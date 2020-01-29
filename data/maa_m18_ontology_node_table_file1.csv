@@ -411,6 +411,7 @@ aida-item:Movement.TransportArtifact.GrantEntry,"en:""aida-item:Movement.Transpo
 aida-item:ORG,"en:""aida-item:ORG""",Item,
 aida-item:ORG.Government.Council,"en:""aida-item:ORG.Government.Council""",Item,
 aida-item:Movement.TransportArtifact.NonviolentThrowLaunch,"en:""aida-item:Movement.TransportArtifact.NonviolentThrowLaunch""",Item,
+aida-property:source,,Property,aida-property-type:URL
 aida-item:CRM.FinancialCrime.Extortion,"en:""aida-item:CRM.FinancialCrime.Extortion""",Item,
 aida-item:WEA.GrenadeLauncher.GrenadeLauncher,"en:""aida-item:WEA.GrenadeLauncher.GrenadeLauncher""",Item,
 aida-item:FAC.Structure,"en:""aida-item:FAC.Structure""",Item,

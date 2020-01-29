@@ -540,6 +540,7 @@ aida-item:Contact.CommitmentPromiseExpressIntent.Broadcast,rdfs:subClassOf,aida-
 aida-item:Movement.TransportArtifact.NonviolentThrowLaunch,rdf:type,owl:Class
 aida-item:Movement.TransportArtifact.BringCarryUnload,rdfs:subClassOf,aida-item:Movement.TransportArtifact
 aida-item:Transaction.Transaction.GiftGrantProvideAid,rdf:type,owl:Class
+aida-property:source,rdf:type,owl:DatatypeProperty
 aida-item:PER.Police,rdf:type,owl:Class
 aida-property:OrganizationAffiliation.EmploymentMembership.Employment_PlaceOfEmployment,rdf:type,owl:ObjectProperty
 aida-entity:90846e8e-d544-4c5c-8405-eb0e62e73627,aida-property:Measurement.Size.Count_EntityOrFiller,aida-entity:cb192f2f-07ca-49fe-80b4-56fa54420f48
@@ -785,6 +786,7 @@ aida-property:Evaluate.Sentiment.Positive_Holder,rdf:type,owl:ObjectProperty
 aida-item:COM.Equipment.MilitaryEquipment,rdf:type,owl:Class
 aida-item:PER.ProfessionalPosition.Minister,rdfs:subClassOf,aida-item:PER.ProfessionalPosition
 aida-item:Movement.TransportPerson.DisperseSeparate,rdf:type,owl:Class
+aida-property:source,aida-property-type:dataType,aida-property-type:URL
 aida-item:Conflict.Yield,rdfs:subClassOf,aida-item:Event
 aida-entity:5aa209ed-0b29-42c9-99f6-bb7f451b418e,rdf:type,aida-item:GPE.Country.Country
 aida-item:Manufacture.Artifact,rdfs:subClassOf,aida-item:Event
