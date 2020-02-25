@@ -118,7 +118,6 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
                                     val=cp['mainsnak']['datavalue'].get('value')
                                     typ=cp['mainsnak']['datatype']
                                     sid=qnode+'-'+prop+'-'+str(seq_no)
-                                    seq_no+=1
                                     if typ.startswith('wikibase'):
                                         rows.append([sid,qnode,prop,val.get('id',''),doc_id])
                                     elif typ=='quantity':
@@ -134,7 +133,12 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
                                         rows.append([sid,qnode,prop,'\"'+val['text']+'\"'+'@'+val['language'],doc_id])           
                                     else:
                                         rows.append([sid,qnode,prop,'\"'+val+'\"',doc_id])
-                                        
+                                    
+                                    # add an edge from the item to the statement with prefix 'ps:' for the property 
+                                    prop_name='ps:'+prop
+                                    statement_id=qnode+'-'+prop_name+'-'+str(seq_no)
+                                    rows.append([statement_id,qnode,prop_name,sid,doc_id])
+                                    seq_no+=1
                                     # get qualifiers for the statements that we are importing  
                                     if parse_qualifiers:
                                         if cp.get('qualifiers',None):
