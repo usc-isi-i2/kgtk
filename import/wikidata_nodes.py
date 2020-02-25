@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 
 import bz2
-import json
+import simplejson as json
 import logging
 import csv
 
@@ -69,7 +69,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
     if parse_aliases:
         header.append('aliases')
     header.append('document_id')
-    with open('entities.csv', 'w', newline='') as myfile:
+    with open('sample.csv', 'w', newline='') as myfile:
         wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
         wr.writerow(header)
         
@@ -90,10 +90,8 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
             if len(clean_line) > 1:
                 obj = json.loads(clean_line)
                 entry_type = obj["type"]
-                if entry_type == "item":
+                if entry_type == "item" or entry_type == 'property':
                     keep = True
-                else:
-                    continue
                 if keep:
                     row=[]
                     qnode=obj["id"]
@@ -153,13 +151,13 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
                     row.append(doc_id)
                     rows.append(row)                 
             if cnt % 50000 == 0 and cnt > 0:
-                with open('entities.csv', 'a', newline='') as myfile:
+                with open('sample.csv', 'a', newline='') as myfile:
                     for row in rows:
                         wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
                         wr.writerow(row)
                     rows=[]
-    with open('entities.csv', 'a', newline='') as myfile:
+    with open('sample.csv', 'a', newline='') as myfile:
         for row in rows:
             wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
             wr.writerow(row)
-wikidata_to_csv('wikidata-20200203-all.json.bz2','wikidata-20200203')
+wikidata_to_csv('wikidata-20200203-all.json.bz2','wikidata-20200203',limit=100)

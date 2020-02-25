@@ -1,7 +1,7 @@
 from __future__ import unicode_literals
 
 import bz2
-import json
+import simplejson as json
 import logging
 import csv
 import time
@@ -55,6 +55,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
 
     # parse appropriate fields - depending on what we need in the KB
     parse_properties = True
+    parse_qualifiers = True
     parse_sitelinks = True
     parse_labels = True
     parse_aliases = True
@@ -128,38 +129,39 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
                                     elif typ=='globe-coordinate':
                                         rows.append([sid,qnode,prop,'@'+str(val['latitude'])+'/'+str(val['longitude']),doc_id])
                                     elif typ=='time':
-                                        rows.append([sid,qnode,prop,val['time']+'/'+str(val['precision']),doc_id])
+                                        rows.append([sid,qnode,prop,"^"+val['time'][1:]+'/'+str(val['precision']),doc_id])
                                     elif typ=='monolingualtext':
                                         rows.append([sid,qnode,prop,'\"'+val['text']+'\"'+'@'+val['language'],doc_id])           
                                     else:
                                         rows.append([sid,qnode,prop,'\"'+val+'\"',doc_id])
                                         
-                                    # get qualifiers for the statements that we are importing    
-                                    if cp.get('qualifiers',None):
-                                        quals=cp['qualifiers']
-                                        for qual_prop, qual_claim_property in quals.items():
-                                            qual_seq_no=1
-                                            for qcp in qual_claim_property:
-                                                if qcp['snaktype']=='value':
-                                                    val=qcp['datavalue'].get('value')
-                                                    typ=qcp['datatype']
-                                                    tempid=sid+'-'+qual_prop+'-'+str(qual_seq_no)
-                                                    qual_seq_no+=1
-                                                    if typ.startswith('wikibase'):
-                                                        rows.append([tempid,sid,qual_prop,val.get('id',''),doc_id])
-                                                    elif typ=='quantity':
-                                                        if val.get('upperbound',None) or val.get('lowerbound',None):
-                                                            rows.append([tempid,sid,qual_prop,val['amount']+'['+val.get('upperbound','')+','+val.get('lowerbound','')+']',doc_id])
+                                    # get qualifiers for the statements that we are importing  
+                                    if parse_qualifiers:
+                                        if cp.get('qualifiers',None):
+                                            quals=cp['qualifiers']
+                                            for qual_prop, qual_claim_property in quals.items():
+                                                qual_seq_no=1
+                                                for qcp in qual_claim_property:
+                                                    if qcp['snaktype']=='value':
+                                                        val=qcp['datavalue'].get('value')
+                                                        typ=qcp['datatype']
+                                                        tempid=sid+'-'+qual_prop+'-'+str(qual_seq_no)
+                                                        qual_seq_no+=1
+                                                        if typ.startswith('wikibase'):
+                                                            rows.append([tempid,sid,qual_prop,val.get('id',''),doc_id])
+                                                        elif typ=='quantity':
+                                                            if val.get('upperbound',None) or val.get('lowerbound',None):
+                                                                rows.append([tempid,sid,qual_prop,val['amount']+'['+val.get('upperbound','')+','+val.get('lowerbound','')+']',doc_id])
+                                                            else:
+                                                                rows.append([tempid,sid,qual_prop,val['amount'],doc_id])
+                                                        elif typ=='globe-coordinate':
+                                                            rows.append([tempid,sid,qual_prop,'@'+str(val['latitude'])+'/'+str(val['longitude']),doc_id])
+                                                        elif typ=='time':
+                                                            rows.append([tempid,sid,qual_prop,"^"+val['time'][1:]+'/'+str(val['precision']),doc_id])
+                                                        elif typ=='monolingualtext':
+                                                            rows.append([tempid,sid,qual_prop,'\"'+val['text']+'\"'+'@'+val['language'],doc_id])           
                                                         else:
-                                                            rows.append([tempid,sid,qual_prop,val['amount'],doc_id])
-                                                    elif typ=='globe-coordinate':
-                                                        rows.append([tempid,sid,qual_prop,'@'+str(val['latitude'])+'/'+str(val['longitude']),doc_id])
-                                                    elif typ=='time':
-                                                        rows.append([tempid,sid,qual_prop,val['time']+'/'+str(val['precision']),doc_id])
-                                                    elif typ=='monolingualtext':
-                                                        rows.append([tempid,sid,qual_prop,'\"'+val['text']+'\"'+'@'+val['language'],doc_id])           
-                                                    else:
-                                                        rows.append([tempid,sid,qual_prop,'\"'+val+'\"',doc_id])
+                                                            rows.append([tempid,sid,qual_prop,'\"'+val+'\"',doc_id])
                             '''
                             if cp_vals:
                                 if to_print:
