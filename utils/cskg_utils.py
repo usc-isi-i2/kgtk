@@ -44,3 +44,16 @@ def extract_label_aliases(a_list):
                     alias_labels.append(l.replace('_', ' '))
             aliases=','.join(alias_labels)
     return label, aliases
+
+def add_lowercase_labels(labels):
+    """
+    Transform the list of labels into label and aliases, but also add lowercase label versions.
+    """
+    label, *aliases=list(labels)
+    added=set()
+    for lbl in labels:
+        if not lbl.islower() and lbl.lower() not in labels:
+            added.add(lbl.lower())
+
+    aliases = list(set(aliases) | added)
+    return label, aliases
