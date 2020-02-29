@@ -55,7 +55,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
 
     # parse appropriate fields - depending on what we need in the KB
     parse_properties = True
-    parse_qualifiers = True
+    parse_qualifiers = False
     parse_sitelinks = True
     parse_labels = True
     parse_aliases = True
@@ -68,8 +68,8 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
     header.append('property')
     header.append('value')
     header.append('document_id')
-    with open('sample.csv', 'w', newline='') as myfile:
-        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+    with open('edge.csv', 'w', newline='') as myfile:
+        wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
         wr.writerow(header)
         
     rows=[]
@@ -87,7 +87,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
             if len(clean_line) > 1:
                 obj = json.loads(clean_line)
                 entry_type = obj["type"]
-                if entry_type == "item":
+                if entry_type == "item" or entry_type == "property":
                     keep = True
                     
                 claims = obj["claims"]
@@ -130,14 +130,14 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
                                     elif typ=='time':
                                         rows.append([sid,qnode,prop,"^"+val['time'][1:]+'/'+str(val['precision']),doc_id])
                                     elif typ=='monolingualtext':
-                                        rows.append([sid,qnode,prop,'\"'+val['text']+'\"'+'@'+val['language'],doc_id])           
+                                        rows.append([sid,qnode,prop,'\''+val['text']+'\''+'@'+val['language'],doc_id])           
                                     else:
                                         rows.append([sid,qnode,prop,'\"'+val+'\"',doc_id])
                                     
                                     # add an edge from the item to the statement with prefix 'ps:' for the property 
-                                    prop_name='ps:'+prop
-                                    statement_id=qnode+'-'+prop_name+'-'+str(seq_no)
-                                    rows.append([statement_id,qnode,prop_name,sid,doc_id])
+                                    #prop_name='ps:'+prop
+                                    #statement_id=qnode+'-'+prop_name+'-'+str(seq_no)
+                                    #rows.append([statement_id,qnode,prop_name,sid,doc_id])
                                     seq_no+=1
                                     # get qualifiers for the statements that we are importing  
                                     if parse_qualifiers:
@@ -166,36 +166,17 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=True,
                                                             rows.append([tempid,sid,qual_prop,'\"'+val['text']+'\"'+'@'+val['language'],doc_id])           
                                                         else:
                                                             rows.append([tempid,sid,qual_prop,'\"'+val+'\"',doc_id])
-                            '''
-                            if cp_vals:
-                                if to_print:
-                                    print("prop:", prop, cp_vals)
-                            cp_dicts = [
-                                cp["mainsnak"]["datavalue"].get("value")
-                                for cp in claim_property
-                                if cp["mainsnak"].get("datavalue")
-                            ]
-                            cp_values = [
-                                cp_dict.get("id")
-                                for cp_dict in cp_dicts
-                                if isinstance(cp_dict, dict)
-                                if cp_dict.get("id") is not None
-                            ]
-                            if cp_values:
-                                if to_print:
-                                    print("prop:", prop, cp_values)
-                            '''
             if cnt % 50000 == 0 and cnt > 0:
-                with open('sample.csv', 'a', newline='') as myfile:
+                with open('edge.csv', 'a', newline='') as myfile:
                     for row in rows:
-                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
                         wr.writerow(row)
                     rows=[]
-    with open('sample.csv', 'a', newline='') as myfile:
+    with open('edge.csv', 'a', newline='') as myfile:
         for row in rows:
-            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+            wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
             wr.writerow(row)
 start=time.time()
-wikidata_to_csv('wikidata-20200203-all.json.bz2','wikidata-20200203',limit=2)
+wikidata_to_csv('wikidata-20200203-all.json.bz2','wikidata-20200203')
 end=time.time()
 print((end-start)/3600)
