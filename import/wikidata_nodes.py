@@ -60,16 +60,16 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
     
     # create the header of the csv file
     header=[]
-    header.append('identifier')
+    header.append('id')
     if parse_labels:
-        header.append('labels')
+        header.append('label')
     header.append('type')
     if parse_descr:
         header.append('descriptions')
     if parse_aliases:
         header.append('aliases')
     header.append('document_id')
-    with open('sample.csv', 'w', newline='') as myfile:
+    with open('nodes.csv', 'w', newline='') as myfile:
         wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
         wr.writerow(header)
         
@@ -90,7 +90,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
             if len(clean_line) > 1:
                 obj = json.loads(clean_line)
                 entry_type = obj["type"]
-                if entry_type == "item" or entry_type == 'property':
+                if entry_type == "item" or entry_type == "property":
                     keep = True
                 if keep:
                     row=[]
@@ -142,7 +142,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
                                         print(
                                             "alias (" + lang + "):", item["value"]
                                         )
-                                row.append(",".join(alias_list))
+                                row.append("|".join(alias_list))
                             else:
                                 row.append('')
                         else:
@@ -151,13 +151,13 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
                     row.append(doc_id)
                     rows.append(row)                 
             if cnt % 50000 == 0 and cnt > 0:
-                with open('sample.csv', 'a', newline='') as myfile:
+                with open('nodes.csv', 'a', newline='') as myfile:
                     for row in rows:
                         wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
                         wr.writerow(row)
                     rows=[]
-    with open('sample.csv', 'a', newline='') as myfile:
+    with open('nodes.csv', 'a', newline='') as myfile:
         for row in rows:
             wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
             wr.writerow(row)
-wikidata_to_csv('wikidata-20200203-all.json.bz2','wikidata-20200203',limit=100)
+wikidata_to_csv('wikidata-20200203-all.json.bz2','wikidata-20200203')
