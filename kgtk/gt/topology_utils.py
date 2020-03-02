@@ -1,5 +1,7 @@
 import graph_tool as gtmain
 import graph_tool.all as gtall
+import graph_tool.topology as gttop
+
 
 def get_nodes_with_degree(g, deg_from, deg_to):
     u = gtmain.GraphView(g, vfilt=lambda v: v.in_degree()+v.out_degree() in range(deg_from,deg_to))
@@ -19,3 +21,6 @@ def get_neighbors(g, node_id, direction):
         return set(the_node.in_neighbors())
     else: # total
         return set(the_node.out_neighbors()) | set(the_node.in_neighbors())
+
+def compute_transitive_closure(g):
+    return gttop.transitive_closure(g)
