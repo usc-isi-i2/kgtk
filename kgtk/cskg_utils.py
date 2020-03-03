@@ -65,7 +65,7 @@ def merge_clusters(node2cluster, s, o):
             node2cluster[v]=node2cluster[s]
     return node2cluster
 
-def collapse_identical_nodes(edges_df, nodes_df):
+def compute_sameas_replacements(edges_df):
     sameas_df=edges_df[edges_df['predicate']=='mw:SameAs']
     node2cluster={}
     new_cluster_id=1
@@ -94,14 +94,48 @@ def collapse_identical_nodes(edges_df, nodes_df):
     replacements={}
     for node, cid in node2cluster.items():
         replacements[node]=names[cid]
+    return replacements
 
-    edges_df['subject'].replace(replacements, inplace=True)
-    edges_df['object'].replace(replacements, inplace=True)
+def replace_edges(edges_file, replacements, rep_nodes):
+    new_rows=[]
+    with open(edges_file, newline='\n') as csvfile:
+        spamreader = csv.reader(csvfile, delimiter='\t')
+        for i, row in enumerate(spamreader):
+            if row[0] in rep_nodes:
+                row[0]=replacements[row[0]]
+            if row[2] in rep_nodes:
+                row[2]=replacements[row[2]]
+            new_rows.append(row)
+            if i%1000000==0:
+                print(i, 'processed edges')
+    return new_rows
 
-    edges_df=edges_df[edges_df['predicate']!='mw:SameAs']
+def replace_nodes(nodes_file, replacements, rep_nodes):
+    new_node_rows=[]
+    with open(nodes_file, newline='\n') as csvfile:
+        spamreader = csv.reader(csvfile, delimiter='\t')
+        for i, row in enumerate(spamreader):
+            if row[0] in rep_nodes:
+                row[0]=replacements[row[0]]
+            new_node_rows.append(row)
+    return new_node_rows
 
-    nodes_df['id'].replace(replacements, inplace=True)
-    nodes_df.drop_duplicates(subset ="id",
+def collapse_identical_nodes(edges_file, nodes_file):
+
+    edges_df=pd.read_csv(edges_file, sep='\t')
+    nodes_df=pd.read_csv(nodes_file, sep='\t')
+
+    replacements=compute_sameas_replacements(edges_df)
+    
+    new_edge_rows=replace_edges(edges_file, replacements, rep_nodes)
+    new_edges_df=pd.DataFrame(new_edge_rows, columns=edges_df.columns)
+    new_edges_df=new_edges_df[new_edges_df['predicate']!='mw:SameAs']
+    print(len(new_edges_df), 'edges')
+
+    new_node_rows=replace_nodes(nodes_file, replacements, rep_nodes)
+    new_nodes_df=pd.DataFrame(new_node_rows, columns=nodes_df.columns)
+    new_nodes_df.drop_duplicates(subset ="id",
                              keep = 'first', inplace = True)
+    print(len(new_nodes_df), 'nodes')
 
-    return edges_df, nodes_df
+    return new_edges_df, new_nodes_df
