@@ -1,5 +1,6 @@
 import pandas as pd
 from copy import copy
+from collections import defaultdict
 
 def append_df_with_missing_nodes(base_df, missing_nodes, datasource, node_columns):
     """
@@ -57,3 +58,50 @@ def add_lowercase_labels(labels):
 
     aliases = list(set(aliases) | added)
     return label, aliases
+
+def merge_clusters(node2cluster, s, o):
+    for k, v in node2cluster.items():
+        if v==o:
+            node2cluster[v]=node2cluster[s]
+    return node2cluster
+
+def collapse_identical_nodes(edges_df, nodes_df):
+    sameas_df=edges_df[edges_df['predicate']=='mw:SameAs']
+    node2cluster={}
+    new_cluster_id=1
+    for i, row in sameas_df.iterrows():
+        s=row['subject']
+        o=row['object']
+        if s not in node2cluster.keys() and o not in node2cluster.keys():
+            node2cluster[s]=node2cluster[o]=new_cluster_id
+            new_cluster_id+=1
+        elif s not in node2cluster.keys():
+            node2cluster[s]=node2cluster[o]
+        elif o not in node2cluster.keys():
+            node2cluster[o]=node2cluster[s]
+        else: # both are in a cluster
+            if node2cluster[s]!=node2cluster[o]:
+                node2cluster=merge_clusters(node2cluster, s, o)
+
+    cid2members=defaultdict(set)
+    for n, c in node2cluster.items():
+        cid2members[c].add(n)
+
+    names={}
+    for c, nodes in cid2members.items():
+        names[c]='+'.join(list(nodes))
+
+    replacements={}
+    for node, cid in node2cluster.items():
+        replacements[node]=names[cid]
+
+    edges_df['subject'].replace(replacements, inplace=True)
+    edges_df['object'].replace(replacements, inplace=True)
+
+    edges_df=edges_df[edges_df['predicate']!='mw:SameAs']
+
+    nodes_df['id'].replace(replacements, inplace=True)
+    nodes_df.drop_duplicates(subset ="id",
+                             keep = 'first', inplace = True)
+
+    return edges_df, nodes_df
