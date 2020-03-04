@@ -1,6 +1,9 @@
 import pandas as pd
 from copy import copy
 from collections import defaultdict
+import csv
+import sys
+csv.field_size_limit(sys.maxsize)
 
 def append_df_with_missing_nodes(base_df, missing_nodes, datasource, node_columns):
     """
@@ -122,11 +125,13 @@ def replace_nodes(nodes_file, replacements, rep_nodes):
 
 def collapse_identical_nodes(edges_file, nodes_file):
 
-    edges_df=pd.read_csv(edges_file, sep='\t')
-    nodes_df=pd.read_csv(nodes_file, sep='\t')
+    edges_df=pd.read_csv(edges_file, sep='\t', header=0)
+    nodes_df=pd.read_csv(nodes_file, sep='\t', header=0)
 
+    print(len(edges_df))
     replacements=compute_sameas_replacements(edges_df)
-    
+    rep_nodes=set(replacements.keys())
+
     new_edge_rows=replace_edges(edges_file, replacements, rep_nodes)
     new_edges_df=pd.DataFrame(new_edge_rows, columns=edges_df.columns)
     new_edges_df=new_edges_df[new_edges_df['predicate']!='mw:SameAs']
