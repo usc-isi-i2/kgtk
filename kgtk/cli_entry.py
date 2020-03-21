@@ -1,5 +1,4 @@
 import sys
-import os
 import importlib
 import pkgutil
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
@@ -9,8 +8,7 @@ from kgtk.exceptions import kgtk_exception_handler
 from kgtk import __version__
 
 
-# module name should NOT starts with '__' (double underscore)
-# module name can not be in 'help', '--help', 'h', '-h'.
+# module name should NOT start with '__' (double underscore)
 handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
                    if not x.name.startswith('__')]
 
@@ -40,8 +38,10 @@ def cli_entry(*args):
         metavar='command',
         dest='cmd',
     )
+    sub_parsers.required = True
 
     # load parser of each module
+    # TODO: need to optimize with lazy loading method
     for h in handlers:
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         sub_parser = sub_parsers.add_parser(h, **mod.parser())
