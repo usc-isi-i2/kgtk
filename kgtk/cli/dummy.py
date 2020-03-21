@@ -4,8 +4,10 @@ Example CLI module
 
 
 def parser():
+    # https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser
     return {
-        'help': 'this is dummy'
+        'help': 'this is dummy',
+        'description': 'this is a basic example'
     }
 
 
@@ -15,7 +17,7 @@ def add_arguments(parser):
     Args:
         parser (argparse.ArgumentParser)
     """
-    parser.add_argument("-t", "--test", action="store", type=str, dest="test", required=True)
+    parser.add_argument(action="store", type=str, metavar="test", dest="test")
     parser.add_argument("-i", "--info", action="store", type=str, dest="info")
 
 
