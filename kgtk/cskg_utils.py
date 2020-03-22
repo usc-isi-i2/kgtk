@@ -5,6 +5,29 @@ import csv
 import sys
 csv.field_size_limit(sys.maxsize)
 
+def combine_dicts(dicts):
+    new_dict=defaultdict(set)
+    for d in dicts:
+        for k in d.keys():
+            new_dict[k] = new_dict[k] | set(d[k])
+    for k, v in new_dict.items():
+        v=list(v)
+    return dict(new_dict)
+
+def merge_and_deduplicate(x):
+    return ','.join(list(set(x.split(','))))
+
+def deduplicate_with_transformations(df, join_columns, transformations={'label': ','.join, 'aliases': ','.join, 'pos': ','.join, 'datasource': ','.join, 'other': ','.join}):
+    grouped=df.groupby(join_columns, as_index=False).agg(transformations)
+    for col in transformations.keys():
+        if col not in ['other', 'weight']:
+            grouped[col] = grouped[col].apply(merge_and_deduplicate)
+#        elif col=='other':
+#            grouped[col] = grouped[col].apply(combine_dicts)
+
+    print(grouped)
+    return grouped
+
 def append_df_with_missing_nodes(base_df, missing_nodes, datasource, node_columns):
     """
     Complement a nodes dataframe with missing nodes, represented with minimal info.
@@ -139,8 +162,12 @@ def collapse_identical_nodes(edges_file, nodes_file):
 
     new_node_rows=replace_nodes(nodes_file, replacements, rep_nodes)
     new_nodes_df=pd.DataFrame(new_node_rows, columns=nodes_df.columns)
-    new_nodes_df.drop_duplicates(subset ="id",
-                             keep = 'first', inplace = True)
+    node_transformations={'label': ','.join, 'aliases': ','.join, 'pos': ','.join, 'datasource': ','.join, 'other': list}
+    new_nodes_df=deduplicate_with_transformations(new_nodes_df, 'id', node_transformations)
+
+
+#    new_nodes_df.drop_duplicates(subset ="id",
+#        keep = 'first', inplace = True)
     print(len(new_nodes_df), 'nodes')
 
     return new_edges_df, new_nodes_df
