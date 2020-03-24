@@ -51,14 +51,10 @@ def add_arguments(parser):
     parser.add_argument('--bz2', '--bzip2', action='store_true', dest='bz2', help='compress result with bzip2')
     parser.add_argument('--xz', action='store_true', dest='xz', help='compress result with xz')
     parser.add_argument('--tmp', '--temp-directory', default='/tmp', dest='tmpDir', help="directory for temporary files")
-    parser.add_argument(nargs="*", dest='inputs', metavar="inputs", help='files to process, use - for stdin')
+    parser.add_argument("inputs", nargs="?", action="store", help='files to process, use - for stdin')
 
 
 def determineFileType(file):
-    if file == '-':
-        header = tempfile.mkstemp(dir=tmpDir, prefix='kgtk-header.')[1]
-        sh.head('-c', '1024', _in=sys.stdin, _out=header)
-        file = header
     fileType = sh.file('--brief', file).stdout.split()[0].lower()
     return (file, fileType)
 
@@ -66,12 +62,8 @@ def run(output, gz, bz2, xz, tmpDir, inputs):
 
     # import modules locally
     import socket
-
-    if len(inputs) == 0:
-        inputs.append('-')
     if isinstance(output, str):
         output = open(output, "wb")
-
     compress = None
     if gz:
         compress = sh.gzip
@@ -80,32 +72,35 @@ def run(output, gz, bz2, xz, tmpDir, inputs):
     elif xz:
         compress = sh.xz
 
-    for inp in inputs:
-        catcmd = sh.cat
-        file, fileType = determineFileType(inp)
-        if fileType == 'gzip':
-            catcmd = sh.zcat
-        elif fileType == 'bzip2':
-            catcmd = sh.bzcat
-        elif fileType == 'xz':
-            catcmd = sh.xzcat
-        try:
-            if inp == '-':
-                if compress is not None:
-                    compress(catcmd(sh.cat(file, '-', _in=sys.stdin, _piped=True), _piped=True), '-c', _out=output, _tty_out=False)
-                else:
-                    catcmd(sh.cat(file, '-', _in=sys.stdin, _piped=True), _out=output)
-            else:
+    print(inputs)
+    if inputs:
+        for inp in inputs:
+            catcmd = sh.cat
+            file, fileType = determineFileType(inp)
+            if fileType == 'gzip':
+                catcmd = sh.zcat
+            elif fileType == 'bzip2':
+                catcmd = sh.bzcat
+            elif fileType == 'xz':
+                catcmd = sh.xzcat
+            try:
                 if compress is not None:
                     compress(catcmd(file, _piped=True, _out=output), '-c', _out=output, _tty_out=False)
                 else:
                     catcmd(file, _out=output)
+            except sh.SignalException_SIGPIPE:
+                break
+    else:
+        print('here')
+        try:
+            if compress is not None:
+                print('compressing')
+                compress('-c', _in=sys.stdin, _out=output, _tty_out=False)
+                print('compressing done')
+            else:
+                sh.cat(_in=sys.stdin, _piped=True, _out=output)
         except sh.SignalException_SIGPIPE:
-            break
-        finally:
-            if inp == '-':
-                # remove temporary header file for the data that was piped in from stdin:
-                sh.rm('-f', file)
+            pass
 
     # cleanup in case we piped and terminated prematurely:
     try:
