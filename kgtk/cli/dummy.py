@@ -2,6 +2,7 @@
 Example CLI module
 
 Please DON'T import modules globally, import them in `run`.
+Please DON'T initialize resource (e.g., variable) globally.
 """
 
 
