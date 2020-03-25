@@ -148,8 +148,8 @@ def replace_nodes(nodes_file, replacements, rep_nodes):
 
 def collapse_identical_nodes(edges_file, nodes_file):
 
-    edges_df=pd.read_csv(edges_file, sep='\t', header=0)
-    nodes_df=pd.read_csv(nodes_file, sep='\t', header=0)
+    edges_df=pd.read_csv(edges_file, sep='\t', header=0, na_filter= False)
+    nodes_df=pd.read_csv(nodes_file, sep='\t', header=0, na_filter= False)
 
     print(len(edges_df))
     replacements=compute_sameas_replacements(edges_df)
