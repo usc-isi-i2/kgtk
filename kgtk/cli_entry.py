@@ -3,6 +3,7 @@ import importlib
 import pkgutil
 import itertools
 from io import StringIO
+import signal
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from kgtk import cli
@@ -16,6 +17,8 @@ handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
 
 
 pipe_delimiter = '/'
+
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
 class KGTKArgumentParser(ArgumentParser):
@@ -81,4 +84,5 @@ def cli_entry(*args):
 
     stdout_.write(last_stdout.getvalue())
     last_stdout.close(); sys.stdin.close()
+
     return ret_code
