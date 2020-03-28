@@ -1,7 +1,9 @@
 import sys
-import os
 import importlib
 import pkgutil
+import itertools
+from io import StringIO
+import signal
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from kgtk import cli
@@ -9,10 +11,14 @@ from kgtk.exceptions import kgtk_exception_handler
 from kgtk import __version__
 
 
-# module name should NOT starts with '__' (double underscore)
-# module name can not be in 'help', '--help', 'h', '-h'.
+# module name should NOT start with '__' (double underscore)
 handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
                    if not x.name.startswith('__')]
+
+
+pipe_delimiter = '/'
+
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
 class KGTKArgumentParser(ArgumentParser):
@@ -38,10 +44,12 @@ def cli_entry(*args):
 
     sub_parsers = parser.add_subparsers(
         metavar='command',
-        dest='cmd',
+        dest='cmd'
     )
+    sub_parsers.required = True
 
     # load parser of each module
+    # TODO: need to optimize with lazy loading method
     for h in handlers:
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         sub_parser = sub_parsers.add_parser(h, **mod.parser())
@@ -51,13 +59,30 @@ def cli_entry(*args):
         args = tuple(sys.argv)
     if len(args) == 1:
         args = args + ('-h',)
-    args = parser.parse_args(args[1:])
+    args = args[1:]
 
-    # run
-    func = None
-    if args.cmd:
-        mod = importlib.import_module('.{}'.format(args.cmd), 'kgtk.cli')
-        func = mod.run
-        kwargs = vars(args)
-        del kwargs['cmd']
-    return kgtk_exception_handler(func, **kwargs)
+    stdout_ = sys.stdout
+    last_stdout = StringIO()
+    ret_code = 0
+
+    for cmd_args in [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]:
+        # parse command and options
+        args = parser.parse_args(cmd_args)
+
+        # load module
+        func = None
+        if args.cmd:
+            mod = importlib.import_module('.{}'.format(args.cmd), 'kgtk.cli')
+            func = mod.run
+            kwargs = vars(args)
+            del kwargs['cmd']
+
+        # run module
+        last_stdout.close(); last_stdout = StringIO()
+        ret_code = kgtk_exception_handler(func, **kwargs)
+        sys.stdin.close(); sys.stdin = StringIO(last_stdout.getvalue())
+
+    stdout_.write(last_stdout.getvalue())
+    last_stdout.close(); sys.stdin.close()
+
+    return ret_code
