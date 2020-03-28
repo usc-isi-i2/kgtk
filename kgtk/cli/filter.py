@@ -1,5 +1,5 @@
 """
-Filter rows by a property value.
+Filter rows by subject, predicate, object values.
 """
 
 
@@ -7,7 +7,7 @@ import sys
 
 def parser():
     return {
-        'help': 'Filter rows by a property value.'
+        'help': 'Filter rows by subject, predicate, object values.'
     }
 
 
