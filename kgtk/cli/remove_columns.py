@@ -30,10 +30,10 @@ def run(datatype, columns, input):
     import sh
 
     if input:
-        sh.mlr('--tsv', 'cut', '-x', '-f', columns, input, _out=sys.stdout, _err=sys.stderr)
+        sh.mlr('--tsv', 'cut', '-x', '-f', columns, 
+                input, _out=sys.stdout, _err=sys.stderr)
     elif not sys.stdin.isatty():
         print('reading from stdin')
-        # print(sh.cat(_in=sys.stdin))
         print(sh.mlr('--tsv', 'cut', '-x', '-f', columns,
                      _in=sys.stdin, _out=sys.stdout, _err=sys.stderr))
     else:
