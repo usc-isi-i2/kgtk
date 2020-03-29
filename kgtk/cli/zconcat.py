@@ -50,15 +50,13 @@ def add_arguments(parser):
     parser.add_argument('--gz', '--gzip', action='store_true', dest='gz', help='compress result with gzip')
     parser.add_argument('--bz2', '--bzip2', action='store_true', dest='bz2', help='compress result with bzip2')
     parser.add_argument('--xz', action='store_true', dest='xz', help='compress result with xz')
-    parser.add_argument('--tmp', '--temp-directory', default='/tmp', dest='tmpDir', help="directory for temporary files")
-    parser.add_argument("inputs", nargs="?", action="store", help='files to process, use - for stdin')
-
+    parser.add_argument("inputs", nargs="?", action="store", help='files to process')
 
 def determineFileType(file):
     fileType = sh.file('--brief', file).stdout.split()[0].lower()
     return (file, fileType)
 
-def run(output, gz, bz2, xz, tmpDir, inputs):
+def run(output, gz, bz2, xz, inputs):
 
     # import modules locally
     import socket
