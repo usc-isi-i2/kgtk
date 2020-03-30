@@ -1,5 +1,5 @@
 import csv
-def db_import(input_file,output_file):
+def db_import(input_file,output_file,delim=' '):
     limit=None
     write=True
     rows=[]
@@ -15,19 +15,23 @@ def db_import(input_file,output_file):
     header.append('node2_id')
     header.append('node2_type')
     data_dict={}
+    if input_file.endswith('nt'):
+        line_size=3
+    elif input_file.endswith('ttl'):
+        line_size=4
     if write:
         with open(output_file, 'w', newline='') as myfile:
             wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
             wr.writerow(header)
     with open(input_file,mode='r') as file:
-        reader=csv.reader(file,delimiter=' ',escapechar="\\")
+        reader=csv.reader(file,delimiter=delim,escapechar="\\")
         for cnt,line in enumerate(reader):
             keep=True
             if limit and cnt >= limit:
                 break
             if cnt % 500000 == 0 and cnt > 0:
                 print(cnt)
-            if len(line)!=4:
+            if len(line)!=line_size:
                 print(line)
                 keep=False
             if keep:
@@ -90,6 +94,7 @@ def db_import(input_file,output_file):
                     wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
                     wr.writerow(row)
 if __name__ == '__main__':
-    input_file='dbpedia dumps/specific_mappingbased_properties_en.ttl'
-    output_file='Dbpedia_specific_mapping_properties.tsv'
-    db_import(input_file,output_file)
+    input_file='kg.nt'
+    output_file='covid_data_kgtk.tsv'
+    delimiter='\t'
+    db_import(input_file,output_file,delimiter)
