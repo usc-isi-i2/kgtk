@@ -92,4 +92,4 @@ def db_import(input_file,output_file):
 if __name__ == '__main__':
     input_file='dbpedia dumps/specific_mappingbased_properties_en.ttl'
     output_file='Dbpedia_specific_mapping_properties.tsv'
-    db_import(output_file)
+    db_import(input_file,output_file)
