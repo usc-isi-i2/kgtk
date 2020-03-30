@@ -2,23 +2,23 @@ import sys
 import importlib
 import pkgutil
 import itertools
-from io import StringIO
 import signal
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from kgtk import cli
 from kgtk.exceptions import kgtk_exception_handler
 from kgtk import __version__
+import sh
 
 
 # module name should NOT start with '__' (double underscore)
 handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
                    if not x.name.startswith('__')]
 
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 pipe_delimiter = '/'
-
-signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+ret_code = 0
 
 
 class KGTKArgumentParser(ArgumentParser):
@@ -29,17 +29,24 @@ class KGTKArgumentParser(ArgumentParser):
         super(KGTKArgumentParser, self).__init__(*args, **kwargs)
 
 
+def cmd_done(cmd, success, exit_code):
+    global ret_code
+    ret_code = exit_code
+
+
 def cli_entry(*args):
     """
     Usage:
         kgtk <command> [options]
     """
+    global ret_code
+
     parser = KGTKArgumentParser()
     parser.add_argument(
         '-V', '--version',
         action='version',
         version='KGTK %s' % __version__,
-        help="show KGTK version number and exit."
+        help='show KGTK version number and exit.'
     )
 
     sub_parsers = parser.add_subparsers(
@@ -61,12 +68,10 @@ def cli_entry(*args):
         args = args + ('-h',)
     args = args[1:]
 
-    stdout_ = sys.stdout
-    last_stdout = StringIO()
-    ret_code = 0
-
-    for cmd_args in [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]:
-        # parse command and options
+    # parse internal pipe
+    pipe = [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
+    if len(pipe) == 1:
+        cmd_args = pipe[0]
         args = parser.parse_args(cmd_args)
 
         # load module
@@ -78,11 +83,22 @@ def cli_entry(*args):
             del kwargs['cmd']
 
         # run module
-        last_stdout.close(); last_stdout = StringIO()
         ret_code = kgtk_exception_handler(func, **kwargs)
-        sys.stdin.close(); sys.stdin = StringIO(last_stdout.getvalue())
-
-    stdout_.write(last_stdout.getvalue())
-    last_stdout.close(); sys.stdin.close()
+    else:
+        concat_cmd_args = None
+        for idx, cmd_args in enumerate(pipe):
+            # parse command and options
+            cmd_str = ', '.join(['"{}"'.format(c) for c in cmd_args])
+            if idx == 0:  # first command
+                concat_cmd_args = 'sh.kgtk({}, _in=sys.stdin, _done=cmd_done, _piped=True)'.format(cmd_str)
+            elif idx + 1 == len(pipe):  # last command
+                concat_cmd_args = 'sh.kgtk({}, {}, _out=sys.stdout, _done=cmd_done)'.format(concat_cmd_args, cmd_str)
+            else:
+                concat_cmd_args = 'sh.kgtk({}, {}, _done=cmd_done, _piped=True)'.format(concat_cmd_args, cmd_str)
+        try:
+            eval(concat_cmd_args)
+        except sh.SignalException_SIGPIPE:
+            pass
 
     return ret_code
+
