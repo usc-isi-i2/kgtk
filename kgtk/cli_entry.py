@@ -90,15 +90,18 @@ def cli_entry(*args):
             # parse command and options
             cmd_str = ', '.join(['"{}"'.format(c) for c in cmd_args])
             if idx == 0:  # first command
-                concat_cmd_args = 'sh.kgtk({}, _in=sys.stdin, _done=cmd_done, _piped=True)'.format(cmd_str)
+                concat_cmd_args = 'sh.kgtk({}, _in=sys.stdin, _done=cmd_done, _piped=True, _bg_exc=False)'.format(cmd_str)
             elif idx + 1 == len(pipe):  # last command
-                concat_cmd_args = 'sh.kgtk({}, {}, _out=sys.stdout, _done=cmd_done)'.format(concat_cmd_args, cmd_str)
+                concat_cmd_args = 'sh.kgtk({}, {}, _out=sys.stdout, _done=cmd_done, _bg_exc=False)'.format(concat_cmd_args, cmd_str)
             else:
-                concat_cmd_args = 'sh.kgtk({}, {}, _done=cmd_done, _piped=True)'.format(concat_cmd_args, cmd_str)
+                concat_cmd_args = 'sh.kgtk({}, {}, _done=cmd_done, _piped=True, _bg_exc=False)'.format(concat_cmd_args, cmd_str)
         try:
             eval(concat_cmd_args)
         except sh.SignalException_SIGPIPE:
             pass
+        except sh.ErrorReturnCode as e:
+            err = '\nRAN: {}\nSTDERR:\n{}\n'.format(e.full_cmd, e.stderr.decode('utf-8'))
+            sys.stderr.write(err)
 
     return ret_code
 
