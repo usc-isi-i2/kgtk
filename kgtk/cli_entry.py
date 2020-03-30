@@ -89,12 +89,15 @@ def cli_entry(*args):
         for idx, cmd_args in enumerate(pipe):
             # parse command and options
             cmd_str = ', '.join(['"{}"'.format(c) for c in cmd_args])
+            # add common arguments
+            cmd_str += ', _bg_exc=False, _done=cmd_done'
+            # add specific arguments
             if idx == 0:  # first command
-                concat_cmd_args = 'sh.kgtk({}, _in=sys.stdin, _done=cmd_done, _piped=True, _bg_exc=False)'.format(cmd_str)
+                concat_cmd_args = 'sh.kgtk({}, _in=sys.stdin, _piped=True)'.format(cmd_str)
             elif idx + 1 == len(pipe):  # last command
-                concat_cmd_args = 'sh.kgtk({}, {}, _out=sys.stdout, _done=cmd_done, _bg_exc=False)'.format(concat_cmd_args, cmd_str)
+                concat_cmd_args = 'sh.kgtk({}, {}, _out=sys.stdout)'.format(concat_cmd_args, cmd_str)
             else:
-                concat_cmd_args = 'sh.kgtk({}, {}, _done=cmd_done, _piped=True, _bg_exc=False)'.format(concat_cmd_args, cmd_str)
+                concat_cmd_args = 'sh.kgtk({}, {}, _piped=True)'.format(concat_cmd_args, cmd_str)
         try:
             eval(concat_cmd_args)
         except sh.SignalException_SIGPIPE:
