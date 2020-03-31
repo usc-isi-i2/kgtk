@@ -2,7 +2,6 @@ import sys
 import importlib
 import pkgutil
 import itertools
-import signal
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from kgtk import cli
@@ -15,7 +14,8 @@ import sh
 handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
                    if not x.name.startswith('__')]
 
-signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+# import signal
+# signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 pipe_delimiter = '/'
 ret_code = 0
@@ -35,6 +35,7 @@ class KGTKArgumentParser(ArgumentParser):
 
 
 def cmd_done(cmd, success, exit_code):
+    # cmd.cmd -> complete command line
     global ret_code
     ret_code = exit_code
 
@@ -95,9 +96,11 @@ def cli_entry(*args):
             # parse command and options
             cmd_str = ', '.join(['"{}"'.format(c) for c in cmd_args])
             # add common arguments
-            cmd_str += ', _bg_exc=False, _done=cmd_done, _err=sys.stdout'
+            cmd_str += ', _bg_exc=False, _done=cmd_done'  # , _err=sys.stdout
             # add specific arguments
             if idx == 0:  # first command
+                # concat_cmd_str = 'sh.kgtk("dummy", _bg_exc=False, _in=sys.stdin, _piped=True)'
+                # concat_cmd_str = 'sh.kgtk({}, {}, _piped=True)'.format(concat_cmd_str, cmd_str)
                 concat_cmd_str = 'sh.kgtk({}, _in=sys.stdin, _piped=True)'.format(cmd_str)
             elif idx + 1 == len(pipe):  # last command
                 concat_cmd_str = 'sh.kgtk({}, {}, _out=sys.stdout)'.format(concat_cmd_str, cmd_str)
@@ -109,9 +112,10 @@ def cli_entry(*args):
         except sh.SignalException_SIGPIPE:
             pass
         except sh.ErrorReturnCode as e:
-            pass  # suppress Python exception, only write to stderr
-        #     err = '\nRAN: {}\nSTDERR:\n{}\n'.format(e.full_cmd, e.stderr.decode('utf-8'))
-        #     sys.stderr.write(err)
+            # err = '\nRAN: {}\nSTDERR:\n{}\n'.format(e.full_cmd, e.stderr.decode('utf-8'))
+            # sys.stderr.write(err)
+            # mimic parser exit
+            parser.exit(KGTKArgumentParseException.return_code, e.stderr.decode('utf-8'))
 
     return ret_code
 
