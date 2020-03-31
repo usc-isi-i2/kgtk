@@ -6,7 +6,7 @@ import signal
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from kgtk import cli
-from kgtk.exceptions import kgtk_exception_handler
+from kgtk.exceptions import kgtk_exception_handler, KGTKArgumentParseException
 from kgtk import __version__
 import sh
 
@@ -27,6 +27,11 @@ class KGTKArgumentParser(ArgumentParser):
             kwargs['formatter_class'] = RawDescriptionHelpFormatter
 
         super(KGTKArgumentParser, self).__init__(*args, **kwargs)
+
+    def exit(self, status=0, message=None):
+        if status == 2:
+            status = KGTKArgumentParseException.return_code
+        super(KGTKArgumentParser, self).exit(status, message)
 
 
 def cmd_done(cmd, success, exit_code):
@@ -85,26 +90,28 @@ def cli_entry(*args):
         # run module
         ret_code = kgtk_exception_handler(func, **kwargs)
     else:
-        concat_cmd_args = None
+        concat_cmd_str = None
         for idx, cmd_args in enumerate(pipe):
             # parse command and options
             cmd_str = ', '.join(['"{}"'.format(c) for c in cmd_args])
             # add common arguments
-            cmd_str += ', _bg_exc=False, _done=cmd_done'
+            cmd_str += ', _bg_exc=False, _done=cmd_done, _err=sys.stdout'
             # add specific arguments
             if idx == 0:  # first command
-                concat_cmd_args = 'sh.kgtk({}, _in=sys.stdin, _piped=True)'.format(cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, _in=sys.stdin, _piped=True)'.format(cmd_str)
             elif idx + 1 == len(pipe):  # last command
-                concat_cmd_args = 'sh.kgtk({}, {}, _out=sys.stdout)'.format(concat_cmd_args, cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, {}, _out=sys.stdout)'.format(concat_cmd_str, cmd_str)
             else:
-                concat_cmd_args = 'sh.kgtk({}, {}, _piped=True)'.format(concat_cmd_args, cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, {}, _piped=True)'.format(concat_cmd_str, cmd_str)
         try:
-            eval(concat_cmd_args)
+            process = eval(concat_cmd_str)
+            process.wait()
         except sh.SignalException_SIGPIPE:
             pass
         except sh.ErrorReturnCode as e:
-            err = '\nRAN: {}\nSTDERR:\n{}\n'.format(e.full_cmd, e.stderr.decode('utf-8'))
-            sys.stderr.write(err)
+            pass  # suppress Python exception, only write to stderr
+        #     err = '\nRAN: {}\nSTDERR:\n{}\n'.format(e.full_cmd, e.stderr.decode('utf-8'))
+        #     sys.stderr.write(err)
 
     return ret_code
 

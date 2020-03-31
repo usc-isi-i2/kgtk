@@ -3,29 +3,34 @@ import sys
 
 class KGTKException(BaseException):
     return_code = 1
+    message = 'KGTK Exception found\n'
 
     def __init__(self):
         pass
 
 
-class KGTKIntegerException(KGTKException):
+class KGTKArgumentParseException(KGTKException):
+    # same as https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.error
     return_code = 2
-
-    def __init__(self):
-        pass
 
 
 class KGTKExceptionHandler(object):
     def __call__(self, func, *args, **kwargs):
         try:
-            return func(*args, **kwargs)
+            return_code = func(*args, **kwargs) or 0
+            if return_code != 0:
+                Warning('Please raise exception instead of returning non-zero value')
+            return return_code
         except BaseException as e:
             type, exc_val, exc_tb = sys.exc_info()
             return self.handle_exception(e, type, exc_val, exc_tb)
 
     def handle_exception(self, e, type, exc_val, exc_tb):
         if isinstance(e, KGTKException):
+            sys.stderr.write(e.message)
             return e.return_code
+
+        sys.stderr.write(KGTKException.message)
         return KGTKException.return_code
 
 
