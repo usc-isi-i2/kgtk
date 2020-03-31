@@ -1,12 +1,13 @@
 import sys
+import warnings
 
 
 class KGTKException(BaseException):
     return_code = 1
-    message = 'KGTK Exception found\n'
+    message = 'KGTKException found\n'
 
-    def __init__(self):
-        pass
+    def __init__(self, message):
+        self.message = message
 
 
 class KGTKArgumentParseException(KGTKException):
@@ -14,12 +15,16 @@ class KGTKArgumentParseException(KGTKException):
     return_code = 2
 
 
+# class KGTKExampleException(KGTKException):
+#     return_code = 1000  # please allocate a value which is gte 1000
+
+
 class KGTKExceptionHandler(object):
     def __call__(self, func, *args, **kwargs):
         try:
             return_code = func(*args, **kwargs) or 0
             if return_code != 0:
-                Warning('Please raise exception instead of returning non-zero value')
+                warnings.warn('Please raise exception instead of returning non-zero value')
             return return_code
         except BaseException as e:
             type, exc_val, exc_tb = sys.exc_info()
@@ -30,6 +35,7 @@ class KGTKExceptionHandler(object):
             sys.stderr.write(e.message)
             return e.return_code
 
+        warnings.warn('Please raise KGTKException instead of {}'.format(type))
         sys.stderr.write(KGTKException.message)
         return KGTKException.return_code
 
