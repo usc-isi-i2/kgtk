@@ -1,7 +1,9 @@
-import csv
-def db_import(input_file,output_file,delim=' '):
-    limit=None
+import re
+def db_import(input_file,output_file):
+    regex = r"\"(?:\\\"|[^\"])+\"|[^\s]+"
+    limit=1000
     write=True
+    errors=0
     rows=[]
     header=[]
     header.append('node1')
@@ -15,33 +17,36 @@ def db_import(input_file,output_file,delim=' '):
     header.append('node2_id')
     header.append('node2_type')
     data_dict={}
-    if input_file.endswith('nt'):
-        line_size=3
-    elif input_file.endswith('ttl'):
-        line_size=4
     if write:
         with open(output_file, 'w', newline='') as myfile:
             wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
             wr.writerow(header)
     with open(input_file,mode='r') as file:
-        reader=csv.reader(file,delimiter=delim,escapechar="\\")
-        for cnt,line in enumerate(reader):
+        for cnt,full_line in enumerate(file):
+            matches = re.finditer(regex, full_line, re.MULTILINE)
+            line=[]
+            for m in matches:
+                line.append(m.group())
             keep=True
             if limit and cnt >= limit:
                 break
             if cnt % 500000 == 0 and cnt > 0:
                 print(cnt)
-            if len(line)!=line_size:
+            if len(line)<4 or len(line)>5:
+                errors+=1
                 print(line)
                 keep=False
             if keep:
+                final_row=[]
+                final_row.append(line[0])
+                final_row.append(line[1])
                 subject_isuri=False
-                line=line[:3]
-                n1_parts=line[0].rsplit('/', 1)
-                line+=n1_parts
-                label_parts=line[1].rsplit('/', 1)
-                line+=label_parts
-                subject=line[2]
+                if line[2].startswith('\"') and line[2].endswith('\"'):
+                    line[2]=line[2][1:-1]
+                if line[3]!='.':
+                    subject=line[2]+line[3]
+                else:
+                    subject=line[2]
                 if '^^' in subject:
                     subject_parts=subject.split('^^')
                     value=subject_parts[0]
@@ -69,18 +74,23 @@ def db_import(input_file,output_file,delim=' '):
                             final_value='\''+str_parts[0]+'\'@'+str_parts[1]
                         else:
                             final_value='\"'+str(subject)+'\"'
+                final_row.append(final_value)
+                n1_parts=line[0].rsplit('/', 1)
+                final_row+=n1_parts
+                label_parts=line[1].rsplit('/', 1)
+                final_row+=label_parts
                 if subject_isuri:
                     subject_parts=subject.rsplit('/',1)
-                    line+=subject_parts
+                    final_row+=subject_parts
                 else:
-                    line+=[':',final_value]
-                line.append(datatype)
-                rows.append(line)
-                for i in range(len(line)):
-                    line[i]=line[i].replace('<','')
-                    line[i]=line[i].replace('>','')
+                    final_row+=[':',final_value]
+                final_row.append(datatype)
+                rows.append(final_row)
+                for i in range(len(final_row)):
+                    final_row[i]=final_row[i].replace('<','')
+                    final_row[i]=final_row[i].replace('>','')
                     if (not subject_isuri) and i==2:
-                        line[i]=final_value
+                        final_row[i]=final_value
             if write:
                 if cnt % 50000 == 0 and cnt > 0:
                     with open(output_file, 'a', newline='') as myfile:
@@ -93,8 +103,8 @@ def db_import(input_file,output_file,delim=' '):
                 for row in rows:
                     wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
                     wr.writerow(row)
+    print(errors)
 if __name__ == '__main__':
     input_file='kg.nt'
-    output_file='covid_data_kgtk.tsv'
-    delimiter='\t'
-    db_import(input_file,output_file,delimiter)
+    output_file='covid_kgtk.tsv'
+    db_import(input_file,output_file)
