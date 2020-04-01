@@ -1,12 +1,11 @@
 from __future__ import unicode_literals
 
 import bz2
-import simplejson as json
-import logging
+import json
 import csv
+from argparse import ArgumentParser
 
-logger = logging.getLogger(__name__)
-def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False, lang="en", parse_descr=True):
+def wikidata_to_csv(wikidata_file, output_file,limit,lang, doc_id):
     # Read the JSON wiki data and parse out the entities. Takes about 7-10h to parse 55M lines.
     # get latest-all.json.bz2 from https://dumps.wikimedia.org/wikidatawiki/entities/
 
@@ -50,9 +49,10 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
     title_to_id = dict()
     id_to_descr = dict()
     id_to_alias = dict()
-
+    to_print=False
     # parse appropriate fields - depending on what we need in the KB
     parse_properties = False
+    parse_descr=True
     parse_sitelinks = True
     parse_labels = True
     parse_aliases = True
@@ -69,8 +69,8 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
     if parse_aliases:
         header.append('aliases')
     header.append('document_id')
-    with open('nodes.csv', 'w', newline='') as myfile:
-        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+    with open(output_file, 'w', newline='') as myfile:
+        wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
         wr.writerow(header)
         
         
@@ -103,7 +103,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
                         if labels:
                             lang_label = labels.get(lang, None)
                             if lang_label:
-                                row.append('\"'+lang_label['value']+'\"'+"@"+lang)
+                                row.append('\''+lang_label['value']+'\''+"@"+lang)
                                 if to_print:
                                     print(
                                         "label (" + lang + "):", lang_label["value"]
@@ -119,7 +119,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
                         if descriptions:
                             lang_descr = descriptions.get(lang, None)
                             if lang_descr:
-                                row.append('\"'+lang_descr['value']+'\"'+"@"+lang)
+                                row.append('\''+lang_descr['value']+'\''+"@"+lang)
                                 if to_print:
                                     print(
                                         "description (" + lang + "):",
@@ -137,7 +137,7 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
                             if lang_aliases:
                                 alias_list=[]
                                 for item in lang_aliases:
-                                    alias_list.append('\"'+item['value']+'\"'+"@"+lang)
+                                    alias_list.append('\''+item['value']+'\''+"@"+lang)
                                     if to_print:
                                         print(
                                             "alias (" + lang + "):", item["value"]
@@ -151,13 +151,28 @@ def wikidata_to_csv(wikidata_file, doc_id='Wikidata', limit=None, to_print=False
                     row.append(doc_id)
                     rows.append(row)                 
             if cnt % 50000 == 0 and cnt > 0:
-                with open('nodes.csv', 'a', newline='') as myfile:
+                with open(output_file, 'a', newline='') as myfile:
                     for row in rows:
-                        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                        wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
                         wr.writerow(row)
                     rows=[]
-    with open('nodes.csv', 'a', newline='') as myfile:
+    with open(output_file, 'a', newline='') as myfile:
         for row in rows:
-            wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+            wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
             wr.writerow(row)
-wikidata_to_csv('wikidata-20200203-all.json.bz2','wikidata-20200203')
+            
+            
+if __name__=='__main__':
+    parser = ArgumentParser()
+    parser.add_argument("-i", action="store", type=str, dest="inp_path")
+    parser.add_argument("-o", action="store", type=str, dest="out_path")
+    parser.add_argument("-l", action="store", type=int, dest="limit",default=None)
+    parser.add_argument("-L", action="store", type=str, dest="lang",default="en")
+    parser.add_argument("-s", action="store", type=str, dest="source", default="wikidata-20200203")
+    args, _ = parser.parse_known_args()
+    inp_path=args.inp_path
+    out_path=args.out_path
+    limit=args.limit
+    lang=args.lang
+    source=args.source
+    wikidata_to_csv(inp_path,out_path,limit,lang,source)
