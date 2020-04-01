@@ -63,6 +63,8 @@ def db_import(input_file,output_file):
                         else:
                             final_value=value
                     else:
+                        datatype=datatype.replace('<','')
+                        datatype=datatype.replace('>','')
                         final_value='!'+value+'^^'+datatype
                 else:
                     datatype=''
