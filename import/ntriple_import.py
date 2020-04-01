@@ -1,7 +1,8 @@
 import re
-def db_import(input_file,output_file):
+import csv
+from argparse import ArgumentParser
+def db_import(input_file,output_file,limit=None):
     regex = r"\"(?:\\\"|[^\"])+\"|[^\s]+"
-    limit=1000
     write=True
     errors=0
     rows=[]
@@ -70,6 +71,7 @@ def db_import(input_file,output_file):
                     datatype=''
                     if subject.startswith('<'):
                         subject_isuri=True
+                        final_value=subject
                     else:
                         if '@' in subject:
                             str_parts=subject.split('@')
@@ -105,8 +107,13 @@ def db_import(input_file,output_file):
                 for row in rows:
                     wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
                     wr.writerow(row)
-    print(errors)
 if __name__ == '__main__':
-    input_file='kg.nt'
-    output_file='covid_kgtk.tsv'
-    db_import(input_file,output_file)
+    parser = ArgumentParser()
+    parser.add_argument("-i", action="store", type=str, dest="inp_path")
+    parser.add_argument("-o", action="store", type=str, dest="out_path")
+    parser.add_argument("-l", action="store", type=int, dest="limit")
+    args, _ = parser.parse_known_args()
+    inp_path=args.inp_path
+    out_path=args.out_path
+    limit=args.limit
+    db_import(inp_path,out_path,limit)
