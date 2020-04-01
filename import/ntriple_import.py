@@ -1,12 +1,14 @@
 import re
 import csv
 from argparse import ArgumentParser
-def db_import(input_file,output_file,limit=None):
+
+
+def db_import(input_file, output_file, limit):
     regex = r"\"(?:\\\"|[^\"])+\"|[^\s]+"
-    write=True
-    errors=0
-    rows=[]
-    header=[]
+    write = True
+    errors = 0
+    rows = []
+    header = []
     header.append('node1')
     header.append('label')
     header.append('node2')
@@ -17,103 +19,122 @@ def db_import(input_file,output_file,limit=None):
     header.append('node2_prefix')
     header.append('node2_id')
     header.append('node2_type')
-    data_dict={}
+    data_dict = {}
     if write:
         with open(output_file, 'w', newline='') as myfile:
-            wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
+            wr = csv.writer(
+                myfile,
+                quoting=csv.QUOTE_NONE,
+                delimiter="\t",
+                escapechar="\n",
+                quotechar='')
             wr.writerow(header)
-    with open(input_file,mode='r') as file:
-        for cnt,full_line in enumerate(file):
+    with open(input_file, mode='r') as file:
+        for cnt, full_line in enumerate(file):
             matches = re.finditer(regex, full_line, re.MULTILINE)
-            line=[]
+            line = []
             for m in matches:
                 line.append(m.group())
-            keep=True
+            keep = True
             if limit and cnt >= limit:
                 break
             if cnt % 500000 == 0 and cnt > 0:
                 print(cnt)
-            if len(line)<4 or len(line)>5:
-                errors+=1
-                print(line)
-                keep=False
+            if len(line) < 4 or len(line) > 5:
+                errors += 1
+                #print(line)
+                keep = False
             if keep:
-                final_row=[]
+                final_row = []
                 final_row.append(line[0])
                 final_row.append(line[1])
-                subject_isuri=False
+                subject_isuri = False
                 if line[2].startswith('\"') and line[2].endswith('\"'):
-                    line[2]=line[2][1:-1]
-                if line[3]!='.':
-                    subject=line[2]+line[3]
+                    line[2] = line[2][1:-1]
+                if line[3] != '.':
+                    subject = line[2] + line[3]
                 else:
-                    subject=line[2]
+                    subject = line[2]
                 if '^^' in subject:
-                    subject_parts=subject.split('^^')
-                    value=subject_parts[0]
-                    datatype=subject_parts[1]
+                    subject_parts = subject.split('^^')
+                    value = subject_parts[0]
+                    datatype = subject_parts[1]
                     if 'www.w3.org' in subject:
                         if 'boolean' in datatype:
-                            final_value=value.capitalize()
+                            final_value = value.capitalize()
                         elif 'date' in datatype:
-                            final_value='^'+value+'T00:00:00Z/11'
+                            final_value = '^' + value + 'T00:00:00Z/11'
                         elif 'YearMonth' in datatype:
-                            final_value='^'+value+'-00T00:00:00Z/10'
+                            final_value = '^' + value + '-00T00:00:00Z/10'
                         elif 'Year' in datatype:
-                            final_value='^'+value+'-00-00T00:00:00Z/9'
+                            final_value = '^' + value + '-00-00T00:00:00Z/9'
                         else:
-                            final_value=value
+                            final_value = value
                     else:
-                        datatype=datatype.replace('<','')
-                        datatype=datatype.replace('>','')
-                        final_value='!'+value+'^^'+datatype
+                        datatype = datatype.replace('<', '')
+                        datatype = datatype.replace('>', '')
+                        final_value = '!' + value + '^^' + datatype
                 else:
-                    datatype=''
+                    datatype = ''
                     if subject.startswith('<'):
-                        subject_isuri=True
-                        final_value=subject
+                        subject_isuri = True
+                        final_value = subject
                     else:
                         if '@' in subject:
-                            str_parts=subject.split('@')
-                            final_value='\''+str_parts[0]+'\'@'+str_parts[1]
+                            str_parts = subject.split('@')
+                            final_value = '\'' + \
+                                str_parts[0] + '\'@' + str_parts[1]
                         else:
-                            final_value='\"'+str(subject)+'\"'
+                            final_value = '\"' + str(subject) + '\"'
                 final_row.append(final_value)
-                n1_parts=line[0].rsplit('/', 1)
-                final_row+=n1_parts
-                label_parts=line[1].rsplit('/', 1)
-                final_row+=label_parts
+                n1_parts = line[0].rsplit('/', 1)
+                final_row += n1_parts
+                label_parts = line[1].rsplit('/', 1)
+                final_row += label_parts
                 if subject_isuri:
-                    subject_parts=subject.rsplit('/',1)
-                    final_row+=subject_parts
+                    subject_parts = subject.rsplit('/', 1)
+                    final_row += subject_parts
                 else:
-                    final_row+=[':',final_value]
+                    final_row += [':', final_value]
                 final_row.append(datatype)
                 rows.append(final_row)
                 for i in range(len(final_row)):
-                    final_row[i]=final_row[i].replace('<','')
-                    final_row[i]=final_row[i].replace('>','')
-                    if (not subject_isuri) and i==2:
-                        final_row[i]=final_value
+                    final_row[i] = final_row[i].replace('<', '')
+                    final_row[i] = final_row[i].replace('>', '')
+                    if (not subject_isuri) and i == 2:
+                        final_row[i] = final_value
             if write:
                 if cnt % 50000 == 0 and cnt > 0:
                     with open(output_file, 'a', newline='') as myfile:
                         for row in rows:
-                            wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
+                            wr = csv.writer(
+                                myfile,
+                                quoting=csv.QUOTE_NONE,
+                                delimiter="\t",
+                                escapechar="\n",
+                                quotechar='')
                             wr.writerow(row)
-                        rows=[]
+                        rows = []
         if write:
             with open(output_file, 'a', newline='') as myfile:
                 for row in rows:
-                    wr = csv.writer(myfile, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
+                    wr = csv.writer(
+                        myfile,
+                        quoting=csv.QUOTE_NONE,
+                        delimiter="\t",
+                        escapechar="\n",
+                        quotechar='')
                     wr.writerow(row)
+
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("-i", action="store", type=str, dest="inp_path")
     parser.add_argument("-o", action="store", type=str, dest="out_path")
     parser.add_argument("-l", action="store", type=int, dest="limit")
     args, _ = parser.parse_known_args()
-    inp_path=args.inp_path
-    out_path=args.out_path
-    limit=args.limit
-    db_import(inp_path,out_path,limit)
+    inp_path = args.inp_path
+    out_path = args.out_path
+    limit = args.limit
+    db_import(inp_path, out_path, limit)
+
