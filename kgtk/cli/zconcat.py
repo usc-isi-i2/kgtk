@@ -1,39 +1,8 @@
-#!/usr/bin/env python
-
-############################# BEGIN LICENSE BLOCK ############################
-#                                                                            #
-# Copyright (C) 2020                                                         #
-# UNIVERSITY OF SOUTHERN CALIFORNIA, INFORMATION SCIENCES INSTITUTE          #
-# 4676 Admiralty Way, Marina Del Rey, California 90292, U.S.A.               #
-#                                                                            #
-# Permission is hereby granted, free of charge, to any person obtaining      #
-# a copy of this software and associated documentation files (the            #
-# "Software"), to deal in the Software without restriction, including        #
-# without limitation the rights to use, copy, modify, merge, publish,        #
-# distribute, sublicense, and/or sell copies of the Software, and to         #
-# permit persons to whom the Software is furnished to do so, subject to      #
-# the following conditions:                                                  #
-#                                                                            #
-# The above copyright notice and this permission notice shall be             #
-# included in all copies or substantial portions of the Software.            #
-#                                                                            #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,            #
-# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF         #
-# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND                      #
-# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE     #
-# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION     #
-# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION      #
-# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.            #
-#                                                                            #
-############################# END LICENSE BLOCK ##############################
-
-from   __future__ import print_function
 import sys
-import os
-import os.path
-import argparse
 import sh
 import tempfile
+
+from kgtk.exceptions import KGTKException
 
 
 def parser():
@@ -41,27 +10,54 @@ def parser():
         'help': 'Concatenate any mixture of plain or gzip/bzip2/xz-compressed files'
     }
 
-
-scriptName = os.path.basename((len(sys.argv) > 0 and sys.argv[0]) or '')
-runsAsScript = scriptName.find('.py') >= 0
-
 def add_arguments(parser):
     parser.add_argument('-o', '--out', default=None, dest='output', help='output file to write to, otherwise output goes to stdout')
     parser.add_argument('--gz', '--gzip', action='store_true', dest='gz', help='compress result with gzip')
     parser.add_argument('--bz2', '--bzip2', action='store_true', dest='bz2', help='compress result with bzip2')
     parser.add_argument('--xz', action='store_true', dest='xz', help='compress result with xz')
-    parser.add_argument("inputs", nargs="?", action="store", help='files to process')
+    parser.add_argument("inputs", nargs="*", action="store", help='files to process')
 
-def determineFileType(file):
-    fileType = sh.file('--brief', file).stdout.split()[0].lower()
-    return (file, fileType)
+
+# this should be configurable:
+tmp_dir = '/tmp'
+
+def determine_file_type(file):
+    """Determine if `file' is compressed and if so how, and return file and its associated type.
+    If `file' is `-' (stdin), we need to pipe part of it to a temp file so we can check its type.
+    In that case, the returned file name will be that of the temporary file header.
+    """
+    if file == '-':
+        header = tempfile.mkstemp(dir=tmp_dir, prefix='kgtk-header.')[1]
+        sh.head('-c', '1024', _in=sys.stdin, _out=header)
+        file = header
+    # tricky: we get a byte sequence here which we have to decode into a string:
+    file_type = sh.file('--brief', file).stdout.split()[0].lower().decode()
+    return (file, file_type)
+
+def get_cat_command(file_type):
+    """Determine a `cat' command based on a `file_type' determined by `determine_file_type'.
+    """
+    catcmd = sh.cat
+    if file_type == 'gzip':
+        catcmd = sh.zcat
+    elif file_type == 'bzip2':
+        catcmd = sh.bzcat
+    elif file_type == 'xz':
+        catcmd = sh.xzcat
+    return catcmd
+
 
 def run(output, gz, bz2, xz, inputs):
+    """Run zconcat according to the provided input arguments.
+    """
 
-    # import modules locally
-    import socket
+    if len(inputs) == 0:
+        inputs.append('-')
+
+    output = output or sys.stdout
     if isinstance(output, str):
         output = open(output, "wb")
+
     compress = None
     if gz:
         compress = sh.gzip
@@ -70,39 +66,62 @@ def run(output, gz, bz2, xz, inputs):
     elif xz:
         compress = sh.xz
 
-    print(inputs)
-    if inputs:
+    try:
         for inp in inputs:
-            catcmd = sh.cat
-            file, fileType = determineFileType(inp)
-            if fileType == 'gzip':
-                catcmd = sh.zcat
-            elif fileType == 'bzip2':
-                catcmd = sh.bzcat
-            elif fileType == 'xz':
-                catcmd = sh.xzcat
-            try:
+            file, file_type = determine_file_type(inp)
+            catcmd = get_cat_command(file_type)
+            if inp == '-':
+                # process input piped in from stdin:
+                try:
+                    if compress is not None:
+                        compress(catcmd(sh.cat(file, '-', _in=sys.stdin, _piped=True), _piped=True), '-c', _out=output, _tty_out=False)
+                    else:
+                        catcmd(sh.cat(file, '-', _in=sys.stdin, _piped=True), _out=output)
+                finally:
+                    # remove temporary header file for the data that was piped in from stdin:
+                    sh.rm('-f', file)
+            else:
+                # process a regular named file:
                 if compress is not None:
                     compress(catcmd(file, _piped=True, _out=output), '-c', _out=output, _tty_out=False)
                 else:
                     catcmd(file, _out=output)
-            except sh.SignalException_SIGPIPE:
-                break
-    else:
-        print('here')
-        try:
-            if compress is not None:
-                print('compressing')
-                compress('-c', _in=sys.stdin, _out=output, _tty_out=False)
-                print('compressing done')
-            else:
-                sh.cat(_in=sys.stdin, _piped=True, _out=output)
-        except sh.SignalException_SIGPIPE:
-            pass
 
-    # cleanup in case we piped and terminated prematurely:
-    try:
+    except sh.SignalException_SIGPIPE:
+        # cleanup in case we piped and terminated prematurely:
         output.flush()
         sys.stdout.flush()
-    except:
-        pass
+    except Exception as e:
+        #import traceback
+        #traceback.print_tb(sys.exc_info()[2], 10)
+        raise KGTKException('INTERNAL ERROR: ' + str(e) + '\n')
+
+"""
+# Examples:
+
+> echo hello | kgtk zconcat
+hello
+
+> cat <<EOF > /tmp/file1
+line1
+line2
+EOF
+> cat <<EOF > /tmp/file2
+line3
+line4
+EOF
+
+> echo hello | kgtk ticker -i / zconcat --gz -o /tmp/out.gz /tmp/file1 - /tmp/file2
+> 
+> bzip2 /tmp/file1
+> echo hello-again | kgtk zconcat /tmp/out.gz - /tmp/file1.bz2 
+line1
+line2
+hello
+>2020-04-01 15:57:48.750904
+line3
+line4
+hello-again
+line1
+line2
+"""
