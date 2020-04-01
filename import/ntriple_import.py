@@ -63,7 +63,7 @@ def db_import(input_file,output_file):
                         else:
                             final_value=value
                     else:
-                        final_value='\"'+value+'\"'
+                        final_value='!'+value+'^^'+datatype
                 else:
                     datatype=''
                     if subject.startswith('<'):
