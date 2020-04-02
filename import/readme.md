@@ -17,4 +17,4 @@ python3 ntriple_import.py -i input.nt -o output.tsv -l limit
 
 ### assumptions
 * The input ntriple file contains lines of the format :
-  <http://one.example/subject1> <http://one.example/predicate1> <http://one.example/object1> .
+  \<http://one.example/subject1> \<http://one.example/predicate1> \<http://one.example/object1> .
