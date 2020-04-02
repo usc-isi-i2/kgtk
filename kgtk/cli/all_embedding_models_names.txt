@@ -1,0 +1,16 @@
+bert-base-nli-cls-token
+bert-base-nli-max-tokens
+bert-base-nli-mean-tokens
+bert-base-nli-stsb-mean-tokens
+bert-base-wikipedia-sections-mean-tokens
+bert-large-nli-cls-token
+bert-large-nli-max-tokens
+bert-large-nli-mean-tokens
+bert-large-nli-stsb-mean-tokens
+distilbert-base-nli-mean-tokens
+distilbert-base-nli-stsb-mean-tokens
+distiluse-base-multilingual-cased
+roberta-base-nli-mean-tokens
+roberta-base-nli-stsb-mean-tokens
+roberta-large-nli-mean-tokens
+roberta-large-nli-stsb-mean-tokens
