@@ -1,16 +1,50 @@
-from __future__ import unicode_literals
-
-import bz2
-import json
-import csv
-from argparse import ArgumentParser
+"""
+Import wikidata nodes into KGTK file
+"""
 
 
-def wikidata_nodes_to_tsv(wikidata_file, output_file, limit, lang, doc_id):
-    # Read the JSON wiki data and parse out the entities. Takes about 7-10h to parse 55M lines.
-    # get latest-all.json.bz2 from
-    # https://dumps.wikimedia.org/wikidatawiki/entities/
+def parser():
+    return {
+        'help': 'Import wikidata nodes into KGTK file'
+    }
 
+
+def add_arguments(parser):
+    """
+    Parse arguments
+    Args:
+        parser (argparse.ArgumentParser)
+    """
+    parser.add_argument("-i", action="store", type=str, dest="wikidat_file")
+    parser.add_argument("-o", action="store", type=str, dest="output_file")
+    parser.add_argument(
+        "-l",
+        action="store",
+        type=int,
+        dest="limit",
+        default=None)
+    parser.add_argument(
+        "-L",
+        action="store",
+        type=str,
+        dest="lang",
+        default="en")
+    parser.add_argument(
+        "-s",
+        action="store",
+        type=str,
+        dest="doc_id",
+        default="wikidata-20200203")
+    
+    
+def run(wikidata_file, output_file, limit, lang, doc_id):
+    # import modules locally
+    
+    import bz2
+    import json
+    import csv
+    from __future__ import unicode_literals
+    
     site_filter = '{}wiki'.format(lang)
 
     WD_META_ITEMS = [
@@ -85,6 +119,7 @@ def wikidata_nodes_to_tsv(wikidata_file, output_file, limit, lang, doc_id):
     rows = []
 
     with bz2.open(wikidata_file, mode='rb') as file:
+        print('processing wikidata file now...')
         for cnt, line in enumerate(file):
             keep = False
             if limit and cnt >= limit:
@@ -177,34 +212,4 @@ def wikidata_nodes_to_tsv(wikidata_file, output_file, limit, lang, doc_id):
                 escapechar="\n",
                 quotechar='')
             wr.writerow(row)
-
-
-if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument("-i", action="store", type=str, dest="inp_path")
-    parser.add_argument("-o", action="store", type=str, dest="out_path")
-    parser.add_argument(
-        "-l",
-        action="store",
-        type=int,
-        dest="limit",
-        default=None)
-    parser.add_argument(
-        "-L",
-        action="store",
-        type=str,
-        dest="lang",
-        default="en")
-    parser.add_argument(
-        "-s",
-        action="store",
-        type=str,
-        dest="source",
-        default="wikidata-20200203")
-    args, _ = parser.parse_known_args()
-    inp_path = args.inp_path
-    out_path = args.out_path
-    limit = args.limit
-    lang = args.lang
-    source = args.source
-    wikidata_nodes_to_tsv(inp_path, out_path, limit, lang, source)
+    print('import complete')
