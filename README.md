@@ -2,7 +2,7 @@
 
 ### Installation
 
-0. Our installations will be in a conda environment. If you don't have a conda installed, follow [link] to install it.
+0. Our installations will be in a conda environment. If you don't have a conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it.
 1. Set up your own conda environment:
 ```
 conda create -n mowgli-env python=3.6 anaconda
