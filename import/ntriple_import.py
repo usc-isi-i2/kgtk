@@ -30,6 +30,7 @@ def db_import(input_file, output_file, limit):
                 quotechar='')
             wr.writerow(header)
     with open(input_file, mode='r') as file:
+        print('processing the ntriple file now...')
         for cnt, full_line in enumerate(file):
             matches = re.finditer(regex, full_line, re.MULTILINE)
             line = []
@@ -39,7 +40,7 @@ def db_import(input_file, output_file, limit):
             if limit and cnt >= limit:
                 break
             if cnt % 500000 == 0 and cnt > 0:
-                print(cnt)
+                print('processed {} lines'.format(cnt))
             if len(line) < 4 or len(line) > 5:
                 errors += 1
                 #print(line)
@@ -125,6 +126,8 @@ def db_import(input_file, output_file, limit):
                         escapechar="\n",
                         quotechar='')
                     wr.writerow(row)
+    print('{} invalid lines in ntriple file'.format(errors))
+    print('import complete')
 
 
 if __name__ == '__main__':
