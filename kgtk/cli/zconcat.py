@@ -11,11 +11,16 @@ def parser():
     }
 
 def add_arguments(parser):
-    parser.add_argument('-o', '--out', default=None, dest='output', help='output file to write to, otherwise output goes to stdout')
-    parser.add_argument('--gz', '--gzip', action='store_true', dest='gz', help='compress result with gzip')
-    parser.add_argument('--bz2', '--bzip2', action='store_true', dest='bz2', help='compress result with bzip2')
-    parser.add_argument('--xz', action='store_true', dest='xz', help='compress result with xz')
-    parser.add_argument("inputs", nargs="*", action="store", help='files to process')
+    parser.add_argument('-o', '--out', default=None, dest='output',
+                        help='output file to write to, otherwise output goes to stdout')
+    parser.add_argument('--gz', '--gzip', action='store_true', dest='gz',
+                        help='compress result with gzip')
+    parser.add_argument('--bz2', '--bzip2', action='store_true', dest='bz2',
+                        help='compress result with bzip2')
+    parser.add_argument('--xz', action='store_true', dest='xz',
+                        help='compress result with xz')
+    parser.add_argument("inputs", metavar="INPUT", nargs="*", action="store",
+                        help="input files to process, if empty or `-' read from stdin")
 
 
 # this should be configurable:
