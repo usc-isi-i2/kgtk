@@ -1,9 +1,32 @@
-import re
-import csv
-from argparse import ArgumentParser
+"""
+Import an ntriple file into KGTK file
+"""
 
 
-def db_import(input_file, output_file, limit):
+def parser():
+    return {
+        'help': 'Import an ntriple file into KGTK file'
+    }
+
+
+def add_arguments(parser):
+    """
+    Parse arguments
+    Args:
+        parser (argparse.ArgumentParser)
+    """
+    parser.add_argument("-i", action="store", type=str, dest="input_file")
+    parser.add_argument("-o", action="store", type=str, dest="output_file")
+    parser.add_argument("-l", action="store", type=int, dest="limit",default=None)
+    
+    
+    
+def run(input_file, output_file, limit):
+    # import modules locally
+    import re
+    import csv
+    
+    
     regex = r"\"(?:\\\"|[^\"])+\"|[^\s]+"
     write = True
     errors = 0
@@ -30,6 +53,7 @@ def db_import(input_file, output_file, limit):
                 quotechar='')
             wr.writerow(header)
     with open(input_file, mode='r') as file:
+        print('processing the ntriple file now...')
         for cnt, full_line in enumerate(file):
             matches = re.finditer(regex, full_line, re.MULTILINE)
             line = []
@@ -39,7 +63,7 @@ def db_import(input_file, output_file, limit):
             if limit and cnt >= limit:
                 break
             if cnt % 500000 == 0 and cnt > 0:
-                print(cnt)
+                print('processed {} lines'.format(cnt))
             if len(line) < 4 or len(line) > 5:
                 errors += 1
                 #print(line)
@@ -124,16 +148,6 @@ def db_import(input_file, output_file, limit):
                         delimiter="\t",
                         escapechar="\n",
                         quotechar='')
-                    wr.writerow(row)
-
-
-if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument("-i", action="store", type=str, dest="inp_path")
-    parser.add_argument("-o", action="store", type=str, dest="out_path")
-    parser.add_argument("-l", action="store", type=int, dest="limit")
-    args, _ = parser.parse_known_args()
-    inp_path = args.inp_path
-    out_path = args.out_path
-    limit = args.limit
-    db_import(inp_path, out_path, limit)
+                    wr.writerow(row)               
+    print('{} invalid lines in ntriple file'.format(errors))
+    print('import complete')

@@ -1,22 +1,59 @@
-from __future__ import unicode_literals
-import bz2
-import json
-import csv
-import time
-from argparse import ArgumentParser
+"""
+Import wikidata edges into KGTK file
+"""
 
 
-def wikidata_edges_to_tsv(
-        wikidata_file,
-        edge_file,
-        qual_file,
-        limit,
-        lang,
-        doc_id):
-    # Read the JSON wiki data and parse out the entities. Takes about 7-10h to parse 55M lines.
-    # get latest-all.json.bz2 from
-    # https://dumps.wikimedia.org/wikidatawiki/entities/
+def parser():
+    return {
+        'help': 'Import wikidata edges into KGTK file'
+    }
 
+
+def add_arguments(parser):
+    """
+    Parse arguments
+    Args:
+        parser (argparse.ArgumentParser)
+    """
+    parser.add_argument("-i", action="store", type=str, dest="wikidata_file")
+    parser.add_argument(
+        "-e",
+        action="store",
+        type=str,
+        dest="edge_file",
+        default=None)
+    parser.add_argument(
+        "-q",
+        action="store",
+        type=str,
+        dest="qual_file",
+        default=None)
+    parser.add_argument(
+        "-l",
+        action="store",
+        type=int,
+        dest="limit",
+        default=None)
+    parser.add_argument(
+        "-L",
+        action="store",
+        type=str,
+        dest="lang",
+        default="en")
+    parser.add_argument(
+        "-s",
+        action="store",
+        type=str,
+        dest="doc_id",
+        default="wikidata-20200203")
+    
+    
+def run(wikidata_file, edge_file, qual_file, limit, lang, doc_id):
+    # import modules locally
+    import bz2
+    import json
+    import csv
+    
     site_filter = '{}wiki'.format(lang)
 
     WD_META_ITEMS = [
@@ -106,12 +143,13 @@ def wikidata_edges_to_tsv(
     qrows = []
     short_id = 1
     with bz2.open(wikidata_file, mode='rb') as file:
+        print('processing wikidata file now...')
         for cnt, line in enumerate(file):
             if limit and cnt >= limit:
                 break
             if cnt % 500000 == 0 and cnt > 0:
                 #logger.info("processed {} lines of WikiData JSON dump".format(cnt))
-                print(cnt)
+                print('processed {} lines'.format(cnt))
             clean_line = line.strip()
             if clean_line.endswith(b","):
                 clean_line = clean_line[:-1]
@@ -351,46 +389,4 @@ def wikidata_edges_to_tsv(
                     escapechar="\n",
                     quotechar='')
                 wr.writerow(row)
-
-
-if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument("-i", action="store", type=str, dest="inp_path")
-    parser.add_argument(
-        "-e",
-        action="store",
-        type=str,
-        dest="edge_file",
-        default=None)
-    parser.add_argument(
-        "-q",
-        action="store",
-        type=str,
-        dest="qual_file",
-        default=None)
-    parser.add_argument(
-        "-l",
-        action="store",
-        type=int,
-        dest="limit",
-        default=None)
-    parser.add_argument(
-        "-L",
-        action="store",
-        type=str,
-        dest="lang",
-        default="en")
-    parser.add_argument(
-        "-s",
-        action="store",
-        type=str,
-        dest="source",
-        default="wikidata-20200203")
-    args, _ = parser.parse_known_args()
-    inp_path = args.inp_path
-    edge_file = args.edge_file
-    qual_file = args.qual_file
-    limit = args.limit
-    lang = args.lang
-    source = args.source
-    wikidata_edges_to_tsv(inp_path, edge_file, qual_file, limit, lang, source)
+    print('import complete')
