@@ -10,3 +10,13 @@ source activate mowgli-env
 ```
 2. `pip install -r requirements.txt`
 3. Install `graph-tool`. If you use conda, then you can run `conda install -c conda-forge graph-tool`, else see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+
+### List of supported tools
+* `instances`
+* `reachable_nodes`
+* `filter`
+* `text_embedding`
+* `remove_columns`
+* `sort`
+* `merge_identical_nodes`
+* `zconcat`
