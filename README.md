@@ -20,3 +20,8 @@ source activate mowgli-env
 * `sort`
 * `merge_identical_nodes`
 * `zconcat`
+
+To get an information on how to use each of them, run:
+`kgtk [TOOL] -h`
+
+More detailed description of the arguments will be added here promptly.
