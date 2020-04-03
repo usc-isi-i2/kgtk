@@ -33,7 +33,7 @@ def determine_file_type(file):
     """
     if file == '-':
         header = tempfile.mkstemp(dir=tmp_dir, prefix='kgtk-header.')[1]
-        sh.head('-c', '1024', _in=sys.stdin, _out=header)
+        sh.head('-c', '1024', _in=sys.stdin.buffer, _out=header)
         file = header
     # tricky: we get a byte sequence here which we have to decode into a string:
     file_type = sh.file('--brief', file).stdout.split()[0].lower().decode()
@@ -59,7 +59,7 @@ def run(output, gz, bz2, xz, inputs):
     if len(inputs) == 0:
         inputs.append('-')
 
-    output = output or sys.stdout
+    output = output or sys.stdout.buffer
     if isinstance(output, str):
         output = open(output, "wb")
 
@@ -79,9 +79,9 @@ def run(output, gz, bz2, xz, inputs):
                 # process input piped in from stdin:
                 try:
                     if compress is not None:
-                        compress(catcmd(sh.cat(file, '-', _in=sys.stdin, _piped=True), _piped=True), '-c', _out=output, _tty_out=False)
+                        compress(catcmd(sh.cat(file, '-', _in=sys.stdin.buffer, _piped=True), _piped=True), '-c', _out=output, _tty_out=False)
                     else:
-                        catcmd(sh.cat(file, '-', _in=sys.stdin, _piped=True), _out=output)
+                        catcmd(sh.cat(file, '-', _in=sys.stdin.buffer, _piped=True), _out=output)
                 finally:
                     # remove temporary header file for the data that was piped in from stdin:
                     sh.rm('-f', file)
@@ -129,4 +129,16 @@ line4
 hello-again
 line1
 line2
+
+> cat /tmp/file1.bz2 | kgtk zconcat
+line1
+line2
+
+> cat /tmp/out.gz | kgtk zconcat
+line1
+line2
+hello
+>2020-04-02 18:36:40.000507
+line3
+line4
 """
