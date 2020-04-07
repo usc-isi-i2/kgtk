@@ -2,3 +2,4 @@ mypy
 rltk
 seaborn
 sh
+tqdm
