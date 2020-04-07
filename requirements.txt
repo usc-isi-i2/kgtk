@@ -1,3 +1,4 @@
+loguru
 mypy
 rltk
 seaborn
