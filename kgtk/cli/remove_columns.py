@@ -27,7 +27,7 @@ def add_arguments(parser):
 
 def run(datatype, columns, input): 
     # import modules locally
-    import sh
+    import sh # type: ignore
 
     if input:
         sh.mlr('--tsv', 'cut', '-x', '-f', columns, 

@@ -25,7 +25,7 @@ def add_arguments(parser):
 def run(datatype, pattern, input): 
     # import modules locally
     import socket
-    import sh
+    import sh # type: ignore
 
     props=['node1', 'label', 'node2']
 

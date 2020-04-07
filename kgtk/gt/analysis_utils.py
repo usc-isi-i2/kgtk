@@ -1,12 +1,12 @@
 import graph_tool as gtmain
 import graph_tool.all as gtall
-import numpy as np
+import numpy as np # type: ignore
 from collections import defaultdict
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # type: ignore
 plt.rcParams.update({'font.size': 12})
 
-import seaborn as sns
+import seaborn as sns # type: ignore
 sns.set_style("whitegrid")
 
 #### BASIC STATS ####
