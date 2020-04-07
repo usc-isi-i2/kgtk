@@ -1,5 +1,5 @@
 import sys
-import sh
+import sh # type: ignore
 import tempfile
 
 from kgtk.exceptions import KGTKException

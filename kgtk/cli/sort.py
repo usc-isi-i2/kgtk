@@ -24,6 +24,6 @@ def add_arguments(parser):
 def run(datatype, column, input): 
     # import modules locally
     import socket
-    import sh
+    import sh # type: ignore
     sh.mlr('--%s' % datatype, 'sort', '-f', column, input, _out=sys.stdout, _err=sys.stderr)
 

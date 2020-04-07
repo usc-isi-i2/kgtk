@@ -3,7 +3,7 @@ import typing
 
 class EmbeddingVector:
     def __init__(self, model_name=None):
-        from sentence_transformers import SentenceTransformer,  SentencesDataset, LoggingHandler, losses, models
+        from sentence_transformers import SentenceTransformer,  SentencesDataset, LoggingHandler, losses, models # type: ignore
         import logging
         from collections import defaultdict
         if model_name is None:
@@ -46,7 +46,7 @@ class EmbeddingVector:
         return sentence_embeddings
 
     def send_sparql_query(self, query_body:str):
-        from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED
+        from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED # type: ignore
         qm = SPARQLWrapper(self.wikidata_server)
         qm.setReturnFormat(JSON)
         qm.setMethod(POST)
@@ -164,7 +164,7 @@ class EmbeddingVector:
             add_all_properties = False
 
         from collections import defaultdict
-        import pandas as pd
+        import pandas as pd # type: ignore
         if input_format == "test_format":
             self.input_format = input_format
             input_df = pd.read_csv(file_path)
@@ -306,7 +306,7 @@ class EmbeddingVector:
         """
         import os
         import time
-        from tqdm import tqdm
+        from tqdm import tqdm # type: ignore
         if vector_dump_file is None:
             vector_dump_file = self.vector_dump_file
         if use_cache and os.path.exists(vector_dump_file):
@@ -420,7 +420,7 @@ class EmbeddingVector:
         """
         import os
         import time
-        from sklearn.manifold import TSNE
+        from sklearn.manifold import TSNE # type: ignore
 
         # if vector_dump_file is None:
         #     vector_dump_file = self.vector_dump_file.replace(".pkl", "_2D.pkl")
