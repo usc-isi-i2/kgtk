@@ -2,5 +2,6 @@ loguru
 mypy
 rltk
 seaborn
+sentence_transformers
 sh
 tqdm
