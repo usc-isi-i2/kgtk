@@ -5,3 +5,5 @@ FILES=`find . -name '*.py'`
 lint:
 	python3 -m mypy $(FILES)
 
+requirements:
+	pip install -r requirements.txt
