@@ -1,5 +1,5 @@
 import sys
-import sh
+import sh # type: ignore
 import tempfile
 
 from kgtk.exceptions import KGTKException
@@ -11,11 +11,16 @@ def parser():
     }
 
 def add_arguments(parser):
-    parser.add_argument('-o', '--out', default=None, dest='output', help='output file to write to, otherwise output goes to stdout')
-    parser.add_argument('--gz', '--gzip', action='store_true', dest='gz', help='compress result with gzip')
-    parser.add_argument('--bz2', '--bzip2', action='store_true', dest='bz2', help='compress result with bzip2')
-    parser.add_argument('--xz', action='store_true', dest='xz', help='compress result with xz')
-    parser.add_argument("inputs", nargs="*", action="store", help='files to process')
+    parser.add_argument('-o', '--out', default=None, dest='output',
+                        help='output file to write to, otherwise output goes to stdout')
+    parser.add_argument('--gz', '--gzip', action='store_true', dest='gz',
+                        help='compress result with gzip')
+    parser.add_argument('--bz2', '--bzip2', action='store_true', dest='bz2',
+                        help='compress result with bzip2')
+    parser.add_argument('--xz', action='store_true', dest='xz',
+                        help='compress result with xz')
+    parser.add_argument("inputs", metavar="INPUT", nargs="*", action="store",
+                        help="input files to process, if empty or `-' read from stdin")
 
 
 # this should be configurable:
@@ -28,7 +33,7 @@ def determine_file_type(file):
     """
     if file == '-':
         header = tempfile.mkstemp(dir=tmp_dir, prefix='kgtk-header.')[1]
-        sh.head('-c', '1024', _in=sys.stdin, _out=header)
+        sh.head('-c', '1024', _in=sys.stdin.buffer, _out=header)
         file = header
     # tricky: we get a byte sequence here which we have to decode into a string:
     file_type = sh.file('--brief', file).stdout.split()[0].lower().decode()
@@ -54,7 +59,7 @@ def run(output, gz, bz2, xz, inputs):
     if len(inputs) == 0:
         inputs.append('-')
 
-    output = output or sys.stdout
+    output = output or sys.stdout.buffer
     if isinstance(output, str):
         output = open(output, "wb")
 
@@ -74,9 +79,9 @@ def run(output, gz, bz2, xz, inputs):
                 # process input piped in from stdin:
                 try:
                     if compress is not None:
-                        compress(catcmd(sh.cat(file, '-', _in=sys.stdin, _piped=True), _piped=True), '-c', _out=output, _tty_out=False)
+                        compress(catcmd(sh.cat(file, '-', _in=sys.stdin.buffer, _piped=True), _piped=True), '-c', _out=output, _tty_out=False)
                     else:
-                        catcmd(sh.cat(file, '-', _in=sys.stdin, _piped=True), _out=output)
+                        catcmd(sh.cat(file, '-', _in=sys.stdin.buffer, _piped=True), _out=output)
                 finally:
                     # remove temporary header file for the data that was piped in from stdin:
                     sh.rm('-f', file)
@@ -124,4 +129,16 @@ line4
 hello-again
 line1
 line2
+
+> cat /tmp/file1.bz2 | kgtk zconcat
+line1
+line2
+
+> cat /tmp/out.gz | kgtk zconcat
+line1
+line2
+hello
+>2020-04-02 18:36:40.000507
+line3
+line4
 """
