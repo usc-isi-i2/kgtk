@@ -1,5 +1,5 @@
 from distutils.core import setup
-from setuptools import find_packages
+from setuptools import find_packages # type: ignore
 from kgtk import __version__
 
 with open('requirements.txt', 'r') as f:

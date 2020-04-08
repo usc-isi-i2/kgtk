@@ -24,7 +24,7 @@ def add_arguments(parser):
 def run(nodes_file, edges_file, label): 
     # import modules locally
     import socket
-    import sh
+    import sh # type: ignore
     from kgtk.cskg_utils import collapse_identical_nodes
     new_edges_df, new_nodes_df = collapse_identical_nodes(edges_file, nodes_file)
 
