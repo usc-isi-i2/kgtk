@@ -1,8 +1,28 @@
 import sys
 import typing
 
+ALL_EMBEDDING_MODELS_NAMES = [
+"bert-base-nli-cls-token",
+"bert-base-nli-max-tokens",
+"bert-base-nli-mean-tokens",
+"bert-base-nli-stsb-mean-tokens",
+"bert-base-wikipedia-sections-mean-tokens",
+"bert-large-nli-cls-token",
+"bert-large-nli-max-tokens",
+"bert-large-nli-mean-tokens",
+"bert-large-nli-stsb-mean-tokens",
+"distilbert-base-nli-mean-tokens",
+"distilbert-base-nli-stsb-mean-tokens",
+"distiluse-base-multilingual-cased",
+"roberta-base-nli-mean-tokens",
+"roberta-base-nli-stsb-mean-tokens",
+"roberta-large-nli-mean-tokens",
+"roberta-large-nli-stsb-mean-tokens"
+]
+
+
 class EmbeddingVector:
-    def __init__(self, model_name=None):
+    def __init__(self, model_name=None, query_server=None):
         from sentence_transformers import SentenceTransformer,  SentencesDataset, LoggingHandler, losses, models # type: ignore
         import logging
         import re
@@ -21,10 +41,14 @@ class EmbeddingVector:
         else:
             self.model_name = model_name
             self.model = SentenceTransformer(model_name)
+        if query_server is None:
+            self.wikidata_server = "https://dsbox02.isi.edu:8888/bigdata/namespace/wdq/sparql"
+        else:
+            self.wikidata_server = query_server
         self.q_nodes_descriptions = dict()
         self.vectors_map = dict()
         self.vectors_2D = None
-        self.gt = dict()
+        self.gt_nodes = set()
         self.candidates = defaultdict(dict)
         self.embedding_cache = dict()
         self.vector_dump_file = None
@@ -33,7 +57,6 @@ class EmbeddingVector:
         self.gt_indexes = set()
         self.input_format = ""
         self._logger = logging.getLogger(__name__)
-        self.wikidata_server = "https://dsbox02.isi.edu:8888/bigdata/namespace/wdq/sparql"
         self.token_patern = re.compile(r"(?u)\b\w\w+\b")
 
     @staticmethod
@@ -67,6 +90,9 @@ class EmbeddingVector:
         return sentence_embeddings
 
     def send_sparql_query(self, query_body:str):
+        """
+            a simple wrap to send the query and return the returned results
+        """
         from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED # type: ignore
         qm = SPARQLWrapper(self.wikidata_server)
         qm.setReturnFormat(JSON)
@@ -93,6 +119,7 @@ class EmbeddingVector:
             find_all_properties = False
 
         properties_list = [[] for _ in range(4)]
+        used_p_node_ids = set()
         names = ["labels", "descriptions", "isa_properties", "has_properties"]
         for k, v in target_properties.items():
             if v == "label_properties":
@@ -106,11 +133,12 @@ class EmbeddingVector:
 
         need_find_label = "label" in properties_list[0]
         need_find_description = "description" in properties_list[1]
+        query_qnodes = ""
+        for each in qnodes:
+            query_qnodes += "wd:{} ".format(each)
+
+        # this is used to get corresponding labels / descriptions
         if need_find_label or need_find_description:
-            query_qnodes = ""
-            # descriptions = {}
-            for each in qnodes:
-                query_qnodes += "wd:{} ".format(each)
             query_body = """
                 select ?item ?itemDescription ?itemLabel
                 where {
@@ -122,19 +150,17 @@ class EmbeddingVector:
             for each in results:
                 each_node = each['item']['value'].split("/")[-1]
                 if 'itemDescription' in each:
-                    # clean up the descriptions
-                    # description = " ".join(token_patern.findall(each['itemDescription']['value']))
                     description = each['itemDescription']['value']
                 else:
                     description = ""
                 if "itemLabel" in each:
                     label = each['itemLabel']['value']
-                    if each_node == self.gt[gt_label]:
-                        if self.minDistance(label, gt_label) > len(gt_label):
-                            a = "".join(self.token_patern.findall(label.lower()))
-                            b = "".join(self.token_patern.findall(gt_label.lower()))
-                            if a not in b and b not in a:
-                                self._logger.error("{} with {} --> {} edit distance too larger!!!".format(each_node, label, gt_label))
+                    # if each_node == self.gt[gt_label]:
+                    #     if self.minDistance(label, gt_label) > len(gt_label):
+                    #         a = "".join(self.token_patern.findall(label.lower()))
+                    #         b = "".join(self.token_patern.findall(gt_label.lower()))
+                    #         if a not in b and b not in a:
+                    #             self._logger.error("{} with {} --> {} edit distance too larger!!!".format(each_node, label, gt_label))
                 else:
                     label = ""
                 if need_find_label:
@@ -142,12 +168,13 @@ class EmbeddingVector:
                 if need_find_description:
                     self.candidates[each_node]["description_properties"] = [description]
 
-
+        # this is used to get corresponding P node labels
         query_body2 = "select ?item"
         part2 = ""
         for name, part in zip(names, properties_list):
             for i, each in enumerate(part):
-                if each not in {"label", "description"}:
+                if each not in {"label", "description", "all"}:
+                    used_p_node_ids.add(each)
                     query_body2 += " ?{}_{}Label".format(name, i)
                     part2 += """?item wdt:{} ?{}_{}. \n""".format(each, name, i)
         query_body2 += """
@@ -159,7 +186,6 @@ class EmbeddingVector:
                     }
         """
         results2 = self.send_sparql_query(query_body2)
-        
         for each in results2:
             node_name = each['item']['value'].split("/")[-1]
             for name, part in zip(names, properties_list):
@@ -171,12 +197,32 @@ class EmbeddingVector:
                             properties_res.add(each[property_key]['value'])
                     self.candidates[node_name][name] = properties_res
 
-        # if find_all_properties:
+        # if need get all properties, we need to run extra query
+        if find_all_properties:
+            query_body3 = """
+                select DISTINCT ?item ?p_entity ?p_entityLabel
+                where {
+                  values ?item {"""+ query_qnodes + """}
+                  ?item ?p ?o.
+                  FILTER regex(str(?p), "^http://www.wikidata.org/prop/P", "i")
+                  BIND (IRI(REPLACE(STR(?p), "http://www.wikidata.org/prop", "http://www.wikidata.org/entity")) AS ?p_entity) .
+                  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+                }
+            """
+            results3 = self.send_sparql_query(query_body3)
+            for each in results3:
+                node_name = each['item']['value'].split("/")[-1]
+                p_node_id = each['p_entity']['value'].split("/")[-1]
+                p_node_label = each['p_entityLabel']['value']
+                if p_node_id not in used_p_node_ids:
+                    if "has_properties" in self.candidates[node_name]:
+                        self.candidates[node_name]["has_properties"].add(p_node_label)
+                    else:
+                        self.candidates[node_name]["has_properties"] = set([p_node_label])
 
-        # import pdb
-        # pdb.set_trace()
-        # self.candidates[name]["isa_properties"] = 
-        # return descriptions
+        for each_node_id in qnodes:
+            self.candidates[each_node_id]["sentence"] = self.attribute_to_sentence(self.candidates[each_node_id], each_node_id)
+
 
     def read_input(self, file_path: str, skip_nodes_set: set=None, 
                    input_format: str="kgtk_format",target_properties: dict={},
@@ -188,12 +234,6 @@ class EmbeddingVector:
         from collections import defaultdict
         import pandas as pd # type: ignore
         self.property_labels_dict = property_labels_dict
-
-        if "all" in target_properties:
-            _ = target_properties.pop("all")
-            add_all_properties = True
-        else:
-            add_all_properties = False
 
         if input_format == "test_format":
             self.input_format = input_format
@@ -227,15 +267,19 @@ class EmbeddingVector:
                         to_remove_q.add(each_q)
                 temp = set(temp) - to_remove_q
                 count += len(temp)
-                self.gt[label] = str(each[gt_column_id])
+                self.gt_nodes.add(each[gt_column_id])
                 self.get_item_description(temp, target_properties, label)
-            # self.candidates = candidates
-            self.gt = gt
             
             self._logger.info("Totally {} rows with {} candidates loaded.".format(str(len(gt)), str(count)))
 
         elif input_format == "kgtk_format":
             # assume the input edge file is sorted
+            if "all" in target_properties:
+                _ = target_properties.pop("all")
+                add_all_properties = True
+            else:
+                add_all_properties = False
+
             self.input_format = input_format
             with open(file_path, "r") as f:
                 # get header
@@ -280,7 +324,7 @@ class EmbeddingVector:
                         else:
                             # if we get to next id
                             # concate all properties into one sentence to represent the Q node
-                            concated_sentence = self.attribute_to_sentence(each_node_attributes)
+                            concated_sentence = self.attribute_to_sentence(each_node_attributes, node_id)
                             each_node_attributes["sentence"] = concated_sentence
                             self.candidates[node_id] = each_node_attributes
                             self._logger.debug("{} --> {}".format(node_id, concated_sentence))
@@ -296,7 +340,6 @@ class EmbeddingVector:
         else:
             raise ValueError("Unkonwn input format {}".format(input_format))
 
-
         self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
         self.vector_dump_file = "dump_vectors_{}_{}.pkl".format(file_path[:file_path.rfind(".")], self. model_name)
         # self._logger.debug("The cache file name will be {}".format(self.vector_dump_file))
@@ -307,7 +350,7 @@ class EmbeddingVector:
         else:
             return node
 
-    def attribute_to_sentence(self, v):
+    def attribute_to_sentence(self, v, node_id = None):
         concated_sentence = ""
         if "label_properties" in v and len(v["label_properties"]) > 0:
             concated_sentence += self.get_real_label_name(v["label_properties"][0])
@@ -329,6 +372,7 @@ class EmbeddingVector:
             elif temp[0] != "":
                 concated_sentence += "It has "
             concated_sentence += " and ".join(temp)
+        self._logger.debug("Transform node {} --> {}".format(node_id, concated_sentence))
         return concated_sentence
 
     def get_vetors(self, use_cache=True, vector_dump_file=None):
@@ -455,15 +499,12 @@ class EmbeddingVector:
         if input_format == "test_format":
             # # start plot
             gt_indexes = set()
-            for each in self.gt.values():
-                all_nodes = each.split(" ")
-                for each_node in all_nodes:
-                    gt_indexes.add(list(self.vectors_map.keys()).index(each_node))
+            for each_node in self.gt_nodes:
+                gt_indexes.add(list(self.vectors_map.keys()).index(each_node))
             # load the descriptions if we don't have them
             # if len(self.q_nodes_descriptions) == 0:
             #     for each in self.candidates.values():
             #         _ = self.get_item_description(each)
-
             self.metadata.append("Q_nodes\tType\tLabel\tDescription")
             for i, each in enumerate(self.vectors_map.keys()):
                 label = self.q_node_to_label[each]
@@ -536,17 +577,18 @@ class EmbeddingVector:
         dist = dist ** 0.5
         return dist
 
-def load_embedding_model_names():
-    names = []
-    import os
-    model_file_path = os.path.join(repr(__file__).replace("'","").replace("/text_embedding.py", ""), "all_embedding_models_names.txt")
-    if os.path.exists(model_file_path):
-        with open(model_file_path, "r") as f:
-            for each_line in f.readlines():
-                names.append(each_line.replace("\n", ""))
-    else:
-        raise ValueError("Embedding model names list file lost! Please check.")
-    return names
+# removed
+# def load_embedding_model_names():
+#     names = []
+#     import os
+#     model_file_path = os.path.join(repr(__file__).replace("'","").replace("/text_embedding.py", ""), "all_embedding_models_names.txt")
+#     if os.path.exists(model_file_path):
+#         with open(model_file_path, "r") as f:
+#             for each_line in f.readlines():
+#                 names.append(each_line.replace("\n", ""))
+#     else:
+#         raise ValueError("Embedding model names list file lost! Please check.")
+#     return names
 
 def load_property_labels_file(input_files: typing.List[str]):
     labels_dict = {}
@@ -754,7 +796,7 @@ def add_arguments(parser):
             default="info", choices=("error", "warning", "info", "debug"),
             help="set up the logging level, default is INFO level")
     # model name
-    all_models_names = load_embedding_model_names()
+    all_models_names = ALL_EMBEDDING_MODELS_NAMES
     parser.add_argument('-m', '--model', action='store', nargs='+', dest='all_models_names',
             default="bert-base-wikipedia-sections-mean-tokens", choices=all_models_names,
             help="the model to used for embedding")
