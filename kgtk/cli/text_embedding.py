@@ -631,91 +631,91 @@ def main(**kwargs):
     # formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s", '%m-%d %H:%M:%S')
     # console.setFormatter(formatter)
     # logging.getLogger('').addHandler(console)
-
-    import logging
-    import os
-    import time
-    from time import strftime
-    logging_level = kwargs.get("logging_level", "warning")
-    if logging_level == "info":
-        logging_level_class = logging.INFO
-    elif logging_level == "debug":
-        logging_level_class = logging.DEBUG
-    elif logging_level == "warning":
-        logging_level_class = logging.WARNING
-    elif logging_level == "error":
-        logging_level_class = logging.ERROR
-    else:
-        logging_level_class = logging.WARNING
-    logger_path = os.path.join(os.environ.get("HOME"), "kgtk_text_embedding_log_{}.log".format(strftime("%Y-%m-%d-%H-%M")))
-    logging.basicConfig(level=logging_level_class,
-                format="%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s",
-                datefmt='%m-%d %H:%M:%S',
-                filename=logger_path,
-                filemode='w')
-    _logger = logging.getLogger(__name__)
-    _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
-    import torch
-    import typing
-
-    import pandas as pd
-    import string
-    import math
-    import re
-    import argparse
-    import pickle
-
-    # get input parameters from kwargs
-    output_uri = kwargs.get("output_uri", "")
-    black_list_files = kwargs.get("black_list_files", "")
-    all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
-    input_format = kwargs.get("input_format", "kgtk_format")
-    input_uris = kwargs.get("input_uris", [])
-    output_format = kwargs.get("output_format", "kgtk_format")
-    property_labels_files = kwargs.get("property_labels_file_uri", "")
-    properties = dict()
-    all_property_relate_inputs = [kwargs.get("label_properties", ["label"]), 
-                                  kwargs.get("description_properties", ["description"]),
-                                  kwargs.get("isa_properties", ["P31"]),
-                                  kwargs.get("has_properties", ["all"]),
-                                 ]
-    all_required_properties = ["label_properties", "description_properties", 
-                               "isa_properties", "has_properties"]
-
-    for each_property, each_input in zip(all_required_properties, all_property_relate_inputs):
-        for each in each_input:
-            properties[each] = each_property
-
-    
-    output_properties = {
-        "metatada_properties": kwargs.get("metatada_properties", []),
-        "output_properties": kwargs.get("output_properties", "text_embedding")
-    }
-
-    if isinstance(all_models_names, str):
-        all_models_names = [all_models_names]
-    if isinstance(input_uris, str):
-        input_uris = [input_uris]
-    if len(all_models_names) == 0:
-        raise ValueError("No embedding vector model name given!")
-    if len(input_uris) == 0:
-        raise ValueError("No input file path given!")
-
-    if output_uri == "":
-        output_uri = os.getenv("HOME") # os.getcwd()
-    if black_list_files != "":
-        black_list_set = load_black_list_files(black_list_files)
-    else:
-        black_list_set = set()
-    if property_labels_files:
-        property_labels_dict = load_property_labels_file(property_labels_files)
-        _logger.info("Totally {} property labels loaded.".format(len(property_labels_dict)))
-    else:
-        property_labels_dict = {}
-        
-    run_TSNE = kwargs.get("run_TSNE", True)
-
+    from kgtk.exceptions import KGTKException
     try:
+        import logging
+        import os
+        import time
+        from time import strftime
+        logging_level = kwargs.get("logging_level", "warning")
+        if logging_level == "info":
+            logging_level_class = logging.INFO
+        elif logging_level == "debug":
+            logging_level_class = logging.DEBUG
+        elif logging_level == "warning":
+            logging_level_class = logging.WARNING
+        elif logging_level == "error":
+            logging_level_class = logging.ERROR
+        else:
+            logging_level_class = logging.WARNING
+        logger_path = os.path.join(os.environ.get("HOME"), "kgtk_text_embedding_log_{}.log".format(strftime("%Y-%m-%d-%H-%M")))
+        logging.basicConfig(level=logging_level_class,
+                    format="%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s",
+                    datefmt='%m-%d %H:%M:%S',
+                    filename=logger_path,
+                    filemode='w')
+        _logger = logging.getLogger(__name__)
+        _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
+        import torch
+        import typing
+
+        import pandas as pd
+        import string
+        import math
+        import re
+        import argparse
+        import pickle
+
+        # get input parameters from kwargs
+        output_uri = kwargs.get("output_uri", "")
+        black_list_files = kwargs.get("black_list_files", "")
+        all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
+        input_format = kwargs.get("input_format", "kgtk_format")
+        input_uris = kwargs.get("input_uris", [])
+        output_format = kwargs.get("output_format", "kgtk_format")
+        property_labels_files = kwargs.get("property_labels_file_uri", "")
+        properties = dict()
+        all_property_relate_inputs = [kwargs.get("label_properties", ["label"]), 
+                                      kwargs.get("description_properties", ["description"]),
+                                      kwargs.get("isa_properties", ["P31"]),
+                                      kwargs.get("has_properties", ["all"]),
+                                     ]
+        all_required_properties = ["label_properties", "description_properties", 
+                                   "isa_properties", "has_properties"]
+
+        for each_property, each_input in zip(all_required_properties, all_property_relate_inputs):
+            for each in each_input:
+                properties[each] = each_property
+
+        
+        output_properties = {
+            "metatada_properties": kwargs.get("metatada_properties", []),
+            "output_properties": kwargs.get("output_properties", "text_embedding")
+        }
+
+        if isinstance(all_models_names, str):
+            all_models_names = [all_models_names]
+        if isinstance(input_uris, str):
+            input_uris = [input_uris]
+        if len(all_models_names) == 0:
+            raise ValueError("No embedding vector model name given!")
+        if len(input_uris) == 0:
+            raise ValueError("No input file path given!")
+
+        if output_uri == "":
+            output_uri = os.getenv("HOME") # os.getcwd()
+        if black_list_files != "":
+            black_list_set = load_black_list_files(black_list_files)
+        else:
+            black_list_set = set()
+        if property_labels_files:
+            property_labels_dict = load_property_labels_file(property_labels_files)
+            _logger.info("Totally {} property labels loaded.".format(len(property_labels_dict)))
+        else:
+            property_labels_dict = {}
+            
+        run_TSNE = kwargs.get("run_TSNE", True)
+
         for each_model_name in all_models_names:
             for each_input_file in input_uris:
                 _logger.info("Running {} model on {}".format(each_model_name, each_input_file))
@@ -731,7 +731,7 @@ def main(**kwargs):
                 _logger.info("*" * 20 + "finished" + "*" * 20)
     except Exception as e:
         _logger.debug(e, exc_info=True)
-
+        raise KGTKException(str(e))
 
 def parser():
     return {
