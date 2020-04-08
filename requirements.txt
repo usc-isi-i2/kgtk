@@ -7,3 +7,4 @@ sh
 sklearn
 SPARQLWrapper
 tqdm
+etk
