@@ -5,6 +5,7 @@ class EmbeddingVector:
     def __init__(self, model_name=None):
         from sentence_transformers import SentenceTransformer,  SentencesDataset, LoggingHandler, losses, models
         import logging
+        import re
         from collections import defaultdict
         if model_name is None:
             model_name = 'bert-base-nli-mean-tokens'
@@ -33,6 +34,26 @@ class EmbeddingVector:
         self.input_format = ""
         self._logger = logging.getLogger(__name__)
         self.wikidata_server = "https://dsbox02.isi.edu:8888/bigdata/namespace/wdq/sparql"
+        self.token_patern = re.compile(r"(?u)\b\w\w+\b")
+
+    @staticmethod
+    def minDistance(word1, word2):
+        """Dynamic programming solution"""
+        m = len(word1)
+        n = len(word2)
+        table = [[0] * (n + 1) for _ in range(m + 1)]
+        for i in range(m + 1):
+            table[i][0] = i
+        for j in range(n + 1):
+            table[0][j] = j
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if word1[i - 1] == word2[j - 1]:
+                    table[i][j] = table[i - 1][j - 1]
+                else:
+                    table[i][j] = 1 + min(table[i - 1][j], table[i][j - 1], table[i - 1][j - 1])
+        return table[-1][-1]
+
 
     def get_sentences_embedding(self, sentences: typing.List[str]):
         """
@@ -60,7 +81,7 @@ class EmbeddingVector:
         except:
             raise ValueError("Sending Sparl query to {} failed!".format(wikidata_server))
 
-    def get_item_description(self, qnodes: typing.List[str]=None, target_properties:dict={}):
+    def get_item_description(self, qnodes: typing.List[str]=None, target_properties:dict={}, gt_label:str=""):
         """
             use sparql query to get the descriptions of given Q nodes
         """
@@ -99,7 +120,7 @@ class EmbeddingVector:
             """
             results = self.send_sparql_query(query_body)
             for each in results:
-                name = each['item']['value'].split("/")[-1]
+                each_node = each['item']['value'].split("/")[-1]
                 if 'itemDescription' in each:
                     # clean up the descriptions
                     # description = " ".join(token_patern.findall(each['itemDescription']['value']))
@@ -108,20 +129,27 @@ class EmbeddingVector:
                     description = ""
                 if "itemLabel" in each:
                     label = each['itemLabel']['value']
+                    if each_node == self.gt[gt_label]:
+                        if self.minDistance(label, gt_label) > len(gt_label):
+                            a = "".join(self.token_patern.findall(label.lower()))
+                            b = "".join(self.token_patern.findall(gt_label.lower()))
+                            if a not in b and b not in a:
+                                self._logger.error("{} with {} --> {} edit distance too larger!!!".format(each_node, label, gt_label))
                 else:
                     label = ""
                 if need_find_label:
-                    self.candidates[name]["label_properties"] = [label]
+                    self.candidates[each_node]["label_properties"] = [label]
                 if need_find_description:
-                    self.candidates[name]["description_properties"] = [description]
+                    self.candidates[each_node]["description_properties"] = [description]
 
 
         query_body2 = "select ?item"
         part2 = ""
         for name, part in zip(names, properties_list):
             for i, each in enumerate(part):
-                query_body2 += " ?{}_{}Label".format(name, i)
-                part2 += """?item wdt:{} ?{}_{}. \n""".format(each, name, i)
+                if each not in {"label", "description"}:
+                    query_body2 += " ?{}_{}Label".format(name, i)
+                    part2 += """?item wdt:{} ?{}_{}. \n""".format(each, name, i)
         query_body2 += """
                     where {
                       values ?item {""" + query_qnodes + "}" 
@@ -157,14 +185,16 @@ class EmbeddingVector:
         """
             load the input candidates files
         """
+        from collections import defaultdict
+        import pandas as pd
+        self.property_labels_dict = property_labels_dict
+
         if "all" in target_properties:
             _ = target_properties.pop("all")
             add_all_properties = True
         else:
             add_all_properties = False
 
-        from collections import defaultdict
-        import pandas as pd
         if input_format == "test_format":
             self.input_format = input_format
             input_df = pd.read_csv(file_path)
@@ -179,19 +209,26 @@ class EmbeddingVector:
                 raise ValueError("Can't find ground truth id column!")
 
             for _, each in input_df.iterrows():
-                temp = each['candidates'].split("|")
+                temp = str(each['candidates']).split("|")
                 to_remove_q = set()
                 gt_nodes = each[gt_column_id].split(" ")
+                label = str(each["label"])
+                if len(gt_nodes) == 0:
+                    self._logger.error("Skip a row with no ground truth node given: as {}".format(str(each)))
+                    continue
+                if label == "":
+                    self._logger.error("Skip a row with no label given: as {}".format(str(each)))
+                    continue
                 # candidates[each['label']] = temp
                 temp.extend(gt_nodes)
                 for each_q in temp:
-                    self.q_node_to_label[each_q] = each['label']
+                    self.q_node_to_label[each_q] = label
                     if skip_nodes_set is not None and each_q in skip_nodes_set:
                         to_remove_q.add(each_q)
                 temp = set(temp) - to_remove_q
                 count += len(temp)
-                gt[each['label']] = each[gt_column_id]
-                self.get_item_description(temp, target_properties)
+                self.gt[label] = str(each[gt_column_id])
+                self.get_item_description(temp, target_properties, label)
             # self.candidates = candidates
             self.gt = gt
             
@@ -199,106 +236,100 @@ class EmbeddingVector:
 
         elif input_format == "kgtk_format":
             # assume the input edge file is sorted
-            headers = None
-            candidates_properties = defaultdict(dict)
             self.input_format = input_format
             with open(file_path, "r") as f:
-                for each_line in f.readlines():
+                # get header
+                headers = f.readline().replace("\n", "").split("\t")
+                if len(headers) < 3:
+                    raise ValueError("No enough columns found on given input file. Only {} columns given but at least 3 needed.".format(len(headers)))
+                elif "node" in headers and "property" in headers and "value" in headers:
+                    column_references = {"node": headers.index("node"), 
+                                         "property": headers.index("property"),
+                                         "value": headers.index("value")}
+                elif len(headers) == 3:
+                    column_references = {"node": 0, 
+                                         "property": 1,
+                                         "value": 2}
+                else:
+                    missing_column = set(["node", "property", "value"]) - set(headers)
+                    raise ValueError("Missing column {}".format(missing_column))
+                self._logger.debug("column index information: ")
+                self._logger.debug(str(column_references))
+                # read contents
+                each_node_attributes = {"has_properties":[], "isa_properties":[], "label_properties":[], "description_properties": []}
+                current_process_node_id = None
+                for each_line in f:
                     each_line = each_line.replace("\n", "").split("\t")
-                    if headers is None:
-                        headers = each_line
-                        if len(headers) < 3:
-                            raise ValueError("No enough columns found on given input file. Only {} columns given but at least 3 needed.".format(len(headers)))
-                        elif "node" in headers and "property" in headers and "value" in headers:
-                            column_references = {"node": headers.index("node"), 
-                                                 "property": headers.index("property"),
-                                                 "value": headers.index("value")}
-                        elif len(headers) == 3:
-                            column_references = {"node": 0, 
-                                                 "property": 1,
-                                                 "value": 2}
+                    node_id = each_line[column_references["node"]]
+                    node_property = each_line[column_references["property"]]
+                    node_value = each_line[column_references["value"]]
+                    # remove @ mark
+                    if "@" in node_value and node_value[0] != "@":
+                        node_value_org = node_value
+                        node_value = node_value[:node_value.index("@")]
+                        # print("{} --> {}".format(node_value_org, node_value))
+                    # remove extra double quote " and single quote '
+                    if node_value[0]== '"' and node_value[-1] == '"':
+                        node_value = node_value[1:-1]
+                    if node_value[0]== "'" and node_value[-1] == "'":
+                        node_value = node_value[1:-1]
+
+                    if current_process_node_id != node_id:
+                        if current_process_node_id is None:
+                            current_process_node_id = node_id
                         else:
-                            missing_column = set(["node", "property", "value"]) - set(headers)
-                            raise ValueError("Missing column {}".format(missing_column))
+                            # if we get to next id
+                            # concate all properties into one sentence to represent the Q node
+                            concated_sentence = self.attribute_to_sentence(each_node_attributes)
+                            each_node_attributes["sentence"] = concated_sentence
+                            self.candidates[node_id] = each_node_attributes
+                            self._logger.debug("{} --> {}".format(node_id, concated_sentence))
+                            # after write down finish, we can cleaer and start parsing next one
+                            each_node_attributes = {"has_properties":[], "isa_properties":[], "label_properties":[], "description_properties": []}
+                            current_process_node_id = node_id
 
-                        self._logger.debug("column index information: ")
-                        self._logger.debug(str(column_references))
-                    else:
-                        node_id = each_line[column_references["node"]]
-                        node_property = each_line[column_references["property"]]
-                        node_value = each_line[column_references["value"]]
-                        candidates_properties[node_id][node_property] = node_value
-                        # remove @ mark
-                        if "@" in node_value and node_value[0] != "@":
-                            node_value_org = node_value
-                            node_value = node_value[:node_value.index("@")]
-                            # print("{} --> {}".format(node_value_org, node_value))
-                        # remove extra double quote "
-                        if node_value[0]== '"' and node_value[-1] == '"':
-                            node_value = node_value[1:-1]
+                    if node_property in target_properties:
+                        each_node_attributes[target_properties[node_property]].append(node_value)
+                    if add_all_properties and each_line[column_references["value"]][0] == "P":
+                        each_node_attributes["has_properties"].append(node_value)
                         
-                        if node_property in target_properties:
-                            # only use the fisrt value get (except has-properties part)
-                            # if target_properties[node_property] in candidates_properties[node_id].keys() or \
-                            # target_properties[node_property] == "has_properties":
-                            if target_properties[node_property] != "has_properties":
-                                if target_properties[node_property] in candidates_properties[node_id]:
-                                    candidates_properties[node_id][target_properties[node_property]].append(node_value)
-                                else:
-                                    candidates_properties[node_id][target_properties[node_property]] = [node_value]
-                            else:
-                                if node_value not in black_list_set:
-                                    if target_properties[node_property] in candidates_properties[node_id]:
-                                        candidates_properties[node_id][target_properties[node_property]].append(node_property)
-                                    else:
-                                        candidates_properties[node_id][target_properties[node_property]] = [node_property]
-                        elif add_all_properties:
-                            if node_value not in black_list_set:
-                                if "has_properties" in candidates_properties[node_id]:
-                                    candidates_properties[node_id]["has_properties"].append(node_property)
-                                else:
-                                    candidates_properties[node_id]["has_properties"] = [node_property]
-
-            self.candidates = candidates_properties
         else:
             raise ValueError("Unkonwn input format {}".format(input_format))
 
-        # concate all properties into one sentence to represent the Q node
-        for k, v in self.candidates.items():
-            concated_sentence = ""
-            if "label_properties" in v:
-                concated_sentence += self.get_real_label_name(v["label_properties"][0], property_labels_dict)
-            if "description_properties" in v:
-                if concated_sentence != "" and v["description_properties"][0] != "":
-                    concated_sentence += ", "
-                concated_sentence += self.get_real_label_name(v["description_properties"][0], property_labels_dict)
-            if "isa_properties" in v:
-                temp = [self.get_real_label_name(each, property_labels_dict) for each in v["isa_properties"]]
-                if concated_sentence != "" and temp[0] != "":
-                    concated_sentence += " is a " 
-                elif temp[0] != "":
-                    concated_sentence += "It is a "
-                concated_sentence += ", ".join(temp)
-            if "has_properties" in v:
-                temp = [self.get_real_label_name(each, property_labels_dict) for each in v["has_properties"]]
-                if concated_sentence != "" and temp[0] != "":
-                    concated_sentence += ", and has "
-                elif temp[0] != "":
-                    concated_sentence += "It has "
-                concated_sentence += " and ".join(temp)
-            self.candidates[k]["sentence"] = concated_sentence
-            self._logger.debug("{} --> {}".format(k, concated_sentence))
-            self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
 
-
+        self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
         self.vector_dump_file = "dump_vectors_{}_{}.pkl".format(file_path[:file_path.rfind(".")], self. model_name)
         # self._logger.debug("The cache file name will be {}".format(self.vector_dump_file))
 
-    def get_real_label_name(self, node, property_labels_dict):
-        if node in property_labels_dict:
-            return property_labels_dict[node]
+    def get_real_label_name(self, node):
+        if node in self.property_labels_dict:
+            return self.property_labels_dict[node]
         else:
             return node
+
+    def attribute_to_sentence(self, v):
+        concated_sentence = ""
+        if "label_properties" in v and len(v["label_properties"]) > 0:
+            concated_sentence += self.get_real_label_name(v["label_properties"][0])
+        if "description_properties" in v and len(v["description_properties"]) > 0:
+            if concated_sentence != "" and v["description_properties"][0] != "":
+                concated_sentence += ", "
+            concated_sentence += self.get_real_label_name(v["description_properties"][0])
+        if "isa_properties" in v and len(v["isa_properties"]) > 0:
+            temp = [self.get_real_label_name(each) for each in v["isa_properties"]]
+            if concated_sentence != "" and temp[0] != "":
+                concated_sentence += " is a " 
+            elif temp[0] != "":
+                concated_sentence += "It is a "
+            concated_sentence += ", ".join(temp)
+        if "has_properties" in v and len(v["has_properties"]) > 0:
+            temp = [self.get_real_label_name(each) for each in v["has_properties"]]
+            if concated_sentence != "" and temp[0] != "":
+                concated_sentence += ", and has "
+            elif temp[0] != "":
+                concated_sentence += "It has "
+            concated_sentence += " and ".join(temp)
+        return concated_sentence
 
     def get_vetors(self, use_cache=True, vector_dump_file=None):
         """
@@ -318,23 +349,7 @@ class EmbeddingVector:
         jobs_count = 0
         counter = 0
         self._logger.info("Now generating embedding vector.")
-        # embed_time, query_time, rem_time = 0, 0, 0
-        # if self.input_format == "test_format":
-        #     for each in tqdm(self.candidates.values()):
-        #         # do process for each row(one target)
-        #         start = time.time()
-        #         each_part_description = self.get_item_description(each)
-        #         end1 = time.time()
-        #         query_time += end1 - start
-        #         vectors = self.get_sentences_embedding(list(each_part_description.values()))
-        #         end2 = time.time()
-        #         embed_time += end2 - end1
-        #         for q_node, vector in zip(list(each_part_description.keys()), vectors):
-        #             self.vectors_map[q_node] = vector
-        #     self._logger.debug("query time = {} s, embedding time = {} s".format(query_time, embed_time))
-        #     # self.dump_vectors(vector_dump_file)
 
-        # elif self.input_format == "kgtk_format":
         for q_node, each_item in tqdm(self.candidates.items()):
             # do process for each row(one target)
             sentence = each_item["sentence"]
@@ -558,7 +573,7 @@ def load_property_labels_file(input_files: typing.List[str]):
                     node_id = each_line[column_references["predicate"]]
                     node_label = each_line[column_references["label"]]
                     if "@en" in node_label:
-                        node_label = node_label.replace("'", "").replace("@en", "")
+                        node_label = node_label.replace("'", "").split("@")[0]
                         labels_dict[node_id] = node_label
                     if node_id not in labels_dict:
                         labels_dict[node_id] = node_label
@@ -569,6 +584,7 @@ def load_black_list_files(file_path):
     import tarfile
     import zipfile
     import gzip
+    import re
     token_patern = re.compile(r"(?u)\b\w\w+\b")
     q_nodes_set = set()
     for each_file in file_path:
@@ -693,9 +709,10 @@ def main(**kwargs):
         black_list_set = set()
     if property_labels_files:
         property_labels_dict = load_property_labels_file(property_labels_files)
+        _logger.info("Totally {} property labels loaded.".format(len(property_labels_dict)))
     else:
         property_labels_dict = {}
-        _logger.info("Totally {} property labels loaded.".format(len(property_labels_dict)))
+        
     run_TSNE = kwargs.get("run_TSNE", True)
 
     try:
@@ -734,7 +751,7 @@ def add_arguments(parser):
             raise argparse.ArgumentTypeError('Boolean value expected.')
     # logging level
     parser.add_argument('-l', '--logging-level', action='store', dest='logging_level',
-            default="info", choices=("warning, info, debug"),
+            default="info", choices=("error", "warning", "info", "debug"),
             help="set up the logging level, default is INFO level")
     # model name
     all_models_names = load_embedding_model_names()
