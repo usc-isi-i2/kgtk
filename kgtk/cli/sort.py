@@ -25,5 +25,10 @@ def run(datatype, column, input):
     # import modules locally
     import socket
     import sh # type: ignore
-    sh.mlr('--%s' % datatype, 'sort', '-f', column, input, _out=sys.stdout, _err=sys.stderr)
+    from kgtk.exceptions import KGTKException
+
+    try:
+        sh.mlr('--%s' % datatype, 'sort', '-f', column, input, _out=sys.stdout, _err=sys.stderr)
+    except:
+        raise KGTKException
 
