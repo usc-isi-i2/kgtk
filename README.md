@@ -11,6 +11,21 @@ source activate kgtk-env
 2. `pip install -r requirements.txt`
 3. Install `graph-tool`. If you use conda, then you can run `conda install -c conda-forge graph-tool`, else see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
 
+### The Miller Package
+
+1. Our code uses the "miller" package to manipulate formatted data.
+
+2. TheGitHub repository for miller is:
+```
+https://github.com/johnkerl/miller
+```
+3. The documentaton is:
+```
+https://www.mankier.com/1/mlr
+```
+4. You may need to install the miller command (mlr) on your system.
+   * OpenSUSE Tumbleweed Linux: install package `miller` from Main Repository (OSS)
+
 ### List of supported tools
 * `instances`
 * `reachable_nodes`
