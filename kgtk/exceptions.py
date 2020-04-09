@@ -26,16 +26,18 @@ class KGTKExceptionHandler(object):
             if return_code != 0:
                 warnings.warn('Please raise exception instead of returning non-zero value')
             return return_code
-        except BaseException as e:
-            type, exc_val, exc_tb = sys.exc_info()
-            return self.handle_exception(e, type, exc_val, exc_tb)
+        except BrokenPipeError:
+            pass
+        except BaseException:
+            type_, exc_val, exc_tb = sys.exc_info()
+            return self.handle_exception(type_, exc_val, exc_tb)
 
-    def handle_exception(self, e, type, exc_val, exc_tb):
-        if isinstance(e, KGTKException):
-            sys.stderr.write(e.message)
-            return e.return_code
+    def handle_exception(self, type_, exc_val, exc_tb):
+        if isinstance(exc_val, KGTKException):
+            sys.stderr.write(exc_val.message)
+            return exc_val.return_code
 
-        warnings.warn('Please raise KGTKException instead of {}'.format(type))
+        warnings.warn('Please raise KGTKException instead of {}'.format(type_))
         sys.stderr.write(KGTKException.message)
         return KGTKException.return_code
 

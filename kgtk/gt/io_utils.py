@@ -1,9 +1,9 @@
 import argparse
 import os
 import csv
-from tqdm import tqdm
+from tqdm import tqdm # type: ignore
 import subprocess
-import pandas as pd
+import pandas as pd # type: ignore
 
 from loguru import logger
 

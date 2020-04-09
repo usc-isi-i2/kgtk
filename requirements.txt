@@ -1,2 +1,10 @@
+loguru
+mypy
 rltk
+seaborn
+sentence_transformers
 sh
+sklearn
+SPARQLWrapper
+tqdm
+etk

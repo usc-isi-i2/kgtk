@@ -12,7 +12,7 @@ def parser():
     Parameters: https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser
     """
     return {
-        'help': 'this is dummy',
+        'help': 'this is example',
         'description': 'this is a basic example'
     }
 
@@ -40,6 +40,6 @@ def run(name, info, error):
     from kgtk.exceptions import KGTKException
 
     if error:
-        raise KGTKException
+        raise KGTKException('An error here\n')
 
     print('name: {}, info: {}\nhost: {}'.format(name, info, socket.gethostname()))
