@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as pd # type: ignore
 from copy import copy
 from collections import defaultdict
 import csv

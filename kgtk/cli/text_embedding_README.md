@@ -1,7 +1,7 @@
 # KGTK Text Embedding Utilities
 ## Install
-The program requires Python vesion >= `3`
-The corresponding packages requirement are stored at `requirement.txt`
+The program requires Python vesion >= `3` and `kgtk` package installed.
+The corresponding packages requirement are stored at `text_embedding_requirement.txt`
 
 ## Usage
 ### Run

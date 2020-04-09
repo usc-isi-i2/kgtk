@@ -1,0 +1,16 @@
+node1	label	node2	id
+q1	p1	'Alice'@en	e1
+q1	p3	'Alicia'@sp	e2
+q1	p6	"Character in a famous novel"	e3
+q1	p8	q2	e4
+p8	type	property	
+p8	p1	'hasFather'@en	e5
+p8	p6	'The relationship of being child of someone'@en	e6
+q2	p1	'Bob'@en	e7
+q1	p8	q2	e8
+e8	p9	^2013-01-01T00:00:00Z/11	
+e8	p9	^2013-01-01T00:00:00Z/8	
+e8	p10	@043.26193/010.92708
+q1	p12	'爱丽丝'@zh	e9
+q1	p11	+1.4U11573	e10
+e10	p13	q2	

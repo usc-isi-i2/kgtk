@@ -7,7 +7,7 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from kgtk import cli
 from kgtk.exceptions import kgtk_exception_handler, KGTKArgumentParseException
 from kgtk import __version__
-import sh
+import sh # type: ignore
 
 
 # module name should NOT start with '__' (double underscore)

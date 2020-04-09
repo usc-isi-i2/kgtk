@@ -24,11 +24,12 @@ def add_arguments(parser):
 def run(nodes_file, edges_file, label): 
     # import modules locally
     import socket
-    import sh
+    import sh # type: ignore
+    from kgtk.exceptions import KGTKException
     from kgtk.cskg_utils import collapse_identical_nodes
-    new_edges_df, new_nodes_df = collapse_identical_nodes(edges_file, nodes_file)
-
-    print(new_edges_df)
-
-    print(new_nodes_df)
-
+    try:
+        new_edges_df, new_nodes_df = collapse_identical_nodes(edges_file, nodes_file)
+        print(new_edges_df)
+        print(new_nodes_df)
+    except:
+        raise KGTKException

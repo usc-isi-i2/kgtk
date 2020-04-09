@@ -1,5 +1,5 @@
-import gt.io_utils as gtio
-import gt.analysis_utils as gtanalysis
+import kgtk.gt.io_utils as gtio
+import kgtk.gt.analysis_utils as gtanalysis
 
 #datadir='data/'
 mowgli_nodes=f'{datadir}nodes_v002.csv'
