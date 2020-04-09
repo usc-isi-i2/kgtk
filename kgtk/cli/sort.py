@@ -1,7 +1,7 @@
 import os
 import sys
 import io
-import sh
+import sh # type: ignore
 
 from kgtk.exceptions import KGTKException
 import kgtk.cli.zconcat as zcat
