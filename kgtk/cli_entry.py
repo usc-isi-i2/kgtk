@@ -70,6 +70,11 @@ def cli_entry(*args):
     shared_args = base_parser.add_argument_group('shared optional arguments')
     shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
 
+    # parse shared arguments
+    parsed_shared_args, rest_args = base_parser.parse_known_args(args)
+    shared_args = tuple(filter(lambda a: a not in rest_args, args))
+    args = tuple(rest_args)
+
     # complete parser, load sub-parser of each module
     parser = KGTKArgumentParser(parents=[base_parser])
     sub_parsers = parser.add_subparsers(
@@ -82,14 +87,9 @@ def cli_entry(*args):
         sub_parser = sub_parsers.add_parser(h, **mod.parser())
         mod.add_arguments(sub_parser)
 
-    # parse shared arguments
-    parsed_shared_args, rest_args = base_parser.parse_known_args(args)
-    shared_args = tuple(filter(lambda a: a not in rest_args, args))
-    args = tuple(rest_args)
-
     # parse internal pipe
     pipe = [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
-    if len(pipe) == 1:
+    if len(pipe) == 1:  # single command
         cmd_args = pipe[0]
         parsed_args = parser.parse_args(cmd_args)
 
@@ -104,14 +104,16 @@ def cli_entry(*args):
             kwargs = vars(parsed_args)
             del kwargs['cmd']
 
-            # remove unnecessary shared arguments
+            # set shared arguments
             for sa in vars(parsed_shared_args):
                 if sa not in sub_parsers.choices[h].shared_arguments:
                     del kwargs[sa]
+                else:
+                    kwargs[sa] = getattr(parsed_shared_args, sa)
 
         # run module
         ret_code = kgtk_exception_handler(func, **kwargs)
-    else:
+    else:  # piped commands
         concat_cmd_str = None
         for idx, cmd_args in enumerate(pipe):
             # add shared arguments
