@@ -2,11 +2,11 @@ import sys
 import importlib
 import pkgutil
 import itertools
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from kgtk import cli
 from kgtk.exceptions import kgtk_exception_handler, KGTKArgumentParseException
 from kgtk import __version__
+from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments
 import sh # type: ignore
 
 
@@ -19,24 +19,6 @@ handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
 
 pipe_delimiter = '/'
 ret_code = 0
-
-
-class KGTKArgumentParser(ArgumentParser):
-    def __init__(self, *args, **kwargs):
-        if not kwargs.get('formatter_class'):
-            kwargs['formatter_class'] = RawDescriptionHelpFormatter
-
-        self.shared_arguments = set()
-
-        super(KGTKArgumentParser, self).__init__(*args, **kwargs)
-
-    def accept_shared_argument(self, dest_name):
-        self.shared_arguments.add(dest_name)
-
-    def exit(self, status=0, message=None):
-        if status == 2:
-            status = KGTKArgumentParseException.return_code
-        super(KGTKArgumentParser, self).exit(status, message)
 
 
 def cmd_done(cmd, success, exit_code):
@@ -69,6 +51,7 @@ def cli_entry(*args):
     )
     shared_args = base_parser.add_argument_group('shared optional arguments')
     shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
+    add_shared_arguments(shared_args)
 
     # parse shared arguments
     parsed_shared_args, rest_args = base_parser.parse_known_args(args)
