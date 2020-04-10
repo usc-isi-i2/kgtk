@@ -26,16 +26,23 @@ def add_arguments(parser):
 
 
 def run(datatype, columns, input): 
-    # import modules locally
-    import sh
+	# import modules locally
+	import socket
+	import sh # type: ignore
+	from kgtk.exceptions import KGTKException
 
-    if input:
-        sh.mlr('--tsv', 'cut', '-x', '-f', columns, input, _out=sys.stdout, _err=sys.stderr)
-    elif not sys.stdin.isatty():
-        print('reading from stdin')
-        # print(sh.cat(_in=sys.stdin))
-        print(sh.mlr('--tsv', 'cut', '-x', '-f', columns,
-                     _in=sys.stdin, _out=sys.stdout, _err=sys.stderr))
-    else:
-        parser.print_help()
+	try:
+		if input:
+
+			print(input)
+			sh.mlr('--tsv', 'cut', '-x', '-f', columns, 
+					input, _out=sys.stdout, _err=sys.stderr)
+		elif not sys.stdin.isatty():
+			print(sh.mlr('--tsv', 'cut', '-x', '-f', columns,
+						 _in=sys.stdin, _out=sys.stdout, _err=sys.stderr))
+		else:
+			raise KGTKException
+	except:
+		raise KGTKException
+    #parser.print_help()
 

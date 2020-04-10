@@ -3,7 +3,7 @@ from collections import defaultdict
 from kgtk.graph_manager import GraphManager
 from kgtk.nomalizer import normalize_text, normalize_ontology_type
 
-import rltk
+import rltk # type: ignore
 
 
 class Comparator(object):
