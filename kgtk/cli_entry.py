@@ -37,8 +37,6 @@ def cli_entry(*args):
     # get all arguments
     if not args:
         args = tuple(sys.argv)
-    if len(args) == 1:
-        args = args + ('-h',)
     args = args[1:]
 
     # base parser for shared arguments
@@ -72,7 +70,10 @@ def cli_entry(*args):
 
     # parse internal pipe
     pipe = [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
-    if len(pipe) == 1:  # single command
+    if len(pipe) == 0:
+        parser.print_usage()
+        parser.exit(KGTKArgumentParseException.return_code)
+    elif len(pipe) == 1:  # single command
         cmd_args = pipe[0]
         parsed_args = parser.parse_args(cmd_args)
 
