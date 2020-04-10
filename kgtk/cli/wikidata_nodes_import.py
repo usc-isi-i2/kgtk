@@ -43,7 +43,6 @@ def run(wikidata_file, output_file, limit, lang, doc_id):
     import bz2
     import json
     import csv
-    from __future__ import unicode_literals
     
     site_filter = '{}wiki'.format(lang)
 
