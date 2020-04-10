@@ -60,7 +60,7 @@ def cli_entry(*args):
     parser = KGTKArgumentParser(
         parents=[base_parser], prog='kgtk',
         description='kgtk --- Knowledge Graph Toolkit',
-        usage='%(prog)s [shared options] command [options] [ / command [options]]*')
+    )
     sub_parsers = parser.add_subparsers(
         metavar='command',
         dest='cmd'
@@ -70,6 +70,9 @@ def cli_entry(*args):
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         sub_parser = sub_parsers.add_parser(h, **mod.parser())
         mod.add_arguments(sub_parser)
+    # add root level usage after sub-parsers are created
+    # this won't pollute help info in sub-parsers
+    parser.usage = '%(prog)s [options] command [ / command]*'
 
     # parse internal pipe
     pipe = [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
