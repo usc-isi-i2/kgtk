@@ -4,7 +4,7 @@ import pkgutil
 import itertools
 
 from kgtk import cli
-from kgtk.exceptions import kgtk_exception_handler, KGTKArgumentParseException
+from kgtk.exceptions import KGTKExceptionHandler, KGTKArgumentParseException
 from kgtk import __version__
 from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments
 import sh # type: ignore
@@ -40,7 +40,7 @@ def cli_entry(*args):
     args = args[1:]
 
     # base parser for shared arguments
-    base_parser = KGTKArgumentParser(prog='kgtk', add_help=False)
+    base_parser = KGTKArgumentParser(add_help=False)
     base_parser.add_argument(
         '-V', '--version',
         action='version',
@@ -57,7 +57,10 @@ def cli_entry(*args):
     args = tuple(rest_args)
 
     # complete parser, load sub-parser of each module
-    parser = KGTKArgumentParser(parents=[base_parser])
+    parser = KGTKArgumentParser(
+        parents=[base_parser], prog='kgtk',
+        description='kgtk --- Knowledge Graph Toolkit',
+        usage='%(prog)s [shared options] command [options] [ / command [options]]*')
     sub_parsers = parser.add_subparsers(
         metavar='command',
         dest='cmd'
@@ -75,6 +78,7 @@ def cli_entry(*args):
         parser.exit(KGTKArgumentParseException.return_code)
     elif len(pipe) == 1:  # single command
         cmd_args = pipe[0]
+        kwargs = {}
         parsed_args = parser.parse_args(cmd_args)
 
         # load module
@@ -96,6 +100,7 @@ def cli_entry(*args):
                     kwargs[sa] = getattr(parsed_shared_args, sa)
 
         # run module
+        kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
         ret_code = kgtk_exception_handler(func, **kwargs)
     else:  # piped commands
         concat_cmd_str = None
