@@ -100,11 +100,11 @@ def run(
     import sys
     import warnings
     import re
+    import requests
     from typing import TextIO
     try:
         from etk.etk import ETK
         from etk.knowledge_graph import KGSchema
-        from etk.extractors.glossary_extractor import GlossaryExtractor
         from etk.etk_module import ETKModule
         from etk.wikidata.entity import WDItem, WDProperty
         from etk.wikidata.value import (
@@ -114,6 +114,8 @@ def run(
             QuantityValue,
             MonolingualText,
             GlobeCoordinate,
+            ExternalIdentifier,
+            URLValue
         )
         from kgtk.exceptions import KGTKException
     except:
@@ -158,6 +160,8 @@ def run(
                 "quantity": QuantityValue,
                 "monolingualtext": MonolingualText,
                 "string": StringValue,
+                "external-identifier":ExternalIdentifier,
+                "url":URLValue
             }
             with open(propFile, "r") as fp:
                 props = fp.readlines()
@@ -338,10 +342,13 @@ def run(
                     OBJECT = MonolingualText(textString, lang)
                 except:
                     OBJECT = MonolingualText(textString, "en")
+            elif edgeType == ExternalIdentifier:
+                OBJECT = ExternalIdentifier(node2)
+            elif edge == URLValue:
+                OBJECT = URLValue(node2)
             else:
                 # treat everything else as stringValue
                 OBJECT = StringValue(node2)
-
             if isPropEdge:
                 # edge: q1 p8 q2 e8
                 # create brand new property edge and replace STATEMENT
