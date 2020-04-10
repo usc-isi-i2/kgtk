@@ -360,7 +360,7 @@ def run(
             self.doc.kg.add_subject(self.STATEMENT)
             return True
 
-        def entryPoint(self, edge: str):
+        def entryPoint(self, line_number:int , edge: str):
             """
             edge: "p8\tp1\t'hasFather'@en\te5\n", a line in the edges.tsv file
             generates a list of two, the first element is the determination of the edge type using corresponding edge type
@@ -384,8 +384,8 @@ def run(
                 )
                 if eID == self.ID:
                     raise KGTKException(
-                        "id {} of edge {} duplicates latest property statement id {}.\n".format(
-                            eID, edge, self.ID
+                        "id {} of edge {} at line {} duplicates latest property statement id {}.\n".format(
+                            eID, edge, line_number, self.ID
                         )
                     )
                     return
@@ -400,13 +400,13 @@ def run(
                     # 1. not a property declaration edge and
                     # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
                     raise KGTKException(
-                        "Node1 {} of qualifier edge {} doesn't agree with latest property edge id {}.\n".format(
-                            node1, edge, self.ID
+                        "Node1 {} of qualifier edge {} at line {} doesn't agree with latest property edge id {}.\n".format(
+                            node1, edge, line_number, self.ID
                         )
                     )
                     return
             else:
-                raise KGTKException("Length {} of edge {} is not valid.\n".format(l, edge))
+                raise KGTKException("Length {} of edge {} at line {} is not valid.\n".format(l, edge, line_number))
                 return
 
             if label in self.labelSet:
@@ -423,7 +423,7 @@ def run(
                     self.read += self.genNormalTriple(node1, label, node2, isPropEdge)
                 else:
                     raise KGTKException(
-                        "property {}'s type is unknown as in edge {}.\n".format(label, edge)
+                        "property {}'s type is unknown as in edge {} at line {}.\n".format(label, edge, line_number)
                     )
 
         def serialize(self):
@@ -463,6 +463,6 @@ def run(
         if num == 0:
             continue
         else:
-            generator.entryPoint(edge)
+            generator.entryPoint(num, edge)
     generator.serialize()
     generator.finalize()
