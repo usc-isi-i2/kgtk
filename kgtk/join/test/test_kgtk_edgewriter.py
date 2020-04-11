@@ -32,7 +32,7 @@ def main():
     line_count: int = 0
     line: typing.List[str]
     for line in er:
-        er.write(line)
+        ew.write(line)
         line_count += 1
     ew.close()
     print("Copied %d lines" % line_count)
