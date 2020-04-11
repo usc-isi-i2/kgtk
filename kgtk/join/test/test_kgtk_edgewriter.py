@@ -24,7 +24,7 @@ def main():
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
-    ew: EdgeWriter = EdgeReader.open(er.column_names,
+    ew: EdgeWriter = EdgeWriter.open(er.column_names,
                                      args.output_edge_file,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
