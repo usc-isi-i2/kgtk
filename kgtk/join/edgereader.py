@@ -35,6 +35,14 @@ class EdgeReader:
     fill_missing_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
 
+    # When we report line numbers in error messages, line 1 is the first line after the header line.
+    #
+    # The use of a list is a sneaky way to get around the frozen class.
+    # TODO: Find the right way to do this.  Don't freeze the class?
+    line_count: typing.List[int] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(int),
+                                                                                   iterable_validator=attr.validators.instance_of(list)))
+
+
     # TODO: There must be some place to import these constants
     NODE1_COLUMN_NAME: str = "node1"
     NODE2_COLUMN_NAME: str = "node2"
@@ -154,6 +162,7 @@ class EdgeReader:
                    require_all_columns=require_all_columns,
                    prohibit_extra_columns=prohibit_extra_columns,
                    fill_missing_columns=fill_missing_columns,
+                   line_count=[1], # TODO: find a better way to do this.
         )
 
     # This is an iterator object.
@@ -167,20 +176,27 @@ class EdgeReader:
             line: str = next(self.file_in) # Will throw StopIteration
         except StopIteration as e:
             # Close the input file!
+            #
+            # TODO: implement a close() routine and/or whatever it takes to support "with".
             self.file_in.close() # Do we need to guard against repeating this call?
             raise e
 
         values: typing.List[str] = line.split(self.column_separator)
 
         # Optionally validate that the line contained the right number of columns:
+        #
+        # When we report line numbers in error messages, line 1 is the first line after the header line.
         if self.require_all_columns and len(values) < self.column_count:
-            raise ValueError("Required %d columns in input line, saw %d: '%s'" % (self.column_count, len(values), line))
+            raise ValueError("Required %d columns in input line %d, saw %d: '%s'" % (self.column_count, self.line_count[0], len(values), line))
         if self.prohibit_extra_columns and len(values) > self.column_count:
-            raise ValueError("Required %d columns in input line, saw %d (%d extra): '%s'" % (self.column_count, len(values), len(values) - self.column_count, line))
+            raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count[0], len(values),
+                                                                                                len(values) - self.column_count, line))
 
         # Optionally fill missing trailing columns with empty values:
         if self.fill_missing_columns and len(values) < self.column_count:
             while len(values) < self.column_count:
                 values.append("")
+
+        self.line_count[0] += 1
             
         return values
