@@ -90,6 +90,8 @@ class EdgeReader:
     NODE2_COLUMN_NAME: str = "node2"
     LABEL_COLUMN_NAME: str = "label"
 
+    REQUIRED_COLUMN_NAMES: typing.List[str] = [ NODE1_COLUMN_NAME, NODE2_COLUMN_NAME, LABEL_COLUMN_NAME ]
+
     GZIP_QUEUE_SIZE_DEFAULT: int = 1000
 
     @classmethod
@@ -190,22 +192,21 @@ class EdgeReader:
         for column_name in column_names:
             if column_name is None or len(column_name) == 0:
                 # TODO: throw a better exception
-                raise ValueError("Invalid column name in the edge file header")
+                raise ValueError("Column %d has an invalid name in the edge file header" % column_idx)
             column_name_map[column_name] = column_idx
             column_idx += 1
 
+        # Ensure that the three require columns are present:
         if EdgeReader.NODE1_COLUMN_NAME not in column_name_map:
             # TODO: throw a better exception
             raise ValueError("Missing node1 column in the edge file header")
         else:
             node1_column_idx: int = column_name_map[EdgeReader.NODE1_COLUMN_NAME]
-
         if EdgeReader.NODE2_COLUMN_NAME not in column_name_map:
             # TODO: throw a better exception
             raise ValueError("Missing node2 column in the edge file header")
         else:
             node2_column_idx: int = column_name_map[EdgeReader.NODE2_COLUMN_NAME]
-
         if EdgeReader.LABEL_COLUMN_NAME not in column_name_map:
             # TODO: throw a better exception
             raise ValueError("Missing label column in the edge file header")
@@ -279,3 +280,39 @@ class EdgeReader:
             sys.stdout.flush()
             
         return values
+
+    def additional_columns(self)->typing.List[str]:
+        """
+        Return a list of column names in this file excluding the three required columns.
+        """
+        additional_columns: typing.List[str] = [ ]
+        column_name: str
+        for column_name in self.column_names:
+            if column_name not in self.REQUIRED_COLUMN_NAMES:
+                additional_columns.append(column_name)
+        return additional_columns
+
+    def merge_columns(self, additional_columns: typing.List[str])->typing.List[str]:
+        """
+        Return a list that merges the current column names with an additional set of column names.
+        """
+        merged_columns: typing.List[str] = self.column_names.copy()
+
+        column_name: str
+        for column_name in additional_columns:
+            if column_name not in self.column_name_map:
+                merged_columns.append(column_name)
+
+        return merged_columns
+
+    def to_map(self, line: typing.List[str])->typing.Mapping[str, str]:
+        """
+        Convert an input line into a named map of fields.
+        """
+        result: typing.MutableMapping[str, str] = { }
+        value: str
+        idx: int = 0
+        for value in line:
+            result[self.column_names[idx]] = value
+            idx += 1
+        return result

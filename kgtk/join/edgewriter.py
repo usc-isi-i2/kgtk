@@ -53,6 +53,8 @@ class EdgeWriter:
     column_separator: str = attr.ib(validator=attr.validators.instance_of(str))
     column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                      iterable_validator=attr.validators.instance_of(list)))
+    column_name_map: typing.Mapping[str, int] = attr.ib(validator=attr.validators.deep_mapping(key_validator=attr.validators.instance_of(str),
+                                                                                               value_validator=attr.validators.instance_of(int)))
 
     # For convenience, the count of columns. This is the same as len(column_names).
     column_count: int = attr.ib(validator=attr.validators.instance_of(int))
@@ -164,16 +166,26 @@ class EdgeWriter:
                very_verbose: bool = False,
     )->"EdgeWriter":
 
-        # Validate the column names.
-        if EdgeWriter.NODE1_COLUMN_NAME not in column_names:
+        # Validate the column names and build a map from column name
+        # to column index.
+        column_name_map: typing.MutableMapping[str, int] = { }
+        column_idx: int = 0 # There may be a more pythonic way to do this
+        column_name: str
+        for column_name in column_names:
+            if column_name is None or len(column_name) == 0:
+                # TODO: throw a better exception
+                raise ValueError("Column %d has an invalid name in the list of column names" % column_idx)
+            column_name_map[column_name] = column_idx
+            column_idx += 1
+
+        # Ensure that the three required columns are present:
+        if EdgeWriter.NODE1_COLUMN_NAME not in column_name_map:
             # TODO: throw a better exception
             raise ValueError("Missing node1 column in the edge file header")
-
-        if EdgeWriter.NODE2_COLUMN_NAME not in column_names:
+        if EdgeWriter.NODE2_COLUMN_NAME not in column_name_map:
             # TODO: throw a better exception
             raise ValueError("Missing node2 column in the edge file header")
-
-        if EdgeWriter.LABEL_COLUMN_NAME not in column_names:
+        if EdgeWriter.LABEL_COLUMN_NAME not in column_name_map:
             # TODO: throw a better exception
             raise ValueError("Missing label column in the edge file header")
 
@@ -193,6 +205,7 @@ class EdgeWriter:
                    file_out=file_out,
                    column_separator=column_separator,
                    column_names=column_names,
+                   column_name_map=column_name_map,
                    column_count=len(column_names),
                    require_all_columns=require_all_columns,
                    prohibit_extra_columns=prohibit_extra_columns,
@@ -242,3 +255,25 @@ class EdgeWriter:
             self.file_out.close()
 
 
+    def writemap(self, value_map: typing.Mapping[str, str]):
+        """
+        Write a map of values to the output file.
+        """
+        column_name: str
+
+        # Optionally check for unexpected column names:
+        if self.prohibit_extra_columns:
+            for column_name in value_map.keys():
+                if column_name not in self.column_name_map:
+                    raise ValueError("Unexpected column name %s at data record %d" % (column_name, self.line_count[0]))
+
+        values: typing.List[str] = [ ]
+        for column_name in self.column_names:
+            if column_name in value_map:
+                values.append(value_map[column_name])
+            elif self.require_all_columns:
+                    raise ValueError("Missing column %s at data record %d" % (column_name, self.line_count[0]))
+            else:
+                values.append("")
+                
+        self.write(values)
