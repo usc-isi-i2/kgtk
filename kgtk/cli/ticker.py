@@ -1,9 +1,10 @@
 """
 Example CLI module
 
-Please DON'T import modules globally, import them in `run`.
+Please DON'T import specific modules globally, import them in `run`.
 Please DON'T initialize resource (e.g., variable) globally.
 """
+from kgtk.cli_argparse import KGTKArgumentParser
 
 
 def parser():
@@ -17,11 +18,9 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
-    Args:
-        parser (argparse.ArgumentParser)
     """
     parser.add_argument('-i', '--indent', action='count', default=0, help='indentation')
 
