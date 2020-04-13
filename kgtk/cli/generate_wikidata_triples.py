@@ -230,6 +230,8 @@ def run(
                 entity = WDItem(node1.upper())
             if "@" in node2:
                 node2, lang = node2.split("@")
+                if len(lang) != 2:
+                    lang="en" #TODO need to fix the ill-formatted language short code
                 entity.add_label(node2.replace('"', "").replace("'", ""), lang=lang)
             else:
                 entity.add_label(
