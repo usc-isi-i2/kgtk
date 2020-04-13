@@ -72,12 +72,12 @@ def add_arguments(parser):
         dest="truthy",
     )
     parser.add_argument(
-        "-ip",
-        "--ignore-unknown-properties",
+        "-ig",
+        "--ig",
         action="store",
         type=bool,
-        help="if a property is not listed in property-types file or specified in [label|alias|description] option, ignore it. NOTIMPLEMENTED",
-        dest="ignoreUnknownProp",
+        help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging NOTIMPLEMENTED",
+        dest="ignore",
     )
 
 
@@ -88,7 +88,7 @@ def run(
     propFile: str,
     n: int,
     truthy: bool = False,
-    ignoreUnknownProp: bool = True,
+    ignore: bool = True,
 ):
     """
     Arguments here should be defined in `add_arguments` first.
@@ -134,9 +134,11 @@ def run(
             labelSet: str,
             aliasSet: str,
             descriptionSet: str,
+            ignore: bool,
             n: int,
             destFp: TextIO = sys.stdout,
         ):
+            self.ignore = ignore
             self.propTypes = self.__setPropTypes(propFile)
             self.labelSet, self.aliasSet, self.descriptionSet = self.__setSets(
                 labelSet, aliasSet, descriptionSet
@@ -171,11 +173,12 @@ def run(
                 try:
                     __propTypes[node1] = dataTypeMappings[node2.strip()]
                 except:
-                    raise KGTKException(
-                        "DataType {} of node {} is not supported.\n".format(
-                            node2, node1
+                    if not self.ignore:                    
+                        raise KGTKException(
+                            "DataType {} of node {} is not supported.\n".format(
+                                node2, node1
+                            )
                         )
-                    )
             return __propTypes
 
         def __setSets(self, labelSet: str, aliasSet: str, descriptionSet: str):
@@ -385,11 +388,12 @@ def run(
                     eID.strip(),
                 )
                 if eID == self.ID:
-                    raise KGTKException(
-                        "id {} of edge {} at line {} duplicates latest property statement id {}.\n".format(
-                            eID, edge, line_number, self.ID
+                    if not self.ignore:
+                        raise KGTKException(
+                            "id {} of edge {} at line {} duplicates latest property statement id {}.\n".format(
+                                eID, edge, line_number, self.ID
+                            )
                         )
-                    )
                     return
                 else:
                     self.ID = eID
@@ -401,14 +405,16 @@ def run(
                 if label != "type" and node1 != self.ID:
                     # 1. not a property declaration edge and
                     # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
-                    raise KGTKException(
-                        "Node1 {} of qualifier edge {} at line {} doesn't agree with latest property edge id {}.\n".format(
-                            node1, edge, line_number, self.ID
+                    if not self.ignore:
+                        raise KGTKException(
+                            "Node1 {} of qualifier edge {} at line {} doesn't agree with latest property edge id {}.\n".format(
+                                node1, edge, line_number, self.ID
+                            )
                         )
-                    )
                     return
             else:
-                raise KGTKException("Length {} of edge {} at line {} is not valid.\n".format(l, edge, line_number))
+                if not self.ignore:
+                    raise KGTKException("Length {} of edge {} at line {} is not valid.\n".format(l, edge, line_number))
                 return
 
             if label in self.labelSet:
@@ -424,9 +430,10 @@ def run(
                 if label in self.propTypes:
                     self.read += self.genNormalTriple(node1, label, node2, isPropEdge)
                 else:
-                    raise KGTKException(
-                        "property {}'s type is unknown as in edge {} at line {}.\n".format(label, edge, line_number)
-                    )
+                    if not self.ignore:
+                        raise KGTKException(
+                            "property {}'s type is unknown as in edge {} at line {}.\n".format(label, edge, line_number)
+                        )
 
         def serialize(self):
             """
@@ -459,6 +466,7 @@ def run(
         aliasSet=aliases,
         descriptionSet=descriptions,
         n=n,
+        ignore=True
     )
     # process stdin
     for num, edge in enumerate(sys.stdin.readlines()):
