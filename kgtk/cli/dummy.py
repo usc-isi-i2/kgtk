@@ -1,9 +1,10 @@
 """
 Example CLI module
 
-Please DON'T import modules globally, import them in `run`.
+Please DON'T import specific modules globally, import them in `run`.
 Please DON'T initialize resource (e.g., variable) globally.
 """
+from kgtk.cli_argparse import KGTKArgumentParser
 
 
 def parser():
@@ -17,18 +18,19 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
-        parser (argparse.ArgumentParser)
+        parser (kgtk.cli_argparse.KGTKArgumentParser)
     """
     parser.add_argument(action="store", type=str, metavar="name", dest="name")
     parser.add_argument("-i", "--info", action="store", type=str, dest="info")
     parser.add_argument("-e", "--error", action="store_true", help="raise an error")
+    parser.accept_shared_argument('_debug')
 
 
-def run(name, info, error):
+def run(name, info, error, _debug):
     """
     Arguments here should be defined in `add_arguments` first.
     The return value (integer) will be the return code in shell. It will set to 0 if no value returns.
@@ -38,6 +40,9 @@ def run(name, info, error):
     # import modules locally
     import socket
     from kgtk.exceptions import KGTKException
+
+    if _debug:
+        print('DEBUG MODE')
 
     if error:
         raise KGTKException('An error here\n')
