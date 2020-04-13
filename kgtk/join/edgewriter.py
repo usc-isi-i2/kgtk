@@ -13,6 +13,8 @@ import sys
 from multiprocessing import Process
 import typing
 
+from kgtk.join.kgtk_format import KgtkFormat
+
 # This helper class supports running gzip in parallel.
 #
 # TODO: can we use attrs here?
@@ -35,7 +37,7 @@ class GzipProcess(Process):
             if line is None: # This is the plug.
                 self.gzip_file.close()
                 return # Exit the process.
-            gzip_file.write(line)
+            self.gzip_file.write(line)
 
     # Called from the parent process.
     def write(self, line: str):
@@ -78,11 +80,6 @@ class EdgeWriter:
 
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
-
-    # TODO: There must be some place to import these constants
-    NODE1_COLUMN_NAME: str = "node1"
-    NODE2_COLUMN_NAME: str = "node2"
-    LABEL_COLUMN_NAME: str = "label"
 
     GZIP_QUEUE_SIZE_DEFAULT: int = 1000
 
@@ -168,33 +165,13 @@ class EdgeWriter:
 
         # Validate the column names and build a map from column name
         # to column index.
-        column_name_map: typing.MutableMapping[str, int] = { }
-        column_idx: int = 0 # There may be a more pythonic way to do this
-        column_name: str
-        for column_name in column_names:
-            if column_name is None or len(column_name) == 0:
-                # TODO: throw a better exception
-                raise ValueError("Column %d has an invalid name in the list of column names" % column_idx)
-            column_name_map[column_name] = column_idx
-            column_idx += 1
-
-        # Ensure that the three required columns are present:
-        if EdgeWriter.NODE1_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing node1 column in the edge file header")
-        if EdgeWriter.NODE2_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing node2 column in the edge file header")
-        if EdgeWriter.LABEL_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing label column in the edge file header")
+        column_name_map: typing.Mapping[str, int] = KgtkFormat.validate_kgtk_edge_columns(column_names)
 
         # Write the column names to the first line.
         header: str = column_separator.join(column_names)
         if verbose:
             print("header: %s" % header)
         file_out.write(header + "\n") # Todo: use system end-of-line sequence?
-
 
         gzip_thread: typing.Optional[GzipProcess] = None
         if gzip_in_parallel:

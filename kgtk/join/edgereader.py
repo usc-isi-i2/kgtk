@@ -13,6 +13,8 @@ import sys
 from multiprocessing import Process
 import typing
 
+from kgtk.join.kgtk_format import KgtkFormat
+
 # This helper class supports running gzip in parallel.
 #
 # TODO: can we use attrs here?
@@ -84,13 +86,6 @@ class EdgeReader:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
-
-    # TODO: There must be some place to import these constants
-    NODE1_COLUMN_NAME: str = "node1"
-    NODE2_COLUMN_NAME: str = "node2"
-    LABEL_COLUMN_NAME: str = "label"
-
-    REQUIRED_COLUMN_NAMES: typing.List[str] = [ NODE1_COLUMN_NAME, NODE2_COLUMN_NAME, LABEL_COLUMN_NAME ]
 
     GZIP_QUEUE_SIZE_DEFAULT: int = 1000
 
@@ -180,38 +175,14 @@ class EdgeReader:
 
         # Split the first line into column names.
         column_names: typing.List[str] = header.split(column_separator)
-        if len(column_names) < 3:
-            # TODO: throw a better exception
-            raise ValueError("The edge file header must have at least three columns.")
 
-        # Validate the column names and build a map from column name
-        # to column index.
-        column_name_map: typing.MutableMapping[str, int] = { }
-        column_idx: int = 0 # There may be a more pythonic way to do this
-        column_name: str
-        for column_name in column_names:
-            if column_name is None or len(column_name) == 0:
-                # TODO: throw a better exception
-                raise ValueError("Column %d has an invalid name in the edge file header" % column_idx)
-            column_name_map[column_name] = column_idx
-            column_idx += 1
+        # Validate the column names and build a map from column name to column index.
+        column_name_map: typing.Mapping[str, int] = KgtkFormat.validate_kgtk_edge_columns(column_names)
 
-        # Ensure that the three require columns are present:
-        if EdgeReader.NODE1_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing node1 column in the edge file header")
-        else:
-            node1_column_idx: int = column_name_map[EdgeReader.NODE1_COLUMN_NAME]
-        if EdgeReader.NODE2_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing node2 column in the edge file header")
-        else:
-            node2_column_idx: int = column_name_map[EdgeReader.NODE2_COLUMN_NAME]
-        if EdgeReader.LABEL_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing label column in the edge file header")
-        else:
-            label_column_idx: int = column_name_map[EdgeReader.LABEL_COLUMN_NAME]
+        # Get the indices of the required columns.
+        node1_column_idx: int = column_name_map[KgtkFormat.NODE1_COLUMN_NAME]
+        node2_column_idx: int = column_name_map[KgtkFormat.NODE2_COLUMN_NAME]
+        label_column_idx: int = column_name_map[KgtkFormat.LABEL_COLUMN_NAME]
 
         gzip_thread: typing.Optional[GunzipProcess] = None
         if gzip_in_parallel:
@@ -288,7 +259,7 @@ class EdgeReader:
         additional_columns: typing.List[str] = [ ]
         column_name: str
         for column_name in self.column_names:
-            if column_name not in self.REQUIRED_COLUMN_NAMES:
+            if column_name not in KgtkFormat.REQUIRED_COLUMN_NAMES:
                 additional_columns.append(column_name)
         return additional_columns
 
