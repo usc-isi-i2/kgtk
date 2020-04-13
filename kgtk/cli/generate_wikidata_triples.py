@@ -329,13 +329,15 @@ def run(
                 )
 
             elif edgeType == QuantityValue:
-                amount, unit = (
-                    re.compile("([\+|\-]?[0-9]+\.?[0-9]*)U([0-9]+)")
-                    .match(node2)
-                    .groups()
-                )
-                OBJECT = QuantityValue(amount=float(amount), unit=Item(unit))
-
+                try:
+                    amount, unit = (
+                        re.compile("([\+|\-]?[0-9]+\.?[0-9]*)U([0-9]+)")
+                        .match(node2)
+                        .groups()
+                    )
+                    OBJECT = QuantityValue(amount=float(amount), unit=Item(unit))
+                except:
+                    OBJECT = QuantityValue(amount=float(node2))
             elif edgeType == MonolingualText:
                 try:
                     textString, lang = node2.split("@")
