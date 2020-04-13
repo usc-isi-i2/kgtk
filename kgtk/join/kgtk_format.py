@@ -6,6 +6,8 @@ Constants and helpers for the KGTK file format.
 import typing
 
 class KgtkFormat:
+    COLUMN_SEPARATOR: str = "\t"
+
     NODE1_COLUMN_NAME: str = "node1"
     NODE2_COLUMN_NAME: str = "node2"
     LABEL_COLUMN_NAME: str = "label"
