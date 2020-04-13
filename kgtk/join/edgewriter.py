@@ -1,8 +1,7 @@
 """
-Read a KGTK edge file in TXV format.
+Write a KGTK edge file in TsV format.
 
-TODO: Add support for decompression and alternative envelope formats,
-such as JSON.
+TODO: Add support for alternative envelope formats, such as JSON.
 """
 
 import attr
@@ -59,7 +58,7 @@ class EdgeWriter:
              fill_missing_columns: bool = False,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
-             column_separator: str = "\t",
+             column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
              verbose: bool = False,
              very_verbose: bool = False)->"EdgeWriter":
         if file_path is None or str(file_path) == "-":
@@ -216,8 +215,41 @@ class EdgeWriter:
             if column_name in value_map:
                 values.append(value_map[column_name])
             elif self.require_all_columns:
-                    raise ValueError("Missing column %s at data record %d" % (column_name, self.line_count[0]))
+                # TODO: throw a better exception.
+                raise ValueError("Missing column %s at data record %d" % (column_name, self.line_count[0]))
             else:
                 values.append("")
                 
         self.write(values)
+
+    def build_shuffle_list(self,
+                           other_column_names: typing.List[str],
+                           fail_on_unknown_column: bool = False)->typing.List[int]:
+        results: typing.List[int] = [ ]
+        column_name: str
+        for column_name in other_column_names:
+            if column_name in self.column_name_map:
+                results.append(self.column_name_map[column_name])
+            elif fail_on_unknown_column:
+                # TODO: throw a better exception
+                raise ValueError("Unknown column name %s when building shuffle list" % column_name)
+            else:
+                results.append(-1) # Means skip this column.
+        return results
+    
+    def write_shuffled(self,
+                       shuffle_list: typing.List[int],
+                       values: typing.List[str]):
+        if len(shuffle_list) != len(values):
+            # TODO: throw a better exception
+            raise ValueError("The shuffle list is %d lone but the values are %d long" % (len(shuffle_list), len(values)))
+
+        shuffled_values: typing.List[str] = [""] * self.column_count
+        idx: int
+        for idx in range(len(shuffle_list)):
+            shuffle_idx: int = shuffle_list[idx]
+            if shuffle_idx >= 0:
+                shuffled_values[shuffle_idx] = values[idx]
+
+                self.write(shuffled_values)
+                

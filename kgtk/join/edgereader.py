@@ -1,8 +1,7 @@
 """
-Read a KGTK edge file in TXV format.
+Read a KGTK edge file in TSV format.
 
-TODO: Add support for decompression and alternative envelope formats,
-such as JSON.
+TODO: Add support for alternative envelope formats, such as JSON.
 """
 
 import attr
@@ -64,7 +63,7 @@ class EdgeReader:
              fill_missing_columns: bool = False,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
-             column_separator: str = "\t",
+             column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
              verbose: bool = False,
              very_verbose: bool = False)->"EdgeReader":
         if file_path is None or str(file_path) == "-":
