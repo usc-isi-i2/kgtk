@@ -7,12 +7,39 @@ import typing
 
 class KgtkFormat:
     COLUMN_SEPARATOR: str = "\t"
+    COMMENT_INDICATOR: str = "#"
 
-    NODE1_COLUMN_NAME: str = "node1"
-    NODE2_COLUMN_NAME: str = "node2"
-    LABEL_COLUMN_NAME: str = "label"
+    # These are the required columns in an edge file:
+    NODE1_COLUMN_NAMES: typing.List[str] = ["node1", "from", "subject"]
+    NODE2_COLUMN_NAMES: typing.List[str] = ["node2", "to", "object"]
+    LABEL_COLUMN_NAMES: typing.List[str] = ["label", "predicate", "relation", "relationship"]
 
-    REQUIRED_COLUMN_NAMES: typing.List[str] = [ NODE1_COLUMN_NAME, NODE2_COLUMN_NAME, LABEL_COLUMN_NAME ]
+    # There is only one required column in a node file:
+    ID_COLUMN_NAMES: typing.List[str] = ["id", "ID"]
+
+    @classmethod
+    def get_column_idx(cls,
+                            name_or_aliases: typing.List[str],
+                            column_name_map: typing.Mapping[str, int],
+                            is_optional: bool = False)->int:
+        """
+        Get the indices of the required column using one of its allowable names.
+        Return -1 if the column is not found and is optional.
+        """
+        found_column_name: str = ""
+        column_idx: int = -1
+        col_name: str
+        for col_name in name_or_aliases:
+            if col_name in column_name_map:
+                if column_idx >= 0:
+                    # TODO: throw a better exception
+                    raise ValueError("Ambiguous node1 column names %s and %s" % (found_column_name, col_name))
+                column_idx = column_name_map[col_name]
+                found_column_name = col_name
+        if column_idx < 0 and not is_optional:
+            # TODO: throw a better exception:
+            raise ValueError("Missing required column: %s" % " | ".join(name_or_aliases))
+        return column_idx
 
     @classmethod
     def validate_kgtk_edge_columns(cls, column_names: typing.List[str])->typing.Mapping[str, int]:
@@ -38,15 +65,36 @@ class KgtkFormat:
             column_name_map[column_name] = column_idx
             column_idx += 1
 
-         # Ensure that the three require columns are present:
-        if cls.NODE1_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing node1 column in the edge file header")
-        if cls.NODE2_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing node2 column in the edge file header")
-        if cls.LABEL_COLUMN_NAME not in column_name_map:
-            # TODO: throw a better exception
-            raise ValueError("Missing label column in the edge file header")
+        # Ensure that the three require columns are present:
+        cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map)
+        cls.get_column_idx(cls.NODE2_COLUMN_NAMES, column_name_map)
+        cls.get_column_idx(cls.LABEL_COLUMN_NAMES, column_name_map)
 
         return column_name_map
+
+    @classmethod
+    def additional_edge_columns(cls, column_names: typing.List[str])->typing.List[str]:
+        """
+        Return a list of column names in this file excluding the required columns.
+        """
+        additional_columns: typing.List[str] = [ ]
+        column_name: str
+        for column_name in column_names:
+            if column_name not in KgtkFormat.NODE1_COLUMN_NAMES and \
+               column_name not in KgtkFormat.NODE2_COLUMN_NAMES and \
+               column_name not in KgtkFormat.LABEL_COLUMN_NAMES:
+                additional_columns.append(column_name)
+        return additional_columns
+
+    @classmethod
+    def additional_node_columns(cls, column_names: typing.List[str])->typing.List[str]:
+        """
+        Return a list of column names in this file excluding the required columns.
+        """
+        additional_columns: typing.List[str] = [ ]
+        column_name: str
+        for column_name in column_names:
+            if column_name not in KgtkFormat.ID_COLUMN_NAMES:
+                additional_columns.append(column_name)
+        return additional_columns
+

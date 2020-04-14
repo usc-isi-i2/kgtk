@@ -29,13 +29,20 @@ class EdgeReader:
 
     # The indices of the three mandatory columns:
     node1_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
-    node2_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
+    node2_column_idx: int = attr.ib(validator=attr.validators.instance_of(int)) # -1 means missing
     label_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
 
     # Require or fill trailing fields?
     require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
     prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
     fill_missing_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
+
+    # Ignore empty lines, comments, and all whitespace lines, etc.?
+    ignore_empty_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    ignore_comment_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    ignore_whitespace_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    ignore_blank_node1_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    ignore_blank_node2_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
     # Other implementation options?
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool))
@@ -46,6 +53,9 @@ class EdgeReader:
     #
     # The use of a list is a sneaky way to get around the frozen class.
     # TODO: Find the right way to do this.  Don't freeze the class?
+    #
+    # line_count[0] Count of accepted lines
+    # line_count[1] Count of ignored lines (comments, etc.)
     line_count: typing.List[int] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(int),
                                                                                    iterable_validator=attr.validators.instance_of(list)))
 
@@ -61,6 +71,11 @@ class EdgeReader:
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
              fill_missing_columns: bool = False,
+             ignore_empty_lines: bool = True,
+             ignore_comment_lines: bool = True,
+             ignore_whitespace_lines: bool = True,
+             ignore_blank_node1_lines: bool = True,
+             ignore_blank_node2_lines: bool = True,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
@@ -74,6 +89,11 @@ class EdgeReader:
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
+                              ignore_empty_lines=ignore_empty_lines,
+                              ignore_comment_lines=ignore_comment_lines,
+                              ignore_whitespace_lines=ignore_whitespace_lines,
+                              ignore_blank_node1_lines=ignore_blank_node1_lines,
+                              ignore_blank_node2_lines=ignore_blank_node2_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -94,6 +114,11 @@ class EdgeReader:
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
+                              ignore_empty_lines=ignore_empty_lines,
+                              ignore_comment_lines=ignore_comment_lines,
+                              ignore_whitespace_lines=ignore_whitespace_lines,
+                              ignore_blank_node1_lines=ignore_blank_node1_lines,
+                              ignore_blank_node2_lines=ignore_blank_node2_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -109,6 +134,11 @@ class EdgeReader:
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
+                              ignore_empty_lines=ignore_empty_lines,
+                              ignore_comment_lines=ignore_comment_lines,
+                              ignore_whitespace_lines=ignore_whitespace_lines,
+                              ignore_blank_node1_lines=ignore_blank_node1_lines,
+                              ignore_blank_node2_lines=ignore_blank_node2_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -123,6 +153,11 @@ class EdgeReader:
                require_all_columns: bool,
                prohibit_extra_columns: bool,
                fill_missing_columns: bool,
+               ignore_empty_lines: bool,
+               ignore_comment_lines: bool,
+               ignore_whitespace_lines: bool,
+               ignore_blank_node1_lines: bool,
+               ignore_blank_node2_lines: bool,
                gzip_in_parallel: bool,
                gzip_queue_size: int,
                column_separator: str,
@@ -133,11 +168,11 @@ class EdgeReader:
         Read the edge file header and split it into column names. Locate the three essential comumns.
         """
         # Read the column names from the first line.
+        #
+        # TODO: if the read fails, throw a more useful exception with the line number.
         header: str = file_in.readline()
         if verbose:
             print("header: %s" % header)
-        #
-        # TODO: if the read fails, throw a useful exception.
 
         # Split the first line into column names.
         column_names: typing.List[str] = header.split(column_separator)
@@ -146,9 +181,9 @@ class EdgeReader:
         column_name_map: typing.Mapping[str, int] = KgtkFormat.validate_kgtk_edge_columns(column_names)
 
         # Get the indices of the required columns.
-        node1_column_idx: int = column_name_map[KgtkFormat.NODE1_COLUMN_NAME]
-        node2_column_idx: int = column_name_map[KgtkFormat.NODE2_COLUMN_NAME]
-        label_column_idx: int = column_name_map[KgtkFormat.LABEL_COLUMN_NAME]
+        node1_column_idx: int = KgtkFormat.get_column_idx(KgtkFormat.NODE1_COLUMN_NAMES, column_name_map)
+        node2_column_idx: int = KgtkFormat.get_column_idx(KgtkFormat.NODE2_COLUMN_NAMES, column_name_map)
+        label_column_idx: int = KgtkFormat.get_column_idx(KgtkFormat.LABEL_COLUMN_NAMES, column_name_map)
 
         gzip_thread: typing.Optional[GunzipProcess] = None
         if gzip_in_parallel:
@@ -167,10 +202,15 @@ class EdgeReader:
                    require_all_columns=require_all_columns,
                    prohibit_extra_columns=prohibit_extra_columns,
                    fill_missing_columns=fill_missing_columns,
+                   ignore_empty_lines=ignore_empty_lines,
+                   ignore_comment_lines=ignore_comment_lines,
+                   ignore_whitespace_lines=ignore_whitespace_lines,
+                   ignore_blank_node1_lines=ignore_blank_node1_lines,
+                   ignore_blank_node2_lines=ignore_blank_node2_lines,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_thread=gzip_thread,
                    gzip_queue_size=gzip_queue_size,
-                   line_count=[1], # TODO: find a better way to do this.
+                   line_count=[1, 0], # TODO: find a better way to do this.
                    verbose=verbose,
                    very_verbose=very_verbose,
         )
@@ -182,63 +222,95 @@ class EdgeReader:
     # Get the next edge values as a list of strings.
     # TODO: Convert integers, coordinates, etc. to Python types
     def __next__(self)-> typing.List[str]:
-        line: str
-        try:
-            if self.gzip_thread is not None:
-                line = next(self.gzip_thread) # TODO: unify this
-            else:
-                line = next(self.file_in) # Will throw StopIteration
-        except StopIteration as e:
-            # Close the input file!
+        values: typing.List[str]
+
+        # This loop accomodates lines that are ignored.
+        while (True):
+            line: str
+            try:
+                if self.gzip_thread is not None:
+                    line = next(self.gzip_thread) # TODO: unify this
+                else:
+                    line = next(self.file_in) # Will throw StopIteration
+            except StopIteration as e:
+                # Close the input file!
+                #
+                # TODO: implement a close() routine and/or whatever it takes to support "with".
+                self.file_in.close() # Do we need to guard against repeating this call?
+                raise e
+
+            # Ignore empty lines.
+            if len(line) == 0 and self.ignore_empty_lines:
+                self.line_count[1] += 1
+                continue
+            # Ignore comment lines:
+            if line[0] == KgtkFormat.COMMENT_INDICATOR and self.ignore_comment_lines:
+                self.line_count[1] += 1
+                continue
+            # Ignore whitespace lines
+            if self.ignore_whitespace_lines and line.isspace():
+                self.line_count[1] += 1
+                continue
+
+            values = line.split(self.column_separator)
+
+            # Optionally validate that the line contained the right number of columns:
             #
-            # TODO: implement a close() routine and/or whatever it takes to support "with".
-            self.file_in.close() # Do we need to guard against repeating this call?
-            raise e
+            # When we report line numbers in error messages, line 1 is the first line after the header line.
+            if self.require_all_columns and len(values) < self.column_count:
+                raise ValueError("Required %d columns in input line %d, saw %d: '%s'" % (self.column_count, self.line_count[0], len(values), line))
+            if self.prohibit_extra_columns and len(values) > self.column_count:
+                raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count[0], len(values),
+                                                                                                    len(values) - self.column_count, line))
 
-        values: typing.List[str] = line.split(self.column_separator)
+            # Optionally fill missing trailing columns with empty values:
+            if self.fill_missing_columns and len(values) < self.column_count:
+                while len(values) < self.column_count:
+                    values.append("")
 
-        # Optionally validate that the line contained the right number of columns:
-        #
-        # When we report line numbers in error messages, line 1 is the first line after the header line.
-        if self.require_all_columns and len(values) < self.column_count:
-            raise ValueError("Required %d columns in input line %d, saw %d: '%s'" % (self.column_count, self.line_count[0], len(values), line))
-        if self.prohibit_extra_columns and len(values) > self.column_count:
-            raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count[0], len(values),
-                                                                                                len(values) - self.column_count, line))
+            # Ignore lines with blank node1 fields.  This code comes after
+            # filling missing trailing columns, although it could be reworked
+            # to come first.
+            if self.ignore_blank_node1_lines and self.node1_column_idx >= 0 and len(values) > self.node1_column_idx:
+                node1_value: str = values[self.node1_column_idx]
+                if len(node1_value) == 0 or node1_value.isspace():
+                    self.line_count[1] += 1
+                    continue
 
-        # Optionally fill missing trailing columns with empty values:
-        if self.fill_missing_columns and len(values) < self.column_count:
-            while len(values) < self.column_count:
-                values.append("")
+            # Ignore lines with blank node2 fields:
+            if self.ignore_blank_node2_lines and self.node2_column_idx >= 0 and len(values) > self.node2_column_idx:
+                node2_value: str = values[self.node2_column_idx]
+                if len(node2_value) == 0 or node2_value.isspace():
+                    self.line_count[1] += 1
+                    continue
 
-        self.line_count[0] += 1
-        if self.very_verbose:
-            sys.stdout.write(".")
-            sys.stdout.flush()
+            self.line_count[0] += 1
+            if self.very_verbose:
+                sys.stdout.write(".")
+                sys.stdout.flush()
             
-        return values
-
-    def additional_columns(self)->typing.List[str]:
-        """
-        Return a list of column names in this file excluding the three required columns.
-        """
-        additional_columns: typing.List[str] = [ ]
-        column_name: str
-        for column_name in self.column_names:
-            if column_name not in KgtkFormat.REQUIRED_COLUMN_NAMES:
-                additional_columns.append(column_name)
-        return additional_columns
+            return values
 
     def merge_columns(self, additional_columns: typing.List[str])->typing.List[str]:
         """
-        Return a list that merges the current column names with an additional set of column names.
+        Return a list that merges the current column names with an additional set
+        of column names, taking care to respect the use of column names
+        aliases.
+
         """
         merged_columns: typing.List[str] = self.column_names.copy()
 
         column_name: str
         for column_name in additional_columns:
-            if column_name not in self.column_name_map:
-                merged_columns.append(column_name)
+            if self.node1_column_idx >= 0 and column_name in KgtkFormat.NODE1_COLUMN_NAMES:
+                continue
+            if self.node2_column_idx >= 0 and column_name in KgtkFormat.NODE2_COLUMN_NAMES:
+                continue
+            if self.label_column_idx >= 0 and column_name in KgtkFormat.LABEL_COLUMN_NAMES:
+                continue
+            if column_name in self.column_name_map:
+                continue
+            merged_columns.append(column_name)
 
         return merged_columns
 
