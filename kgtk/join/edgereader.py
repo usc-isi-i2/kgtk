@@ -32,6 +32,11 @@ class EdgeReader:
     node2_column_idx: int = attr.ib(validator=attr.validators.instance_of(int)) # -1 means missing
     label_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
 
+    # supply a missing header record or override an existing header record.
+    force_column_names: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                       iterable_validator=attr.validators.instance_of(list))))
+    skip_first_record: bool = attr.ib(validator=attr.validators.instance_of(bool))
+
     # Require or fill trailing fields?
     require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
     prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
@@ -68,6 +73,8 @@ class EdgeReader:
     @classmethod
     def open(cls,
              file_path: typing.Optional[Path],
+             force_column_names: typing.Optional[typing.List[str]] = None, #
+             skip_first_record: bool = False,
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
              fill_missing_columns: bool = False,
@@ -86,6 +93,8 @@ class EdgeReader:
                 print("EdgeReader: reading stdin")
             return cls._setup(file_path=None,
                               file_in=sys.stdin,
+                              force_column_names=force_column_names,
+                              skip_first_record=skip_first_record,
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
@@ -111,6 +120,8 @@ class EdgeReader:
             gzip_file: typing.TextIO = gzip.open(file_path, mode="rt") # type: ignore
             return cls._setup(file_path=file_path,
                               file_in=gzip_file,
+                              force_column_names=force_column_names,
+                              skip_first_record=skip_first_record,
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
@@ -131,6 +142,8 @@ class EdgeReader:
                 print("EdgeReader: reading file %s" % str(file_path))
             return cls._setup(file_path=file_path,
                               file_in=open(file_path, "r"),
+                              force_column_names=force_column_names,
+                              skip_first_record=skip_first_record,
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
@@ -150,6 +163,8 @@ class EdgeReader:
     def _setup(cls,
                file_path: typing.Optional[Path],
                file_in: typing.TextIO,
+               force_column_names: typing.Optional[typing.List[str]],
+               skip_first_record: bool,
                require_all_columns: bool,
                prohibit_extra_columns: bool,
                fill_missing_columns: bool,
@@ -167,15 +182,24 @@ class EdgeReader:
         """
         Read the edge file header and split it into column names. Locate the three essential comumns.
         """
-        # Read the column names from the first line.
-        #
-        # TODO: if the read fails, throw a more useful exception with the line number.
-        header: str = file_in.readline()
-        if verbose:
-            print("header: %s" % header)
+        column_names: typing.List[str]
+        if force_column_names is None:
+            # Read the column names from the first line.
+            #
+            # TODO: if the read fails, throw a more useful exception with the line number.
+            header: str = file_in.readline()
+            if verbose:
+                print("header: %s" % header)
 
-        # Split the first line into column names.
-        column_names: typing.List[str] = header.split(column_separator)
+            # Split the first line into column names.
+            column_names = header.split(column_separator)
+        else:
+            # Skip the first record to override the column names in the file.
+            # Do not skip the first record if the file does not hae a header record.
+            if skip_first_record:
+                file_in.readline()
+            # Use the forced column names.
+            column_names = force_column_names
 
         # Validate the column names and build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = KgtkFormat.validate_kgtk_edge_columns(column_names)
@@ -199,6 +223,8 @@ class EdgeReader:
                    node1_column_idx=node1_column_idx,
                    node2_column_idx=node2_column_idx,
                    label_column_idx=label_column_idx,
+                   force_column_names=force_column_names,
+                   skip_first_record=skip_first_record,
                    require_all_columns=require_all_columns,
                    prohibit_extra_columns=prohibit_extra_columns,
                    fill_missing_columns=fill_missing_columns,
