@@ -9,7 +9,7 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
@@ -33,6 +33,7 @@ def run(filename,output,directed,header,sub,obj,props,strong):
     from graph_tool.util import find_edge
     from graph_tool.topology import label_components
     from kgtk.exceptions import KGTKException
+    from kgtk.cli_argparse import KGTKArgumentParser
     
     try:
         g=load_graph_from_csv(filename,directed,skip_first=header,hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
