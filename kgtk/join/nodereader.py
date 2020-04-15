@@ -1,13 +1,11 @@
 """
-Read a KGTK edge file in TSV format.
+Read a KGTK node file in TSV format.
 
 TODO: Add support for alternative envelope formats, such as JSON.
 """
 
 import attr
-import bz2
 import gzip
-import lzma
 from pathlib import Path
 from multiprocessing import Queue
 import sys
@@ -18,15 +16,12 @@ from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtk_format import KgtkFormat
 
 @attr.s(slots=True, frozen=True)
-class EdgeReader(BaseReader):
-    # The indices of the three mandatory columns:
-    node1_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
-    node2_column_idx: int = attr.ib(validator=attr.validators.instance_of(int)) # -1 means missing
-    label_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
+class NodeReader(BaseReader):
+    # The index of the one mandatory column:
+    id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
 
-    # Ignore records with blank node1 or node2 values
-    ignore_blank_node1_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    ignore_blank_node2_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    # Ignore records with blank id values
+    ignore_blank_id_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
     @classmethod
     def open(cls,
@@ -39,16 +34,15 @@ class EdgeReader(BaseReader):
              ignore_empty_lines: bool = True,
              ignore_comment_lines: bool = True,
              ignore_whitespace_lines: bool = True,
-             ignore_blank_node1_lines: bool = True,
-             ignore_blank_node2_lines: bool = True,
+             ignore_blank_id_lines: bool = True,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = BaseReader.GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
              verbose: bool = False,
-             very_verbose: bool = False)->"EdgeReader":
+             very_verbose: bool = False)->"NodeReader":
         if file_path is None or str(file_path) == "-":
             if verbose:
-                print("EdgeReader: reading stdin")
+                print("NodeReader: reading stdin")
             return cls._setup(file_path=None,
                               file_in=sys.stdin,
                               force_column_names=force_column_names,
@@ -59,8 +53,7 @@ class EdgeReader(BaseReader):
                               ignore_empty_lines=ignore_empty_lines,
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
-                              ignore_blank_node1_lines=ignore_blank_node1_lines,
-                              ignore_blank_node2_lines=ignore_blank_node2_lines,
+                              ignore_blank_id_lines=ignore_blank_id_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -76,19 +69,20 @@ class EdgeReader(BaseReader):
             gzip_file: typing.TextIO
             if file_path.suffix == ".gz":
                 if verbose:
-                    print("EdgeReader: reading gzip %s" % str(file_path))
+                    print("NodeReader: reading gzip %s" % str(file_path))
                 gzip_file = gzip.open(file_path, mode="rt") # type: ignore
             elif file_path.suffix == ".bz2":
                 if verbose:
-                    print("EdgeReader: reading bz2 %s" % str(file_path))
+                    print("NodeReader: reading bz2 %s" % str(file_path))
                 gzip_file = bz2.open(file_path, mode="rt") # type: ignore
             elif file_path.suffix == ".xz":
                 if verbose:
-                    print("EdgeReader: reading lzma %s" % str(file_path))
+                    print("NodeReader: reading lzma %s" % str(file_path))
                 gzip_file = lzma.open(file_path, mode="rt") # type: ignore
             else:
                 # TODO: throw a better exception.
                 raise ValueError("Unexpected file_patn.suffiz = '%s'" % file_path.suffix)
+
             return cls._setup(file_path=file_path,
                               file_in=gzip_file,
                               force_column_names=force_column_names,
@@ -99,18 +93,17 @@ class EdgeReader(BaseReader):
                               ignore_empty_lines=ignore_empty_lines,
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
-                              ignore_blank_node1_lines=ignore_blank_node1_lines,
-                              ignore_blank_node2_lines=ignore_blank_node2_lines,
+                              ignore_blank_id_lines=ignore_blank_id_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
-
+            
         else:
             if verbose:
-                print("EdgeReader: reading file %s" % str(file_path))
+                print("NodeReader: reading file %s" % str(file_path))
             return cls._setup(file_path=file_path,
                               file_in=open(file_path, "r"),
                               force_column_names=force_column_names,
@@ -121,8 +114,7 @@ class EdgeReader(BaseReader):
                               ignore_empty_lines=ignore_empty_lines,
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
-                              ignore_blank_node1_lines=ignore_blank_node1_lines,
-                              ignore_blank_node2_lines=ignore_blank_node2_lines,
+                              ignore_blank_id_lines=ignore_blank_id_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -142,14 +134,13 @@ class EdgeReader(BaseReader):
                ignore_empty_lines: bool,
                ignore_comment_lines: bool,
                ignore_whitespace_lines: bool,
-               ignore_blank_node1_lines: bool,
-               ignore_blank_node2_lines: bool,
+               ignore_blank_id_lines: bool,
                gzip_in_parallel: bool,
                gzip_queue_size: int,
                column_separator: str,
                verbose: bool = False,
                very_verbose: bool = False,
-    )->"EdgeReader":
+    )->"NodeReader":
         """
         Read the edge file header and split it into column names. Locate the three essential comumns.
         """
@@ -160,12 +151,10 @@ class EdgeReader(BaseReader):
                                                                  verbose=verbose)
 
         # Validate the column names and build a map from column name to column index.
-        column_name_map: typing.Mapping[str, int] = KgtkFormat.validate_kgtk_edge_columns(column_names)
+        column_name_map: typing.Mapping[str, int] = KgtkFormat.validate_kgtk_node_columns(column_names)
 
         # Get the indices of the required columns.
-        node1_column_idx: int = KgtkFormat.get_column_idx(KgtkFormat.NODE1_COLUMN_NAMES, column_name_map)
-        node2_column_idx: int = KgtkFormat.get_column_idx(KgtkFormat.NODE2_COLUMN_NAMES, column_name_map)
-        label_column_idx: int = KgtkFormat.get_column_idx(KgtkFormat.LABEL_COLUMN_NAMES, column_name_map)
+        id_column_idx: int = KgtkFormat.get_column_idx(KgtkFormat.ID_COLUMN_NAMES, column_name_map)
 
         gzip_thread: typing.Optional[GunzipProcess] = None
         if gzip_in_parallel:
@@ -178,9 +167,7 @@ class EdgeReader(BaseReader):
                    column_names=column_names,
                    column_name_map=column_name_map,
                    column_count=len(column_names),
-                   node1_column_idx=node1_column_idx,
-                   node2_column_idx=node2_column_idx,
-                   label_column_idx=label_column_idx,
+                   id_column_idx=id_column_idx,
                    force_column_names=force_column_names,
                    skip_first_record=skip_first_record,
                    require_all_columns=require_all_columns,
@@ -189,8 +176,7 @@ class EdgeReader(BaseReader):
                    ignore_empty_lines=ignore_empty_lines,
                    ignore_comment_lines=ignore_comment_lines,
                    ignore_whitespace_lines=ignore_whitespace_lines,
-                   ignore_blank_node1_lines=ignore_blank_node1_lines,
-                   ignore_blank_node2_lines=ignore_blank_node2_lines,
+                   ignore_blank_id_lines=ignore_blank_id_lines,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_thread=gzip_thread,
                    gzip_queue_size=gzip_queue_size,
@@ -200,29 +186,17 @@ class EdgeReader(BaseReader):
         )
 
     def _ignore_if_blank_fields(self, values: typing.List[str]):
-        # Ignore lines with blank node1 fields.  This code comes after
+        # Ignore lines with blank id fields.  This code comes after
         # filling missing trailing columns, although it could be reworked
         # to come first.
-        if self.ignore_blank_node1_lines and self.node1_column_idx >= 0 and len(values) > self.node1_column_idx:
-            node1_value: str = values[self.node1_column_idx]
-            if len(node1_value) == 0 or node1_value.isspace():
-                self.line_count[1] += 1
-                return True # ignore this line
-
-        # Ignore lines with blank node2 fields:
-        if self.ignore_blank_node2_lines and self.node2_column_idx >= 0 and len(values) > self.node2_column_idx:
-            node2_value: str = values[self.node2_column_idx]
-            if len(node2_value) == 0 or node2_value.isspace():
+        if self.ignore_blank_id_lines and self.id_column_idx >= 0 and len(values) > self.id_column_idx:
+            id_value: str = values[self.id_column_idx]
+            if len(id_value) == 0 or id_value.isspace():
                 self.line_count[1] += 1
                 return True # ignore this line
         return False # Do not ignore this line
 
     def _skip_reserved_fields(self, column_name):
-        if self.node1_column_idx >= 0 and column_name in KgtkFormat.NODE1_COLUMN_NAMES:
-            return True
-        if self.node2_column_idx >= 0 and column_name in KgtkFormat.NODE2_COLUMN_NAMES:
-            return True
-        if self.label_column_idx >= 0 and column_name in KgtkFormat.LABEL_COLUMN_NAMES:
+        if self.id_column_idx >= 0 and column_name in KgtkFormat.ID_COLUMN_NAMES:
             return True
         return False
-    
