@@ -12,14 +12,15 @@ from multiprocessing import Queue
 import sys
 import typing
 
+from kgtk.join.closableiter import ClosableIter
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtk_format import KgtkFormat
 
 # TODO: properly mark this as an abstract class.
 @attr.s(slots=True, frozen=True)
-class BaseReader:
+class BaseReader(ClosableIter[typing.List[str]]):
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
-    file_in: typing.TextIO = attr.ib() # Todo: validate TextIO
+    source: ClosableIter[str] = attr.ib() # Todo: validate
     column_separator: str = attr.ib(validator=attr.validators.instance_of(str))
     column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                      iterable_validator=attr.validators.instance_of(list)))
@@ -46,7 +47,6 @@ class BaseReader:
 
     # Other implementation options?
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    gzip_thread: typing.Optional[GunzipProcess] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(GunzipProcess)))
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int))
 
     # When we report line numbers in error messages, line 1 is the first line after the header line.
@@ -96,8 +96,11 @@ class BaseReader:
             column_names = force_column_names
         return column_names
 
-    # This is an iterator object.
-    def __iter__(self)-> typing.Iterator:
+    def close(self):
+        self.source.close()
+
+    # This is both and iterable and an iterator object.
+    def __iter__(self)->typing.Iterator[typing.List[str]]:
         return self
 
     # Get the next edge values as a list of strings.
@@ -109,15 +112,12 @@ class BaseReader:
         while (True):
             line: str
             try:
-                if self.gzip_thread is not None:
-                    line = next(self.gzip_thread) # TODO: unify this
-                else:
-                    line = next(self.file_in) # Will throw StopIteration
+                line = next(self.source) # Will throw StopIteration
             except StopIteration as e:
                 # Close the input file!
                 #
                 # TODO: implement a close() routine and/or whatever it takes to support "with".
-                self.file_in.close() # Do we need to guard against repeating this call?
+                self.source.close() # Do we need to guard against repeating this call?
                 raise e
 
             # Ignore empty lines.
