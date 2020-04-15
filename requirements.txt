@@ -8,3 +8,5 @@ sklearn
 SPARQLWrapper
 tqdm
 etk
+simplejson
+pyrallel.lib
