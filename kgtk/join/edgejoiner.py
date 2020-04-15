@@ -29,6 +29,10 @@ class EdgeJoiner:
     left_join: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     right_join: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # TODO: This is complicated by the alias list.
+    # left_join_column_names: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.NODE1_COLUMN_NAMES)
+    # right_join_column_names: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.NODE1_COLUMN_NAMES)
+
     # Require or fill trailing fields?
     require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -39,6 +43,7 @@ class EdgeJoiner:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # TODO: pass in join_column_names and find the index of the first matching column name.
     def node1_set(self, er: EdgeReader)->typing.Set[str]:
         result: typing.Set[str] = set()
         node1_idx: int = er.node1_column_idx
@@ -46,7 +51,7 @@ class EdgeJoiner:
             result.add(line[node1_idx])
         return result
         
-
+    # TODO: pass through join_column_names
     def extract_node1_values(self, edge_path: Path)->typing.Set[str]:
         er: EdgeReader = EdgeReader.open(edge_path,
                                          require_all_columns=self.require_all_columns,
@@ -62,11 +67,14 @@ class EdgeJoiner:
         """
         Read the input edge files the first time, building the sets of left and right nodes.
         """
+        # TODO: pass in self.left_join_column_names
         left_node1_values: typing.Set[str] = self.extract_node1_values(self.left_file_path)
+        # TODO: pass in self.right_join_column_names
         right_node1_values: typing.Set[str] = self.extract_node1_values(self.right_file_path)
 
         joined_node1_values: typing.Set[str]
         if self.left_join and self.right_join:
+            # TODO: This joins everything! We can shortut computing these sets.
             joined_node1_values = left_node1_values.union(right_node1_values)
         elif self.left_join and not self.right_join:
             joined_node1_values = left_node1_values.copy()
