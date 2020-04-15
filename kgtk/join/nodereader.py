@@ -4,6 +4,7 @@ Read a KGTK node file in TSV format.
 TODO: Add support for alternative envelope formats, such as JSON.
 """
 
+from argparse import ArgumentParser
 import attr
 import gzip
 from pathlib import Path
@@ -200,3 +201,43 @@ class NodeReader(BaseReader):
         if self.id_column_idx >= 0 and column_name in KgtkFormat.ID_COLUMN_NAMES:
             return True
         return False
+
+    @classmethod
+    def add_arguments(cls, parser: ArgumentParser):
+        super().add_arguments(parser)
+        parser.add_argument(      "--no-ignore-blank-id-lines", dest="ignore_blank_id_lines",
+                                  help="When specified, do not ignore blank id lines.", action='store_false')
+
+    
+def main():
+    """
+    Test the KGTK node file reader.
+    """
+    parser = ArgumentParser()
+    NodeReader.add_arguments(parser)
+    args = parser.parse_args()
+
+    er: NodeReader = NodeReader.open(args.edge_file,
+                                     force_column_names=args.force_column_names,
+                                     skip_first_record=args.skip_first_record,
+                                     require_all_columns=args.require_all_columns,
+                                     prohibit_extra_columns=args.prohibit_extra_columns,
+                                     fill_missing_columns=args.fill_missing_columns,
+                                     ignore_empty_lines=args.ignore_empty_lines,
+                                     ignore_comment_lines=args.ignore_comment_lines,
+                                     ignore_whitespace_lines=args.ignore_whitespace_lines,
+                                     ignore_blank_id_lines=args.ignore_blank_id_lines,
+                                     gzip_in_parallel=args.gzip_in_parallel,
+                                     gzip_queue_size=args.gzip_queue_size,
+                                     column_separator=args.column_separator,
+                                     verbose=args.verbose, very_verbose=args.very_verbose)
+
+    line_count: int = 0
+    line: typing.List[str]
+    for line in er:
+        line_count += 1
+    print("Read %d lines" % line_count)
+
+if __name__ == "__main__":
+    main()
+

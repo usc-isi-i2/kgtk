@@ -4,6 +4,7 @@ Read a KGTK edge file in TSV format.
 TODO: Add support for alternative envelope formats, such as JSON.
 """
 
+from argparse import ArgumentParser
 import attr
 import bz2
 import gzip
@@ -225,4 +226,47 @@ class EdgeReader(BaseReader):
         if self.label_column_idx >= 0 and column_name in KgtkFormat.LABEL_COLUMN_NAMES:
             return True
         return False
+
+    @classmethod
+    def add_arguments(cls, parser: ArgumentParser):
+        super().add_arguments(parser)
+        parser.add_argument(      "--no-ignore-blank-node1-lines", dest="ignore_blank_node1_lines",
+                                  help="When specified, do not ignore blank node1 lines.", action='store_false')
+
+        parser.add_argument(      "--no-ignore-blank-node2-lines", dest="ignore_blank_node2_lines",
+                                  help="When specified, do not ignore blank node2 lines.", action='store_false')
+
     
+def main():
+    """
+    Test the KGTK edge file reader.
+    """
+    parser = ArgumentParser()
+    EdgeReader.add_arguments(parser)
+    args = parser.parse_args()
+
+    er: EdgeReader = EdgeReader.open(args.edge_file,
+                                     force_column_names=args.force_column_names,
+                                     skip_first_record=args.skip_first_record,
+                                     require_all_columns=args.require_all_columns,
+                                     prohibit_extra_columns=args.prohibit_extra_columns,
+                                     fill_missing_columns=args.fill_missing_columns,
+                                     ignore_empty_lines=args.ignore_empty_lines,
+                                     ignore_comment_lines=args.ignore_comment_lines,
+                                     ignore_whitespace_lines=args.ignore_whitespace_lines,
+                                     ignore_blank_node1_lines=args.ignore_blank_node1_lines,
+                                     ignore_blank_node2_lines=args.ignore_blank_node2_lines,
+                                     gzip_in_parallel=args.gzip_in_parallel,
+                                     gzip_queue_size=args.gzip_queue_size,
+                                     column_separator=args.column_separator,
+                                     verbose=args.verbose, very_verbose=args.very_verbose)
+
+    line_count: int = 0
+    line: typing.List[str]
+    for line in er:
+        line_count += 1
+    print("Read %d lines" % line_count)
+
+if __name__ == "__main__":
+    main()
+

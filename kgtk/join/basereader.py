@@ -4,6 +4,7 @@ Read a KGTK edge or node file in TSV format (common parts)
 TODO: Add support for alternative envelope formats, such as JSON.
 """
 
+from argparse import ArgumentParser
 import attr
 import gzip
 from pathlib import Path
@@ -194,3 +195,41 @@ class BaseReader:
             result[self.column_names[idx]] = value
             idx += 1
         return result
+
+    @classmethod
+    def add_arguments(cls, parser: ArgumentParser):
+        parser.add_argument(dest="edge_file", help="The edge file to read", type=Path, default=None)
+
+        parser.add_argument(      "--column-separator", dest="column_separator",
+                                  help="Column separator.", type=str, default=KgtkFormat.COLUMN_SEPARATOR)
+
+        parser.add_argument(      "--fill-missing-columns", dest="fill_missing_columns",
+                                  help="Fill missing trailing columns in each line.", action='store_true')
+
+        parser.add_argument(      "--force-column-names", dest="force_column_names", help="Force the column names.", nargs='*')
+
+        parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
+
+        parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
+                                  help="Queue size for parallel gzip.", type=int, default=BaseReader.GZIP_QUEUE_SIZE_DEFAULT)
+
+        parser.add_argument(      "--no-ignore-comment-lines", dest="ignore_comment_lines",
+                                  help="When specified, do not ignore comment lines.", action='store_false')
+
+        parser.add_argument(      "--no-ignore-empty-lines", dest="ignore_empty_lines",
+                                  help="When specified, do not ignore empty lines.", action='store_false')
+
+        parser.add_argument(      "--no-ignore-whitespace-lines", dest="ignore_whitespace_lines",
+                                  help="When specified, do not ignore whitespace lines.", action='store_false')
+
+        parser.add_argument(      "--no-prohibit-extra-columns", dest="prohibit_extra_columns",
+                                  help="When specified, do not prohibit extra columns in each line.", action='store_false')
+
+        parser.add_argument(      "--no-require-all-columns", dest="require_all_columns",
+                                  help="When specified, do not require all columns in each line.", action='store_false')
+
+        parser.add_argument(      "--skip-first-record", dest="skip_first_record", help="Skip the first record when forcing column names.", action='store_true')
+
+        parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+
+        parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
