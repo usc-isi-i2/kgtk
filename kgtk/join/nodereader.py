@@ -13,6 +13,7 @@ import sys
 import typing
 
 from kgtk.join.basereader import BaseReader
+from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtk_format import KgtkFormat
 
@@ -55,7 +56,7 @@ class NodeReader(BaseReader):
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
                               ignore_blank_id_lines=ignore_blank_id_lines,
-                              gzip_in_parallel=gzip_in_parallel,
+                              gzip_in_parallel=False,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
                               verbose=verbose,
@@ -116,7 +117,7 @@ class NodeReader(BaseReader):
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
                               ignore_blank_id_lines=ignore_blank_id_lines,
-                              gzip_in_parallel=gzip_in_parallel,
+                              gzip_in_parallel=False,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
                               verbose=verbose,
@@ -157,13 +158,16 @@ class NodeReader(BaseReader):
         # Get the indices of the required columns.
         id_column_idx: int = KgtkFormat.get_column_idx(KgtkFormat.ID_COLUMN_NAMES, column_name_map)
 
-        gzip_thread: typing.Optional[GunzipProcess] = None
+        source: ClosableIter[str]
         if gzip_in_parallel:
-            gzip_thread = GunzipProcess(file_in, Queue(gzip_queue_size))
+            gzip_thread: GunzipProcess = GunzipProcess(file_in, Queue(gzip_queue_size))
             gzip_thread.start()
+            source = gzip_thread
+        else:
+            source = ClosableIterTextIOWrapper(file_in)
 
         return cls(file_path=file_path,
-                   file_in=file_in,
+                   source=source,
                    column_separator=column_separator,
                    column_names=column_names,
                    column_name_map=column_name_map,
@@ -179,7 +183,6 @@ class NodeReader(BaseReader):
                    ignore_whitespace_lines=ignore_whitespace_lines,
                    ignore_blank_id_lines=ignore_blank_id_lines,
                    gzip_in_parallel=gzip_in_parallel,
-                   gzip_thread=gzip_thread,
                    gzip_queue_size=gzip_queue_size,
                    line_count=[1, 0], # TODO: find a better way to do this.
                    verbose=verbose,

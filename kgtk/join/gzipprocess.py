@@ -6,6 +6,8 @@ import gzip
 from multiprocessing import Process, Queue
 import typing
 
+from kgtk.join.closableiter import ClosableIter
+
 # This helper class supports running gzip in parallel.
 #
 # TODO: can we use attrs here?
@@ -42,7 +44,7 @@ class GzipProcess(Process):
 # This helper class supports running gunzip in parallel.
 #
 # TODO: can we use attrs here?
-class GunzipProcess(Process):
+class GunzipProcess(Process, ClosableIter[str]):
     gzip_file: typing.TextIO
 
     # The line queue contains str with None as a plug.
@@ -62,7 +64,7 @@ class GunzipProcess(Process):
         self.line_queue.put(None) # Plug the queue.
 
     # This is an iterator object.
-    def __iter__(self)-> typing.Iterator:
+    def __iter__(self)-> typing.Iterator[str]:
         return self
     
     def __next__(self)->str:
@@ -71,4 +73,7 @@ class GunzipProcess(Process):
             raise StopIteration
         else:
             return line
+
+    def close(self):
+        self.gzip_file.close()
 
