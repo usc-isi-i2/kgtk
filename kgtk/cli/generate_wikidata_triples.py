@@ -319,15 +319,19 @@ def run(
 
             Update the self.STATEMENT
             """
+            # print("#Debug: ", node1, label, node2, isQualifierEdge)
+
             # determine the node type [property|item]
             if node1 in self.propTypes:
                 entity = WDProperty(node1.upper(), self.propTypes[node1])
             else:
                 entity = WDItem(node1.upper())
             # determine the edge type
+
             edgeType = self.propTypes[label]
+
             if edgeType == Item:
-                OBJECT = Item(node2.upper())
+                OBJECT = WDItem(node2.upper())
 
             elif edgeType == TimeValue:
                 # https://www.wikidata.org/wiki/Help:Dates
@@ -373,12 +377,17 @@ def run(
             if isQualifierEdge:
                 # edge: e8 p9 ^2013-01-01T00:00:00Z/11
                 # create qualifier edge on previous STATEMENT and return the updated STATEMENT
+                if type(OBJECT) == WDItem:
+                    self.doc.kg.add_subject(OBJECT)
                 self.STATEMENT.add_qualifier(label.upper(), OBJECT)
                 self.doc.kg.add_subject(self.STATEMENT) #TODO maybe can be positioned better for the edge cases.
     
             else:
                 # edge: q1 p8 q2 e8
                 # create brand new property edge and replace STATEMENT
+                if type(OBJECT) == WDItem:
+                    self.doc.kg.add_subject(OBJECT)
+                self.doc.kg.add_subject(entity) #TODO add the entity itself
                 self.STATEMENT = entity.add_statement(label.upper(), OBJECT)
                 self.doc.kg.add_subject(self.STATEMENT)
             return True
@@ -397,18 +406,18 @@ def run(
 
             [node1, label, node2, eID] = edgeList
             node1, label, node2, eID = node1.strip(),label.strip(),node2.strip(),eID.strip()
-            if line_number == 1:
+            if line_number == 0: #TODO ignore header mode
                 # by default a statement edge
-                if self.read >= self.n:
-                    self.serialize()
                 isQualifierEdge = False
                 # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
                 self.ID = eID
             else:
                 if node1 != self.ID:
                     # also a new statement edge
+                    if self.read >= self.n:
+                        self.serialize()
                     isQualifierEdge = False
-                    # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
+                    # print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
                     self.ID= eID
                 else:
                 # qualifier edge or property declaration edge
@@ -422,7 +431,7 @@ def run(
                                     node1, line_number, self.ID
                                 )
                             )
-                    # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
+                    # print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
 
             if label in self.labelSet:
                 self.read += self.genLabelTriple(node1, label, node2)
@@ -457,6 +466,7 @@ def run(
             """
             docs = self.etk.process_ems(self.doc)
             self.fp.write(docs[0].kg.serialize("ttl").split("\n\n")[0] + "\n\n")
+            self.fp.flush()
             self.__reset()
 
         def __reset(self):
