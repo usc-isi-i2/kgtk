@@ -14,6 +14,16 @@ def parser():
         "help": "Generates wikidata triples from kgtk file",
         "description": "Generating Wikidata triples.",
     }
+def str2bool(v):
+    import argparse
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def add_arguments(parser):
@@ -67,7 +77,7 @@ def add_arguments(parser):
         "-gt",
         "--generate-truthy",
         action="store",
-        type=bool,
+        type=str2bool,
         help="the default is to not generate truthy triples. Specify this option to generate truthy triples. NOTIMPLEMENTED",
         dest="truthy",
     )
@@ -75,7 +85,7 @@ def add_arguments(parser):
         "-ig",
         "--ig",
         action="store",
-        type=bool,
+        type=str2bool,
         help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging NOTIMPLEMENTED",
         dest="ignore",
     )
@@ -87,15 +97,9 @@ def run(
     descriptions: str,
     propFile: str,
     n: int,
-    truthy: bool = False,
-    ignore: bool = True,
+    truthy: bool,
+    ignore: bool,
 ):
-    """
-    Arguments here should be defined in `add_arguments` first.
-    The return value (integer) will be the return code in shell. It will set to 0 if no value returns.
-    Though you can return a non-zero value to indicate error, raise exceptions defined in kgtk.exceptions is preferred
-    since this gives user an unified error code and message.
-    """
     # import modules locally
     import sys
     import warnings
@@ -229,9 +233,11 @@ def run(
             else:
                 entity = WDItem(node1.upper())
             if "@" in node2:
-                node2, lang = node2.split("@")
-                if len(lang) != 2:
-                    lang="en" #TODO need to fix the ill-formatted language short code
+                res = node2.split("@")
+                node2 = "@".join(res[:-1])
+                lang = res[-1]
+                if len(lang) > 2: #TODO fix the unsupported language short code
+                    lang = "en"
                 entity.add_label(node2.replace('"', "").replace("'", ""), lang=lang)
             else:
                 entity.add_label(
@@ -246,7 +252,11 @@ def run(
             else:
                 entity = WDItem(node1.upper())
             if "@" in node2:
-                node2, lang = node2.split("@")
+                res = node2.split("@")
+                node2 = "@".join(res[:-1])
+                lang = res[-1]
+                if len(lang) > 2:
+                    lang = "en"
                 entity.add_description(
                     node2.replace('"', "").replace("'", ""), lang=lang
                 )
@@ -263,7 +273,11 @@ def run(
             else:
                 entity = WDItem(node1.upper())
             if "@" in node2:
-                node2, lang = node2.split("@")
+                res = node2.split("@")
+                node2 = "@".join(res[:-1])
+                lang = res[-1]
+                if len(lang) > 2:
+                    lang = "en"
                 entity.add_description(
                     node2.replace('"', "").replace("'", ""), lang=lang
                 )
@@ -296,7 +310,7 @@ def run(
             return True
 
         def genNormalTriple(
-            self, node1: str, label: str, node2: str, isPropEdge: bool
+            self, node1: str, label: str, node2: str, isQualifierEdge: bool
         ) -> bool:
             """
             The normal triple's type is determined by 
@@ -356,15 +370,17 @@ def run(
             else:
                 # treat everything else as stringValue
                 OBJECT = StringValue(node2)
-            if isPropEdge:
-                # edge: q1 p8 q2 e8
-                # create brand new property edge and replace STATEMENT
-                self.STATEMENT = entity.add_statement(label.upper(), OBJECT)
-            else:
+            if isQualifierEdge:
                 # edge: e8 p9 ^2013-01-01T00:00:00Z/11
                 # create qualifier edge on previous STATEMENT and return the updated STATEMENT
                 self.STATEMENT.add_qualifier(label.upper(), OBJECT)
-            self.doc.kg.add_subject(self.STATEMENT)
+                self.doc.kg.add_subject(self.STATEMENT) #TODO maybe can be positioned better for the edge cases.
+    
+            else:
+                # edge: q1 p8 q2 e8
+                # create brand new property edge and replace STATEMENT
+                self.STATEMENT = entity.add_statement(label.upper(), OBJECT)
+                self.doc.kg.add_subject(self.STATEMENT)
             return True
 
         def entryPoint(self, line_number:int , edge: str):
@@ -376,48 +392,37 @@ def run(
             """
             edgeList = edge.strip().split("\t")
             l = len(edgeList)
-            if l == 4:
-                # property statement edge
-                # try to serialize when a new property statement is encountered.
+            if l!=4:
+                raise KGTKException("line {} has {} fields other than 4".format(line_number,l))
+
+            [node1, label, node2, eID] = edgeList
+            node1, label, node2, eID = node1.strip(),label.strip(),node2.strip(),eID.strip()
+            if line_number == 1:
+                # by default a statement edge
                 if self.read >= self.n:
                     self.serialize()
-                isPropEdge = True
-                [node1, label, node2, eID] = edgeList
-                node1, label, node2, eID = (
-                    node1.strip(),
-                    label.strip(),
-                    node2.strip(),
-                    eID.strip(),
-                )
-                if eID == self.ID:
-                    if not self.ignore:
-                        raise KGTKException(
-                            "id {} of edge {} at line {} duplicates latest property statement id {}.\n".format(
-                                eID, edge, line_number, self.ID
-                            )
-                        )
-                    return
-                else:
-                    self.ID = eID
-            elif l == 3:
-                # qualifier edge or property declaration edge
-                isPropEdge = False
-                [node1, label, node2] = edgeList
-                node1, label, node2 = node1.strip(), label.strip(), node2.strip()
-                if label != "type" and node1 != self.ID:
-                    # 1. not a property declaration edge and
-                    # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
-                    if not self.ignore:
-                        raise KGTKException(
-                            "Node1 {} of qualifier edge {} at line {} doesn't agree with latest property edge id {}.\n".format(
-                                node1, edge, line_number, self.ID
-                            )
-                        )
-                    return
+                isQualifierEdge = False
+                # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
+                self.ID = eID
             else:
-                if not self.ignore:
-                    raise KGTKException("Length {} of edge {} at line {} is not valid.\n".format(l, edge, line_number))
-                return
+                if node1 != self.ID:
+                    # also a new statement edge
+                    isQualifierEdge = False
+                    # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
+                    self.ID= eID
+                else:
+                # qualifier edge or property declaration edge
+                    isQualifierEdge = True
+                    if label != "type" and node1 != self.ID:
+                        # 1. not a property declaration edge and
+                        # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
+                        if not self.ignore:
+                            raise KGTKException(
+                                "Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
+                                    node1, line_number, self.ID
+                                )
+                            )
+                    # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
 
             if label in self.labelSet:
                 self.read += self.genLabelTriple(node1, label, node2)
@@ -430,11 +435,11 @@ def run(
                 self.read += self.genPropDeclarationTriple(node1, label, node2)
             else:
                 if label in self.propTypes:
-                    self.read += self.genNormalTriple(node1, label, node2, isPropEdge)
+                    self.read += self.genNormalTriple(node1, label, node2, isQualifierEdge)
                 else:
                     if not self.ignore:
                         raise KGTKException(
-                            "property {}'s type is unknown as in edge {} at line {}.\n".format(label, edge, line_number)
+                            "property {}'s type is unknown at line {}.\n".format(label, line_number)
                         )
 
         def serialize(self):
@@ -443,6 +448,7 @@ def run(
             """
             docs = self.etk.process_ems(self.doc)
             self.fp.write("\n\n".join(docs[0].kg.serialize("ttl").split("\n\n")[1:]))
+            self.fp.flush()
             self.__reset()
 
         def __serialize_prefix(self):
@@ -460,6 +466,7 @@ def run(
             self.doc = self.__setDoc()
 
         def finalize(self):
+            self.serialize()
             return
 
     generator = TripleGenerator(
@@ -468,13 +475,12 @@ def run(
         aliasSet=aliases,
         descriptionSet=descriptions,
         n=n,
-        ignore=True
+        ignore=ignore
     )
     # process stdin
     for num, edge in enumerate(sys.stdin.readlines()):
-        if num == 0:
+        if edge.startswith("#"): # TODO First line omit
             continue
         else:
             generator.entryPoint(num, edge)
-    generator.serialize()
     generator.finalize()
