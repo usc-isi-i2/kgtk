@@ -79,12 +79,26 @@ class EdgeWriter:
         
         if verbose:
             print("File_path.suffix: %s" % file_path.suffix)
-        if file_path.suffix == ".gz":
-            if verbose:
-                print("EdgeWriter: writing gzip %s" % str(file_path))
 
+        if file_path.suffix in [".gz", ".bz2", ".xz"]:
             # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
-            gzip_file: typing.TextIO = gzip.open(file_path, mode="wt") # type: ignore
+            gzip_file: typing.TextIO
+            if file_path.suffix == ".gz":
+                if verbose:
+                    print("NodeReader: reading gzip %s" % str(file_path))
+                gzip_file = gzip.open(file_path, mode="wt") # type: ignore
+            elif file_path.suffix == ".bz2":
+                if verbose:
+                    print("NodeReader: reading bz2 %s" % str(file_path))
+                gzip_file = bz2.open(file_path, mode="wt") # type: ignore
+            elif file_path.suffix == ".xz":
+                if verbose:
+                    print("NodeReader: reading lzma %s" % str(file_path))
+                gzip_file = lzma.open(file_path, mode="wt") # type: ignore
+            else:
+                # TODO: throw a better exception.
+                raise ValueError("Unexpected file_patn.suffiz = '%s'" % file_path.suffix)
+
             return cls._setup(column_names=column_names,
                               file_path=file_path,
                               file_out=gzip_file,

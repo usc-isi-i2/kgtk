@@ -19,9 +19,9 @@ class KgtkFormat:
 
     @classmethod
     def get_column_idx(cls,
-                            name_or_aliases: typing.List[str],
-                            column_name_map: typing.Mapping[str, int],
-                            is_optional: bool = False)->int:
+                       name_or_aliases: typing.List[str],
+                       column_name_map: typing.Mapping[str, int],
+                       is_optional: bool = False)->int:
         """
         Get the indices of the required column using one of its allowable names.
         Return -1 if the column is not found and is optional.
@@ -42,11 +42,7 @@ class KgtkFormat:
         return column_idx
 
     @classmethod
-    def validate_kgtk_edge_columns(cls, column_names: typing.List[str])->typing.Mapping[str, int]:
-        if len(column_names) < 3:
-            # TODO: throw a better exception
-            raise ValueError("The edge file header must have at least three columns.")
-
+    def build_column_name_map(cls, column_names: typing.List[str])->typing.Mapping[str, int]:
         # Validate the column names and build a map from column name
         # to column index.
         column_name_map: typing.MutableMapping[str, int] = { }
@@ -55,7 +51,7 @@ class KgtkFormat:
         for column_name in column_names:
             if column_name is None or len(column_name) == 0:
                 # TODO: throw a better exception
-                raise ValueError("Column %d has an invalid name in the edge file header" % column_idx)
+                raise ValueError("Column %d has an invalid name in the file header" % column_idx)
 
             # Ensure that columns names are not duplicated:
             if column_name in column_name_map:
@@ -64,8 +60,19 @@ class KgtkFormat:
 
             column_name_map[column_name] = column_idx
             column_idx += 1
+        return column_name_map
 
-        # Ensure that the three require columns are present:
+    @classmethod
+    def validate_kgtk_edge_columns(cls, column_names: typing.List[str])->typing.Mapping[str, int]:
+        if len(column_names) < 3:
+            # TODO: throw a better exception
+            raise ValueError("The edge file header must have at least three columns.")
+
+        # Validate the column names and build a map from column name
+        # to column index.
+        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
+
+        # Ensure that the three required columns are present:
         cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map)
         cls.get_column_idx(cls.NODE2_COLUMN_NAMES, column_name_map)
         cls.get_column_idx(cls.LABEL_COLUMN_NAMES, column_name_map)
@@ -87,6 +94,21 @@ class KgtkFormat:
         return additional_columns
 
     @classmethod
+    def validate_kgtk_node_columns(cls, column_names: typing.List[str])->typing.Mapping[str, int]:
+        if len(column_names) < 1:
+            # TODO: throw a better exception
+            raise ValueError("The edge file header must have at least one column.")
+
+        # Validate the column names and build a map from column name
+        # to column index.
+        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
+
+        # Ensure that the required column is present:
+        cls.get_column_idx(cls.ID_COLUMN_NAMES, column_name_map)
+
+        return column_name_map
+
+    @classmethod
     def additional_node_columns(cls, column_names: typing.List[str])->typing.List[str]:
         """
         Return a list of column names in this file excluding the required columns.
@@ -97,4 +119,4 @@ class KgtkFormat:
             if column_name not in KgtkFormat.ID_COLUMN_NAMES:
                 additional_columns.append(column_name)
         return additional_columns
-
+    
