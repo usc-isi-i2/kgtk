@@ -115,6 +115,14 @@ Similar to shared arguments, default arguments are also globally defined. But it
 
 Using it is also similar to shared arguments: define default arguments in [`kgtk.cli_argparse.add_default_arguments`](https://github.com/usc-isi-i2/kgtk/blob/dev/kgtk/cli_argparse.py).
 
+```
+def add_default_arguments(parser):
+    # set default arguments here
+    # need to specify dest
+    # e.g., parser.add_default_argument('--save', dest='save', action='store', help='save to file')
+    pass
+```
+
 Then in submodule, register interested default arguments with `parser.accept_default_argument` in `add_arguments` function and change the signature of `run` to accept these arguments.
 
 ```
