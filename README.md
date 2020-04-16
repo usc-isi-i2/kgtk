@@ -40,3 +40,7 @@ To get an information on how to use each of them, run:
 `kgtk [TOOL] -h`
 
 More detailed description of the arguments will be added here promptly.
+
+### Developer Instruction
+
+Please refer to [this](README_dev.md)
