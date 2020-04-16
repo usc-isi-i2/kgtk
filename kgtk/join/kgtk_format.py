@@ -63,21 +63,13 @@ class KgtkFormat:
         return column_name_map
 
     @classmethod
-    def validate_kgtk_edge_columns(cls, column_names: typing.List[str])->typing.Mapping[str, int]:
-        if len(column_names) < 3:
-            # TODO: throw a better exception
-            raise ValueError("The edge file header must have at least three columns.")
-
-        # Validate the column names and build a map from column name
-        # to column index.
-        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
-
+    def required_edge_columns(cls, column_name_map: typing.Mapping[str, int])->typing.Tuple[int, int, int]:
         # Ensure that the three required columns are present:
-        cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map)
-        cls.get_column_idx(cls.NODE2_COLUMN_NAMES, column_name_map)
-        cls.get_column_idx(cls.LABEL_COLUMN_NAMES, column_name_map)
+        node1_column_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map)
+        node2_column_idx: int = cls.get_column_idx(cls.NODE2_COLUMN_NAMES, column_name_map)
+        label_column_idx: int = cls.get_column_idx(cls.LABEL_COLUMN_NAMES, column_name_map)
 
-        return column_name_map
+        return (node1_column_idx, node2_column_idx, label_column_idx)
 
     @classmethod
     def additional_edge_columns(cls, column_names: typing.List[str])->typing.List[str]:
@@ -94,19 +86,9 @@ class KgtkFormat:
         return additional_columns
 
     @classmethod
-    def validate_kgtk_node_columns(cls, column_names: typing.List[str])->typing.Mapping[str, int]:
-        if len(column_names) < 1:
-            # TODO: throw a better exception
-            raise ValueError("The edge file header must have at least one column.")
-
-        # Validate the column names and build a map from column name
-        # to column index.
-        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
-
+    def required_node_column(cls, column_name_map: typing.Mapping[str, int])->int:
         # Ensure that the required column is present:
-        cls.get_column_idx(cls.ID_COLUMN_NAMES, column_name_map)
-
-        return column_name_map
+        return cls.get_column_idx(cls.ID_COLUMN_NAMES, column_name_map)
 
     @classmethod
     def additional_node_columns(cls, column_names: typing.List[str])->typing.List[str]:
