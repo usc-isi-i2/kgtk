@@ -6,7 +6,10 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 from argparse import ArgumentParser
 import attr
+import bz2
 import gzip
+import lz4.frame # type: ignore
+import lzma
 from pathlib import Path
 from multiprocessing import Queue
 import sys
@@ -66,7 +69,7 @@ class NodeReader(BaseReader):
         if verbose:
             print("File_path.suffix: %s" % file_path.suffix)
 
-        if file_path.suffix in [".gz", ".bz2", ".xz"]:
+        if file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
             # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
             gzip_file: typing.TextIO
             if file_path.suffix == ".gz":
@@ -81,6 +84,10 @@ class NodeReader(BaseReader):
                 if verbose:
                     print("NodeReader: reading lzma %s" % str(file_path))
                 gzip_file = lzma.open(file_path, mode="rt") # type: ignore
+            elif file_path.suffix == ".lz4":
+                if verbose:
+                    print("EdgeReader: reading lz4 %s" % str(file_path))
+                gzip_file = lz4.frame.open(file_path, mode="rt") # type: ignore
             else:
                 # TODO: throw a better exception.
                 raise ValueError("Unexpected file_patn.suffiz = '%s'" % file_path.suffix)
