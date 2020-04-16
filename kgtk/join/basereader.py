@@ -4,21 +4,24 @@ Read a KGTK edge or node file in TSV format (common parts)
 TODO: Add support for alternative envelope formats, such as JSON.
 """
 
+import abc
 from argparse import ArgumentParser
 import attr
+import bz2
 import gzip
+import lz4.frame # type: ignore
+import lzma
 from pathlib import Path
 from multiprocessing import Queue
 import sys
 import typing
 
-from kgtk.join.closableiter import ClosableIter
+from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtk_format import KgtkFormat
 
-# TODO: properly mark this as an abstract class.
 @attr.s(slots=True, frozen=True)
-class BaseReader(ClosableIter[typing.List[str]]):
+class BaseReader(KgtkFormat, ClosableIter[typing.List[str]], metaclass=abc.ABCMeta):
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     source: ClosableIter[str] = attr.ib() # Todo: validate
     column_separator: str = attr.ib(validator=attr.validators.instance_of(str))
@@ -59,6 +62,10 @@ class BaseReader(ClosableIter[typing.List[str]]):
     line_count: typing.List[int] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(int),
                                                                                    iterable_validator=attr.validators.instance_of(list)))
 
+    # Is this an edge file or a node file?
+    is_edge_file: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    is_node_file: bool = attr.ib(validator=attr.validators.instance_of(bool))
+
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
@@ -66,8 +73,57 @@ class BaseReader(ClosableIter[typing.List[str]]):
     GZIP_QUEUE_SIZE_DEFAULT: int = 1000
 
     @classmethod
+    def _openfile(cls, file_path: typing.Optional[Path],
+                  gzip_in_parallel: bool,
+                  gzip_queue_size: int,
+                  verbose: bool)->ClosableIter[str]:
+        who: str = cls.__name__
+        if file_path is None or str(file_path) == "-":
+            if verbose:
+                print("%s: reading stdin" % who)
+            return ClosableIterTextIOWrapper(sys.stdin)
+
+        if verbose:
+            print("%s: File_path.suffix: %s" % (who, file_path.suffix))
+
+        if file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
+            # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
+            gzip_file: typing.TextIO
+            if file_path.suffix == ".gz":
+                if verbose:
+                    print("%s: reading gzip %s" % (who, str(file_path)))
+                gzip_file = gzip.open(file_path, mode="rt") # type: ignore
+            elif file_path.suffix == ".bz2":
+                if verbose:
+                    print("%s: reading bz2 %s" % (who, str(file_path)))
+                gzip_file = bz2.open(file_path, mode="rt") # type: ignore
+            elif file_path.suffix == ".xz":
+                if verbose:
+                    print("%s: reading lzma %s" % (who, str(file_path)))
+                gzip_file = lzma.open(file_path, mode="rt") # type: ignore
+            elif file_path.suffix == ".lz4":
+                if verbose:
+                    print("%s: reading lz4 %s" % (who, str(file_path)))
+                gzip_file = lz4.frame.open(file_path, mode="rt") # type: ignore
+            else:
+                # TODO: throw a better exception.
+                raise ValueError("%s: Unexpected file_path.suffix = '%s'" % (who, file_path.suffix))
+
+            if gzip_in_parallel:
+                gzip_thread: GunzipProcess = GunzipProcess(gzip_file, Queue(gzip_queue_size))
+                gzip_thread.start()
+                return gzip_thread
+            else:
+                return ClosableIterTextIOWrapper(gzip_file)
+            
+        else:
+            if verbose:
+                print("%s: reading file %s" % (who, str(file_path)))
+            return ClosableIterTextIOWrapper(open(file_path, "r"))
+
+    @classmethod
     def _build_column_names(cls,
-                            file_in: typing.TextIO,
+                            source: ClosableIter[str],
                             force_column_names: typing.Optional[typing.List[str]],
                             skip_first_record: bool,
                             column_separator: str,
@@ -81,7 +137,7 @@ class BaseReader(ClosableIter[typing.List[str]]):
             # Read the column names from the first line.
             #
             # TODO: if the read fails, throw a more useful exception with the line number.
-            header: str = file_in.readline()
+            header: str = next(source)
             if verbose:
                 print("header: %s" % header)
 
@@ -91,7 +147,7 @@ class BaseReader(ClosableIter[typing.List[str]]):
             # Skip the first record to override the column names in the file.
             # Do not skip the first record if the file does not hae a header record.
             if skip_first_record:
-                file_in.readline()
+                next(source)
             # Use the forced column names.
             column_names = force_column_names
         return column_names
@@ -125,7 +181,7 @@ class BaseReader(ClosableIter[typing.List[str]]):
                 self.line_count[1] += 1
                 continue
             # Ignore comment lines:
-            if line[0] == KgtkFormat.COMMENT_INDICATOR and self.ignore_comment_lines:
+            if line[0] == self.COMMENT_INDICATOR and self.ignore_comment_lines:
                 self.line_count[1] += 1
                 continue
             # Ignore whitespace lines
@@ -159,11 +215,13 @@ class BaseReader(ClosableIter[typing.List[str]]):
             
             return values
 
+    @abc.abstractmethod
     def _ignore_if_blank_fields(self, values: typing.List[str]):
-        pass # TODO: Use proper abstract class markers.
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def _skip_reserved_fields(self, column_name):
-        pass # TODO: Use proper abstract class markers.
+        raise NotImplementedError
 
     def merge_columns(self, additional_columns: typing.List[str])->typing.List[str]:
         """
@@ -198,10 +256,10 @@ class BaseReader(ClosableIter[typing.List[str]]):
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(dest="edge_file", help="The edge file to read", type=Path, default=None)
+        parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, default=None)
 
         parser.add_argument(      "--column-separator", dest="column_separator",
-                                  help="Column separator.", type=str, default=KgtkFormat.COLUMN_SEPARATOR)
+                                  help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
 
         parser.add_argument(      "--fill-missing-columns", dest="fill_missing_columns",
                                   help="Fill missing trailing columns in each line.", action='store_true')
@@ -211,7 +269,7 @@ class BaseReader(ClosableIter[typing.List[str]]):
         parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
 
         parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
-                                  help="Queue size for parallel gzip.", type=int, default=BaseReader.GZIP_QUEUE_SIZE_DEFAULT)
+                                  help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
 
         parser.add_argument(      "--no-ignore-comment-lines", dest="ignore_comment_lines",
                                   help="When specified, do not ignore comment lines.", action='store_false')

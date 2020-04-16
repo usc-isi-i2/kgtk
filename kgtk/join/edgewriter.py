@@ -4,6 +4,7 @@ Write a KGTK edge file in TsV format.
 TODO: Add support for alternative envelope formats, such as JSON.
 """
 
+from argparse import ArgumentParser
 import attr
 import gzip
 from pathlib import Path
@@ -12,10 +13,11 @@ import sys
 import typing
 
 from kgtk.join.gzipprocess import GzipProcess
+from kgtk.join.edgereader import EdgeReader
 from kgtk.join.kgtk_format import KgtkFormat
 
 @attr.s(slots=True, frozen=True)
-class EdgeWriter:
+class EdgeWriter(KgtkFormat):
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     file_out: typing.TextIO = attr.ib() # Todo: validate TextIO
     column_separator: str = attr.ib(validator=attr.validators.instance_of(str))
@@ -85,15 +87,15 @@ class EdgeWriter:
             gzip_file: typing.TextIO
             if file_path.suffix == ".gz":
                 if verbose:
-                    print("NodeReader: reading gzip %s" % str(file_path))
+                    print("EdgeWriter: writing gzip %s" % str(file_path))
                 gzip_file = gzip.open(file_path, mode="wt") # type: ignore
             elif file_path.suffix == ".bz2":
                 if verbose:
-                    print("NodeReader: reading bz2 %s" % str(file_path))
+                    print("EdgeWriter: writing bz2 %s" % str(file_path))
                 gzip_file = bz2.open(file_path, mode="wt") # type: ignore
             elif file_path.suffix == ".xz":
                 if verbose:
-                    print("NodeReader: reading lzma %s" % str(file_path))
+                    print("EdgeWriter: writing lzma %s" % str(file_path))
                 gzip_file = lzma.open(file_path, mode="wt") # type: ignore
             else:
                 # TODO: throw a better exception.
@@ -143,9 +145,11 @@ class EdgeWriter:
                very_verbose: bool = False,
     )->"EdgeWriter":
 
-        # Validate the column names and build a map from column name
-        # to column index.
-        column_name_map: typing.Mapping[str, int] = KgtkFormat.validate_kgtk_edge_columns(column_names)
+        # Build a map from column name to column index.
+        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
+
+        # Validate that we have the proper columns for an edge file.
+        cls.required_edge_columns(column_name_map)
 
         # Write the column names to the first line.
         header: str = column_separator.join(column_names)
@@ -267,3 +271,35 @@ class EdgeWriter:
 
                 self.write(shuffled_values)
                 
+def main():
+    """
+    Test the KGTK edge file writer.
+    """
+    parser = ArgumentParser()
+    parser.add_argument(dest="input_edge_file", help="The edge file to read", type=Path, default=None)
+    parser.add_argument(dest="output_edge_file", help="The edge file to write", type=Path, default=None)
+    parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in a subthread.", action='store_true')
+    parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+    parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
+    args = parser.parse_args()
+
+    er: EdgeReader = EdgeReader.open(args.input_edge_file,
+                                     gzip_in_parallel=args.gzip_in_parallel,
+                                     verbose=args.verbose, very_verbose=args.very_verbose)
+
+    ew: EdgeWriter = EdgeWriter.open(er.column_names,
+                                     args.output_edge_file,
+                                     gzip_in_parallel=args.gzip_in_parallel,
+                                     verbose=args.verbose, very_verbose=args.very_verbose)
+
+    line_count: int = 0
+    line: typing.List[str]
+    for line in er:
+        ew.write(line)
+        line_count += 1
+    ew.close()
+    print("Copied %d lines" % line_count)
+
+
+if __name__ == "__main__":
+    main()
