@@ -14,7 +14,7 @@ import typing
 
 from kgtk.join.gzipprocess import GzipProcess
 from kgtk.join.edgereader import EdgeReader
-from kgtk.join.kgtk_format import KgtkFormat
+from kgtk.join.kgtkformat import KgtkFormat
 
 @attr.s(slots=True, frozen=True)
 class EdgeWriter(KgtkFormat):

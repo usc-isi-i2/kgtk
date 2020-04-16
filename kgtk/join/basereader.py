@@ -18,7 +18,7 @@ import typing
 
 from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.gzipprocess import GunzipProcess
-from kgtk.join.kgtk_format import KgtkFormat
+from kgtk.join.kgtkformat import KgtkFormat
 
 @attr.s(slots=True, frozen=True)
 class BaseReader(KgtkFormat, ClosableIter[typing.List[str]], metaclass=abc.ABCMeta):
