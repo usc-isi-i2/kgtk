@@ -387,8 +387,8 @@ def run(
                 # create brand new property edge and replace STATEMENT
                 if type(OBJECT) == WDItem:
                     self.doc.kg.add_subject(OBJECT)
+                self.STATEMENT = entity.add_statement(label.upper(), OBJECT) #TODO the order matters, this line must appear before the line below
                 self.doc.kg.add_subject(entity) #TODO add the entity itself
-                self.STATEMENT = entity.add_statement(label.upper(), OBJECT)
                 self.doc.kg.add_subject(self.STATEMENT)
             return True
 
