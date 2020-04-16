@@ -6,7 +6,7 @@ import itertools
 from kgtk import cli
 from kgtk.exceptions import KGTKExceptionHandler, KGTKArgumentParseException
 from kgtk import __version__
-from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments
+from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments, add_default_arguments
 import sh # type: ignore
 
 
@@ -69,7 +69,9 @@ def cli_entry(*args):
     for h in handlers:
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         sub_parser = sub_parsers.add_parser(h, **mod.parser())
+        add_default_arguments(sub_parser)  # call this before adding other arguments
         mod.add_arguments(sub_parser)
+
     # add root level usage after sub-parsers are created
     # this won't pollute help info in sub-parsers
     parser.usage = '%(prog)s [options] command [ / command]*'

@@ -233,11 +233,12 @@ class EmbeddingVector:
         """
         from collections import defaultdict
         import pandas as pd # type: ignore
+        import numpy as np
         self.property_labels_dict = property_labels_dict
 
         if input_format == "test_format":
             self.input_format = input_format
-            input_df = pd.read_csv(file_path)
+            input_df = pd.read_csv(file_path, dtype=str)
             candidates = {}
             gt = {}
             count = 0
@@ -251,6 +252,9 @@ class EmbeddingVector:
             for _, each in input_df.iterrows():
                 temp = str(each['candidates']).split("|")
                 to_remove_q = set()
+                if each[gt_column_id] is np.nan:
+                    self._logger.error("Ignore nan value form {}".format(str(each)))
+                    each[gt_column_id] = ""
                 gt_nodes = each[gt_column_id].split(" ")
                 label = str(each["label"])
                 if len(gt_nodes) == 0:
@@ -499,8 +503,9 @@ class EmbeddingVector:
         if input_format == "test_format":
             # # start plot
             gt_indexes = set()
+            vector_map_keys = list(self.vectors_map.keys())
             for each_node in self.gt_nodes:
-                gt_indexes.add(list(self.vectors_map.keys()).index(each_node))
+                gt_indexes.add(vector_map_keys.index(each_node))
             # load the descriptions if we don't have them
             # if len(self.q_nodes_descriptions) == 0:
             #     for each in self.candidates.values():
@@ -539,7 +544,8 @@ class EmbeddingVector:
             self.print_vector(self.vectors_2D, output_properties.get("output_properties"), output_format)
         else:
             self.print_vector(vectors, output_properties.get("output_properties"), output_format)
-        self.dump_vectors(metadata_output_path, "metadata")
+        if output_uri != "none":
+            self.dump_vectors(metadata_output_path, "metadata")
 
     def evaluate_result(self):
         """
@@ -690,12 +696,14 @@ def main(**kwargs):
             logging_level_class = logging.ERROR
         else:
             logging_level_class = logging.WARNING
-        logger_path = os.path.join(os.environ.get("HOME"), "kgtk_text_embedding_log_{}.log".format(strftime("%Y-%m-%d-%H-%M")))
-        logging.basicConfig(level=logging_level_class,
-                    format="%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s",
-                    datefmt='%m-%d %H:%M:%S',
-                    filename=logger_path,
-                    filemode='w')
+
+        if logging_level != "none":
+            logger_path = os.path.join(os.environ.get("HOME"), "kgtk_text_embedding_log_{}.log".format(strftime("%Y-%m-%d-%H-%M")))
+            logging.basicConfig(level=logging_level_class,
+                        format="%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s",
+                        datefmt='%m-%d %H:%M:%S',
+                        filename=logger_path,
+                        filemode='w')
         _logger = logging.getLogger(__name__)
         _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
         import torch
@@ -793,7 +801,7 @@ def add_arguments(parser):
             raise argparse.ArgumentTypeError('Boolean value expected.')
     # logging level
     parser.add_argument('-l', '--logging-level', action='store', dest='logging_level',
-            default="info", choices=("error", "warning", "info", "debug"),
+            default="info", choices=("error", "warning", "info", "debug", "none"),
             help="set up the logging level, default is INFO level")
     # model name
     all_models_names = ALL_EMBEDDING_MODELS_NAMES
