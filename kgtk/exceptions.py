@@ -16,6 +16,10 @@ class KGTKArgumentParseException(KGTKException):
     return_code = 2
 
 
+class KGTKSyntaxException(KGTKException):
+    return_code = 900
+
+
 # class KGTKExampleException(KGTKException):
 #     return_code = 1000  # please allocate a value which is gte 1000
 
