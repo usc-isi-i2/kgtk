@@ -65,7 +65,7 @@ def run(name, info, error, _debug):
 - Function `add_arguments` defines all accepted arguments.
 - Function `run` takes all parsed arguments.
 
-Internally, kgtk scans all submodules in `kgtk/cli`, then calls `parse` to initialize each sub parser and `add_arguments` to register all arguments. You should AVOID using unnecessary global variables, global import, etc, because all these will be loaded while initializing and drop performance. A cli command will be converted into a `run` function call. For example, if the command is `kgtk dummy hello`, it will finally be `run(name='hello')`.
+Internally, kgtk scans all submodules in `kgtk.cli`, then calls `parse` to initialize each sub parser and `add_arguments` to register all arguments. You should AVOID using unnecessary global variables, global import, etc, because all these will be loaded while initializing and drop performance. A cli command will be converted into a `run` function call. For example, if the command is `kgtk dummy hello`, it will finally be `run(name='hello')`.
 
 ## Exceptions
 
@@ -103,6 +103,34 @@ def add_arguments(parser: KGTKArgumentParser):
 
 def run(..., _debug):
     ...
+```
+
+## Default arguments
+
+Similar to shared arguments, default arguments are also globally defined. But it has several differences comparing to shared arguments:
+
+- It performs the same as normal arguments.
+- It defines some common, unified but not globally set arguments. For developer, it's more like a parent parser: arguments only need to be defined once but can be used in all registered sub modules.
+- If it's used in pipe, each sub command can set it to different values.
+
+Using it is also similar to shared arguments: define default arguments in [`kgtk.cli_argparse.add_default_arguments`](https://github.com/usc-isi-i2/kgtk/blob/dev/kgtk/cli_argparse.py).
+
+Then in submodule, register interested default arguments with `parser.accept_default_argument` in `add_arguments` function and change the signature of `run` to accept these arguments.
+
+```
+def add_arguments(parser: KGTKArgumentParser):
+    ...
+    parser.accept_default_argument('save')
+
+def run(..., save):
+    ...
+```
+
+Examples usage:
+
+```
+kgtk --shared-arg command --opt foo --default-arg bar
+kgtk --shared-arg command1 --default-arg bar1 / command2 --default-arg bar2
 ```
 
 ## Debug mode
