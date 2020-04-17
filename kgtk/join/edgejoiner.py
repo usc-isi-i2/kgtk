@@ -17,7 +17,7 @@ from kgtk.join.edgewriter import EdgeWriter
 from kgtk.join.kgtkformat import KgtkFormat
 
 @attr.s(slots=True, frozen=True)
-class EdgeJoiner:
+class EdgeJoiner(KgtkFormat):
     left_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     right_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
@@ -89,24 +89,24 @@ class EdgeJoiner:
         joined_node1_values: typing.Set[str] = self.join_node1_values()
 
         # Open the input files for the second time. This won't work with stdin.
-        left_er =  EdgeReader.open(self.left_file_path,
-                                   require_all_columns=self.require_all_columns,
-                                   prohibit_extra_columns=self.prohibit_extra_columns,
-                                   fill_missing_columns=self.fill_missing_columns)
-        right_er =  EdgeReader.open(self.right_file_path,
-                                   require_all_columns=self.require_all_columns,
-                                   prohibit_extra_columns=self.prohibit_extra_columns,
-                                   fill_missing_columns=self.fill_missing_columns)
+        left_er: EdgeReader =  EdgeReader.open(self.left_file_path,
+                                               require_all_columns=self.require_all_columns,
+                                               prohibit_extra_columns=self.prohibit_extra_columns,
+                                               fill_missing_columns=self.fill_missing_columns)
+        right_er: EdgeReader = EdgeReader.open(self.right_file_path,
+                                               require_all_columns=self.require_all_columns,
+                                               prohibit_extra_columns=self.prohibit_extra_columns,
+                                               fill_missing_columns=self.fill_missing_columns)
         joined_column_names: typing.list[str] = left_er.merge_columns(right_er.column_names)
         
-        ew = EdgeWriter.open(joined_column_names,
-                             self.output_path,
-                             require_all_columns=False,
-                             prohibit_extra_columns=True,
-                             fill_missing_columns=True,
-                             gzip_in_parallel=self.gzip_in_parallel,
-                             verbose=self.verbose,
-                             very_verbose=self.very_verbose)
+        ew: EdgeWriter = EdgeWriter.open(joined_column_names,
+                                         self.output_path,
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         gzip_in_parallel=self.gzip_in_parallel,
+                                         verbose=self.verbose,
+                                         very_verbose=self.very_verbose)
 
         line: typing.list[str]
         left_node1_idx: int = left_er.node1_column_idx
@@ -116,11 +116,39 @@ class EdgeJoiner:
                 ew.write(line)
 
         right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_er.column_names)
-        right_node1_idx: int = roght_er.node1_column_idx
+        right_node1_idx: int = right_er.node1_column_idx
         for line in right_er:
             node1_value: str = line[right_node1_idx]
             if node1_value in joined_node1_values:
-                ew.write_shuffled(right_shuffle_list, line)
+                ew.write(line, shuffle_list=right_shuffle_list)
             
         ew.close()
         
+def main():
+    """
+    Test the KGTK file reader.
+    """
+    parser = ArgumentParser()
+    parser.add_argument(dest="left_file_path", help="The KGTK file to read", type=Path, required=True)
+    parser.add_argument(dest="right_file_path", help="The KGTK file to read", type=Path, required=True)
+    parser.add_argument("-o", "output-file", dest="output_path", help="The KGTK file to read", type=Path, default=None)
+    parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
+    parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
+    parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
+    parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+    parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
+    args = parser.parse_args()
+
+    ej: EdgeJoiner = EdgeJoiner(left_file_path=args.left_file_path,
+                                right_file_path=args.right_file_patn,
+                                left_join=args.left_join,
+                                right_join=args.right_join,
+                                gzip_in_parallel=args.gzip_in_parallel,
+                                verbose=args.verbose,
+                                very_verbose=args.very_verbose)
+
+    ej.process()
+
+if __name__ == "__main__":
+    main()
+
