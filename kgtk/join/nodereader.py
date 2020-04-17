@@ -15,12 +15,6 @@ from kgtk.join.closableiter import ClosableIter
 
 @attr.s(slots=True, frozen=True)
 class NodeReader(BaseReader):
-    # The index of the one mandatory column:
-    id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
-
-    # Ignore records with blank id values
-    ignore_blank_id_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
-
     @classmethod
     def open(cls,
              file_path: typing.Optional[Path],

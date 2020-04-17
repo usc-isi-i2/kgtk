@@ -15,15 +15,6 @@ from kgtk.join.closableiter import ClosableIter
 
 @attr.s(slots=True, frozen=True)
 class EdgeReader(BaseReader):
-    # The indices of the three mandatory columns:
-    node1_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
-    node2_column_idx: int = attr.ib(validator=attr.validators.instance_of(int)) # -1 means missing
-    label_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
-
-    # Ignore records with blank node1 or node2 values
-    ignore_blank_node1_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    ignore_blank_node2_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
-
     @classmethod
     def open(cls,
              file_path: typing.Optional[Path],

@@ -24,7 +24,6 @@ from kgtk.join.kgtkformat import KgtkFormat
 class BaseReader(KgtkFormat, ClosableIter[typing.List[str]], metaclass=abc.ABCMeta):
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     source: ClosableIter[str] = attr.ib() # Todo: validate
-    column_separator: str = attr.ib(validator=attr.validators.instance_of(str))
     column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                      iterable_validator=attr.validators.instance_of(list)))
     column_name_map: typing.Mapping[str, int] = attr.ib(validator=attr.validators.deep_mapping(key_validator=attr.validators.instance_of(str),
@@ -32,25 +31,6 @@ class BaseReader(KgtkFormat, ClosableIter[typing.List[str]], metaclass=abc.ABCMe
 
     # For convenience, the count of columns. This is the same as len(column_names).
     column_count: int = attr.ib(validator=attr.validators.instance_of(int))
-
-    # supply a missing header record or override an existing header record.
-    force_column_names: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                       iterable_validator=attr.validators.instance_of(list))))
-    skip_first_record: bool = attr.ib(validator=attr.validators.instance_of(bool))
-
-    # Require or fill trailing fields?
-    require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    fill_missing_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
-
-    # Ignore empty lines, comments, and all whitespace lines, etc.?
-    ignore_empty_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    ignore_comment_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    ignore_whitespace_lines: bool = attr.ib(validator=attr.validators.instance_of(bool))
-
-    # Other implementation options?
-    gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int))
 
     # When we report line numbers in error messages, line 1 is the first line after the header line.
     #
@@ -62,12 +42,46 @@ class BaseReader(KgtkFormat, ClosableIter[typing.List[str]], metaclass=abc.ABCMe
     line_count: typing.List[int] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(int),
                                                                                    iterable_validator=attr.validators.instance_of(list)))
 
-    # Is this an edge file or a node file?
-    is_edge_file: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    is_node_file: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    # The column separator is normally tab.
+    column_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.COLUMN_SEPARATOR)
 
-    verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    # supply a missing header record or override an existing header record.
+    force_column_names: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                                                     iterable_validator=attr.validators.instance_of(list))),
+                                                                    default=None)
+    skip_first_record: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # The index of the mandatory columns.  -1 means missing:
+    node1_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
+    node2_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
+    label_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
+    id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # node file
+
+    # Ignore records with values in certain fields:
+    ignore_blank_node1_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # edge file
+    ignore_blank_node2_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # edge file
+    ignore_blank_id_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # node file
+
+    # Require or fill trailing fields?
+    require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    fill_missing_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Ignore empty lines, comments, and all whitespace lines, etc.?
+    ignore_empty_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    ignore_comment_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    ignore_whitespace_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
+    # Other implementation options?
+    gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=BaseReader.GZIP_QUEUE_SIZE_DEFAULT)
+
+    # Is this an edge file or a node file?
+    is_edge_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    is_node_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
 
     GZIP_QUEUE_SIZE_DEFAULT: int = 1000
