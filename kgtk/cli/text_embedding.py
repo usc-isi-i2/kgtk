@@ -298,10 +298,11 @@ class EmbeddingVector:
                 raise ValueError("Can't find ground truth id column! It should either named as `GT_kg_id` or `kg_id`")
 
             for _, each in input_df.iterrows():
-                if each['candidates'] is np.nan or math.isnan(each['candidates']):
-                    temp = []
-                else:
+                if isinstance(each["candidates"], str):
                     temp = str(each['candidates']).split("|")
+                elif each['candidates'] is np.nan or math.isnan(each['candidates']):
+                    temp = []
+                    
                 to_remove_q = set()
                 if each[gt_column_id] is np.nan:
                     self._logger.warning("Ignore NaN gt value form {}".format(str(each)))
