@@ -182,7 +182,22 @@ class EdgeWriter(KgtkFormat):
 
     # Write the next list of edge values as a list of strings.
     # TODO: Convert integers, coordinates, etc. from Python types
-    def write(self, values: typing.List[str]):
+    def write(self, values: typing.List[str],
+              shuffle_list: typing.Optional[typing.List[int]]= None):
+
+        if shuffle_list is not None:
+            if len(shuffle_list) != len(values):
+                # TODO: throw a better exception
+                raise ValueError("The shuffle list is %d long but the values are %d long" % (len(shuffle_list), len(values)))
+
+            shuffled_values: typing.List[str] = [""] * self.column_count
+            idx: int
+            for idx in range(len(shuffle_list)):
+                shuffle_idx: int = shuffle_list[idx]
+                if shuffle_idx >= 0:
+                    shuffled_values[shuffle_idx] = values[idx]
+            values = shuffled_values
+
         # Optionally fill missing trailing columns with empty values:
         if self.fill_missing_columns and len(values) < self.column_count:
             while len(values) < self.column_count:
@@ -255,22 +270,6 @@ class EdgeWriter(KgtkFormat):
                 results.append(-1) # Means skip this column.
         return results
     
-    def write_shuffled(self,
-                       shuffle_list: typing.List[int],
-                       values: typing.List[str]):
-        if len(shuffle_list) != len(values):
-            # TODO: throw a better exception
-            raise ValueError("The shuffle list is %d lone but the values are %d long" % (len(shuffle_list), len(values)))
-
-        shuffled_values: typing.List[str] = [""] * self.column_count
-        idx: int
-        for idx in range(len(shuffle_list)):
-            shuffle_idx: int = shuffle_list[idx]
-            if shuffle_idx >= 0:
-                shuffled_values[shuffle_idx] = values[idx]
-
-                self.write(shuffled_values)
-                
 def main():
     """
     Test the KGTK edge file writer.
