@@ -1,7 +1,7 @@
 """
 Import an wikidata file into KGTK file
 """
-
+import pyrallel
 class MyMapper(pyrallel.Mapper):
     
     def enter(self):
@@ -327,7 +327,7 @@ def parser():
     }
 
 
-def add_arguments(parser: KGTKArgumentParser):
+def add_arguments(parser):
     """
     Parse arguments
     Args:
