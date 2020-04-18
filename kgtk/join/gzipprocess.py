@@ -19,6 +19,8 @@ class GzipProcess(Process):
     # TODO: can we do a better job of type declaration here?
     line_queue: Queue
 
+    GZIP_QUEUE_SIZE_DEFAULT: int = 1000
+
     def __init__(self,  gzip_file: typing.TextIO, line_queue: Queue):
         super().__init__()
         self.gzip_file = gzip_file
@@ -51,6 +53,8 @@ class GunzipProcess(Process, ClosableIter[str]):
     #
     # TODO: can we do a better job of type declaration here?
     line_queue: Queue
+
+    GZIP_QUEUE_SIZE_DEFAULT: int = 1000
 
     def __init__(self,  gzip_file: typing.TextIO, line_queue: Queue):
         super().__init__()

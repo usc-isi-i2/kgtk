@@ -53,13 +53,13 @@ class EdgeJoiner(KgtkFormat):
         
     # TODO: pass through join_column_names
     def extract_node1_values(self, edge_path: Path)->typing.Set[str]:
-        er: EdgeReader = EdgeReader.open(edge_path,
-                                         require_all_columns=self.require_all_columns,
-                                         prohibit_extra_columns=self.prohibit_extra_columns,
-                                         fill_missing_columns=self.fill_missing_columns,
-                                         gzip_in_parallel=self.gzip_in_parallel,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)
+        er: EdgeReader = EdgeReader.open_edge_file(edge_path,
+                                                   require_all_columns=self.require_all_columns,
+                                                   prohibit_extra_columns=self.prohibit_extra_columns,
+                                                   fill_missing_columns=self.fill_missing_columns,
+                                                   gzip_in_parallel=self.gzip_in_parallel,
+                                                   verbose=self.verbose,
+                                                   very_verbose=self.very_verbose)
         return self.node1_set(er) # closes er file
         
 
@@ -89,14 +89,14 @@ class EdgeJoiner(KgtkFormat):
         joined_node1_values: typing.Set[str] = self.join_node1_values()
 
         # Open the input files for the second time. This won't work with stdin.
-        left_er: EdgeReader =  EdgeReader.open(self.left_file_path,
-                                               require_all_columns=self.require_all_columns,
-                                               prohibit_extra_columns=self.prohibit_extra_columns,
-                                               fill_missing_columns=self.fill_missing_columns)
-        right_er: EdgeReader = EdgeReader.open(self.right_file_path,
-                                               require_all_columns=self.require_all_columns,
-                                               prohibit_extra_columns=self.prohibit_extra_columns,
-                                               fill_missing_columns=self.fill_missing_columns)
+        left_er: EdgeReader =  EdgeReader.open_edge_file(self.left_file_path,
+                                                         require_all_columns=self.require_all_columns,
+                                                         prohibit_extra_columns=self.prohibit_extra_columns,
+                                                         fill_missing_columns=self.fill_missing_columns)
+        right_er: EdgeReader = EdgeReader.open_edge_file(self.right_file_path,
+                                                         require_all_columns=self.require_all_columns,
+                                                         prohibit_extra_columns=self.prohibit_extra_columns,
+                                                         fill_missing_columns=self.fill_missing_columns)
         joined_column_names: typing.list[str] = left_er.merge_columns(right_er.column_names)
         
         ew: EdgeWriter = EdgeWriter.open(joined_column_names,
