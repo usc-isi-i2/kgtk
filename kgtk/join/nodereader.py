@@ -10,28 +10,28 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.join.basereader import BaseReader
 from kgtk.join.closableiter import ClosableIter
+from kgtk.join.kgtkreader import KgtkReader
 
 @attr.s(slots=True, frozen=True)
-class NodeReader(BaseReader):
+class NodeReader(KgtkReader):
     @classmethod
-    def open(cls,
-             file_path: typing.Optional[Path],
-             force_column_names: typing.Optional[typing.List[str]] = None, #
-             skip_first_record: bool = False,
-             require_all_columns: bool = True,
-             prohibit_extra_columns: bool = True,
-             fill_missing_columns: bool = False,
-             ignore_empty_lines: bool = True,
-             ignore_comment_lines: bool = True,
-             ignore_whitespace_lines: bool = True,
-             ignore_blank_id_lines: bool = True,
-             gzip_in_parallel: bool = False,
-             gzip_queue_size: int = BaseReader.GZIP_QUEUE_SIZE_DEFAULT,
-             column_separator: str = BaseReader.COLUMN_SEPARATOR,
-             verbose: bool = False,
-             very_verbose: bool = False)->"NodeReader":
+    def open_node_file(cls,
+                       file_path: typing.Optional[Path],
+                       force_column_names: typing.Optional[typing.List[str]] = None, #
+                       skip_first_record: bool = False,
+                       require_all_columns: bool = True,
+                       prohibit_extra_columns: bool = True,
+                       fill_missing_columns: bool = False,
+                       ignore_empty_lines: bool = True,
+                       ignore_comment_lines: bool = True,
+                       ignore_whitespace_lines: bool = True,
+                       ignore_blank_id_lines: bool = True,
+                       gzip_in_parallel: bool = False,
+                       gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
+                       column_separator: str = KgtkReader.COLUMN_SEPARATOR,
+                       verbose: bool = False,
+                       very_verbose: bool = False)->"NodeReader":
 
         source: ClosableIter[str] = cls._openfile(file_path,
                                                   gzip_in_parallel=gzip_in_parallel,
@@ -50,6 +50,9 @@ class NodeReader(BaseReader):
         
         # Get the index of the required column.
         id_column_idx: int = cls.required_node_column(column_name_map)
+
+        if verbose:
+            print("NodeReader: Reading an node file. id=%d" % (id_column_idx))
 
         return cls(file_path=file_path,
                    source=source,
@@ -94,7 +97,7 @@ class NodeReader(BaseReader):
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        super().add_arguments(parser)
+        # super().add_arguments(parser)
         parser.add_argument(      "--no-ignore-blank-id-lines", dest="ignore_blank_id_lines",
                                   help="When specified, do not ignore blank id lines.", action='store_false')
 
@@ -104,6 +107,7 @@ def main():
     Test the KGTK node file reader.
     """
     parser = ArgumentParser()
+    KgtkReader.add_shared_arguments(parser)
     NodeReader.add_arguments(parser)
     args = parser.parse_args()
 

@@ -10,35 +10,37 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.join.basereader import BaseReader
 from kgtk.join.closableiter import ClosableIter
+from kgtk.join.kgtkreader import KgtkReader
 
 @attr.s(slots=True, frozen=True)
-class EdgeReader(BaseReader):
+class EdgeReader(KgtkReader):
+
     @classmethod
-    def open(cls,
-             file_path: typing.Optional[Path],
-             force_column_names: typing.Optional[typing.List[str]] = None,
-             skip_first_record: bool = False,
-             require_all_columns: bool = True,
-             prohibit_extra_columns: bool = True,
-             fill_missing_columns: bool = False,
-             ignore_empty_lines: bool = True,
-             ignore_comment_lines: bool = True,
-             ignore_whitespace_lines: bool = True,
-             ignore_blank_node1_lines: bool = True,
-             ignore_blank_node2_lines: bool = True,
-             gzip_in_parallel: bool = False,
-             gzip_queue_size: int = BaseReader.GZIP_QUEUE_SIZE_DEFAULT,
-             column_separator: str = BaseReader.COLUMN_SEPARATOR,
-             verbose: bool = False,
-             very_verbose: bool = False)->"EdgeReader":
+    def open_edge_file(cls,
+                       file_path: typing.Optional[Path],
+                       force_column_names: typing.Optional[typing.List[str]] = None, #
+                       skip_first_record: bool = False,
+                       require_all_columns: bool = True,
+                       prohibit_extra_columns: bool = True,
+                       fill_missing_columns: bool = False,
+                       ignore_empty_lines: bool = True,
+                       ignore_comment_lines: bool = True,
+                       ignore_whitespace_lines: bool = True,
+                       ignore_blank_node1_lines: bool = True,
+                       ignore_blank_node2_lines: bool = True,
+                       gzip_in_parallel: bool = False,
+                       gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
+                       column_separator: str = KgtkReader.COLUMN_SEPARATOR,
+                       verbose: bool = False,
+                       very_verbose: bool = False)->"EdgeReader":
+
         source: ClosableIter[str] = cls._openfile(file_path,
                                                   gzip_in_parallel=gzip_in_parallel,
                                                   gzip_queue_size=gzip_queue_size,
                                                   verbose=verbose)
 
-        # Read the edge file header and split it into column names.
+        # Read the node file header and split it into column names.
         column_names: typing.List[str] = cls._build_column_names(source,
                                                                  force_column_names=force_column_names,
                                                                  skip_first_record=skip_first_record,
@@ -47,12 +49,16 @@ class EdgeReader(BaseReader):
 
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
-
+        
         # Get the indices of the required columns.
         node1_column_idx: int
         node2_column_idx: int
         label_column_idx: int
         (node1_column_idx, node2_column_idx, label_column_idx) = cls.required_edge_columns(column_name_map)
+
+        if verbose:
+            print("EdgeReader: Reading an edge file. node1=%d label=%d node2=%d" % (node1_column_idx, label_column_idx, node2_column_idx))
+
 
         return cls(file_path=file_path,
                    source=source,
@@ -76,8 +82,8 @@ class EdgeReader(BaseReader):
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
                    line_count=[1, 0], # TODO: find a better way to do this.
-                   is_edge_file=True,
-                   is_node_file=False,
+                   is_edge_file=False,
+                   is_node_file=True,
                    verbose=verbose,
                    very_verbose=very_verbose,
         )
@@ -111,7 +117,7 @@ class EdgeReader(BaseReader):
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        super().add_arguments(parser)
+        # super().add_arguments(parser)
         parser.add_argument(      "--no-ignore-blank-node1-lines", dest="ignore_blank_node1_lines",
                                   help="When specified, do not ignore blank node1 lines.", action='store_false')
 
@@ -124,6 +130,7 @@ def main():
     Test the KGTK edge file reader.
     """
     parser = ArgumentParser()
+    KgtkReader.add_shared_arguments(parser)
     EdgeReader.add_arguments(parser)
     args = parser.parse_args()
 
