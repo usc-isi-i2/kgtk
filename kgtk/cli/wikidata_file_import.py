@@ -15,12 +15,13 @@ def add_arguments(parser):
         parser (argparse.ArgumentParser)
     """
     parser.add_argument("-i",'--inp', action="store", type=str, dest="inp_path",help='input path file')
-    parser.add_argument('--procs',
-                        action="store",
-                        type=int,
-                        dest="procs",
-                        default=2,
-                        help='number of processes to run in parallel, default 2')
+    parser.add_argument(
+        '--procs',
+        action="store",
+        type=int,
+        dest="procs",
+        default=2,
+        help='number of processes to run in parallel, default 2')
     parser.add_argument(
         "--node",
         action="store",
@@ -63,9 +64,14 @@ def add_arguments(parser):
         dest="source",
         default="wikidata",
         help='wikidata version number, default: wikidata')
+    parser.add_argument(
+        "--deprecated",
+        action="store_true",
+        dest="deprecated",
+        help='option to include deprecated statements, not included by default')
     
     
-def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source):
+def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecated):
     # import modules locally
     import bz2
     import simplejson as json
@@ -212,7 +218,8 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source):
                         for prop, claim_property in claims.items():
                             seq_no = 1
                             for cp in claim_property:
-                                if cp['rank'] != 'deprecated' and cp['mainsnak']['snaktype'] == 'value':
+                                if (deprecated or cp['rank'] != 'deprecated') and cp['mainsnak']['snaktype'] == 'value':
+                                    rank=cp['rank']
                                     val = cp['mainsnak']['datavalue'].get(
                                         'value')
                                     typ = cp['mainsnak']['datatype']
@@ -278,8 +285,11 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source):
                                                      precision,
                                                      calendar,
                                                      enttype])
-                                    seq_no += 1
+                                    seq_no += 1                                    
                                     if qual_file:
+                                        temp_id=sid+'-rank-1'
+                                        qrows.append([temp_id,sid,'rank',rank,'','','','',
+                                                     '','','','',''])
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
