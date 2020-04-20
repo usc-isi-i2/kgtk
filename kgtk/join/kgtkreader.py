@@ -6,6 +6,7 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 from argparse import ArgumentParser
 import attr
+from enum import Enum
 from multiprocessing import Process, Queue
 from pathlib import Path
 import sys
@@ -14,6 +15,26 @@ import typing
 from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtkformat import KgtkFormat
+
+class KgtkReaderMode(Enum):
+    NONE = 0
+    EDGE = 1
+    NODE = 2
+    AUTO = 3
+
+   # magic methods for argparse compatibility
+    def __str__(self):
+        return self.name.lower()
+
+    def __repr__(self):
+        return str(self)
+
+    @staticmethod
+    def argparse(s):
+        try:
+            return SomeEnum[s.upper()]
+        except KeyError:
+            return s
 
 @attr.s(slots=True, frozen=True)
 class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
@@ -97,8 +118,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
-             is_edge_file: bool = False,
-             is_node_file: bool = False,
+             mode: KgtkReaderMode = KgtkReaderMode.AUTO,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkReader":
         """
@@ -118,14 +138,20 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
 
-        # Should we automatically deterimne if this is an edge file or a node file?
-        if is_edge_file == True and is_node_file == True:
-            raise ValueError("KgtkReader: Cannot be both an edge file and a node file.")
-        if is_edge_file == False and is_node_file == False:
+        # Should we automatically determine if this is an edge file or a node file?
+        is_edge_file: bool = False
+        is_node_file: bool = False
+        if mode is KgtkReaderMode.AUTO:
             # If we have a node1 column, then this must be an edge file. Otherwise, assume it is a node file.
             node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map, is_optional=True)
             is_edge_file = node1_idx >= 0
             is_node_file = not is_edge_file
+        elif mode is KgtkReaderMode.EDGE:
+            is_edge_file = True
+        elif mode is KgtkReaderMode.NODE:
+            is_node_file = True
+        elif mode is KgtkReaderMode.NONE:
+            pass
 
         if is_edge_file:
             # We'll instantiate an EdgeReader, which is a subclass of KgtkReader.
@@ -163,12 +189,12 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               line_count=[1, 0], # TODO: find a better way to do this.
-                              is_edge_file=True,
-                              is_node_file=False,
+                              is_edge_file=is_edge_file,
+                              is_node_file=is_node_file,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
-        else:
+        elif is_node_file:
             # We'll instantiate an NodeReader, which is a subclass of KgtkReader.
             # The NodeReader import is deferred to avoid circular imports.
             from kgtk.join.nodereader import NodeReader
@@ -198,10 +224,34 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               line_count=[1, 0], # TODO: find a better way to do this.
-                              is_edge_file=False,
-                              is_node_file=True,
+                              is_edge_file=is_edge_file,
+                              is_node_file=is_node_file,
                               verbose=verbose,
                               very_verbose=very_verbose,
+            )
+        else:
+            return cls(file_path=file_path,
+                       source=source,
+                       column_separator=column_separator,
+                       column_names=column_names,
+                       column_name_map=column_name_map,
+                       column_count=len(column_names),
+                       force_column_names=force_column_names,
+                       skip_first_record=skip_first_record,
+                       require_all_columns=require_all_columns,
+                       prohibit_extra_columns=prohibit_extra_columns,
+                       fill_missing_columns=fill_missing_columns,
+                       ignore_empty_lines=ignore_empty_lines,
+                       ignore_comment_lines=ignore_comment_lines,
+                       ignore_whitespace_lines=ignore_whitespace_lines,
+                       ignore_blank_id_lines=ignore_blank_id_lines,
+                       gzip_in_parallel=gzip_in_parallel,
+                       gzip_queue_size=gzip_queue_size,
+                       line_count=[1, 0], # TODO: find a better way to do this.
+                       is_edge_file=is_edge_file,
+                       is_node_file=is_node_file,
+                       verbose=verbose,
+                       very_verbose=very_verbose,
             )
 
     @classmethod
@@ -441,11 +491,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     # May be overridden
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(      "--is-edge-file", dest="is_edge_file",
-                                  help="When specified, treat the input file as an edge file.", action='store_true')
-        
-        parser.add_argument(      "--is-node-file", dest="is_node_file",
-                                  help="When specified, treat the input file as an node file.", action='store_true')
+        parser.add_argument(      "--mode", dest="mode_str",
+                                  help="Determine the KGTK file mode.", type=KgtkReaderMode.argparse, choices=list(KgtkReaderMode))
 
 
     
@@ -475,8 +522,7 @@ def main():
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
                                      column_separator=args.column_separator,
-                                     is_edge_file=args.is_edge_file,
-                                     is_node_file=args.is_node_file,
+                                     mode=args.mode,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
     line_count: int = 0
