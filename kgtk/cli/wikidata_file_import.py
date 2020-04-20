@@ -390,7 +390,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                       '','','','',''])
                                     if qual_file:
                                         tempid=sid+'-lang-1'
-                                        qrows.append([tempid,sid,'lang','"'+sitelang+'"','','','','','','','','',''])
+                                        qrows.append([tempid,sid,'lang','\"'+sitelang+'\"','','','','','','','','',''])
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
