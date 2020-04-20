@@ -214,6 +214,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                 if cp_rank != "deprecated" and cp_id in value_set:
                                     keep = False
                     if keep:
+                        sitelinks=obj.get('sitelinks',None)
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
                             seq_no = 1
@@ -285,7 +286,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                      precision,
                                                      calendar,
                                                      enttype])
-                                    seq_no += 1                                    
+                                    seq_no += 1
                                     if qual_file:
                                         temp_id=sid+'-rank-1'
                                         qrows.append([temp_id,sid,'rank',rank,'','','','',
@@ -374,6 +375,23 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                                 precision,
                                                                 calendar,
                                                                 enttype])
+            
+                        if sitelinks:
+                            wikipedia_seq_no = 1
+                            for link in sitelinks:
+                                if link.endswith('wiki') and link!='commonswiki':
+                                    sid=qnode + '-wikipedia_sitelink-'+str(wikipedia_seq_no)
+                                    wikipedia_seq_no+=1
+                                    sitetitle='_'.join(sitelinks[link]['title'].split())
+                                    sitelang=link.split('wiki')[0].replace('_','-')
+                                    sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
+                                    if edge_file:
+                                        erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','',
+                                                      '','','','',''])
+                                    if qual_file:
+                                        tempid=sid+'-lang-1'
+                                        qrows.append([tempid,sid,'lang','"'+sitelang+'"','','','','','','','','',''])
+
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
                     for row in nrows:
