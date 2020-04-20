@@ -1,10 +1,12 @@
-"""Join two KTKG edge files.
+"""
+Join two KTKG edge files.
 
 Note: This implementation builds im-memory sets of all the node1 values in
 each input file.
 
 """
 
+from argparse import ArgumentParser
 import attr
 import gzip
 from pathlib import Path
@@ -12,12 +14,12 @@ from multiprocessing import Queue
 import sys
 import typing
 
-from kgtk.join.edgereader import EdgeReader
 from kgtk.join.edgewriter import EdgeWriter
+from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.kgtkformat import KgtkFormat
 
 @attr.s(slots=True, frozen=True)
-class EdgeJoiner(KgtkFormat):
+class SimpleJoiner(KgtkFormat):
     left_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     right_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
@@ -29,9 +31,8 @@ class EdgeJoiner(KgtkFormat):
     left_join: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     right_join: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # TODO: This is complicated by the alias list.
-    # left_join_column_names: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.NODE1_COLUMN_NAMES)
-    # right_join_column_names: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.NODE1_COLUMN_NAMES)
+    left_join_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    right_join_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # Require or fill trailing fields?
     require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -43,61 +44,81 @@ class EdgeJoiner(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # TODO: pass in join_column_names and find the index of the first matching column name.
-    def node1_set(self, er: EdgeReader)->typing.Set[str]:
+    def join_column_idx(self, kr: KgtkReader, join_column_name: typing.Optional[str], who: str)->int:
+        if join_column_name is not None:
+            if join_column_name in kr.column_name_map:
+                return kr.column_name_map[join_column_name]
+            else:
+                # TODO: throw a better exception
+                raise ValueError("SimpleJoiner: unknown %s join column %s" % (who, join_column_name))
+        else:
+            idx: int
+            if kr.is_edge_file:
+                idx = kr.node1_column_idx
+                if idx < 0:
+                    # TODO: throw a better exception
+                    raise ValueError("SimpleJoiner: unknown node1 column index in KGTK %s edge type." % who)
+                return idx
+            elif kr.is_node_file:
+                idx = kr.id_column_idx
+                if idx < 0:
+                    # TODO: throw a better exception
+                    raise ValueError("SimpleJoiner: unknown node1 column index in KGTK %s node type." % who)
+                return idx
+            else:
+                # TODO: throw a better exception
+                raise ValueError("SimpleJoiner: unknown %s KGTK file type." % who)
+
+    def join_column_set(self, kr: KgtkReader, join_column_idx: int)->typing.Set[str]:
         result: typing.Set[str] = set()
-        node1_idx: int = er.node1_column_idx
-        for line in er:
-            result.add(line[node1_idx])
+        for line in kr:
+            result.add(line[join_column_idx])
         return result
         
-    # TODO: pass through join_column_names
-    def extract_node1_values(self, edge_path: Path)->typing.Set[str]:
-        er: EdgeReader = EdgeReader.open_edge_file(edge_path,
-                                                   require_all_columns=self.require_all_columns,
-                                                   prohibit_extra_columns=self.prohibit_extra_columns,
-                                                   fill_missing_columns=self.fill_missing_columns,
-                                                   gzip_in_parallel=self.gzip_in_parallel,
-                                                   verbose=self.verbose,
-                                                   very_verbose=self.very_verbose)
-        return self.node1_set(er) # closes er file
+    def extract_join_values(self, file_path: Path, join_column_name: typing.Optional[str], who: str)->typing.Set[str]:
+        kr: KgtkReader = KgtkReader.open(file_path,
+                                         require_all_columns=self.require_all_columns,
+                                         prohibit_extra_columns=self.prohibit_extra_columns,
+                                         fill_missing_columns=self.fill_missing_columns,
+                                         gzip_in_parallel=self.gzip_in_parallel,
+                                         verbose=self.verbose,
+                                         very_verbose=self.very_verbose)
+        
+        return self.join_column_set(kr, self.join_column_idx(kr, join_column_name, who)) # closes er file
         
 
-    def join_node1_values(self)->typing.Set[str]:
+    def join_column_values(self)->typing.Set[str]:
         """
-        Read the input edge files the first time, building the sets of left and right nodes.
+        Read the input edge files the first time, building the sets of left and right join values.
         """
-        # TODO: pass in self.left_join_column_names
-        left_node1_values: typing.Set[str] = self.extract_node1_values(self.left_file_path)
-        # TODO: pass in self.right_join_column_names
-        right_node1_values: typing.Set[str] = self.extract_node1_values(self.right_file_path)
+        left_join_values: typing.Set[str] = self.extract_join_values(self.left_file_path, self.left_join_column_name, "left")
+        right_join_values: typing.Set[str] = self.extract_join_values(self.right_file_path, self.right_join_column_name, "right")
 
-        joined_node1_values: typing.Set[str]
+        joined_column_values: typing.Set[str]
         if self.left_join and self.right_join:
             # TODO: This joins everything! We can shortut computing these sets.
-            joined_node1_values = left_node1_values.union(right_node1_values)
+            joined_column_values = left_join_values.union(right_join_values)
         elif self.left_join and not self.right_join:
-            joined_node1_values = left_node1_values.copy()
+            joined_column_values = left_join_values.copy()
         elif self.right_join and not self.left_join:
-            joined_node1_values = right_node1_values.copy()
+            joined_column_values = right_join_values.copy()
         else:
-            joined_node1_values = left_node1_values.intersection(right_node1_values)
-        return joined_node1_values
+            joined_column_values = left_join_values.intersection(right_join_values)
+        return joined_column_values
     
-        
     def process(self):
-        joined_node1_values: typing.Set[str] = self.join_node1_values()
+        joined_column_values: typing.Set[str] = self.join_column_values()
 
         # Open the input files for the second time. This won't work with stdin.
-        left_er: EdgeReader =  EdgeReader.open_edge_file(self.left_file_path,
-                                                         require_all_columns=self.require_all_columns,
-                                                         prohibit_extra_columns=self.prohibit_extra_columns,
-                                                         fill_missing_columns=self.fill_missing_columns)
-        right_er: EdgeReader = EdgeReader.open_edge_file(self.right_file_path,
-                                                         require_all_columns=self.require_all_columns,
-                                                         prohibit_extra_columns=self.prohibit_extra_columns,
-                                                         fill_missing_columns=self.fill_missing_columns)
-        joined_column_names: typing.list[str] = left_er.merge_columns(right_er.column_names)
+        left_kr: KgtkReader =  KgtkReader.open(self.left_file_path,
+                                               require_all_columns=self.require_all_columns,
+                                               prohibit_extra_columns=self.prohibit_extra_columns,
+                                               fill_missing_columns=self.fill_missing_columns)
+        right_kr: EdgeReader = KgtkReader.open(self.right_file_path,
+                                               require_all_columns=self.require_all_columns,
+                                               prohibit_extra_columns=self.prohibit_extra_columns,
+                                               fill_missing_columns=self.fill_missing_columns)
+        joined_column_names: typing.list[str] = left_kr.merge_columns(right_kr.additional_column_names())
         
         ew: EdgeWriter = EdgeWriter.open(joined_column_names,
                                          self.output_path,
@@ -109,43 +130,48 @@ class EdgeJoiner(KgtkFormat):
                                          very_verbose=self.very_verbose)
 
         line: typing.list[str]
-        left_node1_idx: int = left_er.node1_column_idx
-        for line in left_er:
+        left_node1_idx: int = self.join_column_idx(left_kr, self.left_join_column_name, who="left")
+        for line in left_kr:
             node1_value: str = line[left_node1_idx]
-            if node1_value in joined_node1_values:
+            if node1_value in joined_column_values:
                 ew.write(line)
 
-        right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_er.column_names)
-        right_node1_idx: int = right_er.node1_column_idx
-        for line in right_er:
+        right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_kr.column_names)
+        right_node1_idx: int = self.join_column_idx(right_kr, self.right_join_column_name, who="right")
+        for line in right_kr:
             node1_value: str = line[right_node1_idx]
-            if node1_value in joined_node1_values:
+            if node1_value in joined_column_values:
                 ew.write(line, shuffle_list=right_shuffle_list)
             
         ew.close()
         
 def main():
     """
-    Test the KGTK file reader.
+    Test the KGTK file joiner.
     """
     parser = ArgumentParser()
-    parser.add_argument(dest="left_file_path", help="The KGTK file to read", type=Path, required=True)
-    parser.add_argument(dest="right_file_path", help="The KGTK file to read", type=Path, required=True)
-    parser.add_argument("-o", "output-file", dest="output_path", help="The KGTK file to read", type=Path, default=None)
+    parser.add_argument(dest="left_file_path", help="The KGTK file to read", type=Path)
+    parser.add_argument(dest="right_file_path", help="The KGTK file to read", type=Path)
+    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
+    parser.add_argument(      "--left-join-column-name", dest="left_join_column_name", help="The name of the left join column.")
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
+    parser.add_argument(      "--right-join-column-name", dest="right_join_column_name", help="The name of the right join column.")
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     args = parser.parse_args()
 
-    ej: EdgeJoiner = EdgeJoiner(left_file_path=args.left_file_path,
-                                right_file_path=args.right_file_patn,
-                                left_join=args.left_join,
-                                right_join=args.right_join,
-                                gzip_in_parallel=args.gzip_in_parallel,
-                                verbose=args.verbose,
-                                very_verbose=args.very_verbose)
+    ej: SimpleJoiner = SimpleJoiner(left_file_path=args.left_file_path,
+                                    right_file_path=args.right_file_path,
+                                    output_path=args.output_file_path,
+                                    left_join=args.left_join,
+                                    right_join=args.right_join,
+                                    left_join_column_name=args.left_join_column_name,
+                                    right_join_column_name=args.right_join_column_name,
+                                    gzip_in_parallel=args.gzip_in_parallel,
+                                    verbose=args.verbose,
+                                    very_verbose=args.very_verbose)
 
     ej.process()
 

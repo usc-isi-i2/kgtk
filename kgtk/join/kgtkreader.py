@@ -266,12 +266,13 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         """
         column_names: typing.List[str]
         if force_column_names is None:
-            # Read the column names from the first line.
+            # Read the column names from the first line, stripping end-of-line characters.
             #
             # TODO: if the read fails, throw a more useful exception with the line number.
-            header: str = next(source)
+            header: str = next(source).rstrip("\r\n")
             if verbose:
                 print("header: %s" % header)
+
 
             # Split the first line into column names.
             column_names = header.split(column_separator)
@@ -300,6 +301,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         while (True):
             line: str
             try:
+                
                 line = next(self.source) # Will throw StopIteration
             except StopIteration as e:
                 # Close the input file!
@@ -307,6 +309,9 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                 # TODO: implement a close() routine and/or whatever it takes to support "with".
                 self.source.close() # Do we need to guard against repeating this call?
                 raise e
+
+            # Strip the end-of-line characters:
+            line = line.rstrip("\r\n")
 
             # Ignore empty lines.
             if len(line) == 0 and self.ignore_empty_lines:
@@ -354,6 +359,15 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     # May be overridden
     def _skip_reserved_fields(self, column_name):
         return False
+
+    def additional_column_names(self)->typing.List[str]:
+        if self.is_edge_file:
+            return KgtkFormat.additional_edge_columns(self.column_names)
+        elif self.is_node_file:
+            return KgtkFormat.additional_node_columns(self.column_names)
+        else:
+            # TODO: throw a better exception.
+            raise ValueError("KgtkReader: Unknown Kgtk file type.")
 
     def merge_columns(self, additional_columns: typing.List[str])->typing.List[str]:
         """
