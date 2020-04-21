@@ -546,8 +546,8 @@ class EmbeddingVector:
         #     self._logger.info("Using cached 2D vector file!")
         #     self.load_vectors(vector_dump_file, "2D")
         # else:
-        vectors = list(self.vectors_map.values())
         self.vectors_map = {k: v for k, v in sorted(self.vectors_map.items(), key=lambda item: item[0], reverse=True)}
+        vectors = list(self.vectors_map.values())
         # use tsne to reduce dimension
         if run_TSNE:
             self._logger.warning("Start running TSNE to reduce dimension. It will take a long time.")
