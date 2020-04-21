@@ -4,7 +4,7 @@ Read a KGTK edge file in TSV format.
 TODO: Add support for alternative envelope formats, such as JSON.
 """
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Action
 import attr
 from enum import Enum
 from multiprocessing import Process, Queue
@@ -16,25 +16,66 @@ from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtkformat import KgtkFormat
 
-class KgtkReaderMode(Enum):
-    NONE = 0
-    EDGE = 1
-    NODE = 2
-    AUTO = 3
+# TODO: optionally report lines with problems
+# lines with blank node1 fields
+# lines with blank node2 fields
+# lines with blank id fields
+# empty lines
+# comment lines
+# whitespace lines
+# lines with missing columns
+# lines with exra columns
+#
+# Place a limit on the number of lines reported.  When the limit
+# is reached, either:
+# 1) stop reporting errors, or
+# 2) exit immediately
+#
+# TODO: optionally pass a decompressor selection (use an enum) to
+# override the filename suffix-based selector.
+# TODO: if a decompressor has been selected, allow decompression of
+# standard input.
 
-   # magic methods for argparse compatibility
-    def __str__(self):
-        return self.name.lower()
+class EnumNameAction(Action):
+    """
+    Argparse action for handling Enums
 
-    def __repr__(self):
-        return str(self)
+    Adapted from:
+    https://stackoverflow.com/questions/43968006/support-for-enum-arguments-in-argparse
+    """
+    def __init__(self, **kwargs):
+        # Pop off the type value
+        enum = kwargs.pop("type", None)
 
-    @staticmethod
-    def argparse(s):
-        try:
-            return SomeEnum[s.upper()]
-        except KeyError:
-            return s
+        # Ensure an Enum subclass is provided
+        if enum is None:
+            raise ValueError("type must be assigned an Enum when using EnumAction")
+        if not issubclass(enum, Enum):
+            raise TypeError("type must be an Enum when using EnumAction")
+
+        # Generate choices from the Enum
+        kwargs.setdefault("choices", tuple(e.name for e in enum))
+
+        super(EnumAction, self).__init__(**kwargs)
+
+        self._enum = enum
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        # Convert value back into an Enum
+        enum = self._enum[values]
+        setattr(namespace, self.dest, enum)
+
+
+class KgtkReaderErrorAction(Enum):
+    """
+    Actions to take on constraint violation.
+
+    TODO: Why can't this be inside class KgtkReader?
+    """
+    PASS = 0 # Silently pass the input line with fixes.
+    PASSYELP = 1 # Pass the input line with fixes and complain.
+    SKIP = 2 # Silently skip the input line.
+    SKIPYELP = 3 # Skip the input line and complain
 
 @attr.s(slots=True, frozen=True)
 class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
@@ -57,6 +98,11 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     # line_count[1] Count of ignored lines (comments, etc.)
     line_count: typing.List[int] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(int),
                                                                                    iterable_validator=attr.validators.instance_of(list)))
+    # lines_read: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    # lines_passed: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    # lines_skipped: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    # lines_fixed: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    # errors_reported: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # The column separator is normally tab.
     column_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.COLUMN_SEPARATOR)
@@ -73,20 +119,21 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     label_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
     id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # node file
 
+    # Ignore empty lines, comments, and all whitespace lines, etc.?
+    error_action: KgtkReaderErrorAction = attr.ib(validator=attr.validators.in_(KgtkReaderErrorAction), default=KgtkReaderErrorAction.SKIPYELP)
+    ignore_empty_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    ignore_comment_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    ignore_whitespace_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     # Ignore records with values in certain fields:
     ignore_blank_node1_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # edge file
     ignore_blank_node2_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # edge file
     ignore_blank_id_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # node file
-
+    
     # Require or fill trailing fields?
     require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     fill_missing_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
-    # Ignore empty lines, comments, and all whitespace lines, etc.?
-    ignore_empty_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    ignore_comment_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    ignore_whitespace_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     # Other implementation options?
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -101,6 +148,15 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
     GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
 
+    class Mode(Enum):
+        """
+        There are four file reading modes:
+        """
+        NONE = 0 # Enforce neither edge nore node file required columns
+        EDGE = 1 # Enforce edge file required columns
+        NODE = 2 # Enforce node file require columns
+        AUTO = 3 # Automatically decide whether to envode edge or node file required columns
+
     @classmethod
     def open(cls,
              file_path: typing.Optional[Path],
@@ -109,6 +165,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
              fill_missing_columns: bool = False,
+             error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.SKIPYELP,
              ignore_empty_lines: bool = True,
              ignore_comment_lines: bool = True,
              ignore_whitespace_lines: bool = True,
@@ -118,7 +175,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
-             mode: KgtkReaderMode = KgtkReaderMode.AUTO,
+             mode: Mode = Mode.AUTO,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkReader":
         """
@@ -141,16 +198,16 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         # Should we automatically determine if this is an edge file or a node file?
         is_edge_file: bool = False
         is_node_file: bool = False
-        if mode is KgtkReaderMode.AUTO:
+        if mode is KgtkReader.Mode.AUTO:
             # If we have a node1 column, then this must be an edge file. Otherwise, assume it is a node file.
             node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map, is_optional=True)
             is_edge_file = node1_idx >= 0
             is_node_file = not is_edge_file
-        elif mode is KgtkReaderMode.EDGE:
+        elif mode is KgtkReader.Mode.EDGE:
             is_edge_file = True
-        elif mode is KgtkReaderMode.NODE:
+        elif mode is KgtkReader.Mode.NODE:
             is_node_file = True
-        elif mode is KgtkReaderMode.NONE:
+        elif mode is KgtkReader.Mode.NONE:
             pass
 
         if is_edge_file:
@@ -181,6 +238,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
+                              # error_action=error_action,
                               ignore_empty_lines=ignore_empty_lines,
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
@@ -217,6 +275,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
+                              # error_action=error_action,
                               ignore_empty_lines=ignore_empty_lines,
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
@@ -241,6 +300,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                        require_all_columns=require_all_columns,
                        prohibit_extra_columns=prohibit_extra_columns,
                        fill_missing_columns=fill_missing_columns,
+                       # error_action=error_action,
                        ignore_empty_lines=ignore_empty_lines,
                        ignore_comment_lines=ignore_comment_lines,
                        ignore_whitespace_lines=ignore_whitespace_lines,
@@ -457,6 +517,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--column-separator", dest="column_separator",
                                   help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
 
+        parser.add_argument(      "--error-action", dest="error_action",
+                                  help="The action to take for error input lines",
+                                  type=KgtkReaderErrorAction, action=EnumNameAction)
+
         parser.add_argument(      "--fill-missing-columns", dest="fill_missing_columns",
                                   help="Fill missing trailing columns in each line.", action='store_true')
 
@@ -492,7 +556,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
         parser.add_argument(      "--mode", dest="mode_str",
-                                  help="Determine the KGTK file mode.", type=KgtkReaderMode.argparse, choices=list(KgtkReaderMode))
+                                  help="Determine the KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction)
 
 
     
@@ -513,7 +577,8 @@ def main():
                                      require_all_columns=args.require_all_columns,
                                      prohibit_extra_columns=args.prohibit_extra_columns,
                                      fill_missing_columns=args.fill_missing_columns,
-                                     ignore_empty_lines=args.ignore_empty_lines,
+                                     error_action=args.error_action,
+                                     ignore_blank_lines=args.ignore_blank_lines,
                                      ignore_comment_lines=args.ignore_comment_lines,
                                      ignore_whitespace_lines=args.ignore_whitespace_lines,
                                      ignore_blank_node1_lines=args.ignore_blank_node1_lines,
