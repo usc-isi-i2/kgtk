@@ -16,21 +16,6 @@ from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtkformat import KgtkFormat
 
-# TODO: optionally report lines with problems
-# lines with blank node1 fields
-# lines with blank node2 fields
-# lines with blank id fields
-# empty lines
-# comment lines
-# whitespace lines
-# lines with missing columns
-# lines with exra columns
-#
-# Place a limit on the number of lines reported.  When the limit
-# is reached, either:
-# 1) stop reporting errors, or
-# 2) exit immediately
-#
 # TODO: optionally pass a decompressor selection (use an enum) to
 # override the filename suffix-based selector.
 # TODO: if a decompressor has been selected, allow decompression of
@@ -114,7 +99,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
     # How do we handle errors?
     error_action: KgtkReaderErrorAction = attr.ib(validator=attr.validators.in_(KgtkReaderErrorAction), default=KgtkReaderErrorAction.STDOUT)
-    error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=ERROR_LIMIT_DEFAULT)
+    error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=ERROR_LIMIT_DEFAULT) # >0 ==> limit error reports
 
     # Ignore empty lines, comments, and all whitespace lines, etc.?
     ignore_empty_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
