@@ -94,7 +94,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
     data_lines_read: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_lines_passed: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
-    data_lines_skipped: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_ignored: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_errors_reported: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # The column separator is normally tab.
@@ -393,8 +393,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     def close(self):
         self.source.close()
 
-    def _error(self, msg: str, line: str):
-        self.data_lines_skipped += 1
+    def yelp(self, msg: str, line: str):
+        self.data_lines_ignored += 1
         if self.error_action == KgtkReaderErrorAction.SILENT:
             return
         elif self.error_action == KgtkReaderErrorAction.STDOUT:
@@ -440,15 +440,15 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
             # Ignore empty lines.
             if len(line) == 0 and self.ignore_empty_lines:
-                self._error("saw an empty line", line)
+                self.yelp("saw an empty line", line)
                 continue
             # Ignore comment lines:
             if line[0] == self.COMMENT_INDICATOR and self.ignore_comment_lines:
-                self._error("saw a comment line", line)
+                self.yelp("saw a comment line", line)
                 continue
             # Ignore whitespace lines
             if self.ignore_whitespace_lines and line.isspace():
-                self._error("saw a whitespace line", line)
+                self.yelp("saw a whitespace line", line)
                 continue
 
             values = line.split(self.column_separator)
@@ -457,14 +457,14 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             #
             # When we report line numbers in error messages, line 1 is the first line after the header line.
             if self.require_all_columns and len(values) < self.column_count:
-                self._error("Required %d columns, saw %d: '%s'" % (self.column_count,
+                self.yelp("Required %d columns, saw %d: '%s'" % (self.column_count,
                                                                    len(values),
                                                                    line),
                             line)
                 continue
                              
             if self.prohibit_extra_columns and len(values) > self.column_count:
-                self._error("Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
+                self.yelp("Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
                                                                               len(values),
                                                                               len(values) - self.column_count,
                                                                               line),
@@ -477,7 +477,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                     values.append("")
 
             if self._ignore_if_blank_fields(values):
-                self.data_lines_skipped += 1
+                self.yelp("saw blank values in required fields", line)
                 continue
 
             self.data_lines_passed += 1
