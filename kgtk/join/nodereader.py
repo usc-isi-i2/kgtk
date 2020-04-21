@@ -11,7 +11,7 @@ import sys
 import typing
 
 from kgtk.join.closableiter import ClosableIter
-from kgtk.join.kgtkreader import KgtkReader
+from kgtk.join.kgtkreader import KgtkReader, KgtkReaderErrorAction
 
 @attr.s(slots=True, frozen=True)
 class NodeReader(KgtkReader):
@@ -23,6 +23,7 @@ class NodeReader(KgtkReader):
                        require_all_columns: bool = True,
                        prohibit_extra_columns: bool = True,
                        fill_missing_columns: bool = False,
+                       error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.SKIPYELP,
                        ignore_empty_lines: bool = True,
                        ignore_comment_lines: bool = True,
                        ignore_whitespace_lines: bool = True,
@@ -66,6 +67,7 @@ class NodeReader(KgtkReader):
                    require_all_columns=require_all_columns,
                    prohibit_extra_columns=prohibit_extra_columns,
                    fill_missing_columns=fill_missing_columns,
+                   error_action=error_action,
                    ignore_empty_lines=ignore_empty_lines,
                    ignore_comment_lines=ignore_comment_lines,
                    ignore_whitespace_lines=ignore_whitespace_lines,
@@ -117,6 +119,7 @@ def main():
                                      require_all_columns=args.require_all_columns,
                                      prohibit_extra_columns=args.prohibit_extra_columns,
                                      fill_missing_columns=args.fill_missing_columns,
+                                     error_action=args.error_action,
                                      ignore_empty_lines=args.ignore_empty_lines,
                                      ignore_comment_lines=args.ignore_comment_lines,
                                      ignore_whitespace_lines=args.ignore_whitespace_lines,
