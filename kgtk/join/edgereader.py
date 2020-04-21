@@ -13,7 +13,7 @@ import typing
 from kgtk.join.closableiter import ClosableIter
 from kgtk.join.kgtkreader import KgtkReader, KgtkReaderErrorAction
 
-@attr.s(slots=True, frozen=True)
+@attr.s(slots=True, frozen=False)
 class EdgeReader(KgtkReader):
 
     @classmethod
@@ -24,7 +24,8 @@ class EdgeReader(KgtkReader):
                        require_all_columns: bool = True,
                        prohibit_extra_columns: bool = True,
                        fill_missing_columns: bool = False,
-                       error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.SKIPYELP,
+                       error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDOUT,
+                       error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
                        ignore_empty_lines: bool = True,
                        ignore_comment_lines: bool = True,
                        ignore_whitespace_lines: bool = True,
@@ -83,7 +84,6 @@ class EdgeReader(KgtkReader):
                    ignore_blank_node2_lines=ignore_blank_node2_lines,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
-                   line_count=[1, 0], # TODO: find a better way to do this.
                    is_edge_file=False,
                    is_node_file=True,
                    verbose=verbose,
@@ -97,14 +97,12 @@ class EdgeReader(KgtkReader):
         if self.ignore_blank_node1_lines and self.node1_column_idx >= 0 and len(values) > self.node1_column_idx:
             node1_value: str = values[self.node1_column_idx]
             if len(node1_value) == 0 or node1_value.isspace():
-                self.line_count[1] += 1
                 return True # ignore this line
 
         # Ignore lines with blank node2 fields:
         if self.ignore_blank_node2_lines and self.node2_column_idx >= 0 and len(values) > self.node2_column_idx:
             node2_value: str = values[self.node2_column_idx]
             if len(node2_value) == 0 or node2_value.isspace():
-                self.line_count[1] += 1
                 return True # ignore this line
         return False # Do not ignore this line
 
@@ -143,6 +141,7 @@ def main():
                                      prohibit_extra_columns=args.prohibit_extra_columns,
                                      fill_missing_columns=args.fill_missing_columns,
                                      error_action=args.error_action,
+                                     error_limit=args.error_limit,
                                      ignore_empty_lines=args.ignore_empty_lines,
                                      ignore_comment_lines=args.ignore_comment_lines,
                                      ignore_whitespace_lines=args.ignore_whitespace_lines,
