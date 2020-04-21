@@ -384,7 +384,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                     sitelang=link.split('wiki')[0].replace('_','-')
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
                                     if edge_file:
-                                        erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','',
+                                        erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','',
                                                       '','','','',''])
                                     if qual_file:
                                         tempid=sid+'-language-1'
