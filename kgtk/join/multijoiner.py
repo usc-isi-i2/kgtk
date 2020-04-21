@@ -35,9 +35,10 @@ class MultiJoiner(KgtkFormat):
     right_join_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # Require or fill trailing fields?
-    require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    fill_missing_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    ignore_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    ignore_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -77,9 +78,10 @@ class MultiJoiner(KgtkFormat):
         
     def extract_join_values(self, file_path: Path, join_column_name: typing.Optional[str], who: str)->typing.Set[str]:
         kr: KgtkReader = KgtkReader.open(file_path,
-                                         require_all_columns=self.require_all_columns,
-                                         prohibit_extra_columns=self.prohibit_extra_columns,
-                                         fill_missing_columns=self.fill_missing_columns,
+                                         ignore_short_lines=self.ignore_short_lines,
+                                         ignore_long_lines=self.ignore_long_lines,
+                                         fill_short_lines=self.fill_short_lines,
+                                         truncate_long_lines=self.truncate_long_lines,
                                          gzip_in_parallel=self.gzip_in_parallel,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
@@ -116,13 +118,17 @@ class MultiJoiner(KgtkFormat):
 
         # Open the input files for the second time. This won't work with stdin.
         left_kr: KgtkReader =  KgtkReader.open(self.left_file_path,
-                                               require_all_columns=self.require_all_columns,
-                                               prohibit_extra_columns=self.prohibit_extra_columns,
-                                               fill_missing_columns=self.fill_missing_columns)
+                                               ignore_short_lines=self.ignore_short_lines,
+                                               ignore_long_lines=self.ignore_long_lines,
+                                               fill_short_lines=self.fill_short_lines,
+                                               truncate_long_lines=self.truncate_long_lines)
+        
         right_kr: EdgeReader = KgtkReader.open(self.right_file_path,
-                                               require_all_columns=self.require_all_columns,
-                                               prohibit_extra_columns=self.prohibit_extra_columns,
-                                               fill_missing_columns=self.fill_missing_columns)
+                                               ignore_short_lines=self.ignore_short_lines,
+                                               ignore_long_lines=self.ignore_long_lines,
+                                               fill_short_lines=self.fill_short_lines,
+                                               truncate_long_lines=self.truncate_long_lines)
+
         joined_column_names: typing.list[str] = left_kr.merge_columns(right_kr.additional_column_names())
         
         ew: EdgeWriter = EdgeWriter.open(joined_column_names,
@@ -157,14 +163,22 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="left_file_path", help="The KGTK file to read", type=Path)
     parser.add_argument(dest="right_file_path", help="The KGTK file to read", type=Path)
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
+    parser.add_argument(      "--allow-long-lines", dest="ignore_long_lines",
+                              help="When specified, do not ignore lines with extra columns.", action='store_false')
+    parser.add_argument(      "--allow-short-lines", dest="ignore_short_lines",
+                              help="When specified, do not ignore lines with missing columns.", action='store_false')
+    parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
+                              help="Fill missing trailing columns in short lines with empty values.", action='store_true')
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
     parser.add_argument(      "--left-join-column-name", dest="left_join_column_name", help="The name of the left join column.")
     parser.add_argument(      "--match-labels", dest="match_labels", help="Match the left and right label columns.", action='store_true')
     parser.add_argument(      "--match-node2", dest="match_node2", help="Match the left and right node2 columns.", action='store_true')
+    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
     parser.add_argument(      "--right-join-column-name", dest="right_join_column_name", help="The name of the right join column.")
+    parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
+                              help="Remove excess trailing columns in long lines.", action='store_true')
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     args = parser.parse_args()

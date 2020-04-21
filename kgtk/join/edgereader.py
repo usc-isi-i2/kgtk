@@ -21,9 +21,8 @@ class EdgeReader(KgtkReader):
                        file_path: typing.Optional[Path],
                        force_column_names: typing.Optional[typing.List[str]] = None, #
                        skip_first_record: bool = False,
-                       require_all_columns: bool = True,
-                       prohibit_extra_columns: bool = True,
-                       fill_missing_columns: bool = False,
+                       fill_short_lines: bool = False,
+                       truncate_long_lines: bool = False,
                        error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDOUT,
                        error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
                        ignore_empty_lines: bool = True,
@@ -31,6 +30,8 @@ class EdgeReader(KgtkReader):
                        ignore_whitespace_lines: bool = True,
                        ignore_blank_node1_lines: bool = True,
                        ignore_blank_node2_lines: bool = True,
+                       ignore_short_lines: bool = True,
+                       ignore_long_lines: bool = True,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
                        column_separator: str = KgtkReader.COLUMN_SEPARATOR,
@@ -73,15 +74,16 @@ class EdgeReader(KgtkReader):
                    label_column_idx=label_column_idx,
                    force_column_names=force_column_names,
                    skip_first_record=skip_first_record,
-                   require_all_columns=require_all_columns,
-                   prohibit_extra_columns=prohibit_extra_columns,
-                   fill_missing_columns=fill_missing_columns,
+                   fill_short_lines=fill_short_lines,
+                   truncate_long_lines=truncate_long_lines,
                    error_action=error_action,
                    ignore_empty_lines=ignore_empty_lines,
                    ignore_comment_lines=ignore_comment_lines,
                    ignore_whitespace_lines=ignore_whitespace_lines,
                    ignore_blank_node1_lines=ignore_blank_node1_lines,
                    ignore_blank_node2_lines=ignore_blank_node2_lines,
+                   ignore_short_lines=ignore_short_lines,
+                   ignore_long_lines=ignore_long_lines,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
                    is_edge_file=False,
@@ -118,10 +120,10 @@ class EdgeReader(KgtkReader):
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
         # super().add_arguments(parser)
-        parser.add_argument(      "--no-ignore-blank-node1-lines", dest="ignore_blank_node1_lines",
+        parser.add_argument(      "--allow-blank-node1-lines", dest="ignore_blank_node1_lines",
                                   help="When specified, do not ignore blank node1 lines.", action='store_false')
 
-        parser.add_argument(      "--no-ignore-blank-node2-lines", dest="ignore_blank_node2_lines",
+        parser.add_argument(      "--allow-blank-node2-lines", dest="ignore_blank_node2_lines",
                                   help="When specified, do not ignore blank node2 lines.", action='store_false')
 
     
@@ -137,9 +139,8 @@ def main():
     er: EdgeReader = EdgeReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,
                                      skip_first_record=args.skip_first_record,
-                                     require_all_columns=args.require_all_columns,
-                                     prohibit_extra_columns=args.prohibit_extra_columns,
-                                     fill_missing_columns=args.fill_missing_columns,
+                                     fill_short_lines=args.fill_short_lines,
+                                     truncate_long_lines=truncate_long_lines,
                                      error_action=args.error_action,
                                      error_limit=args.error_limit,
                                      ignore_empty_lines=args.ignore_empty_lines,
@@ -147,6 +148,8 @@ def main():
                                      ignore_whitespace_lines=args.ignore_whitespace_lines,
                                      ignore_blank_node1_lines=args.ignore_blank_node1_lines,
                                      ignore_blank_node2_lines=args.ignore_blank_node2_lines,
+                                     ignore_short_lines=args.ignore_short_lines,
+                                     ignore_long_lines=args.ignore_long_lines,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
                                      column_separator=args.column_separator,

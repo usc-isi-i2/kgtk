@@ -127,9 +127,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     ignore_blank_id_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # node file
     
     # Require or fill trailing fields?
-    require_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    fill_missing_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    ignore_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    ignore_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # Other implementation options?
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -156,9 +157,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              file_path: typing.Optional[Path],
              force_column_names: typing.Optional[typing.List[str]] = None,
              skip_first_record: bool = False,
-             require_all_columns: bool = True,
-             prohibit_extra_columns: bool = True,
-             fill_missing_columns: bool = False,
+             fill_short_lines: bool = False,
+             truncate_long_lines: bool = False,
              error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDOUT,
              error_limit: int = ERROR_LIMIT_DEFAULT,
              ignore_empty_lines: bool = True,
@@ -167,6 +167,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              ignore_blank_node1_lines: bool = True,
              ignore_blank_node2_lines: bool = True,
              ignore_blank_id_lines: bool = True,
+             ignore_short_lines: bool = True,
+             ignore_long_lines: bool = True,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
@@ -230,9 +232,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               label_column_idx=label_column_idx,
                               force_column_names=force_column_names,
                               skip_first_record=skip_first_record,
-                              require_all_columns=require_all_columns,
-                              prohibit_extra_columns=prohibit_extra_columns,
-                              fill_missing_columns=fill_missing_columns,
+                              fill_short_lines=fill_short_lines,
+                              truncate_long_lines=truncate_long_lines,
                               error_action=error_action,
                               error_limit=error_limit,
                               ignore_empty_lines=ignore_empty_lines,
@@ -240,6 +241,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               ignore_whitespace_lines=ignore_whitespace_lines,
                               ignore_blank_node1_lines=ignore_blank_node1_lines,
                               ignore_blank_node2_lines=ignore_blank_node2_lines,
+                              ignore_short_lines=ignore_short_lines,
+                              ignore_long_lines=ignore_long_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               is_edge_file=is_edge_file,
@@ -267,15 +270,16 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               id_column_idx=id_column_idx,
                               force_column_names=force_column_names,
                               skip_first_record=skip_first_record,
-                              require_all_columns=require_all_columns,
-                              prohibit_extra_columns=prohibit_extra_columns,
-                              fill_missing_columns=fill_missing_columns,
+                              fill_short_lines=fill_short_lines,
+                              truncate_long_lines=truncate_long_lines,
                               error_action=error_action,
                               error_limit=error_limit,
                               ignore_empty_lines=ignore_empty_lines,
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
                               ignore_blank_id_lines=ignore_blank_id_lines,
+                              ignore_short_lines=ignore_short_lines,
+                              ignore_long_lines=ignore_long_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               is_edge_file=is_edge_file,
@@ -292,15 +296,16 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                        column_count=len(column_names),
                        force_column_names=force_column_names,
                        skip_first_record=skip_first_record,
-                       require_all_columns=require_all_columns,
-                       prohibit_extra_columns=prohibit_extra_columns,
-                       fill_missing_columns=fill_missing_columns,
+                       fill_short_lines=fill_short_lines,
+                       truncate_long_lines=truncate_long_lines,
                        error_action=error_action,
                        error_limit=error_limit,
                        ignore_empty_lines=ignore_empty_lines,
                        ignore_comment_lines=ignore_comment_lines,
                        ignore_whitespace_lines=ignore_whitespace_lines,
                        ignore_blank_id_lines=ignore_blank_id_lines,
+                       ignore_short_lines=ignore_short_lines,
+                       ignore_long_lines=ignore_long_lines,
                        gzip_in_parallel=gzip_in_parallel,
                        gzip_queue_size=gzip_queue_size,
                        is_edge_file=is_edge_file,
@@ -404,7 +409,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         elif self.error_action == KgtkReaderErrorAction.VALUEERROR:
             raise ValueError("In input data line %d, %s: %s" % (self.data_lines_read, msg, line))
         self.data_errors_reported += 1
-        if self.data_errors_reported >= self.error_limit:
+        if self.error_limit > 0 and self.data_errors_reported >= self.error_limit:
             raise ValueError("Too many data errors.")
 
     # This is both and iterable and an iterator object.
@@ -453,28 +458,32 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
             values = line.split(self.column_separator)
 
+            # Optionally fill missing trailing columns with empty values:
+            if self.fill_short_lines and len(values) < self.column_count:
+                while len(values) < self.column_count:
+                    values.append("")
+                    
+            # Optionally remove extra trailing columns:
+            if self.truncate_long_lines and len(values) > self.column_count:
+                values = values[:self.column_count]
+
             # Optionally validate that the line contained the right number of columns:
             #
             # When we report line numbers in error messages, line 1 is the first line after the header line.
-            if self.require_all_columns and len(values) < self.column_count:
+            if self.ignore_short_lines and len(values) < self.column_count:
                 self.yelp("Required %d columns, saw %d: '%s'" % (self.column_count,
                                                                    len(values),
                                                                    line),
                             line)
                 continue
                              
-            if self.prohibit_extra_columns and len(values) > self.column_count:
+            if self.ignore_long_lines and len(values) > self.column_count:
                 self.yelp("Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
                                                                               len(values),
                                                                               len(values) - self.column_count,
                                                                               line),
                             line)
                 continue
-
-            # Optionally fill missing trailing columns with empty values:
-            if self.fill_missing_columns and len(values) < self.column_count:
-                while len(values) < self.column_count:
-                    values.append("")
 
             if self._ignore_if_blank_fields(values):
                 self.yelp("saw blank values in required fields", line)
@@ -539,6 +548,21 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     def add_shared_arguments(cls, parser: ArgumentParser):
         parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, default=None)
 
+        parser.add_argument(      "--allow-comment-lines", dest="ignore_comment_lines",
+                                  help="When specified, do not ignore comment lines.", action='store_false')
+
+        parser.add_argument(      "--allow-empty-lines", dest="ignore_empty_lines",
+                                  help="When specified, do not ignore empty lines.", action='store_false')
+
+        parser.add_argument(      "--allow-long-lines", dest="ignore_long_lines",
+                                  help="When specified, do not ignore lines with extra columns.", action='store_false')
+
+        parser.add_argument(      "--allow-short-lines", dest="ignore_short_lines",
+                                  help="When specified, do not ignore lines with missing columns.", action='store_false')
+
+        parser.add_argument(      "--allow-whitespace-lines", dest="ignore_whitespace_lines",
+                                  help="When specified, do not ignore whitespace lines.", action='store_false')
+
         parser.add_argument(      "--column-separator", dest="column_separator",
                                   help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
 
@@ -549,8 +573,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--error-limit", dest="error_limit",
                                   help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
 
-        parser.add_argument(      "--fill-missing-columns", dest="fill_missing_columns",
-                                  help="Fill missing trailing columns in each line.", action='store_true')
+        parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
+                                  help="Fill missing trailing columns in short lines with empty values.", action='store_true')
 
         parser.add_argument(      "--force-column-names", dest="force_column_names", help="Force the column names.", nargs='*')
 
@@ -559,22 +583,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
                                   help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
 
-        parser.add_argument(      "--no-ignore-comment-lines", dest="ignore_comment_lines",
-                                  help="When specified, do not ignore comment lines.", action='store_false')
-
-        parser.add_argument(      "--no-ignore-empty-lines", dest="ignore_empty_lines",
-                                  help="When specified, do not ignore empty lines.", action='store_false')
-
-        parser.add_argument(      "--no-ignore-whitespace-lines", dest="ignore_whitespace_lines",
-                                  help="When specified, do not ignore whitespace lines.", action='store_false')
-
-        parser.add_argument(      "--no-prohibit-extra-columns", dest="prohibit_extra_columns",
-                                  help="When specified, do not prohibit extra columns in each line.", action='store_false')
-
-        parser.add_argument(      "--no-require-all-columns", dest="require_all_columns",
-                                  help="When specified, do not require all columns in each line.", action='store_false')
-
         parser.add_argument(      "--skip-first-record", dest="skip_first_record", help="Skip the first record when forcing column names.", action='store_true')
+
+        parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
+                                  help="Remove excess trailing columns in long lines.", action='store_true')
 
         parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
 
@@ -602,9 +614,8 @@ def main():
     kr: KgtkReader = KgtkReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,
                                      skip_first_record=args.skip_first_record,
-                                     require_all_columns=args.require_all_columns,
-                                     prohibit_extra_columns=args.prohibit_extra_columns,
-                                     fill_missing_columns=args.fill_missing_columns,
+                                     fill_short_lines=args.fill_short_lines,
+                                     truncate_long_lines=args.truncate_long_lines,
                                      error_action=args.error_action,
                                      error_limit=args.error_limit,
                                      ignore_blank_lines=args.ignore_blank_lines,
@@ -613,6 +624,8 @@ def main():
                                      ignore_blank_node1_lines=args.ignore_blank_node1_lines,
                                      ignore_blank_node2_lines=args.ignore_blank_node2_lines,
                                      ignore_blank_id_lines=args.ignore_blank_id_lines,
+                                     ignore_short_lines=args.ignore_short_lines,
+                                     ignore_long_lines=args.ignore_long_lines,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
                                      column_separator=args.column_separator,
