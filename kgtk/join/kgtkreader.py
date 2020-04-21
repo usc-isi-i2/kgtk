@@ -68,17 +68,20 @@ class EnumNameAction(Action):
 
 class KgtkReaderErrorAction(Enum):
     """
-    Actions to take on constraint violation.
+    Should we complain when errors are detected?
 
     TODO: Why can't this be inside class KgtkReader?
     """
-    PASS = 0 # Silently pass the input line with fixes.
-    PASSYELP = 1 # Pass the input line with fixes and complain.
-    SKIP = 2 # Silently skip the input line.
-    SKIPYELP = 3 # Skip the input line and complain
+    SILENT = 0 # Silently ignore the line with the error
+    STDOUT = 1 # Print an error message on STDOUT
+    STDERR = 2 # Print an error message on STDERR
+    VALUEERROR = 4 # Raise a ValueError and fail
 
-@attr.s(slots=True, frozen=True)
+@attr.s(slots=True, frozen=False)
 class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
+    ERROR_LIMIT_DEFAULT: int = 1000
+    GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
+
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     source: ClosableIter[str] = attr.ib() # Todo: validate
     column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
@@ -89,20 +92,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     # For convenience, the count of columns. This is the same as len(column_names).
     column_count: int = attr.ib(validator=attr.validators.instance_of(int))
 
-    # When we report line numbers in error messages, line 1 is the first line after the header line.
-    #
-    # The use of a list is a sneaky way to get around the frozen class.
-    # TODO: Find the right way to do this.  Don't freeze the class?
-    #
-    # line_count[0] Count of accepted lines
-    # line_count[1] Count of ignored lines (comments, etc.)
-    line_count: typing.List[int] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(int),
-                                                                                   iterable_validator=attr.validators.instance_of(list)))
-    # lines_read: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
-    # lines_passed: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
-    # lines_skipped: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
-    # lines_fixed: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
-    # errors_reported: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_read: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_passed: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_skipped: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_errors_reported: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # The column separator is normally tab.
     column_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.COLUMN_SEPARATOR)
@@ -119,8 +112,11 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     label_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
     id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # node file
 
+    # How do we handle errors?
+    error_action: KgtkReaderErrorAction = attr.ib(validator=attr.validators.in_(KgtkReaderErrorAction), default=KgtkReaderErrorAction.STDOUT)
+    error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=ERROR_LIMIT_DEFAULT)
+
     # Ignore empty lines, comments, and all whitespace lines, etc.?
-    error_action: KgtkReaderErrorAction = attr.ib(validator=attr.validators.in_(KgtkReaderErrorAction), default=KgtkReaderErrorAction.SKIPYELP)
     ignore_empty_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     ignore_comment_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     ignore_whitespace_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -137,7 +133,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
     # Other implementation options?
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT)
+    gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
     # Is this an edge file or a node file?
     is_edge_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -145,8 +141,6 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
-    GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
 
     class Mode(Enum):
         """
@@ -165,7 +159,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
              fill_missing_columns: bool = False,
-             error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.SKIPYELP,
+             error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDOUT,
+             error_limit: int = ERROR_LIMIT_DEFAULT,
              ignore_empty_lines: bool = True,
              ignore_comment_lines: bool = True,
              ignore_whitespace_lines: bool = True,
@@ -238,7 +233,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
-                              # error_action=error_action,
+                              error_action=error_action,
+                              error_limit=error_limit,
                               ignore_empty_lines=ignore_empty_lines,
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
@@ -246,7 +242,6 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               ignore_blank_node2_lines=ignore_blank_node2_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
-                              line_count=[1, 0], # TODO: find a better way to do this.
                               is_edge_file=is_edge_file,
                               is_node_file=is_node_file,
                               verbose=verbose,
@@ -275,14 +270,14 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
-                              # error_action=error_action,
+                              error_action=error_action,
+                              error_limit=error_limit,
                               ignore_empty_lines=ignore_empty_lines,
                               ignore_comment_lines=ignore_comment_lines,
                               ignore_whitespace_lines=ignore_whitespace_lines,
                               ignore_blank_id_lines=ignore_blank_id_lines,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
-                              line_count=[1, 0], # TODO: find a better way to do this.
                               is_edge_file=is_edge_file,
                               is_node_file=is_node_file,
                               verbose=verbose,
@@ -300,14 +295,14 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                        require_all_columns=require_all_columns,
                        prohibit_extra_columns=prohibit_extra_columns,
                        fill_missing_columns=fill_missing_columns,
-                       # error_action=error_action,
+                       error_action=error_action,
+                       error_limit=error_limit,
                        ignore_empty_lines=ignore_empty_lines,
                        ignore_comment_lines=ignore_comment_lines,
                        ignore_whitespace_lines=ignore_whitespace_lines,
                        ignore_blank_id_lines=ignore_blank_id_lines,
                        gzip_in_parallel=gzip_in_parallel,
                        gzip_queue_size=gzip_queue_size,
-                       line_count=[1, 0], # TODO: find a better way to do this.
                        is_edge_file=is_edge_file,
                        is_node_file=is_node_file,
                        verbose=verbose,
@@ -398,6 +393,20 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     def close(self):
         self.source.close()
 
+    def _error(self, msg: str, line: str):
+        self.data_lines_skipped += 1
+        if self.error_action == KgtkReaderErrorAction.SILENT:
+            return
+        elif self.error_action == KgtkReaderErrorAction.STDOUT:
+            print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line))
+        elif self.error_action == KgtkReaderErrorAction.STDERR:
+            print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=sys.stderr)
+        elif self.error_action == KgtkReaderErrorAction.VALUEERROR:
+            raise ValueError("In input data line %d, %s: %s" % (self.data_lines_read, msg, line))
+        self.data_errors_reported += 1
+        if self.data_errors_reported >= self.error_limit:
+            raise ValueError("Too many data errors.")
+
     # This is both and iterable and an iterator object.
     def __iter__(self)->typing.Iterator[typing.List[str]]:
         return self
@@ -420,20 +429,26 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                 self.source.close() # Do we need to guard against repeating this call?
                 raise e
 
+            # Count the data line read.
+            self.data_lines_read += 1
+
             # Strip the end-of-line characters:
             line = line.rstrip("\r\n")
 
+            if self.very_verbose:
+                print("'%s'" % line)
+
             # Ignore empty lines.
             if len(line) == 0 and self.ignore_empty_lines:
-                self.line_count[1] += 1
+                self._error("saw an empty line", line)
                 continue
             # Ignore comment lines:
             if line[0] == self.COMMENT_INDICATOR and self.ignore_comment_lines:
-                self.line_count[1] += 1
+                self._error("saw a comment line", line)
                 continue
             # Ignore whitespace lines
             if self.ignore_whitespace_lines and line.isspace():
-                self.line_count[1] += 1
+                self._error("saw a whitespace line", line)
                 continue
 
             values = line.split(self.column_separator)
@@ -442,10 +457,19 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             #
             # When we report line numbers in error messages, line 1 is the first line after the header line.
             if self.require_all_columns and len(values) < self.column_count:
-                raise ValueError("Required %d columns in input line %d, saw %d: '%s'" % (self.column_count, self.line_count[0], len(values), line))
+                self._error("Required %d columns, saw %d: '%s'" % (self.column_count,
+                                                                   len(values),
+                                                                   line),
+                            line)
+                continue
+                             
             if self.prohibit_extra_columns and len(values) > self.column_count:
-                raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count[0], len(values),
-                                                                                                    len(values) - self.column_count, line))
+                self._error("Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
+                                                                              len(values),
+                                                                              len(values) - self.column_count,
+                                                                              line),
+                            line)
+                continue
 
             # Optionally fill missing trailing columns with empty values:
             if self.fill_missing_columns and len(values) < self.column_count:
@@ -453,9 +477,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                     values.append("")
 
             if self._ignore_if_blank_fields(values):
+                self.data_lines_skipped += 1
                 continue
 
-            self.line_count[0] += 1
+            self.data_lines_passed += 1
             if self.very_verbose:
                 sys.stdout.write(".")
                 sys.stdout.flush()
@@ -521,6 +546,9 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                                   help="The action to take for error input lines",
                                   type=KgtkReaderErrorAction, action=EnumNameAction)
 
+        parser.add_argument(      "--error-limit", dest="error_limit",
+                                  help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
+
         parser.add_argument(      "--fill-missing-columns", dest="fill_missing_columns",
                                   help="Fill missing trailing columns in each line.", action='store_true')
 
@@ -578,6 +606,7 @@ def main():
                                      prohibit_extra_columns=args.prohibit_extra_columns,
                                      fill_missing_columns=args.fill_missing_columns,
                                      error_action=args.error_action,
+                                     error_limit=args.error_limit,
                                      ignore_blank_lines=args.ignore_blank_lines,
                                      ignore_comment_lines=args.ignore_comment_lines,
                                      ignore_whitespace_lines=args.ignore_whitespace_lines,
@@ -598,4 +627,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

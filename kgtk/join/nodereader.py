@@ -13,8 +13,9 @@ import typing
 from kgtk.join.closableiter import ClosableIter
 from kgtk.join.kgtkreader import KgtkReader, KgtkReaderErrorAction
 
-@attr.s(slots=True, frozen=True)
+@attr.s(slots=True, frozen=False)
 class NodeReader(KgtkReader):
+
     @classmethod
     def open_node_file(cls,
                        file_path: typing.Optional[Path],
@@ -23,7 +24,8 @@ class NodeReader(KgtkReader):
                        require_all_columns: bool = True,
                        prohibit_extra_columns: bool = True,
                        fill_missing_columns: bool = False,
-                       error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.SKIPYELP,
+                       error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDOUT,
+                       error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
                        ignore_empty_lines: bool = True,
                        ignore_comment_lines: bool = True,
                        ignore_whitespace_lines: bool = True,
@@ -74,7 +76,6 @@ class NodeReader(KgtkReader):
                    ignore_blank_id_lines=ignore_blank_id_lines,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
-                   line_count=[1, 0], # TODO: find a better way to do this.
                    is_edge_file=False,
                    is_node_file=True,
                    verbose=verbose,
@@ -88,7 +89,6 @@ class NodeReader(KgtkReader):
         if self.ignore_blank_id_lines and self.id_column_idx >= 0 and len(values) > self.id_column_idx:
             id_value: str = values[self.id_column_idx]
             if len(id_value) == 0 or id_value.isspace():
-                self.line_count[1] += 1
                 return True # ignore this line
         return False # Do not ignore this line
 
@@ -120,6 +120,7 @@ def main():
                                      prohibit_extra_columns=args.prohibit_extra_columns,
                                      fill_missing_columns=args.fill_missing_columns,
                                      error_action=args.error_action,
+                                     error_limit=args.error_limit,
                                      ignore_empty_lines=args.ignore_empty_lines,
                                      ignore_comment_lines=args.ignore_comment_lines,
                                      ignore_whitespace_lines=args.ignore_whitespace_lines,
