@@ -277,6 +277,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                      qnode,
                                                      prop,
                                                      value,
+                                                     rank,
                                                      mag,
                                                      unit,
                                                      lower,
@@ -288,9 +289,6 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                      enttype])
                                     seq_no += 1
                                     if qual_file:
-                                        temp_id=sid+'-rank-1'
-                                        qrows.append([temp_id,sid,'rank',rank,'','','','',
-                                                     '','','','',''])
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
@@ -389,8 +387,8 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                         erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','',
                                                       '','','','',''])
                                     if qual_file:
-                                        tempid=sid+'-lang-1'
-                                        qrows.append([tempid,sid,'lang','\"'+sitelang+'\"','','','','','','','','',''])
+                                        tempid=sid+'-language-1'
+                                        qrows.append([tempid,sid,'language','\"'+sitelang+'\"','','','','','','','','',''])
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
@@ -437,7 +435,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                     escapechar="\n",
                     quotechar='')
                 wr.writerow(header)
-        header = ['id','node1','label','node2','node2;magnitude','node2;unit','node2;lower','node2;upper',
+        header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;lower','node2;upper',
               'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type']
         if edge_file:
             with open(edge_file+'_header', 'w', newline='') as myfile:
@@ -449,6 +447,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                     quotechar='')
                 wr.writerow(header)
         if qual_file:
+            header.remove('rank')
             with open(qual_file+'_header', 'w', newline='') as myfile:
                 wr = csv.writer(
                     myfile,
