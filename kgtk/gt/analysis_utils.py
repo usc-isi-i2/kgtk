@@ -62,11 +62,12 @@ def get_max_node(g, prop):
     return max_pr, max_pr_vertex
 
 def get_topn_indices(g, prop, n, print_prop):
-    a=g.vp[prop].a
-    ind = np.argpartition(a, -n)[-n:]
-    for i in ind:
-        print(i, g.vp[print_prop][i], g.vp[prop][i])
-    return
+	a=g.vp[prop].a
+	ind = np.argpartition(a, -n)[-n:]
+	result=[]
+	for i in ind:
+		result.append([i, g.vp[print_prop][i], g.vp[prop][i]])
+	return result
 
 #### RUN ALL STATS ####
     
