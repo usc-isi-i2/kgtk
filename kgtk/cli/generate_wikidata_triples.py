@@ -228,6 +228,7 @@ def run(
             return doc
 
         def genLabelTriple(self, node1: str, label: str, node2: str) -> bool:
+            # print("#DEBUG",node1, self.propTypes)
             if node1 in self.propTypes:
                 entity = WDProperty(node1.upper(), self.propTypes[node1])
             else:
@@ -316,7 +317,6 @@ def run(
             The normal triple's type is determined by 
             1. label's datatype in prop_types.tsv
             2. kgtk format convention of node2 field
-
             Update the self.STATEMENT
             """
             # print("#Debug: ", node1, label, node2, isQualifierEdge)
@@ -336,14 +336,22 @@ def run(
             elif edgeType == TimeValue:
                 # https://www.wikidata.org/wiki/Help:Dates
                 # ^201301-01T00:00:00Z/11
-                dateTimeString, precision = node2[1:].split("/")
-                dateString, timeString = dateTimeString.split("T")
-                OBJECT = TimeValue(
-                    value=dateString,
-                    calendar=Item("Q1985727"),
-                    precision=precision,
-                    time_zone=0,
-                )
+                try:
+                    dateTimeString, precision = node2[1:].split("/")
+                    dateString, timeString = dateTimeString.split("T")
+                    OBJECT = TimeValue(
+                        value=dateString,
+                        calendar=Item("Q1985727"),
+                        precision=precision,
+                        time_zone=0,
+                    )
+                except:
+                    # Assume it is year TODO
+                    OBJECT = TimeValue(
+                        value=node2,
+                        calendar=Item("Q1985727"),
+                        precision="9"
+                    )
 
             elif edgeType == GlobeCoordinate:
                 latitude, longitude = node2[1:].split("/")
@@ -366,6 +374,7 @@ def run(
                     textString, lang = node2.split("@")
                     OBJECT = MonolingualText(textString, lang)
                 except:
+                    textString = node2
                     OBJECT = MonolingualText(textString, "en")
             elif edgeType == ExternalIdentifier:
                 OBJECT = ExternalIdentifier(node2)
@@ -389,12 +398,11 @@ def run(
                     self.doc.kg.add_subject(OBJECT)
                 self.STATEMENT = entity.add_statement(label.upper(), OBJECT) #TODO the order matters, this line must appear before the line below
                 self.doc.kg.add_subject(entity) #TODO add the entity itself
-                self.doc.kg.add_subject(self.STATEMENT)
+                # self.doc.kg.add_subject(self.STATEMENT)
             return True
 
         def entryPoint(self, line_number:int , edge: str):
             """
-            edge: "p8\tp1\t'hasFather'@en\te5\n", a line in the edges.tsv file
             generates a list of two, the first element is the determination of the edge type using corresponding edge type
             the second element is a bool indicating whether this is a valid property edge or qualifier edge.
             Call corresponding downstream functions
@@ -409,7 +417,7 @@ def run(
             if line_number == 0: #TODO ignore header mode
                 # by default a statement edge
                 isQualifierEdge = False
-                # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
+                print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
                 self.ID = eID
             else:
                 if node1 != self.ID:
@@ -417,7 +425,7 @@ def run(
                     if self.read >= self.n:
                         self.serialize()
                     isQualifierEdge = False
-                    # print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
+                    print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
                     self.ID= eID
                 else:
                 # qualifier edge or property declaration edge
@@ -431,7 +439,7 @@ def run(
                                     node1, line_number, self.ID
                                 )
                             )
-                    # print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
+                    print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
 
             if label in self.labelSet:
                 self.read += self.genLabelTriple(node1, label, node2)
@@ -489,7 +497,7 @@ def run(
     )
     # process stdin
     for num, edge in enumerate(sys.stdin.readlines()):
-        if edge.startswith("#"): # TODO First line omit
+        if edge.startswith("#") or num == 0: # TODO First line omit
             continue
         else:
             generator.entryPoint(num, edge)
