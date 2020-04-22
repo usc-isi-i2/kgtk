@@ -29,7 +29,7 @@ class EmbeddingVector:
         self._logger = logging.getLogger(__name__)
         from collections import defaultdict
         if model_name is None:
-            model_name = 'bert-base-nli-mean-tokens'
+            self.model_name = 'bert-base-nli-mean-tokens'
         # xlnet need to be trained before using, we can't use this for now
         # elif model_name == "xlnet-base-cased":
         #     word_embedding_model = models.XLNet('xlnet-base-cased')
@@ -41,7 +41,7 @@ class EmbeddingVector:
         #     self.model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
         else:
             self.model_name = model_name
-            self.model = SentenceTransformer(model_name)
+        self.model = SentenceTransformer(model_name)
         if query_server is None or query_server == "":
             self.wikidata_server = "https://query.wikidata.org/sparql"
         else:
@@ -103,14 +103,17 @@ class EmbeddingVector:
         if self.redis_server is not None:
             sentence_embeddings = []
             for each_node, each_sentence in zip(qnodes, sentences):
-                cache_res = self.redis_server.get(each_node+each_sentence)
+                query_cache_key = each_node + each_sentence
+                if self.model_name != "bert-base-wikipedia-sections-mean-tokens":
+                    query_cache_key += self.model_name
+                cache_res = self.redis_server.get(query_cache_key)
                 if cache_res is not None:
                     sentence_embeddings.append(literal_eval(cache_res.decode("utf-8")))
                     # self._logger.error("{} hit!".format(each_node+each_sentence))
                 else:
                     each_embedding = self.model.encode([each_sentence], show_progress_bar=False)
                     sentence_embeddings.extend(each_embedding)
-                    self.redis_server.set(each_node+each_sentence, str(each_embedding[0].tolist()))
+                    self.redis_server.set(query_cache_key, str(each_embedding[0].tolist()))
         else:
             sentence_embeddings = self.model.encode(sentences, show_progress_bar=False)
             # self.embedding_cache[sentences] = sentence_embeddings
