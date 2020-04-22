@@ -139,7 +139,6 @@ def run(
         """
         A class to maintain the status of the generator
         """
-
         def __init__(
             self,
             propFile: str,
@@ -163,6 +162,8 @@ def run(
             # ignore-logging, if not ignore, log them and move on.
             if not self.ignore:
                 self.ignoreFile = open("ignored.log","w")
+            # corrupted statement id
+            self.corrupted_statement_id = None
             # serialize prfix
             kg_schema = KGSchema()
             kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
@@ -242,11 +243,10 @@ def run(
             return doc
 
         def genLabelTriple(self, node1: str, label: str, node2: str) -> bool:
-            # print("#DEBUG",node1, self.propTypes)
             if node1 in self.propTypes:
                 entity = WDProperty(node1.upper(), self.propTypes[node1])
             else:
-                entity = WDItem(node1.upper())
+                entity = WDItem(TripleGenerator.replaceIllegalString(node1.upper()))
             if "@" in node2:
                 res = node2.split("@")
                 node2 = "@".join(res[:-1])
@@ -266,7 +266,7 @@ def run(
             if node1 in self.propTypes:
                 entity = WDProperty(node1.upper(), self.propTypes[node1])
             else:
-                entity = WDItem(node1.upper())
+                entity = WDItem(TripleGenerator.replaceIllegalString(node1.upper()))
             if "@" in node2:
                 res = node2.split("@")
                 node2 = "@".join(res[:-1])
@@ -288,7 +288,7 @@ def run(
             if node1 in self.propTypes:
                 entity = WDProperty(node1.upper(), self.propTypes[node1])
             else:
-                entity = WDItem(node1.upper())
+                entity = WDItem(TripleGenerator.replaceIllegalString((node1.upper())))
             if "@" in node2:
                 res = node2.split("@")
                 node2 = "@".join(res[:-1])
@@ -309,7 +309,7 @@ def run(
             if node1 in self.propTypes:
                 entity = WDProperty(node1.upper(), self.propTypes[node1])
             else:
-                entity = WDItem(node1.upper())
+                entity = WDItem(TripleGenerator.replaceIllegalString((node1.upper())))
 
             if "@" in node2:
                 res = node2.split("@")
@@ -330,8 +330,7 @@ def run(
             return True
 
         def genNormalTriple(
-            self, node1: str, label: str, node2: str, isQualifierEdge: bool
-        ) -> bool:
+            self, node1: str, label: str, node2: str, isQualifierEdge: bool) -> bool:
             """
             The normal triple's type is determined by 
             1. label's datatype in prop_types.tsv
@@ -343,19 +342,22 @@ def run(
             # determine the node type [property|item]
             if node1 in self.propTypes:
                 entity = WDProperty(node1.upper(), self.propTypes[node1])
+                self.ignoreFile.write("node1 {} is property\n".format(node1))
             else:
-                entity = WDItem(node1.upper())
+                entity = WDItem(TripleGenerator.replaceIllegalString(node1.upper()))
+                self.ignoreFile.write("node1 {} is item\n".format(node1))
             # determine the edge type
 
             edgeType = self.propTypes[label]
 
             if edgeType == Item:
-                OBJECT = WDItem(node2.upper())
-
+                OBJECT = WDItem(TripleGenerator.replaceIllegalString(node2.upper()))
+                self.ignoreFile.write("node2 {} is item\n".format(node2))
             elif edgeType == TimeValue:
                 # https://www.wikidata.org/wiki/Help:Dates
                 # ^2013-01-01T00:00:00Z/11
                 # ^8000000-00-00T00:00:00Z/3
+                self.ignoreFile.write("node2 {} is timevalue\n".format(node2))
                 try:
                     dateTimeString, precision = node2[1:].split("/")
                     dateTimeString, _ = dateTimeString.split("Z")
@@ -382,6 +384,7 @@ def run(
                 return False
 
             elif edgeType == GlobeCoordinate:
+                self.ignoreFile.write("node2 {} is globecoordinate\n".format(node2))
                 latitude, longitude = node2[1:].split("/")
                 OBJECT = GlobeCoordinate(
                     latitude, longitude, 0.0001, globe=StringValue("Earth")
@@ -389,39 +392,42 @@ def run(
 
             elif edgeType == QuantityValue:
                 # +70[+60,+80]Q743895
-                # 
-                try:
-                    res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?").match(node2).groups()
-                    # match 1st and 4th groups for amount or unit, or match 4 groups with 2nd and 3rd being lower and upper bound
-                    upper_bound, lower_bound, unit = None, None, None
-                    if len(res)==4:
-                        amount, lower_bound, upper_bound, unit = res
-                    elif len(res)==3:
-                        amount, lower_bound, upper_bound = res
-                    elif len(res)==1:
-                        amount = res[0]
-                    if lower_bound != None:
-                        lower_bound = str(float(lower_bound))
-                    if upper_bound != None:
-                        upper_bound = str(float(upper_bound))
-                    OBJECT = QuantityValue(amount=float(amount), unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
-                except:
-                    return False
+                self.ignoreFile.write("node2 {} is quantity value\n".format(node2))
+            
+                res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?").match(node2).groups()
+                # match 1st and 4th groups for amount or unit, or match 4 groups with 2nd and 3rd being lower and upper bound
+                amount, lower_bound, upper_bound, unit = res
+                if unit != None:
+                    if upper_bound != None and lower_bound != None:
+                        OBJECT = QuantityValue(amount=float(amount), unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
+                    else:
+                        OBJECT = QuantityValue(amount=float(amount), unit=Item(unit))
+                else:
+                    if upper_bound != None and lower_bound != None:
+                        OBJECT = QuantityValue(amount=float(amount), upper_bound=upper_bound,lower_bound=lower_bound)
+                    else:
+                        OBJECT = QuantityValue(amount=float(amount))                   
             elif edgeType == MonolingualText:
-                try:
-                    textString, lang = node2.split("@")
+                self.ignoreFile.write("node2 {} is monolingualtext\n".format(node2))
+                if "@" in node2:
+                    res = node2.split("@")
+                    lang = res[-1]
+                    textString = "@".join(res[:-1])
                     lang = lang.replace('\"','').replace("\'","")
                     OBJECT = MonolingualText(textString, lang)
-                except:
+                else:
                     textString = node2
                     OBJECT = MonolingualText(textString, "en")
             elif edgeType == ExternalIdentifier:
+                self.ignoreFile.write("node2 {} is externalIdentifier\n".format(node2))
                 OBJECT = ExternalIdentifier(node2)
             elif edge == URLValue:
+                self.ignoreFile.write("node2 {} is url value\n".format(node2))
                 OBJECT = URLValue(node2)
             else:
                 # treat everything else as stringValue
                 OBJECT = StringValue(node2)
+                self.ignoreFile.write("node2 {} is globecoordinate\n".format(node2))
             if isQualifierEdge:
                 # edge: e8 p9 ^2013-01-01T00:00:00Z/11
                 # create qualifier edge on previous STATEMENT and return the updated STATEMENT
@@ -435,9 +441,8 @@ def run(
                 # create brand new property edge and replace STATEMENT
                 if type(OBJECT) == WDItem:
                     self.doc.kg.add_subject(OBJECT)
-                self.STATEMENT = entity.add_statement(label.upper(), OBJECT,rank=Rank.Preferred) #TODO the order matters, this line must appear before the line below
-                self.doc.kg.add_subject(entity) #TODO add the entity itself
-                # self.doc.kg.add_subject(self.STATEMENT)
+                self.STATEMENT = entity.add_statement(label.upper(), OBJECT,rank=self.rank) 
+                self.doc.kg.add_subject(entity)
             return True
 
         def entryPoint(self, line_number:int , edge: str):
@@ -449,7 +454,9 @@ def run(
             edgeList = edge.strip().split("\t")
             l = len(edgeList)
             if l!=4:
-                raise KGTKException("line {} has {} fields other than 4".format(line_number,l))
+                self.ignoreFile.write("Field# Error: line {} has {} fields other than 4".format(line_number,l))
+                self.ignoreFile.flush()
+                return
 
             [node1, label, node2, eID] = edgeList
             node1, label, node2, eID = node1.strip(),label.strip(),node2.strip(),eID.strip()
@@ -458,6 +465,7 @@ def run(
                 isQualifierEdge = False
                 # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
                 self.ID = eID
+                self.corrupted_statement_id = None
             else:
                 if node1 != self.ID:
                     # also a new statement edge
@@ -466,9 +474,13 @@ def run(
                     isQualifierEdge = False
                     # print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
                     self.ID= eID
+                    self.corrupted_statement_id = None
                 else:
                 # qualifier edge or property declaration edge
                     isQualifierEdge = True
+                    if self.corrupted_statement_id == eID:
+                        # Met a qualifier which associates with a corrupted statement
+                        return
                     if label != "type" and node1 != self.ID:
                         # 1. not a property declaration edge and
                         # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
@@ -482,19 +494,23 @@ def run(
                                     node1, line_number, self.ID
                                 ))
                             self.ignoreFile.flush()
-
             if label in self.labelSet:
-                self.read += self.genLabelTriple(node1, label, node2)
+                self.ignoreFile.write("#{} label\n".format(line_number))
+                success = self.genLabelTriple(node1, label, node2)
             elif label in self.descriptionSet:
-                self.read += self.genDescriptionTriple(node1, label, node2)
+                self.ignoreFile.write("#{} description\n".format(line_number))
+                success= self.genDescriptionTriple(node1, label, node2)
             elif label in self.aliasSet:
-                self.read += self.genAliasTriple(node1, label, node2)
+                self.ignoreFile.write("#{} alias\n".format(line_number))
+                success = self.genAliasTriple(node1, label, node2)
             elif label == "type":
+                self.ignoreFile.write("#{} type\n".format(line_number))
                 # special edge of prop declaration
-                self.read += self.genPropDeclarationTriple(node1, label, node2)
+                success = self.genPropDeclarationTriple(node1, label, node2)
             else:
                 if label in self.propTypes:
-                    self.read += self.genNormalTriple(node1, label, node2, isQualifierEdge)
+                    self.ignoreFile.write("#{} normal\n".format(line_number))
+                    success= self.genNormalTriple(node1, label, node2, isQualifierEdge)
                 else:
                     if not self.ignore:
                         # raise KGTKException(
@@ -502,6 +518,14 @@ def run(
                         # )
                         self.ignoreFile.write("PropertyUnknownError: property {}'s type is unknown at line {}.\n".format(label, line_number))
                         self.ignoreFile.flush()
+            if (not success) and (not isQualifierEdge) and (not self.ignore):
+                # We have a corrupted edge here.
+                self.ignoreFile.write("Corrupted statement at line number: {} with id {} with current corrupted id {}\n".format(line_number, eID, self.corrupted_statement_id))
+                self.ignoreFile.flush()
+                self.corrupted_statement_id = eID
+            else:
+                self.read += 1
+                self.corrupted_statement_id = None
 
         def serialize(self):
             """
@@ -530,6 +554,9 @@ def run(
         def finalize(self):
             self.serialize()
             return
+        @staticmethod
+        def replaceIllegalString(s:str)->str:
+            return s.replace(":","-")
 
     generator = TripleGenerator(
         propFile=propFile,
