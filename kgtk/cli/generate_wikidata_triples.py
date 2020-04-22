@@ -119,7 +119,8 @@ def run(
             MonolingualText,
             GlobeCoordinate,
             ExternalIdentifier,
-            URLValue
+            URLValue,
+            Precision
         )
         from kgtk.exceptions import KGTKException
     except:
@@ -237,6 +238,7 @@ def run(
                 res = node2.split("@")
                 node2 = "@".join(res[:-1])
                 lang = res[-1]
+                lang = lang.replace('\"','').replace("\'","")
                 if len(lang) > 2: #TODO fix the unsupported language short code
                     lang = "en"
                 entity.add_label(node2.replace('"', "").replace("'", ""), lang=lang)
@@ -256,6 +258,7 @@ def run(
                 res = node2.split("@")
                 node2 = "@".join(res[:-1])
                 lang = res[-1]
+                lang = lang.replace('\"','').replace("\'","")
                 if len(lang) > 2:
                     lang = "en"
                 entity.add_description(
@@ -335,7 +338,7 @@ def run(
 
             elif edgeType == TimeValue:
                 # https://www.wikidata.org/wiki/Help:Dates
-                # ^201301-01T00:00:00Z/11
+                # ^2013-01-01T00:00:00Z/11
                 try:
                     dateTimeString, precision = node2[1:].split("/")
                     dateString, timeString = dateTimeString.split("T")
@@ -347,10 +350,12 @@ def run(
                     )
                 except:
                     # Assume it is year TODO
+                    dateString = node2 + "-01-01"
                     OBJECT = TimeValue(
-                        value=node2,
+                        value=dateString, #TODO
                         calendar=Item("Q1985727"),
-                        precision="9"
+                        precision=Precision.year,
+                        time_zone=0,
                     )
 
             elif edgeType == GlobeCoordinate:
@@ -360,18 +365,25 @@ def run(
                 )
 
             elif edgeType == QuantityValue:
+                # +70[+60,+80]Q743895
+                # 
                 try:
-                    amount, unit = (
-                        re.compile("([\+|\-]?[0-9]+\.?[0-9]*)U([0-9]+)")
-                        .match(node2)
-                        .groups()
-                    )
-                    OBJECT = QuantityValue(amount=float(amount), unit=Item(unit))
+                    res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?[U|Q]([0-9]+)").match(node2).groups()
+                    # match 1st and 4th groups for amount or unit, or match 4 groups with 2nd and 3rd being lower and upper bound
+                    if len(res) == 2:
+                        amount, unit = res
+                        upper_bound, lower_bound=None,None
+                    elif len(res)==4:
+                        amount, lower_bound, upper_bound, unit = res
+                    else:
+                        raise KGTKException("Error parsing quantity.")
+                    OBJECT = QuantityValue(amount=float(amount), unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
                 except:
                     OBJECT = QuantityValue(amount=float(node2))
             elif edgeType == MonolingualText:
                 try:
                     textString, lang = node2.split("@")
+                    lang = lang.replace('\"','').replace("\'","")
                     OBJECT = MonolingualText(textString, lang)
                 except:
                     textString = node2
@@ -417,7 +429,7 @@ def run(
             if line_number == 0: #TODO ignore header mode
                 # by default a statement edge
                 isQualifierEdge = False
-                print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
+                # print("#Debug Info: ",line_number, self.ID, eID, isQualifierEdge,self.STATEMENT)
                 self.ID = eID
             else:
                 if node1 != self.ID:
@@ -425,7 +437,7 @@ def run(
                     if self.read >= self.n:
                         self.serialize()
                     isQualifierEdge = False
-                    print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
+                    # print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
                     self.ID= eID
                 else:
                 # qualifier edge or property declaration edge
@@ -439,7 +451,7 @@ def run(
                                     node1, line_number, self.ID
                                 )
                             )
-                    print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
+                    # print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
 
             if label in self.labelSet:
                 self.read += self.genLabelTriple(node1, label, node2)
