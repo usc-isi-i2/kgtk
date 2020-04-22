@@ -341,27 +341,31 @@ def run(
             elif edgeType == TimeValue:
                 # https://www.wikidata.org/wiki/Help:Dates
                 # ^2013-01-01T00:00:00Z/11
-                # ^2016-00-00T00:00:00Z/9
+                # ^8000000-00-00T00:00:00Z/3
                 try:
                     dateTimeString, precision = node2[1:].split("/")
-                    dateString, timeString = dateTimeString.split("T")
-                    #TODO For Amandeep's Heng's data, handle errors
-                    # res = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}").match()
+                    dateTimeString, _ = dateTimeString.split("Z")
                     OBJECT = TimeValue(
-                        value=dateString,
+                        value=dateTimeString,
                         calendar=Item("Q1985727"),
                         precision=precision,
                         time_zone=0,
                     )
+                except: 
+                    pass
+                try:
+                    if re.compile("[0-9]{4}").match(node2):
+                        dateTimeString = node2 + "-01-01"
+                        OBJECT = TimeValue(
+                            value=dateTimeString, #TODO
+                            calendar=Item("Q1985727"),
+                            precision=Precision.year,
+                            time_zone=0,
+                        )
                 except:
-                    # Assume it is year TODO
-                    dateString = node2 + "-01-01"
-                    OBJECT = TimeValue(
-                        value=dateString, #TODO
-                        calendar=Item("Q1985727"),
-                        precision=Precision.year,
-                        time_zone=0,
-                    )
+                    pass
+                #TODO other than that, not supported. Creation of normal triple fails
+                return False
 
             elif edgeType == GlobeCoordinate:
                 latitude, longitude = node2[1:].split("/")
@@ -375,14 +379,12 @@ def run(
                 try:
                     res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?[U|Q]([0-9]+)").match(node2).groups()
                     # match 1st and 4th groups for amount or unit, or match 4 groups with 2nd and 3rd being lower and upper bound
-                    if len(res) == 2:
-                        amount, unit = res
-                        upper_bound, lower_bound=None,None
-                    elif len(res)==4:
-                        amount, lower_bound, upper_bound, unit = res
-                        lower_bound, upper_bound = float(lower_bound), float(upper_bound)
-                    else:
-                        raise KGTKException("Error parsing quantity.")
+                    amount, lower_bound, upper_bound, unit = res
+                    #TODO ETK issue of upper bound and lower bound being string
+                    if lower_bound != None:
+                        lower_bound = str(float(lower_bound))
+                    if upper_bound != None:
+                        upper_bound = str(float(upper_bound))
                     OBJECT = QuantityValue(amount=float(amount), unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
                 except:
                     OBJECT = QuantityValue(amount=float(node2))
