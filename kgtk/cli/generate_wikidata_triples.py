@@ -122,6 +122,7 @@ def run(
             URLValue,
             Precision
         )
+        from etk.wikidata.statement import Rank
         from kgtk.exceptions import KGTKException
     except:
         #TODO The only exception not handled by KGTKException.
@@ -142,13 +143,14 @@ def run(
             ignore: bool,
             n: int,
             destFp: TextIO = sys.stdout,
+            truthy:bool =False
         ):
             self.ignore = ignore
             self.propTypes = self.__setPropTypes(propFile)
             self.labelSet, self.aliasSet, self.descriptionSet = self.__setSets(
                 labelSet, aliasSet, descriptionSet
             )
-            # TODO handle standard output
+            self.rank = Rank.Preferred if truthy else Rank.Normal
             self.fp = destFp
             self.n = int(n)
             self.read = 0
@@ -339,9 +341,12 @@ def run(
             elif edgeType == TimeValue:
                 # https://www.wikidata.org/wiki/Help:Dates
                 # ^2013-01-01T00:00:00Z/11
+                # ^2016-00-00T00:00:00Z/9
                 try:
                     dateTimeString, precision = node2[1:].split("/")
                     dateString, timeString = dateTimeString.split("T")
+                    #TODO For Amandeep's Heng's data, handle errors
+                    # res = re.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}").match()
                     OBJECT = TimeValue(
                         value=dateString,
                         calendar=Item("Q1985727"),
@@ -375,6 +380,7 @@ def run(
                         upper_bound, lower_bound=None,None
                     elif len(res)==4:
                         amount, lower_bound, upper_bound, unit = res
+                        lower_bound, upper_bound = float(lower_bound), float(upper_bound)
                     else:
                         raise KGTKException("Error parsing quantity.")
                     OBJECT = QuantityValue(amount=float(amount), unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
@@ -408,7 +414,7 @@ def run(
                 # create brand new property edge and replace STATEMENT
                 if type(OBJECT) == WDItem:
                     self.doc.kg.add_subject(OBJECT)
-                self.STATEMENT = entity.add_statement(label.upper(), OBJECT) #TODO the order matters, this line must appear before the line below
+                self.STATEMENT = entity.add_statement(label.upper(), OBJECT,rank=Rank.Preferred) #TODO the order matters, this line must appear before the line below
                 self.doc.kg.add_subject(entity) #TODO add the entity itself
                 # self.doc.kg.add_subject(self.STATEMENT)
             return True
@@ -505,12 +511,14 @@ def run(
         aliasSet=aliases,
         descriptionSet=descriptions,
         n=n,
-        ignore=ignore
+        ignore=ignore,
+        truthy=truthy
     )
     # process stdin
     for num, edge in enumerate(sys.stdin.readlines()):
         if edge.startswith("#") or num == 0: # TODO First line omit
             continue
         else:
+            # print("#DEBUG: {}".format(num))
             generator.entryPoint(num, edge)
     generator.finalize()
