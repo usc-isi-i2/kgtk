@@ -86,9 +86,13 @@ def add_arguments(parser):
         "--ig",
         action="store",
         type=str2bool,
-        help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging NOTIMPLEMENTED",
+        help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging",
         dest="ignore",
     )
+    # logging level
+    # parser.add_argument('-l', '--logging-level', action='store', dest='logging_level',
+    #         default="info", choices=("error", "warning", "info", "debug"),
+    #         help="set up the logging level, default is INFO level")
 
 
 def run(
@@ -99,6 +103,7 @@ def run(
     n: int,
     truthy: bool,
     ignore: bool,
+    # logging_level:str
 ):
     # import modules locally
     import sys
@@ -106,6 +111,7 @@ def run(
     import re
     import requests
     from typing import TextIO
+    import logging
     try:
         from etk.etk import ETK
         from etk.knowledge_graph import KGSchema
@@ -126,7 +132,7 @@ def run(
         from kgtk.exceptions import KGTKException
     except:
         #TODO The only exception not handled by KGTKException.
-        print("Please check the etk and spacy libraries.")
+        print("Library Error: Please check the etk and spacy libraries.")
         return
 
     class TripleGenerator:
@@ -154,6 +160,9 @@ def run(
             self.fp = destFp
             self.n = int(n)
             self.read = 0
+            # ignore-logging, if not ignore, log them and move on.
+            if not self.ignore:
+                self.ignoreFile = open("ignored.log","w")
             # serialize prfix
             kg_schema = KGSchema()
             kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
@@ -181,11 +190,13 @@ def run(
                     __propTypes[node1] = dataTypeMappings[node2.strip()]
                 except:
                     if not self.ignore:                    
-                        raise KGTKException(
-                            "DataType {} of node {} is not supported.\n".format(
-                                node2, node1
-                            )
-                        )
+                        # raise KGTKException(
+                        #     "DataType {} of node {} is not supported.\n".format(
+                        #         node2, node1
+                        #     )
+                        # )
+                        self.ignoreFile.write("DataTypeError: DataType {} of node {} is not supported.\n".format(node2, node1))
+                        self.ignoreFile.flush()
             return __propTypes
 
         def __setSets(self, labelSet: str, aliasSet: str, descriptionSet: str):
@@ -301,7 +312,10 @@ def run(
                 entity = WDItem(node1.upper())
 
             if "@" in node2:
-                node2, lang = node2.split("@")
+                res = node2.split("@")
+                node2 = "@".join(res[:-1])
+                lang = res[-1]
+                lang = lang.replace('\"','').replace("\'","")
                 entity.add_alias(node2.replace('"', "").replace("'", ""), lang=lang)
             else:
                 entity.add_alias(
@@ -377,17 +391,22 @@ def run(
                 # +70[+60,+80]Q743895
                 # 
                 try:
-                    res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?[U|Q]([0-9]+)").match(node2).groups()
+                    res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?").match(node2).groups()
                     # match 1st and 4th groups for amount or unit, or match 4 groups with 2nd and 3rd being lower and upper bound
-                    amount, lower_bound, upper_bound, unit = res
-                    #TODO ETK issue of upper bound and lower bound being string
+                    upper_bound, lower_bound, unit = None, None, None
+                    if len(res)==4:
+                        amount, lower_bound, upper_bound, unit = res
+                    elif len(res)==3:
+                        amount, lower_bound, upper_bound = res
+                    elif len(res)==1:
+                        amount = res[0]
                     if lower_bound != None:
                         lower_bound = str(float(lower_bound))
                     if upper_bound != None:
                         upper_bound = str(float(upper_bound))
                     OBJECT = QuantityValue(amount=float(amount), unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
                 except:
-                    OBJECT = QuantityValue(amount=float(node2))
+                    return False
             elif edgeType == MonolingualText:
                 try:
                     textString, lang = node2.split("@")
@@ -454,12 +473,15 @@ def run(
                         # 1. not a property declaration edge and
                         # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
                         if not self.ignore:
-                            raise KGTKException(
-                                "Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
+                            # raise KGTKException(
+                            #     "Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
+                            #         node1, line_number, self.ID
+                            #     )
+                            # )
+                            self.ignoreFile.write("QualifierIDError: Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
                                     node1, line_number, self.ID
-                                )
-                            )
-                    # print("#Debug Info: ",line_number, self.ID, node1, isQualifierEdge,self.STATEMENT)
+                                ))
+                            self.ignoreFile.flush()
 
             if label in self.labelSet:
                 self.read += self.genLabelTriple(node1, label, node2)
@@ -475,9 +497,11 @@ def run(
                     self.read += self.genNormalTriple(node1, label, node2, isQualifierEdge)
                 else:
                     if not self.ignore:
-                        raise KGTKException(
-                            "property {}'s type is unknown at line {}.\n".format(label, line_number)
-                        )
+                        # raise KGTKException(
+                        #     "property {}'s type is unknown at line {}.\n".format(label, line_number)
+                        # )
+                        self.ignoreFile.write("PropertyUnknownError: property {}'s type is unknown at line {}.\n".format(label, line_number))
+                        self.ignoreFile.flush()
 
         def serialize(self):
             """
@@ -514,7 +538,8 @@ def run(
         descriptionSet=descriptions,
         n=n,
         ignore=ignore,
-        truthy=truthy
+        truthy=truthy,
+        # logging_level=logging_level,
     )
     # process stdin
     for num, edge in enumerate(sys.stdin.readlines()):
