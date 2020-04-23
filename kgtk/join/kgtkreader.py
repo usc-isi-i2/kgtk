@@ -64,7 +64,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # node file
 
     # How do we handle errors?
-    error_action: KgtkReaderErrorAction = attr.ib(validator=attr.validators.in_(KgtkReaderErrorAction), default=KgtkReaderErrorAction.STDOUT)
+    #
+    # TODO: Why doesn't the following work?
+    # error_action: KgtkReaderErrorAction = attr.ib(validator=attr.validators.in_(KgtkReaderErrorAction), default=KgtkReaderErrorAction.STDOUT)
+    error_action: KgtkReaderErrorAction = attr.ib(default=KgtkReaderErrorAction.STDOUT)
     error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=ERROR_LIMIT_DEFAULT) # >0 ==> limit error reports
 
     # Ignore empty lines, comments, and all whitespace lines, etc.?
@@ -203,8 +206,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               is_edge_file=is_edge_file,
                               is_node_file=is_node_file,
                               verbose=verbose,
-                              very_verbose=very_verbose,
-            )
+                              very_verbose=very_verbose)
+        
         elif is_node_file:
             # We'll instantiate an NodeReader, which is a subclass of KgtkReader.
             # The NodeReader import is deferred to avoid circular imports.
@@ -543,7 +546,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
         parser.add_argument(      "--error-action", dest="error_action",
                                   help="The action to take for error input lines",
-                                  type=KgtkReaderErrorAction, action=EnumNameAction)
+                                  type=KgtkReaderErrorAction, action=EnumNameAction, default=KgtkReaderErrorAction.STDOUT)
 
         parser.add_argument(      "--error-limit", dest="error_limit",
                                   help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
@@ -579,6 +582,11 @@ def main():
     """
     Test the KGTK file reader.
     """
+    # The EdgeReader import is deferred to avoid circular imports.
+    from kgtk.join.edgereader import EdgeReader
+    # The NodeReader import is deferred to avoid circular imports.
+    from kgtk.join.nodereader import NodeReader
+
     parser = ArgumentParser()
     KgtkReader.add_shared_arguments(parser)
     KgtkReader.add_arguments(parser)
