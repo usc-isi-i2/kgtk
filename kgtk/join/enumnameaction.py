@@ -21,7 +21,7 @@ class EnumNameAction(Action):
         # Generate choices from the Enum
         kwargs.setdefault("choices", tuple(e.name for e in enum))
 
-        super(EnumAction, self).__init__(**kwargs)
+        super(EnumNameAction, self).__init__(**kwargs)
 
         self._enum = enum
 
