@@ -143,7 +143,7 @@ def main():
                                      force_column_names=args.force_column_names,
                                      skip_first_record=args.skip_first_record,
                                      fill_short_lines=args.fill_short_lines,
-                                     truncate_long_lines=truncate_long_lines,
+                                     truncate_long_lines=args.truncate_long_lines,
                                      error_action=args.error_action,
                                      error_limit=args.error_limit,
                                      ignore_empty_lines=args.ignore_empty_lines,
@@ -157,6 +157,7 @@ def main():
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
                                      column_separator=args.column_separator,
+                                     mode=KgtkReader.Mode.EDGE,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
     line_count: int = 0
