@@ -304,8 +304,8 @@ def main():
     Test the KGTK edge file writer.
     """
     parser = ArgumentParser()
-    parser.add_argument(dest="input_kgtk__file", help="The KGTK file to read", type=Path, default=None)
-    parser.add_argument(dest="output_kgtk__file", help="The KGTK file to write", type=Path, default=None)
+    parser.add_argument(dest="input_kgtk_file", help="The KGTK file to read", type=Path, default=None)
+    parser.add_argument(dest="output_kgtk_file", help="The KGTK file to write", type=Path, default=None)
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in a subthread.", action='store_true')
     parser.add_argument(      "--input-mode", dest="input_mode",
                               help="Determine the input KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
@@ -315,7 +315,7 @@ def main():
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     args = parser.parse_args()
 
-    kr: KgtkReader = KgtkReader.open(args.input_kgtk__file,
+    kr: KgtkReader = KgtkReader.open(args.input_kgtk_file,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      mode=args.input_mode,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
