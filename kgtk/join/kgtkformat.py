@@ -8,6 +8,7 @@ import typing
 class KgtkFormat:
     COLUMN_SEPARATOR: str = "\t"
     COMMENT_INDICATOR: str = "#"
+    LIST_SEPARATOR: str = "|"
 
     # These are the required columns in an edge file:
     NODE1_COLUMN_NAMES: typing.List[str] = ["node1", "from", "subject"]

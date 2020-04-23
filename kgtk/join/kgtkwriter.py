@@ -178,7 +178,7 @@ class KgtkWriter(KgtkFormat):
             cls.required_edge_columns(column_name_map)
         elif is_node_file:
             # Validate that we have the proper columns for an node file.
-            cls.required_edge_columns(column_name_map)
+            cls.required_node_column(column_name_map)
 
         # Write the column names to the first line.
         header: str = column_separator.join(column_names)
