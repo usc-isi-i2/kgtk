@@ -14,8 +14,8 @@ from multiprocessing import Queue
 import sys
 import typing
 
+from kgtk.join.edgereader import EdgeReader
 from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.kgtkwriter import KgtkWriter
 
 @attr.s(slots=True, frozen=True)
@@ -54,14 +54,14 @@ class EdgeJoiner(KgtkFormat):
 
     FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
 
-    def node1_column_idx(self, kr: KgtkReader, who: str)->int:
+    def node1_column_idx(self, kr: EdgeReader, who: str)->int:
         idx: int = kr.node1_column_idx
         if idx < 0:
             # TODO: throw a better exception
             raise ValueError("EdgeJoiner: unknown node1 column index in KGTK %s edge type." % who)
         return idx
 
-    def build_join_key(self, kr: KgtkReader, join_idx: int, line: typing.List[str])->str:
+    def build_join_key(self, kr: EdgeReader, join_idx: int, line: typing.List[str])->str:
         key: str = line[join_idx]
         if self.join_on_label:
             key += self.field_separator+ line[kr.label_column_idx]
@@ -69,28 +69,28 @@ class EdgeJoiner(KgtkFormat):
             key += self.field_separator+ line[kr.node2_column_idx]
         return key
 
-    def multi_column_key_set(self, kr: KgtkReader, join_idx: int)->typing.Set[str]:
+    def multi_column_key_set(self, kr: EdgeReader, join_idx: int)->typing.Set[str]:
         result: typing.Set[str] = set()
         for line in kr:
             result.add(self.build_join_key(kr, join_idx, line))
         return result
         
     # Optimized for a single join column:
-    def single_column_key_set(self, kr: KgtkReader, join_idx: int)->typing.Set[str]:
+    def single_column_key_set(self, kr: EdgeReader, join_idx: int)->typing.Set[str]:
         result: typing.Set[str] = set()
         for line in kr:
             result.add(line[join_idx])
         return result
         
     def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
-        kr: KgtkReader = KgtkReader.open(file_path,
-                                         ignore_short_lines=self.ignore_short_lines,
-                                         ignore_long_lines=self.ignore_long_lines,
-                                         fill_short_lines=self.fill_short_lines,
-                                         truncate_long_lines=self.truncate_long_lines,
-                                         gzip_in_parallel=self.gzip_in_parallel,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)
+        kr: EdgeReader = EdgeReader.open_edge_file(file_path,
+                                                   ignore_short_lines=self.ignore_short_lines,
+                                                   ignore_long_lines=self.ignore_long_lines,
+                                                   fill_short_lines=self.fill_short_lines,
+                                                   truncate_long_lines=self.truncate_long_lines,
+                                                   gzip_in_parallel=self.gzip_in_parallel,
+                                                   verbose=self.verbose,
+                                                   very_verbose=self.very_verbose)
 
         if not kr.is_edge_file:
             raise ValueError("The %s file is not an edge file" % who)
@@ -130,7 +130,7 @@ class EdgeJoiner(KgtkFormat):
             joined_key_set = left_join_key_set.intersection(right_join_key_set)
         return joined_key_set
     
-    def merge_columns(self, left_kr: KgtkReader, right_kr: KgtkReader)->typing.Tuple[typing.List[str], typing.List[str]]:
+    def merge_columns(self, left_kr: EdgeReader, right_kr: EdgeReader)->typing.Tuple[typing.List[str], typing.List[str]]:
         joined_column_names: typing.List[str] = [ ]
         right_column_names: typing.List[str] = [ ]
 
@@ -171,17 +171,17 @@ class EdgeJoiner(KgtkFormat):
         joined_key_set: typing.Set[str] = self.join_key_sets()
 
         # Open the input files for the second time. This won't work with stdin.
-        left_kr: KgtkReader =  KgtkReader.open(self.left_file_path,
-                                               ignore_short_lines=self.ignore_short_lines,
-                                               ignore_long_lines=self.ignore_long_lines,
-                                               fill_short_lines=self.fill_short_lines,
-                                               truncate_long_lines=self.truncate_long_lines)
+        left_kr: EdgeReader =  EdgeReader.open_edge_file(self.left_file_path,
+                                                         ignore_short_lines=self.ignore_short_lines,
+                                                         ignore_long_lines=self.ignore_long_lines,
+                                                         fill_short_lines=self.fill_short_lines,
+                                                         truncate_long_lines=self.truncate_long_lines)
 
-        right_kr: EdgeReader = KgtkReader.open(self.right_file_path,
-                                               ignore_short_lines=self.ignore_short_lines,
-                                               ignore_long_lines=self.ignore_long_lines,
-                                               fill_short_lines=self.fill_short_lines,
-                                               truncate_long_lines=self.truncate_long_lines)
+        right_kr: EdgeReader = EdgeReader.open_edge_file(self.right_file_path,
+                                                         ignore_short_lines=self.ignore_short_lines,
+                                                         ignore_long_lines=self.ignore_long_lines,
+                                                         fill_short_lines=self.fill_short_lines,
+                                                         truncate_long_lines=self.truncate_long_lines)
 
         # Map the right column names for the join:
         joined_column_names: typing.List[str]

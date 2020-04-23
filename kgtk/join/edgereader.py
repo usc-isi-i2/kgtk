@@ -89,8 +89,8 @@ class EdgeReader(KgtkReader):
                    compression_type=compression_type,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
-                   is_edge_file=False,
-                   is_node_file=True,
+                   is_edge_file=True,
+                   is_node_file=False,
                    verbose=verbose,
                    very_verbose=very_verbose,
         )

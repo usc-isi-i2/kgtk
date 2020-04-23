@@ -15,8 +15,8 @@ import sys
 import typing
 
 from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.kgtkwriter import KgtkWriter
+from kgtk.join.nodereader import NodeReader
 
 @attr.s(slots=True, frozen=True)
 class NodeJoiner(KgtkFormat):
@@ -50,28 +50,28 @@ class NodeJoiner(KgtkFormat):
 
     FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
 
-    def id_column_idx(self, kr: KgtkReader, who: str)->int:
+    def id_column_idx(self, kr: NodeReader, who: str)->int:
         idx: int = kr.id_column_idx
         if idx < 0:
             # TODO: throw a better exception
             raise ValueError("NodeJoiner: unknown node1 column index in KGTK %s edge type." % who)
         return idx
 
-    def single_column_key_set(self, kr: KgtkReader, join_idx: int)->typing.Set[str]:
+    def single_column_key_set(self, kr: NodeReader, join_idx: int)->typing.Set[str]:
         result: typing.Set[str] = set()
         for line in kr:
             result.add(line[join_idx])
         return result
         
     def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
-        kr: KgtkReader = KgtkReader.open(file_path,
-                                         ignore_short_lines=self.ignore_short_lines,
-                                         ignore_long_lines=self.ignore_long_lines,
-                                         fill_short_lines=self.fill_short_lines,
-                                         truncate_long_lines=self.truncate_long_lines,
-                                         gzip_in_parallel=self.gzip_in_parallel,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)
+        kr: NodeReader = NodeReader.open_node_file(file_path,
+                                                   ignore_short_lines=self.ignore_short_lines,
+                                                   ignore_long_lines=self.ignore_long_lines,
+                                                   fill_short_lines=self.fill_short_lines,
+                                                   truncate_long_lines=self.truncate_long_lines,
+                                                   gzip_in_parallel=self.gzip_in_parallel,
+                                                   verbose=self.verbose,
+                                                   very_verbose=self.very_verbose)
 
         if not kr.is_node_file:
             raise ValueError("The %s file is not a node file" % who)
@@ -99,7 +99,7 @@ class NodeJoiner(KgtkFormat):
             joined_key_set = left_join_key_set.intersection(right_join_key_set)
         return joined_key_set
     
-    def merge_columns(self, left_kr: KgtkReader, right_kr: KgtkReader)->typing.Tuple[typing.List[str], typing.List[str]]:
+    def merge_columns(self, left_kr: NodeReader, right_kr: NodeReader)->typing.Tuple[typing.List[str], typing.List[str]]:
         joined_column_names: typing.List[str] = [ ]
         right_column_names: typing.List[str] = [ ]
 
@@ -140,17 +140,17 @@ class NodeJoiner(KgtkFormat):
         joined_key_set: typing.Set[str] = self.join_key_sets()
 
         # Open the input files for the second time. This won't work with stdin.
-        left_kr: KgtkReader =  KgtkReader.open(self.left_file_path,
-                                               ignore_short_lines=self.ignore_short_lines,
-                                               ignore_long_lines=self.ignore_long_lines,
-                                               fill_short_lines=self.fill_short_lines,
-                                               truncate_long_lines=self.truncate_long_lines)
+        left_kr: NodeReader =  NodeReader.open_node_file(self.left_file_path,
+                                                         ignore_short_lines=self.ignore_short_lines,
+                                                         ignore_long_lines=self.ignore_long_lines,
+                                                         fill_short_lines=self.fill_short_lines,
+                                                         truncate_long_lines=self.truncate_long_lines)
 
-        right_kr: EdgeReader = KgtkReader.open(self.right_file_path,
-                                               ignore_short_lines=self.ignore_short_lines,
-                                               ignore_long_lines=self.ignore_long_lines,
-                                               fill_short_lines=self.fill_short_lines,
-                                               truncate_long_lines=self.truncate_long_lines)
+        right_kr: NodeReader = NodeReader.open_node_file(self.right_file_path,
+                                                         ignore_short_lines=self.ignore_short_lines,
+                                                         ignore_long_lines=self.ignore_long_lines,
+                                                         fill_short_lines=self.fill_short_lines,
+                                                         truncate_long_lines=self.truncate_long_lines)
 
         # Map the right column names for the join:
         joined_column_names: typing.List[str]

@@ -120,7 +120,7 @@ class IfExists(KgtkFormat):
                                                fill_short_lines=self.fill_short_lines,
                                                truncate_long_lines=self.truncate_long_lines)
 
-        right_kr: EdgeReader = KgtkReader.open(self.right_file_path,
+        right_kr: KgtkReader = KgtkReader.open(self.right_file_path,
                                                ignore_short_lines=self.ignore_short_lines,
                                                ignore_long_lines=self.ignore_long_lines,
                                                fill_short_lines=self.fill_short_lines,
