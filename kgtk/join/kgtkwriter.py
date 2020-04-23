@@ -51,9 +51,9 @@ class KgtkWriter(KgtkFormat):
         """
         There are four file reading modes:
         """
-        NONE = 0 # Enforce neither edge nore node file required columns
+        NONE = 0 # Enforce neither edge nor node file required columns
         EDGE = 1 # Enforce edge file required columns
-        NODE = 2 # Enforce node file require columns
+        NODE = 2 # Enforce node file required columns
         AUTO = 3 # Automatically decide whether to enforce edge or node file required columns
 
     @classmethod
@@ -71,7 +71,7 @@ class KgtkWriter(KgtkFormat):
              very_verbose: bool = False)->"KgtkWriter":
         if file_path is None or str(file_path) == "-":
             if verbose:
-                print("KgtkWriter: writing stdout")
+                print("KgtkWriter: writing stdout", file=sys.stderr)
             return cls._setup(column_names=column_names,
                               file_path=None,
                               file_out=sys.stdout,
@@ -87,22 +87,22 @@ class KgtkWriter(KgtkFormat):
             )
         
         if verbose:
-            print("File_path.suffix: %s" % file_path.suffix)
+            print("File_path.suffix: %s" % file_path.suffix, file=sys.stderr)
 
         if file_path.suffix in [".gz", ".bz2", ".xz"]:
             # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
             gzip_file: typing.TextIO
             if file_path.suffix == ".gz":
                 if verbose:
-                    print("KgtkWriter: writing gzip %s" % str(file_path))
+                    print("KgtkWriter: writing gzip %s" % str(file_path), file=sys.stderr)
                 gzip_file = gzip.open(file_path, mode="wt") # type: ignore
             elif file_path.suffix == ".bz2":
                 if verbose:
-                    print("KgtkWriter: writing bz2 %s" % str(file_path))
+                    print("KgtkWriter: writing bz2 %s" % str(file_path), file=sys.stderr)
                 gzip_file = bz2.open(file_path, mode="wt") # type: ignore
             elif file_path.suffix == ".xz":
                 if verbose:
-                    print("KgtkWriter: writing lzma %s" % str(file_path))
+                    print("KgtkWriter: writing lzma %s" % str(file_path), file=sys.stderr)
                 gzip_file = lzma.open(file_path, mode="wt") # type: ignore
             else:
                 # TODO: throw a better exception.
@@ -124,7 +124,7 @@ class KgtkWriter(KgtkFormat):
             
         else:
             if verbose:
-                print("KgtkWriter: writing file %s" % str(file_path))
+                print("KgtkWriter: writing file %s" % str(file_path), file=sys.stderr)
             return cls._setup(column_names=column_names,
                               file_path=file_path,
                               file_out=open(file_path, "w"),
@@ -183,7 +183,7 @@ class KgtkWriter(KgtkFormat):
         # Write the column names to the first line.
         header: str = column_separator.join(column_names)
         if verbose:
-            print("header: %s" % header)
+            print("header: %s" % header, file=sys.stderr)
         file_out.write(header + "\n") # Todo: use system end-of-line sequence?
 
         gzip_thread: typing.Optional[GzipProcess] = None
@@ -304,8 +304,8 @@ def main():
     Test the KGTK edge file writer.
     """
     parser = ArgumentParser()
-    parser.add_argument(dest="input_kgtk_file", help="The KGTK file to read", type=Path, default=None)
-    parser.add_argument(dest="output_kgtk_file", help="The KGTK file to write", type=Path, default=None)
+    parser.add_argument(dest="input_kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
+    parser.add_argument(dest="output_kgtk_file", help="The KGTK file to write", type=Path, nargs="?")
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in a subthread.", action='store_true')
     parser.add_argument(      "--input-mode", dest="input_mode",
                               help="Determine the input KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
@@ -332,7 +332,8 @@ def main():
         kw.write(line)
         line_count += 1
     kw.close()
-    print("Copied %d lines" % line_count)
+    if args.verbose:
+        print("Copied %d lines" % line_count, file=sys.stderr)
 
 
 if __name__ == "__main__":
