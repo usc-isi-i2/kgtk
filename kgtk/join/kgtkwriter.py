@@ -1,23 +1,24 @@
 """
-Write a KGTK edge file in TsV format.
+Write a KGTK edge or node file in TSV format.
 
-TODO: Add support for alternative envelope formats, such as JSON.
 """
 
 from argparse import ArgumentParser
 import attr
+from enum import Enum
 import gzip
 from pathlib import Path
 from multiprocessing import Queue
 import sys
 import typing
 
+from kgtk.join.kgtkreader import KgtkReader
+from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GzipProcess
-from kgtk.join.edgereader import EdgeReader
 from kgtk.join.kgtkformat import KgtkFormat
 
-@attr.s(slots=True, frozen=True)
-class EdgeWriter(KgtkFormat):
+@attr.s(slots=True, frozen=False)
+class KgtkWriter(KgtkFormat):
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     file_out: typing.TextIO = attr.ib() # Todo: validate TextIO
     column_separator: str = attr.ib(validator=attr.validators.instance_of(str))
@@ -39,17 +40,21 @@ class EdgeWriter(KgtkFormat):
     gzip_thread: typing.Optional[GzipProcess] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(GzipProcess)))
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int))
 
-    # When we report line numbers in error messages, line 1 is the first line after the header line.
-    #
-    # The use of a list is a sneaky way to get around the frozen class.
-    # TODO: Find the right way to do this.  Don't freeze the class?
-    line_count: typing.List[int] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(int),
-                                                                                   iterable_validator=attr.validators.instance_of(list)))
+    line_count: int = attr.ib(validator=attr.validators.instance_of(int))
 
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
     GZIP_QUEUE_SIZE_DEFAULT: int = 1000
+
+    class Mode(Enum):
+        """
+        There are four file reading modes:
+        """
+        NONE = 0 # Enforce neither edge nore node file required columns
+        EDGE = 1 # Enforce edge file required columns
+        NODE = 2 # Enforce node file require columns
+        AUTO = 3 # Automatically decide whether to enforce edge or node file required columns
 
     @classmethod
     def open(cls,
@@ -61,11 +66,12 @@ class EdgeWriter(KgtkFormat):
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
+             mode: Mode = Mode.AUTO,
              verbose: bool = False,
-             very_verbose: bool = False)->"EdgeWriter":
+             very_verbose: bool = False)->"KgtkWriter":
         if file_path is None or str(file_path) == "-":
             if verbose:
-                print("EdgeWriter: writing stdout")
+                print("KgtkWriter: writing stdout")
             return cls._setup(column_names=column_names,
                               file_path=None,
                               file_out=sys.stdout,
@@ -75,6 +81,7 @@ class EdgeWriter(KgtkFormat):
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
+                              mode=mode,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
@@ -87,15 +94,15 @@ class EdgeWriter(KgtkFormat):
             gzip_file: typing.TextIO
             if file_path.suffix == ".gz":
                 if verbose:
-                    print("EdgeWriter: writing gzip %s" % str(file_path))
+                    print("KgtkWriter: writing gzip %s" % str(file_path))
                 gzip_file = gzip.open(file_path, mode="wt") # type: ignore
             elif file_path.suffix == ".bz2":
                 if verbose:
-                    print("EdgeWriter: writing bz2 %s" % str(file_path))
+                    print("KgtkWriter: writing bz2 %s" % str(file_path))
                 gzip_file = bz2.open(file_path, mode="wt") # type: ignore
             elif file_path.suffix == ".xz":
                 if verbose:
-                    print("EdgeWriter: writing lzma %s" % str(file_path))
+                    print("KgtkWriter: writing lzma %s" % str(file_path))
                 gzip_file = lzma.open(file_path, mode="wt") # type: ignore
             else:
                 # TODO: throw a better exception.
@@ -110,13 +117,14 @@ class EdgeWriter(KgtkFormat):
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
+                              mode=mode,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
             
         else:
             if verbose:
-                print("EdgeWriter: writing file %s" % str(file_path))
+                print("KgtkWriter: writing file %s" % str(file_path))
             return cls._setup(column_names=column_names,
                               file_path=file_path,
                               file_out=open(file_path, "w"),
@@ -126,6 +134,7 @@ class EdgeWriter(KgtkFormat):
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
+                              mode=mode,
                               verbose=verbose,
                               very_verbose=very_verbose,
 )
@@ -141,15 +150,35 @@ class EdgeWriter(KgtkFormat):
                gzip_in_parallel: bool,
                gzip_queue_size: int,
                column_separator: str,
+               mode: Mode = Mode.AUTO,
                verbose: bool = False,
                very_verbose: bool = False,
-    )->"EdgeWriter":
+    )->"KgtkWriter":
 
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
 
-        # Validate that we have the proper columns for an edge file.
-        cls.required_edge_columns(column_name_map)
+        # Should we automatically determine if this is an edge file or a node file?
+        is_edge_file: bool = False
+        is_node_file: bool = False
+        if mode is KgtkWriter.Mode.AUTO:
+            # If we have a node1 (or alias) column, then this must be an edge file. Otherwise, assume it is a node file.
+            node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map, is_optional=True)
+            is_edge_file = node1_idx >= 0
+            is_node_file = not is_edge_file
+        elif mode is KgtkWriter.Mode.EDGE:
+            is_edge_file = True
+        elif mode is KgtkWriter.Mode.NODE:
+            is_node_file = True
+        elif mode is KgtkWriter.Mode.NONE:
+            pass
+        
+        if is_edge_file:
+            # Validate that we have the proper columns for an edge file.
+            cls.required_edge_columns(column_name_map)
+        elif is_node_file:
+            # Validate that we have the proper columns for an node file.
+            cls.required_edge_columns(column_name_map)
 
         # Write the column names to the first line.
         header: str = column_separator.join(column_names)
@@ -174,7 +203,7 @@ class EdgeWriter(KgtkFormat):
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_thread=gzip_thread,
                    gzip_queue_size=gzip_queue_size,
-                   line_count=[1], # TODO: find a better way to do this.
+                   line_count=1,
                    verbose=verbose,
                    very_verbose=very_verbose,
         )
@@ -209,9 +238,9 @@ class EdgeWriter(KgtkFormat):
         #
         # When we report line numbers in error messages, line 1 is the first line after the header line.
         if self.require_all_columns and len(values) < self.column_count:
-            raise ValueError("Required %d columns in input line %d, saw %d: '%s'" % (self.column_count, self.line_count[0], len(values), line))
+            raise ValueError("Required %d columns in input line %d, saw %d: '%s'" % (self.column_count, self.line_count, len(values), line))
         if self.prohibit_extra_columns and len(values) > self.column_count:
-            raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count[0], len(values),
+            raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count, len(values),
                                                                                                 len(values) - self.column_count, line))
 
         if self.gzip_thread is not None:
@@ -219,7 +248,7 @@ class EdgeWriter(KgtkFormat):
         else:
             self.file_out.write(line + "\n")
 
-        self.line_count[0] += 1
+        self.line_count += 1
         if self.very_verbose:
             sys.stdout.write(".")
             sys.stdout.flush()
@@ -241,7 +270,7 @@ class EdgeWriter(KgtkFormat):
         if self.prohibit_extra_columns:
             for column_name in value_map.keys():
                 if column_name not in self.column_name_map:
-                    raise ValueError("Unexpected column name %s at data record %d" % (column_name, self.line_count[0]))
+                    raise ValueError("Unexpected column name %s at data record %d" % (column_name, self.line_count))
 
         values: typing.List[str] = [ ]
         for column_name in self.column_names:
@@ -249,7 +278,7 @@ class EdgeWriter(KgtkFormat):
                 values.append(value_map[column_name])
             elif self.require_all_columns:
                 # TODO: throw a better exception.
-                raise ValueError("Missing column %s at data record %d" % (column_name, self.line_count[0]))
+                raise ValueError("Missing column %s at data record %d" % (column_name, self.line_count))
             else:
                 values.append("")
                 
@@ -275,28 +304,34 @@ def main():
     Test the KGTK edge file writer.
     """
     parser = ArgumentParser()
-    parser.add_argument(dest="input_edge_file", help="The edge file to read", type=Path, default=None)
-    parser.add_argument(dest="output_edge_file", help="The edge file to write", type=Path, default=None)
+    parser.add_argument(dest="input_kgtk__file", help="The KGTK file to read", type=Path, default=None)
+    parser.add_argument(dest="output_kgtk__file", help="The KGTK file to write", type=Path, default=None)
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in a subthread.", action='store_true')
+    parser.add_argument(      "--input-mode", dest="input_mode",
+                              help="Determine the input KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
+    parser.add_argument(      "--output-mode", dest="output_mode",
+                              help="Determine the output KGTK file mode.", type=KgtkWriter.Mode, action=EnumNameAction, default=KgtkWriter.Mode.AUTO)
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     args = parser.parse_args()
 
-    er: EdgeReader = EdgeReader.open(args.input_edge_file,
+    kr: KgtkReader = KgtkReader.open(args.input_kgtk__file,
                                      gzip_in_parallel=args.gzip_in_parallel,
+                                     mode=args.input_mode,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
-    ew: EdgeWriter = EdgeWriter.open(er.column_names,
-                                     args.output_edge_file,
+    kw: KgtkWriter = KgtkWriter.open(kr.column_names,
+                                     args.output_kgtk_file,
                                      gzip_in_parallel=args.gzip_in_parallel,
+                                     mode=args.output_mode,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
     line_count: int = 0
     line: typing.List[str]
-    for line in er:
-        ew.write(line)
+    for line in kr:
+        kw.write(line)
         line_count += 1
-    ew.close()
+    kw.close()
     print("Copied %d lines" % line_count)
 
 

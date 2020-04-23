@@ -4,7 +4,7 @@ Read a KGTK edge file in TSV format.
 TODO: Add support for alternative envelope formats, such as JSON.
 """
 
-from argparse import ArgumentParser, Action
+from argparse import ArgumentParser
 import attr
 from enum import Enum
 from multiprocessing import Process, Queue
@@ -13,43 +13,9 @@ import sys
 import typing
 
 from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
+from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtkformat import KgtkFormat
-
-# TODO: optionally pass a decompressor selection (use an enum) to
-# override the filename suffix-based selector.
-# TODO: if a decompressor has been selected, allow decompression of
-# standard input.
-
-class EnumNameAction(Action):
-    """
-    Argparse action for handling Enums
-
-    Adapted from:
-    https://stackoverflow.com/questions/43968006/support-for-enum-arguments-in-argparse
-    """
-    def __init__(self, **kwargs):
-        # Pop off the type value
-        enum = kwargs.pop("type", None)
-
-        # Ensure an Enum subclass is provided
-        if enum is None:
-            raise ValueError("type must be assigned an Enum when using EnumAction")
-        if not issubclass(enum, Enum):
-            raise TypeError("type must be an Enum when using EnumAction")
-
-        # Generate choices from the Enum
-        kwargs.setdefault("choices", tuple(e.name for e in enum))
-
-        super(EnumAction, self).__init__(**kwargs)
-
-        self._enum = enum
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        # Convert value back into an Enum
-        enum = self._enum[values]
-        setattr(namespace, self.dest, enum)
-
 
 class KgtkReaderErrorAction(Enum):
     """
@@ -118,6 +84,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # Other implementation options?
+    compression_type: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
@@ -135,7 +102,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         NONE = 0 # Enforce neither edge nore node file required columns
         EDGE = 1 # Enforce edge file required columns
         NODE = 2 # Enforce node file require columns
-        AUTO = 3 # Automatically decide whether to envode edge or node file required columns
+        AUTO = 3 # Automatically decide whether to enforce edge or node file required columns
 
     @classmethod
     def open(cls,
@@ -154,6 +121,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              ignore_blank_id_lines: bool = True,
              ignore_short_lines: bool = True,
              ignore_long_lines: bool = True,
+             compression_type: typing.Optional[str] = None,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
@@ -164,6 +132,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         Opens a KGTK file, which may be an edge file or a node file.  The appropriate reader is returned.
         """
         source: ClosableIter[str] = cls._openfile(file_path,
+                                                  compression_type=compression_type,
                                                   gzip_in_parallel=gzip_in_parallel,
                                                   gzip_queue_size=gzip_queue_size,
                                                   verbose=verbose)
@@ -181,7 +150,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         is_edge_file: bool = False
         is_node_file: bool = False
         if mode is KgtkReader.Mode.AUTO:
-            # If we have a node1 column, then this must be an edge file. Otherwise, assume it is a node file.
+            # If we have a node1 (or alias) column, then this must be an edge file. Otherwise, assume it is a node file.
             node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map, is_optional=True)
             is_edge_file = node1_idx >= 0
             is_node_file = not is_edge_file
@@ -228,6 +197,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               ignore_blank_node2_lines=ignore_blank_node2_lines,
                               ignore_short_lines=ignore_short_lines,
                               ignore_long_lines=ignore_long_lines,
+                              compression_type=compression_type,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               is_edge_file=is_edge_file,
@@ -265,6 +235,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               ignore_blank_id_lines=ignore_blank_id_lines,
                               ignore_short_lines=ignore_short_lines,
                               ignore_long_lines=ignore_long_lines,
+                              compression_type=compression_type,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               is_edge_file=is_edge_file,
@@ -291,6 +262,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                        ignore_blank_id_lines=ignore_blank_id_lines,
                        ignore_short_lines=ignore_short_lines,
                        ignore_long_lines=ignore_long_lines,
+                       compression_type=compression_type,
                        gzip_in_parallel=gzip_in_parallel,
                        gzip_queue_size=gzip_queue_size,
                        is_edge_file=is_edge_file,
@@ -300,53 +272,72 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             )
 
     @classmethod
+    def _open_compressed_file(cls,
+                              compression_type: str,
+                              file_name: str,
+                              file_or_path: typing.Union[Path, typing.TextIO],
+                              who: str,
+                              verbose: bool)->typing.TextIO:
+        
+        # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
+        if compression_type in [".gz", "gz"]:
+            if verbose:
+                print("%s: reading gzip %s" % (who, file_name))
+            return gzip.open(file_or_path, mode="rt") # type: ignore
+        
+        elif compression_type in [".bz2", "bz2"]:
+            if verbose:
+                print("%s: reading bz2 %s" % (who, file_name))
+            return bz2.open(file_or_path, mode="rt") # type: ignore
+        
+        elif compression_type in [".xz", "xz"]:
+            if verbose:
+                print("%s: reading lzma %s" % (who, file_name))
+            return lzma.open(file_or_path, mode="rt") # type: ignore
+        
+        elif compression_type in [".lz4", "lz4"]:
+            if verbose:
+                print("%s: reading lz4 %s" % (who, file_name))
+            return lz4.frame.open(file_or_path, mode="rt") # type: ignore
+        else:
+            # TODO: throw a better exception.
+                raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))
+
+    @classmethod
     def _openfile(cls, file_path: typing.Optional[Path],
+                  compression_type: typing.Optional[str],
                   gzip_in_parallel: bool,
                   gzip_queue_size: int,
                   verbose: bool)->ClosableIter[str]:
         who: str = cls.__name__
         if file_path is None or str(file_path) == "-":
-            if verbose:
-                print("%s: reading stdin" % who)
-            return ClosableIterTextIOWrapper(sys.stdin)
+            if compression_type is not None and len(compression_type) > 0:
+                return ClosableIterTextIOWrapper(cls._open_compressed_file(compression_type, "-", sys.stdin, who, verbose))
+            else:
+                if verbose:
+                    print("%s: reading stdin" % who)
+                return ClosableIterTextIOWrapper(sys.stdin)
 
         if verbose:
             print("%s: File_path.suffix: %s" % (who, file_path.suffix))
 
-        if file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
-            # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
-            gzip_file: typing.TextIO
-            if file_path.suffix == ".gz":
-                if verbose:
-                    print("%s: reading gzip %s" % (who, str(file_path)))
-                gzip_file = gzip.open(file_path, mode="rt") # type: ignore
-            elif file_path.suffix == ".bz2":
-                if verbose:
-                    print("%s: reading bz2 %s" % (who, str(file_path)))
-                gzip_file = bz2.open(file_path, mode="rt") # type: ignore
-            elif file_path.suffix == ".xz":
-                if verbose:
-                    print("%s: reading lzma %s" % (who, str(file_path)))
-                gzip_file = lzma.open(file_path, mode="rt") # type: ignore
-            elif file_path.suffix == ".lz4":
-                if verbose:
-                    print("%s: reading lz4 %s" % (who, str(file_path)))
-                gzip_file = lz4.frame.open(file_path, mode="rt") # type: ignore
-            else:
-                # TODO: throw a better exception.
-                raise ValueError("%s: Unexpected file_path.suffix = '%s'" % (who, file_path.suffix))
-
-            if gzip_in_parallel:
-                gzip_thread: GunzipProcess = GunzipProcess(gzip_file, Queue(gzip_queue_size))
-                gzip_thread.start()
-                return gzip_thread
-            else:
-                return ClosableIterTextIOWrapper(gzip_file)
-            
+        gzip_file: typing.TextIO
+        if compression_type is not None and len(compression_type) > 0:
+            gzip_file = cls._open_compressed_file(compression_type, str(file_path), file_path, who, verbose)
+        elif file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
+            gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, verbose)
         else:
             if verbose:
                 print("%s: reading file %s" % (who, str(file_path)))
             return ClosableIterTextIOWrapper(open(file_path, "r"))
+
+        if gzip_in_parallel:
+            gzip_thread: GunzipProcess = GunzipProcess(gzip_file, Queue(gzip_queue_size))
+            gzip_thread.start()
+            return gzip_thread
+        else:
+            return ClosableIterTextIOWrapper(gzip_file)
+            
 
     @classmethod
     def _build_column_names(cls,
@@ -501,16 +492,13 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     def merge_columns(self, additional_columns: typing.List[str])->typing.List[str]:
         """
         Return a list that merges the current column names with an additional set
-        of column names, taking care to respect the use of column names
-        aliases.
+        of column names.
 
         """
         merged_columns: typing.List[str] = self.column_names.copy()
 
         column_name: str
         for column_name in additional_columns:
-            if self._skip_reserved_fields(column_name):
-                continue
             if column_name in self.column_name_map:
                 continue
             merged_columns.append(column_name)
@@ -551,6 +539,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--column-separator", dest="column_separator",
                                   help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
 
+        parser.add_argument(      "--compression-type", dest="compression_type", help="Specify the compression type.")
+
         parser.add_argument(      "--error-action", dest="error_action",
                                   help="The action to take for error input lines",
                                   type=KgtkReaderErrorAction, action=EnumNameAction)
@@ -580,8 +570,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     # May be overridden
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(      "--mode", dest="mode_str",
-                                  help="Determine the KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction)
+        parser.add_argument(      "--mode", dest="mode",
+                                  help="Determine the KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
 
 
     
@@ -611,6 +601,7 @@ def main():
                                      ignore_blank_id_lines=args.ignore_blank_id_lines,
                                      ignore_short_lines=args.ignore_short_lines,
                                      ignore_long_lines=args.ignore_long_lines,
+                                     compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
                                      column_separator=args.column_separator,
