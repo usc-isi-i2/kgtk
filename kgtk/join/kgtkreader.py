@@ -522,7 +522,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
     @classmethod
     def add_shared_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, default=None)
+        parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
 
         parser.add_argument(      "--allow-comment-lines", dest="ignore_comment_lines",
                                   help="When specified, do not ignore comment lines.", action='store_false')
