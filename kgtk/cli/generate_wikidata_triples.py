@@ -249,12 +249,12 @@ def run(
                 entity = WDItem(TripleGenerator.replaceIllegalString(node1.upper()))
             if "@" in node2:
                 res = node2.split("@")
-                node2 = "@".join(res[:-1])
+                textString = "@".join(res[:-1])
                 lang = res[-1]
                 lang = lang.replace('\"','').replace("\'","")
                 if len(lang) > 2: #TODO fix the unsupported language short code
-                    lang = "en"
-                entity.add_label(node2.replace('"', "").replace("'", ""), lang=lang)
+                    textString, lang = node2.replace('"', "").replace("'", "") , "en"
+                entity.add_label(textString, lang=lang)
             else:
                 entity.add_label(
                     node2.replace('"', "").replace("'", ""), lang="en"
@@ -273,10 +273,8 @@ def run(
                 lang = res[-1]
                 lang = lang.replace('\"','').replace("\'","")
                 if len(lang) > 2:
-                    lang = "en"
-                entity.add_description(
-                    node2.replace('"', "").replace("'", ""), lang=lang
-                )
+                    textString, lang = node2.replace('"', "").replace("'", "") , "en"
+                entity.add_description(textString, lang=lang)
             else:
                 entity.add_description(
                     node2.replace('"', "").replace("'", ""), lang="en"
@@ -294,10 +292,8 @@ def run(
                 node2 = "@".join(res[:-1])
                 lang = res[-1]
                 if len(lang) > 2:
-                    lang = "en"
-                entity.add_description(
-                    node2.replace('"', "").replace("'", ""), lang=lang
-                )
+                    textString, lang = node2.replace('"', "").replace("'", "") , "en"
+                entity.add_description(textString, lang=lang)
             else:
                 entity.add_description(
                     node2.replace('"', "").replace("'", ""), lang="en"
@@ -316,7 +312,9 @@ def run(
                 node2 = "@".join(res[:-1])
                 lang = res[-1]
                 lang = lang.replace('\"','').replace("\'","")
-                entity.add_alias(node2.replace('"', "").replace("'", ""), lang=lang)
+                if len(lang) > 2:
+                    textString, lang = node2.replace('"', "").replace("'", "") , "en"
+                entity.add_alias(textString, lang=lang)
             else:
                 entity.add_alias(
                     node2.replace('"', "").replace("'", ""), lang="en"
@@ -358,30 +356,39 @@ def run(
                 # ^2013-01-01T00:00:00Z/11
                 # ^8000000-00-00T00:00:00Z/3
                 self.ignoreFile.write("node2 {} is timevalue\n".format(node2))
-                try:
-                    dateTimeString, precision = node2[1:].split("/")
-                    dateTimeString, _ = dateTimeString.split("Z")
-                    OBJECT = TimeValue(
-                        value=dateTimeString,
-                        calendar=Item("Q1985727"),
-                        precision=precision,
-                        time_zone=0,
-                    )
-                except: 
-                    pass
-                try:
-                    if re.compile("[0-9]{4}").match(node2):
+                if re.compile("[0-9]{4}").match(node2):
+                    try:                   
                         dateTimeString = node2 + "-01-01"
+                        self.ignoreFile.write("dateTimeString {} \n".format(dateTimeString))
                         OBJECT = TimeValue(
                             value=dateTimeString, #TODO
                             calendar=Item("Q1985727"),
                             precision=Precision.year,
                             time_zone=0,
                         )
-                except:
-                    pass
+                    except:
+                        return False
+                else:
+                    try:
+                        dateTimeString, precision = node2[1:].split("/")
+                        dateTimeString = dateTimeString[:-1] # remove "Z"
+                        # 2016-00-00T00:00:00 case
+                        if "-00-00" in dateTimeString:
+                            dateTimeString = "-01-01".join(dateTimeString.split("-00-00"))
+                        elif dateTimeString[-3:] == "-00":
+                            dateTimeString = dateTimeString[:-3]+"-01"
+                        self.ignoreFile.write("dateTimeString {} \n".format(dateTimeString))
+                        OBJECT = TimeValue(
+                            value=dateTimeString,
+                            calendar=Item("Q1985727"),
+                            precision=precision,
+                            time_zone=0,
+                        )
+                    except: 
+                        return False
+
                 #TODO other than that, not supported. Creation of normal triple fails
-                return False
+                
 
             elif edgeType == GlobeCoordinate:
                 self.ignoreFile.write("node2 {} is globecoordinate\n".format(node2))
@@ -399,11 +406,15 @@ def run(
                 amount, lower_bound, upper_bound, unit = res
                 if unit != None:
                     if upper_bound != None and lower_bound != None:
+                        upper_bound = str(float(upper_bound))
+                        lower_bound = str(float(lower_bound))
                         OBJECT = QuantityValue(amount=float(amount), unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
                     else:
                         OBJECT = QuantityValue(amount=float(amount), unit=Item(unit))
                 else:
                     if upper_bound != None and lower_bound != None:
+                        upper_bound = str(float(upper_bound))
+                        lower_bound = str(float(lower_bound))
                         OBJECT = QuantityValue(amount=float(amount), upper_bound=upper_bound,lower_bound=lower_bound)
                     else:
                         OBJECT = QuantityValue(amount=float(amount))                   
@@ -414,6 +425,8 @@ def run(
                     lang = res[-1]
                     textString = "@".join(res[:-1])
                     lang = lang.replace('\"','').replace("\'","")
+                    if len(lang) > 2:
+                        textString, lang = node2.replace('"', "").replace("'", "") , "en"
                     OBJECT = MonolingualText(textString, lang)
                 else:
                     textString = node2
@@ -518,6 +531,7 @@ def run(
                         # )
                         self.ignoreFile.write("PropertyUnknownError: property {}'s type is unknown at line {}.\n".format(label, line_number))
                         self.ignoreFile.flush()
+                        success = False
             if (not success) and (not isQualifierEdge) and (not self.ignore):
                 # We have a corrupted edge here.
                 self.ignoreFile.write("Corrupted statement at line number: {} with id {} with current corrupted id {}\n".format(line_number, eID, self.corrupted_statement_id))
