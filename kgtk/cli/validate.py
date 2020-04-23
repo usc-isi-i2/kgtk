@@ -136,6 +136,5 @@ def run(kgtk_file: typing.Optional[Path],
         return 0
 
     except Exception as e:
-        print("Exception: %s" % str(e))
         raise KGTKException(e)
 
