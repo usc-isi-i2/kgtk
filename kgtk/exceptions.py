@@ -1,5 +1,6 @@
 import sys
 import warnings
+import traceback
 
 
 class KGTKException(BaseException):
@@ -15,11 +16,18 @@ class KGTKArgumentParseException(KGTKException):
     return_code = 2
 
 
+class KGTKSyntaxException(KGTKException):
+    return_code = 900
+
+
 # class KGTKExampleException(KGTKException):
 #     return_code = 1000  # please allocate a value which is gte 1000
 
 
 class KGTKExceptionHandler(object):
+    def __init__(self, debug=False):
+        self._debug = debug
+
     def __call__(self, func, *args, **kwargs):
         try:
             return_code = func(*args, **kwargs) or 0
@@ -33,6 +41,9 @@ class KGTKExceptionHandler(object):
             return self.handle_exception(type_, exc_val, exc_tb)
 
     def handle_exception(self, type_, exc_val, exc_tb):
+        if self._debug:
+            traceback.print_exception(type_, exc_val, exc_tb)  # the output goes to sys.stderr
+
         if isinstance(exc_val, KGTKException):
             sys.stderr.write(exc_val.message)
             return exc_val.return_code

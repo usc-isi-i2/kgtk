@@ -4,9 +4,9 @@ import pkgutil
 import itertools
 
 from kgtk import cli
-from kgtk.exceptions import kgtk_exception_handler, KGTKArgumentParseException
+from kgtk.exceptions import KGTKExceptionHandler, KGTKArgumentParseException
 from kgtk import __version__
-from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments
+from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments, add_default_arguments
 import sh # type: ignore
 
 
@@ -37,12 +37,10 @@ def cli_entry(*args):
     # get all arguments
     if not args:
         args = tuple(sys.argv)
-    if len(args) == 1:
-        args = args + ('-h',)
     args = args[1:]
 
     # base parser for shared arguments
-    base_parser = KGTKArgumentParser(prog='kgtk', add_help=False)
+    base_parser = KGTKArgumentParser(add_help=False)
     base_parser.add_argument(
         '-V', '--version',
         action='version',
@@ -59,7 +57,10 @@ def cli_entry(*args):
     args = tuple(rest_args)
 
     # complete parser, load sub-parser of each module
-    parser = KGTKArgumentParser(parents=[base_parser])
+    parser = KGTKArgumentParser(
+        parents=[base_parser], prog='kgtk',
+        description='kgtk --- Knowledge Graph Toolkit',
+    )
     sub_parsers = parser.add_subparsers(
         metavar='command',
         dest='cmd'
@@ -68,12 +69,21 @@ def cli_entry(*args):
     for h in handlers:
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         sub_parser = sub_parsers.add_parser(h, **mod.parser())
+        add_default_arguments(sub_parser)  # call this before adding other arguments
         mod.add_arguments(sub_parser)
+
+    # add root level usage after sub-parsers are created
+    # this won't pollute help info in sub-parsers
+    parser.usage = '%(prog)s [options] command [ / command]*'
 
     # parse internal pipe
     pipe = [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
-    if len(pipe) == 1:  # single command
+    if len(pipe) == 0:
+        parser.print_usage()
+        parser.exit(KGTKArgumentParseException.return_code)
+    elif len(pipe) == 1:  # single command
         cmd_args = pipe[0]
+        kwargs = {}
         parsed_args = parser.parse_args(cmd_args)
 
         # load module
@@ -95,6 +105,7 @@ def cli_entry(*args):
                     kwargs[sa] = getattr(parsed_shared_args, sa)
 
         # run module
+        kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
         ret_code = kgtk_exception_handler(func, **kwargs)
     else:  # piped commands
         concat_cmd_str = None
