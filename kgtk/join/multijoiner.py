@@ -14,9 +14,9 @@ from multiprocessing import Queue
 import sys
 import typing
 
-from kgtk.join.edgewriter import EdgeWriter
-from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.kgtkformat import KgtkFormat
+from kgtk.join.kgtkreader import KgtkReader
+from kgtk.join.kgtkwriter import KgtkWriter
 
 @attr.s(slots=True, frozen=True)
 class MultiJoiner(KgtkFormat):
@@ -131,7 +131,7 @@ class MultiJoiner(KgtkFormat):
 
         joined_column_names: typing.list[str] = left_kr.merge_columns(right_kr.additional_column_names())
         
-        ew: EdgeWriter = EdgeWriter.open(joined_column_names,
+        ew: KgtkWriter = KgtkWriter.open(joined_column_names,
                                          self.output_path,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
@@ -200,4 +200,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

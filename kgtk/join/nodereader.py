@@ -31,6 +31,7 @@ class NodeReader(KgtkReader):
                        ignore_blank_id_lines: bool = True,
                        ignore_short_lines: bool = True,
                        ignore_long_lines: bool = True,
+                       compression_type: typing.Optional[str] = None,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
                        column_separator: str = KgtkReader.COLUMN_SEPARATOR,
@@ -38,6 +39,7 @@ class NodeReader(KgtkReader):
                        very_verbose: bool = False)->"NodeReader":
 
         source: ClosableIter[str] = cls._openfile(file_path,
+                                                  compression_type=compression_type,
                                                   gzip_in_parallel=gzip_in_parallel,
                                                   gzip_queue_size=gzip_queue_size,
                                                   verbose=verbose)
@@ -76,6 +78,7 @@ class NodeReader(KgtkReader):
                    ignore_blank_id_lines=ignore_blank_id_lines,
                    ignore_short_lines=ignore_short_lines,
                    ignore_long_lines=ignore_long_lines,
+                   compression_type=compression_type,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
                    is_edge_file=False,
@@ -128,6 +131,7 @@ def main():
                                      ignore_blank_id_lines=args.ignore_blank_id_lines,
                                      ignore_short_lines=args.ignore_short_lines,
                                      ignore_long_lines=args.ignore_long_lines,
+                                     compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
                                      column_separator=args.column_separator,
