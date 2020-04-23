@@ -1,5 +1,5 @@
 """
-Validate a KGTK file, producing error messages.
+Validate a KGTK file, producing a clean KGTK file (no comments, whitespace lines, etc.) as output.
 """
 
 from pathlib import Path
@@ -46,7 +46,7 @@ def add_arguments(parser):
     
     parser.add_argument(      "--error-action", dest="error_action",
                               help="The action to take for error input lines",
-                              type=KgtkReaderErrorAction, action=EnumNameAction, default=KgtkReaderErrorAction.STDOUT)
+                              type=KgtkReaderErrorAction, action=EnumNameAction, default=KgtkReaderErrorAction.STDERR)
     
     parser.add_argument(      "--error-limit", dest="error_limit",
                               help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
@@ -78,7 +78,7 @@ def run(kgtk_file: typing.Optional[Path],
         skip_first_record: bool = False,
         fill_short_lines: bool = False,
         truncate_long_lines: bool = False,
-        error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDOUT,
+        error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDERR,
         error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
         ignore_empty_lines: bool = True,
         ignore_comment_lines: bool = True,
