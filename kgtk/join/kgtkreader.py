@@ -554,7 +554,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
                                   help="Fill missing trailing columns in short lines with empty values.", action='store_true')
 
-        parser.add_argument(      "--force-column-names", dest="force_column_names", help="Force the column names.", nargs='*')
+        parser.add_argument(      "--force-column-names", dest="force_column_names", help="Force the column names.", nargs='+')
 
         parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
 
