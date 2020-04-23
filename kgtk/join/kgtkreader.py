@@ -593,7 +593,6 @@ def main():
                                      truncate_long_lines=args.truncate_long_lines,
                                      error_action=args.error_action,
                                      error_limit=args.error_limit,
-                                     ignore_blank_lines=args.ignore_blank_lines,
                                      ignore_comment_lines=args.ignore_comment_lines,
                                      ignore_whitespace_lines=args.ignore_whitespace_lines,
                                      ignore_blank_node1_lines=args.ignore_blank_node1_lines,
