@@ -35,6 +35,7 @@ https://www.mankier.com/1/mlr
 * `sort`
 * `merge_identical_nodes`
 * `zconcat`
+* `export_neo4j`
 
 To get an information on how to use each of them, run:
 `kgtk [TOOL] -h`
