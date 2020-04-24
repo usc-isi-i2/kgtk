@@ -57,10 +57,10 @@ def run(datatype, pattern, input, subj_col, pred_col, obj_col):
 
         if filter_str:
             if input:
-                sh.mlr('--%s' % datatype, 'filter', filter_str, input, 
+                sh.mlr('--%slite' % datatype, 'filter', filter_str, input, 
                         _out=sys.stdout, _err=sys.stderr)
             elif not sys.stdin.isatty():
-                sh.mlr('--%s' % datatype, 'filter', filter_str, 
+                sh.mlr('--%slite' % datatype, 'filter', filter_str, 
                         _in=sys.stdin, _out=sys.stdout, _err=sys.stderr)
     except:
         raise KGTKException
