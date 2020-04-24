@@ -1,5 +1,7 @@
 """
-Validate a KGTK file, producing a clean KGTK file (no comments, whitespace lines, etc.) as output.
+Copy a KGTK file, validating it and producing a clean KGTK file (no
+comments, whitespace lines, etc.) as output.
+
 """
 
 from pathlib import Path

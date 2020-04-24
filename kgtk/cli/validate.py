@@ -1,5 +1,14 @@
 """
 Validate a KGTK file, producing error messages.
+
+At the present time, validation looks at such things as:
+1)      Presence of require columns
+2)      Consistent number of columns
+3)      Comments, whitespace lines, line s with empty required columns
+
+Certain constraints can be overlooked or repaired.
+
+This program does not validate individual fields.
 """
 
 from pathlib import Path
