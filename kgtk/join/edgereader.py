@@ -161,8 +161,8 @@ def main():
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
     line_count: int = 0
-    line: typing.List[str]
-    for line in er:
+    row: typing.List[str]
+    for row in er:
         line_count += 1
     print("Read %d lines" % line_count)
 

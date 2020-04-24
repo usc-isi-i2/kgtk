@@ -327,9 +327,9 @@ def main():
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
     line_count: int = 0
-    line: typing.List[str]
-    for line in kr:
-        kw.write(line)
+    row: typing.List[str]
+    for row in kr:
+        kw.write(row)
         line_count += 1
     kw.close()
     if args.verbose:

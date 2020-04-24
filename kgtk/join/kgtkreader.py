@@ -508,14 +508,14 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
         return merged_columns
 
-    def to_map(self, line: typing.List[str])->typing.Mapping[str, str]:
+    def to_map(self, row: typing.List[str])->typing.Mapping[str, str]:
         """
         Convert an input line into a named map of fields.
         """
         result: typing.MutableMapping[str, str] = { }
         value: str
         idx: int = 0
-        for value in line:
+        for value in row:
             result[self.column_names[idx]] = value
             idx += 1
         return result
@@ -616,8 +616,8 @@ def main():
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
     line_count: int = 0
-    line: typing.List[str]
-    for line in kr:
+    row: typing.List[str]
+    for row in kr:
         line_count += 1
     print("Read %d lines" % line_count)
 
