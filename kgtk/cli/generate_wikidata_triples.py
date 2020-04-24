@@ -112,28 +112,8 @@ def run(
     import requests
     from typing import TextIO
     import logging
-    try:
-        from etk.etk import ETK
-        from etk.knowledge_graph import KGSchema
-        from etk.etk_module import ETKModule
-        from etk.wikidata.entity import WDItem, WDProperty
-        from etk.wikidata.value import (
-            Item,
-            StringValue,
-            TimeValue,
-            QuantityValue,
-            MonolingualText,
-            GlobeCoordinate,
-            ExternalIdentifier,
-            URLValue,
-            Precision
-        )
-        from etk.wikidata.statement import Rank
-        from kgtk.exceptions import KGTKException
-    except:
-        #TODO The only exception not handled by KGTKException.
-        print("Library Error: Please check the etk and spacy libraries.")
-        return
+    from etk.wikidata.entity import WDItem, WDProperty
+    from kgtk.exceptions import KGTKException
 
     class TripleGenerator:
         """
@@ -150,12 +130,15 @@ def run(
             destFp: TextIO = sys.stdout,
             truthy:bool =False
         ):
+            from etk.wikidata.statement import Rank
+            from etk.etk import ETK
+            from etk.knowledge_graph import KGSchema
+            from etk.etk_module import ETKModule
             self.ignore = ignore
             self.propTypes = self.__setPropTypes(propFile)
             self.labelSet, self.aliasSet, self.descriptionSet = self.__setSets(
                 labelSet, aliasSet, descriptionSet
             )
-            self.rank = Rank.Preferred if truthy else Rank.Normal
             self.fp = destFp
             self.n = int(n)
             self.read = 0
@@ -170,8 +153,29 @@ def run(
             self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
             self.doc = self.__setDoc()
             self.__serialize_prefix()
+        
+        def _node_2_entity(self, node:str):
+            '''
+            A node can be Qxxx or Pxxx, return the proper entity.
+            '''
+            if node in self.propTypes:
+                entity = WDProperty(node, self.propTypes[node])
+            else:
+                entity = WDItem(TripleGenerator.replaceIllegalString(node.upper()))
+            return entity
+
 
         def __setPropTypes(self, propFile: str):
+            from etk.wikidata.value import (
+            Item,
+            StringValue,
+            TimeValue,
+            QuantityValue,
+            MonolingualText,
+            GlobeCoordinate,
+            ExternalIdentifier,
+            URLValue
+            )
             dataTypeMappings = {
                 "item": Item,
                 "time": TimeValue,
@@ -242,112 +246,73 @@ def run(
             doc.kg.bind("schema", "http://schema.org/")
             return doc
 
-        def genLabelTriple(self, node1: str, label: str, node2: str) -> bool:
-            if node1 in self.propTypes:
-                entity = WDProperty(node1.upper(), self.propTypes[node1])
-            else:
-                entity = WDItem(TripleGenerator.replaceIllegalString(node1.upper()))
-            if "@" in node2:
-                res = node2.split("@")
+        @staticmethod
+        def _process_text_string(string:str)->[str,str]:
+            ''' 
+            '''
+            if "@" in string:
+                res = string.split("@")
                 textString = "@".join(res[:-1])
                 lang = res[-1]
-                lang = lang.replace('\"','').replace("\'","")
-                if len(lang) > 2: #TODO fix the unsupported language short code
-                    textString, lang = node2.replace('"', "").replace("'", "") , "en"
-                entity.add_label(textString, lang=lang)
+                lang = lang.replace('"','').replace("'","")
+                if len(lang) != 2:
+                    lang = "en"
             else:
-                entity.add_label(
-                    node2.replace('"', "").replace("'", ""), lang="en"
-                )  # default
+                lang = "en"
+            
+            textString = string.replace('"', "").replace("'", "")
+            return [textString, lang]
+
+        def genLabelTriple(self, node1: str, label: str, node2: str) -> bool:
+            entity = self._node_2_entity(node1)
+            textString, lang = TripleGenerator._process_text_string(node2)
+            entity.add_label(textString, lang=lang)
             self.doc.kg.add_subject(entity)
             return True
 
         def genDescriptionTriple(self, node1: str, label: str, node2: str) -> bool:
-            if node1 in self.propTypes:
-                entity = WDProperty(node1.upper(), self.propTypes[node1])
-            else:
-                entity = WDItem(TripleGenerator.replaceIllegalString(node1.upper()))
-            if "@" in node2:
-                res = node2.split("@")
-                node2 = "@".join(res[:-1])
-                lang = res[-1]
-                lang = lang.replace('\"','').replace("\'","")
-                if len(lang) > 2:
-                    textString, lang = node2.replace('"', "").replace("'", "") , "en"
-                entity.add_description(textString, lang=lang)
-            else:
-                entity.add_description(
-                    node2.replace('"', "").replace("'", ""), lang="en"
-                )  # default
+            entity = self._node_2_entity(node1)
+            textString, lang = TripleGenerator._process_text_string(node2)
+            entity.add_description(textString, lang=lang)
             self.doc.kg.add_subject(entity)
             return True
 
         def genDescriptionTriple(self, node1: str, label: str, node2: str) -> bool:
-            if node1 in self.propTypes:
-                entity = WDProperty(node1.upper(), self.propTypes[node1])
-            else:
-                entity = WDItem(TripleGenerator.replaceIllegalString((node1.upper())))
-            if "@" in node2:
-                res = node2.split("@")
-                node2 = "@".join(res[:-1])
-                lang = res[-1]
-                if len(lang) > 2:
-                    textString, lang = node2.replace('"', "").replace("'", "") , "en"
-                entity.add_description(textString, lang=lang)
-            else:
-                entity.add_description(
-                    node2.replace('"', "").replace("'", ""), lang="en"
-                )  # default
+            entity = self._node_2_entity(node1)
+            textString, lang = TripleGenerator._process_text_string(node2)
+            entity.add_description(textString, lang=lang)
             self.doc.kg.add_subject(entity)
             return True
 
         def genAliasTriple(self, node1: str, label: str, node2: str) -> bool:
-            if node1 in self.propTypes:
-                entity = WDProperty(node1.upper(), self.propTypes[node1])
-            else:
-                entity = WDItem(TripleGenerator.replaceIllegalString((node1.upper())))
-
-            if "@" in node2:
-                res = node2.split("@")
-                node2 = "@".join(res[:-1])
-                lang = res[-1]
-                lang = lang.replace('\"','').replace("\'","")
-                if len(lang) > 2:
-                    textString, lang = node2.replace('"', "").replace("'", "") , "en"
-                entity.add_alias(textString, lang=lang)
-            else:
-                entity.add_alias(
-                    node2.replace('"', "").replace("'", ""), lang="en"
-                )  # default
+            entity = self._node_2_entity(node1)
+            textString, lang = TripleGenerator._process_text_string(node2)
+            entity.add_alias(textString, lang=lang)
             self.doc.kg.add_subject(entity)
             return True
 
         def genPropDeclarationTriple(self, node1: str, label: str, node2: str) -> bool:
-            prop = WDProperty(node1.upper(), self.propTypes[node1])
+            prop = WDProperty(node1, self.propTypes[node1])
             self.doc.kg.add_subject(prop)
             return True
 
         def genNormalTriple(
             self, node1: str, label: str, node2: str, isQualifierEdge: bool) -> bool:
-            """
-            The normal triple's type is determined by 
-            1. label's datatype in prop_types.tsv
-            2. kgtk format convention of node2 field
-            Update the self.STATEMENT
-            """
-            # print("#Debug: ", node1, label, node2, isQualifierEdge)
+            from etk.wikidata.value import (
+            Item,
+            StringValue,
+            TimeValue,
+            QuantityValue,
+            MonolingualText,
+            GlobeCoordinate,
+            ExternalIdentifier,
+            URLValue,
+            Precision
+            )
 
-            # determine the node type [property|item]
-            if node1 in self.propTypes:
-                entity = WDProperty(node1.upper(), self.propTypes[node1])
-                self.ignoreFile.write("node1 {} is property\n".format(node1))
-            else:
-                entity = WDItem(TripleGenerator.replaceIllegalString(node1.upper()))
-                self.ignoreFile.write("node1 {} is item\n".format(node1))
+            entity = self._node_2_entity(node1)
             # determine the edge type
-
             edgeType = self.propTypes[label]
-
             if edgeType == Item:
                 OBJECT = WDItem(TripleGenerator.replaceIllegalString(node2.upper()))
                 self.ignoreFile.write("node2 {} is item\n".format(node2))
@@ -375,8 +340,8 @@ def run(
                         # 2016-00-00T00:00:00 case
                         if "-00-00" in dateTimeString:
                             dateTimeString = "-01-01".join(dateTimeString.split("-00-00"))
-                        elif dateTimeString[-3:] == "-00":
-                            dateTimeString = dateTimeString[:-3]+"-01"
+                        elif dateTimeString[8:10] == "00":
+                            dateTimeString = dateTimeString[:8]+"01" + dateTimeString[10:]
                         self.ignoreFile.write("dateTimeString {} \n".format(dateTimeString))
                         OBJECT = TimeValue(
                             value=dateTimeString,
@@ -400,37 +365,25 @@ def run(
             elif edgeType == QuantityValue:
                 # +70[+60,+80]Q743895
                 self.ignoreFile.write("node2 {} is quantity value\n".format(node2))
-            
                 res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?").match(node2).groups()
-                # match 1st and 4th groups for amount or unit, or match 4 groups with 2nd and 3rd being lower and upper bound
                 amount, lower_bound, upper_bound, unit = res
+                amount = TripleGenerator._clean_number_string(amount)
+                lower_bound = TripleGenerator._clean_number_string(lower_bound)
+                upper_bound = TripleGenerator._clean_number_string(upper_bound)
                 if unit != None:
                     if upper_bound != None and lower_bound != None:
-                        upper_bound = str(float(upper_bound))
-                        lower_bound = str(float(lower_bound))
-                        OBJECT = QuantityValue(amount=float(amount), unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
+                        OBJECT = QuantityValue(amount, unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
                     else:
-                        OBJECT = QuantityValue(amount=float(amount), unit=Item(unit))
+                        OBJECT = QuantityValue(amount, unit=Item(unit))
                 else:
                     if upper_bound != None and lower_bound != None:
-                        upper_bound = str(float(upper_bound))
-                        lower_bound = str(float(lower_bound))
-                        OBJECT = QuantityValue(amount=float(amount), upper_bound=upper_bound,lower_bound=lower_bound)
+                        OBJECT = QuantityValue(amount, upper_bound=upper_bound,lower_bound=lower_bound)
                     else:
-                        OBJECT = QuantityValue(amount=float(amount))                   
+                        OBJECT = QuantityValue(amount)                   
             elif edgeType == MonolingualText:
                 self.ignoreFile.write("node2 {} is monolingualtext\n".format(node2))
-                if "@" in node2:
-                    res = node2.split("@")
-                    lang = res[-1]
-                    textString = "@".join(res[:-1])
-                    lang = lang.replace('\"','').replace("\'","")
-                    if len(lang) > 2:
-                        textString, lang = node2.replace('"', "").replace("'", "") , "en"
-                    OBJECT = MonolingualText(textString, lang)
-                else:
-                    textString = node2
-                    OBJECT = MonolingualText(textString, "en")
+                textString, lang = TripleGenerator._process_text_string(node2)
+                OBJECT = MonolingualText(textString, lang)
             elif edgeType == ExternalIdentifier:
                 self.ignoreFile.write("node2 {} is externalIdentifier\n".format(node2))
                 OBJECT = ExternalIdentifier(node2)
@@ -440,7 +393,7 @@ def run(
             else:
                 # treat everything else as stringValue
                 OBJECT = StringValue(node2)
-                self.ignoreFile.write("node2 {} is globecoordinate\n".format(node2))
+                self.ignoreFile.write("node2 {} is string\n".format(node2))
             if isQualifierEdge:
                 # edge: e8 p9 ^2013-01-01T00:00:00Z/11
                 # create qualifier edge on previous STATEMENT and return the updated STATEMENT
@@ -454,9 +407,20 @@ def run(
                 # create brand new property edge and replace STATEMENT
                 if type(OBJECT) == WDItem:
                     self.doc.kg.add_subject(OBJECT)
-                self.STATEMENT = entity.add_statement(label.upper(), OBJECT,rank=self.rank) 
+                if truthy:
+                    self.STATEMENT = entity.add_truthy_statement(label.upper(), OBJECT) 
+                else:
+                    self.STATEMENT = entity.add_statement(label.upper(), OBJECT) 
                 self.doc.kg.add_subject(entity)
             return True
+        
+        @staticmethod
+        def _clean_number_string(num):
+            from numpy import format_float_positional
+            if num == None:
+                return None
+            else:
+                return format_float_positional(float(num),trim="-")
 
         def entryPoint(self, line_number:int , edge: str):
             """
@@ -567,7 +531,7 @@ def run(
 
         def finalize(self):
             self.serialize()
-            return
+        
         @staticmethod
         def replaceIllegalString(s:str)->str:
             return s.replace(":","-")
@@ -579,14 +543,12 @@ def run(
         descriptionSet=descriptions,
         n=n,
         ignore=ignore,
-        truthy=truthy,
-        # logging_level=logging_level,
+        truthy=truthy
     )
     # process stdin
     for num, edge in enumerate(sys.stdin.readlines()):
         if edge.startswith("#") or num == 0: # TODO First line omit
             continue
         else:
-            # print("#DEBUG: {}".format(num))
             generator.entryPoint(num, edge)
     generator.finalize()
