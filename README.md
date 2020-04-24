@@ -8,8 +8,18 @@
 conda create -n kgtk-env python=3.7
 source activate kgtk-env
 ```
+**Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
+
 2. `pip install -r requirements.txt`
 3. Install `graph-tool`. If you use conda, then you can run `conda install -c conda-forge graph-tool`, else see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+4. Install `mlr`. Depending on your environment, you can run one of the following:
+  * `brew update && brew install miller` (on mac)
+  * `sudo port selfupdate && sudo port install miller` (on mac)
+  * `sudo apt-get install miller` (linux)
+  * `sudo apt install miller` (linux)
+  * `sudo yum install miller` (linux)
+  
+More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
 
 ### The Miller Package
 
