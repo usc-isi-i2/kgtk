@@ -22,7 +22,10 @@ class Node:
 		else:
 			serialized_properties = ""
 		serialized_instance_type = ':'.join(self.instance_type)
-		serialized_node = "CREATE ({}:{} {})".format(node_id, serialized_instance_type, serialized_properties)
+		if self.instance_type:
+			serialized_node = "CREATE ({}:{} {})".format(node_id, serialized_instance_type, serialized_properties)
+		else:
+			serialized_node = "CREATE ({} {})".format(node_id, serialized_properties)
 		return serialized_node
 
 
@@ -107,7 +110,7 @@ class Properties:
 			if is_property(property_name):
 				serialized_property = "{}: ".format(property_name)
 			else:
-				serialized_property = "\"{}\": ".format(property_name)
+				serialized_property = "{}: ".format(property_name)
 			if len(property_value) == 1:
 				serialized_property += "\"{}\"".format(str(property_value[0]))
 			else:
@@ -127,7 +130,7 @@ class Properties:
 			if is_property(property_name):
 				serialized_properties.append("{}: ".format(property_name))
 			else:
-				serialized_properties.append("\"{}\": ".format(property_name))
+				serialized_properties.append("{}: ".format(property_name))
 			serialized_properties.append("[")
 			for value in property_value:
 				if is_item(value) or is_property(value):
@@ -181,7 +184,20 @@ def is_property(string: str) -> bool:
 
 
 def clean_string(string):
-	return string.strip("\"")
+	string = string.strip("\"")
+	string = string.replace("\"", "'")
+	return string
+
+
+def clean_label(label):
+	cleaned_label_list = [""] * len(label)
+	for index, char in enumerate(label):
+		if char.isalnum():
+			cleaned_label_list[index] = label[index]
+		else:
+			cleaned_label_list[index] = "_"
+	cleaned_label = ''.join(cleaned_label_list)
+	return cleaned_label
 
 
 def create_graph(statement_file_name: str, qualifier_file_name: str, statement_file_encoding: str, qualifier_file_encoding: str):
@@ -192,9 +208,9 @@ def create_graph(statement_file_name: str, qualifier_file_name: str, statement_f
 	# required tsv format headers for qualifiers(unordered):
 	# node1, property, node2, id
 	if not statement_file_encoding:
-		statement_file_encoding = "utf8"
+		statement_file_encoding = "UTF-8"
 	if not qualifier_file_encoding:
-		qualifier_file_encoding = "utf8"
+		qualifier_file_encoding = "UTF-8"
 
 	graph = Graph()
 	node_store = graph.node_store
@@ -203,20 +219,20 @@ def create_graph(statement_file_name: str, qualifier_file_name: str, statement_f
 		with open(statement_file_name, 'r', encoding=statement_file_encoding) as input_file:
 			statements = csv.DictReader(input_file, dialect='excel-tab', restval="")
 			for statement in statements:
-				src_node = node_store.get_or_create(statement['node1'])
+				src_node = node_store.get_or_create(clean_label(statement['node1']))
 				if is_item(statement['node2']):
 					if statement['property'] == 'P31':
-						src_node.add_instance_type(statement['node2'])
+						src_node.add_instance_type(clean_label(statement['node2']))
 					else:
-						dst_node = node_store.get_or_create(statement['node2'])
+						dst_node = node_store.get_or_create(clean_label(statement['node2']))
 						if 'node2_label' in statement and statement['node2_label']:
 							dst_node.add_property("label", statement["node2_label"])
-						relationship = relationship_store.get_or_create(statement['id'])
-						relationship.add_names(statement['property'], statement['node1'], statement['node2'])
+						relationship = relationship_store.get_or_create(clean_label(statement['id']))
+						relationship.add_names(clean_label(statement['property']), clean_label(statement['node1']), clean_label(statement['node2']))
 						if 'property_label' in statement and statement['property_label']:
 							relationship.add_property("label", statement["property_label"])
 				else:
-					src_node.add_property(statement['property'], statement['node2'])
+					src_node.add_property(clean_label(statement['property']), statement['node2'])
 				if 'node1_label' in statement and statement['node1_label']:
 					src_node.add_property("label", statement["node1_label"])
 
@@ -224,9 +240,9 @@ def create_graph(statement_file_name: str, qualifier_file_name: str, statement_f
 		with open(qualifier_file_name, 'r', encoding=qualifier_file_encoding) as input_file:
 			qualifiers = csv.DictReader(input_file, dialect='excel-tab', restval="")
 			for qualifier in qualifiers:
-				relationship = relationship_store.get(qualifier['node1'])
+				relationship = relationship_store.get(clean_label(qualifier['node1']))
 				if relationship:
-					relationship.add_property(qualifier['property'], qualifier['node2'])
+					relationship.add_property(clean_label(qualifier['property']), qualifier['node2'])
 	return graph
 
 
@@ -243,8 +259,8 @@ def add_arguments(parser):
 	parser.add_argument('-sf', "--statement_file_path", action="store", type=str, dest="statement_file_path", help="Filepath of the statement file", default="")
 	parser.add_argument('-qf', '--qualifier_file_path', type=str, dest="qualifier_file_path", help="Filepath of the qualifier file", default="")
 	parser.add_argument('-o', '--output_directory', action="store", type=str, dest='output_directory', help="Directory where the result file will be saved", default="")
-	parser.add_argument('-se', '--statement_file_encoding', type=str, dest='statement_file_encoding', help="Encoding of the statement file, eg.: utf8", default="")
-	parser.add_argument('-qe', '--qualifier_file_encoding', type=str, dest='qualifier_file_encoding', help="Encoding of the qualifier file, eg.: utf8", default="")
+	parser.add_argument('-se', '--statement_file_encoding', type=str, dest='statement_file_encoding', help="Encoding of the statement file, eg.: UTF-8", default="")
+	parser.add_argument('-qe', '--qualifier_file_encoding', type=str, dest='qualifier_file_encoding', help="Encoding of the qualifier file, eg.: UTF-8", default="")
 
 
 def run(statement_file_path: str, qualifier_file_path: str, output_directory: str, statement_file_encoding: str, qualifier_file_encoding: str):
