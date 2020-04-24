@@ -61,25 +61,27 @@ class EdgeJoiner(KgtkFormat):
             raise ValueError("EdgeJoiner: unknown node1 column index in KGTK %s edge type." % who)
         return idx
 
-    def build_join_key(self, kr: EdgeReader, join_idx: int, line: typing.List[str])->str:
-        key: str = line[join_idx]
+    def build_join_key(self, kr: EdgeReader, join_idx: int, row: typing.List[str])->str:
+        key: str = row[join_idx]
         if self.join_on_label:
-            key += self.field_separator+ line[kr.label_column_idx]
+            key += self.field_separator+ row[kr.label_column_idx]
         if self.join_on_node2:
-            key += self.field_separator+ line[kr.node2_column_idx]
+            key += self.field_separator+ row[kr.node2_column_idx]
         return key
 
     def multi_column_key_set(self, kr: EdgeReader, join_idx: int)->typing.Set[str]:
         result: typing.Set[str] = set()
-        for line in kr:
-            result.add(self.build_join_key(kr, join_idx, line))
+        row: typing.List[str]
+        for row in kr:
+            result.add(self.build_join_key(kr, join_idx, row))
         return result
         
     # Optimized for a single join column:
     def single_column_key_set(self, kr: EdgeReader, join_idx: int)->typing.Set[str]:
         result: typing.Set[str] = set()
-        for line in kr:
-            result.add(line[join_idx])
+        row: typing.List[str]
+        for row in kr:
+            result.add(row[join_idx])
         return result
         
     def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
@@ -203,19 +205,19 @@ class EdgeJoiner(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
-        line: typing.list[str]
+        row: typing.list[str]
         left_node1_idx: int = self.node1_column_idx(left_kr, who="left")
-        for line in left_kr:
-            left_key: str = self.build_join_key(left_kr, left_node1_idx, line)
+        for row in left_kr:
+            left_key: str = self.build_join_key(left_kr, left_node1_idx, row)
             if left_key in joined_key_set:
-                ew.write(line)
+                ew.write(row)
 
         right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_column_names)
         right_node1_idx: int = self.node1_column_idx(right_kr, who="right")
-        for line in right_kr:
-            right_key: str = self.build_join_key(right_kr, right_node1_idx, line)
+        for row in right_kr:
+            right_key: str = self.build_join_key(right_kr, right_node1_idx, row)
             if right_key in joined_key_set:
-                ew.write(line, shuffle_list=right_shuffle_list)
+                ew.write(row, shuffle_list=right_shuffle_list)
             
         ew.close()
         

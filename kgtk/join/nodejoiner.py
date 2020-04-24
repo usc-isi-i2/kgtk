@@ -59,8 +59,9 @@ class NodeJoiner(KgtkFormat):
 
     def single_column_key_set(self, kr: NodeReader, join_idx: int)->typing.Set[str]:
         result: typing.Set[str] = set()
-        for line in kr:
-            result.add(line[join_idx])
+        row: typing.List[str]
+        for row in kr:
+            result.add(row[join_idx])
         return result
         
     def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
@@ -172,19 +173,19 @@ class NodeJoiner(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
-        line: typing.list[str]
+        row: typing.list[str]
         left_node1_idx: int = self.id_column_idx(left_kr, who="left")
-        for line in left_kr:
-            left_key: str = line[left_node1_idx]
+        for row in left_kr:
+            left_key: str = row[left_node1_idx]
             if left_key in joined_key_set:
-                ew.write(line)
+                ew.write(row)
 
         right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_column_names)
         right_node1_idx: int = self.id_column_idx(right_kr, who="right")
-        for line in right_kr:
-            right_key: str = line[right_node1_idx]
+        for row in right_kr:
+            right_key: str = row[right_node1_idx]
             if right_key in joined_key_set:
-                ew.write(line, shuffle_list=right_shuffle_list)
+                ew.write(row, shuffle_list=right_shuffle_list)
             
         ew.close()
         

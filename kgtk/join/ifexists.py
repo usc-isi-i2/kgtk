@@ -99,17 +99,18 @@ class IfExists(KgtkFormat):
 
         return self.get_edge_key_columns(kr, who)
 
-    def build_key(self, line: typing.List[str], key_columns: typing.List[int])->str:
+    def build_key(self, row: typing.List[str], key_columns: typing.List[int])->str:
         key: str = ""
         idx: int
         for idx in key_columns:
-            key += self.field_separator+ line[idx]
+            key += self.field_separator+ row[idx]
         return key
 
     def extract_key_set(self, kr: KgtkReader, who: str, key_columns: typing.List[int])->typing.Set[str]:
         result: typing.Set[str] = set()
-        for line in kr:
-            result.add(self.build_key(line, key_columns))
+        row: typing.List[str]
+        for row in kr:
+            result.add(self.build_key(row, key_columns))
         return result
 
     def process(self):
@@ -140,9 +141,9 @@ class IfExists(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
-        line: typing.list[str]
-        for line in left_kr:
-            left_key: str = self.build_key(line, left_key_columns)
+        row: typing.list[str]
+        for row in left_kr:
+            left_key: str = self.build_key(row, left_key_columns)
             if left_key in key_set:
                 ew.write(line)
         ew.close()
