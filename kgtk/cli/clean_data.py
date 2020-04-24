@@ -23,9 +23,9 @@ def add_arguments(parser):
     Args:
         parser (argparse.ArgumentParser)
     """
-    parser.add_argument(      "input_file", nargs="?", help="The KGTK file to read", type=Path, nargs='?')
+    parser.add_argument(      "input_file", nargs="?", help="The KGTK file to read", type=Path,)
     
-    parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write", type=Path, nargs='?')
+    parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write", type=Path)
     
     parser.add_argument(      "--allow-comment-lines", dest="ignore_comment_lines",
                               help="When specified, do not ignore comment lines.", action='store_false')
@@ -150,9 +150,9 @@ def run(input_file: typing.Optional[Path],
                                          verbose=verbose, very_verbose=very_verbose)
         
         line_count: int = 0
-        line: typing.List[str]
-        for line in kr:
-            kw.write(line)
+        row: typing.List[str]
+        for row in kr:
+            kw.write(row)
             line_count += 1
 
         kw.close()
