@@ -128,8 +128,8 @@ def run(kgtk_file: typing.Optional[Path],
                                          verbose=verbose, very_verbose=very_verbose)
         
         line_count: int = 0
-        line: typing.List[str]
-        for line in kr:
+        row: typing.List[str]
+        for row in kr:
             line_count += 1
         if verbose:
             print("Validated %d data lines" % line_count)
