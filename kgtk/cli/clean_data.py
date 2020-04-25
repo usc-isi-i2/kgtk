@@ -10,8 +10,9 @@ import typing
 
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkreader import KgtkReader, KgtkReaderErrorAction
+from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.kgtkwriter import KgtkWriter
+from kgtk.join.validationaction import ValidationAction
 
 def parser():
     return {
@@ -29,58 +30,77 @@ def add_arguments(parser):
     
     parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write", type=Path)
     
-    parser.add_argument(      "--allow-comment-lines", dest="ignore_comment_lines",
-                              help="When specified, do not ignore comment lines.", action='store_false')
+    parser.add_argument(      "--blank-node1-line-action", dest="blank_node1_line_action",
+                              help="The action to take when a blank node1 field is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=None)
 
-    parser.add_argument(      "--allow-empty-lines", dest="ignore_empty_lines",
-                              help="When specified, do not ignore empty lines.", action='store_false')
+    parser.add_argument(      "--blank-node2-line-action", dest="blank_node2_line_action",
+                              help="The action to take when a blank node2 field is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=None)
 
-    parser.add_argument(      "--allow-long-lines", dest="ignore_long_lines",
-                              help="When specified, do not ignore lines with extra columns.", action='store_false')
+    parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
+                              help="The action to take when a blank id field is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=None)
 
-    parser.add_argument(      "--allow-short-lines", dest="ignore_short_lines",
-                              help="When specified, do not ignore lines with missing columns.", action='store_false')
-    
-    parser.add_argument(      "--allow-whitespace-lines", dest="ignore_whitespace_lines",
-                              help="When specified, do not ignore whitespace lines.", action='store_false')
+    parser.add_argument(      "--comment-line-action", dest="comment_line_action",
+                              help="The action to take when a comment line is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
     parser.add_argument(      "--column-separator", dest="column_separator",
-                              help="Column separator (defaults to tab).", type=str, default=KgtkReader.COLUMN_SEPARATOR)
+                              help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
 
-    parser.add_argument(      "--input-compression", dest="input_compression_type", help="Specify the input file compression type, otherwise use the extension.")
-    
-    parser.add_argument(      "--error-action", dest="error_action",
-                              help="The action to take for error input lines",
-                              type=KgtkReaderErrorAction, action=EnumNameAction, default=KgtkReaderErrorAction.STDERR)
-    
+    parser.add_argument(      "--empty-line-action", dest="empty_line_action",
+                              help="The action to take when an empty line is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+    parser.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                              help="Send errors to stdout instead of stderr", action="store_true")
+
     parser.add_argument(      "--error-limit", dest="error_limit",
-                              help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
+                              help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
 
     parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
                               help="Fill missing trailing columns in short lines with empty values.", action='store_true')
 
-    parser.add_argument(      "--force-column-names", dest="force_column_names", help="Force the input file column names.", nargs='+')
-    
+    parser.add_argument(      "--force-column-names", dest="force_column_names", help="Force the column names.", nargs='+')
+
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
-        
+
     parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
-                              help="Queue size for parallel gzip.", type=int, default=KgtkReader.GZIP_QUEUE_SIZE_DEFAULT)
+                              help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
+
+    parser.add_argument(      "--input-compression", dest="input_compression_type", help="Specify the input file compression type, otherwise use the extension.")
     
-    parser.add_argument(      "--mode", dest="mode",
+    parser.add_argument(      "--input-mode", dest="input_mode",
                               help="Determine the KGTK input file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
+
+    parser.add_argument(      "--long-line-action", dest="long_line_action",
+                              help="The action to take when a long line is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
     # Not yet implemented:
     # parser.add_argument(      "--output-compression", dest="input_compression_type", help="Specify the input file compression type, otherwise use the extension.")
     
-    parser.add_argument(      "--skip-first-record", dest="skip_first_record", help="Skip the first input data record when forcing column names.",
-                              action='store_true')
+    parser.add_argument(      "--output-mode", dest="output_mode",
+                              help="Determine the KGTK output file mode.", type=KgtkWriter.Mode, action=EnumNameAction, default=KgtkWriter.Mode.AUTO)
+
+    parser.add_argument(      "--short-line-action", dest="short_line_action",
+                              help="The action to take whe a short line is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+    parser.add_argument(      "--skip-first-record", dest="skip_first_record", help="Skip the first record when forcing column names.", action='store_true')
 
     parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
                               help="Remove excess trailing columns in long lines.", action='store_true')
 
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
-
+    
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
+    
+    parser.add_argument(      "--whitespace-line-action", dest="whitespace_line_action",
+                              help="The action to take when a whitespace line is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
 
 def run(input_file: typing.Optional[Path],
         output_file: typing.Optional[Path],
@@ -88,16 +108,16 @@ def run(input_file: typing.Optional[Path],
         skip_first_record: bool = False,
         fill_short_lines: bool = False,
         truncate_long_lines: bool = False,
-        error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDERR,
+        errors_to_stdout: bool = False,
         error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
-        ignore_empty_lines: bool = True,
-        ignore_comment_lines: bool = True,
-        ignore_whitespace_lines: bool = True,
-        ignore_blank_node1_lines: bool = True,
-        ignore_blank_node2_lines: bool = True,
-        ignore_blank_id_lines: bool = True,
-        ignore_short_lines: bool = True,
-        ignore_long_lines: bool = True,
+        empty_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        comment_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        blank_node1_line_action: typing.Optional[ValidationAction] = None,
+        blank_node2_line_action: typing.Optional[ValidationAction] = None,
+        blank_id_line_action: typing.Optional[ValidationAction] = None,
+        short_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        long_line_action: ValidationAction = ValidationAction.EXCLUDE,
         input_compression_type: typing.Optional[str] = None,
         # output_compression_type: typing.Optional[str] = None, # Not yet implemented
         gzip_in_parallel: bool = False,
@@ -122,20 +142,23 @@ def run(input_file: typing.Optional[Path],
             else:
                 print ("Writing data to stdin", file=sys.stderr)
                 
+        error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+
         kr: KgtkReader = KgtkReader.open(input_file,
                                          force_column_names=force_column_names,
                                          skip_first_record=skip_first_record,
                                          fill_short_lines=fill_short_lines,
                                          truncate_long_lines=truncate_long_lines,
-                                         error_action=error_action,
+                                         error_file=error_file,
                                          error_limit=error_limit,
-                                         ignore_comment_lines=ignore_comment_lines,
-                                         ignore_whitespace_lines=ignore_whitespace_lines,
-                                         ignore_blank_node1_lines=ignore_blank_node1_lines,
-                                         ignore_blank_node2_lines=ignore_blank_node2_lines,
-                                         ignore_blank_id_lines=ignore_blank_id_lines,
-                                         ignore_short_lines=ignore_short_lines,
-                                         ignore_long_lines=ignore_long_lines,
+                                         empty_line_action=empty_line_action,
+                                         comment_line_action=comment_line_action,
+                                         whitespace_line_action=whitespace_line_action,
+                                         blank_node1_line_action=blank_node1_line_action,
+                                         blank_node2_line_action=blank_node2_line_action,
+                                         blank_id_line_action=blank_id_line_action,
+                                         short_line_action=short_line_action,
+                                         long_line_action=long_line_action,
                                          compression_type=input_compression_type,
                                          gzip_in_parallel=gzip_in_parallel,
                                          gzip_queue_size=gzip_queue_size,

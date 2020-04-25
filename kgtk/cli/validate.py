@@ -53,14 +53,15 @@ def add_arguments(parser):
     parser.add_argument(      "--column-separator", dest="column_separator",
                               help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
 
-    parser.add_argument(      "--compression-type", dest="compression_type", help="Specify the compression type.")
+    parser.add_argument(      "--compression-type", dest="compression_type",
+                              help="Specify the input file compression type, otherwise use the extension.")
     
     parser.add_argument(      "--empty-line-action", dest="empty_line_action",
                               help="The action to take when an empty line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
     parser.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
-                              help="Send errors to stderr or to stdout", action="store_true")
+                              help="Send errors to stdout instead of stderr", action="store_true")
 
     parser.add_argument(      "--error-limit", dest="error_limit",
                               help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
@@ -78,6 +79,9 @@ def add_arguments(parser):
     parser.add_argument(      "--long-line-action", dest="long_line_action",
                               help="The action to take when a long line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+    parser.add_argument(      "--mode", dest="mode",
+                              help="Determine the KGTK input file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
 
     parser.add_argument(      "--short-line-action", dest="short_line_action",
                               help="The action to take whe a short line is detected.",
@@ -98,28 +102,28 @@ def add_arguments(parser):
 
 
 def run(kgtk_file: typing.Optional[Path],
-            file_path: typing.Optional[Path],
-             force_column_names: typing.Optional[typing.List[str]] = None,
-             skip_first_record: bool = False,
-             fill_short_lines: bool = False,
-             truncate_long_lines: bool = False,
-             error_file: typing.TextIO = sys.stderr,
-             error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
-             empty_line_action: ValidationAction = ValidationAction.EXCLUDE,
-             comment_line_action: ValidationAction = ValidationAction.EXCLUDE,
-             whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE,
-             blank_node1_line_action: typing.Optional[ValidationAction] = None,
-             blank_node2_line_action: typing.Optional[ValidationAction] = None,
-             blank_id_line_action: typing.Optional[ValidationAction] = None,
-             short_line_action: ValidationAction = ValidationAction.EXCLUDE,
-             long_line_action: ValidationAction = ValidationAction.EXCLUDE,
-             compression_type: typing.Optional[str] = None,
-             gzip_in_parallel: bool = False,
-             gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
-             column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
-             mode: KgtkReader.Mode = KgtkReader.Mode.AUTO,
-             verbose: bool = False,
-             very_verbose: bool = False,
+        file_path: typing.Optional[Path],
+        force_column_names: typing.Optional[typing.List[str]] = None,
+        skip_first_record: bool = False,
+        fill_short_lines: bool = False,
+        truncate_long_lines: bool = False,
+        errors_to_stdout: bool = False,
+        error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
+        empty_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        comment_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        blank_node1_line_action: typing.Optional[ValidationAction] = None,
+        blank_node2_line_action: typing.Optional[ValidationAction] = None,
+        blank_id_line_action: typing.Optional[ValidationAction] = None,
+        short_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        long_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        compression_type: typing.Optional[str] = None,
+        gzip_in_parallel: bool = False,
+        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
+        column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
+        mode: KgtkReader.Mode = KgtkReader.Mode.AUTO,
+        verbose: bool = False,
+        very_verbose: bool = False,
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
@@ -130,7 +134,9 @@ def run(kgtk_file: typing.Optional[Path],
                 print("Validating '%s'" % str(kgtk_file))
             else:
                 print ("Validating from stdin")
-                
+
+        error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+
         kr: KgtkReader = KgtkReader.open(kgtk_file,
                                          force_column_names=force_column_names,
                                          skip_first_record=skip_first_record,
