@@ -111,6 +111,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              empty_line_action: ValidationAction = ValidationAction.EXCLUDE,
              comment_line_action: ValidationAction = ValidationAction.EXCLUDE,
              whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE,
+             blank_line_action: ValidationAction = ValidationAction.EXCLUDE,
              blank_node1_line_action: typing.Optional[ValidationAction] = None,
              blank_node2_line_action: typing.Optional[ValidationAction] = None,
              blank_id_line_action: typing.Optional[ValidationAction] = None,
@@ -172,9 +173,9 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
             # Apply the proper defaults to the blank node1, node2, and id actions:
             if blank_node1_line_action is None:
-                blank_node1_line_action = ValidationAction.EXCLUDE
+                blank_node1_line_action = blank_line_action
             if blank_node2_line_action is None:
-                blank_node2_line_action = ValidationAction.EXCLUDE
+                blank_node2_line_action = blank_line_action
             if blank_id_line_action is None:
                 blank_id_line_action = ValidationAction.PASS
 
@@ -226,7 +227,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             if blank_node2_line_action is None:
                 blank_node2_line_action = ValidationAction.PASS
             if blank_id_line_action is None:
-                blank_id_line_action = ValidationAction.EXCLUDE
+                blank_id_line_action = blank_line_action
 
             return NodeReader(file_path=file_path,
                               source=source,
@@ -557,6 +558,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     def add_shared_arguments(cls, parser: ArgumentParser):
         parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
 
+        parser.add_argument(      "--blank-required-field-line-action", dest="blank_line_action",
+                                  help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                                  
         parser.add_argument(      "--comment-line-action", dest="comment_line_action",
                                   help="The action to take when a comment line is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
@@ -646,6 +651,7 @@ def main():
                                      empty_line_action=args.empty_line_action,
                                      comment_line_action=args.comment_line_action,
                                      whitespace_line_action=args.whitespace_line_action,
+                                     blank_line_action=args.blank_line_action,
                                      blank_node1_line_action=args.blank_node1_line_action,
                                      blank_node2_line_action=args.blank_node2_line_action,
                                      blank_id_line_action=args.blank_id_line_action,
