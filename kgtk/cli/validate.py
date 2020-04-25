@@ -48,7 +48,7 @@ def add_arguments(parser):
 
     parser.add_argument(      "--comment-line-action", dest="comment_line_action",
                               help="The action to take when a comment line is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
 
     parser.add_argument(      "--column-separator", dest="column_separator",
                               help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
@@ -58,7 +58,7 @@ def add_arguments(parser):
     
     parser.add_argument(      "--empty-line-action", dest="empty_line_action",
                               help="The action to take when an empty line is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
 
     parser.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
                               help="Send errors to stdout instead of stderr", action="store_true")
@@ -78,14 +78,14 @@ def add_arguments(parser):
 
     parser.add_argument(      "--long-line-action", dest="long_line_action",
                               help="The action to take when a long line is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
 
     parser.add_argument(      "--mode", dest="mode",
                               help="Determine the KGTK input file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
 
     parser.add_argument(      "--short-line-action", dest="short_line_action",
                               help="The action to take whe a short line is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
 
     parser.add_argument(      "--skip-first-record", dest="skip_first_record", help="Skip the first record when forcing column names.", action='store_true')
 
