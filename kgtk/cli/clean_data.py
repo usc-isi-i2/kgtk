@@ -30,6 +30,10 @@ def add_arguments(parser):
     
     parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write", type=Path)
     
+    parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
+                              help="The action to take when a blank id field is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=None)
+
     parser.add_argument(      "--blank-node1-line-action", dest="blank_node1_line_action",
                               help="The action to take when a blank node1 field is detected.",
                               type=ValidationAction, action=EnumNameAction, default=None)
@@ -38,9 +42,9 @@ def add_arguments(parser):
                               help="The action to take when a blank node2 field is detected.",
                               type=ValidationAction, action=EnumNameAction, default=None)
 
-    parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
-                              help="The action to take when a blank id field is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=None)
+    parser.add_argument(      "--blank-required-field-line-action", dest="blank_line_action",
+                              help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
     parser.add_argument(      "--comment-line-action", dest="comment_line_action",
                               help="The action to take when a comment line is detected.",
@@ -112,7 +116,8 @@ def run(input_file: typing.Optional[Path],
         error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
         empty_line_action: ValidationAction = ValidationAction.EXCLUDE,
         comment_line_action: ValidationAction = ValidationAction.EXCLUDE,
-        whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE, 
+        blank_line_action: ValidationAction = ValidationAction.EXCLUDE,
         blank_node1_line_action: typing.Optional[ValidationAction] = None,
         blank_node2_line_action: typing.Optional[ValidationAction] = None,
         blank_id_line_action: typing.Optional[ValidationAction] = None,
@@ -154,6 +159,7 @@ def run(input_file: typing.Optional[Path],
                                          empty_line_action=empty_line_action,
                                          comment_line_action=comment_line_action,
                                          whitespace_line_action=whitespace_line_action,
+                                         blank_line_action=blank_line_action,
                                          blank_node1_line_action=blank_node1_line_action,
                                          blank_node2_line_action=blank_node2_line_action,
                                          blank_id_line_action=blank_id_line_action,

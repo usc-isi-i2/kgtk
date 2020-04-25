@@ -34,6 +34,10 @@ def add_arguments(parser):
     """
     parser.add_argument(      "kgtk_file", nargs="?", help="The KGTK file to validate. May be omitted or "-" for stdin.", type=Path)
     
+    parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
+                              help="The action to take when a blank id field is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=None)
+
     parser.add_argument(      "--blank-node1-line-action", dest="blank_node1_line_action",
                               help="The action to take when a blank node1 field is detected.",
                               type=ValidationAction, action=EnumNameAction, default=None)
@@ -42,9 +46,9 @@ def add_arguments(parser):
                               help="The action to take when a blank node2 field is detected.",
                               type=ValidationAction, action=EnumNameAction, default=None)
 
-    parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
-                              help="The action to take when a blank id field is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=None)
+    parser.add_argument(      "--blank-required-field-line-action", dest="blank_line_action",
+                              help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
 
     parser.add_argument(      "--comment-line-action", dest="comment_line_action",
                               help="The action to take when a comment line is detected.",
@@ -109,14 +113,15 @@ def run(kgtk_file: typing.Optional[Path],
         truncate_long_lines: bool = False,
         errors_to_stdout: bool = False,
         error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
-        empty_line_action: ValidationAction = ValidationAction.EXCLUDE,
-        comment_line_action: ValidationAction = ValidationAction.EXCLUDE,
-        whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        empty_line_action: ValidationAction = ValidationAction.COMPLAIN,
+        comment_line_action: ValidationAction = ValidationAction.COMPLAIN,
+        whitespace_line_action: ValidationAction = ValidationAction.COMPLAIN,
+        blank_line_action: ValidationAction = ValidationAction.COMPLAIN,
         blank_node1_line_action: typing.Optional[ValidationAction] = None,
         blank_node2_line_action: typing.Optional[ValidationAction] = None,
         blank_id_line_action: typing.Optional[ValidationAction] = None,
-        short_line_action: ValidationAction = ValidationAction.EXCLUDE,
-        long_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        short_line_action: ValidationAction = ValidationAction.COMPLAIN,
+        long_line_action: ValidationAction = ValidationAction.COMPLAIN,
         compression_type: typing.Optional[str] = None,
         gzip_in_parallel: bool = False,
         gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -147,6 +152,7 @@ def run(kgtk_file: typing.Optional[Path],
                                          empty_line_action=empty_line_action,
                                          comment_line_action=comment_line_action,
                                          whitespace_line_action=whitespace_line_action,
+                                         blank_line_action=blank_line_action,
                                          blank_node1_line_action=blank_node1_line_action,
                                          blank_node2_line_action=blank_node2_line_action,
                                          blank_id_line_action=blank_id_line_action,
