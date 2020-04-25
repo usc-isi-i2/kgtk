@@ -595,9 +595,6 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                                   help="The action to take when a long line is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
-        parser.add_argument(      "--mode", dest="mode",
-                                  help="Determine the KGTK input file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
-
         parser.add_argument(      "--short-line-action", dest="short_line_action",
                                   help="The action to take whe a short line is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
