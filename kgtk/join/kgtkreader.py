@@ -571,7 +571,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         parser.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
-                                  help="Send errors to stderr or to stdout", action="store_true")
+                                  help="Send errors to stdout instead of stderr", action="store_true")
 
         parser.add_argument(      "--error-limit", dest="error_limit",
                                   help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
@@ -589,6 +589,9 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--long-line-action", dest="long_line_action",
                                   help="The action to take when a long line is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        parser.add_argument(      "--mode", dest="mode",
+                                  help="Determine the KGTK input file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
 
         parser.add_argument(      "--short-line-action", dest="short_line_action",
                                   help="The action to take whe a short line is detected.",
@@ -639,7 +642,6 @@ def main():
                                      fill_short_lines=args.fill_short_lines,
                                      truncate_long_lines=args.truncate_long_lines,
                                      error_file = error_file,
-                                     error_action=args.error_action,
                                      error_limit=args.error_limit,
                                      empty_line_action=args.empty_line_action,
                                      comment_line_action=args.comment_line_action,
