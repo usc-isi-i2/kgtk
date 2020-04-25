@@ -16,17 +16,7 @@ from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtkformat import KgtkFormat
-
-class KgtkReaderErrorAction(Enum):
-    """
-    Should we complain when errors are detected?
-
-    TODO: Why can't this be inside class KgtkReader?
-    """
-    SILENT = 0 # Silently ignore the line with the error
-    STDOUT = 1 # Print an error message on STDOUT
-    STDERR = 2 # Print an error message on STDERR
-    VALUEERROR = 4 # Raise a ValueError and fail
+from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
 class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
@@ -66,23 +56,25 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     # How do we handle errors?
     #
     # TODO: Why doesn't the following work?
-    # error_action: KgtkReaderErrorAction = attr.ib(validator=attr.validators.in_(KgtkReaderErrorAction), default=KgtkReaderErrorAction.STDOUT)
-    error_action: KgtkReaderErrorAction = attr.ib(default=KgtkReaderErrorAction.STDOUT)
+    # error_action: ValidationAction = attr.ib(validator=attr.validators.in_(ValidationAction), default=ValidationAction.STDOUT)
+    error_file: typing.TextIO = attr.ib(default=sys.stderr)
     error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=ERROR_LIMIT_DEFAULT) # >0 ==> limit error reports
 
     # Ignore empty lines, comments, and all whitespace lines, etc.?
-    ignore_empty_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    ignore_comment_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    ignore_whitespace_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    empty_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+    comment_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+    whitespace_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
 
     # Ignore records with values in certain fields:
-    ignore_blank_node1_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # edge file
-    ignore_blank_node2_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # edge file
-    ignore_blank_id_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False) # node file
+    blank_node1_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.PASS) # EXCLUDE on edge file
+    blank_node2_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.PASS) # EXCLUDE on edge file
+    blank_id_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.PASS) # EXCLUDE on node file
     
-    # Require or fill trailing fields?
-    ignore_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    ignore_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    # Ignore records with too many or too few fields?
+    short_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+    long_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+
+    # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -114,16 +106,16 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              skip_first_record: bool = False,
              fill_short_lines: bool = False,
              truncate_long_lines: bool = False,
-             error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDOUT,
+             error_file: typing.TextIO = sys.stderr,
              error_limit: int = ERROR_LIMIT_DEFAULT,
-             ignore_empty_lines: bool = True,
-             ignore_comment_lines: bool = True,
-             ignore_whitespace_lines: bool = True,
-             ignore_blank_node1_lines: bool = True,
-             ignore_blank_node2_lines: bool = True,
-             ignore_blank_id_lines: bool = True,
-             ignore_short_lines: bool = True,
-             ignore_long_lines: bool = True,
+             empty_line_action: ValidationAction = ValidationAction.EXCLUDE,
+             comment_line_action: ValidationAction = ValidationAction.EXCLUDE,
+             whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE,
+             blank_node1_line_action: typing.Optional[ValidationAction] = None,
+             blank_node2_line_action: typing.Optional[ValidationAction] = None,
+             blank_id_line_action: typing.Optional[ValidationAction] = None,
+             short_line_action: ValidationAction = ValidationAction.EXCLUDE,
+             long_line_action: ValidationAction = ValidationAction.EXCLUDE,
              compression_type: typing.Optional[str] = None,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
@@ -178,6 +170,14 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             if verbose:
                 print("KgtkReader: Reading an edge file. node1=%d label=%d node2=%d" % (node1_column_idx, label_column_idx, node2_column_idx))
 
+            # Apply the proper defaults to the blank node1, node2, and id actions:
+            if blank_node1_line_action is None:
+                blank_node1_line_action = ValidationAction.EXCLUDE
+            if blank_node2_line_action is None:
+                blank_node2_line_action = ValidationAction.EXCLUDE
+            if blank_id_line_action is None:
+                blank_id_line_action = ValidationAction.PASS
+
             return EdgeReader(file_path=file_path,
                               source=source,
                               column_separator=column_separator,
@@ -191,15 +191,16 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               skip_first_record=skip_first_record,
                               fill_short_lines=fill_short_lines,
                               truncate_long_lines=truncate_long_lines,
-                              error_action=error_action,
+                              error_file=error_file,
                               error_limit=error_limit,
-                              ignore_empty_lines=ignore_empty_lines,
-                              ignore_comment_lines=ignore_comment_lines,
-                              ignore_whitespace_lines=ignore_whitespace_lines,
-                              ignore_blank_node1_lines=ignore_blank_node1_lines,
-                              ignore_blank_node2_lines=ignore_blank_node2_lines,
-                              ignore_short_lines=ignore_short_lines,
-                              ignore_long_lines=ignore_long_lines,
+                              empty_line_action=empty_line_action,
+                              comment_line_action=comment_line_action,
+                              whitespace_line_action=whitespace_line_action,
+                              blank_node1_line_action=blank_node1_line_action,
+                              blank_node2_line_action=blank_node2_line_action,
+                              blank_id_line_action=blank_id_line_action,
+                              short_line_action=short_line_action,
+                              long_line_action=long_line_action,
                               compression_type=compression_type,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
@@ -219,6 +220,14 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             if verbose:
                 print("KgtkReader: Reading an node file. id=%d" % (id_column_idx))
 
+            # Apply the proper defaults to the blank node1, node2, and id actions:
+            if blank_node1_line_action is None:
+                blank_node1_line_action = ValidationAction.PASS
+            if blank_node2_line_action is None:
+                blank_node2_line_action = ValidationAction.PASS
+            if blank_id_line_action is None:
+                blank_id_line_action = ValidationAction.EXCLUDE
+
             return NodeReader(file_path=file_path,
                               source=source,
                               column_separator=column_separator,
@@ -230,14 +239,16 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               skip_first_record=skip_first_record,
                               fill_short_lines=fill_short_lines,
                               truncate_long_lines=truncate_long_lines,
-                              error_action=error_action,
+                              error_file=error_file,
                               error_limit=error_limit,
-                              ignore_empty_lines=ignore_empty_lines,
-                              ignore_comment_lines=ignore_comment_lines,
-                              ignore_whitespace_lines=ignore_whitespace_lines,
-                              ignore_blank_id_lines=ignore_blank_id_lines,
-                              ignore_short_lines=ignore_short_lines,
-                              ignore_long_lines=ignore_long_lines,
+                              empty_line_action=empty_line_action,
+                              comment_line_action=comment_line_action,
+                              whitespace_line_action=whitespace_line_action,
+                              blank_node1_line_action=blank_node1_line_action,
+                              blank_node2_line_action=blank_node2_line_action,
+                              blank_id_line_action=blank_id_line_action,
+                              short_line_action=short_line_action,
+                              long_line_action=long_line_action,
                               compression_type=compression_type,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
@@ -247,6 +258,14 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               very_verbose=very_verbose,
             )
         else:
+            # Apply the proper defaults to the blank node1, node2, and id actions:
+            if blank_node1_line_action is None:
+                blank_node1_line_action = ValidationAction.PASS
+            if blank_node2_line_action is None:
+                blank_node2_line_action = ValidationAction.PASS
+            if blank_id_line_action is None:
+                blank_id_line_action = ValidationAction.PASS
+
             return cls(file_path=file_path,
                        source=source,
                        column_separator=column_separator,
@@ -257,14 +276,16 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                        skip_first_record=skip_first_record,
                        fill_short_lines=fill_short_lines,
                        truncate_long_lines=truncate_long_lines,
-                       error_action=error_action,
+                       error_file=error_file,
                        error_limit=error_limit,
-                       ignore_empty_lines=ignore_empty_lines,
-                       ignore_comment_lines=ignore_comment_lines,
-                       ignore_whitespace_lines=ignore_whitespace_lines,
-                       ignore_blank_id_lines=ignore_blank_id_lines,
-                       ignore_short_lines=ignore_short_lines,
-                       ignore_long_lines=ignore_long_lines,
+                       empty_line_action=empty_line_action,
+                       comment_line_action=comment_line_action,
+                       whitespace_line_action=whitespace_line_action,
+                       blank_node1_line_action=blank_node1_line_action,
+                       blank_node2_line_action=blank_node2_line_action,
+                       blank_id_line_action=blank_id_line_action,
+                       short_line_action=short_line_action,
+                       long_line_action=long_line_action,
                        compression_type=compression_type,
                        gzip_in_parallel=gzip_in_parallel,
                        gzip_queue_size=gzip_queue_size,
@@ -377,19 +398,28 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     def close(self):
         self.source.close()
 
-    def yelp(self, msg: str, line: str):
-        self.data_lines_ignored += 1
-        if self.error_action == KgtkReaderErrorAction.SILENT:
-            return
-        elif self.error_action == KgtkReaderErrorAction.STDOUT:
-            print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line))
-        elif self.error_action == KgtkReaderErrorAction.STDERR:
-            print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=sys.stderr)
-        elif self.error_action == KgtkReaderErrorAction.VALUEERROR:
+    def exclude_line(self, action: ValidationAction, msg: str, line: str)->bool:
+        """
+        Take a validation action.  Returns True if the line should be excluded.
+        """
+        result: bool
+        if action == ValidationAction.PASS:
+            return False # Silently pass the line through
+        elif action == ValidationAction.REPORT:
+            result= False # Report the issue then pass the line.
+        elif action == ValidationAction.EXCLUDE:
+            return True # Silently exclude the line
+        elif action == ValidationAction.COMPLAIN:
+            result = True # Report the issue then exclude the line.
+        elif action == ValidationAction.FAIL:
+            # Immediately raise an exception.
             raise ValueError("In input data line %d, %s: %s" % (self.data_lines_read, msg, line))
+        
+        print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file)
         self.data_errors_reported += 1
         if self.error_limit > 0 and self.data_errors_reported >= self.error_limit:
             raise ValueError("Too many data errors.")
+        return result
 
     # This is both and iterable and an iterator object.
     def __iter__(self)->typing.Iterator[typing.List[str]]:
@@ -423,17 +453,19 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                 print("'%s'" % line)
 
             # Ignore empty lines.
-            if len(line) == 0 and self.ignore_empty_lines:
-                self.yelp("saw an empty line", line)
-                continue
+            if self.empty_line_action != ValidationAction.PASS and len(line) == 0:
+                if self.exclude_line(self.empty_line_action, "saw an empty line", line):
+                    continue
+
             # Ignore comment lines:
-            if line[0] == self.COMMENT_INDICATOR and self.ignore_comment_lines:
-                self.yelp("saw a comment line", line)
-                continue
+            if self.comment_line_action != ValidationAction.PASS  and line[0] == self.COMMENT_INDICATOR:
+                if self.exclude_line(self.comment_line_action, "saw a comment line", line):
+                    continue
+
             # Ignore whitespace lines
-            if self.ignore_whitespace_lines and line.isspace():
-                self.yelp("saw a whitespace line", line)
-                continue
+            if self.whitespace_line_action != ValidationAction.PASS and line.isspace():
+                if self.exclude_line(self.whitespace_line_action, "saw a whitespace line", line):
+                    continue
 
             values = line.split(self.column_separator)
 
@@ -449,23 +481,24 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             # Optionally validate that the line contained the right number of columns:
             #
             # When we report line numbers in error messages, line 1 is the first line after the header line.
-            if self.ignore_short_lines and len(values) < self.column_count:
-                self.yelp("Required %d columns, saw %d: '%s'" % (self.column_count,
-                                                                   len(values),
-                                                                   line),
-                            line)
-                continue
+            if self.short_line_action != ValidationAction.PASS and len(values) < self.column_count:
+                if self.exclude_line(self.short_line_action,
+                                     "Required %d columns, saw %d: '%s'" % (self.column_count,
+                                                                            len(values),
+                                                                            line),
+                                     line):
+                    continue
                              
-            if self.ignore_long_lines and len(values) > self.column_count:
-                self.yelp("Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
-                                                                              len(values),
-                                                                              len(values) - self.column_count,
-                                                                              line),
-                            line)
-                continue
+            if self.long_line_action != ValidationAction.PASS and len(values) > self.column_count:
+                if self.exclude_line(self.long_line_action,
+                                     "Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
+                                                                                       len(values),
+                                                                                       len(values) - self.column_count,
+                                                                                       line),
+                                     line):
+                    continue
 
-            if self._ignore_if_blank_fields(values):
-                self.yelp("saw blank values in required fields", line)
+            if self._ignore_if_blank_fields(values, line):
                 continue
 
             self.data_lines_passed += 1
@@ -476,7 +509,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             return values
 
     # May be overridden
-    def _ignore_if_blank_fields(self, values: typing.List[str]):
+    def _ignore_if_blank_fields(self, values: typing.List[str], line: str):
         return False
 
     # May be overridden
@@ -524,29 +557,21 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     def add_shared_arguments(cls, parser: ArgumentParser):
         parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
 
-        parser.add_argument(      "--allow-comment-lines", dest="ignore_comment_lines",
-                                  help="When specified, do not ignore comment lines.", action='store_false')
-
-        parser.add_argument(      "--allow-empty-lines", dest="ignore_empty_lines",
-                                  help="When specified, do not ignore empty lines.", action='store_false')
-
-        parser.add_argument(      "--allow-long-lines", dest="ignore_long_lines",
-                                  help="When specified, do not ignore lines with extra columns.", action='store_false')
-
-        parser.add_argument(      "--allow-short-lines", dest="ignore_short_lines",
-                                  help="When specified, do not ignore lines with missing columns.", action='store_false')
-
-        parser.add_argument(      "--allow-whitespace-lines", dest="ignore_whitespace_lines",
-                                  help="When specified, do not ignore whitespace lines.", action='store_false')
+        parser.add_argument(      "--comment-line-action", dest="comment_line_action",
+                                  help="The action to take when a comment line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         parser.add_argument(      "--column-separator", dest="column_separator",
                                   help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
 
         parser.add_argument(      "--compression-type", dest="compression_type", help="Specify the compression type.")
 
-        parser.add_argument(      "--error-action", dest="error_action",
-                                  help="The action to take for error input lines",
-                                  type=KgtkReaderErrorAction, action=EnumNameAction, default=KgtkReaderErrorAction.STDOUT)
+        parser.add_argument(      "--empty-line-action", dest="empty_line_action",
+                                  help="The action to take when an empty line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        parser.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                                  help="Send errors to stderr or to stdout", action="store_true")
 
         parser.add_argument(      "--error-limit", dest="error_limit",
                                   help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
@@ -561,6 +586,14 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
                                   help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
 
+        parser.add_argument(      "--long-line-action", dest="long_line_action",
+                                  help="The action to take when a long line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        parser.add_argument(      "--short-line-action", dest="short_line_action",
+                                  help="The action to take whe a short line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
         parser.add_argument(      "--skip-first-record", dest="skip_first_record", help="Skip the first record when forcing column names.", action='store_true')
 
         parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
@@ -570,6 +603,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
         parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
 
+        parser.add_argument(      "--whitespace-line-action", dest="whitespace_line_action",
+                                  help="The action to take when a whitespace line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                                  
     # May be overridden
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
@@ -594,20 +631,24 @@ def main():
     NodeReader.add_arguments(parser)
     args = parser.parse_args()
 
+    error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+
     kr: KgtkReader = KgtkReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,
                                      skip_first_record=args.skip_first_record,
                                      fill_short_lines=args.fill_short_lines,
                                      truncate_long_lines=args.truncate_long_lines,
+                                     error_file = error_file,
                                      error_action=args.error_action,
                                      error_limit=args.error_limit,
-                                     ignore_comment_lines=args.ignore_comment_lines,
-                                     ignore_whitespace_lines=args.ignore_whitespace_lines,
-                                     ignore_blank_node1_lines=args.ignore_blank_node1_lines,
-                                     ignore_blank_node2_lines=args.ignore_blank_node2_lines,
-                                     ignore_blank_id_lines=args.ignore_blank_id_lines,
-                                     ignore_short_lines=args.ignore_short_lines,
-                                     ignore_long_lines=args.ignore_long_lines,
+                                     empty_line_action=args.empty_line_action,
+                                     comment_line_action=args.comment_line_action,
+                                     whitespace_line_action=args.whitespace_line_action,
+                                     blank_node1_line_action=args.blank_node1_line_action,
+                                     blank_node2_line_action=args.blank_node2_line_action,
+                                     blank_id_line_action=args.blank_id_line_action,
+                                     short_line_action=args.short_line_action,
+                                     long_line_action=args.long_line_action,
                                      compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,

@@ -14,9 +14,11 @@ from multiprocessing import Queue
 import sys
 import typing
 
+from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkwriter import KgtkWriter
 from kgtk.join.nodereader import NodeReader
+from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=True)
 class NodeJoiner(KgtkFormat):
@@ -37,9 +39,11 @@ class NodeJoiner(KgtkFormat):
     # The field separator used in multifield joins.  The KGHT list character should be safe.
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
 
+    # Ignore records with too many or too few fields?
+    short_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+    long_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+
     # Require or fill trailing fields?
-    ignore_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    ignore_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -66,8 +70,8 @@ class NodeJoiner(KgtkFormat):
         
     def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
         kr: NodeReader = NodeReader.open_node_file(file_path,
-                                                   ignore_short_lines=self.ignore_short_lines,
-                                                   ignore_long_lines=self.ignore_long_lines,
+                                                   short_line_action=self.short_line_action,
+                                                   long_line_action=self.long_line_action,
                                                    fill_short_lines=self.fill_short_lines,
                                                    truncate_long_lines=self.truncate_long_lines,
                                                    gzip_in_parallel=self.gzip_in_parallel,
@@ -142,14 +146,14 @@ class NodeJoiner(KgtkFormat):
 
         # Open the input files for the second time. This won't work with stdin.
         left_kr: NodeReader =  NodeReader.open_node_file(self.left_file_path,
-                                                         ignore_short_lines=self.ignore_short_lines,
-                                                         ignore_long_lines=self.ignore_long_lines,
+                                                         short_line_action=self.short_line_action,
+                                                         long_line_action=self.long_line_action,
                                                          fill_short_lines=self.fill_short_lines,
                                                          truncate_long_lines=self.truncate_long_lines)
 
         right_kr: NodeReader = NodeReader.open_node_file(self.right_file_path,
-                                                         ignore_short_lines=self.ignore_short_lines,
-                                                         ignore_long_lines=self.ignore_long_lines,
+                                                         short_line_action=self.short_line_action,
+                                                         long_line_action=self.long_line_action,
                                                          fill_short_lines=self.fill_short_lines,
                                                          truncate_long_lines=self.truncate_long_lines)
 
@@ -196,15 +200,20 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="left_file_path", help="The left KGTK file to join", type=Path)
     parser.add_argument(dest="right_file_path", help="The right KGTK file to join", type=Path)
-    parser.add_argument(      "--allow-long-lines", dest="ignore_long_lines",
-                              help="When specified, do not ignore lines with extra columns.", action='store_false')
-    parser.add_argument(      "--allow-short-lines", dest="ignore_short_lines",
-                              help="When specified, do not ignore lines with missing columns.", action='store_false')
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=NodeJoiner.FIELD_SEPARATOR_DEFAULT)
     parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
                               help="Fill missing trailing columns in short lines with empty values.", action='store_true')
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
+
+    parser.add_argument(      "--long-line-action", dest="long_line_action",
+                              help="The action to take when a long line is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+    parser.add_argument(      "--short-line-action", dest="short_line_action",
+                              help="The action to take whe a short line is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
     parser.add_argument(      "--prefix", dest="prefix", help="The prefix applied to right file column names in the output file.")
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
@@ -221,8 +230,8 @@ def main():
                                 right_join=args.right_join,
                                 prefix=args.prefix,
                                 field_separator=args.field_separator,
-                                ignore_short_lines=args.ignore_short_lines,
-                                ignore_long_lines=args.ignore_long_lines,
+                                short_line_action=args.short_line_action,
+                                long_line_action=args.long_line_action,
                                 fill_short_lines=args.fill_short_lines,
                                 truncate_long_lines=args.truncate_long_lines,
                                 gzip_in_parallel=args.gzip_in_parallel,
