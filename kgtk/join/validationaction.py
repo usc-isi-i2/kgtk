@@ -10,6 +10,6 @@ class ValidationAction(Enum):
     REPORT = 1 # Report the validation problem and continue to process the line.
     EXCLUDE = 2 # Silently exclude the line from further processing.
     COMPLAIN = 3 # Report the validation problem and exclude the line from further processing.
-    FAIL = 3 # Report the validation problem and immediately raise a ValueError.
+    FAIL = 4 # Report the validation problem and immediately raise a ValueError.
 
 
