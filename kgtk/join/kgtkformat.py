@@ -34,7 +34,7 @@ class KgtkFormat:
             if col_name in column_name_map:
                 if column_idx >= 0:
                     # TODO: throw a better exception
-                    raise ValueError("Ambiguous node1 column names %s and %s" % (found_column_name, col_name))
+                    raise ValueError("Ambiguous required column names %s and %s" % (found_column_name, col_name))
                 column_idx = column_name_map[col_name]
                 found_column_name = col_name
         if column_idx < 0 and not is_optional:

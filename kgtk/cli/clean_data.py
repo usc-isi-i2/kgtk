@@ -45,7 +45,7 @@ def add_arguments(parser):
                               help="When specified, do not ignore whitespace lines.", action='store_false')
 
     parser.add_argument(      "--column-separator", dest="column_separator",
-                              help="Column separator.", type=str, default=KgtkReader.COLUMN_SEPARATOR)
+                              help="Column separator (defaults to tab).", type=str, default=KgtkReader.COLUMN_SEPARATOR)
 
     parser.add_argument(      "--input-compression", dest="input_compression_type", help="Specify the input file compression type, otherwise use the extension.")
     

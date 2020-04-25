@@ -11,7 +11,9 @@ import sys
 import typing
 
 from kgtk.join.closableiter import ClosableIter
-from kgtk.join.kgtkreader import KgtkReader, KgtkReaderErrorAction
+from kgtk.join.enumnameaction import EnumNameAction
+from kgtk.join.kgtkreader import KgtkReader
+from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
 class EdgeReader(KgtkReader):
@@ -23,15 +25,15 @@ class EdgeReader(KgtkReader):
                        skip_first_record: bool = False,
                        fill_short_lines: bool = False,
                        truncate_long_lines: bool = False,
-                       error_action: KgtkReaderErrorAction = KgtkReaderErrorAction.STDOUT,
+                       error_file: typing.TextIO = sys.stderr,
                        error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
-                       ignore_empty_lines: bool = True,
-                       ignore_comment_lines: bool = True,
-                       ignore_whitespace_lines: bool = True,
-                       ignore_blank_node1_lines: bool = True,
-                       ignore_blank_node2_lines: bool = True,
-                       ignore_short_lines: bool = True,
-                       ignore_long_lines: bool = True,
+                       empty_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       comment_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       whitespace_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       blank_node1_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       blank_node2_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       short_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       long_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        compression_type: typing.Optional[str] = None,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -78,14 +80,15 @@ class EdgeReader(KgtkReader):
                    skip_first_record=skip_first_record,
                    fill_short_lines=fill_short_lines,
                    truncate_long_lines=truncate_long_lines,
-                   error_action=error_action,
-                   ignore_empty_lines=ignore_empty_lines,
-                   ignore_comment_lines=ignore_comment_lines,
-                   ignore_whitespace_lines=ignore_whitespace_lines,
-                   ignore_blank_node1_lines=ignore_blank_node1_lines,
-                   ignore_blank_node2_lines=ignore_blank_node2_lines,
-                   ignore_short_lines=ignore_short_lines,
-                   ignore_long_lines=ignore_long_lines,
+                   error_file=error_file,
+                   error_limit=error_limit,
+                   empty_line_action=empty_line_action,
+                   comment_line_action=comment_line_action,
+                   whitespace_line_action=whitespace_line_action,
+                   blank_node1_line_action=blank_node1_line_action,
+                   blank_node2_line_action=blank_node2_line_action,
+                   short_line_action=short_line_action,
+                   long_line_action=long_line_action,
                    compression_type=compression_type,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
@@ -95,20 +98,20 @@ class EdgeReader(KgtkReader):
                    very_verbose=very_verbose,
         )
 
-    def _ignore_if_blank_fields(self, values: typing.List[str]):
-        # Ignore lines with blank node1 fields.  This code comes after
+    def _ignore_if_blank_fields(self, values: typing.List[str], line: str):
+        # Ignore line_action with blank node1 fields.  This code comes after
         # filling missing trailing columns, although it could be reworked
         # to come first.
-        if self.ignore_blank_node1_lines and self.node1_column_idx >= 0 and len(values) > self.node1_column_idx:
+        if self.blank_node1_line_action != ValidationAction.PASS and self.node1_column_idx >= 0 and len(values) > self.node1_column_idx:
             node1_value: str = values[self.node1_column_idx]
             if len(node1_value) == 0 or node1_value.isspace():
-                return True # ignore this line
+                return self.exclude_line(self.blank_node1_line_action, "node1 is blank", line)
 
         # Ignore lines with blank node2 fields:
-        if self.ignore_blank_node2_lines and self.node2_column_idx >= 0 and len(values) > self.node2_column_idx:
+        if self.blank_node2_line_action != ValidationAction.PASS and self.node2_column_idx >= 0 and len(values) > self.node2_column_idx:
             node2_value: str = values[self.node2_column_idx]
             if len(node2_value) == 0 or node2_value.isspace():
-                return True # ignore this line
+                return self.exclude_line(self.blank_node2_line_action, "node2 is blank", line)
         return False # Do not ignore this line
 
     def _skip_reserved_fields(self, column_name):
@@ -123,12 +126,13 @@ class EdgeReader(KgtkReader):
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
         # super().add_arguments(parser)
-        parser.add_argument(      "--allow-blank-node1-lines", dest="ignore_blank_node1_lines",
-                                  help="When specified, do not ignore blank node1 lines.", action='store_false')
+        parser.add_argument(      "--blank-node1-line-action", dest="blank_node1_line_action",
+                                  help="The action to take when a blank node1 field is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
-        parser.add_argument(      "--allow-blank-node2-lines", dest="ignore_blank_node2_lines",
-                                  help="When specified, do not ignore blank node2 lines.", action='store_false')
-
+        parser.add_argument(      "--blank-node2-line-action", dest="blank_node2_line_action",
+                                  help="The action to take when a blank node2 field is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
     
 def main():
     """
@@ -139,20 +143,22 @@ def main():
     EdgeReader.add_arguments(parser)
     args = parser.parse_args()
 
+    error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+
     er: EdgeReader = EdgeReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,
                                      skip_first_record=args.skip_first_record,
                                      fill_short_lines=args.fill_short_lines,
                                      truncate_long_lines=args.truncate_long_lines,
-                                     error_action=args.error_action,
+                                     error_file=error_file,
                                      error_limit=args.error_limit,
-                                     ignore_empty_lines=args.ignore_empty_lines,
-                                     ignore_comment_lines=args.ignore_comment_lines,
-                                     ignore_whitespace_lines=args.ignore_whitespace_lines,
-                                     ignore_blank_node1_lines=args.ignore_blank_node1_lines,
-                                     ignore_blank_node2_lines=args.ignore_blank_node2_lines,
-                                     ignore_short_lines=args.ignore_short_lines,
-                                     ignore_long_lines=args.ignore_long_lines,
+                                     empty_line_action=args.empty_line_action,
+                                     comment_line_action=args.comment_line_action,
+                                     whitespace_line_action=args.whitespace_line_action,
+                                     blank_node1_line_action=args.blank_node1_line_action,
+                                     blank_node2_line_action=args.blank_node2_line_action,
+                                     short_line_action=args.short_line_action,
+                                     long_line_action=args.long_line_action,
                                      compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
