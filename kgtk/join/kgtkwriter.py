@@ -5,8 +5,11 @@ Write a KGTK edge or node file in TSV format.
 
 from argparse import ArgumentParser
 import attr
+import bz2
 from enum import Enum
 import gzip
+import lz4 # type: ignore
+import lzma
 from pathlib import Path
 from multiprocessing import Queue
 import sys
