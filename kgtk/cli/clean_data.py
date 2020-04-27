@@ -73,6 +73,10 @@ def add_arguments(parser):
     parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
                               help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
 
+    parser.add_argument(      "--header-error-action", dest="header_error_action",
+                              help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
+
     parser.add_argument(      "--input-compression", dest="input_compression_type", help="Specify the input file compression type, otherwise use the extension.")
     
     parser.add_argument(      "--input-mode", dest="input_mode",
@@ -123,6 +127,7 @@ def run(input_file: typing.Optional[Path],
         blank_id_line_action: typing.Optional[ValidationAction] = None,
         short_line_action: ValidationAction = ValidationAction.EXCLUDE,
         long_line_action: ValidationAction = ValidationAction.EXCLUDE,
+        header_error_action: ValidationAction = ValidationAction.EXIT,
         input_compression_type: typing.Optional[str] = None,
         # output_compression_type: typing.Optional[str] = None, # Not yet implemented
         gzip_in_parallel: bool = False,
@@ -166,6 +171,7 @@ def run(input_file: typing.Optional[Path],
                                          short_line_action=short_line_action,
                                          long_line_action=long_line_action,
                                          compression_type=input_compression_type,
+                                         header_error_action=header_error_action,
                                          gzip_in_parallel=gzip_in_parallel,
                                          gzip_queue_size=gzip_queue_size,
                                          column_separator=column_separator,
@@ -174,6 +180,7 @@ def run(input_file: typing.Optional[Path],
 
         kw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                          output_file,
+                                         header_error_action=header_error_action,
                                          gzip_in_parallel=gzip_in_parallel,
                                          gzip_queue_size=gzip_queue_size,
                                          column_separator=column_separator,
