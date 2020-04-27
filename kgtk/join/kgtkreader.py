@@ -134,7 +134,8 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                                                   gzip_queue_size=gzip_queue_size,
                                                   verbose=verbose)
 
-        # Read the kgtk file header and split it into column names.
+        # Read the kgtk file header and split it into column names.  We get the
+        # header back, too, for use in debugging and error messages.
         header: str
         column_names: typing.List[str]
         (header, column_names) = cls._build_column_names(source,
@@ -413,7 +414,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             if skip_first_record:
                 next(source)
             # Use the forced column names.
-            return "\t".join(force_column_names), force_column_names
+            return column_separator.join(force_column_names), force_column_names
 
     def close(self):
         self.source.close()
