@@ -26,9 +26,9 @@ def add_arguments(parser):
     Args:
         parser (argparse.ArgumentParser)
     """
-    parser.add_argument(      "input_file", nargs="?", help="The KGTK file to read", type=Path,)
+    parser.add_argument(      "input_file", nargs="?", help="The KGTK file to read.  May be omitted or '-' for stdin.", type=Path,)
     
-    parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write", type=Path)
+    parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write.  May be omitted or '-' for stdout.", type=Path)
     
     parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
                               help="The action to take when a blank id field is detected.",
@@ -51,7 +51,7 @@ def add_arguments(parser):
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
     parser.add_argument(      "--column-separator", dest="column_separator",
-                              help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
+                              help="Column separator.", type=str, default=KgtkFormat.COLUMN_SEPARATOR)
 
     parser.add_argument(      "--empty-line-action", dest="empty_line_action",
                               help="The action to take when an empty line is detected.",
@@ -61,7 +61,7 @@ def add_arguments(parser):
                               help="Send errors to stdout instead of stderr", action="store_true")
 
     parser.add_argument(      "--error-limit", dest="error_limit",
-                              help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
+                              help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
 
     parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
                               help="Fill missing trailing columns in short lines with empty values.", action='store_true')
@@ -71,7 +71,7 @@ def add_arguments(parser):
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
 
     parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
-                              help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
+                              help="Queue size for parallel gzip.", type=int, default=KgtkReader.GZIP_QUEUE_SIZE_DEFAULT)
 
     parser.add_argument(      "--header-error-action", dest="header_error_action",
                               help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
