@@ -10,14 +10,13 @@ conda activate kgtk-env
 ```
  **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
 
-2. Install `rltk`
-
-3. Install (the dev branch at this point): `pip install git+https://github.com/usc-isi-i2/kgtk.git@dev`
+2. Install (the dev branch at this point): `pip install git+https://github.com/usc-isi-i2/kgtk.git@dev`
 
 You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
-4. Install `graph-tool`. If you use conda, then you can run `conda install -c conda-forge graph-tool`, else see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
-5. Install `mlr`. Depending on your environment, you can run one of the following:
+3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+
+4. Install `mlr`. Depending on your environment, you can run one of the following:
   * `brew update && brew install miller` (on mac)
   * `sudo port selfupdate && sudo port install miller` (on mac)
   * `sudo apt-get install miller` (linux)
