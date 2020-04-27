@@ -34,6 +34,7 @@ class EdgeReader(KgtkReader):
                        blank_node2_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        short_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        long_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       header_error_action: ValidationAction = ValidationAction.EXIT,
                        compression_type: typing.Optional[str] = None,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -47,21 +48,28 @@ class EdgeReader(KgtkReader):
                                                   gzip_queue_size=gzip_queue_size,
                                                   verbose=verbose)
 
-        # Read the node file header and split it into column names.
-        column_names: typing.List[str] = cls._build_column_names(source,
-                                                                 force_column_names=force_column_names,
-                                                                 skip_first_record=skip_first_record,
-                                                                 column_separator=column_separator,
-                                                                 verbose=verbose)
+        # Read the edge file header and split it into column names.
+        header: str
+        column_names: typing.List[str]
+        (header, column_names) = cls._build_column_names(source,
+                                                         force_column_names=force_column_names,
+                                                         skip_first_record=skip_first_record,
+                                                         column_separator=column_separator,
+                                                         verbose=verbose)
 
         # Build a map from column name to column index.
-        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
-        
+        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
+                                                                              header_line=header,
+                                                                              error_action=header_error_action,
+                                                                              error_file=error_file)
         # Get the indices of the required columns.
         node1_column_idx: int
         node2_column_idx: int
         label_column_idx: int
-        (node1_column_idx, node2_column_idx, label_column_idx) = cls.required_edge_columns(column_name_map)
+        (node1_column_idx, node2_column_idx, label_column_idx) = cls.required_edge_columns(column_name_map,
+                                                                                           header_line=header,
+                                                                                           error_action=header_error_action,
+                                                                                           error_file=error_file)
 
         if verbose:
             print("EdgeReader: Reading an edge file. node1=%d label=%d node2=%d" % (node1_column_idx, label_column_idx, node2_column_idx))
@@ -89,6 +97,7 @@ class EdgeReader(KgtkReader):
                    blank_node2_line_action=blank_node2_line_action,
                    short_line_action=short_line_action,
                    long_line_action=long_line_action,
+                   header_error_action=header_error_action,
                    compression_type=compression_type,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
@@ -159,6 +168,7 @@ def main():
                                      blank_node2_line_action=args.blank_node2_line_action,
                                      short_line_action=args.short_line_action,
                                      long_line_action=args.long_line_action,
+                                     header_error_action=args.header_error_action,
                                      compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
