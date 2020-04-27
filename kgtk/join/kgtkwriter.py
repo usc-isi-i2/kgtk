@@ -212,7 +212,6 @@ class KgtkWriter(KgtkFormat):
                                      error_file=error_file)
 
         # Write the column names to the first line.
-        header: str = column_separator.join(column_names)
         if verbose:
             print("header: %s" % header, file=sys.stderr)
         file_out.write(header + "\n") # Todo: use system end-of-line sequence?

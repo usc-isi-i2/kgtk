@@ -34,6 +34,7 @@ class NodeReader(KgtkReader):
                        short_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        long_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        header_error_action: ValidationAction = ValidationAction.EXIT,
+                       unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
                        compression_type: typing.Optional[str] = None,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -55,6 +56,12 @@ class NodeReader(KgtkReader):
                                                          skip_first_record=skip_first_record,
                                                          column_separator=column_separator,
                                                          verbose=verbose)
+        # Check for unsafe column names.
+        cls.check_column_names(column_names,
+                               header_line=header,
+                               error_action=unsafe_column_name_action,
+                               error_file=error_file)
+
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
                                                                               header_line=header,
@@ -89,6 +96,7 @@ class NodeReader(KgtkReader):
                    short_line_action=short_line_action,
                    long_line_action=long_line_action,
                    header_error_action=header_error_action,
+                   unsafe_column_name_action=unsafe_column_name_action,
                    compression_type=compression_type,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
@@ -146,6 +154,7 @@ def main():
                                      short_line_action=args.short_line_action,
                                      long_line_action=args.long_line_action,
                                      header_error_action=args.header_error_action,
+                                     unsafe_column_name_action=args.unsafe_column_name_action,
                                      compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
