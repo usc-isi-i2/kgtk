@@ -170,7 +170,8 @@ class KgtkWriter(KgtkFormat):
                very_verbose: bool = False,
     )->"KgtkWriter":
 
-        hreader: str = "\t".join(column_names)
+        # Build a header line for error feedback:
+        header: str = column_separator.join(column_names)
 
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
