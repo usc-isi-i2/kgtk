@@ -195,13 +195,11 @@ def run(
                     __propTypes[node1] = dataTypeMappings[node2.strip()]
                 except:
                     if not self.ignore:                    
-                        # raise KGTKException(
-                        #     "DataType {} of node {} is not supported.\n".format(
-                        #         node2, node1
-                        #     )
-                        # )
-                        self.ignoreFile.write("DataTypeError: DataType {} of node {} is not supported.\n".format(node2, node1))
-                        self.ignoreFile.flush()
+                        raise KGTKException(
+                            "DataType {} of node {} is not supported.\n".format(
+                                node2, node1
+                            )
+                        )
             return __propTypes
 
         def __setSets(self, labelSet: str, aliasSet: str, descriptionSet: str):
@@ -315,16 +313,13 @@ def run(
             edgeType = self.propTypes[label]
             if edgeType == Item:
                 OBJECT = WDItem(TripleGenerator.replaceIllegalString(node2.upper()))
-                self.ignoreFile.write("node2 {} is item\n".format(node2))
             elif edgeType == TimeValue:
                 # https://www.wikidata.org/wiki/Help:Dates
                 # ^2013-01-01T00:00:00Z/11
                 # ^8000000-00-00T00:00:00Z/3
-                self.ignoreFile.write("node2 {} is timevalue\n".format(node2))
                 if re.compile("[0-9]{4}").match(node2):
                     try:                   
                         dateTimeString = node2 + "-01-01"
-                        self.ignoreFile.write("dateTimeString {} \n".format(dateTimeString))
                         OBJECT = TimeValue(
                             value=dateTimeString, #TODO
                             calendar=Item("Q1985727"),
@@ -342,7 +337,6 @@ def run(
                             dateTimeString = "-01-01".join(dateTimeString.split("-00-00"))
                         elif dateTimeString[8:10] == "00":
                             dateTimeString = dateTimeString[:8]+"01" + dateTimeString[10:]
-                        self.ignoreFile.write("dateTimeString {} \n".format(dateTimeString))
                         OBJECT = TimeValue(
                             value=dateTimeString,
                             calendar=Item("Q1985727"),
@@ -356,7 +350,6 @@ def run(
                 
 
             elif edgeType == GlobeCoordinate:
-                self.ignoreFile.write("node2 {} is globecoordinate\n".format(node2))
                 latitude, longitude = node2[1:].split("/")
                 OBJECT = GlobeCoordinate(
                     latitude, longitude, 0.0001, globe=StringValue("Earth")
@@ -364,9 +357,12 @@ def run(
 
             elif edgeType == QuantityValue:
                 # +70[+60,+80]Q743895
-                self.ignoreFile.write("node2 {} is quantity value\n".format(node2))
                 res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?").match(node2).groups()
                 amount, lower_bound, upper_bound, unit = res
+
+                # Handle extra small numbers for now. TODO
+                if TripleGenerator._is_invalid_decimal_string(amount) or TripleGenerator._is_invalid_decimal_string(lower_bound) or TripleGenerator._is_invalid_decimal_string(upper_bound):
+                    return False
                 amount = TripleGenerator._clean_number_string(amount)
                 lower_bound = TripleGenerator._clean_number_string(lower_bound)
                 upper_bound = TripleGenerator._clean_number_string(upper_bound)
@@ -381,19 +377,15 @@ def run(
                     else:
                         OBJECT = QuantityValue(amount)                   
             elif edgeType == MonolingualText:
-                self.ignoreFile.write("node2 {} is monolingualtext\n".format(node2))
                 textString, lang = TripleGenerator._process_text_string(node2)
                 OBJECT = MonolingualText(textString, lang)
             elif edgeType == ExternalIdentifier:
-                self.ignoreFile.write("node2 {} is externalIdentifier\n".format(node2))
                 OBJECT = ExternalIdentifier(node2)
             elif edge == URLValue:
-                self.ignoreFile.write("node2 {} is url value\n".format(node2))
                 OBJECT = URLValue(node2)
             else:
                 # treat everything else as stringValue
                 OBJECT = StringValue(node2)
-                self.ignoreFile.write("node2 {} is string\n".format(node2))
             if isQualifierEdge:
                 # edge: e8 p9 ^2013-01-01T00:00:00Z/11
                 # create qualifier edge on previous STATEMENT and return the updated STATEMENT
@@ -415,6 +407,18 @@ def run(
             return True
         
         @staticmethod
+        def _is_invalid_decimal_string(num_string):
+            '''
+            if a decimal string too small, return True TODO
+            '''
+            if num_string == None:
+                return False
+            else:
+                if abs(float(num_string)) < 0.0001 and float(num_string) != 0:
+                    return True
+                return False        
+
+        @staticmethod
         def _clean_number_string(num):
             from numpy import format_float_positional
             if num == None:
@@ -431,8 +435,6 @@ def run(
             edgeList = edge.strip().split("\t")
             l = len(edgeList)
             if l!=4:
-                self.ignoreFile.write("Field# Error: line {} has {} fields other than 4".format(line_number,l))
-                self.ignoreFile.flush()
                 return
 
             [node1, label, node2, eID] = edgeList
@@ -462,39 +464,28 @@ def run(
                         # 1. not a property declaration edge and
                         # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
                         if not self.ignore:
-                            # raise KGTKException(
-                            #     "Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
-                            #         node1, line_number, self.ID
-                            #     )
-                            # )
-                            self.ignoreFile.write("QualifierIDError: Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
+                            raise KGTKException(
+                                "Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
                                     node1, line_number, self.ID
-                                ))
-                            self.ignoreFile.flush()
+                                )
+                            )
             if label in self.labelSet:
-                self.ignoreFile.write("#{} label\n".format(line_number))
                 success = self.genLabelTriple(node1, label, node2)
             elif label in self.descriptionSet:
-                self.ignoreFile.write("#{} description\n".format(line_number))
                 success= self.genDescriptionTriple(node1, label, node2)
             elif label in self.aliasSet:
-                self.ignoreFile.write("#{} alias\n".format(line_number))
                 success = self.genAliasTriple(node1, label, node2)
             elif label == "type":
-                self.ignoreFile.write("#{} type\n".format(line_number))
                 # special edge of prop declaration
                 success = self.genPropDeclarationTriple(node1, label, node2)
             else:
                 if label in self.propTypes:
-                    self.ignoreFile.write("#{} normal\n".format(line_number))
                     success= self.genNormalTriple(node1, label, node2, isQualifierEdge)
                 else:
                     if not self.ignore:
-                        # raise KGTKException(
-                        #     "property {}'s type is unknown at line {}.\n".format(label, line_number)
-                        # )
-                        self.ignoreFile.write("PropertyUnknownError: property {}'s type is unknown at line {}.\n".format(label, line_number))
-                        self.ignoreFile.flush()
+                        raise KGTKException(
+                            "property {}'s type is unknown at line {}.\n".format(label, line_number)
+                        )
                         success = False
             if (not success) and (not isQualifierEdge) and (not self.ignore):
                 # We have a corrupted edge here.
