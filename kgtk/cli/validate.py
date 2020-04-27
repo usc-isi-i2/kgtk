@@ -64,8 +64,11 @@ def add_arguments(parser):
                               help="The action to take when an empty line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
 
-    parser.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
-                              help="Send errors to stdout instead of stderr", action="store_true")
+    errors_to = parser.add_mutually_exclusive_group()
+    errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                              help="Send errors to stdout instead of stderr (default)", action="store_true")
+    errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+                              help="Send errors to stderr instead of stdout", action="store_true")
 
     parser.add_argument(      "--error-limit", dest="error_limit",
                               help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
@@ -118,6 +121,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         fill_short_lines: bool = False,
         truncate_long_lines: bool = False,
         errors_to_stdout: bool = False,
+        errors_to_stderr: bool = False,
         error_limit: int = KgtkReader.ERROR_LIMIT_DEFAULT,
         empty_line_action: ValidationAction = ValidationAction.COMPLAIN,
         comment_line_action: ValidationAction = ValidationAction.COMPLAIN,
@@ -153,7 +157,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                 else:
                     print ("Validating from stdin")
 
-                error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+                error_file: typing.TextIO = sys.stderr if errors_to_stderr else sys.stdout
 
                 kr: KgtkReader = KgtkReader.open(kgtk_file,
                                                  force_column_names=force_column_names,
