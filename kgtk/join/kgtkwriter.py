@@ -16,9 +16,12 @@ from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GzipProcess
 from kgtk.join.kgtkformat import KgtkFormat
+from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
 class KgtkWriter(KgtkFormat):
+    GZIP_QUEUE_SIZE_DEFAULT: int = GzipProcess.GZIP_QUEUE_SIZE_DEFAULT
+
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     file_out: typing.TextIO = attr.ib() # Todo: validate TextIO
     column_separator: str = attr.ib(validator=attr.validators.instance_of(str))
@@ -35,21 +38,23 @@ class KgtkWriter(KgtkFormat):
     prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
     fill_missing_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
+    # How should header errors be processed?
+    error_file: typing.TextIO = attr.ib(default=sys.stderr)
+    header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXIT)
+
     # Other implementation options?
-    gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    gzip_thread: typing.Optional[GzipProcess] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(GzipProcess)))
-    gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int))
+    gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    gzip_thread: typing.Optional[GzipProcess] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(GzipProcess)), default=None)
+    gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
-    line_count: int = attr.ib(validator=attr.validators.instance_of(int))
+    line_count: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
-    verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool))
-
-    GZIP_QUEUE_SIZE_DEFAULT: int = 1000
+    verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     class Mode(Enum):
         """
-        There are four file reading modes:
+        There are four file writing modes:
         """
         NONE = 0 # Enforce neither edge nor node file required columns
         EDGE = 1 # Enforce edge file required columns
@@ -63,6 +68,8 @@ class KgtkWriter(KgtkFormat):
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
              fill_missing_columns: bool = False,
+             error_file: typing.TextIO = sys.stderr,
+             header_error_action: ValidationAction = ValidationAction.EXIT,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
@@ -78,6 +85,8 @@ class KgtkWriter(KgtkFormat):
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
+                              error_file=error_file,
+                              header_error_action=header_error_action,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -114,6 +123,8 @@ class KgtkWriter(KgtkFormat):
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
+                              error_file=error_file,
+                              header_error_action=header_error_action,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -131,6 +142,8 @@ class KgtkWriter(KgtkFormat):
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
                               fill_missing_columns=fill_missing_columns,
+                              error_file=error_file,
+                              header_error_action=header_error_action,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -147,6 +160,8 @@ class KgtkWriter(KgtkFormat):
                require_all_columns: bool,
                prohibit_extra_columns: bool,
                fill_missing_columns: bool,
+               error_file: typing.TextIO,
+               header_error_action: ValidationAction,
                gzip_in_parallel: bool,
                gzip_queue_size: int,
                column_separator: str,
@@ -155,15 +170,24 @@ class KgtkWriter(KgtkFormat):
                very_verbose: bool = False,
     )->"KgtkWriter":
 
+        hreader: str = "\t".join(column_names)
+
         # Build a map from column name to column index.
-        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
+        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
+                                                                              header_line=header,
+                                                                              error_action=header_error_action,
+                                                                              error_file=error_file)
 
         # Should we automatically determine if this is an edge file or a node file?
         is_edge_file: bool = False
         is_node_file: bool = False
         if mode is KgtkWriter.Mode.AUTO:
             # If we have a node1 (or alias) column, then this must be an edge file. Otherwise, assume it is a node file.
-            node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map, is_optional=True)
+            node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map,
+                                                header_line=header,
+                                                error_action=header_error_action,
+                                                error_file=error_file,
+                                                is_optional=True)
             is_edge_file = node1_idx >= 0
             is_node_file = not is_edge_file
         elif mode is KgtkWriter.Mode.EDGE:
@@ -175,10 +199,16 @@ class KgtkWriter(KgtkFormat):
         
         if is_edge_file:
             # Validate that we have the proper columns for an edge file.
-            cls.required_edge_columns(column_name_map)
+            cls.required_edge_columns(column_name_map,
+                                      header_line=header,
+                                      error_action=header_error_action,
+                                      error_file=error_file)
         elif is_node_file:
             # Validate that we have the proper columns for an node file.
-            cls.required_node_column(column_name_map)
+            cls.required_node_column(column_name_map,
+                                     header_line=header,
+                                     error_action=header_error_action,
+                                     error_file=error_file)
 
         # Write the column names to the first line.
         header: str = column_separator.join(column_names)
@@ -200,6 +230,8 @@ class KgtkWriter(KgtkFormat):
                    require_all_columns=require_all_columns,
                    prohibit_extra_columns=prohibit_extra_columns,
                    fill_missing_columns=fill_missing_columns,
+                   error_file=error_file,
+                   header_error_action=header_error_action,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_thread=gzip_thread,
                    gzip_queue_size=gzip_queue_size,
@@ -306,6 +338,9 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="input_kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
     parser.add_argument(dest="output_kgtk_file", help="The KGTK file to write", type=Path, nargs="?")
+    parser.add_argument(      "--header-error-action", dest="header_error_action",
+                              help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in a subthread.", action='store_true')
     parser.add_argument(      "--input-mode", dest="input_mode",
                               help="Determine the input KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
@@ -315,14 +350,20 @@ def main():
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     args = parser.parse_args()
 
+    error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+
     kr: KgtkReader = KgtkReader.open(args.input_kgtk_file,
+                                     error_file=error_file,
+                                     header_error_action=args.header_error_action,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      mode=args.input_mode,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
     kw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                      args.output_kgtk_file,
+                                     error_file=error_file,
                                      gzip_in_parallel=args.gzip_in_parallel,
+                                     header_error_action=args.header_error_action,
                                      mode=args.output_mode,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 

@@ -33,6 +33,7 @@ class NodeReader(KgtkReader):
                        blank_id_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        short_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        long_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       header_error_action: ValidationAction = ValidationAction.EXIT,
                        compression_type: typing.Optional[str] = None,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -47,17 +48,23 @@ class NodeReader(KgtkReader):
                                                   verbose=verbose)
 
         # Read the node file header and split it into column names.
-        column_names: typing.List[str] = cls._build_column_names(source,
-                                                                 force_column_names=force_column_names,
-                                                                 skip_first_record=skip_first_record,
-                                                                 column_separator=column_separator,
-                                                                 verbose=verbose)
-
+        header: str
+        column_names: typing.List[str]
+        (header, column_names) = cls._build_column_names(source,
+                                                         force_column_names=force_column_names,
+                                                         skip_first_record=skip_first_record,
+                                                         column_separator=column_separator,
+                                                         verbose=verbose)
         # Build a map from column name to column index.
-        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names)
-        
+        column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
+                                                                              header_line=header,
+                                                                              error_action=header_error_action,
+                                                                              error_file=error_file)
         # Get the index of the required column.
-        id_column_idx: int = cls.required_node_column(column_name_map)
+        id_column_idx: int = cls.required_node_column(column_name_map,
+                                                      header_line=header,
+                                                      error_action=header_error_action,
+                                                      error_file=error_file)
 
         if verbose:
             print("NodeReader: Reading an node file. id=%d" % (id_column_idx))
@@ -81,6 +88,7 @@ class NodeReader(KgtkReader):
                    blank_id_line_action=blank_id_line_action,
                    short_line_action=short_line_action,
                    long_line_action=long_line_action,
+                   header_error_action=header_error_action,
                    compression_type=compression_type,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
@@ -137,6 +145,7 @@ def main():
                                      blank_id_line_action=args.blank_id_line_action,
                                      short_line_action=args.short_line_action,
                                      long_line_action=args.long_line_action,
+                                     header_error_action=args.header_error_action,
                                      compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
