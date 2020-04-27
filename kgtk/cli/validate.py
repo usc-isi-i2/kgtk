@@ -50,12 +50,12 @@ def add_arguments(parser):
                               help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
 
+    parser.add_argument(      "--column-separator", dest="column_separator",
+                              help="Column separator.", type=str, default=KgtkReader.COLUMN_SEPARATOR)
+
     parser.add_argument(      "--comment-line-action", dest="comment_line_action",
                               help="The action to take when a comment line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
-
-    parser.add_argument(      "--column-separator", dest="column_separator",
-                              help="Column separator.", type=str, default=KgtkReader.COLUMN_SEPARATOR)
 
     parser.add_argument(      "--compression-type", dest="compression_type",
                               help="Specify the input file compression type, otherwise use the extension.")

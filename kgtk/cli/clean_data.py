@@ -46,12 +46,12 @@ def add_arguments(parser):
                               help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
+    parser.add_argument(      "--column-separator", dest="column_separator",
+                              help="Column separator.", type=str, default=KgtkFormat.COLUMN_SEPARATOR)
+
     parser.add_argument(      "--comment-line-action", dest="comment_line_action",
                               help="The action to take when a comment line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
-
-    parser.add_argument(      "--column-separator", dest="column_separator",
-                              help="Column separator.", type=str, default=KgtkFormat.COLUMN_SEPARATOR)
 
     parser.add_argument(      "--empty-line-action", dest="empty_line_action",
                               help="The action to take when an empty line is detected.",
