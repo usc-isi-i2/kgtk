@@ -250,15 +250,13 @@ def run(
             '''
             if "@" in string:
                 res = string.split("@")
-                textString = "@".join(res[:-1])
-                lang = res[-1]
-                lang = lang.replace('"','').replace("'","")
+                textString = "@".join(res[:-1]).replace('"', "").replace("'", "")
+                lang = res[-1].replace('"','').replace("'","")
                 if len(lang) != 2:
                     lang = "en"
             else:
+                textString = string.replace('"', "").replace("'", "")
                 lang = "en"
-            
-            textString = string.replace('"', "").replace("'", "")
             return [textString, lang]
 
         def genLabelTriple(self, node1: str, label: str, node2: str) -> bool:
