@@ -32,7 +32,7 @@ def add_arguments(parser):
     Args:
         parser (argparse.ArgumentParser)
     """
-    parser.add_argument(      "kgtk_file", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
+    parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
     
     parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
                               help="The action to take when a blank id field is detected.",
@@ -112,8 +112,7 @@ def add_arguments(parser):
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
 
-def run(kgtk_files: typing.List[typing.Optional[Path]],
-        file_path: typing.Optional[Path],
+def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         force_column_names: typing.Optional[typing.List[str]] = None,
         skip_first_record: bool = False,
         fill_short_lines: bool = False,
@@ -142,7 +141,7 @@ def run(kgtk_files: typing.List[typing.Optional[Path]],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
-    if len(kgtk_files) == 0:
+    if kgtk_files is None or len(kgtk_files) == 0:
         kgtk_files = [ None ]
 
     try:
@@ -193,6 +192,8 @@ def run(kgtk_files: typing.List[typing.Optional[Path]],
                         print("Validated %d data lines" % line_count)
         return 0
 
+    except SystemExit as e:
+        raise KGTKException("Exit requested")
     except Exception as e:
         raise KGTKException(e)
 
