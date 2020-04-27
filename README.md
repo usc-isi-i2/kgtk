@@ -6,10 +6,25 @@
 1. Set up your own conda environment:
 ```
 conda create -n kgtk-env python=3.7
-source activate kgtk-env
+conda activate kgtk-env
 ```
-2. `pip install -r requirements.txt`
-3. Install `graph-tool`. If you use conda, then you can run `conda install -c conda-forge graph-tool`, else see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+ **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
+
+2. Install `rltk`
+
+3. Install (the dev branch at this point): `pip install git+https://github.com/usc-isi-i2/kgtk.git@dev`
+
+You can test if `kgtk` is installed properly now with: `kgtk -h`.
+
+4. Install `graph-tool`. If you use conda, then you can run `conda install -c conda-forge graph-tool`, else see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+5. Install `mlr`. Depending on your environment, you can run one of the following:
+  * `brew update && brew install miller` (on mac)
+  * `sudo port selfupdate && sudo port install miller` (on mac)
+  * `sudo apt-get install miller` (linux)
+  * `sudo apt install miller` (linux)
+  * `sudo yum install miller` (linux)
+  
+More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
 
 ### The Miller Package
 
@@ -33,6 +48,7 @@ https://www.mankier.com/1/mlr
 * `text_embedding`
 * `remove_columns`
 * `sort`
+* `gt_loader`
 * `merge_identical_nodes`
 * `zconcat`
 
@@ -40,3 +56,7 @@ To get an information on how to use each of them, run:
 `kgtk [TOOL] -h`
 
 More detailed description of the arguments will be added here promptly.
+
+### Developer Instruction
+
+Please refer to [this](README_dev.md)

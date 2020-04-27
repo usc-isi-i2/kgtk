@@ -127,6 +127,12 @@ There will be 2 part of files:
 ##### --run-TSNE
 User can choose to whether run TSNE to reduce the dimension of the output vectors after getting the embeding vectors or not. The default is True.
 
+##### Logger file
+User can set up the different logging level to records different infomation. Default is `warning` level. Available options are: `debug / info / warning / error / none`. If set to `none`, no logging file will generate.
+
+##### Metadata File
+User can specify where to store the metadata file for the vectors. If not given, the default is to save the metadata file at user's home directly. If set to `none`, no metadata file will generate.
+
 ##### Original Embedding Vectors
 This will have all the embedded vectors values for each Q nodes. This will be print on stddout and can be redirected to a file.
 
