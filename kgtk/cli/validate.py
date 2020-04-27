@@ -32,7 +32,7 @@ def add_arguments(parser):
     Args:
         parser (argparse.ArgumentParser)
     """
-    parser.add_argument(      "kgtk_file", nargs="?", help="The KGTK file to validate. May be omitted or '-' for stdin.", type=Path)
+    parser.add_argument(      "kgtk_file", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
     
     parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
                               help="The action to take when a blank id field is detected.",
@@ -84,6 +84,9 @@ def add_arguments(parser):
                               help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
 
+    parser.add_argument(      "--header-only", dest="header_only",
+                              help="Process the only the header of the input file.", action="store_true")
+
     parser.add_argument(      "--long-line-action", dest="long_line_action",
                               help="The action to take when a long line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
@@ -109,7 +112,7 @@ def add_arguments(parser):
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
 
-def run(kgtk_file: typing.Optional[Path],
+def run(kgtk_files: typing.List[typing.Optional[Path]],
         file_path: typing.Optional[Path],
         force_column_names: typing.Optional[typing.List[str]] = None,
         skip_first_record: bool = False,
@@ -132,51 +135,62 @@ def run(kgtk_file: typing.Optional[Path],
         gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
         column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
         mode: KgtkReader.Mode = KgtkReader.Mode.AUTO,
+        header_only: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    if len(kgtk_files) == 0:
+        kgtk_files = [ None ]
+
     try:
-        if verbose:
-            if kgtk_file is not None:
-                print("Validating '%s'" % str(kgtk_file))
-            else:
-                print ("Validating from stdin")
+        kgtk_file: typing.Optional[Path]
+        for kgtk_file in kgtk_files:
+            if verbose:
+                if kgtk_file is not None:
+                    print("Validating '%s'" % str(kgtk_file))
+                else:
+                    print ("Validating from stdin")
 
-        error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+                error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
-        kr: KgtkReader = KgtkReader.open(kgtk_file,
-                                         force_column_names=force_column_names,
-                                         skip_first_record=skip_first_record,
-                                         fill_short_lines=fill_short_lines,
-                                         truncate_long_lines=truncate_long_lines,
-                                         error_file=error_file,
-                                         error_limit=error_limit,
-                                         empty_line_action=empty_line_action,
-                                         comment_line_action=comment_line_action,
-                                         whitespace_line_action=whitespace_line_action,
-                                         blank_line_action=blank_line_action,
-                                         blank_node1_line_action=blank_node1_line_action,
-                                         blank_node2_line_action=blank_node2_line_action,
-                                         blank_id_line_action=blank_id_line_action,
-                                         short_line_action=short_line_action,
-                                         long_line_action=long_line_action,
-                                         header_error_action=header_error_action,
-                                         compression_type=compression_type,
-                                         gzip_in_parallel=gzip_in_parallel,
-                                         gzip_queue_size=gzip_queue_size,
-                                         column_separator=column_separator,
-                                         mode=mode,
-                                         verbose=verbose, very_verbose=very_verbose)
+                kr: KgtkReader = KgtkReader.open(kgtk_file,
+                                                 force_column_names=force_column_names,
+                                                 skip_first_record=skip_first_record,
+                                                 fill_short_lines=fill_short_lines,
+                                                 truncate_long_lines=truncate_long_lines,
+                                                 error_file=error_file,
+                                                 error_limit=error_limit,
+                                                 empty_line_action=empty_line_action,
+                                                 comment_line_action=comment_line_action,
+                                                 whitespace_line_action=whitespace_line_action,
+                                                 blank_line_action=blank_line_action,
+                                                 blank_node1_line_action=blank_node1_line_action,
+                                                 blank_node2_line_action=blank_node2_line_action,
+                                                 blank_id_line_action=blank_id_line_action,
+                                                 short_line_action=short_line_action,
+                                                 long_line_action=long_line_action,
+                                                 header_error_action=header_error_action,
+                                                 compression_type=compression_type,
+                                                 gzip_in_parallel=gzip_in_parallel,
+                                                 gzip_queue_size=gzip_queue_size,
+                                                 column_separator=column_separator,
+                                                 mode=mode,
+                                                 verbose=verbose, very_verbose=very_verbose)
         
-        line_count: int = 0
-        row: typing.List[str]
-        for row in kr:
-            line_count += 1
-        if verbose:
-            print("Validated %d data lines" % line_count)
+                if header_only:
+                    kr.close()
+                    if verbose:
+                        print("Validated the header only.")
+                else:
+                    line_count: int = 0
+                    row: typing.List[str]
+                    for row in kr:
+                        line_count += 1
+                    if verbose:
+                        print("Validated %d data lines" % line_count)
         return 0
 
     except Exception as e:
