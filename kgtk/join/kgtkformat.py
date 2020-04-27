@@ -109,17 +109,21 @@ class KgtkFormat:
                            column_names: typing.List[str],
                            header_line: str,
                            error_action: ValidationAction,
-                           error_file: typing.TextIO = sys.stderr):
+                           error_file: typing.TextIO = sys.stderr)->bool:
+        """
+        Returns True if the column names are OK.
+        """
         complaints: typing.List[str] = [ ]
         column_name: str
         for column_name in column_names:
             gripes: typing.List[str] = cls.check_column_name(column_name, header_line, error_action, error_file)
             complaints.extend(gripes)
         if len(complaints) == 0:
-            return
+            return True
         # take the error action, joining the complaints into a single message.
         msg = ", ".join(complaints)
         cls._yelp(msg, header_line=header_line, error_action=error_action, error_file=error_file)
+        return False
 
     @classmethod
     def build_column_name_map(cls,
