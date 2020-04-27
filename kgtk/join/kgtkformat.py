@@ -26,7 +26,7 @@ class KgtkFormat:
               msg: str,
               header_line: str,
               error_action: ValidationAction,
-              error_file: typing.TextIO = sys.stderr):
+              error_file: typing.TextIO = sys.stderr)->bool:
         """
         Take a validation action.  Only ERROR is special, all other values are treated as EXIT.
         """
@@ -35,8 +35,11 @@ class KgtkFormat:
             # Immediately raise an exception.
             raise ValueError("In input header'%s': %s" % (header_line, msg))
 
-        print("In input header '%s': %s" % (header_line, msg), file=error_file)
-        sys.exit(1)
+        if (error_action in [ValidationAction.REPORT, ValidationAction.COMPLAIN, ValidationAction.EXIT ]):
+            print("In input header '%s': %s" % (header_line, msg), file=error_file)
+        if error_action == ValidationAction.EXIT:
+            sys.exit(1)
+        return error_action in [ValidationAction.PASS, ValidationAction.REPORT]
 
     @classmethod
     def get_column_idx(cls,
@@ -72,14 +75,33 @@ class KgtkFormat:
                           column_name: str,
                           header_line: str,
                           error_action: ValidationAction,
-                          error_file: typing.TextIO = sys.stderr):
+                          error_file: typing.TextIO = sys.stderr)->typing.List[str]:
+        # Returns a list of complaints.
         # Check for valid column names.
         # 1) Check for leading white space
         # 2) Check for trailing white space
         # 3) Check for internal white space
-        #    1) except for "" and '' quoted strings
+        #    1) except inside "" and '' quoted strings
         # 4) Check for commas
-        pass
+        # 5) Check for vertical bars
+        # 6) Check for semicolons
+        #
+        # TODO: It might be possible to make some of these checks more efficient.
+        results: typing.List[str] = [ ]
+        if column_name.lstrip() != column_name:
+            results.append("Column name '%s' starts with leading white space" % column_name)
+        if column_name.rstrip() != column_name:
+            results.append("Column name '%s' ends with leading white space" % column_name)
+        if not (column_name.startswith('"') or column_name.startswith("'")):
+            if ''.join(column_name.split()) != column_name.strip():
+                results.append("Column name '%s' contains internal white space" % column_name)
+        if "," in column_name:
+            results.append("Column name '%s' contains a comma (,)" % column_name)
+        if "|" in column_name:
+            results.append("Column name '%s' contains a vertical bar (|)" % column_name)
+        if ";" in column_name:
+            results.append("Column name '%s' contains a semicolon (;)" % column_name)
+        return results
     
 
     @classmethod
@@ -88,9 +110,16 @@ class KgtkFormat:
                            header_line: str,
                            error_action: ValidationAction,
                            error_file: typing.TextIO = sys.stderr):
+        complaints: typing.List[str] = [ ]
         column_name: str
         for column_name in column_names:
-            cls.check_column_name(column_name, header_line, error_action, error_file)
+            gripes: typing.List[str] = cls.check_column_name(column_name, header_line, error_action, error_file)
+            complaints.extend(gripes)
+        if len(complaints) == 0:
+            return
+        # take the error action, joining the complaints into a single message.
+        msg = ", ".join(complaints)
+        cls._yelp(msg, header_line=header_line, error_action=error_action, error_file=error_file)
 
     @classmethod
     def build_column_name_map(cls,

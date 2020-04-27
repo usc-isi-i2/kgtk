@@ -168,8 +168,17 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                                                 error_action=header_error_action,
                                                 error_file=error_file,
                                                 is_optional=True)
-            is_edge_file = node1_idx >= 0
-            is_node_file = not is_edge_file
+            if node1_idx >= 0:
+                is_edge_file = True
+                is_node_file = False
+                if verbose:
+                    print("%s column found, this is a KGTK edge file" % column_names[node1_idx], file=error_file)
+            else:
+                is_edge_file = False
+                is_node_file = True
+                if verbose:
+                    print("node1 column not found, assuming this is a KGTK node file", file=error_file)
+
         elif mode is KgtkReader.Mode.EDGE:
             is_edge_file = True
         elif mode is KgtkReader.Mode.NODE:
@@ -192,7 +201,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                                                                                                error_file=error_file)
 
             if verbose:
-                print("KgtkReader: Reading an edge file. node1=%d label=%d node2=%d" % (node1_column_idx, label_column_idx, node2_column_idx))
+                print("KgtkReader: Reading an edge file. node1=%d label=%d node2=%d" % (node1_column_idx, label_column_idx, node2_column_idx), file=error_file)
 
             # Apply the proper defaults to the blank node1, node2, and id actions:
             if blank_node1_line_action is None:
@@ -247,7 +256,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                                                           error_file=error_file)
 
             if verbose:
-                print("KgtkReader: Reading an node file. id=%d" % (id_column_idx))
+                print("KgtkReader: Reading an node file. id=%d" % (id_column_idx), file=error_file)
 
             # Apply the proper defaults to the blank node1, node2, and id actions:
             if blank_node1_line_action is None:
