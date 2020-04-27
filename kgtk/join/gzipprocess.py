@@ -2,7 +2,6 @@
 Support classes for gzip/gunzip in seperate processes.
 """
 
-import gzip
 from multiprocessing import Process, Queue
 import typing
 
