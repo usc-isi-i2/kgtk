@@ -68,6 +68,31 @@ class KgtkFormat:
         return column_idx
 
     @classmethod
+    def check_column_name(cls,
+                          column_name: str,
+                          header_line: str,
+                          error_action: ValidationAction,
+                          error_file: typing.TextIO = sys.stderr):
+        # Check for valid column names.
+        # 1) Check for leading white space
+        # 2) Check for trailing white space
+        # 3) Check for internal white space
+        #    1) except for "" and '' quoted strings
+        # 4) Check for commas
+        pass
+    
+
+    @classmethod
+    def check_column_names(cls,
+                           column_names: typing.List[str],
+                           header_line: str,
+                           error_action: ValidationAction,
+                           error_file: typing.TextIO = sys.stderr):
+        column_name: str
+        for column_name in column_names:
+            cls.check_column_name(column_name, header_line, error_action, error_file)
+
+    @classmethod
     def build_column_name_map(cls,
                               column_names: typing.List[str],
                               header_line: str,
