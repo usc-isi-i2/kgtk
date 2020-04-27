@@ -6,7 +6,11 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 from argparse import ArgumentParser
 import attr
+import bz2
 from enum import Enum
+import gzip
+import lz4 # type: ignore
+import lzma
 from multiprocessing import Process, Queue
 from pathlib import Path
 import sys
