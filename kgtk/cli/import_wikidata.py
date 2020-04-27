@@ -455,10 +455,6 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                     delimiter="\t",
                     escapechar="\n",
                     quotechar='')
-<<<<<<< HEAD:kgtk/cli/wikidata_edges_import.py
-                wr.writerow(row)
-    print('import complete')
-=======
                 wr.writerow(header)
         pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True)
         pp.start()
@@ -511,4 +507,3 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
         print('time taken : {}s'.format(end-start))
     except:
         raise KGTKException
->>>>>>> dev:kgtk/cli/import_wikidata.py
