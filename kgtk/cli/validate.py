@@ -80,6 +80,10 @@ def add_arguments(parser):
     parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
                               help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
 
+    parser.add_argument(      "--header-error-action", dest="header_error_action",
+                              help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
+
     parser.add_argument(      "--long-line-action", dest="long_line_action",
                               help="The action to take when a long line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
@@ -122,6 +126,7 @@ def run(kgtk_file: typing.Optional[Path],
         blank_id_line_action: typing.Optional[ValidationAction] = None,
         short_line_action: ValidationAction = ValidationAction.COMPLAIN,
         long_line_action: ValidationAction = ValidationAction.COMPLAIN,
+        header_error_action: ValidationAction = ValidationAction.EXIT,
         compression_type: typing.Optional[str] = None,
         gzip_in_parallel: bool = False,
         gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -158,6 +163,7 @@ def run(kgtk_file: typing.Optional[Path],
                                          blank_id_line_action=blank_id_line_action,
                                          short_line_action=short_line_action,
                                          long_line_action=long_line_action,
+                                         header_error_action=header_error_action,
                                          compression_type=compression_type,
                                          gzip_in_parallel=gzip_in_parallel,
                                          gzip_queue_size=gzip_queue_size,
