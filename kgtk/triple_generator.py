@@ -3,6 +3,10 @@ import re
 from typing import TextIO
 from kgtk.exceptions import KGTKException
 from etk.wikidata.entity import WDItem, WDProperty
+from etk.etk_module import ETKModule
+from etk.etk import ETK
+from etk.knowledge_graph import KGSchema
+from etk.wikidata import wiki_namespaces
 from etk.wikidata.value import ( 
 Precision,
 Item,
@@ -14,6 +18,7 @@ GlobeCoordinate,
 ExternalIdentifier,
 URLValue
 )
+
 
 class TripleGenerator:
     """
@@ -30,15 +35,10 @@ class TripleGenerator:
         dest_fp: TextIO = sys.stdout,
         truthy:bool =False
     ):
-
-        import logging
         from etk.wikidata.statement import Rank
-        from etk.etk import ETK
-        from etk.knowledge_graph import KGSchema
-        from etk.etk_module import ETKModule
         self.ignore = ignore
         self.prop_types = self.set_properties(prop_file)
-        self.label_set, self.alias_set, self.description_set = self.__setSets(
+        self.label_set, self.alias_set, self.description_set = self.set_sets(
             label_set, alias_set, description_set
         )
         self.fp = dest_fp
@@ -50,13 +50,9 @@ class TripleGenerator:
         # corrupted statement id
         self.corrupted_statement_id = None
         # truthy
-        self.truthy = truthy
-        # serialize prfix
-        kg_schema = KGSchema()
-        kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
-        self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
-        self.doc = self.__setDoc()
-        self.__serialize_prefix()
+        self.truthy = truthy        
+        self.reset_etk_doc()
+        self.serialize_prefix()
     
     def _node_2_entity(self, node:str):
         '''
@@ -96,47 +92,54 @@ class TripleGenerator:
                     )
         return prop_types
 
-    def __setSets(self, label_set: str, alias_set: str, description_set: str):
+    def set_sets(self, label_set: str, alias_set: str, description_set: str):
         return (
             set(label_set.split(",")),
             set(alias_set.split(",")),
             set(description_set.split(",")),
         )
 
-    def __setDoc(self, doc_id: str = "http://isi.edu/default-ns/projects"):
+    def reset_etk_doc(self, doc_id: str = "http://isi.edu/default-ns/projects"):
         """
         reset the doc object and return it. Called at initialization and after outputting triples.
         """
-        doc = self.etk.create_document({}, doc_id=doc_id)
-        # bind prefixes
-        doc.kg.bind("wikibase", "http://wikiba.se/ontology#")
-        doc.kg.bind("wd", "http://www.wikidata.org/entity/")
-        doc.kg.bind("wdt", "http://www.wikidata.org/prop/direct/")
-        doc.kg.bind("wdtn", "http://www.wikidata.org/prop/direct-normalized/")
-        doc.kg.bind("wdno", "http://www.wikidata.org/prop/novalue/")
-        doc.kg.bind("wds", "http://www.wikidata.org/entity/statement/")
-        doc.kg.bind("wdv", "http://www.wikidata.org/value/")
-        doc.kg.bind("wdref", "http://www.wikidata.org/reference/")
-        doc.kg.bind("p", "http://www.wikidata.org/prop/")
-        doc.kg.bind("pr", "http://www.wikidata.org/prop/reference/")
-        doc.kg.bind("prv", "http://www.wikidata.org/prop/reference/value/")
-        doc.kg.bind(
-            "prn", "http://www.wikidata.org/prop/reference/value-normalized/"
-        )
-        doc.kg.bind("ps", "http://www.wikidata.org/prop/statement/")
-        doc.kg.bind("psv", "http://www.wikidata.org/prop/statement/value/")
-        doc.kg.bind(
-            "psn", "http://www.wikidata.org/prop/statement/value-normalized/"
-        )
-        doc.kg.bind("pq", "http://www.wikidata.org/prop/qualifier/")
-        doc.kg.bind("pqv", "http://www.wikidata.org/prop/qualifier/value/")
-        doc.kg.bind(
-            "pqn", "http://www.wikidata.org/prop/qualifier/value-normalized/"
-        )
-        doc.kg.bind("skos", "http://www.w3.org/2004/02/skos/core#")
-        doc.kg.bind("prov", "http://www.w3.org/ns/prov#")
-        doc.kg.bind("schema", "http://schema.org/")
-        return doc
+        kg_schema = KGSchema()
+        kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
+        self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
+        self.doc = self.etk.create_document({}, doc_id=doc_id)
+        for k, v in wiki_namespaces.items():
+            self.doc.kg.bind(k, v) 
+    
+    def serialize(self):
+        """
+        Seriealize the triples. Used a hack to avoid serializing the prefix again.
+        """
+        docs = self.etk.process_ems(self.doc)
+        self.fp.write("\n\n".join(docs[0].kg.serialize("ttl").split("\n\n")[1:]))
+        self.fp.flush()
+        self.reset()
+
+    def serialize_prefix(self):
+        """
+        This function should be called only once after the doc object is initialized.
+        In order to serialize the prefix at the very begining it has to be printed per the change of rdflib 4.2.2->5.0.0
+        Relevent issue: https://github.com/RDFLib/rdflib/issues/965
+        """
+        for k, v in wiki_namespaces.items():
+            line = "@prefix " + k + " " + v + " .\n" 
+            self.fp.write(line)
+        self.fp.write("\n")
+        self.fp.flush()
+        self.reset()
+
+    def reset(self):
+        self.to_append_statement_id = None
+        self.to_append_statement = None
+        self.read_num_of_lines = 0
+        self.reset_etk_doc()
+
+    def finalize(self):
+        self.serialize()
 
     @staticmethod
     def process_text_string(string:str)->[str,str]:
@@ -369,32 +372,6 @@ class TripleGenerator:
             self.read_num_of_lines += 1
             self.corrupted_statement_id = None
 
-    def serialize(self):
-        """
-        Seriealize the triples. Used a hack to avoid serializing the prefix again.
-        """
-        docs = self.etk.process_ems(self.doc)
-        self.fp.write("\n\n".join(docs[0].kg.serialize("ttl").split("\n\n")[1:]))
-        self.fp.flush()
-        self.__reset()
-
-    def __serialize_prefix(self):
-        """
-        This function should be called only once after the doc object is initialized.
-        """
-        docs = self.etk.process_ems(self.doc)
-        self.fp.write(docs[0].kg.serialize("ttl").split("\n\n")[0] + "\n\n")
-        self.fp.flush()
-        self.__reset()
-
-    def __reset(self):
-        self.to_append_statement_id = None
-        self.to_append_statement = None
-        self.read_num_of_lines = 0
-        self.doc = self.__setDoc()
-
-    def finalize(self):
-        self.serialize()
     
     @staticmethod
     def replaceIllegalString(s:str)->str:
