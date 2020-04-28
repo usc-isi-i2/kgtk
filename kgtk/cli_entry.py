@@ -2,11 +2,11 @@ import sys
 import importlib
 import pkgutil
 import itertools
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from kgtk import cli
-from kgtk.exceptions import kgtk_exception_handler, KGTKArgumentParseException
+from kgtk.exceptions import KGTKExceptionHandler, KGTKArgumentParseException
 from kgtk import __version__
+from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments, add_default_arguments
 import sh # type: ignore
 
 
@@ -19,19 +19,6 @@ handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
 
 pipe_delimiter = '/'
 ret_code = 0
-
-
-class KGTKArgumentParser(ArgumentParser):
-    def __init__(self, *args, **kwargs):
-        if not kwargs.get('formatter_class'):
-            kwargs['formatter_class'] = RawDescriptionHelpFormatter
-
-        super(KGTKArgumentParser, self).__init__(*args, **kwargs)
-
-    def exit(self, status=0, message=None):
-        if status == 2:
-            status = KGTKArgumentParseException.return_code
-        super(KGTKArgumentParser, self).exit(status, message)
 
 
 def cmd_done(cmd, success, exit_code):
@@ -47,60 +34,92 @@ def cli_entry(*args):
     """
     global ret_code
 
-    parser = KGTKArgumentParser()
-    parser.add_argument(
+    # get all arguments
+    if not args:
+        args = tuple(sys.argv)
+    args = args[1:]
+
+    # base parser for shared arguments
+    base_parser = KGTKArgumentParser(add_help=False)
+    base_parser.add_argument(
         '-V', '--version',
         action='version',
         version='KGTK %s' % __version__,
         help='show KGTK version number and exit.'
     )
+    shared_args = base_parser.add_argument_group('shared optional arguments')
+    shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
+    add_shared_arguments(shared_args)
 
+    # parse shared arguments
+    parsed_shared_args, rest_args = base_parser.parse_known_args(args)
+    shared_args = tuple(filter(lambda a: a not in rest_args, args))
+    args = tuple(rest_args)
+
+    # complete parser, load sub-parser of each module
+    parser = KGTKArgumentParser(
+        parents=[base_parser], prog='kgtk',
+        description='kgtk --- Knowledge Graph Toolkit',
+    )
     sub_parsers = parser.add_subparsers(
         metavar='command',
         dest='cmd'
     )
     sub_parsers.required = True
-
-    # load parser of each module
-    # TODO: need to optimize with lazy loading method
     for h in handlers:
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         sub_parser = sub_parsers.add_parser(h, **mod.parser())
+        add_default_arguments(sub_parser)  # call this before adding other arguments
         mod.add_arguments(sub_parser)
 
-    if not args:
-        args = tuple(sys.argv)
-    if len(args) == 1:
-        args = args + ('-h',)
-    args = args[1:]
+    # add root level usage after sub-parsers are created
+    # this won't pollute help info in sub-parsers
+    parser.usage = '%(prog)s [options] command [ / command]*'
 
     # parse internal pipe
     pipe = [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
-    if len(pipe) == 1:
+    if len(pipe) == 0:
+        parser.print_usage()
+        parser.exit(KGTKArgumentParseException.return_code)
+    elif len(pipe) == 1:  # single command
         cmd_args = pipe[0]
-        args = parser.parse_args(cmd_args)
+        kwargs = {}
+        parsed_args = parser.parse_args(cmd_args)
 
         # load module
         func = None
-        if args.cmd:
-            mod = importlib.import_module('.{}'.format(args.cmd), 'kgtk.cli')
+        if parsed_args.cmd:
+            h = parsed_args.cmd
+            mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
             func = mod.run
-            kwargs = vars(args)
+
+            # remove sub-command
+            kwargs = vars(parsed_args)
             del kwargs['cmd']
 
+            # set shared arguments
+            for sa in vars(parsed_shared_args):
+                if sa not in sub_parsers.choices[h].shared_arguments:
+                    del kwargs[sa]
+                else:
+                    kwargs[sa] = getattr(parsed_shared_args, sa)
+
         # run module
+        kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
         ret_code = kgtk_exception_handler(func, **kwargs)
-    else:
+    else:  # piped commands
         concat_cmd_str = None
         for idx, cmd_args in enumerate(pipe):
+            # add shared arguments
+            cmd_str = ', '.join(['"{}"'.format(a) for a in shared_args])
+            if cmd_str:
+                cmd_str += ', '
             # parse command and options
-            cmd_str = ', '.join(['"{}"'.format(c) for c in cmd_args])
-            # add common arguments
+            cmd_str += ', '.join(['"{}"'.format(a) for a in cmd_args])
+            # add other common arguments
             cmd_str += ', _bg_exc=False, _done=cmd_done'  # , _err=sys.stdout
             # add specific arguments
             if idx == 0:  # first command
-                # concat_cmd_str = 'sh.kgtk("dummy", _bg_exc=False, _in=sys.stdin, _piped=True)'
-                # concat_cmd_str = 'sh.kgtk({}, {}, _piped=True)'.format(concat_cmd_str, cmd_str)
                 concat_cmd_str = 'sh.kgtk({}, _in=sys.stdin, _piped=True)'.format(cmd_str)
             elif idx + 1 == len(pipe):  # last command
                 concat_cmd_str = 'sh.kgtk({}, {}, _out=sys.stdout)'.format(concat_cmd_str, cmd_str)
@@ -112,8 +131,6 @@ def cli_entry(*args):
         except sh.SignalException_SIGPIPE:
             pass
         except sh.ErrorReturnCode as e:
-            # err = '\nRAN: {}\nSTDERR:\n{}\n'.format(e.full_cmd, e.stderr.decode('utf-8'))
-            # sys.stderr.write(err)
             # mimic parser exit
             parser.exit(KGTKArgumentParseException.return_code, e.stderr.decode('utf-8'))
 
