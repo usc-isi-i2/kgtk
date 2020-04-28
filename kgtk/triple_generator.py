@@ -7,6 +7,7 @@ from etk.etk_module import ETKModule
 from etk.etk import ETK
 from etk.knowledge_graph import KGSchema
 from etk.wikidata import wiki_namespaces
+import rfc3986
 from etk.wikidata.value import ( 
 Precision,
 Item,
@@ -74,7 +75,7 @@ class TripleGenerator:
             "monolingualtext": MonolingualText,
             "string": StringValue,
             "external-identifier":ExternalIdentifier,
-            "url":URLValue
+            "url":StringValue
         }
         with open(prop_file, "r") as fp:
             props = fp.readlines()
@@ -258,7 +259,10 @@ class TripleGenerator:
         elif edge_type == ExternalIdentifier:
             object = ExternalIdentifier(node2)
         elif edge_type == URLValue:
-            object = URLValue(node2)
+            if TripleGenerator.is_valid_uri_with_scheme_and_host(node2):
+                object = URLValue(node2)
+            else:
+                return False
         else:
             # treat everything else as stringValue
             object = StringValue(node2)
@@ -293,6 +297,18 @@ class TripleGenerator:
             if abs(float(num_string)) < 0.0001 and float(num_string) != 0:
                 return True
             return False        
+
+    @staticmethod
+    def is_valid_uri_with_scheme_and_host(uri:str):
+        '''
+        https://github.com/python-hyper/rfc3986/issues/30#issuecomment-461661883
+        '''
+        try:
+            uri = rfc3986.URIReference.from_string(uri)
+            rfc3986.validators.Validator().require_presence_of("scheme", "host").check_validity_of("scheme", "host").validate(uri)
+            return True
+        except :
+            return False
 
     @staticmethod
     def clean_number_string(num):
