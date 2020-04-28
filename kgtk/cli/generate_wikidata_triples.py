@@ -31,7 +31,7 @@ def add_arguments(parser):
     Parse arguments
     Args:
         parser (argparse.ArgumentParser)
-        propFile: str, labelSet: str, aliasSet: str, descriptionSet: str, n: str, dest: Any  --output-n-lines --generate-truthy
+        prop_file: str, labelSet: str, aliasSet: str, descriptionSet: str, n: str, dest: Any  --output-n-lines --generate-truthy
     """
     parser.add_argument(
         "-lp",
@@ -63,7 +63,7 @@ def add_arguments(parser):
         action="store",
         type=str,
         help="path to the file which contains the property datatype mapping in kgtk format.",
-        dest="propFile",
+        dest="prop_file",
     )
     parser.add_argument(
         "-n",
@@ -99,7 +99,7 @@ def run(
     labels: str,
     aliases: str,
     descriptions: str,
-    propFile: str,
+    prop_file: str,
     n: int,
     truthy: bool,
     ignore: bool,
@@ -109,10 +109,10 @@ def run(
     from kgtk.triple_generator import TripleGenerator
     import sys
     generator = TripleGenerator(
-        propFile=propFile,
-        labelSet=labels,
-        aliasSet=aliases,
-        descriptionSet=descriptions,
+        prop_file=prop_file,
+        label_set=labels,
+        alias_set=aliases,
+        description_set=descriptions,
         n=n,
         ignore=ignore,
         truthy=truthy
@@ -127,6 +127,6 @@ def run(
             num_line += 1
             continue
         else:
-            generator.entryPoint(num_line, edge)
+            generator.entry_point(num_line, edge)
             num_line += 1
     generator.finalize()
