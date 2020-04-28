@@ -535,9 +535,15 @@ def run(
         truthy=truthy
     )
     # process stdin
-    for num, edge in enumerate(sys.stdin.readlines()):
-        if edge.startswith("#") or num == 0: # TODO First line omit
+    num_line = 0
+    while True:
+        edge = sys.stdin.readline()
+        if not edge:
+            break
+        if edge.startswith("#") or num_line == 0: # TODO First line omit
+            num_line += 1
             continue
         else:
-            generator.entryPoint(num, edge)
+            generator.entryPoint(num_line, edge)
+            num_line += 1
     generator.finalize()
