@@ -1,5 +1,6 @@
 import sys
 import typing
+from kgtk.exceptions import KGTKException
 
 ALL_EMBEDDING_MODELS_NAMES = [
 "bert-base-nli-cls-token",
@@ -41,7 +42,9 @@ class EmbeddingVector:
         #     self.model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
         else:
             self.model_name = model_name
-        self.model = SentenceTransformer(model_name)
+        self._logger.info("Using model {}".format(self.model_name))
+        self.model = SentenceTransformer(self.model_name)
+        # setup redis cache server
         if query_server is None or query_server == "":
             self.wikidata_server = "https://query.wikidata.org/sparql"
         else:
@@ -135,7 +138,7 @@ class EmbeddingVector:
             results = qm.query().convert()['results']['bindings']
             return results
         except:
-            raise ValueError("Sending Sparl query to {} failed!".format(self.wikidata_server))
+            raise KGTKException("Sending Sparl query to {} failed!".format(self.wikidata_server))
 
     def get_item_description(self, qnodes: typing.List[str]=None, target_properties:dict={}, gt_label:str=""):
         """
@@ -147,7 +150,6 @@ class EmbeddingVector:
             find_all_properties = True
         else:
             find_all_properties = False
-        # self._logger.error(str(qnodes))
         properties_list = [[] for _ in range(4)]
         used_p_node_ids = set()
         names = ["labels", "descriptions", "isa_properties", "has_properties"]
@@ -166,8 +168,7 @@ class EmbeddingVector:
             for each_node in qnodes:
                 cache_res = self.redis_server.get(each_node+str(properties_list))
                 if cache_res is not None:
-                    sentences_cache_dict[each_node] = cache_res
-                    # self._logger.error("{} hit!".format(each_node+str(properties_list)))
+                    sentences_cache_dict[each_node] = cache_res.decode("utf-8")
 
         if len(sentences_cache_dict) > 0:
             qnodes = set(qnodes) - set(sentences_cache_dict.keys())
@@ -267,7 +268,6 @@ class EmbeddingVector:
             each_sentence = self.attribute_to_sentence(self.candidates[each_node_id], each_node_id)
             self.candidates[each_node_id]["sentence"] = each_sentence
             if self.redis_server is not None:
-                # self._logger.error("Pushed: {}".format(each_node+str(properties_list)))
                 self.redis_server.set(each_node+str(properties_list), each_sentence)
             
         for each_node_id, sentence in sentences_cache_dict.items():
@@ -285,6 +285,7 @@ class EmbeddingVector:
         import pandas as pd # type: ignore
         import numpy as np
         import math
+
         self.property_labels_dict = property_labels_dict
 
         if input_format == "test_format":
@@ -298,7 +299,7 @@ class EmbeddingVector:
             elif "kg_id" in input_df.columns:
                 gt_column_id = "kg_id"
             else:
-                raise ValueError("Can't find ground truth id column! It should either named as `GT_kg_id` or `kg_id`")
+                raise KGTKException("Can't find ground truth id column! It should either named as `GT_kg_id` or `kg_id`")
 
             for _, each in input_df.iterrows():
                 if isinstance(each["candidates"], str):
@@ -318,8 +319,8 @@ class EmbeddingVector:
                 if label == "":
                     self._logger.error("Skip a row with no label given: as {}".format(str(each)))
                     continue
-                # candidates[each['label']] = temp
                 temp.extend(gt_nodes)
+
                 for each_q in temp:
                     self.q_node_to_label[each_q] = label
                     if skip_nodes_set is not None and each_q in skip_nodes_set:
@@ -344,7 +345,7 @@ class EmbeddingVector:
                 # get header
                 headers = f.readline().replace("\n", "").split("\t")
                 if len(headers) < 3:
-                    raise ValueError("No enough columns found on given input file. Only {} columns given but at least 3 needed.".format(len(headers)))
+                    raise KGTKException("No enough columns found on given input file. Only {} columns given but at least 3 needed.".format(len(headers)))
                 elif "node" in headers and "property" in headers and "value" in headers:
                     column_references = {"node": headers.index("node"), 
                                          "property": headers.index("property"),
@@ -355,7 +356,7 @@ class EmbeddingVector:
                                          "value": 2}
                 else:
                     missing_column = set(["node", "property", "value"]) - set(headers)
-                    raise ValueError("Missing column {}".format(missing_column))
+                    raise KGTKException("Missing column {}".format(missing_column))
                 self._logger.debug("column index information: ")
                 self._logger.debug(str(column_references))
                 # read contents
@@ -370,7 +371,7 @@ class EmbeddingVector:
                     if "@" in node_value and node_value[0] != "@":
                         node_value_org = node_value
                         node_value = node_value[:node_value.index("@")]
-                        # print("{} --> {}".format(node_value_org, node_value))
+
                     # remove extra double quote " and single quote '
                     if node_value[0]== '"' and node_value[-1] == '"':
                         node_value = node_value[1:-1]
@@ -397,7 +398,7 @@ class EmbeddingVector:
                         each_node_attributes["has_properties"].append(node_value)
                         
         else:
-            raise ValueError("Unkonwn input format {}".format(input_format))
+            raise KGTKException("Unkonwn input format {}".format(input_format))
 
         self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
         self.vector_dump_file = "dump_vectors_{}_{}.pkl".format(file_path[:file_path.rfind(".")], self. model_name)
@@ -543,12 +544,6 @@ class EmbeddingVector:
         import time
         from sklearn.manifold import TSNE # type: ignore
 
-        # if vector_dump_file is None:
-        #     vector_dump_file = self.vector_dump_file.replace(".pkl", "_2D.pkl")
-        # if use_cache and os.path.exists(vector_dump_file):
-        #     self._logger.info("Using cached 2D vector file!")
-        #     self.load_vectors(vector_dump_file, "2D")
-        # else:
         self.vectors_map = {k: v for k, v in sorted(self.vectors_map.items(), key=lambda item: item[0], reverse=True)}
         vectors = list(self.vectors_map.values())
         # use tsne to reduce dimension
@@ -560,7 +555,6 @@ class EmbeddingVector:
             self._logger.info("Totally used {} seconds.".format(time.time() - start))
 
         if input_format == "test_format":
-            # # start plot
             gt_indexes = set()
             vector_map_keys = list(self.vectors_map.keys())
             for each_node in self.gt_nodes:
@@ -615,8 +609,6 @@ class EmbeddingVector:
         else:
             points = self.gt_indexes
         for i, each in enumerate(self.vectors_map.keys()):
-            # label = self.q_node_to_label[each]
-            # description = self.qnodes_descriptions.get(each, "")
             if i in points:
                 if centroid is None:
                     centroid = np.array(self.vectors_map[each])
@@ -633,25 +625,13 @@ class EmbeddingVector:
     @staticmethod
     def calculate_distance(a, b):
         if len(a) != len(b):
-            raise ValueError("Vector dimension are different!")
+            raise KGTKException("Vector dimension are different!")
         dist = 0
         for v1, v2 in zip(a,b):
             dist += (v1 - v2) **2
         dist = dist ** 0.5
         return dist
 
-# removed
-# def load_embedding_model_names():
-#     names = []
-#     import os
-#     model_file_path = os.path.join(repr(__file__).replace("'","").replace("/text_embedding.py", ""), "all_embedding_models_names.txt")
-#     if os.path.exists(model_file_path):
-#         with open(model_file_path, "r") as f:
-#             for each_line in f.readlines():
-#                 names.append(each_line.replace("\n", ""))
-#     else:
-#         raise ValueError("Embedding model names list file lost! Please check.")
-#     return names
 
 def load_property_labels_file(input_files: typing.List[str]):
     labels_dict = {}
@@ -663,7 +643,7 @@ def load_property_labels_file(input_files: typing.List[str]):
                 if headers is None:
                     headers = each_line
                     if len(headers) < 2:
-                        raise ValueError("No enough columns found on given input file. Only {} columns given but at least 2 needed.".format(len(headers)))
+                        raise KGTKException("No enough columns found on given input file. Only {} columns given but at least 2 needed.".format(len(headers)))
                     elif "predicate" in headers and "label" in headers:
                         column_references = {"predicate": headers.index("predicate"), 
                                              "label": headers.index("label")}
@@ -672,7 +652,7 @@ def load_property_labels_file(input_files: typing.List[str]):
                                              "label": headers.index("label"),
                                              }
                     else:
-                        raise ValueError("Can't determine which column is label column for label file!")
+                        raise KGTKException("Can't determine which column is label column for label file!")
 
                 else:
                     node_id = each_line[column_references["predicate"]]
@@ -730,18 +710,21 @@ def load_black_list_files(file_path):
 
 
 def main(**kwargs):
-    # setup logger format
-    # console = logging.StreamHandler()
-    # console.setLevel(logging.DEBUG)
-    # formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s", '%m-%d %H:%M:%S')
-    # console.setFormatter(formatter)
-    # logging.getLogger('').addHandler(console)
     from kgtk.exceptions import KGTKException
     try:
         import logging
         import os
         import time
         from time import strftime
+        import torch
+        import typing
+        import pandas as pd
+        import string
+        import math
+        import re
+        import argparse
+        import pickle
+
         logging_level = kwargs.get("logging_level", "warning")
         if logging_level == "info":
             logging_level_class = logging.INFO
@@ -753,7 +736,6 @@ def main(**kwargs):
             logging_level_class = logging.ERROR
         else:
             logging_level_class = logging.WARNING
-
         if logging_level != "none":
             logger_path = os.path.join(os.environ.get("HOME"), "kgtk_text_embedding_log_{}.log".format(strftime("%Y-%m-%d-%H-%M")))
             logging.basicConfig(level=logging_level_class,
@@ -763,15 +745,6 @@ def main(**kwargs):
                         filemode='w')
         _logger = logging.getLogger(__name__)
         _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
-        import torch
-        import typing
-
-        import pandas as pd
-        import string
-        import math
-        import re
-        import argparse
-        import pickle
 
         # get input parameters from kwargs
         output_uri = kwargs.get("output_uri", "")
@@ -797,7 +770,6 @@ def main(**kwargs):
         for each_property, each_input in zip(all_required_properties, all_property_relate_inputs):
             for each in each_input:
                 properties[each] = each_property
-
         
         output_properties = {
             "metatada_properties": kwargs.get("metatada_properties", []),
@@ -809,9 +781,9 @@ def main(**kwargs):
         if isinstance(input_uris, str):
             input_uris = [input_uris]
         if len(all_models_names) == 0:
-            raise ValueError("No embedding vector model name given!")
+            raise KGTKException("No embedding vector model name given!")
         if len(input_uris) == 0:
-            raise ValueError("No input file path given!")
+            raise KGTKException("No input file path given!")
 
         if output_uri == "":
             output_uri = os.getenv("HOME") # os.getcwd()
@@ -925,7 +897,7 @@ def add_arguments(parser):
     # query server
     parser.add_argument("--query-server", nargs='?',  action='store',
                         default="", dest="query_server",
-                        help="cache host address, default is https://query.wikidata.org/sparql"
+                        help="sparql query endpoint used for test_format input files, default is https://query.wikidata.org/sparql"
                         )
 
 
