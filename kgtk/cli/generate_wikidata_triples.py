@@ -83,11 +83,19 @@ def add_arguments(parser):
     )
     parser.add_argument(
         "-ig",
-        "--ig",
+        "--ignore",
         action="store",
         type=str2bool,
         help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging",
         dest="ignore",
+    )
+    parser.add_argument(
+        "-gz",
+        "--use-gz",
+        action="store",
+        type=str2bool,
+        help="if set to yes, read from compressed gz file",
+        dest="use_gz",
     )
     # logging level
     # parser.add_argument('-l', '--logging-level', action='store', dest='logging_level',
@@ -103,9 +111,10 @@ def run(
     n: int,
     truthy: bool,
     ignore: bool,
-    # logging_level:str
+    use_gz: bool
 ):
     # import modules locally
+    import gzip
     from kgtk.triple_generator import TripleGenerator
     import sys
     generator = TripleGenerator(
@@ -119,8 +128,12 @@ def run(
     )
     # process stdin
     num_line = 0
+    if use_gz:
+        fp = gzip.open(sys.stdin.buffer, 'rt')
+    else:
+        fp = sys.stdin
     while True:
-        edge = sys.stdin.readline()
+        edge = fp.readline()
         if not edge:
             break
         if edge.startswith("#") or num_line == 0: # TODO First line omit
