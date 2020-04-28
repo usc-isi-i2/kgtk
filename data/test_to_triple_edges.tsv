@@ -14,3 +14,7 @@ e8	p10	@043.26193/010.92708
 q1	p12	'爱丽丝'@zh	e9
 q1	p11	+1.4U11573	e10
 e10	p13	q2	
+q1	p14	"sh2008003646"	e11
+p14	p1	"Library of Congress authority ID"	e12
+p14	p7	"Library of Congress identifier for persons, organizations, events, places, titles, and subject headings [Format: 1-2 specific letters followed by 8-10 digits (see regex). For manifestations of works, use P1144]"	e13
+q1	p15	"https://www.wikidata.org/wiki/Q1335388"	e14
