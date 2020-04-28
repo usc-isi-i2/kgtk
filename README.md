@@ -10,7 +10,7 @@ conda activate kgtk-env
 ```
  **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
 
-2. Install (the dev branch at this point): `pip install git+https://github.com/usc-isi-i2/kgtk.git@dev`
+2. Install kgtk: `pip install kgtk`
 
 You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
