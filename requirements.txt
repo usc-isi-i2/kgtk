@@ -13,3 +13,4 @@ etk==2.2.1
 simplejson
 pyrallel.lib
 attrs
+iso-639
