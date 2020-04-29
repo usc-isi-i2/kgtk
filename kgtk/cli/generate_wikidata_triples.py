@@ -127,7 +127,7 @@ def run(
         truthy=truthy
     )
     # process stdin
-    num_line = 0
+    num_line = 1
     if use_gz:
         fp = gzip.open(sys.stdin.buffer, 'rt')
     else:
@@ -136,10 +136,11 @@ def run(
         edge = fp.readline()
         if not edge:
             break
-        if edge.startswith("#") or num_line == 0: # TODO First line omit
+        if edge.startswith("#") or num_line == 1: # TODO First line omit
             num_line += 1
             continue
         else:
+            print(num_line)
             generator.entry_point(num_line, edge)
             num_line += 1
     generator.finalize()

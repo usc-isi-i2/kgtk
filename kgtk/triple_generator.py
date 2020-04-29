@@ -76,7 +76,7 @@ class TripleGenerator:
             "monolingualtext": MonolingualText,
             "string": StringValue,
             "external-identifier":ExternalIdentifier,
-            "url":StringValue
+            "url":URLValue
         }
         with open(prop_file, "r") as fp:
             props = fp.readlines()
@@ -148,12 +148,18 @@ class TripleGenerator:
         ''' 
         detect language
         '''
+        if len(string)==0:
+            return ["","en"]
         if "@" in string:
             res = string.split("@")
             text_string = "@".join(res[:-1]).replace('"', "").replace("'", "")
             lang = res[-1].replace('"','').replace("'","")
-            if len(lang) != 2:
-                lang = detect(text_string)
+            try:
+                detected_lang = detect(text_string) 
+                if detected_lang != lang:
+                    lang = detected_lang
+            except:
+                lang = "en"        
         else:
             text_string = string.replace('"', "").replace("'", "")
             lang = detect(text_string)
