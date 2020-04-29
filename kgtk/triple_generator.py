@@ -20,7 +20,8 @@ ExternalIdentifier,
 URLValue
 )
 
-
+BAD_CHARS = [":", "-", "&", ",", " ",
+             "(", ")", "\'", '\"', "/", "\\", "[", "]", ";"]
 class TripleGenerator:
     """
     A class to maintain the status of the generator
@@ -57,6 +58,7 @@ class TripleGenerator:
         self.yyyy_mm_dd_pattern = re.compile("[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
         self.yyyy_pattern = re.compile("[12]\d{3}")
         self.quantity_pattern = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
+
     
     def _node_2_entity(self, node:str):
         '''
@@ -65,7 +67,7 @@ class TripleGenerator:
         if node in self.prop_types:
             entity = WDProperty(node, self.prop_types[node])
         else:
-            entity = WDItem(TripleGenerator.replace_illegal_string(node.upper()))
+            entity = WDItem(TripleGenerator.replace_illegal_string(node()))
         return entity
 
 
@@ -195,7 +197,7 @@ class TripleGenerator:
         # determine the edge type
         edge_type = self.prop_types[label]
         if edge_type == Item:
-            object = WDItem(TripleGenerator.replace_illegal_string(node2.upper()))
+            object = WDItem(TripleGenerator.replace_illegal_string(node2()))
         elif edge_type == TimeValue:
             # https://www.wikidata.org/wiki/Help:Dates
             # ^2013-01-01T00:00:00Z/11
@@ -288,7 +290,7 @@ class TripleGenerator:
             # create qualifier edge on previous STATEMENT and return the updated STATEMENT
             if type(object) == WDItem:
                 self.doc.kg.add_subject(object)
-            self.to_append_statement.add_qualifier(label.upper(), object)
+            self.to_append_statement.add_qualifier(label(), object)
             self.doc.kg.add_subject(self.to_append_statement) #TODO maybe can be positioned better for the edge cases.
 
         else:
@@ -297,9 +299,9 @@ class TripleGenerator:
             if type(object) == WDItem:
                 self.doc.kg.add_subject(object)
             if self.truthy:
-                self.to_append_statement = entity.add_truthy_statement(label.upper(), object) 
+                self.to_append_statement = entity.add_truthy_statement(label(), object) 
             else:
-                self.to_append_statement = entity.add_statement(label.upper(), object) 
+                self.to_append_statement = entity.add_statement(label(), object) 
             self.doc.kg.add_subject(entity)
         return True
     
@@ -408,4 +410,9 @@ class TripleGenerator:
     
     @staticmethod
     def replace_illegal_string(s:str)->str:
-        return s.replace(":","-")
+        '''
+        this function serves as the last gate of keeping illegal characters outside of entity creation.
+        '''
+        for char in BAD_CHARS:
+            s = s.replace(char,"_")
+        return s

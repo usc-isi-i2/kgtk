@@ -7,7 +7,6 @@ sh
 sklearn
 SPARQLWrapper
 tqdm
-langdetect
 rdflib==5.0.0
 etk==2.2.1
 simplejson
