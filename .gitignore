@@ -133,3 +133,6 @@ dmypy.json
 
 # vscode
 .vscode/
+
+# MacOS file system hidden file
+.DS_Store
