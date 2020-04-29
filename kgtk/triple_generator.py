@@ -8,6 +8,7 @@ from etk.etk import ETK
 from etk.knowledge_graph import KGSchema
 from etk.wikidata import wiki_namespaces
 import rfc3986
+from langdetect import detect
 from etk.wikidata.value import ( 
 Precision,
 Item,
@@ -127,7 +128,7 @@ class TripleGenerator:
         Relevent issue: https://github.com/RDFLib/rdflib/issues/965
         """
         for k, v in wiki_namespaces.items():
-            line = "@prefix " + k + " " + v + " .\n" 
+            line = "@prefix " + k + ": <" + v + "> .\n" 
             self.fp.write(line)
         self.fp.write("\n")
         self.fp.flush()
@@ -145,16 +146,17 @@ class TripleGenerator:
     @staticmethod
     def process_text_string(string:str)->[str,str]:
         ''' 
+        detect language
         '''
         if "@" in string:
             res = string.split("@")
             text_string = "@".join(res[:-1]).replace('"', "").replace("'", "")
             lang = res[-1].replace('"','').replace("'","")
             if len(lang) != 2:
-                lang = "en"
+                lang = detect(text_string)
         else:
             text_string = string.replace('"', "").replace("'", "")
-            lang = "en"
+            lang = detect(text_string)
         return [text_string, lang]
 
     def generate_label_triple(self, node1: str, label: str, node2: str) -> bool:
@@ -194,9 +196,31 @@ class TripleGenerator:
             # https://www.wikidata.org/wiki/Help:Dates
             # ^2013-01-01T00:00:00Z/11
             # ^8000000-00-00T00:00:00Z/3
-            if re.compile("[0-9]{4}").match(node2):
+            if re.compile("[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])").match(node2):
+                try:
+                    dateTimeString = node2
+                    object = TimeValue(
+                        value=dateTimeString, #TODO
+                        calendar=Item("Q1985727"),
+                        precision=Precision.year,
+                        time_zone=0,
+                    )
+                except:
+                    return False
+            elif re.compile("[12]\d{3}").match(node2):
                 try:                   
                     dateTimeString = node2 + "-01-01"
+                    object = TimeValue(
+                        value=dateTimeString, #TODO
+                        calendar=Item("Q1985727"),
+                        precision=Precision.year,
+                        time_zone=0,
+                    )
+                except:
+                    return False
+            elif re.compile("[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])").match(node2):
+                try:
+                    dateTimeString = node2
                     object = TimeValue(
                         value=dateTimeString, #TODO
                         calendar=Item("Q1985727"),
