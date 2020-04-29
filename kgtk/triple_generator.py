@@ -67,7 +67,7 @@ class TripleGenerator:
         if node in self.prop_types:
             entity = WDProperty(node, self.prop_types[node])
         else:
-            entity = WDItem(TripleGenerator.replace_illegal_string(node()))
+            entity = WDItem(TripleGenerator.replace_illegal_string(node))
         return entity
 
 
@@ -197,7 +197,7 @@ class TripleGenerator:
         # determine the edge type
         edge_type = self.prop_types[label]
         if edge_type == Item:
-            object = WDItem(TripleGenerator.replace_illegal_string(node2()))
+            object = WDItem(TripleGenerator.replace_illegal_string(node2))
         elif edge_type == TimeValue:
             # https://www.wikidata.org/wiki/Help:Dates
             # ^2013-01-01T00:00:00Z/11
@@ -290,7 +290,7 @@ class TripleGenerator:
             # create qualifier edge on previous STATEMENT and return the updated STATEMENT
             if type(object) == WDItem:
                 self.doc.kg.add_subject(object)
-            self.to_append_statement.add_qualifier(label(), object)
+            self.to_append_statement.add_qualifier(label, object)
             self.doc.kg.add_subject(self.to_append_statement) #TODO maybe can be positioned better for the edge cases.
 
         else:
@@ -299,9 +299,9 @@ class TripleGenerator:
             if type(object) == WDItem:
                 self.doc.kg.add_subject(object)
             if self.truthy:
-                self.to_append_statement = entity.add_truthy_statement(label(), object) 
+                self.to_append_statement = entity.add_truthy_statement(label, object) 
             else:
-                self.to_append_statement = entity.add_statement(label(), object) 
+                self.to_append_statement = entity.add_statement(label, object) 
             self.doc.kg.add_subject(entity)
         return True
     
