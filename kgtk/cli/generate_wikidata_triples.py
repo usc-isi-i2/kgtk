@@ -140,7 +140,6 @@ def run(
             num_line += 1
             continue
         else:
-            print(num_line)
             generator.entry_point(num_line, edge)
             num_line += 1
     generator.finalize()

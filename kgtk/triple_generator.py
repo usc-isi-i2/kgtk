@@ -8,7 +8,6 @@ from etk.etk import ETK
 from etk.knowledge_graph import KGSchema
 from etk.wikidata import wiki_namespaces
 import rfc3986
-from langdetect import detect
 from etk.wikidata.value import ( 
 Precision,
 Item,
@@ -55,6 +54,9 @@ class TripleGenerator:
         self.truthy = truthy        
         self.reset_etk_doc()
         self.serialize_prefix()
+        self.yyyy_mm_dd_pattern = re.compile("[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
+        self.yyyy_pattern = re.compile("[12]\d{3}")
+        self.quantity_pattern = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
     
     def _node_2_entity(self, node:str):
         '''
@@ -63,7 +65,7 @@ class TripleGenerator:
         if node in self.prop_types:
             entity = WDProperty(node, self.prop_types[node])
         else:
-            entity = WDItem(TripleGenerator.replaceIllegalString(node.upper()))
+            entity = WDItem(TripleGenerator.replace_illegal_string(node.upper()))
         return entity
 
 
@@ -146,7 +148,7 @@ class TripleGenerator:
     @staticmethod
     def process_text_string(string:str)->[str,str]:
         ''' 
-        detect language
+        Language detection is removed from triple generation. The user is responsible for detect the language
         '''
         if len(string)==0:
             return ["","en"]
@@ -154,15 +156,11 @@ class TripleGenerator:
             res = string.split("@")
             text_string = "@".join(res[:-1]).replace('"', "").replace("'", "")
             lang = res[-1].replace('"','').replace("'","")
-            try:
-                detected_lang = detect(text_string) 
-                if detected_lang != lang:
-                    lang = detected_lang
-            except:
-                lang = "en"        
+            if len(lang) > 2:
+                lang ="en"      
         else:
             text_string = string.replace('"', "").replace("'", "")
-            lang = detect(text_string)
+            lang = "en"
         return [text_string, lang]
 
     def generate_label_triple(self, node1: str, label: str, node2: str) -> bool:
@@ -197,12 +195,12 @@ class TripleGenerator:
         # determine the edge type
         edge_type = self.prop_types[label]
         if edge_type == Item:
-            object = WDItem(TripleGenerator.replaceIllegalString(node2.upper()))
+            object = WDItem(TripleGenerator.replace_illegal_string(node2.upper()))
         elif edge_type == TimeValue:
             # https://www.wikidata.org/wiki/Help:Dates
             # ^2013-01-01T00:00:00Z/11
             # ^8000000-00-00T00:00:00Z/3
-            if re.compile("[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])").match(node2):
+            if self.yyyy_mm_dd_pattern.match(node2):
                 try:
                     dateTimeString = node2
                     object = TimeValue(
@@ -213,20 +211,9 @@ class TripleGenerator:
                     )
                 except:
                     return False
-            elif re.compile("[12]\d{3}").match(node2):
+            elif self.yyyy_pattern.match(node2):
                 try:                   
                     dateTimeString = node2 + "-01-01"
-                    object = TimeValue(
-                        value=dateTimeString, #TODO
-                        calendar=Item("Q1985727"),
-                        precision=Precision.year,
-                        time_zone=0,
-                    )
-                except:
-                    return False
-            elif re.compile("[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])").match(node2):
-                try:
-                    dateTimeString = node2
                     object = TimeValue(
                         value=dateTimeString, #TODO
                         calendar=Item("Q1985727"),
@@ -264,7 +251,7 @@ class TripleGenerator:
 
         elif edge_type == QuantityValue:
             # +70[+60,+80]Q743895
-            res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?").match(node2).groups()
+            res = self.quantity_pattern.match(node2).groups()
             amount, lower_bound, upper_bound, unit = res
 
             # Handle extra small numbers for now. TODO
@@ -420,5 +407,5 @@ class TripleGenerator:
 
     
     @staticmethod
-    def replaceIllegalString(s:str)->str:
+    def replace_illegal_string(s:str)->str:
         return s.replace(":","-")
