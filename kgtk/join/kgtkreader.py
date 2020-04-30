@@ -574,19 +574,28 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             return values
 
     def _ignore_invalid_values(self, values: typing.List[str], line: str)->bool:
+        """Give a row of values, validate each value.  If we find one or more
+        validation problems, we might want to emit erro messages and we might
+        want to ignore the entire row.
+
+        Returns True to indicate that the row should be ignored (skipped).
+
+        """
+        problems: typing.List[str] = [ ] # Build a list of problems.
+        idx: int
         value: str
-        idx: int = 0
-        problems: typing.List[str] = [ ]
-        for value in values:
-            kv: KgtkValue = KgtkValue(value)
-            if not kv.is_valid():
-                problems.append("%s: %s" % (self.column_names[idx], kv.describe()))
-            idx += 1
-        if len(problems) > 0 and self.exclude_line(self.invalid_value_action,
-                                                   "; ".join(problems),
-                                                   line):
-            return True
-        return False
+        for idx, value in enumerate(values):
+            if len(value) > 0: # Optimize the common case of empty columns.
+                kv: KgtkValue = KgtkValue(value)
+                if not kv.is_valid():
+                    problems.append("%s: %s" % (self.column_names[idx], kv.describe()))
+
+        if len(problems) == 0:
+            return False
+
+        return self.exclude_line(self.invalid_value_action,
+                                 "; ".join(problems),
+                                 line)
 
     # May be overridden
     def _ignore_if_blank_fields(self, values: typing.List[str], line: str)->bool:
