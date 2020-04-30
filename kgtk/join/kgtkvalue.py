@@ -1,5 +1,7 @@
 """
-Constants and helpers for the KGTK file format.
+Validate KGTK File data types.
+
+Dimensioned quantities are not supported.
 
 """
 
@@ -76,6 +78,20 @@ class KgtkValue(KgtkFormat):
         Return False if this value is a list and idx is None.
         Otherwise, return True if the first character is 0-9,_,-,.
         and Python can parse it.
+
+        Examples:
+        1
+        123
+        -123
+        +123
+        0b101
+        0o277
+        0x24F
+        .4
+        0.4
+        10.
+        10.4
+        10.4e10
         """
         if self.is_list() and idx is None:
             return False
@@ -98,6 +114,11 @@ class KgtkValue(KgtkFormat):
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the first character  is '"'.
+
+        Strings begin and end with double quote (").  Any internal double
+        quotes must be escaped with backslash (\").  Triple-double quoted
+        strings are not supported by KGTK File Vormat v2.
+
         """
         if self.is_list() and idx is None:
             return False
@@ -111,8 +132,8 @@ class KgtkValue(KgtkFormat):
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the first character  is '"',
-        the last character is '"', and the only internal '"' is
-        escaped by backslash.
+        the last character is '"', and any internal '"' characters are
+        escaped by backslashes.
         """
         if self.is_list() and idx is None:
             return False
@@ -202,19 +223,45 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith("@")
 
-    location_coordinates_re: typing.Pattern = re.compile(r"^@[-+]?\d{3}\.\d{5}/[-+]?\d{3}\.\d{5}$")
+    location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?\d{3}\.\d{5})/(?P<lon>[-+]?\d{3}\.\d{5})$")
 
     def is_valid_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like valid location coordinates.
+
+        Note: The coordinates must look exactly like the examples in KGTK
+        File Format v2, excelt for optional +/- characters.
+
+        @043.26193/010.92708
         """
         if self.is_list() and idx is None:
             return False
 
         v: str = self.get_item(idx)
         m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(v)
-        return m is not None
+        if m is None:
+            return False
+
+        # Latitude runs from -90 to +90
+        latstr: str = m.group("lat")
+        try:
+            lat: float = float(latstr)
+            if  lat < -90. or lat > 90.:
+                return False
+        except ValueError:
+            return False
+
+        # Longitude runs from -180 to +180
+        lonstr: str = m.group("lon")
+        try:
+            lon: float = float(lonstr)
+            if lon < -180. or lon > 180.:
+                return False
+        except ValueError:
+            return False
+
+        return True
 
     def is_date_and_times(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -234,6 +281,8 @@ class KgtkValue(KgtkFormat):
         Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like valid date and times
         literal based on ISO-8601.
+
+        TODO: validate the calendar date, eg fail if 31-Apr-2020.
         """
         if self.is_list() and idx is None:
             return False
