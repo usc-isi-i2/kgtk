@@ -160,7 +160,9 @@ def run(
     generator.finalize()
 
 # testing profiling locally with direct call
-
+# pip3 install snakeviz
+# run `snakeviz /tmp/tmp.dat` to visualize the call stacks.
+# python3 -m cProfile -o /tmp/tmp.dat  generate_wikidata_triples.py
 if __name__ == "__main__":
     import gzip
     from kgtk.triple_generator import TripleGenerator
