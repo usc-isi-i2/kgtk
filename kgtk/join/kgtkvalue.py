@@ -304,8 +304,7 @@ class KgtkValue(KgtkFormat):
 
     def describe(self, idx: typing.Optional[int] = None)->str:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return a string that descrubes the value.
+        Return a string that describes the value.
         """
         if self.is_list() and idx is None:
             result: str = ""
