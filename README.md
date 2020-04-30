@@ -1,6 +1,29 @@
-# kgtk
+# KGTK: Knowledge Graph Toolkit
 
-### Installation
+KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs. 
+
+## Documentation
+
+To-do.
+
+## Features
+
+* Computation of class instances
+* Computation of reachable nodes
+* Filtering based on property values
+* Removal of columns
+* Sorting
+* Computation of various embeddings
+* Cleaning and validation
+* Computation of graph metrics
+* Joining and concatenation of graphs
+* Manipulation of Wikidata data
+
+## Releases
+
+* [Source code](https://github.com/usc-isi-i2/kgtk/releases)
+
+## Installation
 
 0. Our installations will be in a conda environment. If you don't have a conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it.
 1. Set up your own conda environment:
@@ -10,9 +33,12 @@ conda activate kgtk-env
 ```
  **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
 
-2. Clone this repository: `git clone https://github.com/usc-isi-i2/kgtk.git`
-2. `pip install -r requirements.txt`
-3. Install `graph-tool`. If you use conda, then you can run `conda install -c conda-forge graph-tool`, else see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+2. Install (the dev branch at this point): `pip install kgtk`
+
+You can test if `kgtk` is installed properly now with: `kgtk -h`.
+
+3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+
 4. Install `mlr`. Depending on your environment, you can run one of the following:
   * `brew update && brew install miller` (on mac)
   * `sudo port selfupdate && sudo port install miller` (on mac)
@@ -21,6 +47,22 @@ conda activate kgtk-env
   * `sudo yum install miller` (linux)
   
 More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
+
+## Running KGTK commands
+
+To list all the available KGTK commands, run:
+
+`kgtk -h`
+
+To see the arguments of a particular commands, run:
+
+`kgtk <command> -h`
+
+An example command that computes instances of the subclasses of two classes:
+
+`kgtk instances --transitive --class Q13442814,Q12345678`
+
+## Additional information
 
 ### The Miller Package
 
@@ -44,14 +86,16 @@ https://www.mankier.com/1/mlr
 * `text_embedding`
 * `remove_columns`
 * `sort`
+* `gt_loader`
 * `merge_identical_nodes`
 * `zconcat`
+* `export_neo4j`
 
 To get an information on how to use each of them, run:
 `kgtk [TOOL] -h`
 
 More detailed description of the arguments will be added here promptly.
 
-### Developer Instruction
+### Developer Instructions
 
 Please refer to [this](README_dev.md)

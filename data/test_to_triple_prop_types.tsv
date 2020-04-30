@@ -5,3 +5,5 @@ p10	property_type	globe-coordinate
 p11	property_type	quantity
 p12	property_type	monolingualtext
 p13	property_type	item
+p14	property_type	external-identifier
+p15	property_type	url
