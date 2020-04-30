@@ -144,6 +144,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                   compression_type=compression_type,
                                                   gzip_in_parallel=gzip_in_parallel,
                                                   gzip_queue_size=gzip_queue_size,
+                                                  error_file=error_file,
                                                   verbose=verbose)
 
         # Read the kgtk file header and split it into column names.  We get the
@@ -154,6 +155,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                          force_column_names=force_column_names,
                                                          skip_first_record=skip_first_record,
                                                          column_separator=column_separator,
+                                                         error_file=error_file,
                                                          verbose=verbose)
         # Check for unsafe column names.
         cls.check_column_names(column_names,
@@ -182,12 +184,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 is_edge_file = True
                 is_node_file = False
                 if verbose:
-                    print("%s column found, this is a KGTK edge file" % column_names[node1_idx], file=error_file)
+                    print("%s column found, this is a KGTK edge file" % column_names[node1_idx], file=error_file, flush=True)
             else:
                 is_edge_file = False
                 is_node_file = True
                 if verbose:
-                    print("node1 column not found, assuming this is a KGTK node file", file=error_file)
+                    print("node1 column not found, assuming this is a KGTK node file", file=error_file, flush=True)
 
         elif mode is KgtkReader.Mode.EDGE:
             is_edge_file = True
@@ -211,7 +213,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                                error_file=error_file)
 
             if verbose:
-                print("KgtkReader: Reading an edge file. node1=%d label=%d node2=%d" % (node1_column_idx, label_column_idx, node2_column_idx), file=error_file)
+                print("KgtkReader: Reading an edge file. node1=%d label=%d node2=%d" % (node1_column_idx, label_column_idx, node2_column_idx), file=error_file, flush=True)
 
             # Apply the proper defaults to the blank node1, node2, and id actions:
             if blank_node1_line_action is None:
@@ -267,7 +269,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                           error_file=error_file)
 
             if verbose:
-                print("KgtkReader: Reading an node file. id=%d" % (id_column_idx), file=error_file)
+                print("KgtkReader: Reading an node file. id=%d" % (id_column_idx), file=error_file, flush=True)
 
             # Apply the proper defaults to the blank node1, node2, and id actions:
             if blank_node1_line_action is None:
@@ -356,27 +358,28 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                               file_name: str,
                               file_or_path: typing.Union[Path, typing.TextIO],
                               who: str,
+                              error_file: typing.TextIO,
                               verbose: bool)->typing.TextIO:
         
         # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
         if compression_type in [".gz", "gz"]:
             if verbose:
-                print("%s: reading gzip %s" % (who, file_name))
+                print("%s: reading gzip %s" % (who, file_name), file=error_file, flush=True)
             return gzip.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".bz2", "bz2"]:
             if verbose:
-                print("%s: reading bz2 %s" % (who, file_name))
+                print("%s: reading bz2 %s" % (who, file_name), file=error_file, flush=True)
             return bz2.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".xz", "xz"]:
             if verbose:
-                print("%s: reading lzma %s" % (who, file_name))
+                print("%s: reading lzma %s" % (who, file_name), file=error_file, flush=True)
             return lzma.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".lz4", "lz4"]:
             if verbose:
-                print("%s: reading lz4 %s" % (who, file_name))
+                print("%s: reading lz4 %s" % (who, file_name), file=error_file, flush=True)
             return lz4.frame.open(file_or_path, mode="rt") # type: ignore
         else:
             # TODO: throw a better exception.
@@ -387,24 +390,25 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                   compression_type: typing.Optional[str],
                   gzip_in_parallel: bool,
                   gzip_queue_size: int,
+                  error_file: typing.TextIO,
                   verbose: bool)->ClosableIter[str]:
         who: str = cls.__name__
         if file_path is None or str(file_path) == "-":
             if compression_type is not None and len(compression_type) > 0:
-                return ClosableIterTextIOWrapper(cls._open_compressed_file(compression_type, "-", sys.stdin, who, verbose))
+                return ClosableIterTextIOWrapper(cls._open_compressed_file(compression_type, "-", sys.stdin, who, error_file, verbose))
             else:
                 if verbose:
-                    print("%s: reading stdin" % who)
+                    print("%s: reading stdin" % who, file=error_file, flush=True)
                 return ClosableIterTextIOWrapper(sys.stdin)
 
         if verbose:
-            print("%s: File_path.suffix: %s" % (who, file_path.suffix))
+            print("%s: File_path.suffix: %s" % (who, file_path.suffix), file=error_file, flush=True)
 
         gzip_file: typing.TextIO
         if compression_type is not None and len(compression_type) > 0:
-            gzip_file = cls._open_compressed_file(compression_type, str(file_path), file_path, who, verbose)
+            gzip_file = cls._open_compressed_file(compression_type, str(file_path), file_path, who, error_file, verbose)
         elif file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
-            gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, verbose)
+            gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, error_file, verbose)
         else:
             if verbose:
                 print("%s: reading file %s" % (who, str(file_path)))
@@ -424,6 +428,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                             force_column_names: typing.Optional[typing.List[str]],
                             skip_first_record: bool,
                             column_separator: str,
+                            error_file: typing.TextIO,
                             verbose: bool = False,
     )->typing.Tuple[str, typing.List[str]]:
         """
@@ -436,8 +441,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # TODO: if the read fails, throw a more useful exception with the line number.
             header: str = next(source).rstrip("\r\n")
             if verbose:
-                print("header: %s" % header)
-
+                print("header: %s" % header, file=error_file, flush=True)
 
             # Split the first line into column names.
             return header, header.split(column_separator)
@@ -469,10 +473,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # Immediately raise an exception.
             raise ValueError("In input data line %d, %s: %s" % (self.data_lines_read, msg, line))
         elif action == ValidationAction.EXIT:
-            print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file)
+            print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
             sys.exit(1)
             
-        print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file)
+        print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
         self.data_errors_reported += 1
         if self.error_limit > 0 and self.data_errors_reported >= self.error_limit:
             raise ValueError("Too many data errors.")
@@ -507,7 +511,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             line = line.rstrip("\r\n")
 
             if self.very_verbose:
-                print("'%s'" % line)
+                print("'%s'" % line, file=self.error_file, flush=True)
 
             # Ignore empty lines.
             if self.empty_line_action != ValidationAction.PASS and len(line) == 0:
@@ -755,7 +759,7 @@ def main():
     row: typing.List[str]
     for row in kr:
         line_count += 1
-    print("Read %d lines" % line_count)
+    print("Read %d lines" % line_count, file=error_file, flush=True)
 
 if __name__ == "__main__":
     main()

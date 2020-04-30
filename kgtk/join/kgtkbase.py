@@ -27,7 +27,7 @@ class KgtkBase(KgtkFormat):
             raise ValueError("In input header'%s': %s" % (header_line, msg))
 
         if (error_action in [ValidationAction.REPORT, ValidationAction.COMPLAIN, ValidationAction.EXIT ]):
-            print("In input header '%s': %s" % (header_line, msg), file=error_file)
+            print("In input header '%s': %s" % (header_line, msg), file=error_file, flush=True)
         if error_action == ValidationAction.EXIT:
             sys.exit(1)
         return error_action in [ValidationAction.PASS, ValidationAction.REPORT]
