@@ -97,10 +97,14 @@ def add_arguments(parser):
         help="if set to yes, read from compressed gz file",
         dest="use_gz",
     )
-    # logging level
-    # parser.add_argument('-l', '--logging-level', action='store', dest='logging_level',
-    #         default="info", choices=("error", "warning", "info", "debug"),
-    #         help="set up the logging level, default is INFO level")
+    parser.add_argument(
+        "-lbl",
+        "--line-by-line",
+        action="store",
+        type=str2bool,
+        help="if set to yes, read from standard input line by line, otherwise loads whole file into memory",
+        dest="line_by_line",
+    )
 
 
 def run(
@@ -111,7 +115,8 @@ def run(
     n: int,
     truthy: bool,
     ignore: bool,
-    use_gz: bool
+    use_gz: bool,
+    line_by_line: bool,
 ):
     # import modules locally
     import gzip
@@ -127,19 +132,54 @@ def run(
         truthy=truthy
     )
     # process stdin
-    num_line = 1
     if use_gz:
         fp = gzip.open(sys.stdin.buffer, 'rt')
     else:
         fp = sys.stdin
-    while True:
-        edge = fp.readline()
-        if not edge:
-            break
-        if edge.startswith("#") or num_line == 1: # TODO First line omit
-            num_line += 1
-            continue
-        else:
-            generator.entry_point(num_line, edge)
-            num_line += 1
+    if line_by_line:
+        print("#line-by-line")
+        num_line = 1
+        while True:
+            edge = fp.readline()
+            if not edge:
+                break
+            if edge.startswith("#") or num_line == 1: # TODO First line omit
+                num_line += 1
+                continue
+            else:
+                generator.entry_point(num_line, edge)
+                num_line += 1
+    else:
+        # not line by line
+        print("#not line-by-line")
+        for num, edge in enumerate(fp.readlines()):
+            if edge.startswith("#") or num == 0:
+                continue
+            else:
+                generator.entry_point(num+1,edge)
     generator.finalize()
+
+# testing profiling locally with direct call
+
+if __name__ == "__main__":
+    import gzip
+    from kgtk.triple_generator import TripleGenerator
+    import sys
+    with open("/tmp/gwt.log","w") as dest_fp:
+        generator = TripleGenerator(
+            prop_file="/Users/rongpeng/Documents/ISI/Covid19/covid_data/v1.3/heng_props.tsv",
+            label_set="label",
+            alias_set="aliases",
+            description_set="descriptions",
+            n=10000,
+            ignore=True,
+            truthy=True,
+            dest_fp = dest_fp
+        )   
+        with open("/Users/rongpeng/Documents/ISI/Covid19/covid_data/v1.3/kgtk_sample_sorted.tsv","r") as fp:
+            for num, edge in enumerate(fp.readlines()):
+                if edge.startswith("#") or num == 0:
+                    continue
+                else:
+                    generator.entry_point(num+1,edge)
+            generator.finalize() 
