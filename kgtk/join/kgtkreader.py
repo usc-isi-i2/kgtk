@@ -19,12 +19,13 @@ import typing
 from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GunzipProcess
+from kgtk.join.kgtkbase import KgtkBase
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkvalue import KgtkValue
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
-class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
+class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     ERROR_LIMIT_DEFAULT: int = 1000
     GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
 
@@ -576,6 +577,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             kv: KgtkValue = KgtkValue(value)
             if not kv.is_valid():
                 problems.append("%s: %s" % (self.column_names[idx], kv.describe()))
+            idx += 1
         if len(problems) > 0 and self.exclude_line(self.invalid_value_action,
                                                    "; ".join(problems),
                                                    line):
@@ -592,9 +594,9 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
 
     def additional_column_names(self)->typing.List[str]:
         if self.is_edge_file:
-            return KgtkFormat.additional_edge_columns(self.column_names)
+            return KgtkBase.additional_edge_columns(self.column_names)
         elif self.is_node_file:
-            return KgtkFormat.additional_node_columns(self.column_names)
+            return KgtkBase.additional_node_columns(self.column_names)
         else:
             # TODO: throw a better exception.
             raise ValueError("KgtkReader: Unknown Kgtk file type.")
