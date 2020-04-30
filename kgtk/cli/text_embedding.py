@@ -384,12 +384,12 @@ class EmbeddingVector:
                         else:
                             # if we get to next id
                             # concate all properties into one sentence to represent the Q node
-                            concated_sentence = self.attribute_to_sentence(each_node_attributes, node_id)
+                            concated_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
                             each_node_attributes["sentence"] = concated_sentence
-                            self.candidates[node_id] = each_node_attributes
-                            self._logger.debug("{} --> {}".format(node_id, concated_sentence))
+                            self.candidates[current_process_node_id] = each_node_attributes
                             # after write down finish, we can cleaer and start parsing next one
                             each_node_attributes = {"has_properties":[], "isa_properties":[], "label_properties":[], "description_properties": []}
+                            # update to new id
                             current_process_node_id = node_id
 
                     if node_property in target_properties:
@@ -725,24 +725,16 @@ def main(**kwargs):
         import argparse
         import pickle
 
-        logging_level = kwargs.get("logging_level", "warning")
-        if logging_level == "info":
-            logging_level_class = logging.INFO
-        elif logging_level == "debug":
+        do_logging = kwargs.get("logging_level", None)
+        if do_logging and do_logging.lower() != "none":
             logging_level_class = logging.DEBUG
-        elif logging_level == "warning":
-            logging_level_class = logging.WARNING
-        elif logging_level == "error":
-            logging_level_class = logging.ERROR
-        else:
-            logging_level_class = logging.WARNING
-        if logging_level != "none":
             logger_path = os.path.join(os.environ.get("HOME"), "kgtk_text_embedding_log_{}.log".format(strftime("%Y-%m-%d-%H-%M")))
             logging.basicConfig(level=logging_level_class,
-                        format="%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s",
-                        datefmt='%m-%d %H:%M:%S',
-                        filename=logger_path,
-                        filemode='w')
+                format="%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s",
+                datefmt='%m-%d %H:%M:%S',
+                filename=logger_path,
+                filemode='w')
+
         _logger = logging.getLogger(__name__)
         _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
 
@@ -832,10 +824,12 @@ def add_arguments(parser):
             return False
         else:
             raise argparse.ArgumentTypeError('Boolean value expected.')
-    # logging level
+    # logging level, no longer need as there is a global choice for it
     parser.add_argument('-l', '--logging-level', action='store', dest='logging_level',
             default="info", choices=("error", "warning", "info", "debug", "none"),
             help="set up the logging level, default is INFO level")
+    # parser.add_argument('--debug', action='store_true', dest='logging_level',
+                        # help='set up to make logging and store at home directory.')
     # model name
     all_models_names = ALL_EMBEDDING_MODELS_NAMES
     parser.add_argument('-m', '--model', action='store', nargs='+', dest='all_models_names',
