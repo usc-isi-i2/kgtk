@@ -48,6 +48,7 @@ class EdgeReader(KgtkReader):
                                                   compression_type=compression_type,
                                                   gzip_in_parallel=gzip_in_parallel,
                                                   gzip_queue_size=gzip_queue_size,
+                                                  error_file=error_file,
                                                   verbose=verbose)
 
         # Read the edge file header and split it into column names.
@@ -57,6 +58,7 @@ class EdgeReader(KgtkReader):
                                                          force_column_names=force_column_names,
                                                          skip_first_record=skip_first_record,
                                                          column_separator=column_separator,
+                                                         error_file=error_file,
                                                          verbose=verbose)
 
         # Check for unsafe column names.

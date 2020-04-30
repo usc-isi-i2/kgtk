@@ -165,11 +165,11 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         kgtk_file: typing.Optional[Path]
         for kgtk_file in kgtk_files:
             if verbose:
-                print("\n====================================================")
+                print("\n====================================================", flush=True)
                 if kgtk_file is not None:
-                    print("Validating '%s'" % str(kgtk_file), file=error_file)
+                    print("Validating '%s'" % str(kgtk_file), file=error_file, flush=True)
                 else:
-                    print ("Validating from stdin", file=error_file)
+                    print ("Validating from stdin", file=error_file, flush=True)
 
                 kr: KgtkReader = KgtkReader.open(kgtk_file,
                                                  force_column_names=force_column_names,
@@ -200,14 +200,14 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                 if header_only:
                     kr.close()
                     if verbose:
-                        print("Validated the header only.", file=error_file)
+                        print("Validated the header only.", file=error_file, flush=True)
                 else:
                     line_count: int = 0
                     row: typing.List[str]
                     for row in kr:
                         line_count += 1
                     if verbose:
-                        print("Validated %d data lines" % line_count, file=error_file)
+                        print("Validated %d data lines" % line_count, file=error_file, flush=True)
         return 0
 
     except SystemExit as e:
