@@ -8,6 +8,7 @@ import sys
 import typing
 
 from kgtk.join.validationaction import ValidationAction
+from kgtk.join.kgtkvalue import KgtkValue
 
 class KgtkFormat:
     COLUMN_SEPARATOR: str = "\t"
@@ -111,8 +112,10 @@ class KgtkFormat:
             results.append("Warning: Column name '%s' contains a vertical bar (|)" % column_name)
         if ";" in column_name:
             results.append("Warning: Column name '%s' contains a semicolon (;)" % column_name)
+        kv: KgtkValue = KgtkValue(column_name)
+        if not kv.is_valid():
+            results.append(kv.describe())
         return results
-    
 
     @classmethod
     def check_column_names(cls,
