@@ -1,4 +1,27 @@
-# kgtk
+# kgtk: Knowledge Graph Toolkit
+
+KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs. 
+
+### Documentation
+
+To-do.
+
+### Features
+
+* Computation of class instances
+* Computation of reachable nodes
+* Filtering based on property values
+* Removal of columns
+* Sorting
+* Computation of various embeddings
+* Cleaning and validation
+* Computation of graph metrics
+* Joining and concatenation of graphs
+* Manipulation of Wikidata data
+
+### Releases
+
+* [Source code](https://github.com/usc-isi-i2/kgtk/releases)
 
 ### Installation
 
@@ -10,7 +33,7 @@ conda activate kgtk-env
 ```
  **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
 
-2. Install (the dev branch at this point): `pip install git+https://github.com/usc-isi-i2/kgtk.git@dev`
+2. Install (the dev branch at this point): `pip install kgtk`
 
 You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
@@ -25,7 +48,20 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
   
 More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
 
-### The Miller Package
+### Running KGTK commands
+
+To list all the available KGTK commands, run:
+`kgtk -h`
+
+To see the arguments of a particular commands, run:
+`kgtk <command> -h`
+
+An example command that computes instances of the subclasses of two classes:
+`kgtk instances --transitive --class Q13442814,Q12345678`
+
+### Additional information
+
+#### The Miller Package
 
 1. Our code uses the "miller" package to manipulate formatted data.
 
@@ -40,7 +76,7 @@ https://www.mankier.com/1/mlr
 4. You may need to install the miller command (mlr) on your system.
    * OpenSUSE Tumbleweed Linux: install package `miller` from Main Repository (OSS)
 
-### List of supported tools
+#### List of supported tools
 * `instances`
 * `reachable_nodes`
 * `filter`
@@ -57,6 +93,6 @@ To get an information on how to use each of them, run:
 
 More detailed description of the arguments will be added here promptly.
 
-### Developer Instruction
+#### Developer Instruction
 
 Please refer to [this](README_dev.md)
