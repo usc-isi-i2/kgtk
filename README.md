@@ -51,12 +51,15 @@ More installation options for `mlr` can be found [here](https://johnkerl.org/mil
 ## Running KGTK commands
 
 To list all the available KGTK commands, run:
+
 `kgtk -h`
 
 To see the arguments of a particular commands, run:
+
 `kgtk <command> -h`
 
 An example command that computes instances of the subclasses of two classes:
+
 `kgtk instances --transitive --class Q13442814,Q12345678`
 
 ## Additional information
