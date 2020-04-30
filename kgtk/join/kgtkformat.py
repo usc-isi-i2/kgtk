@@ -3,6 +3,7 @@ Constants and helpers for the KGTK file format.
 
 """
 
+from enum import Enum
 import sys
 import typing
 
@@ -20,6 +21,15 @@ class KgtkFormat:
 
     # There is only one required column in a node file:
     ID_COLUMN_NAMES: typing.List[str] = ["id", "ID"]
+
+    class DataTypes(Enum):
+        NUMBER = 0
+        STRING = 1
+        STRUCTURED_LITERAL = 2
+        SYMBOL = 3
+
+    TRUE_SYMBOL: str = "True"
+    FALSE_SYMBOL: str = "False"
 
     @classmethod
     def _yelp(cls,
@@ -96,11 +106,11 @@ class KgtkFormat:
             if ''.join(column_name.split()) != column_name.strip():
                 results.append("Column name '%s' contains internal white space" % column_name)
         if "," in column_name:
-            results.append("Column name '%s' contains a comma (,)" % column_name)
+            results.append("Warning: Column name '%s' contains a comma (,)" % column_name)
         if "|" in column_name:
-            results.append("Column name '%s' contains a vertical bar (|)" % column_name)
+            results.append("Warning: Column name '%s' contains a vertical bar (|)" % column_name)
         if ";" in column_name:
-            results.append("Column name '%s' contains a semicolon (;)" % column_name)
+            results.append("Warning: Column name '%s' contains a semicolon (;)" % column_name)
         return results
     
 
