@@ -20,6 +20,7 @@ from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtkformat import KgtkFormat
+from kgtk.join.kgtkvalue import KgtkValue
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
@@ -79,6 +80,9 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
     header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXIT)
     unsafe_column_name_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
 
+    # Validate data cell values?
+    invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
+
     # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -122,6 +126,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
              blank_id_line_action: typing.Optional[ValidationAction] = None,
              short_line_action: ValidationAction = ValidationAction.EXCLUDE,
              long_line_action: ValidationAction = ValidationAction.EXCLUDE,
+             invalid_value_action: ValidationAction = ValidationAction.REPORT,
              header_error_action: ValidationAction = ValidationAction.EXIT,
              unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
              compression_type: typing.Optional[str] = None,
@@ -238,6 +243,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               blank_id_line_action=blank_id_line_action,
                               short_line_action=short_line_action,
                               long_line_action=long_line_action,
+                              invalid_value_action=invalid_value_action,
                               header_error_action=header_error_action,
                               unsafe_column_name_action=unsafe_column_name_action,
                               compression_type=compression_type,
@@ -291,6 +297,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                               blank_id_line_action=blank_id_line_action,
                               short_line_action=short_line_action,
                               long_line_action=long_line_action,
+                              invalid_value_action=invalid_value_action,
                               header_error_action=header_error_action,
                               unsafe_column_name_action=unsafe_column_name_action,
                               compression_type=compression_type,
@@ -330,6 +337,7 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                        blank_id_line_action=blank_id_line_action,
                        short_line_action=short_line_action,
                        long_line_action=long_line_action,
+                       invalid_value_action=invalid_value_action,
                        header_error_action=header_error_action,
                        unsafe_column_name_action=unsafe_column_name_action,
                        compression_type=compression_type,
@@ -549,6 +557,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             if self._ignore_if_blank_fields(values, line):
                 continue
 
+            if self.invalid_value_action != ValidationAction.PASS:
+                if self._ignore_invalid_values(values, line):
+                    continue
+
             self.data_lines_passed += 1
             if self.very_verbose:
                 sys.stdout.write(".")
@@ -556,12 +568,26 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
             
             return values
 
-    # May be overridden
-    def _ignore_if_blank_fields(self, values: typing.List[str], line: str):
+    def _ignore_invalid_values(self, values: typing.List[str], line: str)->bool:
+        value: str
+        idx: int = 0
+        problems: typing.List[str] = [ ]
+        for value in values:
+            kv: KgtkValue = KgtkValue(value)
+            if not kv.is_valid():
+                problems.append("%s: %s" % (self.column_names[idx], kv.describe()))
+        if len(problems) > 0 and self.exclude_line(self.invalid_value_action,
+                                                   "; ".join(problems),
+                                                   line):
+            return True
         return False
 
     # May be overridden
-    def _skip_reserved_fields(self, column_name):
+    def _ignore_if_blank_fields(self, values: typing.List[str], line: str)->bool:
+        return False
+
+    # May be overridden
+    def _skip_reserved_fields(self, column_name)->bool:
         return False
 
     def additional_column_names(self)->typing.List[str]:
@@ -642,6 +668,10 @@ class KgtkReader(KgtkFormat, ClosableIter[typing.List[str]]):
                                   help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
 
+        parser.add_argument(      "--invalid-value-action", dest="invalid_value_action",
+                                  help="The action to take when a data cell value is invalid.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+
         parser.add_argument(      "--long-line-action", dest="long_line_action",
                                   help="The action to take when a long line is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
@@ -709,6 +739,7 @@ def main():
                                      blank_id_line_action=args.blank_id_line_action,
                                      short_line_action=args.short_line_action,
                                      long_line_action=args.long_line_action,
+                                     invalid_value_action=args.invalid_value_action,
                                      header_error_action=args.header_error_action,
                                      unsafe_column_name_action=args.unsafe_column_name_action,
                                      compression_type=args.compression_type,

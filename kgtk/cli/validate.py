@@ -90,6 +90,10 @@ def add_arguments(parser):
     parser.add_argument(      "--header-only", dest="header_only",
                               help="Process the only the header of the input file.", action="store_true")
 
+    parser.add_argument(      "--invalid-value-action", dest="invalid_value_action",
+                              help="The action to take when a data cell value is invalid.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+
     parser.add_argument(      "--long-line-action", dest="long_line_action",
                               help="The action to take when a long line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
@@ -105,6 +109,10 @@ def add_arguments(parser):
 
     parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
                               help="Remove excess trailing columns in long lines.", action='store_true')
+
+    parser.add_argument(      "--unsafe-column-name-action", dest="unsafe_column_name_action",
+                              help="The action to take when a column name is unsafe.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     
@@ -132,7 +140,9 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         blank_id_line_action: typing.Optional[ValidationAction] = None,
         short_line_action: ValidationAction = ValidationAction.COMPLAIN,
         long_line_action: ValidationAction = ValidationAction.COMPLAIN,
+        invalid_value_action: ValidationAction = ValidationAction.REPORT,
         header_error_action: ValidationAction = ValidationAction.EXIT,
+        unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
         compression_type: typing.Optional[str] = None,
         gzip_in_parallel: bool = False,
         gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -177,7 +187,9 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                                                  blank_id_line_action=blank_id_line_action,
                                                  short_line_action=short_line_action,
                                                  long_line_action=long_line_action,
+                                                 invalid_value_action=invalid_value_action,
                                                  header_error_action=header_error_action,
+                                                 unsafe_column_name_action=unsafe_column_name_action,
                                                  compression_type=compression_type,
                                                  gzip_in_parallel=gzip_in_parallel,
                                                  gzip_queue_size=gzip_queue_size,

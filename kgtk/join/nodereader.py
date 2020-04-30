@@ -33,6 +33,7 @@ class NodeReader(KgtkReader):
                        blank_id_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        short_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        long_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       invalid_value_action: ValidationAction = ValidationAction.REPORT,
                        header_error_action: ValidationAction = ValidationAction.EXIT,
                        unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
                        compression_type: typing.Optional[str] = None,
@@ -95,6 +96,7 @@ class NodeReader(KgtkReader):
                    blank_id_line_action=blank_id_line_action,
                    short_line_action=short_line_action,
                    long_line_action=long_line_action,
+                   invalid_value_action=invalid_value_action,
                    header_error_action=header_error_action,
                    unsafe_column_name_action=unsafe_column_name_action,
                    compression_type=compression_type,
@@ -106,7 +108,7 @@ class NodeReader(KgtkReader):
                    very_verbose=very_verbose,
         )
 
-    def _ignore_if_blank_fields(self, values: typing.List[str], line: str):
+    def _ignore_if_blank_fields(self, values: typing.List[str], line: str)->bool:
         # Ignore line_action with blank id fields.  This code comes after
         # filling missing trailing columns, although it could be reworked
         # to come first.
@@ -116,7 +118,7 @@ class NodeReader(KgtkReader):
                 return self.exclude_line(self.blank_id_line_action, "id is blank", line)
         return False # Do not ignore this line
 
-    def _skip_reserved_fields(self, column_name):
+    def _skip_reserved_fields(self, column_name)->bool:
         if self.id_column_idx >= 0 and column_name in self.ID_COLUMN_NAMES:
             return True
         return False
@@ -153,6 +155,7 @@ def main():
                                      blank_id_line_action=args.blank_id_line_action,
                                      short_line_action=args.short_line_action,
                                      long_line_action=args.long_line_action,
+                                     invalid_value_action=args.invalid_value_action,
                                      header_error_action=args.header_error_action,
                                      unsafe_column_name_action=args.unsafe_column_name_action,
                                      compression_type=args.compression_type,
