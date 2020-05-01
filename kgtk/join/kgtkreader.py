@@ -439,7 +439,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # Read the column names from the first line, stripping end-of-line characters.
             #
             # TODO: if the read fails, throw a more useful exception with the line number.
-            header: str = next(source).rstrip("\r\n")
+            try:
+                header: str = next(source).rstrip("\r\n")
+            except StopIteration:
+                raise ValueError("No header line in file")
             if verbose:
                 print("header: %s" % header, file=error_file, flush=True)
 
@@ -449,7 +452,11 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # Skip the first record to override the column names in the file.
             # Do not skip the first record if the file does not hae a header record.
             if skip_first_record:
-                next(source)
+                try:
+                    next(source)
+                except StopIteration:
+                    raise ValueError("No header line to skip")
+
             # Use the forced column names.
             return column_separator.join(force_column_names), force_column_names
 
@@ -479,7 +486,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
         self.data_errors_reported += 1
         if self.error_limit > 0 and self.data_errors_reported >= self.error_limit:
-            raise ValueError("Too many data errors.")
+            raise ValueError("Too many data errors, exiting.")
         return result
 
     # This is both and iterable and an iterator object.
@@ -588,7 +595,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if len(value) > 0: # Optimize the common case of empty columns.
                 kv: KgtkValue = KgtkValue(value)
                 if not kv.is_valid():
-                    problems.append("%s: %s" % (self.column_names[idx], kv.describe()))
+                    problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], value, kv.describe()))
 
         if len(problems) == 0:
             return False
