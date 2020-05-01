@@ -188,7 +188,8 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith("'")
 
-    language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^']|\\.)*')@(?P<lang>[a-zA-Z][a-zA-Z])$")
+    # Support two or three character language codes.
+    language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^']|\\.)*')@(?P<lang>[a-zA-Z]{2,3})$")
 
     def is_valid_language_qualified_string(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -207,7 +208,12 @@ class KgtkValue(KgtkFormat):
         lang: str = m.group("lang")
         # print("lang: %s" % lang)
         try:
-            languages.get(alpha2=lang.lower())
+            if len(lang) == 2:
+                # Two-character language codes.
+                languages.get(alpha2=lang.lower())
+            else:
+                # Three-character language codes.
+                languages.get(bibliographic=lang.lower())
             return True
         except KeyError:
             return False
@@ -223,7 +229,8 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith("@")
 
-    location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?\d{3}\.\d{5})/(?P<lon>[-+]?\d{3}\.\d{5})$")
+    #location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?\d{3}\.\d{5})/(?P<lon>[-+]?\d{3}\.\d{5})$")
+    location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))/(?P<lon>[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))$")
 
     def is_valid_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
         """
