@@ -81,9 +81,9 @@ def compute_stats(g, direction):
             'stdev_degree': stdev_degree
             }
 
-def get_topN_relations(g, N=10):
+def get_topN_relations(g, N=10, pred_property='predicate'):
     rel_freq=defaultdict(int)
     for i, e in enumerate(g.edges()):
-        r=g.edge_properties['predicate'][e]
+        r=g.edge_properties[pred_property][e]
         rel_freq[r]+=1
     return sorted(rel_freq.items(), key=lambda x: x[1], reverse=True)[:N]

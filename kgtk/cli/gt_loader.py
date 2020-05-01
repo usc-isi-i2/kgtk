@@ -16,10 +16,6 @@ def add_arguments(parser):
             parser (argparse.ArgumentParser)
     """
     parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='filename here')
-    parser.add_argument("--header", action="store_true", dest="header_bool", help="Does the file contain a header in its first row")
-    parser.add_argument("--subj", action="store", type=int, dest="sub", help='Column in which the subject is given, default 0', default=0)
-    parser.add_argument("--obj", action="store", type=int, dest="obj", help='Column in which the subject is given, default 2', default=2)
-    parser.add_argument('--pred', action='store', type=str, dest="props", help="Edge properties to store in their order of appearance - comma-separated string.")
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
     parser.add_argument('--degrees', action='store_true', dest='compute_degrees', help="Whether or not to compute degree distribution.")
     parser.add_argument('--pagerank', action='store_true', dest='compute_pagerank', help="Whether or not to compute PageRank centraility.")
@@ -27,7 +23,19 @@ def add_arguments(parser):
     parser.add_argument('--log', action='store', type=str, dest='log_file', help='Log file for summarized statistics of the graph.', default="./log.txt")
     parser.add_argument('-o', '--out', action='store', type=str, dest='output', help='Graph tool file to dump the graph too - if empty, it will not be saved.')
 
-def run(filename, header_bool, sub, obj, props, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output):
+def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output):
+
+	def infer_index(h, options=[]):
+		for o in options:
+			if o in h:
+				return h.index(o)
+		return -1
+	
+	def infer_predicate(h, options=[]):
+		for o in options:
+			if o in h:
+				return o
+		return ''
 
 	try:
 		# import modules locally
@@ -42,22 +50,31 @@ def run(filename, header_bool, sub, obj, props, directed, compute_degrees, compu
 		directions=['in', 'out', 'total']
 		id_col='name'
 
-		p=props.split(',')
-		predicate=p[0]
+		with open(filename, 'r') as f:
+			header=next(f).split('\t')
+			subj_index=infer_index(header, options=['node1', 'subject'])
+			obj_index=infer_index(header, options=['node2', 'object', 'value'])
+			predicate=infer_predicate(header, options=['property', 'predicate', 'label'])
+
+			p=[]
+			for i, header_col in enumerate(header):
+				if i in [subj_index, obj_index]: continue
+				p.append(header_col)
+
 		with open(log_file, 'w') as writer:
 
 			writer.write('loading the TSV graph now ...\n')
 			G2 = load_graph_from_csv(filename, 
-									skip_first=header_bool, 
+									skip_first=True, 
 									directed=directed, 
 									hashed=True, 
-									ecols=[sub,obj],
-									eprop_names=props.split(','), 
+									ecols=[subj_index,obj_index],
+									eprop_names=p, 
 									csv_options={'delimiter': '\t'})
 
 			writer.write('graph loaded! It has %d nodes and %d edges\n' % (G2.num_vertices(), G2.num_edges()))		
 			writer.write('\n###Top relations:\n')
-			for rel, freq in gtanalysis.get_topN_relations(G2):
+			for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=predicate):
 				writer.write('%s\t%d\n' % (rel, freq))
 
 			if compute_degrees:
