@@ -65,11 +65,12 @@ class EmbeddingVector:
         self.qnodes_descriptions = dict()
         self.vectors_map = dict()
         self.property_labels_dict = dict()
+        self.q_node_to_label = dict()
+        self.node_labels = dict()
         self.vectors_2D = None
+        self.vector_dump_file = None
         self.gt_nodes = set()
         self.candidates = defaultdict(dict)
-        self.vector_dump_file = None
-        self.q_node_to_label = dict()
         self.metadata = []
         self.gt_indexes = set()
         self.input_format = ""
@@ -116,6 +117,99 @@ class EmbeddingVector:
         except:
             raise KGTKException("Sending Sparql query to {} failed!".format(self.wikidata_server))
 
+    def _get_labels(self, nodes: typing.List[str]):
+        query_nodes = " ".join(["wd:{}".format(each) for each in nodes])
+        query = """
+        select ?item ?nodeLabel
+        where { 
+          values ?item {""" + query_nodes + """}
+          ?item rdfs:label ?nodeLabel.
+          FILTER(LANG(?nodeLabel) = "en").
+        }
+        """
+        results2 = self.send_sparql_query(query)
+        for each_res in results2:
+            node_id = each_res['item']['value'].split("/")[-1]
+            value = each_res['nodeLabel']['value']
+            self.node_labels[node_id] = value
+
+    def _get_labels_and_descriptions(self, query_qnodes: str, need_find_label: bool, need_find_description: bool):
+        query_body = """
+            select ?item ?itemDescription ?itemLabel
+            where {
+              values ?item {""" + query_qnodes + """ }
+                 SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+            }
+        """
+        results = self.send_sparql_query(query_body)
+        for each in results:
+            each_node = each['item']['value'].split("/")[-1]
+            if 'itemDescription' in each:
+                description = each['itemDescription']['value']
+            else:
+                description = ""
+            if "itemLabel" in each:
+                label = each['itemLabel']['value']
+            else:
+                label = ""
+            if need_find_label:
+                self.candidates[each_node]["label_properties"] = [label]
+            if need_find_description:
+                self.candidates[each_node]["description_properties"] = [description]
+
+    def _get_property_values(self, query_qnodes, query_part_names, query_part_properties):
+        used_p_node_ids = set()
+        for part_name, part in zip(query_part_names, query_part_properties):
+            if part_name == "isa_properties":
+                self._get_labels(part)
+            for i, each in enumerate(part):
+                if each not in {"label", "description", "all"}:
+                    query_body2 = """
+                    select ?item ?eachPropertyLabel
+                    where {{
+                      values ?item {{{all_nodes}}}
+                    ?item wdt:{qnode} ?eachProperty.
+                      SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
+                    }}
+                    """.format(all_nodes=query_qnodes, qnode=each)
+                    results2 = self.send_sparql_query(query_body2)
+
+                    for each_res in results2:
+                        node_id = each_res['item']['value'].split("/")[-1]
+                        value = each_res['eachPropertyLabel']['value']
+                        if part_name == "isa_properties" and self.node_labels[each].endswith("of"):
+                            value = self.node_labels[each] + "||" + value
+                        used_p_node_ids.add(node_id)
+                        if part_name in self.candidates[node_id]:
+                            self.candidates[node_id][part_name] = value
+                        else:
+                            self.candidates[node_id][part_name] = {value}
+        return used_p_node_ids
+
+    def _get_all_properties(self, query_qnodes, used_p_node_ids, properties_list):
+        has_properties_set = set(properties_list[3])
+        query_body3 = """
+                            select DISTINCT ?item ?p_entity ?p_entityLabel
+                            where {
+                              values ?item {""" + query_qnodes + """}
+                              ?item ?p ?o.
+                              FILTER regex(str(?p), "^http://www.wikidata.org/prop/P", "i")
+                              BIND (IRI(REPLACE(STR(?p), "http://www.wikidata.org/prop", "http://www.wikidata.org/entity")) AS ?p_entity) .
+                              SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+                            }
+                        """
+        results3 = self.send_sparql_query(query_body3)
+        for each in results3:
+            node_name = each['item']['value'].split("/")[-1]
+            p_node_id = each['p_entity']['value'].split("/")[-1]
+            p_node_label = each['p_entityLabel']['value']
+            if p_node_id not in used_p_node_ids:
+                if properties_list[3] == ["all"] or p_node_id in has_properties_set:
+                    if "has_properties" in self.candidates[node_name]:
+                        self.candidates[node_name]["has_properties"].add(p_node_label)
+                    else:
+                        self.candidates[node_name]["has_properties"] = {p_node_label}
+
     def get_item_description(self, qnodes: typing.List[str] = None, target_properties: dict = {}):
         """
             use sparql query to get the descriptions of given Q nodes
@@ -127,7 +221,6 @@ class EmbeddingVector:
         else:
             find_all_properties = False
         properties_list = [[] for _ in range(4)]
-        used_p_node_ids = set()
         names = ["labels", "descriptions", "isa_properties", "has_properties"]
         for k, v in target_properties.items():
             if v == "label_properties":
@@ -159,80 +252,23 @@ class EmbeddingVector:
 
             # this is used to get corresponding labels / descriptions
             if need_find_label or need_find_description:
-                query_body = """
-                    select ?item ?itemDescription ?itemLabel
-                    where {
-                      values ?item {""" + query_qnodes + """ }
-                         SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-                    }
-                """
-                results = self.send_sparql_query(query_body)
-                for each in results:
-                    each_node = each['item']['value'].split("/")[-1]
-                    if 'itemDescription' in each:
-                        description = each['itemDescription']['value']
-                    else:
-                        description = ""
-                    if "itemLabel" in each:
-                        label = each['itemLabel']['value']
-                    else:
-                        label = ""
-                    if need_find_label:
-                        self.candidates[each_node]["label_properties"] = [label]
-                    if need_find_description:
-                        self.candidates[each_node]["description_properties"] = [description]
+                self._get_labels_and_descriptions(query_qnodes, need_find_label, need_find_description)
 
-            # this is used to get corresponding P node labels
-            query_body2 = "select ?item"
-            part2 = ""
-            for name, part in zip(names, properties_list):
-                for i, each in enumerate(part):
-                    if each not in {"label", "description", "all"}:
-                        used_p_node_ids.add(each)
-                        query_body2 += " ?{}_{}Label".format(name, i)
-                        part2 += """?item wdt:{} ?{}_{}. \n""".format(each, name, i)
-            query_body2 += """
-                        where {
-                          values ?item {""" + query_qnodes + "}"
-
-            query_body2 += part2 + """
-                             SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-                        }
-            """
-            results2 = self.send_sparql_query(query_body2)
-            for each in results2:
-                node_name = each['item']['value'].split("/")[-1]
-                for name, part in zip(names, properties_list):
-                    if len(part) > 0:
-                        properties_res = set()
-                        for i in range(len(part)):
-                            property_key = '{}_{}Label'.format(name, i)
-                            if property_key in each:
-                                properties_res.add(each[property_key]['value'])
-                        self.candidates[node_name][name] = properties_res
+            if len(properties_list[3]) > len(qnodes):
+                # in this condition, we have too many properties need to be queried, it will waste time
+                # query to get all properties then filtering would save more times
+                find_all_properties = True
+                query_part2_names = names[:3]
+                query_part2_properties = properties_list[:3]
+            else:
+                query_part2_names = names
+                query_part2_properties = properties_list
+            # this is used to get corresponding labels of properties values
+            used_p_node_ids = self._get_property_values(query_qnodes, query_part2_names, query_part2_properties)
 
             # if need get all properties, we need to run extra query
             if find_all_properties:
-                query_body3 = """
-                    select DISTINCT ?item ?p_entity ?p_entityLabel
-                    where {
-                      values ?item {""" + query_qnodes + """}
-                      ?item ?p ?o.
-                      FILTER regex(str(?p), "^http://www.wikidata.org/prop/P", "i")
-                      BIND (IRI(REPLACE(STR(?p), "http://www.wikidata.org/prop", "http://www.wikidata.org/entity")) AS ?p_entity) .
-                      SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-                    }
-                """
-                results3 = self.send_sparql_query(query_body3)
-                for each in results3:
-                    node_name = each['item']['value'].split("/")[-1]
-                    p_node_id = each['p_entity']['value'].split("/")[-1]
-                    p_node_label = each['p_entityLabel']['value']
-                    if p_node_id not in used_p_node_ids:
-                        if "has_properties" in self.candidates[node_name]:
-                            self.candidates[node_name]["has_properties"].add(p_node_label)
-                        else:
-                            self.candidates[node_name]["has_properties"] = {p_node_label}
+                self._get_all_properties(query_qnodes, used_p_node_ids, properties_list)
 
         for each_node_id in qnodes:
             each_sentence = self.attribute_to_sentence(self.candidates[each_node_id], each_node_id)
@@ -260,7 +296,6 @@ class EmbeddingVector:
         if input_format == "test_format":
             self.input_format = input_format
             input_df = pd.read_csv(file_path)
-            candidates = {}
             gt = {}
             count = 0
             if "GT_kg_id" in input_df.columns:
@@ -297,7 +332,7 @@ class EmbeddingVector:
                 temp = set(temp) - to_remove_q
                 count += len(temp)
                 self.gt_nodes.add(each[gt_column_id])
-                self.get_item_description(temp, target_properties, label)
+                self.get_item_description(temp, target_properties)
 
             self._logger.info("Totally {} rows with {} candidates loaded.".format(str(len(gt)), str(count)))
 
@@ -396,12 +431,20 @@ class EmbeddingVector:
             concated_sentence += self.get_real_label_name(v["description_properties"][0])
         if "isa_properties" in v and len(v["isa_properties"]) > 0:
             have_isa_properties = True
-            temp = [self.get_real_label_name(each) for each in v["isa_properties"]]
-            if concated_sentence != "" and temp[0] != "":
+            temp = ""
+            for each in v["isa_properties"]:
+                each = self.get_real_label_name(each)
+                if "||" in each:
+                    if "instance of" in each:
+                        each = each.split("||")[1]
+                    else:
+                        each = each.replace("||", " ")
+                temp += each + ", "
+            if concated_sentence != "" and temp != "":
                 concated_sentence += " is a "
-            elif temp[0] != "":
+            elif concated_sentence == "":
                 concated_sentence += "It is a "
-            concated_sentence += ", ".join(temp)
+            concated_sentence += temp[:-2]
         if "has_properties" in v and len(v["has_properties"]) > 0:
             temp = [self.get_real_label_name(each) for each in v["has_properties"]]
             if concated_sentence != "" and temp[0] != "":
