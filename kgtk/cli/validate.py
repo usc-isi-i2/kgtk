@@ -213,5 +213,5 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
     except SystemExit as e:
         raise KGTKException("Exit requested")
     except Exception as e:
-        raise KGTKException(e)
+        raise KGTKException(str(e))
 

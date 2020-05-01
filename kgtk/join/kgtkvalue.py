@@ -274,13 +274,54 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith("^")
 
-    date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?P<hyphen>-)?(?P<month>1[0-2]|0[1-9])(?(hyphen)-)(?P<day>3[01]|0[1-9]|[12][0-9])T(?P<hour>2[0-3]|[01][0-9])(?(hyphen):)(?P<minute>[0-5][0-9])(?(hyphen):)(?P<second>[0-5][0-9])(?P<zone>Z|\+[0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-9])?$")
+    date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[1-9])(?:(?(hyphen)-)(?P<day>3[01]|0[1-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
 
     def is_valid_date_and_times(self, idx: typing.Optional[int] = None)->bool:
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like valid date and times
         literal based on ISO-8601.
+
+        Valid date formats:
+        YYYY
+        YYYY-MM
+        YYYYMMDD
+        YYYY-MM-DD
+
+        Valid date and time formats
+        YYMMDDTHH
+        YYYY-MM-DDTHH
+        YYMMDDTHHMM
+        YYYY-MM-DDTHH:MM
+        YYMMDDTHHMMSS
+        YYYY-MM-DDTHH:MM:SS
+
+        Optional Time Zone suffix for date and time:
+        Z
+        +HH
+        -HH
+        +HHMM
+        -HHMM
+        +HH:MM
+        -HH:MM
+
+        NOTE: This code also accepts the following, which are disallowed by the standard:
+        YYYYT...
+        YYYYMM
+        YYYYMMT...
+        YYYY-MMT...
+
+        Note:  IS0-8601 disallows 0 for month or day, e.g.:
+        Invalid                   Correct
+        1960-00-00T00:00:00Z/9    1960-01-01T00:00:00Z/9
+
+        TODO: Support fractional time elements
+
+        TODO: Support week dates.
+
+        TODO: Support ordinal dates
+
+        TODO: Support Unicode minus sign as well as ASCII minus sign.
 
         TODO: validate the calendar date, eg fail if 31-Apr-2020.
         """
