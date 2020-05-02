@@ -188,7 +188,6 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                                                        allow_lax_lq_strings=allow_lax_lq_strings,
                                                        allow_additional_language_codes=allow_additional_language_codes,
                                                        additional_language_codes=additional_language_codes)
-    print("value_options.allow_month_or_day_zero = %s" % str(value_options.allow_month_or_day_zero))
 
     try:
         kgtk_file: typing.Optional[Path]
