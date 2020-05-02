@@ -62,10 +62,10 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return len(v) == 0
 
-    def is_number(self, idx: typing.Optional[int] = None)->bool:
+    def is_number_old(self, idx: typing.Optional[int] = None)->bool:
         """
         Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is 0-9,_,-,. .
+        Otherwise, return True if the first character is 0-9,+,-,. .
         """
         if self.is_list() and idx is None:
             return False
@@ -73,7 +73,7 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "."))
     
-    def is_valid_number(self, idx: typing.Optional[int] = None)->bool:
+    def is_valid_number_old(self, idx: typing.Optional[int] = None)->bool:
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the first character is 0-9,_,-,.
@@ -108,6 +108,174 @@ class KgtkValue(KgtkFormat):
                 return True
             except ValueError:
                 return False
+        
+    
+    def is_number_or_quantity(self, idx: typing.Optional[int] = None)->bool:
+        """
+        Return False if this value is a list and idx is None.
+        Otherwise, return True if the first character is 0-9,+,-,. .
+        """
+        if self.is_list() and idx is None:
+            return False
+        
+        v: str = self.get_item(idx)
+        return v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "."))
+    
+    # The following lexical analysis is based on:
+    # https://docs.python.org/3/reference/lexical_analysis.html
+
+    # The long integer suffix was part of Python 2.  It was dropped in Python 3.
+    long_suffix_pat: str = r'[lL]'
+
+    plus_or_minus_pat: str = r'[-+]'
+
+    # Integer literals.
+    #
+    # Decimal integers, allowing leading zeros.
+    digit_pat: str = r'[0-9]'
+    decinteger_pat: str = r'(?:{digit}(?:_?{digit})*{long_suffix}?)'.format(digit=digit_pat,
+                                                                            long_suffix=long_suffix_pat)
+    bindigit_pat: str = r'[01]'
+    bininteger_pat: str = r'(?:0[bB](":_?{bindigit})+{long_suffix})'.format(bindigit=bindigit_pat,
+                                                                            long_suffix=long_suffix_pat)
+    octdigit_pat: str = r'[0-7]'
+    octinteger_pat: str = r'(?:0[oO](":_?{octdigit})+{long_suffix})'.format(octdigit=octdigit_pat,
+                                                                            long_suffix=long_suffix_pat)
+    hexdigit_pat: str = r'[0-7a-fA-F]'
+    hexinteger_pat: str = r'(?:0[xX](":_?{hexdigit})+{long_suffix})'.format(hexdigit=hexdigit_pat,
+                                                                            long_suffix=long_suffix_pat)
+     
+    integer_pat: str = r'(?:{decinteger}|{bininteger}|{octinteger}|{hexinteger})'.format(decinteger=decinteger_pat,
+                                                                                        bininteger=bininteger_pat,
+                                                                                        octinteger=octinteger_pat,
+                                                                                        hexinteger=hexinteger_pat)
+
+    # Floating point literals.
+    digitpart_pat: str = r'(?:{digit}(?:_?{digit})*)'.format(digit=digit_pat)
+    fraction_pat: str = r'(?:\.{digitpart})'.format(digitpart=digitpart_pat)
+    pointfloat_pat: str = r'(?:{digitpart}?{fraction})|(?:{digitpart}\.)'.format(digitpart=digitpart_pat,
+                                                                                 fraction=fraction_pat)
+    exponent_pat: str = r'(?:[eE]{plus_or_minus}?{digitpart})'.format(plus_or_minus=plus_or_minus_pat,
+                                                                      digitpart=digitpart_pat)
+    exponentfloat_pat: str = r'(?:{digitpart}|{pointfloat}){exponent}'.format(digitpart=digitpart_pat,
+                                                                              pointfloat=pointfloat_pat,
+                                                                              exponent=exponent_pat)
+    floatnumber_pat: str = r'(?:{pointfloat}|{exponentfloat})'.format(pointfloat=pointfloat_pat,
+                                                                      exponentfloat=exponentfloat_pat)
+
+    # Imaginary literals.
+    imagnumber_pat: str = r'(?:{floatnumber}|{digitpart})[jJ]'.format(floatnumber=floatnumber_pat,
+                                                                      digitpart=digitpart_pat)
+
+    # Numeric literals.
+    numeric_pat: str = r'(?:{plus_or_minus}?(?:{integer}|{floatnumber}|{imagnumber}))'.format(plus_or_minus=plus_or_minus_pat,
+                                                                                              integer=integer_pat,
+                                                                                              floatnumber=floatnumber_pat,
+                                                                                              imagnumber=imagnumber_pat)
+
+    # Tolerances
+    tolerance_pat: str = r'(?:\[{numeric},{numeric}\])'.format(numeric=numeric_pat)
+
+    # SI units taken from:
+    # http://www.csun.edu/~vceed002/ref/measurement/units/units.pdf
+    #
+    # Note: if Q were in this list, it would conflict with Wikidata nodes (below).
+    si_unit_pat: str = r'(?:m|kg|s|C|K|mol|cd|F|M|A|N|ohms|V|J|Hz|lx|H|Wb|V\W|Pa)'
+    si_power_pat: str = r'(?:-1|2|3)' # Might need more.
+    si_combiner_pat: str = r'[./]'
+    si_pat: str = r'(?:{si_unit}{si_power}?(?:{si_combiner}{si_unit}{si_power}?)*)'.format(si_unit=si_unit_pat,
+                                                                                           si_combiner=si_combiner_pat,
+                                                                                           si_power=si_power_pat)
+    # Wikidata nodes (for units):
+    nonzero_digit_pat: str = r'[1-9]'
+    wikidata_node_pat: str = r'(?:Q{nonzero_digit}{digit}*)'.format(nonzero_digit=nonzero_digit_pat,
+                                                                    digit=digit_pat)
+
+    units_pat: str = r'(?:{si}|{wikidata_node})'.format(si=si_pat,
+                                                        wikidata_node=wikidata_node_pat)
+    
+
+    # This definition matches numbers or quantities.
+    number_or_quantity_pat: str = r'{numeric}{tolerance}?{units}?'.format(numeric=numeric_pat,
+                                                                          tolerance=tolerance_pat,
+                                                                          units=units_pat)
+    # This definition for quantity excludes plain numbers.
+    quantity_pat: str = r'{numeric}(?:(?:{tolerance}{units}?)|{units})'.format(numeric=numeric_pat,
+                                                                               tolerance=tolerance_pat,
+                                                                               units=units_pat)
+    # This matches numbers or quantities.
+    number_or_quantity_re: typing.Pattern = re.compile(r'^' + number_or_quantity_pat + r'$')
+
+    # This matches numbers but not quantities.
+    number_re: typing.Pattern = re.compile(r'^' + numeric_pat + r'$')
+
+    # This matches quantities excluding numbers.
+    quantity_re: typing.Pattern = re.compile(r'^' + quantity_pat + r'$')
+
+    def is_valid_number_or_quantity(self, idx: typing.Optional[int] = None)->bool:
+        """
+        Return False if this value is a list and idx is None.
+        Otherwise, return True if the first character is 0-9,_,-,.
+        and it is either a Python-compatible number or an enhanced
+        quantity.
+        """
+        if self.is_list() and idx is None:
+            return False
+        
+        v: str = self.get_item(idx)
+        if not v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", ".")):
+            return False
+
+        m: typing.Optional[typing.Match] = KgtkValue.number_or_quantity_re.match(v)
+        return m is not None
+        
+    
+    def is_valid_number(self, idx: typing.Optional[int] = None)->bool:
+        """
+        Return False if this value is a list and idx is None.
+        Otherwise, return True if the first character is 0-9,_,-,.
+        and it is a Python-compatible number (with optional limited enhancements).
+
+        Examples:
+        1
+        123
+        -123
+        +123
+        0b101
+        0o277
+        0x24F
+        .4
+        0.4
+        10.
+        10.4
+        10.4e10
+        """
+        if self.is_list() and idx is None:
+            return False
+        
+        v: str = self.get_item(idx)
+        if not v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", ".")):
+            return False
+
+        m: typing.Optional[typing.Match] = KgtkValue.number_re.match(v)
+        return m is not None
+        
+    
+    def is_valid_quantity(self, idx: typing.Optional[int] = None)->bool:
+        """
+        Return False if this value is a list and idx is None.
+        Otherwise, return True if the first character is 0-9,_,-,.
+        and it is an enhanced quantity.
+        """
+        if self.is_list() and idx is None:
+            return False
+        
+        v: str = self.get_item(idx)
+        if not v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", ".")):
+            return False
+
+        m: typing.Optional[typing.Match] = KgtkValue.quantity_re.match(v)
+        return m is not None
         
     
     def is_string(self, idx: typing.Optional[int] = None)->bool:
@@ -163,7 +331,7 @@ class KgtkValue(KgtkFormat):
         if self.is_list() and idx is None:
             return False
 
-        return not (self.is_number(idx) or self.is_string(idx) or self.is_structured_literal(idx))
+        return not (self.is_number_or_quantity(idx) or self.is_string(idx) or self.is_structured_literal(idx))
 
     def is_boolean(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -361,8 +529,8 @@ class KgtkValue(KgtkFormat):
 
         if self.is_string(idx):
             return self.is_valid_string(idx)
-        elif self.is_number(idx):
-            return self.is_valid_number(idx)
+        elif self.is_number_or_quantity(idx):
+            return self.is_valid_number_or_quantity(idx)
         elif self.is_structured_literal(idx):
             if self.is_language_qualified_string(idx):
                 return self.is_valid_language_qualified_string(idx)
@@ -373,7 +541,7 @@ class KgtkValue(KgtkFormat):
             elif self.is_extension(idx):
                 return False # no validation presently available.
             else:
-                return False # Quantities will reach here at present.
+                return False # Shouldn't get here.
         else:
             return False
 
@@ -422,11 +590,13 @@ class KgtkValue(KgtkFormat):
                 return "String"
             else:
                 return "Invalid String"
-        elif self.is_number(idx):
+        elif self.is_number_or_quantity(idx):
             if self.is_valid_number(idx):
                 return "Number"
+            elif self.is_valid_quantity(idx):
+                return "Quantity"
             else:
-                return "Invalid Number"
+                return "Invalid Number or Quantity"
         elif self.is_structured_literal(idx):
             if self.is_language_qualified_string(idx):
                 if self.is_valid_language_qualified_string(idx):
