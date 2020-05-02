@@ -17,110 +17,120 @@ def add_arguments(parser):
     """
     parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='filename here')
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
-    parser.add_argument('--degrees', action='store_true', dest='compute_degrees', help="Whether or not to compute degree distribution.")
-    parser.add_argument('--pagerank', action='store_true', dest='compute_pagerank', help="Whether or not to compute PageRank centraility.")
-    parser.add_argument('--hits', action='store_true', dest='compute_hits', help="Whether or not to compute HITS centraility.")
-    parser.add_argument('--log', action='store', type=str, dest='log_file', help='Log file for summarized statistics of the graph.', default="./log.txt")
-    parser.add_argument('-o', '--out', action='store', type=str, dest='output', help='Graph tool file to dump the graph too - if empty, it will not be saved.')
+    parser.add_argument('--degrees', action='store_true', dest='compute_degrees',
+                        help="Whether or not to compute degree distribution.")
+    parser.add_argument('--pagerank', action='store_true', dest='compute_pagerank',
+                        help="Whether or not to compute PageRank centraility.")
+    parser.add_argument('--hits', action='store_true', dest='compute_hits',
+                        help="Whether or not to compute HITS centraility.")
+    parser.add_argument('--log', action='store', type=str, dest='log_file',
+                        help='Log file for summarized statistics of the graph.', default="./log.txt")
+    parser.add_argument('-o', '--out', action='store', type=str, dest='output',
+                        help='Graph tool file to dump the graph too - if empty, it will not be saved.')
+    parser.add_argument('--output-stats', action='store_true', dest='output_stats',
+                        help='do not output the graph but statistics only')
 
-def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output):
 
-	def infer_index(h, options=[]):
-		for o in options:
-			if o in h:
-				return h.index(o)
-		return -1
-	
-	def infer_predicate(h, options=[]):
-		for o in options:
-			if o in h:
-				return o
-		return ''
 
-	try:
-		# import modules locally
-		import socket
-		from graph_tool import load_graph_from_csv
-		from graph_tool import centrality
-		import kgtk.gt.analysis_utils as gtanalysis
-		from kgtk.exceptions import KGTKException
-		import sys
+def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output, output_stats):
+    from kgtk.exceptions import KGTKException
+    def infer_index(h, options=[]):
+        for o in options:
+            if o in h:
+                return h.index(o)
+        return -1
 
-		# hardcoded values useful for the script. Perhaps some of them should be exposed as arguments later
-		directions=['in', 'out', 'total']
-		id_col='name'
+    def infer_predicate(h, options=[]):
+        for o in options:
+            if o in h:
+                return o
+        return ''
 
-		with open(filename, 'r') as f:
-			header=next(f).split('\t')
-			subj_index=infer_index(header, options=['node1', 'subject'])
-			obj_index=infer_index(header, options=['node2', 'object', 'value'])
-			predicate=infer_predicate(header, options=['property', 'predicate', 'label'])
+    try:
+        # import modules locally
+        import socket
+        from graph_tool import load_graph_from_csv
+        from graph_tool import centrality
+        import kgtk.gt.analysis_utils as gtanalysis
+        import sys
 
-			p=[]
-			for i, header_col in enumerate(header):
-				if i in [subj_index, obj_index]: continue
-				p.append(header_col)
+        # hardcoded values useful for the script. Perhaps some of them should be exposed as arguments later
+        directions = ['in', 'out', 'total']
+        id_col = 'name'
 
-		with open(log_file, 'w') as writer:
+        with open(filename, 'r') as f:
+            header = next(f).split('\t')
+            subj_index = infer_index(header, options=['node1', 'subject'])
+            obj_index = infer_index(header, options=['node2', 'object', 'value'])
+            predicate = infer_predicate(header, options=['property', 'predicate', 'label'])
 
-			writer.write('loading the TSV graph now ...\n')
-			G2 = load_graph_from_csv(filename, 
-									skip_first=True, 
-									directed=directed, 
-									hashed=True, 
-									ecols=[subj_index,obj_index],
-									eprop_names=p, 
-									csv_options={'delimiter': '\t'})
+            p = []
+            for i, header_col in enumerate(header):
+                if i in [subj_index, obj_index]: continue
+                p.append(header_col)
 
-			writer.write('graph loaded! It has %d nodes and %d edges\n' % (G2.num_vertices(), G2.num_edges()))		
-			writer.write('\n###Top relations:\n')
-			for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=predicate):
-				writer.write('%s\t%d\n' % (rel, freq))
+        with open(log_file, 'w') as writer:
 
-			if compute_degrees:
-				writer.write('\n###Degrees:\n')
-				for direction in directions:
-					degree_data=gtanalysis.compute_node_degree_hist(G2, direction)
-					max_degree=len(degree_data)-1
-					mean_degree, std_degree= gtanalysis.compute_avg_node_degree(G2, direction)
-					writer.write('%s degree stats: mean=%f, std=%f, max=%d\n' % (direction, mean_degree, std_degree, max_degree))
+            writer.write('loading the TSV graph now ...\n')
+            G2 = load_graph_from_csv(filename,
+                                     skip_first=True,
+                                     directed=directed,
+                                     hashed=True,
+                                     ecols=[subj_index, obj_index],
+                                     eprop_names=p,
+                                     csv_options={'delimiter': '\t'})
 
-			if compute_pagerank:
-				writer.write('\n###PageRank\n')
-				v_pr = G2.new_vertex_property('float')
-				centrality.pagerank(G2, prop=v_pr)
-				G2.properties[('v', 'vertex_pagerank')] = v_pr 
-				writer.write('Max pageranks\n')
-				result=gtanalysis.get_topn_indices(G2, 'vertex_pagerank', 5, id_col)
-				for n_id, n_label, pr in result:
-					writer.write('%s\t%s\t%f\n' % (n_id, n_label, pr))
+            writer.write('graph loaded! It has %d nodes and %d edges\n' % (G2.num_vertices(), G2.num_edges()))
+            writer.write('\n###Top relations:\n')
+            for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=predicate):
+                writer.write('%s\t%d\n' % (rel, freq))
 
-			if compute_hits:
-				writer.write('\n###HITS\n')
-				hits_eig, G2.vp['vertex_hubs'], G2.vp['vertex_auth']=gtanalysis.compute_hits(G2)
-				writer.write('HITS hubs\n')
-				main_hubs=gtanalysis.get_topn_indices(G2, 'vertex_hubs', 5, id_col)
-				for n_id, n_label, hubness in main_hubs:
-					writer.write('%s\t%s\t%f\n' % (n_id, n_label, hubness))
-				writer.write('HITS auth\n')
-				main_auth=gtanalysis.get_topn_indices(G2, 'vertex_auth', 5, id_col)
-				for n_id, n_label, authority in main_auth:
-					writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
+            if compute_degrees:
+                writer.write('\n###Degrees:\n')
+                for direction in directions:
+                    degree_data = gtanalysis.compute_node_degree_hist(G2, direction)
+                    max_degree = len(degree_data) - 1
+                    mean_degree, std_degree = gtanalysis.compute_avg_node_degree(G2, direction)
+                    writer.write(
+                        '%s degree stats: mean=%f, std=%f, max=%d\n' % (direction, mean_degree, std_degree, max_degree))
 
-			for e in G2.edges():
-				sid, oid=e
-				lbl=G2.ep[predicate][e]
-				sys.stdout.write('%s\t%s\t%s\n' % (G2.vp[id_col][sid], lbl, G2.vp[id_col][oid]))
+            if compute_pagerank:
+                writer.write('\n###PageRank\n')
+                v_pr = G2.new_vertex_property('float')
+                centrality.pagerank(G2, prop=v_pr)
+                G2.properties[('v', 'vertex_pagerank')] = v_pr
+                writer.write('Max pageranks\n')
+                result = gtanalysis.get_topn_indices(G2, 'vertex_pagerank', 5, id_col)
+                for n_id, n_label, pr in result:
+                    writer.write('%s\t%s\t%f\n' % (n_id, n_label, pr))
 
-			for v in G2.vertices():
-				v_id=G2.vp[id_col][v]
-				for vprop in G2.vertex_properties.keys():
-					if vprop==id_col: continue
-					sys.stdout.write('%s\t%s\t%s\n' % (v_id, vprop, G2.vp[vprop][v]))
+            if compute_hits:
+                writer.write('\n###HITS\n')
+                hits_eig, G2.vp['vertex_hubs'], G2.vp['vertex_auth'] = gtanalysis.compute_hits(G2)
+                writer.write('HITS hubs\n')
+                main_hubs = gtanalysis.get_topn_indices(G2, 'vertex_hubs', 5, id_col)
+                for n_id, n_label, hubness in main_hubs:
+                    writer.write('%s\t%s\t%f\n' % (n_id, n_label, hubness))
+                writer.write('HITS auth\n')
+                main_auth = gtanalysis.get_topn_indices(G2, 'vertex_auth', 5, id_col)
+                for n_id, n_label, authority in main_auth:
+                    writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 
-			if output:
-					writer.write('now saving the graph to %s\n' % output)
-					G2.save(output)
-	except Exception as e:
-		raise KGTKException('Error: ' + str(e))
-	
+            if not output_stats:
+                for e in G2.edges():
+                    sid, oid = e
+                    lbl = G2.ep[predicate][e]
+                    sys.stdout.write('THIS IS EDGES\n')
+                    sys.stdout.write('%s\t%s\t%s\n' % (G2.vp[id_col][sid], lbl, G2.vp[id_col][oid]))
+
+            for v in G2.vertices():
+                v_id = G2.vp[id_col][v]
+                for vprop in G2.vertex_properties.keys():
+                    if vprop == id_col: continue
+                    sys.stdout.write('%s\t%s\t%s\n' % (v_id, vprop, G2.vp[vprop][v]))
+
+            if output:
+                writer.write('now saving the graph to %s\n' % output)
+                G2.save(output)
+    except Exception as e:
+        raise KGTKException('Error: ' + str(e))
