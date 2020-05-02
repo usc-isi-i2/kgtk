@@ -31,7 +31,6 @@ def add_arguments(parser):
                         help='do not output the graph but statistics only')
 
 
-
 def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output, output_stats):
     from kgtk.exceptions import KGTKException
     def infer_index(h, options=[]):
@@ -116,15 +115,18 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
                 for n_id, n_label, authority in main_auth:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 
+            sys.stdout.write('node1\tproperty\tnode2\n')
             if not output_stats:
                 for e in G2.edges():
                     sid, oid = e
                     lbl = G2.ep[predicate][e]
-                    sys.stdout.write('THIS IS EDGES\n')
                     sys.stdout.write('%s\t%s\t%s\n' % (G2.vp[id_col][sid], lbl, G2.vp[id_col][oid]))
 
             for v in G2.vertices():
                 v_id = G2.vp[id_col][v]
+
+                sys.stdout.write('{}\t{}\t{}\n'.format(v_id, 'vertex_in_degree', v.in_degree()))
+                sys.stdout.write('{}\t{}\t{}\n'.format(v_id, 'vertex_out_degree', v.out_degree()))
                 for vprop in G2.vertex_properties.keys():
                     if vprop == id_col: continue
                     sys.stdout.write('%s\t%s\t%s\n' % (v_id, vprop, G2.vp[vprop][v]))
