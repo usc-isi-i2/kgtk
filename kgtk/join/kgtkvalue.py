@@ -7,7 +7,8 @@ Dimensioned quantities are not supported.
 
 from argparse import ArgumentParser
 import attr
-from iso639 import languages # type: ignore
+import iso639 # type: ignore
+import pycountry # type: ignore
 import re
 import sys
 import typing
@@ -18,7 +19,23 @@ from kgtk.join.kgtkformat import KgtkFormat
 class KgtkValue(KgtkFormat):
     value: str = attr.ib(validator=attr.validators.instance_of(str))
 
+    allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    allow_additional_language_codes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
+    # When allow_lax_strings is true, strings will be checked to see if they
+    # start and end with double quote ("), but we won't check if internal
+    # double quotes are excaped by backslash.
+    allow_lax_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
+    # When allow_lax_lq_strings is true, language qualified strings will be
+    # checked to see if they start and end with single quote ('), but we won't
+    # check if internal single quotes are excaped by backslash.
+    allow_lax_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     
+    additional_language_codes: typing.List[str] = [
+        "mo", # Retired, replaced by the codes for Romanian, but still appearing in wikidata.
+    ]
+
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
     # Cache the list of values.
@@ -294,7 +311,8 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith('"')
 
-    string_re: typing.Pattern = re.compile(r'^"(?:[^"]|\\.)*"$')
+    lax_string_re: typing.Pattern = re.compile(r'^".*"$')
+    strict_string_re: typing.Pattern = re.compile(r'^"(?:[^"\\]|\\.)*"$')
 
     def is_valid_string(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -309,7 +327,11 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         if not v.startswith('"'):
             return False
-        m: typing.Optional[typing.Match] = KgtkValue.string_re.match(v)
+        m: typing.Optional[typing.Match]
+        if self.allow_lax_strings:
+            m = KgtkValue.lax_string_re.match(v)
+        else:
+            m = KgtkValue.strict_string_re.match(v)
         return m is not None
 
     def is_structured_literal(self, idx: typing.Optional[int] = None)->bool:
@@ -356,35 +378,84 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith("'")
 
-    # Support two or three character language codes.
-    language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^']|\\.)*')@(?P<lang>[a-zA-Z]{2,3})$")
+    # Support two or three character language codes.  Suports hyphenated codes
+    # with country codes or dialect names after a language code.
+    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'.*')@(?P<lang>[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)$")
+    strict_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^'\\]|\\.)*')@(?P<lang>[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)$")
 
     def is_valid_language_qualified_string(self, idx: typing.Optional[int] = None)->bool:
-        """
-        Return False if this value is a list and idx is None.
+        """Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like a language-qualified string.
+
+        The language code may be a two- or three-character code from ISO
+        639-3, which replaces ISO 639-1 and ISO 639-2.  In addition, wikidata
+        may include language codes, such as 'mo', that have been retired.  The
+        additional_language_codes table supports these codes, when allowed.
+
+        Wikidata may also contain collective language codes, such as "nah",
+        referring the the Nahuatl languages. These codes from ISO 639-5 are
+        accepted as a fallback when ISO 639-3 lookup fails.
+
+        https://meta.wikimedia.org/wiki/Special_language_codes
+        https://en.wikipedia.org/wiki/Template:ISO_639_name_be-tarask
+
         """
         if self.is_list() and idx is None:
             return False
 
         v: str = self.get_item(idx)
-        m: typing.Optional[typing.Match] = KgtkValue.language_qualified_string_re.match(v)
+        # print("checking %s" % v)
+        m: typing.Optional[typing.Match]
+        if self.allow_lax_lq_strings:
+            m = KgtkValue.lax_language_qualified_string_re.match(v)
+        else:
+            m = KgtkValue.strict_language_qualified_string_re.match(v)
         if m is None:
+            # print("match failed for %s" % v)
             return False
 
         # Validate the language code:
-        lang: str = m.group("lang")
+        lang: str = m.group("lang").lower()
         # print("lang: %s" % lang)
-        try:
-            if len(lang) == 2:
-                # Two-character language codes.
-                languages.get(alpha2=lang.lower())
-            else:
-                # Three-character language codes.
-                languages.get(bibliographic=lang.lower())
+
+        if len(lang) == 2:
+            # Two-character language codes.
+            if pycountry.languages.get(alpha_2=lang) is not None:
+                return True
+
+        elif len(lang) == 3:
+            # Three-character language codes.
+           if pycountry.languages.get(alpha_3=lang) is not None:
+               return True
+
+           # Perhaps this is a collective code from ISO 639-5?
+           try:
+               iso639.languages.get(part5=lang)
+               return True
+           except KeyError:
+               pass
+
+        # Wikidata contains entries such as:
+        # 'panamenha'@pt-br      # language code followed by country code
+        # 'Ecuador'@es-formal    # language code followed by dialect name
+        #
+        # If we see a dash, we'll check the language code by itself.
+        save_lang: str = lang # for the debug print below.
+        country_or_dialect: str = ""
+        if "-" in lang:
+            (lang, country_or_dialect) = lang.split("-", 1)
+
+            # Assume that this is a two-character code.  If necessary,
+            # we can try three-character codes, too.
+            if  pycountry.languages.get(alpha_2=lang) is not None:
+                return True
+
+        # If there's a table of additional language codes, check there:
+        if self.allow_additional_language_codes and lang in self.additional_language_codes:
             return True
-        except KeyError:
-            return False
+
+        print("save_lang: %s lang: %s country_or_dialect: %s" % (save_lang, lang, country_or_dialect))
+        return False
 
     def is_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -449,7 +520,10 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith("^")
 
-    date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[1-9])(?:(?(hyphen)-)(?P<day>3[01]|0[1-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
+    # This pattern allows month 00 and day 00, which are excluded by ISO 8601.
+    date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[0-9])(?:(?(hyphen)-)(?P<day>3[01]|0[0-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
+
+    strict_date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[1-9])(?:(?(hyphen)-)(?P<day>3[01]|0[1-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
 
     def is_valid_date_and_times(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -504,7 +578,11 @@ class KgtkValue(KgtkFormat):
             return False
 
         v: str = self.get_item(idx)
-        m: typing.Optional[typing.Match] = KgtkValue.date_and_times_re.match(v)
+        m: typing.Optional[typing.Match]
+        if self.allow_month_or_day_zero:
+            m = KgtkValue.date_and_times_re.match(v)
+        else:
+            m = KgtkValue.strict_date_and_times_re.match(v)
         return m is not None
 
     def is_extension(self,  idx: typing.Optional[int] = None)->bool:
