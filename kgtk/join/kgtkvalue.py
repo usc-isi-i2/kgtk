@@ -15,30 +15,51 @@ import typing
 
 from kgtk.join.kgtkformat import KgtkFormat
 
-@attr.s(slots=True, frozen=False)
-class KgtkValue(KgtkFormat):
-    value: str = attr.ib(validator=attr.validators.instance_of(str))
+DEFAULT_ADDITIONAL_LANGUAGE_CODES: typing.List[str] = [
+    "mo", # Retired, replaced by the codes for Romanian, but still appearing in wikidata.
+]
 
-    allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
-    allow_additional_language_codes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
+@attr.s(slots=True, frozen=True)
+class KgtkValueOptions:
+    """
+    These options will affect some aspects of value processing. They are in a
+    seperate class for efficiency.
+    """
+    
+    # Allow month 00 or day 00 in dates?  This isn't really allowed by ISO
+    # 8601, but appears in wikidata.
+    allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # When allow_lax_strings is true, strings will be checked to see if they
     # start and end with double quote ("), but we won't check if internal
     # double quotes are excaped by backslash.
-    allow_lax_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    allow_lax_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # When allow_lax_lq_strings is true, language qualified strings will be
     # checked to see if they start and end with single quote ('), but we won't
     # check if internal single quotes are excaped by backslash.
-    allow_lax_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    allow_lax_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
-    additional_language_codes: typing.List[str] = [
-        "mo", # Retired, replaced by the codes for Romanian, but still appearing in wikidata.
-    ]
+    # Shall we allow additional language codes?
+    allow_additional_language_codes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # If this list gets long, we may want to turn it into a map to make lookup
+    # more efficient.
+    additional_language_codes: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                  iterable_validator=attr.validators.instance_of(list)),
+                                                          default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
+    
+DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
+
+@attr.s(slots=True, frozen=False)
+class KgtkValue(KgtkFormat):
+    value: str = attr.ib(validator=attr.validators.instance_of(str))
+    options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
-    # Cache the list of values.
+    # Cache the list of values.  This member is why the class isn't frozen.
     values: typing.Optional[typing.List[str]] = None
 
     def get_list(self)->typing.List[str]:
@@ -65,7 +86,7 @@ class KgtkValue(KgtkFormat):
             result: typing.List['KgtkValue'] = [ ]
             v: str
             for v in self.get_list():
-                result.append(KgtkValue(v))
+                result.append(KgtkValue(v, options=self.options))
             return result
 
     def is_empty(self, idx: typing.Optional[int] = None)->bool:
@@ -328,7 +349,7 @@ class KgtkValue(KgtkFormat):
         if not v.startswith('"'):
             return False
         m: typing.Optional[typing.Match]
-        if self.allow_lax_strings:
+        if self.options.allow_lax_strings:
             m = KgtkValue.lax_string_re.match(v)
         else:
             m = KgtkValue.strict_string_re.match(v)
@@ -406,7 +427,7 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         # print("checking %s" % v)
         m: typing.Optional[typing.Match]
-        if self.allow_lax_lq_strings:
+        if self.options.allow_lax_lq_strings:
             m = KgtkValue.lax_language_qualified_string_re.match(v)
         else:
             m = KgtkValue.strict_language_qualified_string_re.match(v)
@@ -428,7 +449,7 @@ class KgtkValue(KgtkFormat):
            if pycountry.languages.get(alpha_3=lang) is not None:
                return True
 
-           # Perhaps this is a collective code from ISO 639-5?
+           # Perhaps this is a collective (language family) code from ISO 639-5?
            try:
                iso639.languages.get(part5=lang)
                return True
@@ -440,7 +461,7 @@ class KgtkValue(KgtkFormat):
         # 'Ecuador'@es-formal    # language code followed by dialect name
         #
         # If we see a dash, we'll check the language code by itself.
-        save_lang: str = lang # for the debug print below.
+        # save_lang: str = lang # for the debug print below.
         country_or_dialect: str = ""
         if "-" in lang:
             (lang, country_or_dialect) = lang.split("-", 1)
@@ -448,13 +469,14 @@ class KgtkValue(KgtkFormat):
             # Assume that this is a two-character code.  If necessary,
             # we can try three-character codes, too.
             if  pycountry.languages.get(alpha_2=lang) is not None:
+                # Note: we didn't check the country_or_dialect portion.
                 return True
 
         # If there's a table of additional language codes, check there:
-        if self.allow_additional_language_codes and lang in self.additional_language_codes:
+        if self.options.allow_additional_language_codes and lang in self.options.additional_language_codes:
             return True
 
-        print("save_lang: %s lang: %s country_or_dialect: %s" % (save_lang, lang, country_or_dialect))
+        # print("save_lang: %s lang: %s country_or_dialect: %s" % (save_lang, lang, country_or_dialect))
         return False
 
     def is_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
@@ -521,7 +543,7 @@ class KgtkValue(KgtkFormat):
         return v.startswith("^")
 
     # This pattern allows month 00 and day 00, which are excluded by ISO 8601.
-    date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[0-9])(?:(?(hyphen)-)(?P<day>3[01]|0[0-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
+    lax_date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[0-9])(?:(?(hyphen)-)(?P<day>3[01]|0[0-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
 
     strict_date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[1-9])(?:(?(hyphen)-)(?P<day>3[01]|0[1-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
 
@@ -579,8 +601,8 @@ class KgtkValue(KgtkFormat):
 
         v: str = self.get_item(idx)
         m: typing.Optional[typing.Match]
-        if self.allow_month_or_day_zero:
-            m = KgtkValue.date_and_times_re.match(v)
+        if self.options.allow_month_or_day_zero:
+            m = KgtkValue.lax_date_and_times_re.match(v)
         else:
             m = KgtkValue.strict_date_and_times_re.match(v)
         return m is not None
@@ -710,7 +732,7 @@ def main():
 
     value: str
     for value in args.values:
-        print("%s: %s" % (value, KgtkValue(value).describe()))
+        print("%s: %s" % (value, KgtkValue(value).describe()), flush=True)
 
 if __name__ == "__main__":
     main()
