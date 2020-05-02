@@ -18,6 +18,7 @@ import typing
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkreader import KgtkReader
+from kgtk.join.kgtkvalue import DEFAULT_ADDITIONAL_LANGUAGE_CODES, KgtkValueOptions
 from kgtk.join.validationaction import ValidationAction
 
 def parser():
@@ -33,6 +34,21 @@ def add_arguments(parser):
         parser (argparse.ArgumentParser)
     """
     parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
+
+    parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
+                              help="Additional language codes.", nargs="*", default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
+    
+    parser.add_argument(      "--allow-additional-language-codes", dest="allow_additional_language_codes",
+                              help="Allow certain language codes not found in the current version of ISO 639-3 or ISO 639-5.", action='store_true')
+    
+    parser.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
+                              help="Do not check if double quotes are backslashed inside strings.", action='store_true')
+    
+    parser.add_argument(      "--allow-lax-lq-strings", dest="allow_lax_lq_strings",
+                              help="Do not check if single quotes are backslashed inside language qualified strings.", action='store_true')
+    
+    parser.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
+                              help="Allow month or day zero in dates.", action='store_true')
     
     parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
                               help="The action to take when a blank id field is detected.",
@@ -143,6 +159,11 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         invalid_value_action: ValidationAction = ValidationAction.REPORT,
         header_error_action: ValidationAction = ValidationAction.EXIT,
         unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
+        additional_language_codes: typing.List[str] = DEFAULT_ADDITIONAL_LANGUAGE_CODES,
+        allow_additional_language_codes: bool = False,
+        allow_lax_strings: bool = False,
+        allow_lax_lq_strings: bool = False,
+        allow_month_or_day_zero: bool = False,
         compression_type: typing.Optional[str] = None,
         gzip_in_parallel: bool = False,
         gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -160,6 +181,14 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stderr if errors_to_stderr else sys.stdout
+
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=allow_month_or_day_zero,
+                                                       allow_lax_strings=allow_lax_strings,
+                                                       allow_lax_lq_strings=allow_lax_lq_strings,
+                                                       allow_additional_language_codes=allow_additional_language_codes,
+                                                       additional_language_codes=additional_language_codes)
+    print("value_options.allow_month_or_day_zero = %s" % str(value_options.allow_month_or_day_zero))
 
     try:
         kgtk_file: typing.Optional[Path]
@@ -191,6 +220,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                                                  header_error_action=header_error_action,
                                                  unsafe_column_name_action=unsafe_column_name_action,
                                                  compression_type=compression_type,
+                                                 value_options=value_options,
                                                  gzip_in_parallel=gzip_in_parallel,
                                                  gzip_queue_size=gzip_queue_size,
                                                  column_separator=column_separator,

@@ -13,6 +13,7 @@ import typing
 from kgtk.join.closableiter import ClosableIter
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkreader import KgtkReader
+from kgtk.join.kgtkvalue import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
@@ -36,6 +37,7 @@ class NodeReader(KgtkReader):
                        invalid_value_action: ValidationAction = ValidationAction.REPORT,
                        header_error_action: ValidationAction = ValidationAction.EXIT,
                        unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
+                       value_options: KgtkValueOptions = DEFAULT_KGTK_VALUE_OPTIONS,
                        compression_type: typing.Optional[str] = None,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -101,6 +103,7 @@ class NodeReader(KgtkReader):
                    invalid_value_action=invalid_value_action,
                    header_error_action=header_error_action,
                    unsafe_column_name_action=unsafe_column_name_action,
+                   value_options=value_options,
                    compression_type=compression_type,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
@@ -144,6 +147,13 @@ def main():
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=args.allow_month_or_day_zero,
+                                                       allow_lax_strings=args.allow_lax_strings,
+                                                       allow_lax_lq_strings=args.allow_lax_lq_strings,
+                                                       allow_additional_language_codes=args.allow_additional_language_codes,
+                                                       additional_language_codes=args.additional_language_codes)
+
     er: NodeReader = NodeReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,
                                      skip_first_record=args.skip_first_record,
@@ -160,6 +170,7 @@ def main():
                                      invalid_value_action=args.invalid_value_action,
                                      header_error_action=args.header_error_action,
                                      unsafe_column_name_action=args.unsafe_column_name_action,
+                                     value_options=value_options,
                                      compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,

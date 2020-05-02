@@ -21,7 +21,7 @@ from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtkbase import KgtkBase
 from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkvalue import KgtkValue
+from kgtk.join.kgtkvalue import KgtkValue, KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS, DEFAULT_ADDITIONAL_LANGUAGE_CODES
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
@@ -83,6 +83,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     # Validate data cell values?
     invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
+    value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
     # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -130,6 +131,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
              invalid_value_action: ValidationAction = ValidationAction.REPORT,
              header_error_action: ValidationAction = ValidationAction.EXIT,
              unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
+             value_options: KgtkValueOptions = DEFAULT_KGTK_VALUE_OPTIONS,
              compression_type: typing.Optional[str] = None,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
@@ -249,6 +251,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                               invalid_value_action=invalid_value_action,
                               header_error_action=header_error_action,
                               unsafe_column_name_action=unsafe_column_name_action,
+                              value_options=value_options,
                               compression_type=compression_type,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
@@ -303,6 +306,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                               invalid_value_action=invalid_value_action,
                               header_error_action=header_error_action,
                               unsafe_column_name_action=unsafe_column_name_action,
+                              value_options=value_options,
                               compression_type=compression_type,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
@@ -343,6 +347,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                        invalid_value_action=invalid_value_action,
                        header_error_action=header_error_action,
                        unsafe_column_name_action=unsafe_column_name_action,
+                       value_options=value_options,
                        compression_type=compression_type,
                        gzip_in_parallel=gzip_in_parallel,
                        gzip_queue_size=gzip_queue_size,
@@ -593,7 +598,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         value: str
         for idx, value in enumerate(values):
             if len(value) > 0: # Optimize the common case of empty columns.
-                kv: KgtkValue = KgtkValue(value)
+                kv: KgtkValue = KgtkValue(value, options=self.value_options)
                 if not kv.is_valid():
                     problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], value, kv.describe()))
 
@@ -652,6 +657,21 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     @classmethod
     def add_shared_arguments(cls, parser: ArgumentParser):
         parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
+
+        parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
+                                  help="Additional language codes.", nargs="*", default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
+
+        parser.add_argument(      "--allow-additional-language-codes", dest="allow_additional_language_codes",
+                                  help="Allow certain language codes not found in the current version of ISO 639-3 or ISO 639-5.", action='store_true')
+
+        parser.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
+                                  help="Do not check if double quotes are backslashed inside strings.", action='store_true')
+
+        parser.add_argument(      "--allow-lax-lq-strings", dest="allow_lax_lq_strings",
+                                  help="Do not check if single quotes are backslashed inside language qualified strings.", action='store_true')
+
+        parser.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
+                                  help="Allow month or day zero in dates.", action='store_true')
 
         parser.add_argument(      "--blank-required-field-line-action", dest="blank_line_action",
                                   help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
@@ -745,6 +765,13 @@ def main():
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=args.allow_month_or_day_zero,
+                                                       allow_lax_strings=args.allow_lax_strings,
+                                                       allow_lax_lq_strings=args.allow_lax_lq_strings,
+                                                       allow_additional_language_codes=args.allow_additional_language_codes,
+                                                       additional_language_codes=args.additional_language_codes)
+
     kr: KgtkReader = KgtkReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,
                                      skip_first_record=args.skip_first_record,
@@ -764,6 +791,7 @@ def main():
                                      invalid_value_action=args.invalid_value_action,
                                      header_error_action=args.header_error_action,
                                      unsafe_column_name_action=args.unsafe_column_name_action,
+                                     value_options=value_options,
                                      compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,
