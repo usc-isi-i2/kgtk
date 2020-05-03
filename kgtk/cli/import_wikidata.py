@@ -56,7 +56,7 @@ def add_arguments(parser):
         type=str,
         dest="lang",
         default="en",
-        help='language to extract, default en')
+        help='languages to extract, comma separated, default en')
     parser.add_argument(
         "--source",
         action="store",
@@ -159,6 +159,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                         if labels:
                             lang_label = labels.get(lang, None)
                             if lang_label:
+                                lang_label['value']=lang_label['value'].replace('|','\\|')
                                 row.append(
                                     '\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
                             else:
@@ -172,6 +173,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                         if descriptions:
                             lang_descr = descriptions.get(lang, None)
                             if lang_descr:
+                                lang_descr['value']=lang_descr['value'].replace('|','\\|')
                                 row.append(
                                     '\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
                             else:
@@ -186,6 +188,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                             if lang_aliases:
                                 alias_list = []
                                 for item in lang_aliases:
+                                    item['value']=item['value'].replace('|','\\|')
                                     alias_list.append(
                                         '\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
                                 row.append("|".join(alias_list))
