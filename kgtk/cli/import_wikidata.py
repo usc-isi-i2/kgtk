@@ -160,7 +160,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                             lang_label = labels.get(lang, None)
                             if lang_label:
                                 row.append(
-                                    '\'' + lang_label['value'] + '\'' + "@" + lang)
+                                    '\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
                             else:
                                 row.append("")
                         else:
@@ -173,7 +173,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                             lang_descr = descriptions.get(lang, None)
                             if lang_descr:
                                 row.append(
-                                    '\'' + lang_descr['value'] + '\'' + "@" + lang)
+                                    '\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
                             else:
                                 row.append("")
                         else:
@@ -187,7 +187,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                 alias_list = []
                                 for item in lang_aliases:
                                     alias_list.append(
-                                        '\'' + item['value'] + '\'' + "@" + lang)
+                                        '\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
                                 row.append("|".join(alias_list))
                             else:
                                 row.append('')
@@ -269,9 +269,9 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                             val['time'][1:] + '/' + str(val['precision'])
                                     elif typ == 'monolingualtext':
                                         value = '\'' + \
-                                            val['text'] + '\'' + '@' + val['language']
+                                            val['text'].replace("'","\\'") + '\'' + '@' + val['language']
                                     else:
-                                        value = '\"' + val + '\"'
+                                        value = '\"' + val.replace('"','\\"') + '\"'
                                     if edge_file:
                                         erows.append([sid,
                                                      qnode,
@@ -355,9 +355,9 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                                 val['time'][1:] + '/' + str(val['precision'])
                                                         elif typ == 'monolingualtext':
                                                             value = '\'' + \
-                                                                val['text'] + '\'' + '@' + val['language']
+                                                                val['text'].replace("'","\\'") + '\'' + '@' + val['language']
                                                         else:
-                                                            value = '\"' + val + '\"'
+                                                            value = '\"' + val.replace('"','\\"') + '\"'
                                                         qrows.append(
                                                             [
                                                                 tempid,
