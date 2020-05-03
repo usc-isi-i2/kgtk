@@ -466,11 +466,23 @@ class KgtkValue(KgtkFormat):
         if "-" in lang:
             (lang, country_or_dialect) = lang.split("-", 1)
 
-            # Assume that this is a two-character code.  If necessary,
-            # we can try three-character codes, too.
-            if  pycountry.languages.get(alpha_2=lang) is not None:
-                # Note: we didn't check the country_or_dialect portion.
+            # TODO: refactor so this code isn't duplicated?
+            if len(lang) == 2:
+                # Two-character language codes.
+                if pycountry.languages.get(alpha_2=lang) is not None:
+                    return True
+
+            elif len(lang) == 3:
+                # Three-character language codes.
+                if pycountry.languages.get(alpha_3=lang) is not None:
+                    return True
+
+            # Perhaps this is a collective (language family) code from ISO 639-5?
+            try:
+                iso639.languages.get(part5=lang)
                 return True
+            except KeyError:
+                pass
 
         # If there's a table of additional language codes, check there:
         if self.options.allow_additional_language_codes and lang in self.options.additional_language_codes:
