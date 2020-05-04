@@ -6,9 +6,9 @@ from argparse import ArgumentParser, Namespace
 import attr
 import iso639 # type: ignore
 import pycountry # type: ignore
-import re
-import sys
 import typing
+
+from kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 
 # Problem: pycountry incorporates the Debian team's ISO 639-3 table,
 # which as of 03-May-2020 has not been updated in four years!
@@ -26,6 +26,19 @@ import typing
 # Solution: We will keep a list of additional language codes.
 @attr.s(slots=True, frozen=True)
 class LanguageValidator:
+    """
+    The language code may be a two- or three-character code from ISO
+    639-3, which replaces ISO 639-1 and ISO 639-2.  In addition, wikidata
+    may include language codes, such as 'mo', that have been retired.  The
+    additional_language_codes table supports these codes, when allowed.
+
+    Wikidata may also contain collective language codes, such as "nah",
+    referring the the Nahuatl languages. These codes from ISO 639-5 are
+    accepted as a fallback when ISO 639-3 lookup fails.
+
+    https://meta.wikimedia.org/wiki/Special_language_codes
+    https://en.wikipedia.org/wiki/Template:ISO_639_name_be-tarask
+    """
 
     DEFAULT_ADDITIONAL_LANGUAGE_CODES: typing.List[str] = [
         # New codes:
@@ -33,14 +46,15 @@ class LanguageValidator:
         "hyw", # Wester Armenian.  Added 23-Jan-2018. https://iso639-3.sil.org/code/hyw
 
         # Obsolete codes:
-        "mo", # Retired, replaced by the codes for Romanian, but still appearing in wikidata.
+        "mo", # Moldavian. Retired 3-Nov-2008. Replaced by the codes for Romanian.
+              # http://www.personal.psu.edu/ejp10/blogs/gotunicode/2008/11/language-tage-mo-for-moldovan.html
         "eml", # Emiliano-Romagnolo. Split and retired 16-Jan-2009. https://iso639-3.sil.org/code/eml
     ]
 
     @classmethod
     def validate(cls,
                  lang: str,
-                 additional_language_codes: typing.Optional[typing.List[str]]=None,
+                 options: KgtkValueOptions=DEFAULT_KGTK_VALUE_OPTIONS,
                  verbose: bool = False,
     )->bool:
         # Wikidata contains entries such as:
@@ -82,13 +96,16 @@ class LanguageValidator:
             pass
 
         # If there's a table of additional language codes, check there:
-        if additional_language_codes is None:
+        additional_language_codes: typing.List[str]
+        if options.additional_language_codes is not None:
+            additional_language_codes = options.additional_language_codes
+            if verbose:
+                print("Using a custom list of %d additional language codes." % len(additional_language_codes))
+        else:
             if verbose:
                 print("Using the default list of additional language codes.")
             additional_language_codes = LanguageValidator.DEFAULT_ADDITIONAL_LANGUAGE_CODES
-        else:
-            if verbose:
-                print("Using a custom list of %d additional language codes." % len(additional_language_codes))
+
         if lang in additional_language_codes:
             if verbose:
                 print("found in the table of additional languages.")

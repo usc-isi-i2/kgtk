@@ -9,59 +9,8 @@ import sys
 import typing
 
 from kgtk.join.kgtkformat import KgtkFormat
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 from kgtk.join.languagevalidator import LanguageValidator
-
-@attr.s(slots=True, frozen=True)
-class KgtkValueOptions:
-    """
-    These options will affect some aspects of value processing. They are in a
-    seperate class for efficiency.
-    """
-    
-    # Allow month 00 or day 00 in dates?  This isn't really allowed by ISO
-    # 8601, but appears in wikidata.
-    allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
-    # When allow_lax_strings is true, strings will be checked to see if they
-    # start and end with double quote ("), but we won't check if internal
-    # double quotes are excaped by backslash.
-    allow_lax_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
-    # When allow_lax_lq_strings is true, language qualified strings will be
-    # checked to see if they start and end with single quote ('), but we won't
-    # check if internal single quotes are excaped by backslash.
-    allow_lax_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    
-    # If this list gets long, we may want to turn it into a map to make lookup
-    # more efficient.
-    additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                                                            iterable_validator=attr.validators.instance_of(list))),
-                                                                           default=None)
-    
-
-    @classmethod
-    def add_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
-                                  help="Additional language codes.", nargs="*", default=None)
-
-        parser.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
-                                  help="Do not check if double quotes are backslashed inside strings.", action='store_true')
-
-        parser.add_argument(      "--allow-lax-lq-strings", dest="allow_lax_lq_strings",
-                                  help="Do not check if single quotes are backslashed inside language qualified strings.", action='store_true')
-
-        parser.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
-                                  help="Allow month or day zero in dates.", action='store_true')
-
-    @classmethod
-    # Build the value parsing option structure.
-    def from_args(cls, args: Namespace)->'KgtkValueOptions':
-        return cls(allow_month_or_day_zero=args.allow_month_or_day_zero,
-                   allow_lax_strings=args.allow_lax_strings,
-                   allow_lax_lq_strings=args.allow_lax_lq_strings,
-                   additional_language_codes=args.additional_language_codes)
-
-DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
 @attr.s(slots=True, frozen=False)
 class KgtkValue(KgtkFormat):
@@ -418,19 +367,6 @@ class KgtkValue(KgtkFormat):
     def is_valid_language_qualified_string(self, idx: typing.Optional[int] = None)->bool:
         """Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like a language-qualified string.
-
-        The language code may be a two- or three-character code from ISO
-        639-3, which replaces ISO 639-1 and ISO 639-2.  In addition, wikidata
-        may include language codes, such as 'mo', that have been retired.  The
-        additional_language_codes table supports these codes, when allowed.
-
-        Wikidata may also contain collective language codes, such as "nah",
-        referring the the Nahuatl languages. These codes from ISO 639-5 are
-        accepted as a fallback when ISO 639-3 lookup fails.
-
-        https://meta.wikimedia.org/wiki/Special_language_codes
-        https://en.wikipedia.org/wiki/Template:ISO_639_name_be-tarask
-
         """
         if self.is_list() and idx is None:
             return False
@@ -450,8 +386,7 @@ class KgtkValue(KgtkFormat):
         lang: str = m.group("lang").lower()
         # print("lang: %s" % lang)
 
-        return LanguageValidator.validate(lang,
-                                          additional_language_codes=self.options.additional_language_codes)
+        return LanguageValidator.validate(lang, options=self.options)
 
     def is_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
         """

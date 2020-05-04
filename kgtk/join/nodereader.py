@@ -13,7 +13,7 @@ import typing
 from kgtk.join.closableiter import ClosableIter
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkvalue import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
