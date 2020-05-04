@@ -29,9 +29,25 @@ def add_arguments(parser):
                         help='Graph tool file to dump the graph too - if empty, it will not be saved.')
     parser.add_argument('--output-stats', action='store_true', dest='output_stats',
                         help='do not output the graph but statistics only')
+    parser.add_argument('--vertex-in-degree-property', action='store', dest='vertex_in_degree',
+                        default='vertex_in_degree',
+                        help='label for edge: vertex in degree property')
+    parser.add_argument('--vertex-out-degree-property', action='store', dest='vertex_out_degree',
+                        default='vertex_out_degree',
+                        help='label for edge: vertex out degree property')
+    parser.add_argument('--page-rank-property', action='store', dest='vertex_pagerank',
+                        default='vertex_pagerank',
+                        help='label for pank rank property')
+    parser.add_argument('--vertex-hits-authority-property', action='store', dest='vertex_auth',
+                        default='vertex_auth',
+                        help='label for edge: vertext hits authority')
+    parser.add_argument('--vertex-hits-hubs-property', action='store', dest='vertex_hubs',
+                        default='vertex_hubs',
+                        help='label for edge: vertex hits hubs')
 
 
-def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output, output_stats):
+def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output, output_stats,
+        vertex_in_degree, vertex_out_degree, vertex_pagerank, vertex_auth, vertex_hubs):
     from kgtk.exceptions import KGTKException
     def infer_index(h, options=[]):
         for o in options:
@@ -45,6 +61,11 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
                 return o
         return ''
 
+    v_prop_dict = {
+        'vertex_pagerank': vertex_pagerank,
+        'vertex_hubs': vertex_hubs,
+        'vertex_auth': vertex_auth
+    }
     try:
         # import modules locally
         import socket
@@ -115,21 +136,38 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
                 for n_id, n_label, authority in main_auth:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 
-            sys.stdout.write('node1\tproperty\tnode2\n')
+            sys.stdout.write('id\tnode1\tproperty\tnode2\n')
+            id_count = 0
             if not output_stats:
                 for e in G2.edges():
                     sid, oid = e
                     lbl = G2.ep[predicate][e]
-                    sys.stdout.write('%s\t%s\t%s\n' % (G2.vp[id_col][sid], lbl, G2.vp[id_col][oid]))
+                    sys.stdout.write(
+                        '%s\t%s\t%s\t%s\n' % (
+                            '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count), G2.vp[id_col][sid], lbl,
+                            G2.vp[id_col][oid]))
+                    id_count += 1
 
+            id_count = 0
             for v in G2.vertices():
                 v_id = G2.vp[id_col][v]
 
-                sys.stdout.write('{}\t{}\t{}\n'.format(v_id, 'vertex_in_degree', v.in_degree()))
-                sys.stdout.write('{}\t{}\t{}\n'.format(v_id, 'vertex_out_degree', v.out_degree()))
+                sys.stdout.write(
+                    '{}\t{}\t{}\t{}\n'.format('{}-{}-{}'.format(v_id, vertex_in_degree, id_count), v_id,
+                                              vertex_in_degree, v.in_degree()))
+                id_count += 1
+                sys.stdout.write(
+                    '{}\t{}\t{}\t{}\n'.format('{}-{}-{}'.format(v_id, vertex_out_degree, id_count), v_id,
+                                              vertex_out_degree, v.out_degree()))
+                id_count += 1
+
                 for vprop in G2.vertex_properties.keys():
                     if vprop == id_col: continue
-                    sys.stdout.write('%s\t%s\t%s\n' % (v_id, vprop, G2.vp[vprop][v]))
+                    sys.stdout.write(
+                        '%s\t%s\t%s\t%s\n' % (
+                            '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count), v_id, v_prop_dict[vprop],
+                            G2.vp[vprop][v]))
+                    id_count += 1
 
             if output:
                 writer.write('now saving the graph to %s\n' % output)
