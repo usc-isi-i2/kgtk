@@ -1,24 +1,15 @@
 """
 Validate KGTK File data types.
-
-Dimensioned quantities are not supported.
-
 """
 
 from argparse import ArgumentParser, Namespace
 import attr
-import iso639 # type: ignore
-import pycountry # type: ignore
 import re
 import sys
 import typing
 
 from kgtk.join.kgtkformat import KgtkFormat
-
-DEFAULT_ADDITIONAL_LANGUAGE_CODES: typing.List[str] = [
-    "mo", # Retired, replaced by the codes for Romanian, but still appearing in wikidata.
-]
-
+from kgtk.join.languagevalidator import LanguageValidator
 
 @attr.s(slots=True, frozen=True)
 class KgtkValueOptions:
@@ -41,23 +32,17 @@ class KgtkValueOptions:
     # check if internal single quotes are excaped by backslash.
     allow_lax_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
-    # Shall we allow additional language codes?
-    allow_additional_language_codes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
     # If this list gets long, we may want to turn it into a map to make lookup
     # more efficient.
-    additional_language_codes: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                  iterable_validator=attr.validators.instance_of(list)),
-                                                          default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
+    additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                                   iterable_validator=attr.validators.instance_of(list)),
+                                                                           default=None)
     
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
         parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
-                                  help="Additional language codes.", nargs="*", default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
-
-        parser.add_argument(      "--allow-additional-language-codes", dest="allow_additional_language_codes",
-                                  help="Allow certain language codes not found in the current version of ISO 639-3 or ISO 639-5.", action='store_true')
+                                  help="Additional language codes.", nargs="*", default=None)
 
         parser.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
                                   help="Do not check if double quotes are backslashed inside strings.", action='store_true')
@@ -74,7 +59,6 @@ class KgtkValueOptions:
         return cls(allow_month_or_day_zero=args.allow_month_or_day_zero,
                    allow_lax_strings=args.allow_lax_strings,
                    allow_lax_lq_strings=args.allow_lax_lq_strings,
-                   allow_additional_language_codes=args.allow_additional_language_codes,
                    additional_language_codes=args.additional_language_codes)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
@@ -466,57 +450,8 @@ class KgtkValue(KgtkFormat):
         lang: str = m.group("lang").lower()
         # print("lang: %s" % lang)
 
-        if len(lang) == 2:
-            # Two-character language codes.
-            if pycountry.languages.get(alpha_2=lang) is not None:
-                return True
-
-        elif len(lang) == 3:
-            # Three-character language codes.
-           if pycountry.languages.get(alpha_3=lang) is not None:
-               return True
-
-           # Perhaps this is a collective (language family) code from ISO 639-5?
-           try:
-               iso639.languages.get(part5=lang)
-               return True
-           except KeyError:
-               pass
-
-        # Wikidata contains entries such as:
-        # 'panamenha'@pt-br      # language code followed by country code
-        # 'Ecuador'@es-formal    # language code followed by dialect name
-        #
-        # If we see a dash, we'll check the language code by itself.
-        # save_lang: str = lang # for the debug print below.
-        country_or_dialect: str = ""
-        if "-" in lang:
-            (lang, country_or_dialect) = lang.split("-", 1)
-
-            # TODO: refactor so this code isn't duplicated?
-            if len(lang) == 2:
-                # Two-character language codes.
-                if pycountry.languages.get(alpha_2=lang) is not None:
-                    return True
-
-            elif len(lang) == 3:
-                # Three-character language codes.
-                if pycountry.languages.get(alpha_3=lang) is not None:
-                    return True
-
-            # Perhaps this is a collective (language family) code from ISO 639-5?
-            try:
-                iso639.languages.get(part5=lang)
-                return True
-            except KeyError:
-                pass
-
-        # If there's a table of additional language codes, check there:
-        if self.options.allow_additional_language_codes and lang in self.options.additional_language_codes:
-            return True
-
-        # print("save_lang: %s lang: %s country_or_dialect: %s" % (save_lang, lang, country_or_dialect))
-        return False
+        return LanguageValidator.validate(lang,
+                                          additional_language_codes=self.options.additional_language_codes)
 
     def is_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -762,7 +697,7 @@ class KgtkValue(KgtkFormat):
     
 def main():
     """
-    Test the KGTK value vparser.
+    Test the KGTK value parser.
     """
     parser: ArgumentParser = ArgumentParser()
     parser.add_argument(dest="values", help="The values(s) to test", type=str, nargs="+")
