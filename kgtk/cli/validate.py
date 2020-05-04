@@ -18,7 +18,7 @@ import typing
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkvalue import DEFAULT_ADDITIONAL_LANGUAGE_CODES, KgtkValueOptions
+from kgtk.join.kgtkvalue import KgtkValueOptions
 from kgtk.join.validationaction import ValidationAction
 
 def parser():
@@ -148,8 +148,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         invalid_value_action: ValidationAction = ValidationAction.REPORT,
         header_error_action: ValidationAction = ValidationAction.EXIT,
         unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
-        additional_language_codes: typing.List[str] = DEFAULT_ADDITIONAL_LANGUAGE_CODES,
-        allow_additional_language_codes: bool = False,
+        additional_language_codes: typing.Optional[typing.List[str]] = None,
         allow_lax_strings: bool = False,
         allow_lax_lq_strings: bool = False,
         allow_month_or_day_zero: bool = False,
@@ -175,7 +174,6 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
     value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=allow_month_or_day_zero,
                                                        allow_lax_strings=allow_lax_strings,
                                                        allow_lax_lq_strings=allow_lax_lq_strings,
-                                                       allow_additional_language_codes=allow_additional_language_codes,
                                                        additional_language_codes=additional_language_codes)
 
     try:
