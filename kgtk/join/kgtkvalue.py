@@ -34,8 +34,8 @@ class KgtkValueOptions:
     
     # If this list gets long, we may want to turn it into a map to make lookup
     # more efficient.
-    additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                                   iterable_validator=attr.validators.instance_of(list)),
+    additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                                                            iterable_validator=attr.validators.instance_of(list))),
                                                                            default=None)
     
 
