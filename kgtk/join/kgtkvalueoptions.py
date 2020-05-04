@@ -4,11 +4,7 @@ KGTK value processing options.
 
 from argparse import ArgumentParser, Namespace
 import attr
-import sys
 import typing
-
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.languagevalidator import LanguageValidator
 
 @attr.s(slots=True, frozen=True)
 class KgtkValueOptions:

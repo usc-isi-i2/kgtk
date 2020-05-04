@@ -18,7 +18,7 @@ import typing
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkvalue import KgtkValueOptions
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions
 from kgtk.join.validationaction import ValidationAction
 
 def parser():

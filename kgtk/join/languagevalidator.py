@@ -8,7 +8,7 @@ import iso639 # type: ignore
 import pycountry # type: ignore
 import typing
 
-from kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 
 # Problem: pycountry incorporates the Debian team's ISO 639-3 table,
 # which as of 03-May-2020 has not been updated in four years!
@@ -121,19 +121,16 @@ def main():
     """
     parser: ArgumentParser = ArgumentParser()
     parser.add_argument(dest="values", help="The values(s) to test", type=str, nargs="+")
-
-    parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
-                              help="Additional language codes.", nargs="*", default=None)
-
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+    KgtkValueOptions.add_arguments(parser)
     args: Namespace = parser.parse_args()
+
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     value: str
     for value in args.values:
-        result: bool = LanguageValidator.validate(value,
-                                                  additional_language_codes=args.additional_language_codes,
-                                                  verbose=args.verbose)
-        
+        result: bool = LanguageValidator.validate(value, options=value_options, verbose=args.verbose)                                   
         print("%s: %s" % (value, str(result)), flush=True)
 
 if __name__ == "__main__":
