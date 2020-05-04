@@ -67,7 +67,7 @@ class LanguageValidator:
 
         save_lang: str = lang # for the debug prints below.
         country_or_dialect: str = ""
-        if "-" in lang:
+        if options.allow_language_suffixes and "-" in lang:
             (lang, country_or_dialect) = lang.split("-", 1)
             if verbose:
                 print("'%s' split into '%s' and '%s'" % (save_lang, lang, country_or_dialect))

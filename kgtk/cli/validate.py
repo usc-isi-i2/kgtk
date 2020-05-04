@@ -149,6 +149,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         header_error_action: ValidationAction = ValidationAction.EXIT,
         unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
         additional_language_codes: typing.Optional[typing.List[str]] = None,
+        allow_language_suffixes: bool = False,
         allow_lax_strings: bool = False,
         allow_lax_lq_strings: bool = False,
         allow_month_or_day_zero: bool = False,
@@ -174,6 +175,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
     value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=allow_month_or_day_zero,
                                                        allow_lax_strings=allow_lax_strings,
                                                        allow_lax_lq_strings=allow_lax_lq_strings,
+                                                       allow_language_suffixes=allow_language_suffixes,
                                                        additional_language_codes=additional_language_codes)
 
     try:
