@@ -143,16 +143,13 @@ def main():
     parser = ArgumentParser()
     KgtkReader.add_shared_arguments(parser)
     NodeReader.add_arguments(parser)
+    KgtkValueOptions.add_arguments(parser)
     args = parser.parse_args()
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the value parsing option structure.
-    value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=args.allow_month_or_day_zero,
-                                                       allow_lax_strings=args.allow_lax_strings,
-                                                       allow_lax_lq_strings=args.allow_lax_lq_strings,
-                                                       allow_additional_language_codes=args.allow_additional_language_codes,
-                                                       additional_language_codes=args.additional_language_codes)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     er: NodeReader = NodeReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,

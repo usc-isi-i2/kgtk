@@ -21,7 +21,7 @@ from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GunzipProcess
 from kgtk.join.kgtkbase import KgtkBase
 from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkvalue import KgtkValue, KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS, DEFAULT_ADDITIONAL_LANGUAGE_CODES
+from kgtk.join.kgtkvalue import KgtkValue, KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
@@ -658,21 +658,6 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     def add_shared_arguments(cls, parser: ArgumentParser):
         parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
 
-        parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
-                                  help="Additional language codes.", nargs="*", default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
-
-        parser.add_argument(      "--allow-additional-language-codes", dest="allow_additional_language_codes",
-                                  help="Allow certain language codes not found in the current version of ISO 639-3 or ISO 639-5.", action='store_true')
-
-        parser.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
-                                  help="Do not check if double quotes are backslashed inside strings.", action='store_true')
-
-        parser.add_argument(      "--allow-lax-lq-strings", dest="allow_lax_lq_strings",
-                                  help="Do not check if single quotes are backslashed inside language qualified strings.", action='store_true')
-
-        parser.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
-                                  help="Allow month or day zero in dates.", action='store_true')
-
         parser.add_argument(      "--blank-required-field-line-action", dest="blank_line_action",
                                   help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
@@ -761,16 +746,13 @@ def main():
     KgtkReader.add_arguments(parser)
     EdgeReader.add_arguments(parser)
     NodeReader.add_arguments(parser)
+    KgtkValueOptions.add_arguments(parser)
     args = parser.parse_args()
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the value parsing option structure.
-    value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=args.allow_month_or_day_zero,
-                                                       allow_lax_strings=args.allow_lax_strings,
-                                                       allow_lax_lq_strings=args.allow_lax_lq_strings,
-                                                       allow_additional_language_codes=args.allow_additional_language_codes,
-                                                       additional_language_codes=args.additional_language_codes)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     kr: KgtkReader = KgtkReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,

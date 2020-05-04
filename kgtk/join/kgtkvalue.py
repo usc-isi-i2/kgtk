@@ -5,7 +5,7 @@ Dimensioned quantities are not supported.
 
 """
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 import attr
 import iso639 # type: ignore
 import pycountry # type: ignore
@@ -50,6 +50,33 @@ class KgtkValueOptions:
                                                                                                   iterable_validator=attr.validators.instance_of(list)),
                                                           default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
     
+
+    @classmethod
+    def add_arguments(cls, parser: ArgumentParser):
+        parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
+                                  help="Additional language codes.", nargs="*", default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
+
+        parser.add_argument(      "--allow-additional-language-codes", dest="allow_additional_language_codes",
+                                  help="Allow certain language codes not found in the current version of ISO 639-3 or ISO 639-5.", action='store_true')
+
+        parser.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
+                                  help="Do not check if double quotes are backslashed inside strings.", action='store_true')
+
+        parser.add_argument(      "--allow-lax-lq-strings", dest="allow_lax_lq_strings",
+                                  help="Do not check if single quotes are backslashed inside language qualified strings.", action='store_true')
+
+        parser.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
+                                  help="Allow month or day zero in dates.", action='store_true')
+
+    @classmethod
+    # Build the value parsing option structure.
+    def from_args(cls, args: Namespace)->'KgtkValueOptions':
+        return cls(allow_month_or_day_zero=args.allow_month_or_day_zero,
+                   allow_lax_strings=args.allow_lax_strings,
+                   allow_lax_lq_strings=args.allow_lax_lq_strings,
+                   allow_additional_language_codes=args.allow_additional_language_codes,
+                   additional_language_codes=args.additional_language_codes)
+
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
 @attr.s(slots=True, frozen=False)
@@ -732,19 +759,24 @@ class KgtkValue(KgtkFormat):
         else:
             return "Symbol"
 
+    
 def main():
     """
     Test the KGTK value vparser.
     """
-    parser = ArgumentParser()
+    parser: ArgumentParser = ArgumentParser()
     parser.add_argument(dest="values", help="The values(s) to test", type=str, nargs="+")
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
-    args = parser.parse_args()
+    KgtkValueOptions.add_arguments(parser)
+    args: Namespace = parser.parse_args()
+
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     value: str
     for value in args.values:
-        print("%s: %s" % (value, KgtkValue(value).describe()), flush=True)
+        print("%s: %s" % (value, KgtkValue(value, options=value_options).describe()), flush=True)
 
 if __name__ == "__main__":
     main()

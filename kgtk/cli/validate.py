@@ -35,21 +35,6 @@ def add_arguments(parser):
     """
     parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
 
-    parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
-                              help="Additional language codes.", nargs="*", default=DEFAULT_ADDITIONAL_LANGUAGE_CODES)
-    
-    parser.add_argument(      "--allow-additional-language-codes", dest="allow_additional_language_codes",
-                              help="Allow certain language codes not found in the current version of ISO 639-3 or ISO 639-5.", action='store_true')
-    
-    parser.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
-                              help="Do not check if double quotes are backslashed inside strings.", action='store_true')
-    
-    parser.add_argument(      "--allow-lax-lq-strings", dest="allow_lax_lq_strings",
-                              help="Do not check if single quotes are backslashed inside language qualified strings.", action='store_true')
-    
-    parser.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
-                              help="Allow month or day zero in dates.", action='store_true')
-    
     parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
                               help="The action to take when a blank id field is detected.",
                               type=ValidationAction, action=EnumNameAction, default=None)
@@ -137,6 +122,10 @@ def add_arguments(parser):
     parser.add_argument(      "--whitespace-line-action", dest="whitespace_line_action",
                               help="The action to take when a whitespace line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+    # Note: Any arguments described by KgtkValueOptions.add_arguments(...)
+    # need to be included in the arguments to run(...), below.
+    KgtkValueOptions.add_arguments(parser)
 
 
 def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
