@@ -178,7 +178,7 @@ class KgtkValue(KgtkFormat):
     # http://www.csun.edu/~vceed002/ref/measurement/units/units.pdf
     #
     # Note: if Q were in this list, it would conflict with Wikidata nodes (below).
-    si_unit_pat: str = r'(?:m|kg|s|C|K|mol|cd|F|M|A|N|ohms|V|J|Hz|lx|H|Wb|V\W|Pa)'
+    si_unit_pat: str = r'(?:m|kg|s|C|K|mol|cd|F|M|A|N|ohms|V|J|Hz|lx|H|Wb|V|W|Pa)'
     si_power_pat: str = r'(?:-1|2|3)' # Might need more.
     si_combiner_pat: str = r'[./]'
     si_pat: str = r'(?:{si_unit}{si_power}?(?:{si_combiner}{si_unit}{si_power}?)*)'.format(si_unit=si_unit_pat,
@@ -406,9 +406,6 @@ class KgtkValue(KgtkFormat):
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like valid location coordinates.
-
-        Note: The coordinates must look exactly like the examples in KGTK
-        File Format v2, excelt for optional +/- characters.
 
         @043.26193/010.92708
         """
