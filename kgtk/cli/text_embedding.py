@@ -21,578 +21,6 @@ ALL_EMBEDDING_MODELS_NAMES = [
 ]
 
 
-class EmbeddingVector:
-    def __init__(self, model_name=None, query_server=None, cache_config: dict = {}):
-        from sentence_transformers import SentenceTransformer, SentencesDataset, LoggingHandler, losses, models  # type: ignore
-        import logging
-        import re
-        self._logger = logging.getLogger(__name__)
-        from collections import defaultdict
-        if model_name is None:
-            self.model_name = 'bert-base-nli-mean-tokens'
-        # xlnet need to be trained before using, we can't use this for now
-        # elif model_name == "xlnet-base-cased":
-        #     word_embedding_model = models.XLNet('xlnet-base-cased')
-        # # Apply mean pooling to get one fixed sized sentence vector
-        #     pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
-        #                                pooling_mode_mean_tokens=True,
-        #                                pooling_mode_cls_token=False,
-        #                                pooling_mode_max_tokens=False)
-        #     self.model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
-        else:
-            self.model_name = model_name
-        self._logger.info("Using model {}".format(self.model_name))
-        self.model = SentenceTransformer(self.model_name)
-        # setup redis cache server
-        if query_server is None or query_server == "":
-            self.wikidata_server = "https://query.wikidata.org/sparql"
-        else:
-            self.wikidata_server = query_server
-        use_cache = cache_config.get("use_cache", False)
-        if use_cache:
-            import redis
-            host = cache_config.get("host", "dsbox01.isi.edu")
-            port = cache_config.get("port", 6379)
-            self.redis_server = redis.Redis(host=host, port=port, db=0)
-            try:
-                _ = self.redis_server.get("foo")
-                self._logger.debug("Cache server {}:{} connected!".format(host, port))
-            except:
-                self._logger.error("Cache server {}:{} is not able to be connected! Will not use cache!".format(host, port))
-                self.redis_server = None
-        else:
-            self.redis_server = None
-        self.qnodes_descriptions = dict()
-        self.vectors_map = dict()
-        self.property_labels_dict = dict()
-        self.vectors_2D = None
-        self.gt_nodes = set()
-        self.candidates = defaultdict(dict)
-        self.vector_dump_file = None
-        self.q_node_to_label = dict()
-        self.metadata = []
-        self.gt_indexes = set()
-        self.input_format = ""
-        self.token_pattern = re.compile(r"(?u)\b\w\w+\b")
-
-    def get_sentences_embedding(self, sentences: typing.List[str], qnodes: typing.List[str]):
-        """
-            transform a list of sentences to embedding vectors
-        """
-        from ast import literal_eval
-        if self.redis_server is not None:
-            sentence_embeddings = []
-            for each_node, each_sentence in zip(qnodes, sentences):
-                query_cache_key = each_node + each_sentence
-                if self.model_name != "bert-base-wikipedia-sections-mean-tokens":
-                    query_cache_key += self.model_name
-                cache_res = self.redis_server.get(query_cache_key)
-                if cache_res is not None:
-                    sentence_embeddings.append(literal_eval(cache_res.decode("utf-8")))
-                    # self._logger.error("{} hit!".format(each_node+each_sentence))
-                else:
-                    each_embedding = self.model.encode([each_sentence], show_progress_bar=False)
-                    sentence_embeddings.extend(each_embedding)
-                    self.redis_server.set(query_cache_key, str(each_embedding[0].tolist()))
-        else:
-            sentence_embeddings = self.model.encode(sentences, show_progress_bar=False)
-        return sentence_embeddings
-
-    def send_sparql_query(self, query_body: str):
-        """
-            a simple wrap to send the query and return the returned results
-        """
-        from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
-        qm = SPARQLWrapper(self.wikidata_server)
-        qm.setReturnFormat(JSON)
-        qm.setMethod(POST)
-        qm.setRequestMethod(URLENCODED)
-        self._logger.debug("Sent query is:")
-        self._logger.debug(str(query_body))
-        qm.setQuery(query_body)
-        try:
-            results = qm.query().convert()['results']['bindings']
-            return results
-        except:
-            raise KGTKException("Sending Sparql query to {} failed!".format(self.wikidata_server))
-
-    def get_item_description(self, qnodes: typing.List[str] = None, target_properties: dict = {}):
-        """
-            use sparql query to get the descriptions of given Q nodes
-        """
-        if qnodes is None:
-            qnodes = self.candidates
-        if "all" in target_properties:
-            find_all_properties = True
-        else:
-            find_all_properties = False
-        properties_list = [[] for _ in range(4)]
-        used_p_node_ids = set()
-        names = ["labels", "descriptions", "isa_properties", "has_properties"]
-        for k, v in target_properties.items():
-            if v == "label_properties":
-                properties_list[0].append(k)
-            elif v == "description_properties":
-                properties_list[1].append(k)
-            elif v == "isa_properties":
-                properties_list[2].append(k)
-            elif v == "has_properties":
-                properties_list[3].append(k)
-
-        sentences_cache_dict = {}
-        if self.redis_server is not None:
-            for each_node in qnodes:
-                cache_res = self.redis_server.get(each_node + str(properties_list))
-                if cache_res is not None:
-                    sentences_cache_dict[each_node] = cache_res.decode("utf-8")
-
-        if len(sentences_cache_dict) > 0:
-            qnodes = set(qnodes) - set(sentences_cache_dict.keys())
-
-        # only need to do query when we still have remained nodes
-        if len(qnodes) > 0:
-            need_find_label = "label" in properties_list[0]
-            need_find_description = "description" in properties_list[1]
-            query_qnodes = ""
-            for each in qnodes:
-                query_qnodes += "wd:{} ".format(each)
-
-            # this is used to get corresponding labels / descriptions
-            if need_find_label or need_find_description:
-                query_body = """
-                    select ?item ?itemDescription ?itemLabel
-                    where {
-                      values ?item {""" + query_qnodes + """ }
-                         SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-                    }
-                """
-                results = self.send_sparql_query(query_body)
-                for each in results:
-                    each_node = each['item']['value'].split("/")[-1]
-                    if 'itemDescription' in each:
-                        description = each['itemDescription']['value']
-                    else:
-                        description = ""
-                    if "itemLabel" in each:
-                        label = each['itemLabel']['value']
-                    else:
-                        label = ""
-                    if need_find_label:
-                        self.candidates[each_node]["label_properties"] = [label]
-                    if need_find_description:
-                        self.candidates[each_node]["description_properties"] = [description]
-
-            # this is used to get corresponding P node labels
-            query_body2 = "select ?item"
-            part2 = ""
-            for name, part in zip(names, properties_list):
-                for i, each in enumerate(part):
-                    if each not in {"label", "description", "all"}:
-                        used_p_node_ids.add(each)
-                        query_body2 += " ?{}_{}Label".format(name, i)
-                        part2 += """?item wdt:{} ?{}_{}. \n""".format(each, name, i)
-            query_body2 += """
-                        where {
-                          values ?item {""" + query_qnodes + "}"
-
-            query_body2 += part2 + """
-                             SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-                        }
-            """
-            results2 = self.send_sparql_query(query_body2)
-            for each in results2:
-                node_name = each['item']['value'].split("/")[-1]
-                for name, part in zip(names, properties_list):
-                    if len(part) > 0:
-                        properties_res = set()
-                        for i in range(len(part)):
-                            property_key = '{}_{}Label'.format(name, i)
-                            if property_key in each:
-                                properties_res.add(each[property_key]['value'])
-                        self.candidates[node_name][name] = properties_res
-
-            # if need get all properties, we need to run extra query
-            if find_all_properties:
-                query_body3 = """
-                    select DISTINCT ?item ?p_entity ?p_entityLabel
-                    where {
-                      values ?item {""" + query_qnodes + """}
-                      ?item ?p ?o.
-                      FILTER regex(str(?p), "^http://www.wikidata.org/prop/P", "i")
-                      BIND (IRI(REPLACE(STR(?p), "http://www.wikidata.org/prop", "http://www.wikidata.org/entity")) AS ?p_entity) .
-                      SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-                    }
-                """
-                results3 = self.send_sparql_query(query_body3)
-                for each in results3:
-                    node_name = each['item']['value'].split("/")[-1]
-                    p_node_id = each['p_entity']['value'].split("/")[-1]
-                    p_node_label = each['p_entityLabel']['value']
-                    if p_node_id not in used_p_node_ids:
-                        if "has_properties" in self.candidates[node_name]:
-                            self.candidates[node_name]["has_properties"].add(p_node_label)
-                        else:
-                            self.candidates[node_name]["has_properties"] = {p_node_label}
-
-        for each_node_id in qnodes:
-            each_sentence = self.attribute_to_sentence(self.candidates[each_node_id], each_node_id)
-            self.candidates[each_node_id]["sentence"] = each_sentence
-            if self.redis_server is not None:
-                self.redis_server.set(each_node_id + str(properties_list), each_sentence)
-
-        for each_node_id, sentence in sentences_cache_dict.items():
-            self.candidates[each_node_id]["sentence"] = sentence
-
-    def read_input(self, file_path: str, skip_nodes_set: set = None,
-                   input_format: str = "kgtk_format", target_properties: dict = {},
-                   property_labels_dict: dict = {}, black_list_set: set = set()
-                   ):
-        """
-            load the input candidates files
-        """
-        from collections import defaultdict
-        import pandas as pd  # type: ignore
-        import numpy as np
-        import math
-
-        self.property_labels_dict = property_labels_dict
-
-        if input_format == "test_format":
-            self.input_format = input_format
-            input_df = pd.read_csv(file_path)
-            candidates = {}
-            gt = {}
-            count = 0
-            if "GT_kg_id" in input_df.columns:
-                gt_column_id = "GT_kg_id"
-            elif "kg_id" in input_df.columns:
-                gt_column_id = "kg_id"
-            else:
-                raise KGTKException("Can't find ground truth id column! It should either named as `GT_kg_id` or `kg_id`")
-
-            for _, each in input_df.iterrows():
-                if isinstance(each["candidates"], str):
-                    temp = str(each['candidates']).split("|")
-                elif each['candidates'] is np.nan or math.isnan(each['candidates']):
-                    temp = []
-
-                to_remove_q = set()
-                if each[gt_column_id] is np.nan:
-                    self._logger.warning("Ignore NaN gt value form {}".format(str(each)))
-                    each[gt_column_id] = ""
-                gt_nodes = each[gt_column_id].split(" ")
-                label = str(each["label"])
-                if len(gt_nodes) == 0:
-                    self._logger.error("Skip a row with no ground truth node given: as {}".format(str(each)))
-                    continue
-                if label == "":
-                    self._logger.error("Skip a row with no label given: as {}".format(str(each)))
-                    continue
-                temp.extend(gt_nodes)
-
-                for each_q in temp:
-                    self.q_node_to_label[each_q] = label
-                    if skip_nodes_set is not None and each_q in skip_nodes_set:
-                        to_remove_q.add(each_q)
-                temp = set(temp) - to_remove_q
-                count += len(temp)
-                self.gt_nodes.add(each[gt_column_id])
-                self.get_item_description(temp, target_properties, label)
-
-            self._logger.info("Totally {} rows with {} candidates loaded.".format(str(len(gt)), str(count)))
-
-        elif input_format == "kgtk_format":
-            # assume the input edge file is sorted
-            if "all" in target_properties:
-                _ = target_properties.pop("all")
-                add_all_properties = True
-            else:
-                add_all_properties = False
-
-            self.input_format = input_format
-            with open(file_path, "r") as f:
-                # get header
-                headers = f.readline().replace("\n", "").split("\t")
-                if len(headers) < 3:
-                    raise KGTKException(
-                        "No enough columns found on given input file. Only {} columns given but at least 3 needed.".format(
-                            len(headers)))
-                elif "node" in headers and "property" in headers and "value" in headers:
-                    column_references = {"node": headers.index("node"),
-                                         "property": headers.index("property"),
-                                         "value": headers.index("value")}
-                elif len(headers) == 3:
-                    column_references = {"node": 0,
-                                         "property": 1,
-                                         "value": 2}
-                else:
-                    missing_column = {"node", "property", "value"} - set(headers)
-                    raise KGTKException("Missing column {}".format(missing_column))
-                self._logger.debug("column index information: ")
-                self._logger.debug(str(column_references))
-                # read contents
-                each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
-                                        "description_properties": []}
-                current_process_node_id = None
-                for each_line in f:
-                    each_line = each_line.replace("\n", "").split("\t")
-                    node_id = each_line[column_references["node"]]
-                    node_property = each_line[column_references["property"]]
-                    node_value = each_line[column_references["value"]]
-                    # remove @ mark
-                    if "@" in node_value and node_value[0] != "@":
-                        node_value_org = node_value
-                        node_value = node_value[:node_value.index("@")]
-
-                    # remove extra double quote " and single quote '
-                    if node_value[0] == '"' and node_value[-1] == '"':
-                        node_value = node_value[1:-1]
-                    if node_value[0] == "'" and node_value[-1] == "'":
-                        node_value = node_value[1:-1]
-
-                    if current_process_node_id != node_id:
-                        if current_process_node_id is None:
-                            current_process_node_id = node_id
-                        else:
-                            # if we get to next id
-                            # concate all properties into one sentence to represent the Q node
-                            concated_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
-                            each_node_attributes["sentence"] = concated_sentence
-                            self.candidates[current_process_node_id] = each_node_attributes
-                            # after write down finish, we can cleaer and start parsing next one
-                            each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
-                                                    "description_properties": []}
-                            # update to new id
-                            current_process_node_id = node_id
-
-                    if node_property in target_properties:
-                        each_node_attributes[target_properties[node_property]].append(node_value)
-                    if add_all_properties and each_line[column_references["value"]][0] == "P":
-                        each_node_attributes["has_properties"].append(node_value)
-
-        else:
-            raise KGTKException("Unkonwn input format {}".format(input_format))
-
-        self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
-        self.vector_dump_file = "dump_vectors_{}_{}.pkl".format(file_path[:file_path.rfind(".")], self.model_name)
-        # self._logger.debug("The cache file name will be {}".format(self.vector_dump_file))
-
-    def get_real_label_name(self, node):
-        if node in self.property_labels_dict:
-            return self.property_labels_dict[node]
-        else:
-            return node
-
-    def attribute_to_sentence(self, v, node_id=None):
-        concated_sentence = ""
-        have_isa_properties = False
-        # sort the properties to ensure the sentence always same
-        v = {key: sorted(list(value)) for key, value in v.items() if len(value) > 0}
-        if "label_properties" in v and len(v["label_properties"]) > 0:
-            concated_sentence += self.get_real_label_name(v["label_properties"][0])
-        if "description_properties" in v and len(v["description_properties"]) > 0:
-            if concated_sentence != "" and v["description_properties"][0] != "":
-                concated_sentence += ", "
-            concated_sentence += self.get_real_label_name(v["description_properties"][0])
-        if "isa_properties" in v and len(v["isa_properties"]) > 0:
-            have_isa_properties = True
-            temp = [self.get_real_label_name(each) for each in v["isa_properties"]]
-            if concated_sentence != "" and temp[0] != "":
-                concated_sentence += " is a "
-            elif temp[0] != "":
-                concated_sentence += "It is a "
-            concated_sentence += ", ".join(temp)
-        if "has_properties" in v and len(v["has_properties"]) > 0:
-            temp = [self.get_real_label_name(each) for each in v["has_properties"]]
-            if concated_sentence != "" and temp[0] != "":
-                if have_isa_properties:
-                    concated_sentence += ", and has "
-                else:
-                    concated_sentence += " has "
-            elif temp[0] != "":
-                concated_sentence += "It has "
-            concated_sentence += " and ".join(temp)
-        self._logger.debug("Transform node {} --> {}".format(node_id, concated_sentence))
-        return concated_sentence
-
-    def get_vetors(self):
-        """
-            main function to get the vector representations of the descriptions
-        """
-        import os
-        import time
-        from tqdm import tqdm  # type: ignore
-
-        start_all = time.time()
-        self._logger.info("Now generating embedding vector.")
-        for q_node, each_item in tqdm(self.candidates.items()):
-            # do process for each row(one target)
-            sentence = each_item["sentence"]
-            if isinstance(sentence, bytes):
-                sentence = sentence.decode("utf-8")
-            vectors = self.get_sentences_embedding([sentence], [q_node])
-            self.vectors_map[q_node] = vectors[0]
-        self._logger.info("Totally used {} seconds.".format(str(time.time() - start_all)))
-
-    def dump_vectors(self, file_name, type_=None):
-        import pickle
-        if file_name.endswith(".pkl"):
-            file_name = file_name.replace(".pkl", "")
-        if type_ == "2D":
-            with open(file_name + ".pkl", "wb") as f:
-                pickle.dump(self.vectors_2D, f)
-            dimension = len(self.vectors_2D[0])
-            with open(file_name + ".tsv", "w") as f:
-                for each in self.vectors_2D:
-                    for i, each_val in enumerate(each):
-                        _ = f.write(str(each_val))
-                        if i != dimension - 1:
-                            _ = f.write("\t")
-                    _ = f.write("\n")
-        elif type_ == "metadata":
-            with open(file_name + "_metadata.tsv", "w") as f:
-                for each in self.metadata:
-                    _ = f.write(each + "\n")
-        else:
-            with open(file_name + ".pkl", "wb") as f:
-                pickle.dump(self.vectors_map, f)
-            with open(file_name + ".tsv", "w") as f:
-                for each in self.vectors_map.values():
-                    for i in each:
-                        _ = f.write(str(i) + "\t")
-                    _ = f.write("\n")
-
-    def print_vector(self, vectors, output_properties: str = "text_embedding", output_format="kgtk_format"):
-        if output_format == "kgtk_format":
-            print("node\tproperty\tvalue\n", end="")
-            if self.input_format == "kgtk_format":
-                for i, each_vector in enumerate(vectors):
-                    print(str(list(self.candidates.keys())[i]) + "\t", end="")
-                    print(output_properties + "\t", end="")
-                    for j, each_dimension in enumerate(each_vector):
-                        if j != len(each_vector) - 1:
-                            print(str(each_dimension) + ",", end="")
-                        else:
-                            print(str(each_dimension) + "\n", end="")
-            elif self.input_format == "test_format":
-                all_nodes = list(self.vectors_map.keys())
-                for i, each_vector in enumerate(vectors):
-                    print(all_nodes[i] + "\t", end="")
-                    print(output_properties + "\t", end="")
-                    for j, each_dimension in enumerate(each_vector):
-                        if j != len(each_vector) - 1:
-                            print(str(each_dimension) + ",", end="")
-                        else:
-                            print(str(each_dimension) + "\n", end="")
-
-        elif output_format == "tsv_format":
-            for each_vector in vectors:
-                for i, each_dimension in enumerate(each_vector):
-                    if i != len(each_vector) - 1:
-                        print(str(each_dimension) + "\t", end="")
-                    else:
-                        print(str(each_dimension) + "\n", end="")
-
-    def plot_result(self, output_properties={}, input_format="kgtk_format",
-                    output_uri: str = "", output_format="kgtk_format",
-                    run_TSNE=True
-                    ):
-        """
-            transfer the vectors to lower dimension so that we can plot
-            Then save the 2D vector file for further purpose
-        """
-        import os
-        import time
-        from sklearn.manifold import TSNE  # type: ignore
-
-        self.vectors_map = {k: v for k, v in sorted(self.vectors_map.items(), key=lambda item: item[0], reverse=True)}
-        vectors = list(self.vectors_map.values())
-        # use tsne to reduce dimension
-        if run_TSNE:
-            self._logger.warning("Start running TSNE to reduce dimension. It will take a long time.")
-            start = time.time()
-            self.vectors_2D = TSNE(n_components=2, random_state=0).fit_transform(vectors)
-            self._logger.info("Totally used {} seconds.".format(time.time() - start))
-
-        if input_format == "test_format":
-            gt_indexes = set()
-            vector_map_keys = list(self.vectors_map.keys())
-            for each_node in self.gt_nodes:
-                gt_indexes.add(vector_map_keys.index(each_node))
-
-            self.metadata.append("Q_nodes\tType\tLabel\tDescription")
-            for i, each in enumerate(self.vectors_map.keys()):
-                label = self.q_node_to_label[each]
-                description = self.candidates[each]["sentence"]
-                if i in gt_indexes:
-                    self.metadata.append("{}\tground_truth_node\t{}\t{}".format(each, label, description))
-                else:
-                    self.metadata.append("{}\tcandidates\t{}\t{}".format(each, label, description))
-            self.gt_indexes = gt_indexes
-
-        elif input_format == "kgtk_format":
-            if len(output_properties.get("metatada_properties", [])) == 0:
-                for k, v in self.candidates.items():
-                    label = v.get("label_properties", "")
-                    if len(label) > 0 and isinstance(label, list):
-                        label = label[0]
-                    description = v.get("description_properties", "")
-                    if len(description) > 0 and isinstance(description, list):
-                        description = description[0]
-                    self.metadata.append("{}\t\t{}\t{}".format(k, label, description))
-            else:
-                required_properties = output_properties["metatada_properties"]
-                self.metadata.append("node\t" + "\t".join(required_properties))
-                for k, v in self.candidates.items():
-                    each_metadata = k + "\t"
-                    for each in required_properties:
-                        each_metadata += v.get(each, " ") + "\t"
-                    self.metadata.append(each_metadata)
-
-        metadata_output_path = os.path.join(output_uri, self.vector_dump_file.split("/")[-1])
-        if run_TSNE:
-            self.print_vector(self.vectors_2D, output_properties.get("output_properties"), output_format)
-        else:
-            self.print_vector(vectors, output_properties.get("output_properties"), output_format)
-        if output_uri != "none":
-            self.dump_vectors(metadata_output_path, "metadata")
-
-    def evaluate_result(self):
-        """
-            for the ground truth nodes, evaluate the average distance to the centroid, the lower the average distance, the better clustering results should be
-        """
-        import numpy as np
-        centroid = None
-        gt_nodes_vectors = []
-        if len(self.gt_indexes) == 0:
-            points = set(range(len(self.vectors_map)))
-        else:
-            points = self.gt_indexes
-        for i, each in enumerate(self.vectors_map.keys()):
-            if i in points:
-                if centroid is None:
-                    centroid = np.array(self.vectors_map[each])
-                else:
-                    centroid += np.array(self.vectors_map[each])
-                gt_nodes_vectors.append(self.vectors_map[each])
-        centroid = centroid / len(points)
-
-        distance_sum = 0
-        for each in gt_nodes_vectors:
-            distance_sum += self.calculate_distance(each, centroid)
-        self._logger.info("The average distance for the ground truth nodes to centroid is {}".format(distance_sum / len(points)))
-
-    @staticmethod
-    def calculate_distance(a, b):
-        if len(a) != len(b):
-            raise KGTKException("Vector dimension are different!")
-        dist = 0
-        for v1, v2 in zip(a, b):
-            dist += (v1 - v2) ** 2
-        dist = dist ** 0.5
-        return dist
-
-
 def load_property_labels_file(input_files: typing.List[str]):
     labels_dict = {}
     headers = None
@@ -675,11 +103,25 @@ def load_black_list_files(file_path):
 
 def main(**kwargs):
     from kgtk.exceptions import KGTKException
+    import logging
+    import os
+    from time import strftime
+    do_logging = kwargs.get("_debug", False)
+    if do_logging:
+        logging_level_class = logging.DEBUG
+        logger_path = os.path.join(os.environ.get("HOME"),
+                                   "kgtk_text_embedding_log_{}.log".format(strftime("%Y-%m-%d-%H-%M")))
+        logging.basicConfig(level=logging_level_class,
+                            format="%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s",
+                            datefmt='%m-%d %H:%M:%S',
+                            filename=logger_path,
+                            filemode='w')
+
+    _logger = logging.getLogger(__name__)
+    _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
+
     try:
-        import logging
-        import os
         import time
-        from time import strftime
         import torch
         import typing
         import pandas as pd
@@ -688,29 +130,17 @@ def main(**kwargs):
         import re
         import argparse
         import pickle
-
-        do_logging = kwargs.get("_debug", False)
-        if do_logging:
-            logging_level_class = logging.DEBUG
-            logger_path = os.path.join(os.environ.get("HOME"),
-                                       "kgtk_text_embedding_log_{}.log".format(strftime("%Y-%m-%d-%H-%M")))
-            logging.basicConfig(level=logging_level_class,
-                                format="%(asctime)s [%(levelname)s] %(name)s %(lineno)d -- %(message)s",
-                                datefmt='%m-%d %H:%M:%S',
-                                filename=logger_path,
-                                filemode='w')
-
-        _logger = logging.getLogger(__name__)
-        _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
+        from kgtk.gt.embedding_utils import EmbeddingVector
 
         # get input parameters from kwargs
         output_uri = kwargs.get("output_uri", "")
+        parallel_count = kwargs.get("parallel_count", "1")
         black_list_files = kwargs.get("black_list_files", "")
         all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
         input_format = kwargs.get("input_format", "kgtk_format")
         input_uris = kwargs.get("input_uris", [])
         output_format = kwargs.get("output_format", "kgtk_format")
-        property_labels_files = kwargs.get("property_labels_file_uri", "")
+        property_labels_files = kwargs.get("property_labels_file_uri", [])
         query_server = kwargs.get("query_server")
         properties = dict()
         all_property_relate_inputs = [kwargs.get("label_properties", ["label"]),
@@ -759,11 +189,12 @@ def main(**kwargs):
         for each_model_name in all_models_names:
             for each_input_file in input_uris:
                 _logger.info("Running {} model on {}".format(each_model_name, each_input_file))
-                process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config)
+                process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
+                                          parallel_count=parallel_count)
                 process.read_input(file_path=each_input_file, skip_nodes_set=black_list_set,
                                    input_format=input_format, target_properties=properties,
                                    property_labels_dict=property_labels_dict)
-                process.get_vetors()
+                process.get_vectors()
                 process.plot_result(output_properties=output_properties,
                                     input_format=input_format, output_uri=output_uri,
                                     run_TSNE=run_TSNE, output_format=output_format)
@@ -823,23 +254,28 @@ def add_arguments(parser):
                         This argument is only valid for input in kgtk format.""")
     parser.add_argument('--isa-properties', action='store', nargs='+',
                         dest='isa_properties', default=["P31"],
-                        help="""The names of the eges for `isa` properties, Default is ["P31"] (the `instance of` node in wikidata).\n 
-                        This argument is only valid for input in kgtk format.""")
+                        help="""The names of the eges for `isa` properties, Default is ["P31"] (the `instance of` node in 
+                        wikidata).\n This argument is only valid for input in kgtk format.""")
     parser.add_argument('--has-properties', action='store', nargs='+',
                         dest='has_properties', default=["all"],
-                        help="""The names of the eges for `has` properties, Default is ["all"] (will automatically append all properties found for each node).\n This argument is only valid for input in kgtk format.""")
+                        help="""The names of the eges for `has` properties, Default is ["all"] (will automatically append all 
+                        properties found for each node).\n This argument is only valid for input in kgtk format.""")
     parser.add_argument('--output-property', action='store',
                         dest='output_properties', default="text_embedding",
-                        help="""The output property name used to record the embedding. Default is `output_properties`. \nThis argument is only valid for output in kgtk format.""")
+                        help="""The output property name used to record the embedding. Default is `output_properties`. \nThis 
+                        argument is only valid for output in kgtk format.""")
     # output
     parser.add_argument('-o', '--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
     parser.add_argument('--output-format', action='store', dest='output_format',
                         default="kgtk", choices=("tsv_format", "kgtk_format"),
-                        help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output will be a tsv file, with each row contains only the vector representation of a node. Each dimension is separated by a tab")
+                        help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
+                             "will be a tsv file, with each row contains only the vector representation of a node. Each "
+                             "dimension is separated by a tab")
     parser.add_argument('--embedding-projector-metatada', action='store', nargs='+',
                         dest='metatada_properties', default=[],
-                        help="""list of properties used to construct a metadata file for use in the Google Embedding Projector: http://projector.tensorflow.org. \n Default: the label and description of each node.""")
+                        help="""list of properties used to construct a metadata file for use in the Google Embedding Projector: 
+                        http://projector.tensorflow.org. \n Default: the label and description of each node.""")
     # black list file
     parser.add_argument('-b', '--black-list', nargs='+', action='store', dest='black_list_files',
                         default="",
@@ -848,6 +284,10 @@ def add_arguments(parser):
     parser.add_argument("--run-TSNE", type=str2bool, nargs='?', action='store',
                         default=True, dest="run_TSNE",
                         help="whether to run TSNE or not after the embedding, default is true.")
+
+    parser.add_argument("--parallel", nargs='?', action='store',
+                        default="1", dest="parallel_count",
+                        help="How many processes to be run in same time, default is 1.")
     # cache config
     parser.add_argument("--use-cache", type=str2bool, nargs='?', action='store',
                         default=False, dest="use_cache",
@@ -863,7 +303,8 @@ def add_arguments(parser):
     # query server
     parser.add_argument("--query-server", nargs='?', action='store',
                         default="", dest="query_server",
-                        help="sparql query endpoint used for test_format input files, default is https://query.wikidata.org/sparql"
+                        help="sparql query endpoint used for test_format input files, default is "
+                             "https://query.wikidata.org/sparql "
                         )
 
 
