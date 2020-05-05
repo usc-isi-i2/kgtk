@@ -45,11 +45,11 @@ class KGTKExceptionHandler(object):
             traceback.print_exception(type_, exc_val, exc_tb)  # the output goes to sys.stderr
 
         if isinstance(exc_val, KGTKException):
-            sys.stderr.write(exc_val.message)
+            print("%s" % exc_val.message, file=sys.stderr)
             return exc_val.return_code
 
         warnings.warn('Please raise KGTKException instead of {}'.format(type_))
-        sys.stderr.write(KGTKException.message)
+        print("%s" %KGTKException.message, file=sys.stderr)
         return KGTKException.return_code
 
 
