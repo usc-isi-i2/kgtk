@@ -400,7 +400,8 @@ class KgtkValue(KgtkFormat):
         return v.startswith("@")
 
     #location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?\d{3}\.\d{5})/(?P<lon>[-+]?\d{3}\.\d{5})$")
-    location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))/(?P<lon>[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))$")
+    degrees_pat: str = r'(?:[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))'
+    location_coordinates_re: typing.Pattern = re.compile(r'^@(?P<lat>{degrees})/(?P<lon>{degrees})$'.format(degrees=degrees_pat))
 
     def is_valid_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -448,39 +449,48 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith("^")
 
+    # https://en.wikipedia.org/wiki/ISO_8601
+    #
+    # The "lax" patterns allow month 00 and day 00, which are excluded by ISO 8601.
+    # We will allow those values when requested in the code below.
+    #
+    # The first possible hyphen position determines whether we will parse in
+    # value as a "basic" (no hyphen) or "extended" format date/time.  A
+    # mixture is not permitted: either all hyphens (colons in the time
+    # section) must be present, or none.
+    #
+    # Year-month-day
     year_pat: str = r'(?P<year>[-+]?[0-9]{4})'
-
-    hour_pat: str = r'(?P<hour>2[0-3]|[01][0-9])'
-    minutes_pat: str = r'(?P<minutes>[0-5][0-9])'
-    seconds_pat: str = r'(?P<second>[0-5][0-9])'
-    zone_pat: str = r'(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9]))'
-    time_pat: str = r'(?:{hour}(?:(?(hyphen):){minutes}(?:(?(hyphen):){seconds})?)?{zone}?)'.format(hour=hour_pat,
-                                                                                                   minutes=minutes_pat,
-                                                                                                   seconds=seconds_pat,
-                                                                                                   zone=zone_pat)
-
-    precision_pat: str = r'(?P<precision>/[0-1]?[0-9])'
-
-    # This pattern allows month 00 and day 00, which are excluded by ISO 8601.
     lax_month_pat: str = r'(?P<month>1[0-2]|0[0-9])'
     lax_day_pat: str = r'(?P<day>3[01]|0[0-9]|[12][0-9])'
     lax_date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=year_pat,
                                                                                               month=lax_month_pat,
                                                                                               day=lax_day_pat)
-    lax_date_and_times_pat: str = r'(?:\^{date}(?:T{time}{precision}?)?)'.format(date=lax_date_pat,
-                                                                            time=time_pat,
-                                                                            precision=precision_pat)
+    # hour-minutes-seconds
+    hour_pat: str = r'(?P<hour>2[0-3]|[01][0-9])'
+    minutes_pat: str = r'(?P<minutes>[0-5][0-9])'
+    seconds_pat: str = r'(?P<second>[0-5][0-9])'
+
+    # NOTE: It might be the case that the ":" before the minutes in the time zone pattern
+    # should be conditioned upon the hyphen indicator.  The Wikipedia article doesn't
+    # mention this requirement.
+    #
+    # NOTE: This pattern accepts a wider range of offsets than actually occur.
+    #
+    # TODO: consult the actual standard about the colon.
+    zone_pat: str = r'(?P<zone>Z|[-+][01][0-9](?::?[0-5][0-9])?)'
+
+    time_pat: str = r'(?:{hour}(?:(?(hyphen):){minutes}(?:(?(hyphen):){seconds})?)?{zone}?)'.format(hour=hour_pat,
+                                                                                                   minutes=minutes_pat,
+                                                                                                   seconds=seconds_pat,
+                                                                                                   zone=zone_pat)
+
+    precision_pat: str = r'(?P<precision>[0-1]?[0-9])'
+
+    lax_date_and_times_pat: str = r'(?:\^{date}(?:T{time})?(?:/{precision})?)'.format(date=lax_date_pat,
+                                                                                      time=time_pat,
+                                                                                      precision=precision_pat)
     lax_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=lax_date_and_times_pat))
-                                                                        
-    strict_month_pat: str = r'(?P<month>1[0-2]|0[1-9])'
-    strict_day_pat: str = r'(?P<day>3[01]|0[1-9]|[12][0-9])'
-    strict_date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=year_pat,
-                                                                                                 month=strict_month_pat,
-                                                                                                 day=strict_day_pat)
-    strict_date_and_times_pat: str = r'(?:\^{date}(?:T{time}{precision}?)?)'.format(date=strict_date_pat,
-                                                                               time=time_pat,
-                                                                               precision=precision_pat)
-    strict_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=strict_date_and_times_pat))
                                                                         
     def is_valid_date_and_times(self, idx: typing.Optional[int] = None)->bool:
         """
@@ -535,16 +545,14 @@ class KgtkValue(KgtkFormat):
             return False
 
         v: str = self.get_item(idx)
-        m: typing.Optional[typing.Match]
-        if self.options.allow_month_or_day_zero:
-            m = KgtkValue.lax_date_and_times_re.match(v)
-        else:
-            m = KgtkValue.strict_date_and_times_re.match(v)
+        m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(v)
         if m is None:
             return False
+
+        # Validate the year:
         year_str: str = m.group("year")
         if year_str is None or len(year_str) == 0:
-            return False
+            return False # Years are mandatory
         try:
             year: int = int(year_str)
         except ValueError:
@@ -553,6 +561,25 @@ class KgtkValue(KgtkFormat):
             return False
         if year > self.options.maximum_valid_year:
             return False
+
+        month_str: str = m.group("month")
+        if month_str is not None:
+            try:
+                month: int = int(month_str)
+            except ValueError:
+                return False # shouldn't happen
+            if month == 0 and not self.options.allow_month_or_day_zero:
+                return False # month 0 was disallowed.
+
+        day_str: str = m.group("day")
+        if day_str is not None:
+            try:
+                day: int = int(day_str)
+            except ValueError:
+                return False # shouldn't happen
+            if day == 0 and not self.options.allow_month_or_day_zero:
+                return False # day 0 was disallowed.
+
         return True
 
     def is_extension(self,  idx: typing.Optional[int] = None)->bool:
