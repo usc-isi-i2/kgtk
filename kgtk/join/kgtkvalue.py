@@ -23,71 +23,13 @@ class KgtkValue(KgtkFormat):
     # If this is a list, prepare a KgtkValue object for each item of the list.
     list_items: typing.Optional[typing.List['KgtkValue']] = None
 
-    def get_data_type(self)->KgtkFormat.DataType:
-
-        if self.data_type is not None:
-            pass
-
-        elif self.is_empty() or self.is_list():
-            pass
-
-        elif self.is_string() or self.is_language_qualified_string():
-            pass
-
-        elif self.is_number_or_quantity():
-            # To determine whether this is a number or a quantity, we have
-            # to validate one of them.
-            if not self.is_valid_number():
-                # If it isn't a valid number, assume it's a quantity.
-                self.data_type = KgtkFormat.DataType.QUANTITY
-
-        elif self.is_location_coordinates():
-            pass
-
-        elif self.is_date_and_times():
-            pass
-
-        elif self.is_extension():
-            pass
-
-        elif self.is_boolean() or self.is_symbol():
-            pass
-
-        if self.data_type is not None:
-            return self.data_type
-
-        # Shouldn't get here.
-        raise ValueError("Unknown data type for '%s'" % self.value)
-
     def is_valid(self)->bool:
-        dt: KgtkFormat.DataType = self.get_data_type()
-        if dt == KgtkFormat.DataType.EMPTY:
-            return self.is_valid_empty()
-        elif dt == KgtkFormat.DataType.LIST:
-            return self.is_valid_list()
-        elif dt == KgtkFormat.DataType.NUMBER:
-            return self.is_valid_number()
-        elif dt == KgtkFormat.DataType.QUANTITY:
-            return self.is_valid_quantity()
-        elif dt == KgtkFormat.DataType.STRING:
-            return self.is_valid_string()
-        elif dt == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
-            return self.is_valid_language_qualified_string()
-        elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
-            return self.is_valid_location_coordinates()
-        elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
-            return self.is_valid_date_and_times()
-        elif dt == KgtkFormat.DataType.EXTENSION:
-            return self.is_valid_extension()
-        elif dt == KgtkFormat.DataType.BOOLEAN:
-            return self.is_valid_boolean()
-        elif dt == KgtkFormat.DataType.SYMBOL:
-            return self.is_valid_symbol()
+        if self.valid is not None:
+            return self.valid
         else:
-            raise ValueError("Unrecognized DataType.")
+            return self.validate()
 
-        
-    def is_empty(self)->bool:
+    def is_empty(self, validate: bool = False)->bool:
         if self.data_type is not None:
             return self.data_type == KgtkFormat.DataType.EMPTY
 
@@ -99,41 +41,39 @@ class KgtkValue(KgtkFormat):
         self.valid = True
         return True
 
-    def is_valid_empty(self)->bool:
-        # If it is empty, it is validly so.
-        return self.is_empty()
-
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
     def get_list(self)->typing.List['KgtkValue']:
         if self.list_items is not None:
             return self.list_items
 
+        # Return an empty list if this is not a list.
         self.list_items: typing.List['KgtkValue'] = [ ]
-        value: str
-        for value in KgtkValue.split_list_re.split(self.value):
-            self.list_items.append(KgtkValue(value, options=self.options))
+        values: typing.List[str] = KgtkValue.split_list_re.split(self.value)
+        if len(values) > 1:
+            # Populate list_items with a KgtkValue for each item in the list:
+            item_value: str
+            for item_value in values:
+                self.list_items.append(KgtkValue(item_value, options=self.options))
         return self.list_items
 
-    def is_list(self)->bool:
-        if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.LIST
+    def is_list(self, validate: bool = False)->bool:
+        # Must test for list before anything else (except empty)!
+        if self.data_type is None:
+            if len(self.get_list()) == 0:
+                return False
+            # We are certain that this is a list, although we haven't checked validity.
+            self.data_type = KgtkFormat.DataType.LIST
+        else:
+            if self.data_type != KgtkFormat.DataType.LIST:
+                return False
 
-        if len(self.get_list()) == 1:
-            return False
-
-        # We aare certain that this is a list, although we haven't checked validity.
-        self.data_type = KgtkFormat.DataType.LIST
-        return True
-
-
-    def is_valid_list(self)->bool:
-        if not self.is_list():
-            return False
-
+        if not validate:
+            return True
         if self.valid is not None:
             return self.valid
-            
+        
+        # Validate the list.
         item: 'KgtkValue'
         for item in self.get_list():
             if not item.is_valid():
@@ -148,15 +88,6 @@ class KgtkValue(KgtkFormat):
     def _is_number_or_quantity(self)->bool:
         return self.value.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "."))
 
-    def is_number_or_quantity(self)->bool:
-        """
-        Otherwise, return True if the first character is 0-9,+,-,. .
-        """
-        if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.NUMBER or self.data_type == KgtkFormat.DataType.QUANTITY
-
-        return self._is_number_or_quantity()
-    
     # The following lexical analysis is based on:
     # https://docs.python.org/3/reference/lexical_analysis.html
 
@@ -248,7 +179,7 @@ class KgtkValue(KgtkFormat):
     # This matches quantities excluding numbers.
     quantity_re: typing.Pattern = re.compile(r'^' + quantity_pat + r'$')
 
-    def is_valid_number_or_quantity(self)->bool:
+    def is_number_or_quantity(self, validate: bool=False)->bool:
         """
         Return True if the first character is 0-9,_,-,.
         and it is either a Python-compatible number or an enhanced
@@ -257,14 +188,21 @@ class KgtkValue(KgtkFormat):
         # If we know the specific data type, delegate the test to that data type.
         if self.data_type is not None:
             if self.data_type == KgtkFormat.DataType.NUMBER:
-                return self.is_valid_number()
+                if not validate:
+                    return True
+                return self.is_number(validate=validate)
             elif self.data_type == KgtkFormat.DataType.QUANTITY:
-                return self.is_valid_quantity()
+                if not validate:
+                    return True
+                return self.is_quantity(validate=validate)
             else:
                 return False # Not a number or quantity.
 
         if not self._is_number_or_quantity():
             return False
+
+        if not validate:
+            return True
 
         # We cannot cache the result of this test because it would interfere
         # if we later determined the exact data type.  We could work around
@@ -273,7 +211,7 @@ class KgtkValue(KgtkFormat):
         return m is not None
         
     
-    def is_valid_number(self)->bool:
+    def is_number(self, validate: bool=False)->bool:
         """
         Otherwise, return True if the first character is 0-9,_,-,.
         and it is a Python-compatible number (with optional limited enhancements).
@@ -295,6 +233,8 @@ class KgtkValue(KgtkFormat):
         if self.data_type is not None:
             if self.data_type != KgtkFormat.DataType.NUMBER:
                 return False
+            if not validate:
+                return True
             if self.valid is not None:
                 return self.valid
         
@@ -312,7 +252,7 @@ class KgtkValue(KgtkFormat):
         return True
         
     
-    def is_valid_quantity(self)->bool:
+    def is_quantity(self, validate: bool=False)->bool:
         """
         Return True if the first character is 0-9,_,-,.
         and it is an enhanced quantity.
@@ -320,6 +260,8 @@ class KgtkValue(KgtkFormat):
         if self.data_type is not None:
             if self.data_type != KgtkFormat.DataType.QUANTITY:
                 return False
+            if not validate:
+                return True
             if self.valid is not None:
                 return self.valid
         
@@ -336,7 +278,10 @@ class KgtkValue(KgtkFormat):
         self.valid = True
         return True
     
-    def is_string(self)->bool:
+    lax_string_re: typing.Pattern = re.compile(r'^".*"$')
+    strict_string_re: typing.Pattern = re.compile(r'^"(?:[^"\\]|\\.)*"$')
+
+    def is_string(self, validate: bool = False)->bool:
         """
         Return True if the first character  is '"'.
 
@@ -345,31 +290,21 @@ class KgtkValue(KgtkFormat):
         strings are not supported by KGTK File Vormat v2.
 
         """
-        if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.STRING
-        
-        if not self.value.startswith('"'):
-            return False
+        if self.data_type is None:
+            if not self.value.startswith('"'):
+                return False
+            # We are certain this is a string.  We don't yet know if it is valid.
+            self.data_type = KgtkFormat.DataType.STRING
+        else:
+            if self.data_type != KgtkFormat.DataType.STRING:
+                return False
 
-        # We are certain this is a string.  We don't yet know if it is valid.
-        self.data_type = KgtkFormat.DataType.STRING
-        return True
-
-    lax_string_re: typing.Pattern = re.compile(r'^".*"$')
-    strict_string_re: typing.Pattern = re.compile(r'^"(?:[^"\\]|\\.)*"$')
-
-    def is_valid_string(self)->bool:
-        """
-        Strict: return True if the first character  is '"',
-        the last character is '"', and any internal '"' characters are
-        escaped by backslashes.
-        """
-        if not self.is_string():
-            return False
-
+        if not validate:
+            return True
         if self.valid is not None:
             return self.valid
-
+        
+        # Validate the string:
         m: typing.Optional[typing.Match]
         if self.options.allow_lax_strings:
             m = KgtkValue.lax_string_re.match(self.value)
@@ -388,32 +323,30 @@ class KgtkValue(KgtkFormat):
         """
         return self.value.startswith(("^", "@", "'", "!"))
 
-    def is_symbol(self)->bool:
+    def is_symbol(self, validate: bool = False)->bool:
         """
         Return True if not a number, string, nor structured literal.
         """
         if self.data_type is not None:
             return self.data_type == KgtkFormat.DataType.SYMBOL
 
+        # Is this a symbol?  It is, if it is not something else.
         if self.is_number_or_quantity() or self.is_string() or self.is_structured_literal() or self.is_boolean():
             return False
             
-        # We are certain this is a symbol.  We assume, for now that it is valid.
+        # We are certain this is a symbol.  We assume that it is valid.
         self.data_type = KgtkFormat.DataType.SYMBOL
         self.valid = True
         return True
 
-    def is_valid_symbol(self)->bool:
-        # If it is a suymbol, then it is valid.
-        return self.is_symbol()
-    
-    def is_boolean(self)->bool:
+    def is_boolean(self, validate: bool = False)->bool:
         """
         return True if the value matches one of the special boolean symbols..
         """
         if self.data_type is not None:
             return self.data_type == KgtkFormat.DataType.BOOLEAN
 
+        # Is this a boolean?
         if self.value != KgtkFormat.TRUE_SYMBOL and self.value != KgtkFormat.FALSE_SYMBOL:
             return False
             
@@ -422,35 +355,30 @@ class KgtkValue(KgtkFormat):
         self.valid = True
         return True
 
-    def is_valid_boolean(self)->bool:
-        # If it is a boolean, then it is valid.
-        return self.is_boolean()
-    
-    def is_language_qualified_string(self)->bool:
-        """
-        Return True if the first character is '
-        """
-        if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING
-
-        if not self.value.startswith("'"):
-            return False
-
-        self.data_type = KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING
-        return True
-
     # Support two or three character language codes.  Suports hyphenated codes
     # with country codes or dialect names after a language code.
     lax_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'.*')@(?P<lang>[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)$")
     strict_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^'\\]|\\.)*')@(?P<lang>[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)$")
 
-    def is_valid_language_qualified_string(self)->bool:
+    def is_language_qualified_string(self, validate: bool=False)->bool:
         """
         Return True if the value looks like a language-qualified string.
         """
-        if not self.is_language_qualified_string():
-            return False
+        if self.data_type is None:
+            if not self.value.startswith("'"):
+                return False
+            # We are certain that this is a language qualified string, although we haven't checked validity.
+            self.data_type = KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING
+        else:
+            if self.data_type != KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
+                return False
 
+        if not validate:
+            return True
+        if self.valid is not None:
+            return self.valid
+        
+        # Validate the language qualified string.
         # print("checking %s" % self.value)
         m: typing.Optional[typing.Match]
         if self.options.allow_lax_lq_strings:
@@ -473,33 +401,32 @@ class KgtkValue(KgtkFormat):
         self.valid = True
         return True
 
-    def is_location_coordinates(self)->bool:
-        """
-        Return True if the first character is @
-        """
-        if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.LOCATION_COORDINATES
-
-        if not self.value.startswith("@"):
-            return False
-
-        self.data_type = KgtkFormat.DataType.LOCATION_COORDINATES
-        return True
-
     #location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?\d{3}\.\d{5})/(?P<lon>[-+]?\d{3}\.\d{5})$")
     degrees_pat: str = r'(?:[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))'
     location_coordinates_re: typing.Pattern = re.compile(r'^@(?P<lat>{degrees})/(?P<lon>{degrees})$'.format(degrees=degrees_pat))
 
-    def is_valid_location_coordinates(self)->bool:
+    def is_location_coordinates(self, validate: bool=False)->bool:
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like valid location coordinates.
 
         @043.26193/010.92708
         """
-        if not self.is_location_coordinates():
-            return False
+        if self.data_type is None:
+            if not self.value.startswith("@"):
+                return False
+            # We are certain that this is location coordinates, although we haven't checked validity.
+            self.data_type = KgtkFormat.DataType.LOCATION_COORDINATES
+        else:
+            if self.data_type != KgtkFormat.DataType.LOCATION_COORDINATES:
+                return False
 
+        if not validate:
+            return True
+        if self.valid is not None:
+            return self.valid
+        
+        # Validate the location coordinates:
         m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(self.value)
         if m is None:
             return False
@@ -524,20 +451,6 @@ class KgtkValue(KgtkFormat):
 
         # We are certain that this is valid.
         self.valid = True
-        return True
-
-    def is_date_and_times(self)->bool:
-        """
-        Return True if the first character is ^
-        """
-        if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.DATE_AND_TIMES
-
-        if not self.value.startswith("^"):
-            return False
-
-        # This is a date and times value.  We do not yet know if it si valid.
-        self.data_type = KgtkFormat.DataType.DATE_AND_TIMES
         return True
 
     # https://en.wikipedia.org/wiki/ISO_8601
@@ -583,7 +496,7 @@ class KgtkValue(KgtkFormat):
                                                                                       precision=precision_pat)
     lax_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=lax_date_and_times_pat))
                                                                         
-    def is_valid_date_and_times(self)->bool:
+    def is_date_and_times(self, validate: bool=False)->bool:
         """
         Return True if the value looks like valid date and times
         literal based on ISO-8601.
@@ -631,9 +544,21 @@ class KgtkValue(KgtkFormat):
 
         TODO: validate the calendar date, eg fail if 31-Apr-2020.
         """
-        if not self.is_date_and_times():
-            return False
+        if self.data_type is None:
+            if not self.value.startswith("^"):
+                return False
+            # We are certain that this is location coordinates, although we haven't checked validity.
+            self.data_type = KgtkFormat.DataType.DATE_AND_TIMES
+        else:
+            if self.data_type != KgtkFormat.DataType.DATE_AND_TIMES:
+                return False
 
+        if not validate:
+            return True
+        if self.valid is not None:
+            return self.valid
+        
+        # Validate the date and times:
         m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
         if m is None:
             return False
@@ -673,35 +598,99 @@ class KgtkValue(KgtkFormat):
         self.valid = True
         return True
 
-    def is_extension(self)->bool:
+    def is_extension(self, validate=False)->bool:
         """
         Return True if the first character is !
         """
         if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.EXTENSION
+            if not self.value.startswith("!"):
+                return False
+            # This is an extension, but for now, assume that all extensions are invalid.
+            self.data_type = KgtkFormat.DataType.EXTENSION
+            self.valid = False
+        else:
+            if self.data_type != KgtkFormat.DataType.EXTENSION:
+                return False
 
-        if not self.value.startswith("!"):
-            return False
+        if not validate:
+            return True
+        if self.valid is not None:
+            return self.valid
+        raise ValueError("Inconsistent extension state.")
 
-        # This is an extension, but for now, assume that all extensions are invalid.
-        self.data_type = KgtkFormat.DataType.EXTENSION
-        self.valid = False
-        return True
+    def classify(self)->KgtkFormat.DataType:
+        if self.data_type is not None:
+            return self.data_type
 
-    def is_valid_extension(self)->bool:
-        # For now, all extensions are invalid.
-        return False
+        # Must test for list before anything else (except empty)!
+        if self.is_empty() or self.is_list():
+            pass
 
+        elif self.is_string() or self.is_language_qualified_string():
+            pass
+
+        elif self.is_number_or_quantity():
+            # To determine whether this is a number or a quantity, we have
+            # to validate one of them.
+            if not self.is_number():
+                # If it isn't a valid number, assume it's a quantity.
+                self.data_type = KgtkFormat.DataType.QUANTITY
+
+        elif self.is_location_coordinates():
+            pass
+
+        elif self.is_date_and_times():
+            pass
+
+        elif self.is_extension():
+            pass
+
+        elif self.is_boolean() or self.is_symbol():
+            pass
+
+        if self.data_type is not None:
+            return self.data_type
+
+        # Shouldn't get here.
+        raise ValueError("Unknown data type for '%s'" % self.value)
+
+    def validate(self)->bool:
+        dt: KgtkFormat.DataType = self.classify()
+        if dt == KgtkFormat.DataType.EMPTY:
+            return self.is_empty(validate=True)
+        elif dt == KgtkFormat.DataType.LIST:
+            return self.is_list(validate=True)
+        elif dt == KgtkFormat.DataType.NUMBER:
+            return self.is_number(validate=True)
+        elif dt == KgtkFormat.DataType.QUANTITY:
+            return self.is_quantity(validate=True)
+        elif dt == KgtkFormat.DataType.STRING:
+            return self.is_string(validate=True)
+        elif dt == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
+            return self.is_language_qualified_string(validate=True)
+        elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
+            return self.is_location_coordinates(validate=True)
+        elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
+            return self.is_date_and_times(validate=True)
+        elif dt == KgtkFormat.DataType.EXTENSION:
+            return self.is_extension(validate=True)
+        elif dt == KgtkFormat.DataType.BOOLEAN:
+            return self.is_boolean(validate=True)
+        elif dt == KgtkFormat.DataType.SYMBOL:
+            return self.is_symbol(validate=True)
+        else:
+            raise ValueError("Unrecognized DataType.")
+
+        
     def describe(self)->str:
         """
         Return a string that describes the value.
         """
-        if self.is_list():
-            result: str
-            if self.is_valid_list:
-                result = "List ("
-            else:
-                result = "Invalid List ("
+        dt: KgtkFormat.DataType = self.classify()
+        if dt == KgtkFormat.DataType.EMPTY:
+            return "Empty" if self.is_empty(validate=True) else "Invalid Empty"
+        elif dt == KgtkFormat.DataType.LIST:
+            result: str = "List (" if self.is_list(validate=True) else "Invalid List ("
             kv: KgtkValue
             first: bool = True
             for kv in self.get_list():
@@ -711,42 +700,24 @@ class KgtkValue(KgtkFormat):
                     result += KgtkFormat.LIST_SEPARATOR
                 result += kv.describe()
             return result + ")"
-
-        if self.is_empty():
-            return "Empty"
-        elif self.is_string():
-            if self.is_valid_string():
-                return "String"
-            else:
-                return "Invalid String"
-        elif self.is_number_or_quantity():
-            if self.is_valid_number():
-                return "Number"
-            elif self.is_valid_quantity():
-                return "Quantity"
-            else:
-                return "Invalid Number or Quantity"
-        elif self.is_language_qualified_string():
-            if self.is_valid_language_qualified_string():
-                return "Language Qualified String"
-            else:
-                return "Invalid Language Qualified String"
-        elif self.is_location_coordinates():
-            if self.is_valid_location_coordinates():
-                return "Location Coordinates"
-            else:
-                return "Invalid Location Coordinates"
-        elif self.is_date_and_times():
-            if self.is_valid_date_and_times():
-                return "Date and Times"
-            else:
-                return "Invalid Date and Times"
-        elif self.is_extension():
-            return "Extension (unvalidated)"
-        elif self.is_boolean():
-            return "Boolean Symbol"
-        elif self.is_symbol():
-            return "Symbol"
+        elif dt == KgtkFormat.DataType.NUMBER:
+            return "Number" if self.is_number(validate=True) else "Invali Number"
+        elif dt == KgtkFormat.DataType.QUANTITY:
+            return "Quantity" if self.is_quantity(validate=True) else "Invalid Quantity"
+        elif dt == KgtkFormat.DataType.STRING:
+            return "String" if self.is_string(validate=True) else "Invalid String"
+        elif dt == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
+            return "Language Qualified String" if self.is_language_qualified_string(validate=True) else "Invalid Language Qualified String"
+        elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
+            return "Location Coordinates" if self.is_location_coordinates(validate=True) else "Invalid Location Coordinates"
+        elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
+            return "Date and Times" if self.is_date_and_times(validate=True) else "Invalid Date and Times"
+        elif dt == KgtkFormat.DataType.EXTENSION:
+            return "Extension" if self.is_extension(validate=True) else "Invalid Extension"
+        elif dt == KgtkFormat.DataType.BOOLEAN:
+            return "Boolean" if self.is_boolean(validate=True) else "Invalid Boolean"
+        elif dt == KgtkFormat.DataType.SYMBOL:
+            return "Symbol" if self.is_symbol(validate=True) else "Invalid Symbol"
         else:
             return "Unknown"
     
