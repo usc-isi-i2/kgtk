@@ -57,8 +57,11 @@ def add_arguments(parser):
                               help="The action to take when an empty line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
-    parser.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
-                              help="Send errors to stdout instead of stderr", action="store_true")
+    errors_to = parser.add_mutually_exclusive_group()
+    errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                              help="Send errors to stdout instead of stderr (default)", action="store_true")
+    errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+                              help="Send errors to stderr instead of stdout", action="store_true")
 
     parser.add_argument(      "--error-limit", dest="error_limit",
                               help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
@@ -141,19 +144,20 @@ def run(input_file: typing.Optional[Path],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
-    try:
-        if verbose:
-            if input_file is not None:
-                print("Cleaning data from '%s'" % str(input_file), file=sys.stderr)
-            else:
-                print ("Cleaning data from stdin", file=sys.stderr)
-            if output_file is not None:
-                print("Writing data to '%s'" % str(output_file), file=sys.stderr)
-            else:
-                print ("Writing data to stdin", file=sys.stderr)
-                
-        error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+    # Select where to send error messages, defaulting to stderr.
+    error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
+    if verbose:
+        if input_file is not None:
+            print("Cleaning data from '%s'" % str(input_file), file=error_file)
+        else:
+            print ("Cleaning data from stdin", file=error_file)
+        if output_file is not None:
+            print("Writing data to '%s'" % str(output_file), file=error_file)
+        else:
+            print ("Writing data to stdin", file=error_file)
+                
+    try:
         kr: KgtkReader = KgtkReader.open(input_file,
                                          force_column_names=force_column_names,
                                          skip_first_record=skip_first_record,
@@ -195,7 +199,7 @@ def run(input_file: typing.Optional[Path],
 
         kw.close()
         if verbose:
-            print("Copied %d clean data lines" % line_count, file=sys.stderr)
+            print("Copied %d clean data lines" % line_count, file=error_file)
         return 0
 
     except Exception as e:

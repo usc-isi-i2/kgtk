@@ -13,3 +13,6 @@ etk==2.2.1
 simplejson
 pyrallel.lib
 attrs
+pycountry
+iso-639
+redis

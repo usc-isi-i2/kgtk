@@ -13,6 +13,7 @@ import typing
 from kgtk.join.closableiter import ClosableIter
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkreader import KgtkReader
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
@@ -34,8 +35,10 @@ class EdgeReader(KgtkReader):
                        blank_node2_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        short_line_action: ValidationAction = ValidationAction.EXCLUDE,
                        long_line_action: ValidationAction = ValidationAction.EXCLUDE,
+                       invalid_value_action: ValidationAction = ValidationAction.REPORT,
                        header_error_action: ValidationAction = ValidationAction.EXIT,
                        unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
+                       value_options: KgtkValueOptions = DEFAULT_KGTK_VALUE_OPTIONS,
                        compression_type: typing.Optional[str] = None,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -47,6 +50,7 @@ class EdgeReader(KgtkReader):
                                                   compression_type=compression_type,
                                                   gzip_in_parallel=gzip_in_parallel,
                                                   gzip_queue_size=gzip_queue_size,
+                                                  error_file=error_file,
                                                   verbose=verbose)
 
         # Read the edge file header and split it into column names.
@@ -56,6 +60,7 @@ class EdgeReader(KgtkReader):
                                                          force_column_names=force_column_names,
                                                          skip_first_record=skip_first_record,
                                                          column_separator=column_separator,
+                                                         error_file=error_file,
                                                          verbose=verbose)
 
         # Check for unsafe column names.
@@ -104,8 +109,10 @@ class EdgeReader(KgtkReader):
                    blank_node2_line_action=blank_node2_line_action,
                    short_line_action=short_line_action,
                    long_line_action=long_line_action,
+                   invalid_value_action=invalid_value_action,
                    header_error_action=header_error_action,
                    unsafe_column_name_action=unsafe_column_name_action,
+                   value_options=value_options,
                    compression_type=compression_type,
                    gzip_in_parallel=gzip_in_parallel,
                    gzip_queue_size=gzip_queue_size,
@@ -115,7 +122,7 @@ class EdgeReader(KgtkReader):
                    very_verbose=very_verbose,
         )
 
-    def _ignore_if_blank_fields(self, values: typing.List[str], line: str):
+    def _ignore_if_blank_fields(self, values: typing.List[str], line: str)->bool:
         # Ignore line_action with blank node1 fields.  This code comes after
         # filling missing trailing columns, although it could be reworked
         # to come first.
@@ -131,7 +138,7 @@ class EdgeReader(KgtkReader):
                 return self.exclude_line(self.blank_node2_line_action, "node2 is blank", line)
         return False # Do not ignore this line
 
-    def _skip_reserved_fields(self, column_name):
+    def _skip_reserved_fields(self, column_name)->bool:
         if self.node1_column_idx >= 0 and column_name in self.NODE1_COLUMN_NAMES:
             return True
         if self.node2_column_idx >= 0 and column_name in self.NODE2_COLUMN_NAMES:
@@ -158,9 +165,13 @@ def main():
     parser = ArgumentParser()
     KgtkReader.add_shared_arguments(parser)
     EdgeReader.add_arguments(parser)
+    KgtkValueOptions.add_arguments(parser)
     args = parser.parse_args()
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     er: EdgeReader = EdgeReader.open(args.kgtk_file,
                                      force_column_names=args.force_column_names,
@@ -176,8 +187,10 @@ def main():
                                      blank_node2_line_action=args.blank_node2_line_action,
                                      short_line_action=args.short_line_action,
                                      long_line_action=args.long_line_action,
+                                     invalid_value_action=args.invalid_value_action,
                                      header_error_action=args.header_error_action,
                                      unsafe_column_name_action=args.unsafe_column_name_action,
+                                     value_options=value_options,
                                      compression_type=args.compression_type,
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      gzip_queue_size=args.gzip_queue_size,

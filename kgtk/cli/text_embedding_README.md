@@ -23,6 +23,7 @@ kgtk text_embedding \
     --black-list/ -b <string> # optional,default is None
     --logging-level/ -l <string> \ # optional, default is `info`
     --run-TSNE False # optional, default is True
+    --parallel 4 # optional, default is 1
 ```
 ##### Example 1:
 For easiest running, just give the input file as 
@@ -147,9 +148,25 @@ First column is the node name.
 Second column is the property name as required, default is `text_embedding`.
 Third column is the embeded vecotrs.
 
+##### parallel
+You can also set up the parallel count to some number larger than 1 to run in multiprocess mode. Currently only support for kgtk format input data. For example: `--parallel 4`
+
 ##### Reduced Embedding Vectors
 This will have embedded vectors values after running TSNE and reduced dimension to 2-dimensions for each Q nodes. This is used for visulization. (for example, you can view it at Google's online tools here: http://projector.tensorflow.org/)
 3. Metadata for the generated vectors: This will contains the metadata information for the Q nodes generated from 2 files mentioned above. It will contains the Q node value of each vector, the type (it is a `candidate` or a `ground truth` node), the given label of the Q node and corresponding fetched description information from wikidata.
+
+#### Query / cache related
+##### --query-server
+You can change the query wikidata server address when the input format is `test_format`. The default is to use wikidata official query server, but it has limit on query time and frequency. Alternatively, you can choose to use dsbox02's one as `https://dsbox02.isi.edu:8888/bigdata/namespace/wdq/sparql` (vpn needed).
+
+##### --use-cache
+If set to be true, the system will try to get the cached results for embedding computations. The default value is False, not to use cache. Basically the cache service is a Redis server.
+
+##### --cache-host
+The host address for the Redis cache service. Default is `dsbox01.isi.edu`
+
+##### --cache-port
+The host port for the Redis cache service. Default is `6379`
 
 #### Usage of vector projector
 You can apply any of the tsv vector files along with the metadata file to display it on google's tools for further experiment.
