@@ -17,19 +17,25 @@ class KgtkValue(KgtkFormat):
     value: str = attr.ib(validator=attr.validators.instance_of(str))
     options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
+    # Cache some properties of the value that would be expensive to
+    # continuously recompute. The class is not frozen because we have these
+    # cache members.
     data_type: typing.Optional[KgtkFormat.DataType] = None
     valid: typing.Optional[bool] = None
 
-    # If this is a list, prepare a KgtkValue object for each item of the list.
+    # If this is a list, cache a KgtkValue object for each item of the list.
     list_items: typing.Optional[typing.List['KgtkValue']] = None
 
     def is_valid(self)->bool:
+        # Is this a valid whatever it is?
         if self.valid is not None:
             return self.valid
         else:
             return self.validate()
 
     def is_empty(self, validate: bool = False)->bool:
+        # Is this an empty item?  If so, assume it is valid and ignore the
+        # validate parameter.
         if self.data_type is not None:
             return self.data_type == KgtkFormat.DataType.EMPTY
 
@@ -43,7 +49,9 @@ class KgtkValue(KgtkFormat):
 
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
-    def get_list(self)->typing.List['KgtkValue']:
+    def get_list_items(self)->typing.List['KgtkValue']:
+        # If this is a KGTK List, return a list of KGTK values representing
+        # the items in the list.  If this is not a KGTK List, return an empty list.
         if self.list_items is not None:
             return self.list_items
 
@@ -60,7 +68,7 @@ class KgtkValue(KgtkFormat):
     def is_list(self, validate: bool = False)->bool:
         # Must test for list before anything else (except empty)!
         if self.data_type is None:
-            if len(self.get_list()) == 0:
+            if len(self.get_list_items()) == 0:
                 return False
             # We are certain that this is a list, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.LIST
@@ -75,7 +83,7 @@ class KgtkValue(KgtkFormat):
         
         # Validate the list.
         item: 'KgtkValue'
-        for item in self.get_list():
+        for item in self.get_list_items():
             if not item.is_valid():
                 # The list is invalid if any item in the list is invalid.
                 self.valid = False
@@ -209,7 +217,6 @@ class KgtkValue(KgtkFormat):
         # this problem with more thought.
         m: typing.Optional[typing.Match] = KgtkValue.number_or_quantity_re.match(self.value)
         return m is not None
-        
     
     def is_number(self, validate: bool=False)->bool:
         """
@@ -325,7 +332,9 @@ class KgtkValue(KgtkFormat):
 
     def is_symbol(self, validate: bool = False)->bool:
         """
-        Return True if not a number, string, nor structured literal.
+        Return True if not a number, string, nor structured literal, nor boolean.
+
+        The validate parameter is ignored.
         """
         if self.data_type is not None:
             return self.data_type == KgtkFormat.DataType.SYMBOL
@@ -341,7 +350,9 @@ class KgtkValue(KgtkFormat):
 
     def is_boolean(self, validate: bool = False)->bool:
         """
-        return True if the value matches one of the special boolean symbols..
+        Return True if the value matches one of the special boolean symbols.
+
+        The validate parameter is ignored.
         """
         if self.data_type is not None:
             return self.data_type == KgtkFormat.DataType.BOOLEAN
@@ -599,8 +610,11 @@ class KgtkValue(KgtkFormat):
         return True
 
     def is_extension(self, validate=False)->bool:
-        """
-        Return True if the first character is !
+        """Return True if the first character is !
+
+        Although we refer to the validate parameter in the code below, we
+        force self.valid to False.
+
         """
         if self.data_type is not None:
             if not self.value.startswith("!"):
@@ -619,7 +633,9 @@ class KgtkValue(KgtkFormat):
         raise ValueError("Inconsistent extension state.")
 
     def classify(self)->KgtkFormat.DataType:
+        # Classify this KgtkValue into a KgtkDataType.
         if self.data_type is not None:
+            # Return the cached value.
             return self.data_type
 
         # Must test for list before anything else (except empty)!
@@ -655,7 +671,16 @@ class KgtkValue(KgtkFormat):
         raise ValueError("Unknown data type for '%s'" % self.value)
 
     def validate(self)->bool:
+        # Validate this KgtkValue.
+
+        # Start by classifying the KgtkValue.
         dt: KgtkFormat.DataType = self.classify()
+
+        # If the valid flag has already been cached, return that.
+        if self.valid is not None:
+            return self.valid
+        
+        # Validate the value.
         if dt == KgtkFormat.DataType.EMPTY:
             return self.is_empty(validate=True)
         elif dt == KgtkFormat.DataType.LIST:
@@ -684,7 +709,7 @@ class KgtkValue(KgtkFormat):
         
     def describe(self)->str:
         """
-        Return a string that describes the value.
+        Return a string that describes this KGTK Value.
         """
         dt: KgtkFormat.DataType = self.classify()
         if dt == KgtkFormat.DataType.EMPTY:
@@ -693,7 +718,7 @@ class KgtkValue(KgtkFormat):
             result: str = "List (" if self.is_list(validate=True) else "Invalid List ("
             kv: KgtkValue
             first: bool = True
-            for kv in self.get_list():
+            for kv in self.get_list_items():
                 if first:
                     first = not first
                 else:
