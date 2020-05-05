@@ -18,11 +18,12 @@ import typing
 from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.gzipprocess import GzipProcess
+from kgtk.join.kgtkbase import KgtkBase
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
-class KgtkWriter(KgtkFormat):
+class KgtkWriter(KgtkBase):
     GZIP_QUEUE_SIZE_DEFAULT: int = GzipProcess.GZIP_QUEUE_SIZE_DEFAULT
 
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))

@@ -18,6 +18,7 @@ import typing
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkreader import KgtkReader
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions
 from kgtk.join.validationaction import ValidationAction
 
 def parser():
@@ -33,7 +34,7 @@ def add_arguments(parser):
         parser (argparse.ArgumentParser)
     """
     parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
-    
+
     parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
                               help="The action to take when a blank id field is detected.",
                               type=ValidationAction, action=EnumNameAction, default=None)
@@ -90,6 +91,10 @@ def add_arguments(parser):
     parser.add_argument(      "--header-only", dest="header_only",
                               help="Process the only the header of the input file.", action="store_true")
 
+    parser.add_argument(      "--invalid-value-action", dest="invalid_value_action",
+                              help="The action to take when a data cell value is invalid.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+
     parser.add_argument(      "--long-line-action", dest="long_line_action",
                               help="The action to take when a long line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.COMPLAIN)
@@ -106,6 +111,10 @@ def add_arguments(parser):
     parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
                               help="Remove excess trailing columns in long lines.", action='store_true')
 
+    parser.add_argument(      "--unsafe-column-name-action", dest="unsafe_column_name_action",
+                              help="The action to take when a column name is unsafe.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
@@ -113,6 +122,10 @@ def add_arguments(parser):
     parser.add_argument(      "--whitespace-line-action", dest="whitespace_line_action",
                               help="The action to take when a whitespace line is detected.",
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+    # Note: Any arguments described by KgtkValueOptions.add_arguments(...)
+    # need to be included in the arguments to run(...), below.
+    KgtkValueOptions.add_arguments(parser)
 
 
 def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
@@ -132,7 +145,14 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         blank_id_line_action: typing.Optional[ValidationAction] = None,
         short_line_action: ValidationAction = ValidationAction.COMPLAIN,
         long_line_action: ValidationAction = ValidationAction.COMPLAIN,
+        invalid_value_action: ValidationAction = ValidationAction.REPORT,
         header_error_action: ValidationAction = ValidationAction.EXIT,
+        unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
+        additional_language_codes: typing.Optional[typing.List[str]] = None,
+        allow_language_suffixes: bool = False,
+        allow_lax_strings: bool = False,
+        allow_lax_lq_strings: bool = False,
+        allow_month_or_day_zero: bool = False,
         compression_type: typing.Optional[str] = None,
         gzip_in_parallel: bool = False,
         gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -148,16 +168,25 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
     if kgtk_files is None or len(kgtk_files) == 0:
         kgtk_files = [ None ]
 
+    # Select where to send error messages, defaulting to stderr.
+    error_file: typing.TextIO = sys.stderr if errors_to_stderr else sys.stdout
+
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=allow_month_or_day_zero,
+                                                       allow_lax_strings=allow_lax_strings,
+                                                       allow_lax_lq_strings=allow_lax_lq_strings,
+                                                       allow_language_suffixes=allow_language_suffixes,
+                                                       additional_language_codes=additional_language_codes)
+
     try:
         kgtk_file: typing.Optional[Path]
         for kgtk_file in kgtk_files:
             if verbose:
+                print("\n====================================================", flush=True)
                 if kgtk_file is not None:
-                    print("Validating '%s'" % str(kgtk_file))
+                    print("Validating '%s'" % str(kgtk_file), file=error_file, flush=True)
                 else:
-                    print ("Validating from stdin")
-
-                error_file: typing.TextIO = sys.stderr if errors_to_stderr else sys.stdout
+                    print ("Validating from stdin", file=error_file, flush=True)
 
                 kr: KgtkReader = KgtkReader.open(kgtk_file,
                                                  force_column_names=force_column_names,
@@ -175,8 +204,11 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                                                  blank_id_line_action=blank_id_line_action,
                                                  short_line_action=short_line_action,
                                                  long_line_action=long_line_action,
+                                                 invalid_value_action=invalid_value_action,
                                                  header_error_action=header_error_action,
+                                                 unsafe_column_name_action=unsafe_column_name_action,
                                                  compression_type=compression_type,
+                                                 value_options=value_options,
                                                  gzip_in_parallel=gzip_in_parallel,
                                                  gzip_queue_size=gzip_queue_size,
                                                  column_separator=column_separator,
@@ -186,18 +218,18 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                 if header_only:
                     kr.close()
                     if verbose:
-                        print("Validated the header only.")
+                        print("Validated the header only.", file=error_file, flush=True)
                 else:
                     line_count: int = 0
                     row: typing.List[str]
                     for row in kr:
                         line_count += 1
                     if verbose:
-                        print("Validated %d data lines" % line_count)
+                        print("Validated %d data lines" % line_count, file=error_file, flush=True)
         return 0
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
     except Exception as e:
-        raise KGTKException(e)
+        raise KGTKException(str(e))
 
