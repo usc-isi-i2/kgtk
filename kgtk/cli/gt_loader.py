@@ -9,6 +9,20 @@ def parser():
     }
 
 
+def convert_scientific_notation(num):
+    if isinstance(num, float):
+        num = str(num)
+        if 'e' in num:
+            vals = num.split('e')
+            formatter = int(vals[1].replace('-', '')) + 2
+            try:
+                return "{:.{formatter}f}".format(float(num), formatter=formatter)
+            except:
+                print(num, vals, formatter)
+                raise
+    return num
+
+
 def add_arguments(parser):
     """
     Parse arguments
@@ -136,16 +150,15 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
                 for n_id, n_label, authority in main_auth:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 
-            sys.stdout.write('id\tnode1\tproperty\tnode2\n')
+            sys.stdout.write('node1\tproperty\tnode2\tid\n')
             id_count = 0
             if not output_stats:
                 for e in G2.edges():
                     sid, oid = e
                     lbl = G2.ep[predicate][e]
                     sys.stdout.write(
-                        '%s\t%s\t%s\t%s\n' % (
-                            '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count), G2.vp[id_col][sid], lbl,
-                            G2.vp[id_col][oid]))
+                        '%s\t%s\t%s\t%s\n' % (G2.vp[id_col][sid], lbl, G2.vp[id_col][oid],
+                                              '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)))
                     id_count += 1
 
             id_count = 0
@@ -153,20 +166,19 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
                 v_id = G2.vp[id_col][v]
 
                 sys.stdout.write(
-                    '{}\t{}\t{}\t{}\n'.format('{}-{}-{}'.format(v_id, vertex_in_degree, id_count), v_id,
-                                              vertex_in_degree, v.in_degree()))
+                    '{}\t{}\t{}\t{}\n'.format(v_id, vertex_in_degree, v.in_degree(),
+                                              '{}-{}-{}'.format(v_id, vertex_in_degree, id_count)))
                 id_count += 1
                 sys.stdout.write(
-                    '{}\t{}\t{}\t{}\n'.format('{}-{}-{}'.format(v_id, vertex_out_degree, id_count), v_id,
-                                              vertex_out_degree, v.out_degree()))
+                    '{}\t{}\t{}\t{}\n'.format(v_id, vertex_out_degree, v.out_degree(),
+                                              '{}-{}-{}'.format(v_id, vertex_out_degree, id_count)))
                 id_count += 1
 
                 for vprop in G2.vertex_properties.keys():
                     if vprop == id_col: continue
                     sys.stdout.write(
-                        '%s\t%s\t%s\t%s\n' % (
-                            '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count), v_id, v_prop_dict[vprop],
-                            G2.vp[vprop][v]))
+                        '%s\t%s\t%s\t%s\n' % (v_id, v_prop_dict[vprop], convert_scientific_notation(G2.vp[vprop][v]),
+                                              '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count)))
                     id_count += 1
 
             if output:
