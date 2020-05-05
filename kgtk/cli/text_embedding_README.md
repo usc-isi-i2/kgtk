@@ -23,6 +23,7 @@ kgtk text_embedding \
     --black-list/ -b <string> # optional,default is None
     --logging-level/ -l <string> \ # optional, default is `info`
     --run-TSNE False # optional, default is True
+    --parallel 4 # optional, default is 1
 ```
 ##### Example 1:
 For easiest running, just give the input file as 
@@ -146,6 +147,9 @@ The oupput will be a TSV file with 3 columns:
 First column is the node name.
 Second column is the property name as required, default is `text_embedding`.
 Third column is the embeded vecotrs.
+
+##### parallel
+You can also set up the parallel count to some number larger than 1 to run in multiprocess mode. Currently only support for kgtk format input data. For example: `--parallel 4`
 
 ##### Reduced Embedding Vectors
 This will have embedded vectors values after running TSNE and reduced dimension to 2-dimensions for each Q nodes. This is used for visulization. (for example, you can view it at Google's online tools here: http://projector.tensorflow.org/)
