@@ -448,11 +448,40 @@ class KgtkValue(KgtkFormat):
         v: str = self.get_item(idx)
         return v.startswith("^")
 
+    year_pat: str = r'(?P<year>[-+]?[0-9]{4})'
+
+    hour_pat: str = r'(?P<hour>2[0-3]|[01][0-9])'
+    minutes_pat: str = r'(?P<minutes>[0-5][0-9])'
+    seconds_pat: str = r'(?P<second>[0-5][0-9])'
+    zone_pat: str = r'(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9]))'
+    time_pat: str = r'(?:{hour}(?:(?(hyphen):){minutes}(?:(?(hyphen):){seconds})?)?{zone}?)'.format(hour=hour_pat,
+                                                                                                   minutes=minutes_pat,
+                                                                                                   seconds=seconds_pat,
+                                                                                                   zone=zone_pat)
+
+    precision_pat: str = r'(?P<precision>/[0-1]?[0-9])'
+
     # This pattern allows month 00 and day 00, which are excluded by ISO 8601.
-    lax_date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[0-9])(?:(?(hyphen)-)(?P<day>3[01]|0[0-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
-
-    strict_date_and_times_re: typing.Pattern = re.compile(r"^\^(?P<year>[0-9]{4})(?:(?P<hyphen>-)?(?P<month>1[0-2]|0[1-9])(?:(?(hyphen)-)(?P<day>3[01]|0[1-9]|[12][0-9])))T(?P<hour>2[0-3]|[01][0-9])(?:(?(hyphen):)(?P<minute>[0-5][0-9])(?:(?(hyphen):)(?P<second>[0-5][0-9])))(?P<zone>Z|\[-+][0-9][0-9](?::[0-9][0-9])?)?(?P<precision>/[0-1]?[0-9])?$")
-
+    lax_month_pat: str = r'(?P<month>1[0-2]|0[0-9])'
+    lax_day_pat: str = r'(?P<day>3[01]|0[0-9]|[12][0-9])'
+    lax_date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=year_pat,
+                                                                                              month=lax_month_pat,
+                                                                                              day=lax_day_pat)
+    lax_date_and_times_pat: str = r'(?:\^{date}(?:T{time}{precision}?)?)'.format(date=lax_date_pat,
+                                                                            time=time_pat,
+                                                                            precision=precision_pat)
+    lax_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=lax_date_and_times_pat))
+                                                                        
+    strict_month_pat: str = r'(?P<month>1[0-2]|0[1-9])'
+    strict_day_pat: str = r'(?P<day>3[01]|0[1-9]|[12][0-9])'
+    strict_date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=year_pat,
+                                                                                                 month=strict_month_pat,
+                                                                                                 day=strict_day_pat)
+    strict_date_and_times_pat: str = r'(?:\^{date}(?:T{time}{precision}?)?)'.format(date=strict_date_pat,
+                                                                               time=time_pat,
+                                                                               precision=precision_pat)
+    strict_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=strict_date_and_times_pat))
+                                                                        
     def is_valid_date_and_times(self, idx: typing.Optional[int] = None)->bool:
         """
         Return False if this value is a list and idx is None.
@@ -466,7 +495,7 @@ class KgtkValue(KgtkFormat):
         YYYY-MM-DD
 
         Valid date and time formats
-        YYMMDDTHH
+        YYYYMMDDTHH
         YYYY-MM-DDTHH
         YYMMDDTHHMM
         YYYY-MM-DDTHH:MM
@@ -511,7 +540,20 @@ class KgtkValue(KgtkFormat):
             m = KgtkValue.lax_date_and_times_re.match(v)
         else:
             m = KgtkValue.strict_date_and_times_re.match(v)
-        return m is not None
+        if m is None:
+            return False
+        year_str: str = m.group("year")
+        if year_str is None or len(year_str) == 0:
+            return False
+        try:
+            year: int = int(year_str)
+        except ValueError:
+            return False
+        if year < self.options.minimum_valid_year:
+            return False
+        if year > self.options.maximum_valid_year:
+            return False
+        return True
 
     def is_extension(self,  idx: typing.Optional[int] = None)->bool:
         """

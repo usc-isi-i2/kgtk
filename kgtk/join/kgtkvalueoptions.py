@@ -13,6 +13,10 @@ class KgtkValueOptions:
     seperate class for efficiency.
     """
     
+    # The default minimum and maximum valid year values.
+    MINIMUM_VALID_YEAR: int = 1583 # Per ISO 8601, years before this one require special agreement.
+    MAXIMUM_VALID_YEAR: int = 2100 # Arbitrarily chosen.
+
     # Allow month 00 or day 00 in dates?  This isn't really allowed by ISO
     # 8601, but appears in wikidata.
     allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -31,10 +35,15 @@ class KgtkValueOptions:
 
     # If this list gets long, we may want to turn it into a map to make lookup
     # more efficient.
-    additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                                                            iterable_validator=attr.validators.instance_of(list))),
-                                                                           default=None)
-    
+    #
+    # TODO: fix this validation
+    # additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+    #                                                                                              iterable_validator=attr.validators.instance_of(list)))),
+    additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(default=None)
+
+    # Minimum and maximum year range in dates.
+    minimum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MINIMUM_VALID_YEAR)
+    maximum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MAXIMUM_VALID_YEAR)
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
@@ -69,6 +78,12 @@ class KgtkValueOptions:
         md0group.add_argument(      "--disallow-month-or-day-zero", dest="allow_month_or_day_zero",
                                     help="Allow month or day zero in dates.", action='store_false')
 
+        parser.add_argument(      "--minimum-valid-year", dest="minimum_valid_year",
+                                  help="The minimum valid year in dates.", type=int, default=cls.MINIMUM_VALID_YEAR)
+
+        parser.add_argument(      "--maximum-valid-year", dest="maximum_valid_year",
+                                  help="The maximum valid year in dates.", type=int, default=cls.MAXIMUM_VALID_YEAR)
+
     @classmethod
     # Build the value parsing option structure.
     def from_args(cls, args: Namespace)->'KgtkValueOptions':
@@ -76,7 +91,9 @@ class KgtkValueOptions:
                    allow_language_suffixes=args.allow_language_suffixes,
                    allow_lax_strings=args.allow_lax_strings,
                    allow_lax_lq_strings=args.allow_lax_lq_strings,
-                   additional_language_codes=args.additional_language_codes)
+                   additional_language_codes=args.additional_language_codes,
+                   minimum_valid_year=args.minimum_valid_year,
+                   maximum_valid_year=args.maximum_valid_year)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
