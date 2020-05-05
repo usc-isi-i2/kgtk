@@ -17,107 +17,145 @@ class KgtkValue(KgtkFormat):
     value: str = attr.ib(validator=attr.validators.instance_of(str))
     options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
+    data_type: typing.Optional[KgtkFormat.DataType] = None
+    valid: typing.Optional[bool] = None
+
+    # If this is a list, prepare a KgtkValue object for each item of the list.
+    list_items: typing.Optional[typing.List['KgtkValue']] = None
+
+    def get_data_type(self)->KgtkFormat.DataType:
+
+        if self.data_type is not None:
+            pass
+
+        elif self.is_empty() or self.is_list():
+            pass
+
+        elif self.is_string() or self.is_language_qualified_string():
+            pass
+
+        elif self.is_number_or_quantity():
+            # To determine whether this is a number or a quantity, we have
+            # to validate one of them.
+            if not self.is_valid_number():
+                # If it isn't a valid number, assume it's a quantity.
+                self.data_type = KgtkFormat.DataType.QUANTITY
+
+        elif self.is_location_coordinates():
+            pass
+
+        elif self.is_date_and_times():
+            pass
+
+        elif self.is_extension():
+            pass
+
+        elif self.is_boolean() or self.is_symbol():
+            pass
+
+        if self.data_type is not None:
+            return self.data_type
+
+        # Shouldn't get here.
+        raise ValueError("Unknown data type for '%s'" % self.value)
+
+    def is_valid(self)->bool:
+        dt: KgtkFormat.DataType = self.get_data_type()
+        if dt == KgtkFormat.DataType.EMPTY:
+            return self.is_valid_empty()
+        elif dt == KgtkFormat.DataType.LIST:
+            return self.is_valid_list()
+        elif dt == KgtkFormat.DataType.NUMBER:
+            return self.is_valid_number()
+        elif dt == KgtkFormat.DataType.QUANTITY:
+            return self.is_valid_quantity()
+        elif dt == KgtkFormat.DataType.STRING:
+            return self.is_valid_string()
+        elif dt == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
+            return self.is_valid_language_qualified_string()
+        elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
+            return self.is_valid_location_coordinates()
+        elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
+            return self.is_valid_date_and_times()
+        elif dt == KgtkFormat.DataType.EXTENSION:
+            return self.is_valid_extension()
+        elif dt == KgtkFormat.DataType.BOOLEAN:
+            return self.is_valid_boolean()
+        elif dt == KgtkFormat.DataType.SYMBOL:
+            return self.is_valid_symbol()
+        else:
+            raise ValueError("Unrecognized DataType.")
+
+        
+    def is_empty(self)->bool:
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.EMPTY
+
+        if len(self.value) != 0:
+            return False
+
+        # We are certain that this is an empty value.  We can be certain it is valid.
+        self.data_type = KgtkFormat.DataType.EMPTY
+        self.valid = True
+        return True
+
+    def is_valid_empty(self)->bool:
+        # If it is empty, it is validly so.
+        return self.is_empty()
+
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
-    # Cache the list of values.  This member is why the class isn't frozen.
-    values: typing.Optional[typing.List[str]] = None
+    def get_list(self)->typing.List['KgtkValue']:
+        if self.list_items is not None:
+            return self.list_items
 
-    def get_list(self)->typing.List[str]:
-        if self.values is None:
-            self.values = KgtkValue.split_list_re.split(self.value)
-        return self.values
-
-    def get_item(self, idx: typing.Optional[int])-> str:
-        if idx is None:
-            return self.value
-        else:
-            return self.get_list()[idx]
+        self.list_items: typing.List['KgtkValue'] = [ ]
+        value: str
+        for value in KgtkValue.split_list_re.split(self.value):
+            self.list_items.append(KgtkValue(value, options=self.options))
+        return self.list_items
 
     def is_list(self)->bool:
-        return len(self.get_list()) > 1
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.LIST
 
-    def get_values(self)->typing.List['KgtkValue']:
-        """
-        Convert the value into a list of KgtkValues.
-        """
-        if not self.is_list:
-            return [ self ]
-        else:
-            result: typing.List['KgtkValue'] = [ ]
-            v: str
-            for v in self.get_list():
-                result.append(KgtkValue(v, options=self.options))
-            return result
+        if len(self.get_list()) == 1:
+            return False
 
-    def is_empty(self, idx: typing.Optional[int] = None)->bool:
-        """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the value is empty.
-        """
-        if self.is_list() and idx is None:
-            return False
-        
-        v: str = self.get_item(idx)
-        return len(v) == 0
+        # We aare certain that this is a list, although we haven't checked validity.
+        self.data_type = KgtkFormat.DataType.LIST
+        return True
 
-    def is_number_old(self, idx: typing.Optional[int] = None)->bool:
-        """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is 0-9,+,-,. .
-        """
-        if self.is_list() and idx is None:
-            return False
-        
-        v: str = self.get_item(idx)
-        return v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "."))
-    
-    def is_valid_number_old(self, idx: typing.Optional[int] = None)->bool:
-        """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is 0-9,_,-,.
-        and Python can parse it.
 
-        Examples:
-        1
-        123
-        -123
-        +123
-        0b101
-        0o277
-        0x24F
-        .4
-        0.4
-        10.
-        10.4
-        10.4e10
-        """
-        if self.is_list() and idx is None:
+    def is_valid_list(self)->bool:
+        if not self.is_list():
             return False
-        
-        v: str = self.get_item(idx)
-        if not v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", ".")):
-            return False
-        try:
-            i: int = int(v, 0) # The 0 allows prefixes: 0b, 0o, and 0x.
-            return True
-        except ValueError:
-            try:
-                f: float = float(v)
-                return True
-            except ValueError:
+
+        if self.valid is not None:
+            return self.valid
+            
+        item: 'KgtkValue'
+        for item in self.get_list():
+            if not item.is_valid():
+                # The list is invalid if any item in the list is invalid.
+                self.valid = False
                 return False
-        
-    
-    def is_number_or_quantity(self, idx: typing.Optional[int] = None)->bool:
+
+        # This is a valid list.
+        self.valid = True
+        return True
+
+    def _is_number_or_quantity(self)->bool:
+        return self.value.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "."))
+
+    def is_number_or_quantity(self)->bool:
         """
-        Return False if this value is a list and idx is None.
         Otherwise, return True if the first character is 0-9,+,-,. .
         """
-        if self.is_list() and idx is None:
-            return False
-        
-        v: str = self.get_item(idx)
-        return v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "."))
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.NUMBER or self.data_type == KgtkFormat.DataType.QUANTITY
+
+        return self._is_number_or_quantity()
     
     # The following lexical analysis is based on:
     # https://docs.python.org/3/reference/lexical_analysis.html
@@ -210,27 +248,33 @@ class KgtkValue(KgtkFormat):
     # This matches quantities excluding numbers.
     quantity_re: typing.Pattern = re.compile(r'^' + quantity_pat + r'$')
 
-    def is_valid_number_or_quantity(self, idx: typing.Optional[int] = None)->bool:
+    def is_valid_number_or_quantity(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is 0-9,_,-,.
+        Return True if the first character is 0-9,_,-,.
         and it is either a Python-compatible number or an enhanced
         quantity.
         """
-        if self.is_list() and idx is None:
-            return False
-        
-        v: str = self.get_item(idx)
-        if not v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", ".")):
+        # If we know the specific data type, delegate the test to that data type.
+        if self.data_type is not None:
+            if self.data_type == KgtkFormat.DataType.NUMBER:
+                return self.is_valid_number()
+            elif self.data_type == KgtkFormat.DataType.QUANTITY:
+                return self.is_valid_quantity()
+            else:
+                return False # Not a number or quantity.
+
+        if not self._is_number_or_quantity():
             return False
 
-        m: typing.Optional[typing.Match] = KgtkValue.number_or_quantity_re.match(v)
+        # We cannot cache the result of this test because it would interfere
+        # if we later determined the exact data type.  We could work around
+        # this problem with more thought.
+        m: typing.Optional[typing.Match] = KgtkValue.number_or_quantity_re.match(self.value)
         return m is not None
         
     
-    def is_valid_number(self, idx: typing.Optional[int] = None)->bool:
+    def is_valid_number(self)->bool:
         """
-        Return False if this value is a list and idx is None.
         Otherwise, return True if the first character is 0-9,_,-,.
         and it is a Python-compatible number (with optional limited enhancements).
 
@@ -248,173 +292,215 @@ class KgtkValue(KgtkFormat):
         10.4
         10.4e10
         """
-        if self.is_list() and idx is None:
-            return False
+        if self.data_type is not None:
+            if self.data_type != KgtkFormat.DataType.NUMBER:
+                return False
+            if self.valid is not None:
+                return self.valid
         
-        v: str = self.get_item(idx)
-        if not v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", ".")):
+        if not self._is_number_or_quantity():
+            return False
+        # We don't know yet if this is a number.  It could be a quantity.
+
+        m: typing.Optional[typing.Match] = KgtkValue.number_re.match(self.value)
+        if m is None:
             return False
 
-        m: typing.Optional[typing.Match] = KgtkValue.number_re.match(v)
-        return m is not None
+        # Now we can be certain that this is a number.
+        self.data_type = KgtkFormat.DataType.NUMBER
+        self.valid = True
+        return True
         
     
-    def is_valid_quantity(self, idx: typing.Optional[int] = None)->bool:
+    def is_valid_quantity(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is 0-9,_,-,.
+        Return True if the first character is 0-9,_,-,.
         and it is an enhanced quantity.
         """
-        if self.is_list() and idx is None:
-            return False
+        if self.data_type is not None:
+            if self.data_type != KgtkFormat.DataType.QUANTITY:
+                return False
+            if self.valid is not None:
+                return self.valid
         
-        v: str = self.get_item(idx)
-        if not v.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", ".")):
+        if not self._is_number_or_quantity():
+            return False
+        # We don't know yet if this is a quantity.  It could be a number.
+
+        m: typing.Optional[typing.Match] = KgtkValue.quantity_re.match(self.value)
+        if m is None:
             return False
 
-        m: typing.Optional[typing.Match] = KgtkValue.quantity_re.match(v)
-        return m is not None
-        
+        # Now we can be certain that this is a quantity.
+        self.data_type = KgtkFormat.DataType.QUANTITY
+        self.valid = True
+        return True
     
-    def is_string(self, idx: typing.Optional[int] = None)->bool:
+    def is_string(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character  is '"'.
+        Return True if the first character  is '"'.
 
         Strings begin and end with double quote (").  Any internal double
         quotes must be escaped with backslash (\").  Triple-double quoted
         strings are not supported by KGTK File Vormat v2.
 
         """
-        if self.is_list() and idx is None:
-            return False
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.STRING
         
-        v: str = self.get_item(idx)
-        return v.startswith('"')
+        if not self.value.startswith('"'):
+            return False
+
+        # We are certain this is a string.  We don't yet know if it is valid.
+        self.data_type = KgtkFormat.DataType.STRING
+        return True
 
     lax_string_re: typing.Pattern = re.compile(r'^".*"$')
     strict_string_re: typing.Pattern = re.compile(r'^"(?:[^"\\]|\\.)*"$')
 
-    def is_valid_string(self, idx: typing.Optional[int] = None)->bool:
+    def is_valid_string(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character  is '"',
+        Strict: return True if the first character  is '"',
         the last character is '"', and any internal '"' characters are
         escaped by backslashes.
         """
-        if self.is_list() and idx is None:
+        if not self.is_string():
             return False
-        
-        v: str = self.get_item(idx)
-        if not v.startswith('"'):
-            return False
+
+        if self.valid is not None:
+            return self.valid
+
         m: typing.Optional[typing.Match]
         if self.options.allow_lax_strings:
-            m = KgtkValue.lax_string_re.match(v)
+            m = KgtkValue.lax_string_re.match(self.value)
         else:
-            m = KgtkValue.strict_string_re.match(v)
-        return m is not None
-
-    def is_structured_literal(self, idx: typing.Optional[int] = None)->bool:
-        """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character  is ^@'!.
-        """
-        if self.is_list() and idx is None:
-            return False
-        
-        v: str = self.get_item(idx)
-        return v.startswith(("^", "@", "'", "!"))
-
-    def is_symbol(self, idx: typing.Optional[int] = None)->bool:
-        """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if not a number, string, nor structured literal.
-        """
-        if self.is_list() and idx is None:
+            m = KgtkValue.strict_string_re.match(self.value)
+        if m is None:
             return False
 
-        return not (self.is_number_or_quantity(idx) or self.is_string(idx) or self.is_structured_literal(idx))
+        # We are certain that this is a valid string.
+        self.valid = True
+        return True
 
-    def is_boolean(self, idx: typing.Optional[int] = None)->bool:
+    def is_structured_literal(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the value matches one of the special boolean symbols..
+        Return True if the first character  is ^@'!.
         """
-        if self.is_list() and idx is None:
+        return self.value.startswith(("^", "@", "'", "!"))
+
+    def is_symbol(self)->bool:
+        """
+        Return True if not a number, string, nor structured literal.
+        """
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.SYMBOL
+
+        if self.is_number_or_quantity() or self.is_string() or self.is_structured_literal() or self.is_boolean():
             return False
+            
+        # We are certain this is a symbol.  We assume, for now that it is valid.
+        self.data_type = KgtkFormat.DataType.SYMBOL
+        self.valid = True
+        return True
 
-        v: str = self.get_item(idx)
-        return v == KgtkFormat.TRUE_SYMBOL or v == KgtkFormat.FALSE_SYMBOL
-
+    def is_valid_symbol(self)->bool:
+        # If it is a suymbol, then it is valid.
+        return self.is_symbol()
     
-    def is_language_qualified_string(self, idx: typing.Optional[int] = None)->bool:
+    def is_boolean(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is '
+        return True if the value matches one of the special boolean symbols..
         """
-        if self.is_list() and idx is None:
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.BOOLEAN
+
+        if self.value != KgtkFormat.TRUE_SYMBOL and self.value != KgtkFormat.FALSE_SYMBOL:
+            return False
+            
+        # We are certain this is a valid boolean.
+        self.data_type = KgtkFormat.DataType.BOOLEAN
+        self.valid = True
+        return True
+
+    def is_valid_boolean(self)->bool:
+        # If it is a boolean, then it is valid.
+        return self.is_boolean()
+    
+    def is_language_qualified_string(self)->bool:
+        """
+        Return True if the first character is '
+        """
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING
+
+        if not self.value.startswith("'"):
             return False
 
-        v: str = self.get_item(idx)
-        return v.startswith("'")
+        self.data_type = KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING
+        return True
 
     # Support two or three character language codes.  Suports hyphenated codes
     # with country codes or dialect names after a language code.
     lax_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'.*')@(?P<lang>[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)$")
     strict_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^'\\]|\\.)*')@(?P<lang>[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)$")
 
-    def is_valid_language_qualified_string(self, idx: typing.Optional[int] = None)->bool:
-        """Return False if this value is a list and idx is None.
-        Otherwise, return True if the value looks like a language-qualified string.
+    def is_valid_language_qualified_string(self)->bool:
         """
-        if self.is_list() and idx is None:
+        Return True if the value looks like a language-qualified string.
+        """
+        if not self.is_language_qualified_string():
             return False
 
-        v: str = self.get_item(idx)
-        # print("checking %s" % v)
+        # print("checking %s" % self.value)
         m: typing.Optional[typing.Match]
         if self.options.allow_lax_lq_strings:
-            m = KgtkValue.lax_language_qualified_string_re.match(v)
+            m = KgtkValue.lax_language_qualified_string_re.match(self.value)
         else:
-            m = KgtkValue.strict_language_qualified_string_re.match(v)
+            m = KgtkValue.strict_language_qualified_string_re.match(self.value)
         if m is None:
-            # print("match failed for %s" % v)
+            # print("match failed for %s" % self.value)
             return False
 
         # Validate the language code:
         lang: str = m.group("lang").lower()
         # print("lang: %s" % lang)
 
-        return LanguageValidator.validate(lang, options=self.options)
-
-    def is_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
-        """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is @
-        """
-        if self.is_list() and idx is None:
+        if not LanguageValidator.validate(lang, options=self.options):
+            # print("language validation failed for %s" % self.value)
             return False
 
-        v: str = self.get_item(idx)
-        return v.startswith("@")
+        # We are certain that this is a valid language qualified string.
+        self.valid = True
+        return True
+
+    def is_location_coordinates(self)->bool:
+        """
+        Return True if the first character is @
+        """
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.LOCATION_COORDINATES
+
+        if not self.value.startswith("@"):
+            return False
+
+        self.data_type = KgtkFormat.DataType.LOCATION_COORDINATES
+        return True
 
     #location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?\d{3}\.\d{5})/(?P<lon>[-+]?\d{3}\.\d{5})$")
     degrees_pat: str = r'(?:[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))'
     location_coordinates_re: typing.Pattern = re.compile(r'^@(?P<lat>{degrees})/(?P<lon>{degrees})$'.format(degrees=degrees_pat))
 
-    def is_valid_location_coordinates(self, idx: typing.Optional[int] = None)->bool:
+    def is_valid_location_coordinates(self)->bool:
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like valid location coordinates.
 
         @043.26193/010.92708
         """
-        if self.is_list() and idx is None:
+        if not self.is_location_coordinates():
             return False
 
-        v: str = self.get_item(idx)
-        m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(v)
+        m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(self.value)
         if m is None:
             return False
 
@@ -436,18 +522,23 @@ class KgtkValue(KgtkFormat):
         except ValueError:
             return False
 
+        # We are certain that this is valid.
+        self.valid = True
         return True
 
-    def is_date_and_times(self, idx: typing.Optional[int] = None)->bool:
+    def is_date_and_times(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is ^
+        Return True if the first character is ^
         """
-        if self.is_list() and idx is None:
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.DATE_AND_TIMES
+
+        if not self.value.startswith("^"):
             return False
 
-        v: str = self.get_item(idx)
-        return v.startswith("^")
+        # This is a date and times value.  We do not yet know if it si valid.
+        self.data_type = KgtkFormat.DataType.DATE_AND_TIMES
+        return True
 
     # https://en.wikipedia.org/wiki/ISO_8601
     #
@@ -492,10 +583,9 @@ class KgtkValue(KgtkFormat):
                                                                                       precision=precision_pat)
     lax_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=lax_date_and_times_pat))
                                                                         
-    def is_valid_date_and_times(self, idx: typing.Optional[int] = None)->bool:
+    def is_valid_date_and_times(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the value looks like valid date and times
+        Return True if the value looks like valid date and times
         literal based on ISO-8601.
 
         Valid date formats:
@@ -541,11 +631,10 @@ class KgtkValue(KgtkFormat):
 
         TODO: validate the calendar date, eg fail if 31-Apr-2020.
         """
-        if self.is_list() and idx is None:
+        if not self.is_date_and_times():
             return False
 
-        v: str = self.get_item(idx)
-        m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(v)
+        m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
         if m is None:
             return False
 
@@ -580,77 +669,42 @@ class KgtkValue(KgtkFormat):
             if day == 0 and not self.options.allow_month_or_day_zero:
                 return False # day 0 was disallowed.
 
+        # We are fairly certain that this is a valid date and times.
+        self.valid = True
         return True
 
-    def is_extension(self,  idx: typing.Optional[int] = None)->bool:
+    def is_extension(self)->bool:
         """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the first character is !
+        Return True if the first character is !
         """
-        if self.is_list() and idx is None:
+        if self.data_type is not None:
+            return self.data_type == KgtkFormat.DataType.EXTENSION
+
+        if not self.value.startswith("!"):
             return False
 
-        v: str = self.get_item(idx)
-        return v.startswith("!")
+        # This is an extension, but for now, assume that all extensions are invalid.
+        self.data_type = KgtkFormat.DataType.EXTENSION
+        self.valid = False
+        return True
 
-        
-    def is_valid_literal(self, idx: typing.Optional[int] = None)->bool:
-        """
-        Return False if this value is a list and idx is None.
-        Otherwise, return True if the value looks like a valid literal.
-        """
-        if self.is_list() and idx is None:
-            return False
+    def is_valid_extension(self)->bool:
+        # For now, all extensions are invalid.
+        return False
 
-        if self.is_string(idx):
-            return self.is_valid_string(idx)
-        elif self.is_number_or_quantity(idx):
-            return self.is_valid_number_or_quantity(idx)
-        elif self.is_structured_literal(idx):
-            if self.is_language_qualified_string(idx):
-                return self.is_valid_language_qualified_string(idx)
-            elif self.is_location_coordinates(idx):
-                return self.is_valid_location_coordinates(idx)
-            elif self.is_date_and_times(idx):
-                return self.is_valid_date_and_times(idx)
-            elif self.is_extension(idx):
-                return False # no validation presently available.
-            else:
-                return False # Shouldn't get here.
-        else:
-            return False
-
-    def is_valid_item(self, idx: typing.Optional[int] = None)->bool:
-        if self.is_list() and idx is None:
-            return False
-
-        if self.is_empty(idx):
-            return True
-        elif self.is_valid_literal(idx):
-            return True
-        else:
-            return self.is_symbol(idx) # Should always be True
-
-    def is_valid(self)->bool:
-        """
-        Is this a valid KGTK cell value?  If the value is a list, are all the
-        components valid?
-        """        
-        result: bool = True
-        kv: KgtkValue
-        for kv in self.get_values():
-            result = result and kv.is_valid_item()
-        return result
-
-    def describe(self, idx: typing.Optional[int] = None)->str:
+    def describe(self)->str:
         """
         Return a string that describes the value.
         """
-        if self.is_list() and idx is None:
-            result: str = "List ("
+        if self.is_list():
+            result: str
+            if self.is_valid_list:
+                result = "List ("
+            else:
+                result = "Invalid List ("
             kv: KgtkValue
             first: bool = True
-            for kv in self.get_values():
+            for kv in self.get_list():
                 if first:
                     first = not first
                 else:
@@ -658,43 +712,43 @@ class KgtkValue(KgtkFormat):
                 result += kv.describe()
             return result + ")"
 
-        if self.is_empty(idx):
+        if self.is_empty():
             return "Empty"
-        elif self.is_string(idx):
-            if self.is_valid_string(idx):
+        elif self.is_string():
+            if self.is_valid_string():
                 return "String"
             else:
                 return "Invalid String"
-        elif self.is_number_or_quantity(idx):
-            if self.is_valid_number(idx):
+        elif self.is_number_or_quantity():
+            if self.is_valid_number():
                 return "Number"
-            elif self.is_valid_quantity(idx):
+            elif self.is_valid_quantity():
                 return "Quantity"
             else:
                 return "Invalid Number or Quantity"
-        elif self.is_structured_literal(idx):
-            if self.is_language_qualified_string(idx):
-                if self.is_valid_language_qualified_string(idx):
-                    return "Language Qualified String"
-                else:
-                    return "Invalid Language Qualified String"
-            elif self.is_location_coordinates(idx):
-                if self.is_valid_location_coordinates(idx):
-                    return "Location Coordinates"
-                else:
-                    return "Invalid Location Coordinates"
-            elif self.is_date_and_times(idx):
-                if self.is_valid_date_and_times(idx):
-                    return "Date and Times"
-                else:
-                    return "Invalid Date and Times"
-            elif self.is_extension(idx):
-                return "Extension (unvalidated)"
+        elif self.is_language_qualified_string():
+            if self.is_valid_language_qualified_string():
+                return "Language Qualified String"
             else:
-                return "Invalid Structured Literal"
-        else:
+                return "Invalid Language Qualified String"
+        elif self.is_location_coordinates():
+            if self.is_valid_location_coordinates():
+                return "Location Coordinates"
+            else:
+                return "Invalid Location Coordinates"
+        elif self.is_date_and_times():
+            if self.is_valid_date_and_times():
+                return "Date and Times"
+            else:
+                return "Invalid Date and Times"
+        elif self.is_extension():
+            return "Extension (unvalidated)"
+        elif self.is_boolean():
+            return "Boolean Symbol"
+        elif self.is_symbol():
             return "Symbol"
-
+        else:
+            return "Unknown"
     
 def main():
     """
