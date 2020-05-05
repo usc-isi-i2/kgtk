@@ -26,6 +26,11 @@ class KgtkValue(KgtkFormat):
     # If this is a list, cache a KgtkValue object for each item of the list.
     list_items: typing.Optional[typing.List['KgtkValue']] = None
 
+    # Offer the components of a language-qualified string:
+    string: typing.Optional[str] = None
+    lang: typing.Optional[str] = None
+    suffix: typing.Optional[str] = None # Includes the leading dash.
+
     def is_valid(self)->bool:
         # Is this a valid whatever it is?
         if self.valid is not None:
@@ -367,14 +372,19 @@ class KgtkValue(KgtkFormat):
         return True
 
     # Support two or three character language codes.  Suports hyphenated codes
-    # with country codes or dialect names after a language code.
-    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'.*')@(?P<lang>[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)$")
-    strict_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^'\\]|\\.)*')@(?P<lang>[a-zA-Z]{2,3}(?:-[a-zA-Z]+)?)$")
+    # with a country code or dialect namesuffix after the language code.
+    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'.*')@(?P<lang>[a-zA-Z]{2,3}(?P<suffix>-[a-zA-Z]+)?)$")
+    strict_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^'\\]|\\.)*')@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
 
     def is_language_qualified_string(self, validate: bool=False)->bool:
         """
         Return True if the value looks like a language-qualified string.
         """
+        # Clear the cached components lf the lanjguage qualified string:
+        self.string = None
+        self.lang = None
+        self.suffix = None
+
         if self.data_type is None:
             if not self.value.startswith("'"):
                 return False
@@ -400,11 +410,17 @@ class KgtkValue(KgtkFormat):
             # print("match failed for %s" % self.value)
             return False
 
-        # Validate the language code:
-        lang: str = m.group("lang").lower()
-        # print("lang: %s" % lang)
+        # Extract the string, lang, and optional suffix components:
+        self.string = m.group("string")
+        self.lang = m.group("lang")
+        self.suffix = m.group("suffix")
 
-        if not LanguageValidator.validate(lang, options=self.options):
+        # Extract the combined lang and suffix for use by the LanguageValidator.
+        lang_suffix: str = m.group("lang_suffix")
+        # print("lang: %s" % lang_suffix)
+
+        # Validate the language code:
+        if not LanguageValidator.validate(lang_suffix.lower(), options=self.options):
             # print("language validation failed for %s" % self.value)
             return False
 
@@ -732,7 +748,7 @@ class KgtkValue(KgtkFormat):
         elif dt == KgtkFormat.DataType.STRING:
             return "String" if self.is_string(validate=True) else "Invalid String"
         elif dt == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
-            return "Language Qualified String" if self.is_language_qualified_string(validate=True) else "Invalid Language Qualified String"
+            return "Language Qualified String (%s)" % self.lang if self.is_language_qualified_string(validate=True) else "Invalid Language Qualified String"
         elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
             return "Location Coordinates" if self.is_location_coordinates(validate=True) else "Invalid Location Coordinates"
         elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
