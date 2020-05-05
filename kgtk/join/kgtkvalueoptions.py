@@ -13,10 +13,6 @@ class KgtkValueOptions:
     seperate class for efficiency.
     """
     
-    # The default minimum and maximum valid year values.
-    MINIMUM_VALID_YEAR: int = 1583 # Per ISO 8601, years before this one require special agreement.
-    MAXIMUM_VALID_YEAR: int = 2100 # Arbitrarily chosen.
-
     # Allow month 00 or day 00 in dates?  This isn't really allowed by ISO
     # 8601, but appears in wikidata.
     allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -42,8 +38,21 @@ class KgtkValueOptions:
     additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(default=None)
 
     # Minimum and maximum year range in dates.
+    MINIMUM_VALID_YEAR: int = 1583 # Per ISO 8601, years before this one require special agreement.
     minimum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MINIMUM_VALID_YEAR)
+    MAXIMUM_VALID_YEAR: int = 2100 # Arbitrarily chosen.
     maximum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MAXIMUM_VALID_YEAR)
+
+    MINIMUM_VALID_LAT: float = -90.
+    minimum_valid_lat: float = attr.ib(validator=attr.validators.instance_of(float), default=MINIMUM_VALID_LAT)
+    MAXIMUM_VALID_LAT: float = 90.
+    maximum_valid_lat: float = attr.ib(validator=attr.validators.instance_of(float), default=MAXIMUM_VALID_LAT)
+    
+    MINIMUM_VALID_LON: float = -180.
+    minimum_valid_lon: float = attr.ib(validator=attr.validators.instance_of(float), default=MINIMUM_VALID_LON)
+    MAXIMUM_VALID_LON: float = 180.
+    maximum_valid_lon: float = attr.ib(validator=attr.validators.instance_of(float), default=MAXIMUM_VALID_LON)
+    
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
