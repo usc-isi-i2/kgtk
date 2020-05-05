@@ -418,20 +418,20 @@ class KgtkValue(KgtkFormat):
         if m is None:
             return False
 
-        # Latitude runs from -90 to +90
+        # Latitude normally runs from -90 to +90:
         latstr: str = m.group("lat")
         try:
             lat: float = float(latstr)
-            if  lat < -90. or lat > 90.:
+            if  lat < self.options.minimum_valid_lat or lat > self.options.maximum_valid_lat:
                 return False
         except ValueError:
             return False
 
-        # Longitude runs from -180 to +180
+        # Longitude normally runs from -180 to +180:
         lonstr: str = m.group("lon")
         try:
             lon: float = float(lonstr)
-            if lon < -180. or lon > 180.:
+            if lon < self.options.minimum_valid_lon or lon > self.options.maximum_valid_lon:
                 return False
         except ValueError:
             return False
@@ -647,7 +647,7 @@ class KgtkValue(KgtkFormat):
         Return a string that describes the value.
         """
         if self.is_list() and idx is None:
-            result: str = ""
+            result: str = "List ("
             kv: KgtkValue
             first: bool = True
             for kv in self.get_values():
@@ -656,7 +656,7 @@ class KgtkValue(KgtkFormat):
                 else:
                     result += KgtkFormat.LIST_SEPARATOR
                 result += kv.describe()
-            return result
+            return result + ")"
 
         if self.is_empty(idx):
             return "Empty"
