@@ -26,10 +26,31 @@ class KgtkValue(KgtkFormat):
     # If this is a list, cache a KgtkValue object for each item of the list.
     list_items: typing.Optional[typing.List['KgtkValue']] = None
 
-    # Offer the components of a language-qualified string:
-    string: typing.Optional[str] = None
+    # Offer the components of a string or language-qualified string:
+    contents: typing.Optional[str] = None # String contents without the enclosing quotes
     lang: typing.Optional[str] = None
     suffix: typing.Optional[str] = None # Includes the leading dash.
+
+    # Offer the components of a number or quantity:
+    number: typing.Optional[str] = None # Note: not converted to int or float
+    low_tolerance: typing.Optional[str] = None # Note: not converted to int or float
+    high_tolerance: typing.Optional[str] = None # Note: not converted to int or float
+    si_units: typing.Optional[str] = None
+    wikidata_node: typing.Optional[str] = None
+
+    # Offer the components of a location coordinates:
+    latstr: typing.Optional[str] = None
+    lat: typing.Optional[float] = None
+    lonstr: typing.Optional[str] = None
+    lon: typing.Optional[float] = None
+
+    # Offer the components of a date and times:
+    yearstr: typing.Optional[str] = None # Note: not converted to int
+    monthstr: typing.Optional[str] = None # Note: not converted to int
+    daystr: typing.Optional[str] = None # Note: not converted to int
+    hourstr: typing.Optional[str] = None # Note: not converted to int or float
+    minutesstr: typing.Optional[str] = None # Note: not converted to int or float
+    secondsstr: typing.Optional[str] = None # Note: not converted to int or float
 
     def is_valid(self)->bool:
         # Is this a valid whatever it is?
@@ -153,8 +174,11 @@ class KgtkValue(KgtkFormat):
                                                                                               floatnumber=floatnumber_pat,
                                                                                               imagnumber=imagnumber_pat)
 
+    # Numeric literals with componet labeling:
+    number_pat: str = r'(?P<number>{numeric})'.format(numeric=numeric_pat)
+
     # Tolerances
-    tolerance_pat: str = r'(?:\[{numeric},{numeric}\])'.format(numeric=numeric_pat)
+    tolerance_pat: str = r'(?:\[(?P<low_tolerance>{numeric}),(?P<high_tolerance>{numeric})\])'.format(numeric=numeric_pat)
 
     # SI units taken from:
     # http://www.csun.edu/~vceed002/ref/measurement/units/units.pdf
@@ -163,12 +187,12 @@ class KgtkValue(KgtkFormat):
     si_unit_pat: str = r'(?:m|kg|s|C|K|mol|cd|F|M|A|N|ohms|V|J|Hz|lx|H|Wb|V|W|Pa)'
     si_power_pat: str = r'(?:-1|2|3)' # Might need more.
     si_combiner_pat: str = r'[./]'
-    si_pat: str = r'(?:{si_unit}{si_power}?(?:{si_combiner}{si_unit}{si_power}?)*)'.format(si_unit=si_unit_pat,
+    si_pat: str = r'(?P<si_units>{si_unit}{si_power}?(?:{si_combiner}{si_unit}{si_power}?)*)'.format(si_unit=si_unit_pat,
                                                                                            si_combiner=si_combiner_pat,
                                                                                            si_power=si_power_pat)
     # Wikidata nodes (for units):
     nonzero_digit_pat: str = r'[1-9]'
-    wikidata_node_pat: str = r'(?:Q{nonzero_digit}{digit}*)'.format(nonzero_digit=nonzero_digit_pat,
+    wikidata_node_pat: str = r'(?P<wikidata_node>Q{nonzero_digit}{digit}*)'.format(nonzero_digit=nonzero_digit_pat,
                                                                     digit=digit_pat)
 
     units_pat: str = r'(?:{si}|{wikidata_node})'.format(si=si_pat,
@@ -176,21 +200,15 @@ class KgtkValue(KgtkFormat):
     
 
     # This definition matches numbers or quantities.
-    number_or_quantity_pat: str = r'{numeric}{tolerance}?{units}?'.format(numeric=numeric_pat,
+    number_or_quantity_pat: str = r'{numeric}{tolerance}?{units}?'.format(numeric=number_pat,
                                                                           tolerance=tolerance_pat,
                                                                           units=units_pat)
-    # This definition for quantity excludes plain numbers.
-    quantity_pat: str = r'{numeric}(?:(?:{tolerance}{units}?)|{units})'.format(numeric=numeric_pat,
-                                                                               tolerance=tolerance_pat,
-                                                                               units=units_pat)
+
     # This matches numbers or quantities.
     number_or_quantity_re: typing.Pattern = re.compile(r'^' + number_or_quantity_pat + r'$')
 
     # This matches numbers but not quantities.
-    number_re: typing.Pattern = re.compile(r'^' + numeric_pat + r'$')
-
-    # This matches quantities excluding numbers.
-    quantity_re: typing.Pattern = re.compile(r'^' + quantity_pat + r'$')
+    number_re: typing.Pattern = re.compile(r'^' + number_pat + r'$')
 
     def is_number_or_quantity(self, validate: bool=False)->bool:
         """
@@ -201,15 +219,24 @@ class KgtkValue(KgtkFormat):
         # If we know the specific data type, delegate the test to that data type.
         if self.data_type is not None:
             if self.data_type == KgtkFormat.DataType.NUMBER:
-                if not validate:
-                    return True
                 return self.is_number(validate=validate)
             elif self.data_type == KgtkFormat.DataType.QUANTITY:
-                if not validate:
-                    return True
                 return self.is_quantity(validate=validate)
             else:
+                # Clear the number or quantity components:
+                self.number = None
+                self.low_tolerance = None
+                self.high_tolerance = None
+                self.si_units = None
+                self.wikidata_node = None
                 return False # Not a number or quantity.
+
+        # Clear the number or quantity components:
+        self.number = None
+        self.low_tolerance = None
+        self.high_tolerance = None
+        self.si_units = None
+        self.wikidata_node = None
 
         if not self._is_number_or_quantity():
             return False
@@ -221,7 +248,25 @@ class KgtkValue(KgtkFormat):
         # if we later determined the exact data type.  We could work around
         # this problem with more thought.
         m: typing.Optional[typing.Match] = KgtkValue.number_or_quantity_re.match(self.value)
-        return m is not None
+        if m is None:
+            return False
+
+        # Extract the number or quantity components:
+        self.number = m.group("number")
+        self.low_tolerance = m.group("low_tolerance")
+        self.high_tolerance = m.group("high_tolerance")
+        self.si_units = m.group("si_units")
+        self.wikidata_node = m.group("wikidata_node")
+
+        if self.low_tolerance is not None or self.high_tolerance is not None or self.si_units is not None or self.wikidata_node is not None:
+            # We can be certain that this is a quantity.
+            self.data_type = KgtkFormat.DataType.QUANTITY
+        else:
+            # We can be certain that this is a number
+            self.data_type = KgtkFormat.DataType.NUMBER
+
+        self.valid = True
+        return True
     
     def is_number(self, validate: bool=False)->bool:
         """
@@ -244,12 +289,18 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is not None:
             if self.data_type != KgtkFormat.DataType.NUMBER:
+                # Clear the number components:
+                self.number = None
                 return False
+
             if not validate:
                 return True
             if self.valid is not None:
                 return self.valid
         
+        # Clear the number components:
+        self.number = None
+
         if not self._is_number_or_quantity():
             return False
         # We don't know yet if this is a number.  It could be a quantity.
@@ -257,6 +308,9 @@ class KgtkValue(KgtkFormat):
         m: typing.Optional[typing.Match] = KgtkValue.number_re.match(self.value)
         if m is None:
             return False
+
+        # Extract the number components:
+        self.number = m.group("number")
 
         # Now we can be certain that this is a number.
         self.data_type = KgtkFormat.DataType.NUMBER
@@ -271,18 +325,45 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is not None:
             if self.data_type != KgtkFormat.DataType.QUANTITY:
+                # Clear the quantity components:
+                self.number = None
+                self.low_tolerance = None
+                self.high_tolerance = None
+                self.si_units = None
+                self.wikidata_node = None
                 return False
+            
             if not validate:
                 return True
             if self.valid is not None:
                 return self.valid
         
+        # Clear the quantity components:
+        self.number = None
+        self.low_tolerance = None
+        self.high_tolerance = None
+        self.si_units = None
+        self.wikidata_node = None
+
         if not self._is_number_or_quantity():
             return False
         # We don't know yet if this is a quantity.  It could be a number.
 
-        m: typing.Optional[typing.Match] = KgtkValue.quantity_re.match(self.value)
+        m: typing.Optional[typing.Match] = KgtkValue.number_or_quantity_re.match(self.value)
         if m is None:
+            return False
+
+        # Extract the quantity components:
+        self.number = m.group("number")
+        self.low_tolerance = m.group("low_tolerance")
+        self.high_tolerance = m.group("high_tolerance")
+        self.si_units = m.group("si_units")
+        self.wikidata_node = m.group("wikidata_node")
+
+        if self.low_tolerance is None and self.high_tolerance is None and self.si_units is None and self.wikidata_node is None:
+            # This is a number, not a quantity
+            self.data_type = KgtkFormat.DataType.NUMBER
+            self.valid = True
             return False
 
         # Now we can be certain that this is a quantity.
@@ -290,8 +371,8 @@ class KgtkValue(KgtkFormat):
         self.valid = True
         return True
     
-    lax_string_re: typing.Pattern = re.compile(r'^".*"$')
-    strict_string_re: typing.Pattern = re.compile(r'^"(?:[^"\\]|\\.)*"$')
+    lax_string_re: typing.Pattern = re.compile(r'^"(?P<contents>.*)"$')
+    strict_string_re: typing.Pattern = re.compile(r'^"(?P<contents>(?:[^"\\]|\\.)*"$)')
 
     def is_string(self, validate: bool = False)->bool:
         """
@@ -304,17 +385,24 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is None:
             if not self.value.startswith('"'):
+                # Clear the string components:
+                self.contents = None
                 return False
             # We are certain this is a string.  We don't yet know if it is valid.
             self.data_type = KgtkFormat.DataType.STRING
         else:
             if self.data_type != KgtkFormat.DataType.STRING:
+                # Clear the string components:
+                self.contents = None
                 return False
 
         if not validate:
             return True
         if self.valid is not None:
             return self.valid
+        
+        # Clear the string components:
+        self.contents = None
         
         # Validate the string:
         m: typing.Optional[typing.Match]
@@ -324,6 +412,9 @@ class KgtkValue(KgtkFormat):
             m = KgtkValue.strict_string_re.match(self.value)
         if m is None:
             return False
+
+        # Extract the contents components:
+        self.contents = m.group("contents")
 
         # We are certain that this is a valid string.
         self.valid = True
@@ -373,25 +464,28 @@ class KgtkValue(KgtkFormat):
 
     # Support two or three character language codes.  Suports hyphenated codes
     # with a country code or dialect namesuffix after the language code.
-    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'.*')@(?P<lang>[a-zA-Z]{2,3}(?P<suffix>-[a-zA-Z]+)?)$")
-    strict_language_qualified_string_re: typing.Pattern = re.compile(r"^(?P<string>'(?:[^'\\]|\\.)*')@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
+    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<contents>.*)'@(?P<lang>[a-zA-Z]{2,3}(?P<suffix>-[a-zA-Z]+)?)$")
+    strict_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<contents>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
 
     def is_language_qualified_string(self, validate: bool=False)->bool:
         """
         Return True if the value looks like a language-qualified string.
         """
-        # Clear the cached components lf the lanjguage qualified string:
-        self.string = None
-        self.lang = None
-        self.suffix = None
-
         if self.data_type is None:
             if not self.value.startswith("'"):
+                # Clear the cached components of the language qualified string:
+                self.contents = None
+                self.lang = None
+                self.suffix = None
                 return False
             # We are certain that this is a language qualified string, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING
         else:
             if self.data_type != KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
+                # Clear the cached components of the language qualified string:
+                self.contents = None
+                self.lang = None
+                self.suffix = None
                 return False
 
         if not validate:
@@ -399,6 +493,11 @@ class KgtkValue(KgtkFormat):
         if self.valid is not None:
             return self.valid
         
+        # Clear the cached components of the language qualified string:
+        self.contents = None
+        self.lang = None
+        self.suffix = None
+
         # Validate the language qualified string.
         # print("checking %s" % self.value)
         m: typing.Optional[typing.Match]
@@ -410,8 +509,8 @@ class KgtkValue(KgtkFormat):
             # print("match failed for %s" % self.value)
             return False
 
-        # Extract the string, lang, and optional suffix components:
-        self.string = m.group("string")
+        # Extract the contents, lang, and optional suffix components:
+        self.contents = m.group("contents")
         self.lang = m.group("lang")
         self.suffix = m.group("suffix")
 
@@ -441,11 +540,19 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is None:
             if not self.value.startswith("@"):
+                self.latstr = None
+                self.lat = None
+                self.lonstr = None
+                self.lon = None
                 return False
             # We are certain that this is location coordinates, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.LOCATION_COORDINATES
         else:
             if self.data_type != KgtkFormat.DataType.LOCATION_COORDINATES:
+                self.latstr = None
+                self.lat = None
+                self.lonstr = None
+                self.lon = None
                 return False
 
         if not validate:
@@ -453,25 +560,34 @@ class KgtkValue(KgtkFormat):
         if self.valid is not None:
             return self.valid
         
+        # Clear the lat/lon components:
+        self.latstr = None
+        self.lat = None
+        self.lonstr = None
+        self.lon = None
+
         # Validate the location coordinates:
         m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(self.value)
         if m is None:
             return False
 
-        # Latitude normally runs from -90 to +90:
         latstr: str = m.group("lat")
+        self.latstr = latstr
+        lonstr: str = m.group("lon")
+        self.lonstr = lonstr
+
+        # Latitude normally runs from -90 to +90:
         try:
-            lat: float = float(latstr)
-            if  lat < self.options.minimum_valid_lat or lat > self.options.maximum_valid_lat:
+            self.lat = float(latstr)
+            if  self.lat < self.options.minimum_valid_lat or self.lat > self.options.maximum_valid_lat:
                 return False
         except ValueError:
             return False
 
         # Longitude normally runs from -180 to +180:
-        lonstr: str = m.group("lon")
         try:
-            lon: float = float(lonstr)
-            if lon < self.options.minimum_valid_lon or lon > self.options.maximum_valid_lon:
+            self.lon = float(lonstr)
+            if self.lon < self.options.minimum_valid_lon or self.lon > self.options.maximum_valid_lon:
                 return False
         except ValueError:
             return False
@@ -500,7 +616,7 @@ class KgtkValue(KgtkFormat):
     # hour-minutes-seconds
     hour_pat: str = r'(?P<hour>2[0-3]|[01][0-9])'
     minutes_pat: str = r'(?P<minutes>[0-5][0-9])'
-    seconds_pat: str = r'(?P<second>[0-5][0-9])'
+    seconds_pat: str = r'(?P<seconds>[0-5][0-9])'
 
     # NOTE: It might be the case that the ":" before the minutes in the time zone pattern
     # should be conditioned upon the hyphen indicator.  The Wikipedia article doesn't
@@ -573,11 +689,25 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is None:
             if not self.value.startswith("^"):
+                # Clear the cached date and times components:
+                self.yearstr = None
+                self.monthstr = None
+                self.daystr = None
+                self.hourstr = None
+                self.minutesstr = None
+                self.secondsstr = None
                 return False
             # We are certain that this is location coordinates, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.DATE_AND_TIMES
         else:
             if self.data_type != KgtkFormat.DataType.DATE_AND_TIMES:
+                # Clear the cached date and times components:
+                self.yearstr = None
+                self.monthstr = None
+                self.daystr = None
+                self.hourstr = None
+                self.minutesstr = None
+                self.secondsstr = None
                 return False
 
         if not validate:
@@ -585,13 +715,33 @@ class KgtkValue(KgtkFormat):
         if self.valid is not None:
             return self.valid
         
+        # Clear the cached date and times components:
+        self.yearstr = None
+        self.monthstr = None
+        self.daystr = None
+        self.hourstr = None
+        self.minutesstr = None
+        self.secondsstr = None
+
         # Validate the date and times:
         m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
         if m is None:
             return False
 
-        # Validate the year:
         year_str: str = m.group("year")
+        self.yearstr = year_str
+        month_str: str = m.group("month")
+        self.monthstr = month_str
+        day_str: str = m.group("day")
+        self.daystr = day_str
+        hour_str: str = m.group("hour")
+        self.hourstr = hour_str
+        minutes_str: str = m.group("minutes")
+        self.minutesstr = minutes_str
+        seconds_str: str = m.group("seconds")
+        self.secondsstr = seconds_str
+
+        # Validate the year:
         if year_str is None or len(year_str) == 0:
             return False # Years are mandatory
         try:
@@ -603,7 +753,6 @@ class KgtkValue(KgtkFormat):
         if year > self.options.maximum_valid_year:
             return False
 
-        month_str: str = m.group("month")
         if month_str is not None:
             try:
                 month: int = int(month_str)
@@ -612,7 +761,6 @@ class KgtkValue(KgtkFormat):
             if month == 0 and not self.options.allow_month_or_day_zero:
                 return False # month 0 was disallowed.
 
-        day_str: str = m.group("day")
         if day_str is not None:
             try:
                 day: int = int(day_str)
@@ -686,6 +834,12 @@ class KgtkValue(KgtkFormat):
         # Shouldn't get here.
         raise ValueError("Unknown data type for '%s'" % self.value)
 
+    def reclassify(self)->KgtkFormat.DataType:
+        # Classify this KgtkValue into a KgtkDataType, ignoring any cached data_type.
+        self.data_type = None
+        self.valid = None
+        return self.classify()
+
     def validate(self)->bool:
         # Validate this KgtkValue.
 
@@ -722,6 +876,12 @@ class KgtkValue(KgtkFormat):
         else:
             raise ValueError("Unrecognized DataType.")
 
+    def revalidate(self, reclassify: bool=False)->bool:
+        # Revalidate this KgtkValue after clearing cached values.
+        if reclassify:
+            self.data_type = None
+        self.valid = None
+        return self.validate()
         
     def describe(self)->str:
         """
