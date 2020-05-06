@@ -16,36 +16,39 @@ from kgtk.join.languagevalidator import LanguageValidator
 class KgtkValue(KgtkFormat):
     value: str = attr.ib(validator=attr.validators.instance_of(str))
     options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
+
+    # TODO: proper validation.
     parent: typing.Optional['KgtkValue'] = attr.ib(default=None)
 
     # Cache some properties of the value that would be expensive to
-    # continuously recompute. The class is not frozen because we have these
-    # cache members.
+    # continuously recompute.
     data_type: typing.Optional[KgtkFormat.DataType] = None
     valid: typing.Optional[bool] = None
 
     # If this is a list, cache a KgtkValue object for each item of the list.
+    #
+    # Note: Please do not access this list directly.  Use get_list_items().
     list_items: typing.Optional[typing.List['KgtkValue']] = None
 
-    # Offer the components of a string or language-qualified string:
+    # Offer the components of a string or language-qualified string, after validating the item.
     contents: typing.Optional[str] = None # String contents without the enclosing quotes
     lang: typing.Optional[str] = None
     suffix: typing.Optional[str] = None # Includes the leading dash.
 
-    # Offer the components of a number or quantity:
+    # Offer the components of a number or quantity, after validating the item.
     number: typing.Optional[str] = None # Note: not converted to int or float
     low_tolerance: typing.Optional[str] = None # Note: not converted to int or float
     high_tolerance: typing.Optional[str] = None # Note: not converted to int or float
     si_units: typing.Optional[str] = None
     wikidata_node: typing.Optional[str] = None
 
-    # Offer the components of a location coordinates:
+    # Offer the components of a location coordinates, after validaating the item:
     latstr: typing.Optional[str] = None
     lat: typing.Optional[float] = None
     lonstr: typing.Optional[str] = None
     lon: typing.Optional[float] = None
 
-    # Offer the components of a date and times:
+    # Offer the components of a date and times, after validating the item:
     yearstr: typing.Optional[str] = None # Note: not converted to int
     year: typing.Optional[int] = None
     monthstr: typing.Optional[str] = None # Note: not converted to int
@@ -57,7 +60,7 @@ class KgtkValue(KgtkFormat):
     secondsstr: typing.Optional[str] = None # Note: not converted to int or float
     zonestr: typing.Optional[str] = None
     precisionstr: typing.Optional[str] = None
-    iso8601basic: typing.Optional[bool] = None # True when hyphens/colons present.
+    iso8601extended: typing.Optional[bool] = None # True when hyphens/colons present.
 
     def is_valid(self)->bool:
         # Is this a valid whatever it is?
@@ -85,6 +88,8 @@ class KgtkValue(KgtkFormat):
     def get_list_items(self)->typing.List['KgtkValue']:
         # If this is a KGTK List, return a list of KGTK values representing
         # the items in the list.  If this is not a KGTK List, return an empty list.
+        #
+        # Note:  This is the only routine that should touch self.list_items.
         if self.list_items is not None:
             return self.list_items
 
@@ -135,12 +140,13 @@ class KgtkValue(KgtkFormat):
 
     def rebuild_list(self):
         # Called to repair a list when we've repaired a list item.
-        if self.list_items is None or len(self.list_items) == 0:
+        list_items: typng.List[KgtkValues] = self.get_list_items()
+        if list_items is None or len(list_items) == 0:
             return
         
         values: typing.List[str] = []
         item: KgtkValue
-        for item in self.list_items:
+        for item in list_items:
             values.append(item.value)
         self.value = KgtkFormat.LIST_SEPARATOR.join(values)
         
@@ -727,7 +733,7 @@ class KgtkValue(KgtkFormat):
                 self.day = None
                 self.zonestr = None
                 self.precisionstr = None
-                self.iso8601basic = None
+                self.iso8601extended = None
                 return False
             # We are certain that this is location coordinates, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.DATE_AND_TIMES
@@ -745,7 +751,7 @@ class KgtkValue(KgtkFormat):
                 self.day = None
                 self.zonestr = None
                 self.precisionstr = None
-                self.iso8601basic = None
+                self.iso8601extended = None
                 return False
 
         if not validate:
@@ -765,7 +771,7 @@ class KgtkValue(KgtkFormat):
         self.day = None
         self.zonestr = None
         self.precisionstr = None
-        self.iso8601basic = None
+        self.iso8601extended = None
 
         # Validate the date and times:
         m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
@@ -780,7 +786,7 @@ class KgtkValue(KgtkFormat):
         self.secondsstr = m.group("seconds")
         self.zonestr = m.group("zone")
         self.precisionstr = m.group("precision")
-        self.iso8601basic = m.group("hyphen") is None
+        self.iso8601extended = m.group("hyphen") is not None
 
         fixup_needed: bool = False
 
@@ -836,22 +842,22 @@ class KgtkValue(KgtkFormat):
     def update_date_and_times(self):
         v: str = "^" + self.yearstr
         if self.monthstr is not None:
-            if not self.iso8601basic:
+            if self.iso8601extended:
                 v += "-"
             v += self.monthstr
         if self.daystr is not None:
-            if not self.iso8601basic:
+            if self.iso8601extended:
                 v += "-"
             v += self.daystr
         if self.hourstr is not None:
             v += "T"
             v += self.hourstr
         if self.minutesstr is not None:
-            if not self.iso8601basic:
+            if self.iso8601extended:
                 v += ":"
             v += self.minutesstr
         if self.secondsstr is not None:
-            if not self.iso8601basic:
+            if self.iso8601extended:
                 v += ":"
             v += self.secondsstr
         if self.zonestr is not None:
