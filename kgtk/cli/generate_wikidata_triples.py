@@ -97,14 +97,6 @@ def add_arguments(parser):
         help="if set to yes, read from compressed gz file",
         dest="use_gz",
     )
-    parser.add_argument(
-        "-lbl",
-        "--line-by-line",
-        action="store",
-        type=str2bool,
-        help="if set to yes, read from standard input line by line, otherwise loads whole file into memory",
-        dest="line_by_line",
-    )
 
 
 def run(
@@ -116,7 +108,6 @@ def run(
     truthy: bool,
     ignore: bool,
     use_gz: bool,
-    line_by_line: bool,
 ):
     # import modules locally
     import gzip
@@ -136,27 +127,12 @@ def run(
         fp = gzip.open(sys.stdin.buffer, 'rt')
     else:
         fp = sys.stdin
-    if line_by_line:
-        print("#line-by-line")
-        num_line = 1
-        while True:
-            edge = fp.readline()
-            if not edge:
-                break
-            if edge.startswith("#") or num_line == 1: # TODO First line omit
-                num_line += 1
-                continue
-            else:
-                generator.entry_point(num_line, edge)
-                num_line += 1
-    else:
         # not line by line
-        print("#not line-by-line")
-        for num, edge in enumerate(fp.readlines()):
-            if edge.startswith("#") or num == 0:
-                continue
-            else:
-                generator.entry_point(num+1,edge)
+    for num, edge in enumerate(fp):
+        if edge.startswith("#") or num == 0:
+            continue
+        else:
+            generator.entry_point(num+1,edge)
     generator.finalize()
 
 # testing profiling locally with direct call
