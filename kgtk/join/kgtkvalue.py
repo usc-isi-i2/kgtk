@@ -744,25 +744,19 @@ class KgtkValue(KgtkFormat):
         if m is None:
             return False
 
-        year_str: str = m.group("year")
-        self.yearstr = year_str
-        month_str: str = m.group("month")
-        self.monthstr = month_str
-        day_str: str = m.group("day")
-        self.daystr = day_str
-        hour_str: str = m.group("hour")
-        self.hourstr = hour_str
-        minutes_str: str = m.group("minutes")
-        self.minutesstr = minutes_str
-        seconds_str: str = m.group("seconds")
-        self.secondsstr = seconds_str
+        self.yearstr = m.group("year")
+        self.monthstr = m.group("month")
+        self.daystr = m.group("day")
+        self.hourstr = m.group("hour")
+        self.minutesstr = m.group("minutes")
+        self.secondsstr = m.group("seconds")
         self.iso8601basic = m.group("hyphen") is None
 
         # Validate the year:
-        if year_str is None or len(year_str) == 0:
+        if self.yearstr is None or len(self.yearstr) == 0:
             return False # Years are mandatory
         try:
-            self.year: int = int(year_str)
+            self.year: int = int(self.yearstr)
         except ValueError:
             return False
         if self.year < self.options.minimum_valid_year:
@@ -770,17 +764,17 @@ class KgtkValue(KgtkFormat):
         if self.year > self.options.maximum_valid_year:
             return False
 
-        if month_str is not None:
+        if self.monthstr is not None:
             try:
-                self.month: int = int(month_str)
+                self.month: int = int(self.monthstr)
             except ValueError:
                 return False # shouldn't happen
             if self.month == 0 and not self.options.allow_month_or_day_zero:
                 return False # month 0 was disallowed.
 
-        if day_str is not None:
+        if self.daystr is not None:
             try:
-                self.day: int = int(day_str)
+                self.day: int = int(self.daystr)
             except ValueError:
                 return False # shouldn't happen
             if self.day == 0 and not self.options.allow_month_or_day_zero:
