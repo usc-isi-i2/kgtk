@@ -38,6 +38,9 @@ class KgtkValue(KgtkFormat):
     # obj.revalidate() returns True
     # obj.is_language_qualified_string(validate=True) returns True
     #... etc.
+    #
+    # The fields may be accessed directly, or thet may be obtained in
+    # a map via obj.get_fields()
 
     # Offer the components of a string or language-qualified string, after validating the item.
     contents: typing.Optional[str] = None # String contents without the enclosing quotes
@@ -1098,6 +1101,73 @@ class KgtkValue(KgtkFormat):
             return "Symbol" if self.is_symbol(validate=True) else "Invalid Symbol"
         else:
             return "Unknown"
+
+    def get_fields(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
+        results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
+        if self.data_type is not None:
+            results["data_type"] = str(self.data_type)
+        if self.valid is not None:
+            results["valid"] = self.valid
+        if self.contents is not None:
+            results["contents"] = self.contents
+        if self.lang is not None:
+            results["lang"] = self.lang
+        if self.suffix is not None:
+            results["suffix"] = self.suffix
+        if self.numberstr is not None:
+            results["numberstr"] = self.numberstr
+        if self.number is not None:
+            results["number"] = self.number
+        if self.low_tolerancestr is not None:
+            results["low_tolerancestr"] = self.low_tolerancestr
+        if self.high_tolerancestr is not None:
+            results["high_tolerancestr"] = self.high_tolerancestr
+        if self.si_units is not None:
+            results["si_units"] = self.si_units
+        if self.wikidata_node is not None:
+            results["wikidata_node"] = self.wikidata_node
+        if self.latstr is not None:
+            results["latstr"] = self.latstr
+        if self.lat is not None:
+            results["lat"] = self.lat
+        if self.lonstr is not None:
+            results["lonstr"] = self.lonstr
+        if self.lon is not None:
+            results["lon"] = self.lon
+        if self.yearstr is not None:
+            results["yearstr"] = self.yearstr
+        if self.year is not None:
+            results["year"] = self.year
+        if self.monthstr is not None:
+            results["monthstr"] = self.monthstr
+        if self.month is not None:
+            results["month"] = self.month
+        if self.daystr is not None:
+            results["daystr"] = self.daystr
+        if self.day is not None:
+            results["day"] = self.day
+        if self.hourstr is not None:
+            results["hourstr"] = self.hourstr
+        if self.hour is not None:
+            results["hour"] = self.hour
+        if self.minutesstr is not None:
+            results["minutesstr"] = self.minutesstr
+        if self.minutes is not None:
+            results["minutes"] = self.minutes
+        if self.secondsstr is not None:
+            results["secondsstr"] = self.secondsstr
+        if self.seconds is not None:
+            results["seconds"] = self.seconds
+        if self.zonestr is not None:
+            results["zonestr"] = self.zonestr
+        if self.precisionstr is not None:
+            results["precisionstr"] = self.precisionstr
+        if self.iso8601extended is not None:
+            results["iso8601extended"] = self.iso8601extended
+        list_items: typing.List[KgtkValue] = self.get_list_items()
+        if len(list_items) > 0:
+            results["list_len"] = len(list_items)
+        return results
     
 def main():
     """
@@ -1117,12 +1187,23 @@ def main():
     for value in args.values:
         kv: KgtkValue = KgtkValue(value, options=value_options)
         kv.validate()
-        nv: str = kv.value
-        if value == nv:
+        if value == kv.value:
             print("%s: %s" % (value, kv.describe()), flush=True)
         else:
-            print("%s => %s: %s" % (value, nv, kv.describe()), flush=True)
-            
+            print("%s => %s: %s" % (value, kv.value, kv.describe()), flush=True)
+
+        if args.verbose:
+            fields = kv.get_fields()
+            for key in sorted(fields.keys()):
+                print("%s: %s" % (key, str(fields[key])))
+            list_items: typing.List[KgtkValue] = kv.get_list_items()
+            item: KghtValue
+            for item in list_items:
+                print("...")
+                fields = item.get_fields()
+                for key in sorted(fields.keys()):
+                    print("... %s: %s" % (key, str(fields[key])))
+                
 
 if __name__ == "__main__":
     main()
