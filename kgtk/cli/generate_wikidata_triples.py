@@ -143,11 +143,11 @@ def run(
     else:
         fp = sys.stdin
         # not line by line
-    for num, edge in enumerate(fp):
-        if edge.startswith("#") or num == 0:
+    for line_num, edge in enumerate(fp):
+        if edge.startswith("#"):
             continue
         else:
-            generator.entry_point(num+1,edge)
+            generator.entry_point(line_num+1,edge)
     generator.finalize()
 
 # testing profiling locally with direct call
