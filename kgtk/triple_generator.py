@@ -21,7 +21,7 @@ from etk.wikidata.value import (
 )
 
 BAD_CHARS = [":", "-", "&", ",", " ",
-             "(", ")", "\'", '\"', "/", "\\", "[", "]", ";"]
+             "(", ")", "\'", '\"', "/", "\\", "[", "]", ";","|"]
 
 
 class TripleGenerator:
@@ -38,7 +38,8 @@ class TripleGenerator:
         ignore: bool,
         n: int,
         dest_fp: TextIO = sys.stdout,
-        truthy: bool = False
+        truthy: bool = False,
+        use_id:bool=False,
     ):
         from etk.wikidata.statement import Rank
         self.ignore = ignore
@@ -65,6 +66,7 @@ class TripleGenerator:
             "([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
         # order map, know the column index of ["node1","property","node2",id]
         self.order_map = {}
+        self.use_id = use_id
 
     def _node_2_entity(self, node: str):
         '''
@@ -198,7 +200,9 @@ class TripleGenerator:
         return True
 
     def generate_normal_triple(
-            self, node1: str, label: str, node2: str, is_qualifier_edge: bool) -> bool:
+            self, node1: str, label: str, node2: str, is_qualifier_edge: bool,e_id:str) -> bool:
+        if self.use_id:
+            e_id = TripleGenerator.replace_illegal_string(e_id)
         entity = self._node_2_entity(node1)
         # determine the edge type
         edge_type = self.prop_types[label]
@@ -310,9 +314,10 @@ class TripleGenerator:
                 self.doc.kg.add_subject(object)
             if self.truthy:
                 self.to_append_statement = entity.add_truthy_statement(
-                    label, object)
+                    label, object,statement_id=e_id) if self.use_id else entity.add_truthy_statement(label,object)
             else:
-                self.to_append_statement = entity.add_statement(label, object)
+                self.to_append_statement = entity.add_statement(
+                    label, object,statement_id=e_id) if self.use_id else entity.add_statement(label, object)
             self.doc.kg.add_subject(entity)
         return True
 
@@ -423,7 +428,7 @@ class TripleGenerator:
         else:
             if prop in self.prop_types:
                 success = self.generate_normal_triple(
-                    node1, prop, node2, is_qualifier_edge)
+                    node1, prop, node2, is_qualifier_edge,e_id)
             else:
                 if not self.ignore:
                     raise KGTKException(
