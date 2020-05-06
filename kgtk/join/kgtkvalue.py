@@ -46,8 +46,11 @@ class KgtkValue(KgtkFormat):
 
     # Offer the components of a date and times:
     yearstr: typing.Optional[str] = None # Note: not converted to int
+    year: typing.Optional[int] = None
     monthstr: typing.Optional[str] = None # Note: not converted to int
+    month: typing.Optional[int] = None
     daystr: typing.Optional[str] = None # Note: not converted to int
+    day: typing.Optional[int] = None
     hourstr: typing.Optional[str] = None # Note: not converted to int or float
     minutesstr: typing.Optional[str] = None # Note: not converted to int or float
     secondsstr: typing.Optional[str] = None # Note: not converted to int or float
@@ -696,6 +699,9 @@ class KgtkValue(KgtkFormat):
                 self.hourstr = None
                 self.minutesstr = None
                 self.secondsstr = None
+                self.year = None
+                self.month = None
+                self.day = None
                 return False
             # We are certain that this is location coordinates, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.DATE_AND_TIMES
@@ -708,6 +714,9 @@ class KgtkValue(KgtkFormat):
                 self.hourstr = None
                 self.minutesstr = None
                 self.secondsstr = None
+                self.year = None
+                self.month = None
+                self.day = None
                 return False
 
         if not validate:
@@ -722,6 +731,9 @@ class KgtkValue(KgtkFormat):
         self.hourstr = None
         self.minutesstr = None
         self.secondsstr = None
+        self.year = None
+        self.month = None
+        self.day = None
 
         # Validate the date and times:
         m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
@@ -745,28 +757,28 @@ class KgtkValue(KgtkFormat):
         if year_str is None or len(year_str) == 0:
             return False # Years are mandatory
         try:
-            year: int = int(year_str)
+            self.year: int = int(year_str)
         except ValueError:
             return False
-        if year < self.options.minimum_valid_year:
+        if self.year < self.options.minimum_valid_year:
             return False
-        if year > self.options.maximum_valid_year:
+        if self.year > self.options.maximum_valid_year:
             return False
 
         if month_str is not None:
             try:
-                month: int = int(month_str)
+                self.month: int = int(month_str)
             except ValueError:
                 return False # shouldn't happen
-            if month == 0 and not self.options.allow_month_or_day_zero:
+            if self.month == 0 and not self.options.allow_month_or_day_zero:
                 return False # month 0 was disallowed.
 
         if day_str is not None:
             try:
-                day: int = int(day_str)
+                self.day: int = int(day_str)
             except ValueError:
                 return False # shouldn't happen
-            if day == 0 and not self.options.allow_month_or_day_zero:
+            if self.day == 0 and not self.options.allow_month_or_day_zero:
                 return False # day 0 was disallowed.
 
         # We are fairly certain that this is a valid date and times.
