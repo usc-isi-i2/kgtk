@@ -38,7 +38,8 @@ def add_arguments(parser):
         "--label-property",
         action="store",
         type=str,
-        const="label",
+        default="label",
+        required=False,
         help="property identifiers which will create labels, separated by comma','.",
         dest="labels",
     )
@@ -47,7 +48,8 @@ def add_arguments(parser):
         "--alias-property",
         action="store",
         type=str,
-        const="aliases",
+        required = False,
+        default="aliases",
         help="alias identifiers which will create labels, separated by comma','.",
         dest="aliases",
     )
@@ -56,7 +58,8 @@ def add_arguments(parser):
         "--description-property",
         action="store",
         type=str,
-        const="descriptions",
+        required = False,
+        default="descriptions",
         help="description identifiers which will create labels, separated by comma','.",
         dest="descriptions",
     )
@@ -65,6 +68,7 @@ def add_arguments(parser):
         "--property-types",
         action="store",
         type=str,
+        required = True,
         help="path to the file which contains the property datatype mapping in kgtk format.",
         dest="prop_file",
     )
@@ -73,7 +77,8 @@ def add_arguments(parser):
         "--output-n-lines",
         action="store",
         type=int,
-        const=1000,
+        required = False,
+        default=1000,
         help="output triples approximately every {n} lines of reading stdin.",
         dest="n",
     )
@@ -82,7 +87,8 @@ def add_arguments(parser):
         "--generate-truthy",
         action="store",
         type=str2bool,
-        const="yes",
+        required = False,
+        default="yes",
         help="the default is to not generate truthy triples. Specify this option to generate truthy triples. NOTIMPLEMENTED",
         dest="truthy",
     )
@@ -91,7 +97,8 @@ def add_arguments(parser):
         "--ignore",
         action="store",
         type=str2bool,
-        const="no",
+        required = False,
+        default="no",
         help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging",
         dest="ignore",
     )
@@ -100,7 +107,8 @@ def add_arguments(parser):
         "--use-gz",
         action="store",
         type=str2bool,
-        const="no",
+        required = False,
+        default="no",
         help="if set to yes, read from compressed gz file",
         dest="use_gz",
     )
