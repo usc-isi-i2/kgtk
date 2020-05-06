@@ -153,6 +153,8 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         allow_lax_strings: bool = False,
         allow_lax_lq_strings: bool = False,
         allow_month_or_day_zero: bool = False,
+        repair_month_or_day_zero: bool = False,
+        escape_list_separators: bool = False,
         minimum_valid_year: int = KgtkValueOptions.MINIMUM_VALID_YEAR,
         maximum_valid_year: int = KgtkValueOptions.MAXIMUM_VALID_YEAR,
         compression_type: typing.Optional[str] = None,
@@ -175,12 +177,14 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
 
     # Build the value parsing option structure.
     value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=allow_month_or_day_zero,
+                                                       repair_month_or_day_zero=repair_month_or_day_zero,
                                                        allow_lax_strings=allow_lax_strings,
                                                        allow_lax_lq_strings=allow_lax_lq_strings,
                                                        allow_language_suffixes=allow_language_suffixes,
                                                        additional_language_codes=additional_language_codes,
                                                        minimum_valid_year=minimum_valid_year,
-                                                       maximum_valid_year=maximum_valid_year)
+                                                       maximum_valid_year=maximum_valid_year,
+                                                       escape_list_separators=escape_list_separators)
 
     try:
         kgtk_file: typing.Optional[Path]

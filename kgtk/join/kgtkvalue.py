@@ -87,9 +87,16 @@ class KgtkValue(KgtkFormat):
         if self.list_items is not None:
             return self.list_items
 
-        # Return an empty list if this is not a list.
-        self.list_items: typing.List['KgtkValue'] = [ ]
+        # Split the KGTK list.
         values: typing.List[str] = KgtkValue.split_list_re.split(self.value)
+
+        # Perhaps we'd like to escape the list separators instead of splitting on them?
+        if self.options.escape_list_separators:
+            self.value = ("\\" + KgtkFormat.LIST_SEPARATOR).join(values)
+            return [ ] # Return an empty list.
+
+        # Return an empty Python list if this is not a KGTK list.
+        self.list_items: typing.List['KgtkValue'] = [ ]
         if len(values) > 1:
             # Populate list_items with a KgtkValue for each item in the list:
             item_value: str
@@ -742,10 +749,10 @@ class KgtkValue(KgtkFormat):
         self.secondsstr = None
         self.year = None
         self.month = None
+        self.day = None
         self.zonestr = None
         self.precisionstr = None
         self.iso8601basic = None
-        self.day = None
 
         # Validate the date and times:
         m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
@@ -799,7 +806,7 @@ class KgtkValue(KgtkFormat):
                     self.day = 1
                     self.daystr = "01"
                     fixup_needed = True
-                if not self.options.allow_month_or_day_zero:
+                elif not self.options.allow_month_or_day_zero:
                     return False # day 0 was disallowed.
 
         if fixup_needed:
@@ -829,7 +836,7 @@ class KgtkValue(KgtkFormat):
         if self.secondsstr is not None:
             if not self.iso8601basic:
                 v += ":"
-            v += self.secondssr
+            v += self.secondsstr
         if self.zonestr is not None:
             v += self.zonestr
         if self.precisionstr is not None:
