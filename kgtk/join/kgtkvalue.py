@@ -555,7 +555,7 @@ class KgtkValue(KgtkFormat):
 
     # Support two or three character language codes.  Suports hyphenated codes
     # with a country code or dialect namesuffix after the language code.
-    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<contents>.*)'@(?P<lang>[a-zA-Z]{2,3}(?P<suffix>-[a-zA-Z]+)?)$")
+    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<contents>.*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
     strict_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<contents>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
 
     def is_language_qualified_string(self, validate: bool=False)->bool:
