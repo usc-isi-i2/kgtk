@@ -588,7 +588,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     def _ignore_invalid_values(self, values: typing.List[str], line: str)->bool:
         """Give a row of values, validate each value.  If we find one or more
-        validation problems, we might want to emit erro messages and we might
+        validation problems, we might want to emit error messages and we might
         want to ignore the entire row.
 
         Returns True to indicate that the row should be ignored (skipped).
