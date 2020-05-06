@@ -38,6 +38,7 @@ def add_arguments(parser):
         "--label-property",
         action="store",
         type=str,
+        const="label",
         help="property identifiers which will create labels, separated by comma','.",
         dest="labels",
     )
@@ -46,6 +47,7 @@ def add_arguments(parser):
         "--alias-property",
         action="store",
         type=str,
+        const="aliases",
         help="alias identifiers which will create labels, separated by comma','.",
         dest="aliases",
     )
@@ -54,6 +56,7 @@ def add_arguments(parser):
         "--description-property",
         action="store",
         type=str,
+        const="descriptions",
         help="description identifiers which will create labels, separated by comma','.",
         dest="descriptions",
     )
@@ -70,6 +73,7 @@ def add_arguments(parser):
         "--output-n-lines",
         action="store",
         type=int,
+        const=1000,
         help="output triples approximately every {n} lines of reading stdin.",
         dest="n",
     )
@@ -78,6 +82,7 @@ def add_arguments(parser):
         "--generate-truthy",
         action="store",
         type=str2bool,
+        const="yes",
         help="the default is to not generate truthy triples. Specify this option to generate truthy triples. NOTIMPLEMENTED",
         dest="truthy",
     )
@@ -86,6 +91,7 @@ def add_arguments(parser):
         "--ignore",
         action="store",
         type=str2bool,
+        const="no",
         help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging",
         dest="ignore",
     )
@@ -94,6 +100,7 @@ def add_arguments(parser):
         "--use-gz",
         action="store",
         type=str2bool,
+        const="no",
         help="if set to yes, read from compressed gz file",
         dest="use_gz",
     )
