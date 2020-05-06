@@ -112,6 +112,16 @@ def add_arguments(parser):
         help="if set to yes, read from compressed gz file",
         dest="use_gz",
     )
+    parser.add_argument(
+        "-sid",
+        "--use-id",
+        action="store",
+        type=str2bool,
+        required = False,
+        default="no",
+        help="if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement",
+        dest="use_id",
+    )
 
 
 def run(
@@ -123,6 +133,7 @@ def run(
     truthy: bool,
     ignore: bool,
     use_gz: bool,
+    use_id:bool
 ):
     # import modules locally
     import gzip
@@ -135,7 +146,8 @@ def run(
         description_set=descriptions,
         n=n,
         ignore=ignore,
-        truthy=truthy
+        truthy=truthy,
+        use_id=use_id
     )
     # process stdin
     if use_gz:
