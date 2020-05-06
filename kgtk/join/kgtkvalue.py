@@ -54,6 +54,7 @@ class KgtkValue(KgtkFormat):
     hourstr: typing.Optional[str] = None # Note: not converted to int or float
     minutesstr: typing.Optional[str] = None # Note: not converted to int or float
     secondsstr: typing.Optional[str] = None # Note: not converted to int or float
+    iso8601basic: typing.Optional[bool] = None # True when hyphens/colons present.
 
     def is_valid(self)->bool:
         # Is this a valid whatever it is?
@@ -702,6 +703,7 @@ class KgtkValue(KgtkFormat):
                 self.year = None
                 self.month = None
                 self.day = None
+                self.iso8601basic = None
                 return False
             # We are certain that this is location coordinates, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.DATE_AND_TIMES
@@ -717,6 +719,7 @@ class KgtkValue(KgtkFormat):
                 self.year = None
                 self.month = None
                 self.day = None
+                self.iso8601basic = None
                 return False
 
         if not validate:
@@ -733,6 +736,7 @@ class KgtkValue(KgtkFormat):
         self.secondsstr = None
         self.year = None
         self.month = None
+        self.iso8601basic = None
         self.day = None
 
         # Validate the date and times:
@@ -752,6 +756,7 @@ class KgtkValue(KgtkFormat):
         self.minutesstr = minutes_str
         seconds_str: str = m.group("seconds")
         self.secondsstr = seconds_str
+        self.iso8601basic = m.group("hyphen") is None
 
         # Validate the year:
         if year_str is None or len(year_str) == 0:
