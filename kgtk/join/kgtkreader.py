@@ -1,5 +1,5 @@
 """
-Read a KGTK edge file in TSV format.
+Read a KGTK node or edge file in TSV format.
 
 TODO: Add support for alternative envelope formats, such as JSON.
 """
