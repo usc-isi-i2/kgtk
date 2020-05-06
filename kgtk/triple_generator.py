@@ -63,6 +63,8 @@ class TripleGenerator:
         self.yyyy_pattern = re.compile("[12]\d{3}")
         self.quantity_pattern = re.compile(
             "([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
+        # order map, know the column index of ["node1","property","node2",id]
+        self.order_map = {}
 
     def _node_2_entity(self, node: str):
         '''
@@ -353,14 +355,32 @@ class TripleGenerator:
         the second element is a bool indicating whether this is a valid property edge or qualifier edge.
         Call corresponding downstream functions
         """
+
         edge_list = edge.strip().split("\t")
         l = len(edge_list)
-        if l != 4:
-            return
+        if line_number == 1:
+            # initialize the order_map
+            edge_list = edge.strip().split("\t")
+            node1_index = edge_list.index("node1")
+            node2_index = edge_list.index("node2")
+            prop_index = edge_list.index("property")
+            id_index = edge_list.index("id")
+            if not all([node1_index>-1,node2_index>-1,prop_index>-1,id_index>-1]):
+                raise KGTKException("Header of kgtk file misses at least one of required column names: (node1, node2, property and id)")
+            else:
+                self.order_map["node1"] = node1_index
+                self.order_map["node2"] = node2_index
+                self.order_map["prop"] = prop_index
+                self.order_map["id"] = id_index
+                return
 
-        [node1, label, node2, e_id] = edge_list
-        node1, label, node2, e_id = node1.strip(), label.strip(), node2.strip(), e_id.strip()
-        if line_number == 0:  # TODO ignore header mode
+        # use the order_map to map the node
+         
+        node1 = edge_list[self.order_map["node1"]].strip()
+        node2 = edge_list[self.order_map["node2"]].strip()
+        prop = edge_list[self.order_map["prop"]].strip()
+        e_id = edge_list[self.order_map["id"]].strip()
+        if line_number == 2: 
             # by default a statement edge
             is_qualifier_edge = False
             # print("#Debug Info: ",line_number, self.to_append_statement_id, e_id, is_qualifier_edge,self.to_append_statement)
@@ -381,7 +401,7 @@ class TripleGenerator:
                 if self.corrupted_statement_id == e_id:
                     # Met a qualifier which associates with a corrupted statement
                     return
-                if label != "type" and node1 != self.to_append_statement_id:
+                if prop != "type" and node1 != self.to_append_statement_id:
                     # 1. not a property declaration edge and
                     # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
                     if not self.ignore:
@@ -390,25 +410,25 @@ class TripleGenerator:
                                 node1, line_number, self.to_append_statement_id
                             )
                         )
-        if label in self.label_set:
-            success = self.generate_label_triple(node1, label, node2)
-        elif label in self.description_set:
-            success = self.generate_description_triple(node1, label, node2)
-        elif label in self.alias_set:
-            success = self.generate_alias_triple(node1, label, node2)
-        elif label == "type":
+        if prop in self.label_set:
+            success = self.generate_label_triple(node1, prop, node2)
+        elif prop in self.description_set:
+            success = self.generate_description_triple(node1, prop, node2)
+        elif prop in self.alias_set:
+            success = self.generate_alias_triple(node1, prop, node2)
+        elif prop == "type":
             # special edge of prop declaration
             success = self.generate_prop_declaration_triple(
-                node1, label, node2)
+                node1, prop, node2)
         else:
-            if label in self.prop_types:
+            if prop in self.prop_types:
                 success = self.generate_normal_triple(
-                    node1, label, node2, is_qualifier_edge)
+                    node1, prop, node2, is_qualifier_edge)
             else:
                 if not self.ignore:
                     raise KGTKException(
                         "property {}'s type is unknown at line {}.\n".format(
-                            label, line_number)
+                            prop, line_number)
                     )
                     success = False
         if (not success) and (not is_qualifier_edge) and (not self.ignore):
