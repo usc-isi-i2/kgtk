@@ -16,6 +16,7 @@ class KgtkValueOptions:
     # Allow month 00 or day 00 in dates?  This isn't really allowed by ISO
     # 8601, but appears in wikidata.
     allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    repair_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     # When allow_lax_strings is true, strings will be checked to see if they
     # start and end with double quote ("), but we won't check if internal
