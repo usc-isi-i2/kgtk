@@ -18,6 +18,7 @@ from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.edgereader import EdgeReader
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkwriter import KgtkWriter
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=True)
@@ -50,6 +51,10 @@ class EdgeJoiner(KgtkFormat):
     # Require or fill trailing fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # TODO: find a working validator
+    # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
+    value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -94,6 +99,7 @@ class EdgeJoiner(KgtkFormat):
                                                    long_line_action=self.long_line_action,
                                                    fill_short_lines=self.fill_short_lines,
                                                    truncate_long_lines=self.truncate_long_lines,
+                                                   value_options = self.value_options,
                                                    gzip_in_parallel=self.gzip_in_parallel,
                                                    verbose=self.verbose,
                                                    very_verbose=self.very_verbose)
@@ -181,13 +187,16 @@ class EdgeJoiner(KgtkFormat):
                                                          short_line_action=self.short_line_action,
                                                          long_line_action=self.long_line_action,
                                                          fill_short_lines=self.fill_short_lines,
-                                                         truncate_long_lines=self.truncate_long_lines)
+                                                         truncate_long_lines=self.truncate_long_lines,
+                                                         value_options = self.value_options)
+
 
         right_kr: EdgeReader = EdgeReader.open_edge_file(self.right_file_path,
                                                          short_line_action=self.short_line_action,
                                                          long_line_action=self.long_line_action,
                                                          fill_short_lines=self.fill_short_lines,
-                                                         truncate_long_lines=self.truncate_long_lines)
+                                                         truncate_long_lines=self.truncate_long_lines,
+                                                         value_options = self.value_options)
 
         # Map the right column names for the join:
         joined_column_names: typing.List[str]
@@ -256,7 +265,13 @@ def main():
                               help="Remove excess trailing columns in long lines.", action='store_true')
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
+
+    KgtkValueOptions.add_arguments(parser)
+
     args = parser.parse_args()
+
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     ej: EdgeJoiner = EdgeJoiner(left_file_path=args.left_file_path,
                                 right_file_path=args.right_file_path,
@@ -271,6 +286,7 @@ def main():
                                 long_line_action=args.long_line_action,
                                 fill_short_lines=args.fill_short_lines,
                                 truncate_long_lines=args.truncate_long_lines,
+                                value_options=value_options,
                                 gzip_in_parallel=args.gzip_in_parallel,
                                 verbose=args.verbose,
                                 very_verbose=args.very_verbose)

@@ -84,7 +84,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     # Validate data cell values?
     invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
-    value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
+    value_options: typing.Optional[KgtkValueOptions] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
 
     # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -132,7 +132,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
              invalid_value_action: ValidationAction = ValidationAction.REPORT,
              header_error_action: ValidationAction = ValidationAction.EXIT,
              unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
-             value_options: KgtkValueOptions = DEFAULT_KGTK_VALUE_OPTIONS,
+             value_options: typing.Optional[KgtkValueOptions] = None,
              compression_type: typing.Optional[str] = None,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
@@ -594,12 +594,13 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         Returns True to indicate that the row should be ignored (skipped).
 
         """
+        options: KgtkValueOptions = self.value_options if self.value_options is not None else DEFAULT_KGTK_VALUE_OPTIONS
         problems: typing.List[str] = [ ] # Build a list of problems.
         idx: int
         value: str
         for idx, value in enumerate(values):
             if len(value) > 0: # Optimize the common case of empty columns.
-                kv: KgtkValue = KgtkValue(value, options=self.value_options)
+                kv: KgtkValue = KgtkValue(value, options=options)
                 if not kv.is_valid():
                     problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], value, kv.describe()))
 
