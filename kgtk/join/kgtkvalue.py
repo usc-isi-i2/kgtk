@@ -54,6 +54,8 @@ class KgtkValue(KgtkFormat):
     hourstr: typing.Optional[str] = None # Note: not converted to int or float
     minutesstr: typing.Optional[str] = None # Note: not converted to int or float
     secondsstr: typing.Optional[str] = None # Note: not converted to int or float
+    zonestr: typing.Optional[str] = None
+    precisionstr: typing.Optional[str] = None
     iso8601basic: typing.Optional[bool] = None # True when hyphens/colons present.
 
     def is_valid(self)->bool:
@@ -703,6 +705,8 @@ class KgtkValue(KgtkFormat):
                 self.year = None
                 self.month = None
                 self.day = None
+                self.zonestr = None
+                self.precisionstr = None
                 self.iso8601basic = None
                 return False
             # We are certain that this is location coordinates, although we haven't checked validity.
@@ -719,6 +723,8 @@ class KgtkValue(KgtkFormat):
                 self.year = None
                 self.month = None
                 self.day = None
+                self.zonestr = None
+                self.precisionstr = None
                 self.iso8601basic = None
                 return False
 
@@ -736,6 +742,8 @@ class KgtkValue(KgtkFormat):
         self.secondsstr = None
         self.year = None
         self.month = None
+        self.zonestr = None
+        self.precisionstr = None
         self.iso8601basic = None
         self.day = None
 
@@ -750,7 +758,11 @@ class KgtkValue(KgtkFormat):
         self.hourstr = m.group("hour")
         self.minutesstr = m.group("minutes")
         self.secondsstr = m.group("seconds")
+        self.zonestr = m.group("zone")
+        self.precisionstr = m.group("precision")
         self.iso8601basic = m.group("hyphen") is None
+
+        fixup_needed: bool = False
 
         # Validate the year:
         if self.yearstr is None or len(self.yearstr) == 0:
@@ -769,20 +781,61 @@ class KgtkValue(KgtkFormat):
                 self.month: int = int(self.monthstr)
             except ValueError:
                 return False # shouldn't happen
-            if self.month == 0 and not self.options.allow_month_or_day_zero:
-                return False # month 0 was disallowed.
+            if self.month == 0:
+                if self.options.repair_month_or_day_zero:
+                    self.month = 1
+                    self.monthstr = "01"
+                    fixup_needed = True
+                elif not self.options.allow_month_or_day_zero:
+                    return False # month 0 was disallowed.
 
         if self.daystr is not None:
             try:
                 self.day: int = int(self.daystr)
             except ValueError:
                 return False # shouldn't happen
-            if self.day == 0 and not self.options.allow_month_or_day_zero:
-                return False # day 0 was disallowed.
+            if self.day == 0:
+                if self.options.repair_month_or_day_zero:
+                    self.day = 1
+                    self.daystr = "01"
+                    fixup_needed = True
+                if not self.options.allow_month_or_day_zero:
+                    return False # day 0 was disallowed.
+
+        if fixup_needed:
+            self.update_date_and_times()
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True
         return True
+
+    def update_date_and_times(self):
+        v: str = "^" + self.yearstr
+        if self.monthstr is not None:
+            if not self.iso8601basic:
+                v += "-"
+            v += self.monthstr
+        if self.daystr is not None:
+            if not self.iso8601basic:
+                v += "-"
+            v += self.daystr
+        if self.hourstr is not None:
+            v += "T"
+            v += self.hourstr
+        if self.minutesstr is not None:
+            if not self.iso8601basic:
+                v += ":"
+            v += self.minutesstr
+        if self.secondsstr is not None:
+            if not self.iso8601basic:
+                v += ":"
+            v += self.secondssr
+        if self.zonestr is not None:
+            v += self.zonestr
+        if self.precisionstr is not None:
+            v += "/"
+            v += self.precisionstr
+        self.value = v
 
     def is_extension(self, validate=False)->bool:
         """Return True if the first character is !
@@ -949,7 +1002,14 @@ def main():
 
     value: str
     for value in args.values:
-        print("%s: %s" % (value, KgtkValue(value, options=value_options).describe()), flush=True)
+        kv: KgtkValue = KgtkValue(value, options=value_options)
+        kv.validate()
+        nv: str = kv.value
+        if value == nv:
+            print("%s: %s" % (value, kv.describe()), flush=True)
+        else:
+            print("%s => %s: %s" % (value, nv, kv.describe()), flush=True)
+            
 
 if __name__ == "__main__":
     main()
