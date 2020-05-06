@@ -16,6 +16,7 @@ from kgtk.join.languagevalidator import LanguageValidator
 class KgtkValue(KgtkFormat):
     value: str = attr.ib(validator=attr.validators.instance_of(str))
     options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
+    parent: typing.Optional['KgtkValue'] = attr.ib(default=None)
 
     # Cache some properties of the value that would be expensive to
     # continuously recompute. The class is not frozen because we have these
@@ -101,7 +102,7 @@ class KgtkValue(KgtkFormat):
             # Populate list_items with a KgtkValue for each item in the list:
             item_value: str
             for item_value in values:
-                self.list_items.append(KgtkValue(item_value, options=self.options))
+                self.list_items.append(KgtkValue(item_value, options=self.options, parent=self))
         return self.list_items
 
     def is_list(self, validate: bool = False)->bool:
@@ -131,6 +132,18 @@ class KgtkValue(KgtkFormat):
         # This is a valid list.
         self.valid = True
         return True
+
+    def rebuild_list(self):
+        # Called to repair a list when we've repaired a list item.
+        if self.list_items is None or len(self.list_items) == 0:
+            return
+        
+        values: typing.List[str] = []
+        item: KgtkValue
+        for item in self.list_items:
+            values.append(item.value)
+        self.value = KgtkFormat.LIST_SEPARATOR.join(values)
+        
 
     def _is_number_or_quantity(self)->bool:
         return self.value.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "."))
@@ -810,7 +823,11 @@ class KgtkValue(KgtkFormat):
                     return False # day 0 was disallowed.
 
         if fixup_needed:
+            # Rapair a month or day zero problem.  If this value is the child
+            #of a list, repair the list parent value, too.
             self.update_date_and_times()
+            if self.parent is not None:
+                self.parent.rebuild_list()
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True
