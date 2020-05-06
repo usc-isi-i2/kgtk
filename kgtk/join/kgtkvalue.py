@@ -30,15 +30,25 @@ class KgtkValue(KgtkFormat):
     # Note: Please do not access this list directly.  Use get_list_items().
     list_items: typing.Optional[typing.List['KgtkValue']] = None
 
+    # The following members offer access to the fields of a KgtkValue.
+    # They are accessible immediately after validating the contents
+    # of the KgtkValue object:
+    # obj.is_valid() return True
+    # obj.validate() returns True
+    # obj.revalidate() returns True
+    # obj.is_language_qualified_string(validate=True) returns True
+    #... etc.
+
     # Offer the components of a string or language-qualified string, after validating the item.
     contents: typing.Optional[str] = None # String contents without the enclosing quotes
-    lang: typing.Optional[str] = None
-    suffix: typing.Optional[str] = None # Includes the leading dash.
+    lang: typing.Optional[str] = None # 2- or 3-character code without suffix.
+    suffix: typing.Optional[str] = None # Language code suffix, including the leading dash.
 
     # Offer the components of a number or quantity, after validating the item.
-    number: typing.Optional[str] = None # Note: not converted to int or float
-    low_tolerance: typing.Optional[str] = None # Note: not converted to int or float
-    high_tolerance: typing.Optional[str] = None # Note: not converted to int or float
+    numberstr: typing.Optional[str] = None # Note: not converted to int or float
+    number: typing.Optional[typing.Union[int, float]] = None
+    low_tolerancestr: typing.Optional[str] = None # Note: not converted to int or float
+    high_tolerancestr: typing.Optional[str] = None # Note: not converted to int or float
     si_units: typing.Optional[str] = None
     wikidata_node: typing.Optional[str] = None
 
@@ -49,18 +59,24 @@ class KgtkValue(KgtkFormat):
     lon: typing.Optional[float] = None
 
     # Offer the components of a date and times, after validating the item:
-    yearstr: typing.Optional[str] = None # Note: not converted to int
+    yearstr: typing.Optional[str] = None # Note: before conversion to int
     year: typing.Optional[int] = None
-    monthstr: typing.Optional[str] = None # Note: not converted to int
+    monthstr: typing.Optional[str] = None # Note: before conversion to int
     month: typing.Optional[int] = None
-    daystr: typing.Optional[str] = None # Note: not converted to int
+    daystr: typing.Optional[str] = None # Note: before conversion to int
     day: typing.Optional[int] = None
-    hourstr: typing.Optional[str] = None # Note: not converted to int or float
-    minutesstr: typing.Optional[str] = None # Note: not converted to int or float
-    secondsstr: typing.Optional[str] = None # Note: not converted to int or float
-    zonestr: typing.Optional[str] = None
+    hourstr: typing.Optional[str] = None # Note: before conversion to int or float
+    hour: typing.Optional[int] = None
+    minutesstr: typing.Optional[str] = None # Note: before conversion to int or float
+    minutes: typing.Optional[int] = None
+    secondsstr: typing.Optional[str] = None # Note: before conversion to int or float
+    seconds: typing.Optional[int] = None
+    zonestr: typing.Optional[str] = None # Z or [-+]HH or [-+]HHSS or [-+]HH:SS
     precisionstr: typing.Optional[str] = None
-    iso8601extended: typing.Optional[bool] = None # True when hyphens/colons present.
+    iso8601extended: typing.Optional[bool] = None # True when hyphens/colons are present.
+
+    # Offer the contents of a boolean, after validating the item:
+    truth: typing.Optional[bool] = None
 
     def is_valid(self)->bool:
         # Is this a valid whatever it is?
@@ -179,9 +195,9 @@ class KgtkValue(KgtkFormat):
                                                                             long_suffix=long_suffix_pat)
      
     integer_pat: str = r'(?:{decinteger}|{bininteger}|{octinteger}|{hexinteger})'.format(decinteger=decinteger_pat,
-                                                                                        bininteger=bininteger_pat,
-                                                                                        octinteger=octinteger_pat,
-                                                                                        hexinteger=hexinteger_pat)
+                                                                                         bininteger=bininteger_pat,
+                                                                                         octinteger=octinteger_pat,
+                                                                                         hexinteger=hexinteger_pat)
 
     # Floating point literals.
     digitpart_pat: str = r'(?:{digit}(?:_?{digit})*)'.format(digit=digit_pat)
@@ -256,17 +272,17 @@ class KgtkValue(KgtkFormat):
                 return self.is_quantity(validate=validate)
             else:
                 # Clear the number or quantity components:
-                self.number = None
-                self.low_tolerance = None
-                self.high_tolerance = None
+                self.numberstr = None
+                self.low_tolerancestr = None
+                self.high_tolerancestr = None
                 self.si_units = None
                 self.wikidata_node = None
                 return False # Not a number or quantity.
 
         # Clear the number or quantity components:
-        self.number = None
-        self.low_tolerance = None
-        self.high_tolerance = None
+        self.numberstr = None
+        self.low_tolerancestr = None
+        self.high_tolerancestr = None
         self.si_units = None
         self.wikidata_node = None
 
@@ -284,13 +300,24 @@ class KgtkValue(KgtkFormat):
             return False
 
         # Extract the number or quantity components:
-        self.number = m.group("number")
-        self.low_tolerance = m.group("low_tolerance")
-        self.high_tolerance = m.group("high_tolerance")
+        self.numberstr = m.group("number")
+        self.low_tolerancestr = m.group("low_tolerance")
+        self.high_tolerancestr = m.group("high_tolerance")
         self.si_units = m.group("si_units")
         self.wikidata_node = m.group("wikidata_node")
 
-        if self.low_tolerance is not None or self.high_tolerance is not None or self.si_units is not None or self.wikidata_node is not None:
+        # For convenience, convert the numeric part to int or float:
+        #
+        # TODO: go to this extra work only when requested?
+        if self.numberstr is None:
+            raise ValueError("Missing numeric part")
+        n: str = self.numberstr.lower()
+        if "." in n or ("e" in n and not n.startswith("0x")):
+            self.number = float(n)
+        else:
+            self.number = int(n)
+
+        if self.low_tolerancestr is not None or self.high_tolerancestr is not None or self.si_units is not None or self.wikidata_node is not None:
             # We can be certain that this is a quantity.
             self.data_type = KgtkFormat.DataType.QUANTITY
         else:
@@ -322,7 +349,7 @@ class KgtkValue(KgtkFormat):
         if self.data_type is not None:
             if self.data_type != KgtkFormat.DataType.NUMBER:
                 # Clear the number components:
-                self.number = None
+                self.numberstr = None
                 return False
 
             if not validate:
@@ -331,7 +358,7 @@ class KgtkValue(KgtkFormat):
                 return self.valid
         
         # Clear the number components:
-        self.number = None
+        self.numberstr = None
 
         if not self._is_number_or_quantity():
             return False
@@ -342,7 +369,18 @@ class KgtkValue(KgtkFormat):
             return False
 
         # Extract the number components:
-        self.number = m.group("number")
+        self.numberstr = m.group("number")
+
+        # For convenience, convert the numeric part to int or float:
+        #
+        # TODO: go to this extra work only when requested?
+        if self.numberstr is None:
+            raise ValueError("Missing numeric part")
+        n: str = self.numberstr.lower()
+        if "." in n or ("e" in n and not n.startswith("0x")):
+            self.number = float(n)
+        else:
+            self.number = int(n)
 
         # Now we can be certain that this is a number.
         self.data_type = KgtkFormat.DataType.NUMBER
@@ -358,9 +396,9 @@ class KgtkValue(KgtkFormat):
         if self.data_type is not None:
             if self.data_type != KgtkFormat.DataType.QUANTITY:
                 # Clear the quantity components:
-                self.number = None
-                self.low_tolerance = None
-                self.high_tolerance = None
+                self.numberstr = None
+                self.low_tolerancestr = None
+                self.high_tolerancestr = None
                 self.si_units = None
                 self.wikidata_node = None
                 return False
@@ -371,9 +409,9 @@ class KgtkValue(KgtkFormat):
                 return self.valid
         
         # Clear the quantity components:
-        self.number = None
-        self.low_tolerance = None
-        self.high_tolerance = None
+        self.numberstr = None
+        self.low_tolerancestr = None
+        self.high_tolerancestr = None
         self.si_units = None
         self.wikidata_node = None
 
@@ -386,13 +424,24 @@ class KgtkValue(KgtkFormat):
             return False
 
         # Extract the quantity components:
-        self.number = m.group("number")
-        self.low_tolerance = m.group("low_tolerance")
-        self.high_tolerance = m.group("high_tolerance")
+        self.numberstr = m.group("number")
+        self.low_tolerancestr = m.group("low_tolerance")
+        self.high_tolerancestr = m.group("high_tolerance")
         self.si_units = m.group("si_units")
         self.wikidata_node = m.group("wikidata_node")
 
-        if self.low_tolerance is None and self.high_tolerance is None and self.si_units is None and self.wikidata_node is None:
+        # For convenience, convert the numeric part to int or float:
+        #
+        # TODO: go to this extra work only when requested?
+        if self.numberstr is None:
+            raise ValueError("Missing numeric part")
+        n: str = self.numberstr.lower()
+        if "." in n or ("e" in n and not n.startswith("0x")):
+            self.number = float(n)
+        else:
+            self.number = int(n)
+
+        if self.low_tolerancestr is None and self.high_tolerancestr is None and self.si_units is None and self.wikidata_node is None:
             # This is a number, not a quantity
             self.data_type = KgtkFormat.DataType.NUMBER
             self.valid = True
@@ -483,15 +532,21 @@ class KgtkValue(KgtkFormat):
         The validate parameter is ignored.
         """
         if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.BOOLEAN
+            if self.data_type != KgtkFormat.DataType.BOOLEAN:
+                self.truth = None
+                return False
+            self.truth = self.value == KgtkFormat.TRUE_SYMBOL
+            return True
 
         # Is this a boolean?
         if self.value != KgtkFormat.TRUE_SYMBOL and self.value != KgtkFormat.FALSE_SYMBOL:
+            self.truth = None
             return False
             
         # We are certain this is a valid boolean.
         self.data_type = KgtkFormat.DataType.BOOLEAN
         self.valid = True
+        self.truth = self.value == KgtkFormat.TRUE_SYMBOL
         return True
 
     # Support two or three character language codes.  Suports hyphenated codes
@@ -731,6 +786,9 @@ class KgtkValue(KgtkFormat):
                 self.year = None
                 self.month = None
                 self.day = None
+                self.hour = None
+                self.minutes = None
+                self.seconds = None
                 self.zonestr = None
                 self.precisionstr = None
                 self.iso8601extended = None
@@ -749,6 +807,9 @@ class KgtkValue(KgtkFormat):
                 self.year = None
                 self.month = None
                 self.day = None
+                self.hour = None
+                self.minutes = None
+                self.seconds = None
                 self.zonestr = None
                 self.precisionstr = None
                 self.iso8601extended = None
@@ -769,6 +830,9 @@ class KgtkValue(KgtkFormat):
         self.year = None
         self.month = None
         self.day = None
+        self.hour = None
+        self.minutes = None
+        self.seconds = None
         self.zonestr = None
         self.precisionstr = None
         self.iso8601extended = None
@@ -827,6 +891,25 @@ class KgtkValue(KgtkFormat):
                     fixup_needed = True
                 elif not self.options.allow_month_or_day_zero:
                     return False # day 0 was disallowed.
+
+        # Convert the time fields to ints:
+        if self.hourstr is not None:
+            try:
+                self.hour: int = int(self.hourstr)
+            except ValueError:
+                return False # shouldn't happen
+
+        if self.minutesstr is not None:
+            try:
+                self.minutes: int = int(self.minutesstr)
+            except ValueError:
+                return False # shouldn't happen
+
+        if self.secondsstr is not None:
+            try:
+                self.seconds: int = int(self.secondsstr)
+            except ValueError:
+                return False # shouldn't happen
 
         if fixup_needed:
             # Rapair a month or day zero problem.  If this value is the child
