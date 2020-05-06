@@ -30,17 +30,18 @@ class KgtkValue(KgtkFormat):
     # Note: Please do not access this list directly.  Use get_list_items().
     list_items: typing.Optional[typing.List['KgtkValue']] = None
 
-    # The following members offer access to the fields of a KgtkValue.
-    # They are accessible immediately after validating the contents
-    # of the KgtkValue object:
+    # The following members offer access to the components (fields) of a
+    # KgtkValue.  They are accessible immediately after validating the
+    # contents of the KgtkValue object:
+    #
     # obj.is_valid() return True
     # obj.validate() returns True
     # obj.revalidate() returns True
     # obj.is_language_qualified_string(validate=True) returns True
     #... etc.
     #
-    # The fields may be accessed directly, or thet may be obtained in
-    # a map via obj.get_fields()
+    # The fields may be accessed directly from this object or they may be
+    # obtained as a map via obj.get_fields()
 
     # Offer the components of a string or language-qualified string, after validating the item.
     contents: typing.Optional[str] = None # String contents without the enclosing quotes
