@@ -7,23 +7,28 @@ from etk.etk_module import ETKModule
 from etk.etk import ETK
 from etk.knowledge_graph import KGSchema
 from etk.wikidata import wiki_namespaces
-from etk.wikidata.value import ( 
-Precision,
-Item,
-StringValue,
-TimeValue,
-QuantityValue,
-MonolingualText,
-GlobeCoordinate,
-ExternalIdentifier,
-URLValue
+import rfc3986
+from etk.wikidata.value import (
+    Precision,
+    Item,
+    StringValue,
+    TimeValue,
+    QuantityValue,
+    MonolingualText,
+    GlobeCoordinate,
+    ExternalIdentifier,
+    URLValue
 )
+
+BAD_CHARS = [":", "-", "&", ",", " ",
+             "(", ")", "\'", '\"', "/", "\\", "[", "]", ";","|"]
 
 
 class TripleGenerator:
     """
     A class to maintain the status of the generator
     """
+
     def __init__(
         self,
         prop_file: str,
@@ -33,7 +38,8 @@ class TripleGenerator:
         ignore: bool,
         n: int,
         dest_fp: TextIO = sys.stdout,
-        truthy:bool =False
+        truthy: bool = False,
+        use_id:bool=False,
     ):
         from etk.wikidata.statement import Rank
         self.ignore = ignore
@@ -46,24 +52,31 @@ class TripleGenerator:
         self.read_num_of_lines = 0
         # ignore-logging, if not ignore, log them and move on.
         if not self.ignore:
-            self.ignore_file = open("ignored.log","w")
+            self.ignore_file = open("ignored.log", "w")
         # corrupted statement id
         self.corrupted_statement_id = None
         # truthy
-        self.truthy = truthy        
+        self.truthy = truthy
         self.reset_etk_doc()
         self.serialize_prefix()
-    
-    def _node_2_entity(self, node:str):
+        self.yyyy_mm_dd_pattern = re.compile(
+            "[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
+        self.yyyy_pattern = re.compile("[12]\d{3}")
+        self.quantity_pattern = re.compile(
+            "([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
+        # order map, know the column index of ["node1","property","node2",id]
+        self.order_map = {}
+        self.use_id = use_id
+
+    def _node_2_entity(self, node: str):
         '''
         A node can be Qxxx or Pxxx, return the proper entity.
         '''
         if node in self.prop_types:
             entity = WDProperty(node, self.prop_types[node])
         else:
-            entity = WDItem(TripleGenerator.replaceIllegalString(node.upper()))
+            entity = WDItem(TripleGenerator.replace_illegal_string(node))
         return entity
-
 
     def set_properties(self, prop_file: str):
         datatype_mapping = {
@@ -73,8 +86,8 @@ class TripleGenerator:
             "quantity": QuantityValue,
             "monolingualtext": MonolingualText,
             "string": StringValue,
-            "external-identifier":ExternalIdentifier,
-            "url":URLValue
+            "external-identifier": ExternalIdentifier,
+            "url": URLValue
         }
         with open(prop_file, "r") as fp:
             props = fp.readlines()
@@ -84,7 +97,7 @@ class TripleGenerator:
             try:
                 prop_types[node1] = datatype_mapping[node2.strip()]
             except:
-                if not self.ignore:                    
+                if not self.ignore:
                     raise KGTKException(
                         "DataType {} of node {} is not supported.\n".format(
                             node2, node1
@@ -108,14 +121,15 @@ class TripleGenerator:
         self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
         self.doc = self.etk.create_document({}, doc_id=doc_id)
         for k, v in wiki_namespaces.items():
-            self.doc.kg.bind(k, v) 
-    
+            self.doc.kg.bind(k, v)
+
     def serialize(self):
         """
         Seriealize the triples. Used a hack to avoid serializing the prefix again.
         """
         docs = self.etk.process_ems(self.doc)
-        self.fp.write("\n\n".join(docs[0].kg.serialize("ttl").split("\n\n")[1:]))
+        self.fp.write("\n\n".join(
+            docs[0].kg.serialize("ttl").split("\n\n")[1:]))
         self.fp.flush()
         self.reset()
 
@@ -126,7 +140,7 @@ class TripleGenerator:
         Relevent issue: https://github.com/RDFLib/rdflib/issues/965
         """
         for k, v in wiki_namespaces.items():
-            line = "@prefix " + k + " " + v + " .\n" 
+            line = "@prefix " + k + ": <" + v + "> .\n"
             self.fp.write(line)
         self.fp.write("\n")
         self.fp.flush()
@@ -142,14 +156,17 @@ class TripleGenerator:
         self.serialize()
 
     @staticmethod
-    def process_text_string(string:str)->[str,str]:
+    def process_text_string(string: str) -> [str, str]:
         ''' 
+        Language detection is removed from triple generation. The user is responsible for detect the language
         '''
+        if len(string) == 0:
+            return ["", "en"]
         if "@" in string:
             res = string.split("@")
             text_string = "@".join(res[:-1]).replace('"', "").replace("'", "")
-            lang = res[-1].replace('"','').replace("'","")
-            if len(lang) != 2:
+            lang = res[-1].replace('"', '').replace("'", "")
+            if len(lang) > 2:
                 lang = "en"
         else:
             text_string = string.replace('"', "").replace("'", "")
@@ -183,21 +200,34 @@ class TripleGenerator:
         return True
 
     def generate_normal_triple(
-        self, node1: str, label: str, node2: str, is_qualifier_edge: bool) -> bool:
+            self, node1: str, label: str, node2: str, is_qualifier_edge: bool,e_id:str) -> bool:
+        if self.use_id:
+            e_id = TripleGenerator.replace_illegal_string(e_id)
         entity = self._node_2_entity(node1)
         # determine the edge type
         edge_type = self.prop_types[label]
         if edge_type == Item:
-            object = WDItem(TripleGenerator.replaceIllegalString(node2.upper()))
+            object = WDItem(TripleGenerator.replace_illegal_string(node2))
         elif edge_type == TimeValue:
             # https://www.wikidata.org/wiki/Help:Dates
             # ^2013-01-01T00:00:00Z/11
             # ^8000000-00-00T00:00:00Z/3
-            if re.compile("[0-9]{4}").match(node2):
-                try:                   
+            if self.yyyy_mm_dd_pattern.match(node2):
+                try:
+                    dateTimeString = node2
+                    object = TimeValue(
+                        value=dateTimeString,  # TODO
+                        calendar=Item("Q1985727"),
+                        precision=Precision.year,
+                        time_zone=0,
+                    )
+                except:
+                    return False
+            elif self.yyyy_pattern.match(node2):
+                try:
                     dateTimeString = node2 + "-01-01"
                     object = TimeValue(
-                        value=dateTimeString, #TODO
+                        value=dateTimeString,  # TODO
                         calendar=Item("Q1985727"),
                         precision=Precision.year,
                         time_zone=0,
@@ -207,23 +237,24 @@ class TripleGenerator:
             else:
                 try:
                     dateTimeString, precision = node2[1:].split("/")
-                    dateTimeString = dateTimeString[:-1] # remove "Z"
+                    dateTimeString = dateTimeString[:-1]  # remove "Z"
                     # 2016-00-00T00:00:00 case
                     if "-00-00" in dateTimeString:
-                        dateTimeString = "-01-01".join(dateTimeString.split("-00-00"))
+                        dateTimeString = "-01-01".join(
+                            dateTimeString.split("-00-00"))
                     elif dateTimeString[8:10] == "00":
-                        dateTimeString = dateTimeString[:8]+"01" + dateTimeString[10:]
+                        dateTimeString = dateTimeString[:8] + \
+                            "01" + dateTimeString[10:]
                     object = TimeValue(
                         value=dateTimeString,
                         calendar=Item("Q1985727"),
                         precision=precision,
                         time_zone=0,
                     )
-                except: 
+                except:
                     return False
 
-            #TODO other than that, not supported. Creation of normal triple fails
-            
+            # TODO other than that, not supported. Creation of normal triple fails
 
         elif edge_type == GlobeCoordinate:
             latitude, longitude = node2[1:].split("/")
@@ -233,7 +264,7 @@ class TripleGenerator:
 
         elif edge_type == QuantityValue:
             # +70[+60,+80]Q743895
-            res = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?").match(node2).groups()
+            res = self.quantity_pattern.match(node2).groups()
             amount, lower_bound, upper_bound, unit = res
 
             # Handle extra small numbers for now. TODO
@@ -244,21 +275,26 @@ class TripleGenerator:
             upper_bound = TripleGenerator.clean_number_string(upper_bound)
             if unit != None:
                 if upper_bound != None and lower_bound != None:
-                    object = QuantityValue(amount, unit=Item(unit),upper_bound=upper_bound,lower_bound=lower_bound)
+                    object = QuantityValue(amount, unit=Item(
+                        unit), upper_bound=upper_bound, lower_bound=lower_bound)
                 else:
                     object = QuantityValue(amount, unit=Item(unit))
             else:
                 if upper_bound != None and lower_bound != None:
-                    object = QuantityValue(amount, upper_bound=upper_bound,lower_bound=lower_bound)
+                    object = QuantityValue(
+                        amount, upper_bound=upper_bound, lower_bound=lower_bound)
                 else:
-                    object = QuantityValue(amount)                   
+                    object = QuantityValue(amount)
         elif edge_type == MonolingualText:
             text_string, lang = TripleGenerator.process_text_string(node2)
             object = MonolingualText(text_string, lang)
         elif edge_type == ExternalIdentifier:
             object = ExternalIdentifier(node2)
         elif edge_type == URLValue:
-            object = URLValue(node2)
+            if TripleGenerator.is_valid_uri_with_scheme_and_host(node2):
+                object = URLValue(node2)
+            else:
+                return False
         else:
             # treat everything else as stringValue
             object = StringValue(node2)
@@ -267,8 +303,9 @@ class TripleGenerator:
             # create qualifier edge on previous STATEMENT and return the updated STATEMENT
             if type(object) == WDItem:
                 self.doc.kg.add_subject(object)
-            self.to_append_statement.add_qualifier(label.upper(), object)
-            self.doc.kg.add_subject(self.to_append_statement) #TODO maybe can be positioned better for the edge cases.
+            self.to_append_statement.add_qualifier(label, object)
+            # TODO maybe can be positioned better for the edge cases.
+            self.doc.kg.add_subject(self.to_append_statement)
 
         else:
             # edge: q1 p8 q2 e8
@@ -276,12 +313,14 @@ class TripleGenerator:
             if type(object) == WDItem:
                 self.doc.kg.add_subject(object)
             if self.truthy:
-                self.to_append_statement = entity.add_truthy_statement(label.upper(), object) 
+                self.to_append_statement = entity.add_truthy_statement(
+                    label, object,statement_id=e_id) if self.use_id else entity.add_truthy_statement(label,object)
             else:
-                self.to_append_statement = entity.add_statement(label.upper(), object) 
+                self.to_append_statement = entity.add_statement(
+                    label, object,statement_id=e_id) if self.use_id else entity.add_statement(label, object)
             self.doc.kg.add_subject(entity)
         return True
-    
+
     @staticmethod
     def is_invalid_decimal_string(num_string):
         '''
@@ -292,7 +331,20 @@ class TripleGenerator:
         else:
             if abs(float(num_string)) < 0.0001 and float(num_string) != 0:
                 return True
-            return False        
+            return False
+
+    @staticmethod
+    def is_valid_uri_with_scheme_and_host(uri: str):
+        '''
+        https://github.com/python-hyper/rfc3986/issues/30#issuecomment-461661883
+        '''
+        try:
+            uri = rfc3986.URIReference.from_string(uri)
+            rfc3986.validators.Validator().require_presence_of(
+                "scheme", "host").check_validity_of("scheme", "host").validate(uri)
+            return True
+        except:
+            return False
 
     @staticmethod
     def clean_number_string(num):
@@ -300,22 +352,40 @@ class TripleGenerator:
         if num == None:
             return None
         else:
-            return format_float_positional(float(num),trim="-")
+            return format_float_positional(float(num), trim="-")
 
-    def entry_point(self, line_number:int , edge: str):
+    def entry_point(self, line_number: int, edge: str):
         """
         generates a list of two, the first element is the determination of the edge type using corresponding edge type
         the second element is a bool indicating whether this is a valid property edge or qualifier edge.
         Call corresponding downstream functions
         """
+
         edge_list = edge.strip().split("\t")
         l = len(edge_list)
-        if l!=4:
-            return
+        if line_number == 1:
+            # initialize the order_map
+            edge_list = edge.strip().split("\t")
+            node1_index = edge_list.index("node1")
+            node2_index = edge_list.index("node2")
+            prop_index = edge_list.index("property")
+            id_index = edge_list.index("id")
+            if not all([node1_index>-1,node2_index>-1,prop_index>-1,id_index>-1]):
+                raise KGTKException("Header of kgtk file misses at least one of required column names: (node1, node2, property and id)")
+            else:
+                self.order_map["node1"] = node1_index
+                self.order_map["node2"] = node2_index
+                self.order_map["prop"] = prop_index
+                self.order_map["id"] = id_index
+                return
 
-        [node1, label, node2, e_id] = edge_list
-        node1, label, node2, e_id = node1.strip(),label.strip(),node2.strip(),e_id.strip()
-        if line_number == 0: #TODO ignore header mode
+        # use the order_map to map the node
+         
+        node1 = edge_list[self.order_map["node1"]].strip()
+        node2 = edge_list[self.order_map["node2"]].strip()
+        prop = edge_list[self.order_map["prop"]].strip()
+        e_id = edge_list[self.order_map["id"]].strip()
+        if line_number == 2: 
             # by default a statement edge
             is_qualifier_edge = False
             # print("#Debug Info: ",line_number, self.to_append_statement_id, e_id, is_qualifier_edge,self.to_append_statement)
@@ -328,15 +398,15 @@ class TripleGenerator:
                     self.serialize()
                 is_qualifier_edge = False
                 # print("#Debug Info: ",line_number, self.to_append_statement_id, node1, is_qualifier_edge,self.to_append_statement)
-                self.to_append_statement_id= e_id
+                self.to_append_statement_id = e_id
                 self.corrupted_statement_id = None
             else:
-            # qualifier edge or property declaration edge
+                # qualifier edge or property declaration edge
                 is_qualifier_edge = True
                 if self.corrupted_statement_id == e_id:
                     # Met a qualifier which associates with a corrupted statement
                     return
-                if label != "type" and node1 != self.to_append_statement_id:
+                if prop != "type" and node1 != self.to_append_statement_id:
                     # 1. not a property declaration edge and
                     # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
                     if not self.ignore:
@@ -345,34 +415,42 @@ class TripleGenerator:
                                 node1, line_number, self.to_append_statement_id
                             )
                         )
-        if label in self.label_set:
-            success = self.generate_label_triple(node1, label, node2)
-        elif label in self.description_set:
-            success= self.generate_description_triple(node1, label, node2)
-        elif label in self.alias_set:
-            success = self.generate_alias_triple(node1, label, node2)
-        elif label == "type":
+        if prop in self.label_set:
+            success = self.generate_label_triple(node1, prop, node2)
+        elif prop in self.description_set:
+            success = self.generate_description_triple(node1, prop, node2)
+        elif prop in self.alias_set:
+            success = self.generate_alias_triple(node1, prop, node2)
+        elif prop == "type":
             # special edge of prop declaration
-            success = self.generate_prop_declaration_triple(node1, label, node2)
+            success = self.generate_prop_declaration_triple(
+                node1, prop, node2)
         else:
-            if label in self.prop_types:
-                success= self.generate_normal_triple(node1, label, node2, is_qualifier_edge)
+            if prop in self.prop_types:
+                success = self.generate_normal_triple(
+                    node1, prop, node2, is_qualifier_edge,e_id)
             else:
                 if not self.ignore:
                     raise KGTKException(
-                        "property {}'s type is unknown at line {}.\n".format(label, line_number)
+                        "property {}'s type is unknown at line {}.\n".format(
+                            prop, line_number)
                     )
                     success = False
         if (not success) and (not is_qualifier_edge) and (not self.ignore):
             # We have a corrupted edge here.
-            self.ignore_file.write("Corrupted statement at line number: {} with id {} with current corrupted id {}\n".format(line_number, e_id, self.corrupted_statement_id))
+            self.ignore_file.write("Corrupted statement at line number: {} with id {} with current corrupted id {}\n".format(
+                line_number, e_id, self.corrupted_statement_id))
             self.ignore_file.flush()
             self.corrupted_statement_id = e_id
         else:
             self.read_num_of_lines += 1
             self.corrupted_statement_id = None
 
-    
     @staticmethod
-    def replaceIllegalString(s:str)->str:
-        return s.replace(":","-")
+    def replace_illegal_string(s: str) -> str:
+        '''
+        this function serves as the last gate of keeping illegal characters outside of entity creation.
+        '''
+        for char in BAD_CHARS:
+            s = s.replace(char, "_")
+        return s
