@@ -75,7 +75,7 @@ class KgtkBase(KgtkFormat):
         #    1) except inside "" and '' quoted strings
         # 4) Check for commas
         # 5) Check for vertical bars
-        # 6) Check for semicolons
+        # 6) Check for semicolons (disabled)
         #
         # TODO: It might be possible to make some of these checks more efficient.
         results: typing.List[str] = [ ]
@@ -90,8 +90,8 @@ class KgtkBase(KgtkFormat):
             results.append("Warning: Column name '%s' contains a comma (,)" % column_name)
         if "|" in column_name:
             results.append("Warning: Column name '%s' contains a vertical bar (|)" % column_name)
-        if ";" in column_name:
-            results.append("Warning: Column name '%s' contains a semicolon (;)" % column_name)
+        # if ";" in column_name:
+        #    results.append("Warning: Column name '%s' contains a semicolon (;)" % column_name)
         kv: KgtkValue = KgtkValue(column_name)
         if not kv.is_valid():
             results.append(kv.describe())
