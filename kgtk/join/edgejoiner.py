@@ -38,6 +38,10 @@ class EdgeJoiner(KgtkFormat):
     join_on_label: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     join_on_node2: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # TODO: Write fuill validators
+    left_join_columns: typing.Optional[typing.List[str]] = attr.ib(default=None)
+    right_join_columns: typing.Optional[typing.List[str]] = attr.ib(default=None)
+
     # The prefix applied to right file column names in the output file:
     prefix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
@@ -72,19 +76,24 @@ class EdgeJoiner(KgtkFormat):
             raise ValueError("EdgeJoiner: unknown node1 column index in KGTK %s edge type." % who)
         return idx
 
-    def build_join_key(self, kr: EdgeReader, join_idx: int, row: typing.List[str])->str:
-        key: str = row[join_idx]
-        if self.join_on_label:
-            key += self.field_separator+ row[kr.label_column_idx]
-        if self.join_on_node2:
-            key += self.field_separator+ row[kr.node2_column_idx]
+    def build_join_key(self, kr: EdgeReader, join_idx_list: typing.List[int], row: typing.List[str])->str:
+        key: str = ""
+        join_idx: int
+        first: bool = True
+        for join_idx in join_idx_list:
+            if first:
+                first = False
+            else:
+                key += self.field_separator
+                
+            key += row[join_idx]
         return key
 
-    def multi_column_key_set(self, kr: EdgeReader, join_idx: int)->typing.Set[str]:
+    def multi_column_key_set(self, kr: EdgeReader, join_idx_list: typing.List[int])->typing.Set[str]:
         result: typing.Set[str] = set()
         row: typing.List[str]
         for row in kr:
-            result.add(self.build_join_key(kr, join_idx, row))
+            result.add(self.build_join_key(kr, join_idx_list, row))
         return result
         
     # Optimized for a single join column:
@@ -95,9 +104,49 @@ class EdgeJoiner(KgtkFormat):
             result.add(row[join_idx])
         return result
         
-    def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
+    def build_join_idx_list(self, kr: EdgeReader, who: str, join_columns: typing.Optional[typing.List[str]])->typing.List[int]:
+        join_idx: int
+        join_idx_list: typing.List[int] = [ ]
+        col_num: int = 1
+        if join_columns is not None and len(join_columns) > 0:
+            join_column:str
+            for join_column in join_columns:
+                if join_column not in kr.column_name_map:
+                    raise ValueError("Join column %s not found in in the %s input file" % (join_column, who))
+                join_idx = kr.column_name_map[join_column]
+                if self.verbose:
+                    print("Join column %d: %s (index %d in the %s input file)" % (col_num, join_column, join_idx, who))
+                join_idx_list.append(join_idx)
+            return join_idx_list
+
+        join_idx = self.node1_column_idx(kr, who)
+        if self.verbose:
+            print("Joining on node1 (index %s in the %s input file)" % (join_idx, who))
+        join_idx_list.append(join_idx)
+
+        # join_on_label and join_on_node2 may be specified
+        if self.join_on_label or self.join_on_node2:
+            if self.join_on_label:
+                if kr.label_column_idx < 0:
+                    raise ValueError("join_on_label may not be used because the %s input file does not have a label column." % who)
+                if self.verbose:
+                    print("Joining on label (index %s in the %s input file)" % (kr.label_column_idx, who))
+                join_idx_list.append(kr.label_column_idx)
+                
+            if self.join_on_node2:
+                if kr.node2_column_idx < 0:
+                    raise ValueError("join_on_node2 may not be used because the %s input file does not have a node2 column." % who)
+                if self.verbose:
+                    print("Joining on node2 (index %s in the %s input file)" % (kr.node2_column_idx, who))
+                join_idx_list.append(kr.node2_column_idx)
+        return join_idx_list
+        
+
+    def extract_join_key_set(self, file_path: Path, who: str, join_columns: typing.Optional[typing.List[str]])->typing.Set[str]:
         if self.verbose:
             print("Extracting the join key set from the %s input file: %s" % (who, str(file_path)), flush=True)
+            if join_columns is not None:
+                print("Using join columns: %s" % " ".join(join_columns))
         kr: EdgeReader = EdgeReader.open_edge_file(file_path,
                                                    short_line_action=self.short_line_action,
                                                    long_line_action=self.long_line_action,
@@ -112,26 +161,12 @@ class EdgeJoiner(KgtkFormat):
         if not kr.is_edge_file:
             raise ValueError("The %s file is not an edge file" % who)
         
-        join_idx: int = self.node1_column_idx(kr, who)
-        if self.verbose:
-            print("Joining on node1 (index %s in the %s input file)" % (join_idx, who))
-
-        # join_on_label and join_on_node2 may be specified
-        if self.join_on_label or self.join_on_node2:
-            if self.join_on_label:
-                if kr.label_column_idx < 0:
-                    raise ValueError("join_on_label may not be used because the %s input file does not have a label column." % who)
-                if self.verbose:
-                    print("Joining on label (index %s in the %s input file)" % (kr.label_column_idx, who))
-            if self.join_on_node2:
-                if kr.node2_column_idx < 0:
-                    raise ValueError("join_on_node2 may not be used because the %s input file does not have a node2 column." % who)
-                if self.verbose:
-                    print("Joining on node2 (index %s in the %s input file)" % (kr.node2_column_idx, who))
-            return self.multi_column_key_set(kr, join_idx) # closes er file
-        else:
+        join_idx_list: typing.List[int] = self.build_join_idx_list(kr, who, join_columns)
+        if len(join_idx_list) == 1:
             # This uses optimized code:
-            return self.single_column_key_set(kr, join_idx) # closes er file
+            return self.single_column_key_set(kr, join_idx_list[0]) # closes er file
+        else:
+            return self.multi_column_key_set(kr, join_idx_list) # closes er file
         
 
     def join_key_sets(self)->typing.Optional[typing.Set[str]]:
@@ -146,7 +181,7 @@ class EdgeJoiner(KgtkFormat):
         elif self.left_join and not self.right_join:
             if self.verbose:
                 print("Computing the left join key set", flush=True)
-            join_key_set = self.extract_join_key_set(self.left_file_path, "left").copy()
+            join_key_set = self.extract_join_key_set(self.left_file_path, "left", self.left_join_columns).copy()
             if self.verbose:
                 print("There are %d keys in the left join key set." % len(join_key_set))
             return join_key_set
@@ -154,7 +189,7 @@ class EdgeJoiner(KgtkFormat):
         elif self.right_join and not self.left_join:
             if self.verbose:
                 print("Computing the right join key set", flush=True)
-            join_key_set = self.extract_join_key_set(self.right_file_path, "right").copy()
+            join_key_set = self.extract_join_key_set(self.right_file_path, "right", self.right_join_columns).copy()
             if self.verbose:
                 print("There are %d keys in the right join key set." % len(join_key_set))
             return join_key_set
@@ -162,16 +197,16 @@ class EdgeJoiner(KgtkFormat):
         else:
             if self.verbose:
                 print("Computing the inner join key set", flush=True)
-            left_join_key_set: typing.Set[str] = self.extract_join_key_set(self.left_file_path, "left")
+            left_join_key_set: typing.Set[str] = self.extract_join_key_set(self.left_file_path, "left", self.left_join_columns)
             if self.verbose:
                 print("There are %d keys in the left file key set." % len(left_join_key_set))
-            right_join_key_set: typing.Set[str] = self.extract_join_key_set(self.right_file_path, "right")
+            right_join_key_set: typing.Set[str] = self.extract_join_key_set(self.right_file_path, "right", self.right_join_columns)
             if self.verbose:
                 print("There are %d keys in the right file key set." % len(right_join_key_set))
             join_key_set = left_join_key_set.intersection(right_join_key_set)
             if self.verbose:
                 print("There are %d keys in the inner join key set." % len(join_key_set))
-            return joiin_key_set
+            return join_key_set
     
     def merge_columns(self, left_kr: EdgeReader, right_kr: EdgeReader)->typing.Tuple[typing.List[str], typing.List[str]]:
         joined_column_names: typing.List[str] = [ ]
@@ -236,6 +271,15 @@ class EdgeJoiner(KgtkFormat):
                                                          error_limit=self.error_limit)
 
 
+        # TODO: We ought to do this test sooner.
+        left_join_idx_list: typing.List[int] = self.build_join_idx_list(left_kr, "left", self.left_join_columns)
+        right_join_idx_list: typing.List[int] = self.build_join_idx_list(right_kr, "right", self.right_join_columns)
+        if len(left_join_idx_list) != len(right_join_idx_list):
+            print("the left join key has %d components, the right join key has %d columns. Exiting." % (len(left_join_idx_list), len(right_join_idx_list)))
+            left_kr.close()
+            right_kr.close()
+            return
+
         if self.verbose:
             print("Mapping the column names for the join.", flush=True)
         joined_column_names: typing.List[str]
@@ -268,7 +312,6 @@ class EdgeJoiner(KgtkFormat):
         if self.verbose:
             print("Processing the left input file: %s" % str(self.left_file_path), flush=True)
         row: typing.list[str]
-        left_node1_idx: int = self.node1_column_idx(left_kr, who="left")
         for row in left_kr:
             left_data_lines_read += 1
             if joined_key_set is None:
@@ -276,7 +319,7 @@ class EdgeJoiner(KgtkFormat):
                 output_data_lines += 1
                 left_data_lines_kept += 1
             else:
-                left_key: str = self.build_join_key(left_kr, left_node1_idx, row)
+                left_key: str = self.build_join_key(left_kr, left_join_idx_list, row)
                 if left_key in joined_key_set:
                     ew.write(row)
                     output_data_lines += 1
@@ -287,7 +330,6 @@ class EdgeJoiner(KgtkFormat):
         if self.verbose:
             print("Processing the right input file: %s" % str(self.right_file_path), flush=True)
         right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_column_names)
-        right_node1_idx: int = self.node1_column_idx(right_kr, who="right")
         for row in right_kr:
             right_data_lines_read += 1
             if joined_key_set is None:
@@ -295,7 +337,7 @@ class EdgeJoiner(KgtkFormat):
                 output_data_lines += 1
                 right_data_lines_kept += 1
             else:
-                right_key: str = self.build_join_key(right_kr, right_node1_idx, row)
+                right_key: str = self.build_join_key(right_kr, right_join_idx_list, row)
                 if right_key in joined_key_set:
                     ew.write(row, shuffle_list=right_shuffle_list)
                     output_data_lines += 1
@@ -325,6 +367,7 @@ def main():
     parser.add_argument(      "--join-on-node2", dest="join_on_node2", help="If both input files are edge files, include the node2 column in the join.", action='store_true')
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
+    parser.add_argument(      "--left-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
 
     parser.add_argument(      "--long-line-action", dest="long_line_action",
                               help="The action to take when a long line is detected.",
@@ -333,6 +376,7 @@ def main():
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
     parser.add_argument(      "--prefix", dest="prefix", help="The prefix applied to right file column names in the output file.")
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
+    parser.add_argument(      "--right-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
 
     parser.add_argument(      "--short-line-action", dest="short_line_action",
                               help="The action to take whe a short line is detected.",
@@ -357,6 +401,8 @@ def main():
                                 right_join=args.right_join,
                                 join_on_label=args.join_on_label,
                                 join_on_node2=args.join_on_node2,
+                                left_join_columns=args.left_join_columns,
+                                right_join_columns=args.right_join_columns,
                                 prefix=args.prefix,
                                 field_separator=args.field_separator,
                                 short_line_action=args.short_line_action,
