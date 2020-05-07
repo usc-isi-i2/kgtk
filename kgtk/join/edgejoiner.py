@@ -20,7 +20,7 @@ from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkwriter import KgtkWriter
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=True)

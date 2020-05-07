@@ -28,6 +28,7 @@ from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkformat import KgtkFormat
 from kgtk.join.kgtkreader import KgtkReader
 from kgtk.join.kgtkwriter import KgtkWriter
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=True)
@@ -175,7 +176,7 @@ class IfExists(KgtkFormat):
             input_line_count += 1
             left_key: str = self.build_key(row, left_key_columns)
             if left_key in key_set:
-                ew.write(line)
+                ew.write(row)
                 output_line_count += 1
         ew.close()
 
