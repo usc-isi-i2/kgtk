@@ -1,8 +1,6 @@
 """
 Join two KTKG edge files or two KGTK node files.  The output file is an edge file or a node file.
 
-TODO: rename this to KgtkJoiner.
-
 Note: This implementation builds im-memory sets of all the key values in
 each input file.
 
@@ -24,7 +22,7 @@ from kgtk.join.kgtkvalueoptions import KgtkValueOptions
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=True)
-class EdgeJoiner(KgtkFormat):
+class KgtkJoiner(KgtkFormat):
     left_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     right_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
@@ -76,14 +74,14 @@ class EdgeJoiner(KgtkFormat):
         idx: int = kr.node1_column_idx
         if idx < 0:
             # TODO: throw a better exception
-            raise ValueError("EdgeJoiner: unknown node1 column index in KGTK %s edge file." % who)
+            raise ValueError("KgtkJoiner: unknown node1 column index in KGTK %s edge file." % who)
         return idx
 
     def id_column_idx(self, kr: KgtkReader, who: str)->int:
         idx: int = kr.id_column_idx
         if idx < 0:
             # TODO: throw a better exception
-            raise ValueError("EdgeJoiner: unknown id column index in KGTK %s node file." % who)
+            raise ValueError("KgtkJoiner: unknown id column index in KGTK %s node file." % who)
         return idx
 
     def build_join_key(self, kr: KgtkReader, join_idx_list: typing.List[int], row: typing.List[str])->str:
@@ -390,7 +388,7 @@ def main():
     parser.add_argument(      "--error-limit", dest="error_limit",
                               help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
 
-    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=EdgeJoiner.FIELD_SEPARATOR_DEFAULT)
+    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=KgtkJoiner.FIELD_SEPARATOR_DEFAULT)
     parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
                               help="Fill missing trailing columns in short lines with empty values.", action='store_true')
     parser.add_argument(      "--join-on-label", dest="join_on_label", help="If both input files are edge files, include the label column in the join.", action='store_true')
@@ -424,7 +422,7 @@ def main():
     # Build the value parsing option structure.
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-    ej: EdgeJoiner = EdgeJoiner(left_file_path=args.left_file_path,
+    ej: KgtkJoiner = KgtkJoiner(left_file_path=args.left_file_path,
                                 right_file_path=args.right_file_path,
                                 output_path=args.output_file_path,
                                 left_join=args.left_join,
