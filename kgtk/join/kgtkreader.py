@@ -593,15 +593,17 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     def __next__(self)-> typing.List[str]:
         return self.nextrow()
 
-    def concise(self)->typing.Iterator[typing.List[typing.Optional[str]]]:
+    def concise_rows(self)->typing.Iterator[typing.List[typing.Optional[str]]]:
         """
         Using a generator function, create an iterator that returns rows of fields
         as strings.  Empty fields will be returned as None.
 
         """
         while True:
-            # self.nextrow() will throw StopIteration when done.
-            row: typing.List[str] = self.nextrow()
+            try:
+                row: typing.List[str] = self.nextrow()
+            except StopIteration:
+                return
 
             # Copy the row, converting empty fields into None:
             results: typing.List[typing.Optional[str]] = [ ]
@@ -638,8 +640,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         When validate is True, validate each KgtkValue object.
         """
         while True:
-            # self.nextrow() will throw StopIteration when done.
-            yield self.to_kgtk_values(self.nextrow(), validate=validate)
+            try:
+                yield self.to_kgtk_values(self.nextrow(), validate=validate)
+            except StopIteration:
+                return
 
     def to_concise_kgtk_values(self, row: typing.List[str], validate: bool = False)->typing.List[typing.Optional[KgtkValue]]:
         """
@@ -668,8 +672,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         When validate is True, validate each KgtkValue object.
         """
         while True:
-            # self.nextrow() will throw StopIteration when done.
-            yield self.to_concise_kgtk_values(self.nextrow(), validate=validate)
+            try:
+                yield self.to_concise_kgtk_values(self.nextrow(), validate=validate)
+            except StopIteration:
+                return
 
     def to_dict(self, row: typing.List[str], concise: bool=False)->typing.Mapping[str, str]:
         """
@@ -702,8 +708,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         """
         while True:
-            # self.nextrow() will throw StopIteration when done.
-            yield self.to_dict(self.nextrow(), concise=concise) 
+            try:
+                yield self.to_dict(self.nextrow(), concise=concise)
+            except StopIteration:
+                return
 
     def to_kgtk_value_dict(self, row: typing.List[str], validate: bool=False, concise: bool=False)->typing.Mapping[str, KgtkValue]:
         """
@@ -738,9 +746,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         When validate is True, validate each KgtkValue object.
         """
         while True:
-            # self.nextrow() will throw StopIteration when done.
-            yield self.to_kgtk_value_dict(self.nextrow(), validate=validate, concise=concise) 
-
+            try:
+                yield self.to_kgtk_value_dict(self.nextrow(), validate=validate, concise=concise)
+            except StopIteration:
+                return
 
     def _ignore_invalid_values(self, values: typing.List[str], line: str)->bool:
         """Give a row of values, validate each value.  If we find one or more
@@ -893,6 +902,14 @@ def main():
     EdgeReader.add_arguments(parser)
     NodeReader.add_arguments(parser)
     KgtkValueOptions.add_arguments(parser)
+
+    parser.add_argument(       "--test", dest="test_method", help="The test to perform",
+                               choices=["rows", "concise-rows",
+                                        "kgtk-values", "concise-kgtk-values",
+                                        "dicts", "concise-dicts",
+                                        "kgtk-value-dicts", "concise-kgtk-value-dicts"],
+                               default="rows")
+    parser.add_argument(       "--test-valdate", dest="test_validate", help="Validate KgtkValue objects in test.", action='store_true')
     args = parser.parse_args()
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
@@ -929,8 +946,58 @@ def main():
 
     line_count: int = 0
     row: typing.List[str]
-    for row in kr:
-        line_count += 1
+    kgtk_values: typing.List[KgtkValue]
+    concise_kgtk_values: typing.List[typing.Optional[KgtkValue]]
+    dict_row: typing.Mapping[str, str]
+    kgtk_value_dict: typing.Mapping[str, str]
+    if args.test_method == "rows":
+        if args.verbose:
+            print("Testing iterating over rows.", flush=True)
+        for row in kr:
+            line_count += 1
+
+    elif args.test_method == "concise-rows":
+        if args.verbose:
+            print("Testing iterating over concise rows.", flush=True)
+        for row in kr.concise_rows():
+            line_count += 1
+
+    elif args.test_method == "kgtk-values":
+        if args.verbose:
+            print("Testing iterating over KgtkValue rows.", flush=True)
+        for kgtk_values in kr.kgtk_values(validate=args.test_validate):
+            line_count += 1
+
+    elif args.test_method == "concise-kgtk-values":
+        if args.verbose:
+            print("Testing iterating over concise KgtkValue rows.", flush=True)
+        for kgtk_values in kr.concise_kgtk_values(validate=args.test_validate):
+            line_count += 1
+            
+    elif args.test_method == "dicts":
+        if args.verbose:
+            print("Testing iterating over dicts.", flush=True)
+        for dict_row in kr.dicts():
+            line_count += 1
+            
+    elif args.test_method == "concise-dicts":
+        if args.verbose:
+            print("Testing iterating over concise dicts.", flush=True)
+        for dict_row in kr.dicts(concise=True):
+            line_count += 1
+            
+    elif args.test_method == "kgtk-value-dicts":
+        if args.verbose:
+            print("Testing iterating over KgtkValue dicts.", flush=True)
+        for kgtk_value_dict in kr.kgtk_value_dicts(validate=args.test_validate):
+            line_count += 1
+            
+    elif args.test_method == "concise-kgtk-value-dicts":
+        if args.verbose:
+            print("Testing iterating over concise KgtkValue dicts.", flush=True)
+        for kgtk_value_dict in kr.kgtk_value_dicts(concise=True, validate=args.test_validate):
+            line_count += 1
+            
     print("Read %d lines" % line_count, file=error_file, flush=True)
 
 if __name__ == "__main__":
