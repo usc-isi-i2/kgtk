@@ -58,6 +58,8 @@ class EdgeJoiner(KgtkFormat):
 
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=EdgeReader.ERROR_LIMIT_DEFAULT)
+
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -94,6 +96,8 @@ class EdgeJoiner(KgtkFormat):
         return result
         
     def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
+        if self.verbose:
+            print("Extracting the %s join key set" % who)
         kr: EdgeReader = EdgeReader.open_edge_file(file_path,
                                                    short_line_action=self.short_line_action,
                                                    long_line_action=self.long_line_action,
@@ -101,6 +105,7 @@ class EdgeJoiner(KgtkFormat):
                                                    truncate_long_lines=self.truncate_long_lines,
                                                    value_options = self.value_options,
                                                    gzip_in_parallel=self.gzip_in_parallel,
+                                                   error_limit=self.error_limit,
                                                    verbose=self.verbose,
                                                    very_verbose=self.very_verbose)
 
@@ -123,24 +128,30 @@ class EdgeJoiner(KgtkFormat):
             return self.single_column_key_set(kr, join_idx) # closes er file
         
 
-    def join_key_sets(self)->typing.Set[str]:
+    def join_key_sets(self)->typing.Optional[typing.Set[str]]:
         """
         Read the input edge files the first time, building the sets of left and right join values.
         """
-        left_join_key_set: typing.Set[str] = self.extract_join_key_set(self.left_file_path, "left")
-        right_join_key_set: typing.Set[str] = self.extract_join_key_set(self.right_file_path, "right")
-
-        joined_key_set: typing.Set[str]
         if self.left_join and self.right_join:
-            # TODO: This joins everything! We can shortut computing these sets.
-            joined_key_set = left_join_key_set.union(right_join_key_set)
+            if self.verbose:
+                print("Outer join, no need to compute join keys.")
+            return None
         elif self.left_join and not self.right_join:
-            joined_key_set = left_join_key_set.copy()
+            if self.verbose:
+                print("Computing the left join key set")
+            return self.extract_join_key_set(self.left_file_path, "left").copy()
+
         elif self.right_join and not self.left_join:
-            joined_key_set = right_join_key_set.copy()
+            if self.verbose:
+                print("Computing the right join key set")
+            return self.extract_join_key_set(self.right_file_path, "right").copy()
+
         else:
-            joined_key_set = left_join_key_set.intersection(right_join_key_set)
-        return joined_key_set
+            if self.verbose:
+                print("Computing the inner join key set")
+            left_join_key_set: typing.Set[str] = self.extract_join_key_set(self.left_file_path, "left")
+            right_join_key_set: typing.Set[str] = self.extract_join_key_set(self.right_file_path, "right")
+            return left_join_key_set.intersection(right_join_key_set)
     
     def merge_columns(self, left_kr: EdgeReader, right_kr: EdgeReader)->typing.Tuple[typing.List[str], typing.List[str]]:
         joined_column_names: typing.List[str] = [ ]
@@ -180,25 +191,33 @@ class EdgeJoiner(KgtkFormat):
         return (joined_column_names, right_column_names)
 
     def process(self):
-        joined_key_set: typing.Set[str] = self.join_key_sets()
+        joined_key_set: typing.Optional[typing.Set[str]] = self.join_key_sets()
 
+        if self.verbose:
+            print("Opening the left edge file: %s" % str(self.left_file_path))
         # Open the input files for the second time. This won't work with stdin.
         left_kr: EdgeReader =  EdgeReader.open_edge_file(self.left_file_path,
                                                          short_line_action=self.short_line_action,
                                                          long_line_action=self.long_line_action,
                                                          fill_short_lines=self.fill_short_lines,
                                                          truncate_long_lines=self.truncate_long_lines,
-                                                         value_options = self.value_options)
+                                                         value_options = self.value_options,
+                                                         error_limit=self.error_limit)
 
 
+        if self.verbose:
+            print("Opening the right edge file: %s" % str(self.right_file_path))
         right_kr: EdgeReader = EdgeReader.open_edge_file(self.right_file_path,
                                                          short_line_action=self.short_line_action,
                                                          long_line_action=self.long_line_action,
                                                          fill_short_lines=self.fill_short_lines,
                                                          truncate_long_lines=self.truncate_long_lines,
-                                                         value_options = self.value_options)
+                                                         value_options = self.value_options,
+                                                         error_limit=self.error_limit)
 
-        # Map the right column names for the join:
+
+        if self.verbose:
+            print("Mapping the column names for the join.")
         joined_column_names: typing.List[str]
         right_column_names: typing.List[str]
         (joined_column_names, right_column_names)  = self.merge_columns(left_kr, right_kr)
@@ -209,6 +228,8 @@ class EdgeJoiner(KgtkFormat):
             print("mapped right  columns: %s" % " ".join(right_column_names))
             print("       joined columns: %s" % " ".join(joined_column_names))
         
+        if self.verbose:
+            print("Opening the output edge file: %s" % str(self.output_path))
         ew: KgtkWriter = KgtkWriter.open(joined_column_names,
                                          self.output_path,
                                          require_all_columns=False,
@@ -218,21 +239,52 @@ class EdgeJoiner(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
+        output_data_lines: int = 0
+        left_data_lines_read: int = 0
+        left_data_lines_kept: int = 0
+        right_data_lines_read: int = 0
+        right_data_lines_kept: int = 0
+        
+        if self.verbose:
+            print("Processing the left input file")
         row: typing.list[str]
         left_node1_idx: int = self.node1_column_idx(left_kr, who="left")
         for row in left_kr:
-            left_key: str = self.build_join_key(left_kr, left_node1_idx, row)
-            if left_key in joined_key_set:
+            left_data_lines_read += 1
+            if joined_key_set is None:
                 ew.write(row)
+                output_data_lines += 1
+                left_data_lines_kept += 1
+            else:
+                left_key: str = self.build_join_key(left_kr, left_node1_idx, row)
+                if left_key in joined_key_set:
+                    ew.write(row)
+                    output_data_lines += 1
+                    left_data_lines_kept += 1
 
+        if self.verbose:
+            print("Processing the right input file")
         right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_column_names)
         right_node1_idx: int = self.node1_column_idx(right_kr, who="right")
         for row in right_kr:
-            right_key: str = self.build_join_key(right_kr, right_node1_idx, row)
-            if right_key in joined_key_set:
+            right_data_lines_read += 1
+            if joined_key_set is None:
                 ew.write(row, shuffle_list=right_shuffle_list)
+                output_data_lines += 1
+                right_data_lines_kept += 1
+            else:
+                right_key: str = self.build_join_key(right_kr, right_node1_idx, row)
+                if right_key in joined_key_set:
+                    ew.write(row, shuffle_list=right_shuffle_list)
+                    output_data_lines += 1
+                    right_data_lines_kept += 1
             
         ew.close()
+        if self.verbose:
+            print("The join is complete")
+            print("%d left input data lines read, %d kept" % (left_data_lines_read, left_data_lines_kept))
+            print("%d right input data lines read, %d kept" % (right_data_lines_read, right_data_lines_kept))
+            print("%d data lines written." % output_data_lines)
         
 def main():
     """
@@ -241,6 +293,9 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="left_file_path", help="The left KGTK file to join", type=Path)
     parser.add_argument(dest="right_file_path", help="The right KGTK file to join", type=Path)
+    parser.add_argument(      "--error-limit", dest="error_limit",
+                              help="The maximum number of errors to report before failing", type=int, default=EdgeReader.ERROR_LIMIT_DEFAULT)
+
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=EdgeJoiner.FIELD_SEPARATOR_DEFAULT)
     parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
                               help="Fill missing trailing columns in short lines with empty values.", action='store_true')
@@ -288,6 +343,7 @@ def main():
                                 truncate_long_lines=args.truncate_long_lines,
                                 value_options=value_options,
                                 gzip_in_parallel=args.gzip_in_parallel,
+                                error_limit=args.error_limit,
                                 verbose=args.verbose,
                                 very_verbose=args.very_verbose)
 
