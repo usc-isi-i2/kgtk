@@ -13,7 +13,7 @@ kgtk text_embedding \
     --model/ -m <list_of_string> \  # optional, default is `bert-base-wikipedia-sections-mean-tokens`
     --label-properties <list_of_string> \ # optional, default is ["label"]
     --description-properties <list_of_string> \ # optional, default is ["description"]
-    --isa-properties <list_of_string> \ # optional, default is ["P279"]
+    --isa-properties <list_of_string> \ # optional, default is ["P31"]
     --has-properties <list_of_string> \ # optional, default is ["all"]
     --property-labels-file/ -p <string> \ #optional
     --output-format <string> # optional, default is `kgtk_format`
@@ -113,15 +113,16 @@ If not given, the program will try to use the default edge(property) name as `de
 
 ##### --isa-properties
 an ordered list of properties. When a property contains multiple values, the first value will selected. When a property value is not a literal, output the label of the property value. When multiple isa-properties are present, the values are output comma-separated.
-If not given, the program will try to use the default edge(property) name as `P279`. Those words in properties will be for vector embedding later.
+If not given, the program will try to use the default edge(property) name as `P31`. Those words in properties will be for vector embedding later.
 
 ##### --has-properties
 an ordered list of properties. The output consists of a comma-separated text with the labels of the properties, using and for the last item, e.g., “country, place of birth, religion and canonization status” .
 If not given, the program will use all of the found properties found for the node. Those words in properties will be for vector embedding later.
 
 ##### --property-value
-If the properties in `has-properties` is a property which need to check for details, specify the edge name here and the system will go further to get the property values of this node instead of use the name of this edge. Default is empty `[]`
-For example: For wikidata node `Q41421` (Michael Jordan) `P544` (member of sports team), if specified here, the generated sentence will be "Michael Jordan has Chicago Bulls" instead of "Michael Jordan has member of sports team". 
+If the properties in `has-properties` is a property which need to check for details, specify the edge name here and the system will go further to get the property values of this node instead of use the name of this edge (using template `{property} {value}`) instead of `{property}` to represent this has-property). Default is empty `[]`
+
+For example: For wikidata node `Q41421` (Michael Jordan) `P544` (member of sports team), if specified here, the generated sentence will be `Michael Jordan, ..., has member of sports team Chicago Bulls` instead of `Michael Jordan,..., has member of sports team`. 
 
 ##### --out-properties
 the property used to record the embedding. If not given, the program will use the edge(property) name as `text_embedding`.
@@ -129,9 +130,10 @@ This option is only available when output format is set to `kgtk_format`.
 
 ##### --property-labels-file
 This parameter only works for KGTK format input. For some condition, KGTK format's value is just a reference to another P node. In this condition, user need to specify another label file for KGTK to read.
+
 For example, if run without the labels file on the wikidata dump file, we will get some generated sentence like:
-`WALS genus code is a Q19847637, Q20824104, and has P1466 and P1468` (sentence generated for P1467). After add the labels file, we will get the correct sentence as: `WALS genus code is a Wikidata property for an identifier, Wikidata property for items about languages, and has WALS family code and WALS lect code`.
-This property labels file should also be a KGTK format file. One example file is [here](https://drive.google.com/open?id=1F7pb4LEx5MT1YTqycUCQcs8H2OWmBbB6 "here") (accessed only available for KGTK developers).
+`WALS genus code is a Q19847637, Q20824104, and has P1855 and P2302` (sentence generated for P1467). After add the labels file, we will get the correct sentence as: `WALS genus code is a Wikidata property for an identifier, Wikidata property for items about languages, and has WALS family code and WALS lect code`.
+This property labels file should also be a KGTK format file. One example file is [here](https://drive.google.com/open?id=1F7pb4LEx5MT1YTqycUCQcs8H2OWmBbB6 "here") (accessable only for KGTK developers).
 
 
 #### Dimensional Reduction Algorithm
