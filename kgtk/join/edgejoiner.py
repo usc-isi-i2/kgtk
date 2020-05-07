@@ -1,5 +1,7 @@
 """
-Join two KTKG edge files.  The output file is an edge file.
+Join two KTKG edge files or two KGTK node files.  The output file is an edge file or a node file.
+
+TODO: rename this to KgtkJoiner.
 
 Note: This implementation builds im-memory sets of all the key values in
 each input file.
@@ -46,6 +48,7 @@ class EdgeJoiner(KgtkFormat):
     prefix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
+    # TODO: USE THE COLUMN SEPARATOR !!!!!
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
 
     # Ignore records with too many or too few fields?
@@ -446,4 +449,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-a
+

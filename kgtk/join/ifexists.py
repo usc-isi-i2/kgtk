@@ -54,6 +54,10 @@ class IfExists(KgtkFormat):
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # TODO: find a working validator
+    # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
+    value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
+
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -119,23 +123,39 @@ class IfExists(KgtkFormat):
 
     def process(self):
         # Open the input files once.
+        if self.verbose:
+            print("Opening the left input file: %s" % self.left_file_path, flush=True)
         left_kr: KgtkReader =  KgtkReader.open(self.left_file_path,
                                                short_line_action=self.short_line_action,
                                                long_line_action=self.long_line_action,
                                                fill_short_lines=self.fill_short_lines,
-                                               truncate_long_lines=self.truncate_long_lines)
+                                               truncate_long_lines=self.truncate_long_lines,
+                                               value_options = self.value_options)
 
+        if self.verbose:
+            print("Opening the right input file: %s" % self.right_file_path, flush=True)
         right_kr: KgtkReader = KgtkReader.open(self.right_file_path,
                                                short_line_action=self.short_line_action,
                                                long_line_action=self.long_line_action,
                                                fill_short_lines=self.fill_short_lines,
-                                               truncate_long_lines=self.truncate_long_lines)
+                                               truncate_long_lines=self.truncate_long_lines,
+                                               value_options = self.value_options)
 
         left_key_columns: typing.List[int] = self.get_key_columns(self.left_keys, left_kr, right_kr, "left")
         right_key_columns: typing.List[int] = self.get_key_columns(self.right_keys, right_kr, left_kr, "right")
 
-        key_set: typint.Set[str] = self.extract_key_set(right_kr, "right", right_key_columns)
+        if len(left_key_columns) != len(right_key_columns):
+            print("There are %d left key columns but %d right key columns.  Exiting." % (len(left_key_columns), len(right_key_columns)), flush=True)
+            return
 
+        if self.verbose:
+            print("Building the input key set from %s" % self.right_file_path, flush=True)
+        key_set: typint.Set[str] = self.extract_key_set(right_kr, "right", right_key_columns)
+        if self.verbose:
+            print("There are %d entries in the key set." % len(key_set))
+
+        if self.verbose:
+            print("Opening the output file: %s" % self.output_path, flush=True)
         ew: KgtkWriter = KgtkWriter.open(left_kr.column_names,
                                          self.output_path,
                                          require_all_columns=False,
@@ -145,12 +165,22 @@ class IfExists(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
+        if self.verbose:
+            print("Filtering records from %s" % self.left_file_path, flush=True)
+        input_line_count: int = 0
+        output_line_count: int = 0;
+
         row: typing.list[str]
         for row in left_kr:
+            input_line_count += 1
             left_key: str = self.build_key(row, left_key_columns)
             if left_key in key_set:
                 ew.write(line)
+                output_line_count += 1
         ew.close()
+
+        if self.verbose:
+            print("Read %d records, write %d records." % (input_line_count, output_line_count))
         
 def main():
     """
@@ -161,6 +191,9 @@ def main():
     parser.add_argument(dest="left_file_path", help="The left KGTK file to join", type=Path)
 
     parser.add_argument(dest="right_file_path", help="The right KGTK file to join", type=Path)
+
+    parser.add_argument(      "--error-limit", dest="error_limit",
+                              help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
 
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
 
@@ -190,7 +223,12 @@ def main():
 
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
 
+    KgtkValueOptions.add_arguments(parser)
+
     args = parser.parse_args()
+
+    # Build the value parsing option structure.
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     ie: IfExists = IfExists(left_file_path=args.left_file_path,
                             right_file_path=args.right_file_path,
@@ -202,6 +240,7 @@ def main():
                             long_line_action=args.long_line_action,
                             fill_short_lines=args.fill_short_lines,
                             truncate_long_lines=args.truncate_long_lines,
+                            value_options=value_options,
                             gzip_in_parallel=args.gzip_in_parallel,
                             verbose=args.verbose,
                             very_verbose=args.very_verbose)
