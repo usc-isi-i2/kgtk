@@ -411,6 +411,9 @@ class EmbeddingVector:
                 current_process_node_id = None
 
                 if self._parallel_count > 1:
+                    # need to set with spawn mode to initialize with multiple cuda in multiprocess
+                    from multiprocessing import set_start_method
+                    set_start_method('spawn')
                     pp = ParallelProcessor(self._parallel_count, self._process_one, collector=self._multiprocess_collector)
                     pp.start()
 
@@ -428,9 +431,9 @@ class EmbeddingVector:
                         node_value = node_value[:node_value.index("@")]
 
                     # remove extra double quote " and single quote '
-                    if node_value[0] == '"' and node_value[-1] == '"':
+                    while node_value[0] == '"' and node_value[-1] == '"':
                         node_value = node_value[1:-1]
-                    if node_value[0] == "'" and node_value[-1] == "'":
+                    while node_value[0] == "'" and node_value[-1] == "'":
                         node_value = node_value[1:-1]
 
                     if current_process_node_id != node_id:
@@ -458,12 +461,17 @@ class EmbeddingVector:
                     if node_property in properties_reversed:
                         roles = properties_reversed[node_property]
                         if "property_values" in roles:
+                            # for property values part, changed to be "{property} {value}"
+                            node_value = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
+                        else:
                             node_value = self.get_real_label_name(node_value)
                         for each_role in roles:
-                            if each_role != "property_values":
+                            if each_role == "property_values" and "has_properties" not in roles:
+                                each_node_attributes["has_properties"].append(node_value)
+                            else:
                                 each_node_attributes[each_role].append(node_value)
-                    if add_all_properties and each_line[column_references["value"]][0] == "P":
-                        each_node_attributes["has_properties"].append(self.get_real_label_name(node_value))
+                    elif add_all_properties:  # add remained properties if need all properties
+                        each_node_attributes["has_properties"].append(self.get_real_label_name(node_property))
 
                 # close multiprocess pool
                 if self._parallel_count > 1:
