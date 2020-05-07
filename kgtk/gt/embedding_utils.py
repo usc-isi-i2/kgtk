@@ -9,13 +9,13 @@ import math
 import pickle
 import os
 import time
+import argparse
 
 from pyrallel import ParallelProcessor
-from sklearn.manifold import TSNE  # type: ignore
+from collections import defaultdict, OrderedDict
 from tqdm import tqdm  # type: ignore
 from ast import literal_eval
 from sentence_transformers import SentenceTransformer, SentencesDataset, LoggingHandler, losses, models  # type: ignore
-from collections import defaultdict
 from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
 from kgtk.exceptions import KGTKException
 
@@ -23,7 +23,7 @@ from kgtk.exceptions import KGTKException
 class EmbeddingVector:
     def __init__(self, model_name=None, query_server=None, cache_config: dict = None, parallel_count=1):
         self._logger = logging.getLogger(__name__)
-        if model_name is None:
+        if not model_name:
             self.model_name = 'bert-base-nli-mean-tokens'
         # xlnet need to be trained before using, we can't use this for now
         # elif model_name == "xlnet-base-cased":
@@ -50,22 +50,20 @@ class EmbeddingVector:
             try:
                 _ = self.redis_server.get("foo")
                 self._logger.debug("Cache server {}:{} connected!".format(host, port))
-            except:
+            except Exception as e:
                 self._logger.error("Cache server {}:{} is not able to be connected! Will not use cache!".format(host, port))
+                self._logger.debug(e, exc_info=True)
                 self.redis_server = None
         else:
             self.redis_server = None
         self._parallel_count = int(parallel_count)
         self._logger.debug("Running with {} processes.".format(parallel_count))
-        self.qnodes_descriptions = dict()
         self.vectors_map = dict()
-        self.property_labels_dict = dict()
-        self.q_node_to_label = dict()
-        self.node_labels = dict()
+        self.node_labels = dict()  # this is used to store {node:label} pairs
+        self.candidates = defaultdict(dict)  # this is used to store all node {node:dict()} information
         self.vectors_2D = None
         self.vector_dump_file = None
         self.gt_nodes = set()
-        self.candidates = defaultdict(dict)
         self.metadata = []
         self.gt_indexes = set()
         self.input_format = ""
@@ -115,20 +113,30 @@ class EmbeddingVector:
             raise KGTKException(error_message)
 
     def _get_labels(self, nodes: typing.List[str]):
-        query_nodes = " ".join(["wd:{}".format(each) for each in nodes])
-        query = """
-        select ?item ?nodeLabel
-        where { 
-          values ?item {""" + query_nodes + """}
-          ?item rdfs:label ?nodeLabel.
-          FILTER(LANG(?nodeLabel) = "en").
-        }
-        """
-        results2 = self.send_sparql_query(query)
-        for each_res in results2:
-            node_id = each_res['item']['value'].split("/")[-1]
-            value = each_res['nodeLabel']['value']
-            self.node_labels[node_id] = value
+        nodes_need_query = set()
+        for each in nodes:
+            if each not in self.node_labels:
+                nodes_need_query.add(each)
+        if nodes_need_query:
+            query_nodes = " ".join(["wd:{}".format(each) for each in nodes_need_query])
+            query = """
+            select ?item ?nodeLabel
+            where { 
+              values ?item {""" + query_nodes + """}
+              ?item rdfs:label ?nodeLabel.
+              FILTER(LANG(?nodeLabel) = "en").
+            }
+            """
+            results2 = self.send_sparql_query(query)
+            for each_res in results2:
+                node_id = each_res['item']['value'].split("/")[-1]
+                nodes_need_query.remove(node_id)
+                value = each_res['nodeLabel']['value']
+                self.node_labels[node_id] = value
+
+            # for those nodes we can't find label, just add this to dict to prevent query again
+            for each_node in nodes_need_query:
+                self.node_labels[each_node] = each_node
 
     def _get_labels_and_descriptions(self, query_qnodes: str, need_find_label: bool, need_find_description: bool):
         query_body = """
@@ -154,83 +162,89 @@ class EmbeddingVector:
             if need_find_description:
                 self.candidates[each_node]["description_properties"] = [description]
 
-    def _get_property_values(self, query_qnodes, query_part_names, query_part_properties):
+    def _get_property_values(self, query_qnodes: str, properties: dict, properties_reversed: dict):
+        """
+        run sparql query to get corresponding property values of given q nodes
+        """
         used_p_node_ids = set()
-        for part_name, part in zip(query_part_names, query_part_properties):
+        all_needed_properties = ""
+        for part_name, part in properties.items():
             if part_name == "isa_properties":
                 self._get_labels(part)
-            for i, each in enumerate(part):
-                if each not in {"label", "description", "all"}:
-                    query_body2 = """
-                    select ?item ?eachPropertyLabel
-                    where {{
-                      values ?item {{{all_nodes}}}
-                    ?item wdt:{qnode} ?eachProperty.
-                      SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
-                    }}
-                    """.format(all_nodes=query_qnodes, qnode=each)
-                    results2 = self.send_sparql_query(query_body2)
 
-                    for each_res in results2:
-                        node_id = each_res['item']['value'].split("/")[-1]
-                        value = each_res['eachPropertyLabel']['value']
-                        if part_name == "isa_properties" and self.node_labels[each].endswith("of"):
-                            value = self.node_labels[each] + "||" + value
-                        used_p_node_ids.add(node_id)
-                        if part_name in self.candidates[node_id]:
-                            self.candidates[node_id][part_name].add(value)
-                        else:
-                            self.candidates[node_id][part_name] = {value}
+        for each_node, role in properties_reversed.items():
+            if role != {"has_properties"} and each_node not in {"label", "description", "all"}:
+                all_needed_properties += "wdt:{} ".format(each_node)
+
+        query_body = """
+        select ?item ?properties ?eachPropertyValueLabel
+        where {{
+          values ?item {{{all_nodes}}}
+          values ?properties {{{properties}}}
+          ?item ?properties ?eachPropertyValue.
+          SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }}
+        }}
+        """.format(all_nodes=query_qnodes, properties=all_needed_properties)
+        results = self.send_sparql_query(query_body)
+
+        for each_res in results:
+            node_id = each_res['item']['value'].split("/")[-1]
+            node_property = each_res['properties']['value'].split("/")[-1]
+            roles = properties_reversed[node_property]
+            value = each_res['eachPropertyValueLabel']['value']
+            if node_property in properties["isa_properties"] and self.node_labels[node_property].endswith("of"):
+                value = self.node_labels[node_property] + "||" + value
+            used_p_node_ids.add(node_property)
+            for each_role in roles:
+                if each_role != "property_values":
+                    if each_role in self.candidates[node_id]:
+                        self.candidates[node_id][each_role].add(value)
+                    else:
+                        self.candidates[node_id][each_role] = {value}
         return used_p_node_ids
 
-    def _get_all_properties(self, query_qnodes, used_p_node_ids, properties_list):
-        has_properties_set = set(properties_list[3])
+    def _get_all_properties(self, query_qnodes: str, used_p_node_ids: set, properties: dict):
+        """
+        run sparql query to get all properties of given q nodes
+        """
+        has_properties_set = set(properties["has_properties"])
         query_body3 = """
-                            select DISTINCT ?item ?p_entity ?p_entityLabel
-                            where {
-                              values ?item {""" + query_qnodes + """}
-                              ?item ?p ?o.
-                              FILTER regex(str(?p), "^http://www.wikidata.org/prop/P", "i")
-                              BIND (IRI(REPLACE(STR(?p), "http://www.wikidata.org/prop", "http://www.wikidata.org/entity")) AS ?p_entity) .
-                              SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-                            }
-                        """
+            select DISTINCT ?item ?p_entity ?p_entityLabel
+            where {
+              values ?item {""" + query_qnodes + """}
+              ?item ?p ?o.
+              FILTER regex(str(?p), "^http://www.wikidata.org/prop/P", "i")
+              BIND (IRI(REPLACE(STR(?p), "http://www.wikidata.org/prop", "http://www.wikidata.org/entity")) AS ?p_entity) .
+              SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+            }
+            """
         results3 = self.send_sparql_query(query_body3)
         for each in results3:
             node_name = each['item']['value'].split("/")[-1]
             p_node_id = each['p_entity']['value'].split("/")[-1]
             p_node_label = each['p_entityLabel']['value']
             if p_node_id not in used_p_node_ids:
-                if properties_list[3] == ["all"] or p_node_id in has_properties_set:
+                if has_properties_set == {"all"} or p_node_id in has_properties_set:
                     if "has_properties" in self.candidates[node_name]:
                         self.candidates[node_name]["has_properties"].add(p_node_label)
                     else:
                         self.candidates[node_name]["has_properties"] = {p_node_label}
 
-    def get_item_description(self, qnodes: typing.List[str] = None, target_properties: dict = {}):
+    def get_item_description(self, target_properties: dict, properties_reversed: dict,
+                             qnodes: typing.Union[set, typing.List[str]]):
         """
             use sparql query to get the descriptions of given Q nodes
         """
-        if qnodes is None:
-            qnodes = self.candidates
-        if "all" in target_properties:
-            find_all_properties = True
-        else:
-            find_all_properties = False
-        properties_list = [[] for _ in range(4)]
-        names = ["labels", "descriptions", "isa_properties", "has_properties"]
-        for k, v in target_properties.items():
-            if v == "label_properties":
-                properties_list[0].append(k)
-            elif v == "description_properties":
-                properties_list[1].append(k)
-            elif v == "isa_properties":
-                properties_list[2].append(k)
-            elif v == "has_properties":
-                properties_list[3].append(k)
+        # find_all_properties = False
+        if "all" in properties_reversed:
+            # find_all_properties = True
+            _ = properties_reversed.pop("all")
+        self._logger.info("Need to find all properties.")
 
         hash_generator = hashlib.md5()
-        hash_generator.update(str(properties_list).encode('utf-8'))
+        # sort to ensure the hash key same
+        target_properties = OrderedDict(sorted(target_properties.items()))
+        hash_generator.update(str(target_properties).encode('utf-8'))
         properties_list_hash = "||" + str(hash_generator.hexdigest())
 
         sentences_cache_dict = {}
@@ -240,7 +254,7 @@ class EmbeddingVector:
                 cache_res = self.redis_server.get(cache_key)
                 self._logger.debug("Cached key is: {}".format(cache_key))
                 if cache_res is not None:
-                    self._logger.debug("Cache hitted {}".format(cache_key))
+                    self._logger.debug("Cache hit {}".format(cache_key))
                     sentences_cache_dict[each_node] = cache_res.decode("utf-8")
 
         self._logger.debug("Cached for those nodes {} / {}".format(len(sentences_cache_dict), len(qnodes)))
@@ -254,31 +268,22 @@ class EmbeddingVector:
 
         # only need to do query when we still have remained nodes
         if len(qnodes) > 0:
-            need_find_label = "label" in properties_list[0]
-            need_find_description = "description" in properties_list[1]
             query_qnodes = ""
             for each in qnodes:
                 query_qnodes += "wd:{} ".format(each)
 
+            need_find_label = "label" in target_properties["label_properties"]
+            need_find_description = "description" in target_properties["description_properties"]
             # this is used to get corresponding labels / descriptions
             if need_find_label or need_find_description:
                 self._get_labels_and_descriptions(query_qnodes, need_find_label, need_find_description)
 
-            if len(properties_list[3]) > len(qnodes):
-                # in this condition, we have too many properties need to be queried, it will waste time
-                # query to get all properties then filtering would save more times
-                find_all_properties = True
-                query_part2_names = names[:3]
-                query_part2_properties = properties_list[:3]
-            else:
-                query_part2_names = names
-                query_part2_properties = properties_list
             # this is used to get corresponding labels of properties values
-            used_p_node_ids = self._get_property_values(query_qnodes, query_part2_names, query_part2_properties)
+            used_p_node_ids = self._get_property_values(query_qnodes, target_properties, properties_reversed)
 
             # if need get all properties, we need to run extra query
-            if find_all_properties:
-                self._get_all_properties(query_qnodes, used_p_node_ids, properties_list)
+            # if find_all_properties:
+            self._get_all_properties(query_qnodes, used_p_node_ids, target_properties)
 
         for each_node_id in qnodes:
             each_sentence = self.attribute_to_sentence(self.candidates[each_node_id], each_node_id)
@@ -294,14 +299,14 @@ class EmbeddingVector:
 
     def _process_one(self, args):
         """
-        one process for multiprocess calling
-        :param args:
-        :return:
+        one process for multiprocess calling, should not be used for any other function
+        :param args: args to receive from main process
+        :return: corresponding node vector and attribute
         """
         node_id = args["node_id"]
         each_node_attributes = args["attribute"]
-        concated_sentence = self.attribute_to_sentence(each_node_attributes, node_id)
-        vectors = self.get_sentences_embedding([concated_sentence], [node_id])[0]
+        concat_sentence = self.attribute_to_sentence(each_node_attributes, node_id)
+        vectors = self.get_sentences_embedding([concat_sentence], [node_id])[0]
         return {"v_" + node_id: vectors, "c_" + node_id: each_node_attributes}
 
     def _multiprocess_collector(self, data):
@@ -313,14 +318,19 @@ class EmbeddingVector:
                 k = k.replace("c_", "")
                 self.candidates[k] = v
 
-    def read_input(self, file_path: str, skip_nodes_set: set = None,
-                   input_format: str = "kgtk_format", target_properties: dict = {},
-                   property_labels_dict: dict = {}, black_list_set: set = set()
+    def read_input(self, file_path: str, target_properties: dict, property_labels_dict: dict,
+                   skip_nodes_set: set = None, input_format: str = "kgtk_format",
+                   black_list_set: typing.Optional[set] = None
                    ):
         """
             load the input candidates files
         """
-        self.property_labels_dict = property_labels_dict
+        self.node_labels.update(property_labels_dict)
+        # reverse sentence property to be {property : role)
+        properties_reversed = defaultdict(set)
+        for k, v in target_properties.items():
+            for each_property in v:
+                properties_reversed[each_property].add(k)
 
         if input_format == "test_format":
             self.input_format = input_format
@@ -335,6 +345,7 @@ class EmbeddingVector:
                 raise KGTKException("Can't find ground truth id column! It should either named as `GT_kg_id` or `kg_id`")
 
             for _, each in input_df.iterrows():
+                temp = []
                 if isinstance(each["candidates"], str):
                     temp = str(each['candidates']).split("|")
                 elif each['candidates'] is np.nan or math.isnan(each['candidates']):
@@ -355,20 +366,20 @@ class EmbeddingVector:
                 temp.extend(gt_nodes)
 
                 for each_q in temp:
-                    self.q_node_to_label[each_q] = label
+                    self.node_labels[each_q] = label
                     if skip_nodes_set is not None and each_q in skip_nodes_set:
                         to_remove_q.add(each_q)
                 temp = set(temp) - to_remove_q
                 count += len(temp)
                 self.gt_nodes.add(each[gt_column_id])
-                self.get_item_description(temp, target_properties)
+                self.get_item_description(target_properties, properties_reversed, temp)
 
             self._logger.info("Totally {} rows with {} candidates loaded.".format(str(len(gt)), str(count)))
 
         elif input_format == "kgtk_format":
             # assume the input edge file is sorted
-            if "all" in target_properties:
-                _ = target_properties.pop("all")
+            if "all" in properties_reversed:
+                _ = properties_reversed.pop("all")
                 add_all_properties = True
             else:
                 add_all_properties = False
@@ -406,11 +417,14 @@ class EmbeddingVector:
                 for each_line in f:
                     each_line = each_line.replace("\n", "").split("\t")
                     node_id = each_line[column_references["node"]]
+                    # skip nodes id in black list
+                    if black_list_set and node_id in black_list_set:
+                        continue
+
                     node_property = each_line[column_references["property"]]
                     node_value = each_line[column_references["value"]]
                     # remove @ mark
                     if "@" in node_value and node_value[0] != "@":
-                        node_value_org = node_value
                         node_value = node_value[:node_value.index("@")]
 
                     # remove extra double quote " and single quote '
@@ -423,7 +437,7 @@ class EmbeddingVector:
                         if current_process_node_id is None:
                             current_process_node_id = node_id
                         else:
-                            # if we get to next id, concate all properties into one sentence to represent the Q node
+                            # if we get to next id, concat all properties into one sentence to represent the Q node
 
                             # for multi process
                             if self._parallel_count > 1:
@@ -431,35 +445,40 @@ class EmbeddingVector:
                                 pp.add_task(each_arg)
                             # for single process
                             else:
-                                concated_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
-                                each_node_attributes["sentence"] = concated_sentence
+                                concat_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
+                                each_node_attributes["sentence"] = concat_sentence
                                 self.candidates[current_process_node_id] = each_node_attributes
 
-                            # after write down finish, we can cleaer and start parsing next one
+                            # after write down finish, we can clear and start parsing next one
                             each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
                                                     "description_properties": []}
                             # update to new id
                             current_process_node_id = node_id
 
-                    if node_property in target_properties:
-                        each_node_attributes[target_properties[node_property]].append(node_value)
+                    if node_property in properties_reversed:
+                        roles = properties_reversed[node_property]
+                        if "property_values" in roles:
+                            node_value = self.get_real_label_name(node_value)
+                        for each_role in roles:
+                            if each_role != "property_values":
+                                each_node_attributes[each_role].append(node_value)
                     if add_all_properties and each_line[column_references["value"]][0] == "P":
-                        each_node_attributes["has_properties"].append(node_value)
+                        each_node_attributes["has_properties"].append(self.get_real_label_name(node_value))
 
                 # close multiprocess pool
                 if self._parallel_count > 1:
                     pp.task_done()
                     pp.join()
         else:
-            raise KGTKException("Unkonwn input format {}".format(input_format))
+            raise KGTKException("Unknown input format {}".format(input_format))
 
         self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
         self.vector_dump_file = "dump_vectors_{}_{}.pkl".format(file_path[:file_path.rfind(".")], self.model_name)
         # self._logger.debug("The cache file name will be {}".format(self.vector_dump_file))
 
     def get_real_label_name(self, node):
-        if node in self.property_labels_dict:
-            return self.property_labels_dict[node]
+        if node in self.node_labels:
+            return self.node_labels[node]
         else:
             return node
 
@@ -489,6 +508,7 @@ class EmbeddingVector:
                 concated_sentence += " is a "
             elif concated_sentence == "":
                 concated_sentence += "It is a "
+            # remove last ", "
             concated_sentence += temp[:-2]
         if "has_properties" in attribute_dict and len(attribute_dict["has_properties"]) > 0:
             temp = [self.get_real_label_name(each) for each in attribute_dict["has_properties"]]
@@ -580,9 +600,9 @@ class EmbeddingVector:
                     else:
                         print(str(each_dimension) + "\n", end="")
 
-    def plot_result(self, output_properties={}, input_format="kgtk_format",
+    def plot_result(self, output_properties: dict, input_format="kgtk_format",
                     output_uri: str = "", output_format="kgtk_format",
-                    run_TSNE=True
+                    dimensional_reduction="none", dimension_val=2
                     ):
         """
             transfer the vectors to lower dimension so that we can plot
@@ -590,12 +610,23 @@ class EmbeddingVector:
         """
         self.vectors_map = {k: v for k, v in sorted(self.vectors_map.items(), key=lambda item: item[0], reverse=True)}
         vectors = list(self.vectors_map.values())
-        # use TSNE to reduce dimension
-        if run_TSNE:
-            self._logger.warning("Start running TSNE to reduce dimension. It will take a long time.")
+        # reduce dimension if needed
+        if dimensional_reduction.lower() == "tsne":
+            self._logger.warning("Start running TSNE to reduce dimension. It will take some time.")
             start = time.time()
-            self.vectors_2D = TSNE(n_components=2, random_state=0).fit_transform(vectors)
+            from sklearn.manifold import TSNE  # type: ignore
+            self.vectors_2D = TSNE(n_components=int(dimension_val), random_state=0).fit_transform(vectors)
             self._logger.info("Totally used {} seconds.".format(time.time() - start))
+        elif dimensional_reduction.lower() == "pca":
+            self._logger.warning("Start running PCA to reduce dimension. It will take some time.")
+            start = time.time()
+            from sklearn.decomposition import PCA  # type: ignore
+            self.vectors_2D = PCA(n_components=int(dimension_val)).fit_transform(vectors)
+            self._logger.info("Totally used {} seconds.".format(time.time() - start))
+        elif dimensional_reduction.lower() == "none":
+            self._logger.info("Not run dimensional reduction algorithm.")
+        else:
+            raise KGTKException("Unknown or unsupport dimensional reduction type: {}".format(dimensional_reduction))
 
         if input_format == "test_format":
             gt_indexes = set()
@@ -605,7 +636,7 @@ class EmbeddingVector:
 
             self.metadata.append("Q_nodes\tType\tLabel\tDescription")
             for i, each in enumerate(self.vectors_map.keys()):
-                label = self.q_node_to_label[each]
+                label = self.node_labels[each]
                 description = self.candidates[each]["sentence"]
                 if i in gt_indexes:
                     self.metadata.append("{}\tground_truth_node\t{}\t{}".format(each, label, description))
@@ -614,7 +645,7 @@ class EmbeddingVector:
             self.gt_indexes = gt_indexes
 
         elif input_format == "kgtk_format":
-            if len(output_properties.get("metatada_properties", [])) == 0:
+            if len(output_properties.get("metadata_properties", [])) == 0:
                 for k, v in self.candidates.items():
                     label = v.get("label_properties", "")
                     if len(label) > 0 and isinstance(label, list):
@@ -624,7 +655,7 @@ class EmbeddingVector:
                         description = description[0]
                     self.metadata.append("{}\t\t{}\t{}".format(k, label, description))
             else:
-                required_properties = output_properties["metatada_properties"]
+                required_properties = output_properties["metadata_properties"]
                 self.metadata.append("node\t" + "\t".join(required_properties))
                 for k, v in self.candidates.items():
                     each_metadata = k + "\t"
@@ -633,7 +664,7 @@ class EmbeddingVector:
                     self.metadata.append(each_metadata)
 
         metadata_output_path = os.path.join(output_uri, self.vector_dump_file.split("/")[-1])
-        if run_TSNE:
+        if self.vectors_2D is not None:
             self.print_vector(self.vectors_2D, output_properties.get("output_properties"), output_format)
         else:
             self.print_vector(vectors, output_properties.get("output_properties"), output_format)
@@ -674,3 +705,14 @@ class EmbeddingVector:
             dist += (v1 - v2) ** 2
         dist = dist ** 0.5
         return dist
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')

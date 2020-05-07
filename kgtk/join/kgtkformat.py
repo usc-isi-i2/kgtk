@@ -20,11 +20,18 @@ class KgtkFormat:
     # There is only one required column in a node file:
     ID_COLUMN_NAMES: typing.List[str] = ["id", "ID"]
 
-    class DataTypes(Enum):
-        NUMBER = 0
-        STRING = 1
-        STRUCTURED_LITERAL = 2
-        SYMBOL = 3
+    class DataType(Enum):
+        EMPTY = 0
+        LIST = 1
+        NUMBER = 2
+        QUANTITY = 3
+        STRING = 4
+        LANGUAGE_QUALIFIED_STRING = 5
+        LOCATION_COORDINATES = 6
+        DATE_AND_TIMES = 7
+        EXTENSION = 8
+        BOOLEAN = 9
+        SYMBOL = 10
 
     TRUE_SYMBOL: str = "True"
     FALSE_SYMBOL: str = "False"

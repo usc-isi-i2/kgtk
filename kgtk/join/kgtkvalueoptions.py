@@ -16,6 +16,7 @@ class KgtkValueOptions:
     # Allow month 00 or day 00 in dates?  This isn't really allowed by ISO
     # 8601, but appears in wikidata.
     allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    repair_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # When allow_lax_strings is true, strings will be checked to see if they
     # start and end with double quote ("), but we won't check if internal
@@ -31,9 +32,29 @@ class KgtkValueOptions:
 
     # If this list gets long, we may want to turn it into a map to make lookup
     # more efficient.
-    additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                                                            iterable_validator=attr.validators.instance_of(list))),
-                                                                           default=None)
+    #
+    # TODO: fix this validation
+    # additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+    #                                                                                              iterable_validator=attr.validators.instance_of(list)))),
+    additional_language_codes: typing.Optional[typing.List[str]] = attr.ib(default=None)
+
+    escape_list_separators: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Minimum and maximum year range in dates.
+    MINIMUM_VALID_YEAR: int = 1583 # Per ISO 8601, years before this one require special agreement.
+    minimum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MINIMUM_VALID_YEAR)
+    MAXIMUM_VALID_YEAR: int = 2100 # Arbitrarily chosen.
+    maximum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MAXIMUM_VALID_YEAR)
+
+    MINIMUM_VALID_LAT: float = -90.
+    minimum_valid_lat: float = attr.ib(validator=attr.validators.instance_of(float), default=MINIMUM_VALID_LAT)
+    MAXIMUM_VALID_LAT: float = 90.
+    maximum_valid_lat: float = attr.ib(validator=attr.validators.instance_of(float), default=MAXIMUM_VALID_LAT)
+    
+    MINIMUM_VALID_LON: float = -180.
+    minimum_valid_lon: float = attr.ib(validator=attr.validators.instance_of(float), default=MINIMUM_VALID_LON)
+    MAXIMUM_VALID_LON: float = 180.
+    maximum_valid_lon: float = attr.ib(validator=attr.validators.instance_of(float), default=MAXIMUM_VALID_LON)
     
 
     @classmethod
@@ -62,21 +83,45 @@ class KgtkValueOptions:
         lqgroup.add_argument(      "--disallow-lax-lq-strings", dest="allow_lax_lq_strings",
                                    help="Check if single quotes are backslashed inside language qualified strings.", action='store_false')
 
-        md0group= parser.add_mutually_exclusive_group()
-        md0group.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
+        amd0group= parser.add_mutually_exclusive_group()
+        amd0group.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
                                     help="Allow month or day zero in dates.", action='store_true', default=False)
 
-        md0group.add_argument(      "--disallow-month-or-day-zero", dest="allow_month_or_day_zero",
+        amd0group.add_argument(      "--disallow-month-or-day-zero", dest="allow_month_or_day_zero",
                                     help="Allow month or day zero in dates.", action='store_false')
+
+        rmd0group= parser.add_mutually_exclusive_group()
+        rmd0group.add_argument(      "--repair-month-or-day-zero", dest="repair_month_or_day_zero",
+                                    help="Repair month or day zero in dates.", action='store_true', default=False)
+
+        rmd0group.add_argument(      "--no-repair-month-or-day-zero", dest="repair_month_or_day_zero",
+                                    help="Do not repair month or day zero in dates.", action='store_false')
+
+        parser.add_argument(      "--minimum-valid-year", dest="minimum_valid_year",
+                                  help="The minimum valid year in dates.", type=int, default=cls.MINIMUM_VALID_YEAR)
+
+        parser.add_argument(      "--maximum-valid-year", dest="maximum_valid_year",
+                                  help="The maximum valid year in dates.", type=int, default=cls.MAXIMUM_VALID_YEAR)
+
+        elsgroup= parser.add_mutually_exclusive_group()
+        elsgroup.add_argument(      "--escape-list-separators", dest="escape_list_separators",
+                                    help="Escape all list separators instead of splitting on them.", action='store_true', default=False)
+
+        elsgroup.add_argument(      "--no-escape-list-separators", dest="escape_list_separators",
+                                    help="Do not escape list separators.", action='store_false')
 
     @classmethod
     # Build the value parsing option structure.
     def from_args(cls, args: Namespace)->'KgtkValueOptions':
         return cls(allow_month_or_day_zero=args.allow_month_or_day_zero,
+                   repair_month_or_day_zero=args.repair_month_or_day_zero,
                    allow_language_suffixes=args.allow_language_suffixes,
                    allow_lax_strings=args.allow_lax_strings,
                    allow_lax_lq_strings=args.allow_lax_lq_strings,
-                   additional_language_codes=args.additional_language_codes)
+                   additional_language_codes=args.additional_language_codes,
+                   minimum_valid_year=args.minimum_valid_year,
+                   maximum_valid_year=args.maximum_valid_year,
+                   escape_list_separators=args.escape_list_separators)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
