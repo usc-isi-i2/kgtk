@@ -1,7 +1,19 @@
-"""
-Read a KGTK node or edge file in TSV format.
+"""Read a KGTK node or edge file in TSV format.
+
+Normally, results are obtained as rows of string values obtained by iteration
+on the KgtkReader object.  Alternative iterators are available to return the results
+as:
+
+ * concise_rows:                   lists of strings with empty fields converted to None
+ * kgtk_values:                    lists of KgtkValue objects
+ * concise_kgtk_values:            lists of KgtkValue objects with empty fields converted to None
+ * dicts:                          dicts of strings
+ * dicts(concise=True):            dicts of strings with empty fields omitted
+ * kgtk_value_dicts:               dicts of KgtkValue objects
+ * kgtk_value_dicts(concise=True): dicts of KgtkValue objects with empty fields omitted
 
 TODO: Add support for alternative envelope formats, such as JSON.
+
 """
 
 from argparse import ArgumentParser
