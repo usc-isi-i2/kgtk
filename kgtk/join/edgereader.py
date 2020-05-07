@@ -149,7 +149,6 @@ class EdgeReader(KgtkReader):
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        # super().add_arguments(parser)
         parser.add_argument(      "--blank-node1-line-action", dest="blank_node1_line_action",
                                   help="The action to take when a blank node1 field is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
@@ -163,8 +162,9 @@ def main():
     Test the KGTK edge file reader.
     """
     parser = ArgumentParser()
-    KgtkReader.add_shared_arguments(parser)
-    EdgeReader.add_arguments(parser)
+    KgtkReader.add_operation_arguments(parser)
+    (fgroup, hgroup, lgroup) = KgtkReader.add_shared_arguments(parser)
+    EdgeReader.add_arguments(lgroup)
     KgtkValueOptions.add_arguments(parser)
     args = parser.parse_args()
 

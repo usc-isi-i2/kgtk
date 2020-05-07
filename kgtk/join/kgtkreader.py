@@ -16,7 +16,7 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 """
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, _ArgumentGroup
 import attr
 import bz2
 from enum import Enum
@@ -822,74 +822,87 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         return merged_columns
 
     @classmethod
-    def add_shared_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
-
-        parser.add_argument(      "--blank-required-field-line-action", dest="blank_line_action",
-                                  help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
-                                  
-        parser.add_argument(      "--comment-line-action", dest="comment_line_action",
-                                  help="The action to take when a comment line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
-
-        parser.add_argument(      "--column-separator", dest="column_separator",
-                                  help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
-
-        parser.add_argument(      "--compression-type", dest="compression_type", help="Specify the compression type.")
-
-        parser.add_argument(      "--empty-line-action", dest="empty_line_action",
-                                  help="The action to take when an empty line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
-
-        parser.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
-                                  help="Send errors to stdout instead of stderr", action="store_true")
-
-        parser.add_argument(      "--error-limit", dest="error_limit",
-                                  help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
-
-        parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
-                                  help="Fill missing trailing columns in short lines with empty values.", action='store_true')
-
-        parser.add_argument(      "--force-column-names", dest="force_column_names", help="Force the column names.", nargs='+')
-
-        parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
-
-        parser.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
-                                  help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
-
-        parser.add_argument(      "--header-error-action", dest="header_error_action",
-                                  help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
-
-        parser.add_argument(      "--invalid-value-action", dest="invalid_value_action",
-                                  help="The action to take when a data cell value is invalid.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
-
-        parser.add_argument(      "--long-line-action", dest="long_line_action",
-                                  help="The action to take when a long line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
-
-        parser.add_argument(      "--short-line-action", dest="short_line_action",
-                                  help="The action to take when a short line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
-
-        parser.add_argument(      "--skip-first-record", dest="skip_first_record", help="Skip the first record when forcing column names.", action='store_true')
-
-        parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
-                                  help="Remove excess trailing columns in long lines.", action='store_true')
-
-        parser.add_argument(      "--unsafe-column-name-action", dest="unsafe_column_name_action",
-                                  help="The action to take when a column name is unsafe.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+    def add_operation_arguments(cls, parser: ArgumentParser):
+        errors_to = parser.add_mutually_exclusive_group()
+        errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                                     help="Send errors to stdout instead of stderr", action="store_true")
+        errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+                                     help="Send errors to stderr instead of stdout", action="store_true")
 
         parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
 
         parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
+        
+    @classmethod
+    def add_shared_arguments(cls, parser: ArgumentParser)->typing.Tuple[_ArgumentGroup, _ArgumentGroup, _ArgumentGroup]:
+        parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
 
-        parser.add_argument(      "--whitespace-line-action", dest="whitespace_line_action",
+        fgroup: _ArgumentGroup = parser.add_argument_group("File options", "Options affecting file processing")
+        fgroup.add_argument(      "--column-separator", dest="column_separator",
+                                  help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
+
+        fgroup.add_argument(      "--compression-type", dest="compression_type", help="Specify the compression type.")
+
+        fgroup.add_argument(      "--error-limit", dest="error_limit",
+                                  help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
+
+        fgroup.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
+
+        fgroup.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
+                                  help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
+
+        hgroup: _ArgumentGroup = parser.add_argument_group("Header parsing", "Options affecting header parsing")
+
+        hgroup.add_argument(      "--force-column-names", dest="force_column_names", help="Force the column names.", nargs='+')
+
+        hgroup.add_argument(      "--header-error-action", dest="header_error_action",
+                                  help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
+
+        hgroup.add_argument(      "--skip-first-record", dest="skip_first_record",
+                                  help="Skip the first record when forcing column names.", action='store_true')
+
+        hgroup.add_argument(      "--unsafe-column-name-action", dest="unsafe_column_name_action",
+                                  help="The action to take when a column name is unsafe.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+
+        lgroup: _ArgumentGroup = parser.add_argument_group("Line parsing", "Options affecting data line parsing")
+
+        lgroup.add_argument(      "--blank-required-field-line-action", dest="blank_line_action",
+                                  help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                                  
+        lgroup.add_argument(      "--comment-line-action", dest="comment_line_action",
+                                  help="The action to take when a comment line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        lgroup.add_argument(      "--empty-line-action", dest="empty_line_action",
+                                  help="The action to take when an empty line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        lgroup.add_argument(      "--fill-short-lines", dest="fill_short_lines",
+                                  help="Fill missing trailing columns in short lines with empty values.", action='store_true')
+
+        lgroup.add_argument(      "--invalid-value-action", dest="invalid_value_action",
+                                  help="The action to take when a data cell value is invalid.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+
+        lgroup.add_argument(      "--long-line-action", dest="long_line_action",
+                                  help="The action to take when a long line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        lgroup.add_argument(      "--short-line-action", dest="short_line_action",
+                                  help="The action to take when a short line is detected.",
+                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        lgroup.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
+                                  help="Remove excess trailing columns in long lines.", action='store_true')
+
+        lgroup.add_argument(      "--whitespace-line-action", dest="whitespace_line_action",
                                   help="The action to take when a whitespace line is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        return (fgroup, hgroup, lgroup)
                                   
     # May be overridden
     @classmethod
@@ -909,10 +922,11 @@ def main():
     from kgtk.join.nodereader import NodeReader
 
     parser = ArgumentParser()
-    KgtkReader.add_shared_arguments(parser)
-    KgtkReader.add_arguments(parser)
-    EdgeReader.add_arguments(parser)
-    NodeReader.add_arguments(parser)
+    KgtkReader.add_operation_arguments(parser)
+    (fgroup, hgroup, lgroup) = KgtkReader.add_shared_arguments(parser)
+    KgtkReader.add_arguments(fgroup)
+    EdgeReader.add_arguments(lgroup)
+    NodeReader.add_arguments(lgroup)
     KgtkValueOptions.add_arguments(parser)
 
     parser.add_argument(       "--test", dest="test_method", help="The test to perform",
