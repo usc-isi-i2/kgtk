@@ -97,7 +97,7 @@ class EdgeJoiner(KgtkFormat):
         
     def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
         if self.verbose:
-            print("Extracting the %s join key set" % who)
+            print("Extracting the %s join key set from %s" % (who, str(file_path)), flush=True)
         kr: EdgeReader = EdgeReader.open_edge_file(file_path,
                                                    short_line_action=self.short_line_action,
                                                    long_line_action=self.long_line_action,
@@ -134,21 +134,21 @@ class EdgeJoiner(KgtkFormat):
         """
         if self.left_join and self.right_join:
             if self.verbose:
-                print("Outer join, no need to compute join keys.")
+                print("Outer join, no need to compute join keys.", flush=True)
             return None
         elif self.left_join and not self.right_join:
             if self.verbose:
-                print("Computing the left join key set")
+                print("Computing the left join key set", flush=True)
             return self.extract_join_key_set(self.left_file_path, "left").copy()
 
         elif self.right_join and not self.left_join:
             if self.verbose:
-                print("Computing the right join key set")
+                print("Computing the right join key set", flush=True)
             return self.extract_join_key_set(self.right_file_path, "right").copy()
 
         else:
             if self.verbose:
-                print("Computing the inner join key set")
+                print("Computing the inner join key set", flush=True)
             left_join_key_set: typing.Set[str] = self.extract_join_key_set(self.left_file_path, "left")
             right_join_key_set: typing.Set[str] = self.extract_join_key_set(self.right_file_path, "right")
             return left_join_key_set.intersection(right_join_key_set)
@@ -194,7 +194,7 @@ class EdgeJoiner(KgtkFormat):
         joined_key_set: typing.Optional[typing.Set[str]] = self.join_key_sets()
 
         if self.verbose:
-            print("Opening the left edge file: %s" % str(self.left_file_path))
+            print("Opening the left edge file: %s" % str(self.left_file_path), flush=True)
         # Open the input files for the second time. This won't work with stdin.
         left_kr: EdgeReader =  EdgeReader.open_edge_file(self.left_file_path,
                                                          short_line_action=self.short_line_action,
@@ -206,7 +206,7 @@ class EdgeJoiner(KgtkFormat):
 
 
         if self.verbose:
-            print("Opening the right edge file: %s" % str(self.right_file_path))
+            print("Opening the right edge file: %s" % str(self.right_file_path), flush=True)
         right_kr: EdgeReader = EdgeReader.open_edge_file(self.right_file_path,
                                                          short_line_action=self.short_line_action,
                                                          long_line_action=self.long_line_action,
@@ -217,19 +217,19 @@ class EdgeJoiner(KgtkFormat):
 
 
         if self.verbose:
-            print("Mapping the column names for the join.")
+            print("Mapping the column names for the join.", flush=True)
         joined_column_names: typing.List[str]
         right_column_names: typing.List[str]
         (joined_column_names, right_column_names)  = self.merge_columns(left_kr, right_kr)
 
         if self.verbose:
-            print("       left   columns: %s" % " ".join(left_kr.column_names))
-            print("       right  columns: %s" % " ".join(right_kr.column_names))
-            print("mapped right  columns: %s" % " ".join(right_column_names))
-            print("       joined columns: %s" % " ".join(joined_column_names))
+            print("       left   columns: %s" % " ".join(left_kr.column_names), flush=True)
+            print("       right  columns: %s" % " ".join(right_kr.column_names), flush=True)
+            print("mapped right  columns: %s" % " ".join(right_column_names), flush=True)
+            print("       joined columns: %s" % " ".join(joined_column_names), flush=True)
         
         if self.verbose:
-            print("Opening the output edge file: %s" % str(self.output_path))
+            print("Opening the output edge file: %s" % str(self.output_path), flush=True)
         ew: KgtkWriter = KgtkWriter.open(joined_column_names,
                                          self.output_path,
                                          require_all_columns=False,
@@ -246,7 +246,7 @@ class EdgeJoiner(KgtkFormat):
         right_data_lines_kept: int = 0
         
         if self.verbose:
-            print("Processing the left input file")
+            print("Processing the left input file: %s" % str(self.left_file_path), flush=True)
         row: typing.list[str]
         left_node1_idx: int = self.node1_column_idx(left_kr, who="left")
         for row in left_kr:
@@ -263,7 +263,7 @@ class EdgeJoiner(KgtkFormat):
                     left_data_lines_kept += 1
 
         if self.verbose:
-            print("Processing the right input file")
+            print("Processing the right input file: %s" % str(self.right_file_path), flush=True)
         right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_column_names)
         right_node1_idx: int = self.node1_column_idx(right_kr, who="right")
         for row in right_kr:
@@ -281,10 +281,10 @@ class EdgeJoiner(KgtkFormat):
             
         ew.close()
         if self.verbose:
-            print("The join is complete")
-            print("%d left input data lines read, %d kept" % (left_data_lines_read, left_data_lines_kept))
-            print("%d right input data lines read, %d kept" % (right_data_lines_read, right_data_lines_kept))
-            print("%d data lines written." % output_data_lines)
+            print("The join is complete", flush=True)
+            print("%d left input data lines read, %d kept" % (left_data_lines_read, left_data_lines_kept), flush=True)
+            print("%d right input data lines read, %d kept" % (right_data_lines_read, right_data_lines_kept), flush=True)
+            print("%d data lines written." % output_data_lines, flush=True)
         
 def main():
     """
