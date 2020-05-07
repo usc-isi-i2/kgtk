@@ -138,6 +138,7 @@ class EdgeJoiner(KgtkFormat):
         """
         Read the input edge files the first time, building the sets of left and right join values.
         """
+        join_key_set: typing.Set[str]
         if self.left_join and self.right_join:
             if self.verbose:
                 print("Outer join, no need to compute join keys.", flush=True)
@@ -145,19 +146,32 @@ class EdgeJoiner(KgtkFormat):
         elif self.left_join and not self.right_join:
             if self.verbose:
                 print("Computing the left join key set", flush=True)
-            return self.extract_join_key_set(self.left_file_path, "left").copy()
+            join_key_set = self.extract_join_key_set(self.left_file_path, "left").copy()
+            if self.verbose:
+                print("There are %d keys in the left join key set." % len(join_key_set))
+            return join_key_set
 
         elif self.right_join and not self.left_join:
             if self.verbose:
                 print("Computing the right join key set", flush=True)
-            return self.extract_join_key_set(self.right_file_path, "right").copy()
+            join_key_set = self.extract_join_key_set(self.right_file_path, "right").copy()
+            if self.verbose:
+                print("There are %d keys in the right join key set." % len(join_key_set))
+            return join_key_set
 
         else:
             if self.verbose:
                 print("Computing the inner join key set", flush=True)
             left_join_key_set: typing.Set[str] = self.extract_join_key_set(self.left_file_path, "left")
+            if self.verbose:
+                print("There are %d keys in the left file key set." % len(left_join_key_set))
             right_join_key_set: typing.Set[str] = self.extract_join_key_set(self.right_file_path, "right")
-            return left_join_key_set.intersection(right_join_key_set)
+            if self.verbose:
+                print("There are %d keys in the right file key set." % len(right_join_key_set))
+            join_key_set = left_join_key_set.intersection(right_join_key_set)
+            if self.verbose:
+                print("There are %d keys in the inner join key set." % len(join_key_set))
+            return joiin_key_set
     
     def merge_columns(self, left_kr: EdgeReader, right_kr: EdgeReader)->typing.Tuple[typing.List[str], typing.List[str]]:
         joined_column_names: typing.List[str] = [ ]
