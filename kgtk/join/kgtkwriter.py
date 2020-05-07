@@ -289,6 +289,10 @@ class KgtkWriter(KgtkBase):
             sys.stdout.write(".")
             sys.stdout.flush()
 
+    def flush(self):
+        if self.gzip_thread is None:
+            self.file_out.flush()
+
     def close(self):
         if self.gzip_thread is not None:
             self.gzip_thread.close()

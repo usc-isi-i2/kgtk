@@ -1,7 +1,19 @@
-"""
-Read a KGTK edge file in TSV format.
+"""Read a KGTK node or edge file in TSV format.
+
+Normally, results are obtained as rows of string values obtained by iteration
+on the KgtkReader object.  Alternative iterators are available to return the results
+as:
+
+ * concise_rows:                   lists of strings with empty fields converted to None
+ * kgtk_values:                    lists of KgtkValue objects
+ * concise_kgtk_values:            lists of KgtkValue objects with empty fields converted to None
+ * dicts:                          dicts of strings
+ * dicts(concise=True):            dicts of strings with empty fields omitted
+ * kgtk_value_dicts:               dicts of KgtkValue objects
+ * kgtk_value_dicts(concise=True): dicts of KgtkValue objects with empty fields omitted
 
 TODO: Add support for alternative envelope formats, such as JSON.
+
 """
 
 from argparse import ArgumentParser
@@ -84,7 +96,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     # Validate data cell values?
     invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
-    value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
+    value_options: typing.Optional[KgtkValueOptions] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
 
     # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -132,7 +144,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
              invalid_value_action: ValidationAction = ValidationAction.REPORT,
              header_error_action: ValidationAction = ValidationAction.EXIT,
              unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
-             value_options: KgtkValueOptions = DEFAULT_KGTK_VALUE_OPTIONS,
+             value_options: typing.Optional[KgtkValueOptions] = None,
              compression_type: typing.Optional[str] = None,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
@@ -495,14 +507,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             raise ValueError("Too many data errors, exiting.")
         return result
 
-    # This is both and iterable and an iterator object.
-    def __iter__(self)->typing.Iterator[typing.List[str]]:
-        return self
-
     # Get the next edge values as a list of strings.
-    # TODO: Convert integers, coordinates, etc. to Python types
-    def __next__(self)-> typing.List[str]:
-        values: typing.List[str]
+    def nextrow(self)-> typing.List[str]:
+        row: typing.List[str]
 
         # This loop accomodates lines that are ignored.
         while (True):
@@ -541,42 +548,45 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 if self.exclude_line(self.whitespace_line_action, "saw a whitespace line", line):
                     continue
 
-            values = line.split(self.column_separator)
+            row = line.split(self.column_separator)
 
-            # Optionally fill missing trailing columns with empty values:
-            if self.fill_short_lines and len(values) < self.column_count:
-                while len(values) < self.column_count:
-                    values.append("")
+            # Optionally fill missing trailing columns with empty row:
+            if self.fill_short_lines and len(row) < self.column_count:
+                while len(row) < self.column_count:
+                    row.append("")
                     
             # Optionally remove extra trailing columns:
-            if self.truncate_long_lines and len(values) > self.column_count:
-                values = values[:self.column_count]
+            if self.truncate_long_lines and len(row) > self.column_count:
+                row = row[:self.column_count]
 
             # Optionally validate that the line contained the right number of columns:
             #
             # When we report line numbers in error messages, line 1 is the first line after the header line.
-            if self.short_line_action != ValidationAction.PASS and len(values) < self.column_count:
+            if self.short_line_action != ValidationAction.PASS and len(row) < self.column_count:
                 if self.exclude_line(self.short_line_action,
                                      "Required %d columns, saw %d: '%s'" % (self.column_count,
-                                                                            len(values),
+                                                                            len(row),
                                                                             line),
                                      line):
                     continue
                              
-            if self.long_line_action != ValidationAction.PASS and len(values) > self.column_count:
+            if self.long_line_action != ValidationAction.PASS and len(row) > self.column_count:
                 if self.exclude_line(self.long_line_action,
                                      "Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
-                                                                                       len(values),
-                                                                                       len(values) - self.column_count,
+                                                                                       len(row),
+                                                                                       len(row) - self.column_count,
                                                                                        line),
                                      line):
                     continue
 
-            if self._ignore_if_blank_fields(values, line):
+            if self._ignore_if_blank_fields(row, line):
                 continue
 
             if self.invalid_value_action != ValidationAction.PASS:
-                if self._ignore_invalid_values(values, line):
+                # TODO: find a way to optionally cache the KgtkValue objects
+                # so we don't have to create them a second time in the conversion
+                # and iterator methods below.
+                if self._ignore_invalid_values(row, line):
                     continue
 
             self.data_lines_passed += 1
@@ -584,22 +594,190 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 sys.stdout.write(".")
                 sys.stdout.flush()
             
-            return values
+            return row
+
+    # This is both and iterable and an iterator object.
+    def __iter__(self)->typing.Iterator[typing.List[str]]:
+        return self
+
+    # Get the next row values as a list of strings.
+    # TODO: Convert integers, coordinates, etc. to Python types
+    def __next__(self)-> typing.List[str]:
+        return self.nextrow()
+
+    def concise_rows(self)->typing.Iterator[typing.List[typing.Optional[str]]]:
+        """
+        Using a generator function, create an iterator that returns rows of fields
+        as strings.  Empty fields will be returned as None.
+
+        """
+        while True:
+            try:
+                row: typing.List[str] = self.nextrow()
+            except StopIteration:
+                return
+
+            # Copy the row, converting empty fields into None:
+            results: typing.List[typing.Optional[str]] = [ ]
+            field: str
+            for field in row:
+                if len(field) == 0:
+                    results.append(None)
+                else:
+                    results.append(field)
+            yield results
+                    
+
+    def to_kgtk_values(self, row: typing.List[str], validate: bool = False)->typing.List[KgtkValue]:
+        """
+        Convert an input row into a list of KgtkValue instances.
+
+        When validate is True, validate each KgtkValue object.
+        """
+        options: KgtkValueOptions = self.value_options if self.value_options is not None else DEFAULT_KGTK_VALUE_OPTIONS
+        results: typing.List[KgtkValue] = [ ]
+        field: str
+        for field in row:
+            kv = KgtkValue(field, options=options)
+            if validate:
+                kv.validate()
+            results.append(kv)
+        return results
+
+    def kgtk_values(self, validate: bool = False)->typing.Iterator[typing.List[KgtkValue]]:
+        """
+        Using a generator function, create an iterator that returns rows of fields
+        as KgtkValue objects.
+
+        When validate is True, validate each KgtkValue object.
+        """
+        while True:
+            try:
+                yield self.to_kgtk_values(self.nextrow(), validate=validate)
+            except StopIteration:
+                return
+
+    def to_concise_kgtk_values(self, row: typing.List[str], validate: bool = False)->typing.List[typing.Optional[KgtkValue]]:
+        """
+        Convert an input row into a list of KgtkValue instances.  Empty fields will be returned as None.
+
+        When validate is True, validate each KgtkValue object.
+        """
+        options: KgtkValueOptions = self.value_options if self.value_options is not None else DEFAULT_KGTK_VALUE_OPTIONS
+        results: typing.List[typing.Optional[KgtkValue]] = [ ]
+        field: str
+        for field in row:
+            if len(field) == 0:
+                results.append(None)
+            else:
+                kv = KgtkValue(field, options=options)
+                if validate:
+                    kv.validate()
+                results.append(kv)
+        return results
+
+    def concise_kgtk_values(self, validate: bool = False)->typing.Iterator[typing.List[typing.Optional[KgtkValue]]]:
+        """
+        Using a generator function, create an iterator that returns rows of fields
+        as KgtkValue objects, with empty fields returned as None.
+
+        When validate is True, validate each KgtkValue object.
+        """
+        while True:
+            try:
+                yield self.to_concise_kgtk_values(self.nextrow(), validate=validate)
+            except StopIteration:
+                return
+
+    def to_dict(self, row: typing.List[str], concise: bool=False)->typing.Mapping[str, str]:
+        """
+        Convert an input row into a dict of named fields.
+
+        If concise is True, then empty fields will be skipped.
+        """
+        results: typing.MutableMapping[str, str] = { }
+        field: str
+        idx: int = 0
+
+        # We'll use two seperate loops in anticipation of a modest
+        # efficiency gain.
+        if concise:
+            for field in row:
+                if len(field) > 0:
+                    results[self.column_names[idx]] = field
+                idx += 1
+        else:
+            for field in row:
+                results[self.column_names[idx]] = field
+                idx += 1
+        return results
+
+    def dicts(self, concise: bool=False)->typing.Iterator[typing.Mapping[str, str]]:
+        """
+        Using a generator function, create an iterator that returns each row as a dict of named fields.
+
+        If concise is True, then empty fields will be skipped.
+
+        """
+        while True:
+            try:
+                yield self.to_dict(self.nextrow(), concise=concise)
+            except StopIteration:
+                return
+
+    def to_kgtk_value_dict(self, row: typing.List[str], validate: bool=False, concise: bool=False)->typing.Mapping[str, KgtkValue]:
+        """
+        Convert an input row into a dict of named fields.
+
+        If concise is True, then empty fields will be skipped.
+
+        When validate is True, validate each KgtkValue object.
+        """
+        options: KgtkValueOptions = self.value_options if self.value_options is not None else DEFAULT_KGTK_VALUE_OPTIONS
+        results: typing.MutableMapping[str, KgtkValue] = { }
+        idx: int = 0
+        field: str
+        for field in row:
+            if concise and len(field) == 0:
+                pass # Skip the empty field.
+            else:
+                kv = KgtkValue(field, options=options)
+                if validate:
+                    kv.validate()
+                results[self.column_names[idx]] = kv
+            idx += 1
+        return results
+
+    def kgtk_value_dicts(self, validate: bool=False, concise: bool=False)->typing.Iterator[typing.Mapping[str, KgtkValue]]:
+        """
+        Using a generator function, create an iterator that returns each row as a
+        dict of named KgtkValue objects.
+
+        If concise is True, then empty fields will be skipped.
+
+        When validate is True, validate each KgtkValue object.
+        """
+        while True:
+            try:
+                yield self.to_kgtk_value_dict(self.nextrow(), validate=validate, concise=concise)
+            except StopIteration:
+                return
 
     def _ignore_invalid_values(self, values: typing.List[str], line: str)->bool:
         """Give a row of values, validate each value.  If we find one or more
-        validation problems, we might want to emit erro messages and we might
+        validation problems, we might want to emit error messages and we might
         want to ignore the entire row.
 
         Returns True to indicate that the row should be ignored (skipped).
 
         """
+        options: KgtkValueOptions = self.value_options if self.value_options is not None else DEFAULT_KGTK_VALUE_OPTIONS
         problems: typing.List[str] = [ ] # Build a list of problems.
         idx: int
         value: str
         for idx, value in enumerate(values):
             if len(value) > 0: # Optimize the common case of empty columns.
-                kv: KgtkValue = KgtkValue(value, options=self.value_options)
+                kv: KgtkValue = KgtkValue(value, options=options)
                 if not kv.is_valid():
                     problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], value, kv.describe()))
 
@@ -642,18 +820,6 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             merged_columns.append(column_name)
 
         return merged_columns
-
-    def to_map(self, row: typing.List[str])->typing.Mapping[str, str]:
-        """
-        Convert an input line into a named map of fields.
-        """
-        result: typing.MutableMapping[str, str] = { }
-        value: str
-        idx: int = 0
-        for value in row:
-            result[self.column_names[idx]] = value
-            idx += 1
-        return result
 
     @classmethod
     def add_shared_arguments(cls, parser: ArgumentParser):
@@ -748,6 +914,14 @@ def main():
     EdgeReader.add_arguments(parser)
     NodeReader.add_arguments(parser)
     KgtkValueOptions.add_arguments(parser)
+
+    parser.add_argument(       "--test", dest="test_method", help="The test to perform",
+                               choices=["rows", "concise-rows",
+                                        "kgtk-values", "concise-kgtk-values",
+                                        "dicts", "concise-dicts",
+                                        "kgtk-value-dicts", "concise-kgtk-value-dicts"],
+                               default="rows")
+    parser.add_argument(       "--test-valdate", dest="test_validate", help="Validate KgtkValue objects in test.", action='store_true')
     args = parser.parse_args()
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
@@ -784,8 +958,58 @@ def main():
 
     line_count: int = 0
     row: typing.List[str]
-    for row in kr:
-        line_count += 1
+    kgtk_values: typing.List[KgtkValue]
+    concise_kgtk_values: typing.List[typing.Optional[KgtkValue]]
+    dict_row: typing.Mapping[str, str]
+    kgtk_value_dict: typing.Mapping[str, str]
+    if args.test_method == "rows":
+        if args.verbose:
+            print("Testing iterating over rows.", flush=True)
+        for row in kr:
+            line_count += 1
+
+    elif args.test_method == "concise-rows":
+        if args.verbose:
+            print("Testing iterating over concise rows.", flush=True)
+        for row in kr.concise_rows():
+            line_count += 1
+
+    elif args.test_method == "kgtk-values":
+        if args.verbose:
+            print("Testing iterating over KgtkValue rows.", flush=True)
+        for kgtk_values in kr.kgtk_values(validate=args.test_validate):
+            line_count += 1
+
+    elif args.test_method == "concise-kgtk-values":
+        if args.verbose:
+            print("Testing iterating over concise KgtkValue rows.", flush=True)
+        for kgtk_values in kr.concise_kgtk_values(validate=args.test_validate):
+            line_count += 1
+            
+    elif args.test_method == "dicts":
+        if args.verbose:
+            print("Testing iterating over dicts.", flush=True)
+        for dict_row in kr.dicts():
+            line_count += 1
+            
+    elif args.test_method == "concise-dicts":
+        if args.verbose:
+            print("Testing iterating over concise dicts.", flush=True)
+        for dict_row in kr.dicts(concise=True):
+            line_count += 1
+            
+    elif args.test_method == "kgtk-value-dicts":
+        if args.verbose:
+            print("Testing iterating over KgtkValue dicts.", flush=True)
+        for kgtk_value_dict in kr.kgtk_value_dicts(validate=args.test_validate):
+            line_count += 1
+            
+    elif args.test_method == "concise-kgtk-value-dicts":
+        if args.verbose:
+            print("Testing iterating over concise KgtkValue dicts.", flush=True)
+        for kgtk_value_dict in kr.kgtk_value_dicts(concise=True, validate=args.test_validate):
+            line_count += 1
+            
     print("Read %d lines" % line_count, file=error_file, flush=True)
 
 if __name__ == "__main__":
