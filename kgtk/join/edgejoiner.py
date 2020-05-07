@@ -366,8 +366,8 @@ def main():
     parser.add_argument(      "--join-on-label", dest="join_on_label", help="If both input files are edge files, include the label column in the join.", action='store_true')
     parser.add_argument(      "--join-on-node2", dest="join_on_node2", help="If both input files are edge files, include the node2 column in the join.", action='store_true')
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
+    parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
-    parser.add_argument(      "--left-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
 
     parser.add_argument(      "--long-line-action", dest="long_line_action",
                               help="The action to take when a long line is detected.",
@@ -375,8 +375,8 @@ def main():
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
     parser.add_argument(      "--prefix", dest="prefix", help="The prefix applied to right file column names in the output file.")
+    parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
-    parser.add_argument(      "--right-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
 
     parser.add_argument(      "--short-line-action", dest="short_line_action",
                               help="The action to take whe a short line is detected.",
