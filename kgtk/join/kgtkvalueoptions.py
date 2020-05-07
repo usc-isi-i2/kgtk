@@ -59,7 +59,7 @@ class KgtkValueOptions:
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        vgroup = parser.add_argument_group("KgtkValueOptions", "Options controlling the parsing and repair of KGTK data values.")
+        vgroup = parser.add_argument_group("Data value parsing", "Options controlling the parsing and processing of KGTK data values.")
         vgroup.add_argument(      "--additional-language-codes", dest="additional_language_codes",
                                   help="Additional language codes.", nargs="*", default=None)
 

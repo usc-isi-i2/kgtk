@@ -130,7 +130,6 @@ class NodeReader(KgtkReader):
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        # super().add_arguments(parser)
         parser.add_argument(      "--blank-id-line-action", dest="blank_id_line_action",
                                   help="The action to take when a blank id field is detected.",
                                   type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
@@ -141,8 +140,9 @@ def main():
     Test the KGTK node file reader.
     """
     parser = ArgumentParser()
-    KgtkReader.add_shared_arguments(parser)
-    NodeReader.add_arguments(parser)
+    KgtkReader.add_operation_arguments(parser)
+    (fgroup, hgroup, lgroup) = KgtkReader.add_shared_arguments(parser)
+    NodeReader.add_arguments(lgroup)
     KgtkValueOptions.add_arguments(parser)
     args = parser.parse_args()
 
