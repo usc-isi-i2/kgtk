@@ -97,7 +97,7 @@ class EdgeJoiner(KgtkFormat):
         
     def extract_join_key_set(self, file_path: Path, who: str)->typing.Set[str]:
         if self.verbose:
-            print("Extracting the %s join key set from %s" % (who, str(file_path)), flush=True)
+            print("Extracting the join key set from the %s input file: %s" % (who, str(file_path)), flush=True)
         kr: EdgeReader = EdgeReader.open_edge_file(file_path,
                                                    short_line_action=self.short_line_action,
                                                    long_line_action=self.long_line_action,
@@ -113,15 +113,21 @@ class EdgeJoiner(KgtkFormat):
             raise ValueError("The %s file is not an edge file" % who)
         
         join_idx: int = self.node1_column_idx(kr, who)
+        if self.verbose:
+            print("Joining on node1 (index %s in the %s input file)" % (join_idx, who))
 
         # join_on_label and join_on_node2 may be specified
         if self.join_on_label or self.join_on_node2:
             if self.join_on_label:
                 if kr.label_column_idx < 0:
                     raise ValueError("join_on_label may not be used because the %s input file does not have a label column." % who)
+                if self.verbose:
+                    print("Joining on label (index %s in the %s input file)" % (kr.label_column_idx, who))
             if self.join_on_node2:
                 if kr.node2_column_idx < 0:
                     raise ValueError("join_on_node2 may not be used because the %s input file does not have a node2 column." % who)
+                if self.verbose:
+                    print("Joining on node2 (index %s in the %s input file)" % (kr.node2_column_idx, who))
             return self.multi_column_key_set(kr, join_idx) # closes er file
         else:
             # This uses optimized code:
@@ -261,6 +267,8 @@ class EdgeJoiner(KgtkFormat):
                     ew.write(row)
                     output_data_lines += 1
                     left_data_lines_kept += 1
+        # Flush the output file so far:
+        ew.flush()
 
         if self.verbose:
             print("Processing the right input file: %s" % str(self.right_file_path), flush=True)
