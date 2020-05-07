@@ -61,6 +61,8 @@ class IfExists(KgtkFormat):
 
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=KgtkReader.ERROR_LIMIT_DEFAULT)
+
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -131,7 +133,11 @@ class IfExists(KgtkFormat):
                                                long_line_action=self.long_line_action,
                                                fill_short_lines=self.fill_short_lines,
                                                truncate_long_lines=self.truncate_long_lines,
-                                               value_options = self.value_options)
+                                               value_options = self.value_options,
+                                               error_limit=self.error_limit,
+                                               verbose=self.verbose,
+                                               very_verbose=self.very_verbose,
+        )
 
         if self.verbose:
             print("Opening the right input file: %s" % self.right_file_path, flush=True)
@@ -140,7 +146,11 @@ class IfExists(KgtkFormat):
                                                long_line_action=self.long_line_action,
                                                fill_short_lines=self.fill_short_lines,
                                                truncate_long_lines=self.truncate_long_lines,
-                                               value_options = self.value_options)
+                                               value_options = self.value_options,
+                                               error_limit=self.error_limit,
+                                               verbose=self.verbose,
+                                               very_verbose=self.very_verbose,
+        )
 
         left_key_columns: typing.List[int] = self.get_key_columns(self.left_keys, left_kr, right_kr, "left")
         right_key_columns: typing.List[int] = self.get_key_columns(self.right_keys, right_kr, left_kr, "right")
@@ -243,6 +253,7 @@ def main():
                             truncate_long_lines=args.truncate_long_lines,
                             value_options=value_options,
                             gzip_in_parallel=args.gzip_in_parallel,
+                            error_limit=args.error_limit,
                             verbose=args.verbose,
                             very_verbose=args.very_verbose)
 
