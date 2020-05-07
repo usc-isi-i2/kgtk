@@ -13,7 +13,7 @@ import typing
 from kgtk.join.closableiter import ClosableIter
 from kgtk.join.enumnameaction import EnumNameAction
 from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
+from kgtk.join.kgtkvalueoptions import KgtkValueOptions
 from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
@@ -38,7 +38,7 @@ class EdgeReader(KgtkReader):
                        invalid_value_action: ValidationAction = ValidationAction.REPORT,
                        header_error_action: ValidationAction = ValidationAction.EXIT,
                        unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
-                       value_options: KgtkValueOptions = DEFAULT_KGTK_VALUE_OPTIONS,
+                       value_options: typing.Optional[KgtkValueOptions] = None,
                        compression_type: typing.Optional[str] = None,
                        gzip_in_parallel: bool = False,
                        gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
