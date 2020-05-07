@@ -89,7 +89,7 @@ def add_arguments(parser):
         type=str2bool,
         required = False,
         default="yes",
-        help="the default is to not generate truthy triples. Specify this option to generate truthy triples. NOTIMPLEMENTED",
+        help="the default is to not generate truthy triples. Specify this option to generate truthy triples.",
         dest="truthy",
     )
     parser.add_argument(
