@@ -37,6 +37,8 @@ class IfExists(KgtkFormat):
     right_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
+    invert: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     left_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                                                             iterable_validator=attr.validators.instance_of(list))),
                                                            default=None)
@@ -113,8 +115,13 @@ class IfExists(KgtkFormat):
     def build_key(self, row: typing.List[str], key_columns: typing.List[int])->str:
         key: str = ""
         idx: int
+        first: bool = True
         for idx in key_columns:
-            key += self.field_separator+ row[idx]
+            if first:
+                first = False
+            else:
+                key += self.field_separator
+            key += row[idx]
         return key
 
     def extract_key_set(self, kr: KgtkReader, who: str, key_columns: typing.List[int])->typing.Set[str]:
@@ -162,8 +169,10 @@ class IfExists(KgtkFormat):
         if self.verbose:
             print("Building the input key set from %s" % self.right_file_path, flush=True)
         key_set: typint.Set[str] = self.extract_key_set(right_kr, "right", right_key_columns)
-        if self.verbose:
+        if self.verbose or self.very_verbose:
             print("There are %d entries in the key set." % len(key_set))
+            if self.very_verbose:
+                print("Keys: %s" % " ".join(key_set))
 
         if self.verbose:
             print("Opening the output file: %s" % self.output_path, flush=True)
@@ -185,23 +194,29 @@ class IfExists(KgtkFormat):
         for row in left_kr:
             input_line_count += 1
             left_key: str = self.build_key(row, left_key_columns)
-            if left_key in key_set:
-                ew.write(row)
-                output_line_count += 1
-        ew.close()
+            if self.invert:
+                if left_key not in key_set:
+                    ew.write(row)
+                    output_line_count += 1
+            else:
+                if left_key in key_set:
+                    ew.write(row)
+                    output_line_count += 1
 
         if self.verbose:
-            print("Read %d records, write %d records." % (input_line_count, output_line_count))
+            print("Read %d records, wrote %d records." % (input_line_count, output_line_count), flush=True)
         
+        ew.close()
+
 def main():
     """
     Test the KGTK file joiner.
     """
     parser = ArgumentParser()
 
-    parser.add_argument(dest="left_file_path", help="The left KGTK file to join", type=Path)
+    parser.add_argument(dest="left_kgtk_file", help="The left KGTK file to join", type=Path)
 
-    parser.add_argument(dest="right_file_path", help="The right KGTK file to join", type=Path)
+    parser.add_argument(dest="right_kgtk_file", help="The right KGTK file to join", type=Path)
 
     parser.add_argument(      "--error-limit", dest="error_limit",
                               help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
@@ -212,6 +227,8 @@ def main():
                               help="Fill missing trailing columns in short lines with empty values.", action='store_true')
 
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
+
+    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists).", action='store_true')
 
     parser.add_argument(      "--left-keys", dest="left_keys", help="The key columns in the left file.", nargs='*')
 
@@ -241,9 +258,10 @@ def main():
     # Build the value parsing option structure.
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-    ie: IfExists = IfExists(left_file_path=args.left_file_path,
-                            right_file_path=args.right_file_path,
+    ie: IfExists = IfExists(left_file_path=args.left_kgtk_file,
+                            right_file_path=args.right_kgtk_file,
                             output_path=args.output_file_path,
+                            invert=args.invert,
                             left_keys=args.left_keys,
                             right_keys=args.right_keys,
                             field_separator=args.field_separator,
@@ -261,4 +279,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
