@@ -28,14 +28,14 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.join.closableiter import ClosableIter, ClosableIterTextIOWrapper
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.gzipprocess import GunzipProcess
-from kgtk.join.kgtkbase import KgtkBase
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkvalue import KgtkValue
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
-from kgtk.join.validationaction import ValidationAction
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkbase import KgtkBase
+from kgtk.utils.closableiter import ClosableIter, ClosableIterTextIOWrapper
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.gzipprocess import GunzipProcess
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalue import KgtkValue
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 
 @attr.s(slots=True, frozen=False)
 class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
@@ -216,7 +216,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if is_edge_file:
             # We'll instantiate an EdgeReader, which is a subclass of KgtkReader.
             # The EdgeReader import is deferred to avoid circular imports.
-            from kgtk.join.edgereader import EdgeReader
+            from kgtk.io.edgereader import EdgeReader
             
             # Get the indices of the required columns.
             node1_column_idx: int
@@ -276,7 +276,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         elif is_node_file:
             # We'll instantiate an NodeReader, which is a subclass of KgtkReader.
             # The NodeReader import is deferred to avoid circular imports.
-            from kgtk.join.nodereader import NodeReader
+            from kgtk.io.nodereader import NodeReader
             
             # Get the index of the required column:
             id_column_idx: int = cls.required_node_column(column_name_map,
@@ -917,9 +917,9 @@ def main():
     Test the KGTK file reader.
     """
     # The EdgeReader import is deferred to avoid circular imports.
-    from kgtk.join.edgereader import EdgeReader
+    from kgtk.io.edgereader import EdgeReader
     # The NodeReader import is deferred to avoid circular imports.
-    from kgtk.join.nodereader import NodeReader
+    from kgtk.io.nodereader import NodeReader
 
     parser = ArgumentParser()
     KgtkReader.add_operation_arguments(parser)

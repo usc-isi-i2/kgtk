@@ -15,12 +15,12 @@ from multiprocessing import Queue
 import sys
 import typing
 
-from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.gzipprocess import GzipProcess
-from kgtk.join.kgtkbase import KgtkBase
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.validationaction import ValidationAction
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkbase import KgtkBase
+from kgtk.io.kgtkreader import KgtkReader
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.gzipprocess import GzipProcess
+from kgtk.utils.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
 class KgtkWriter(KgtkBase):
