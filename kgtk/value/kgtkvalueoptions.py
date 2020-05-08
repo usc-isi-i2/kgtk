@@ -9,8 +9,9 @@ import typing
 @attr.s(slots=True, frozen=True)
 class KgtkValueOptions:
     """
-    These options will affect some aspects of value processing. They are in a
-    seperate class for efficiency.
+    These options control various aspects of value processing. They are in a
+    seperate class for code isolation and efficiency.
+
     """
     
     # Allow month 00 or day 00 in dates?  This isn't really allowed by ISO
