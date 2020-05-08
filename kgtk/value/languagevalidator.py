@@ -8,7 +8,7 @@ import iso639 # type: ignore
 import pycountry # type: ignore
 import typing
 
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 
 # Problem: pycountry incorporates the Debian team's ISO 639-3 table,
 # which as of 03-May-2020 has not been updated in four years!
