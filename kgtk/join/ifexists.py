@@ -16,7 +16,7 @@ the second file.
 
 """
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 import attr
 import gzip
 from pathlib import Path
@@ -33,38 +33,24 @@ from kgtk.join.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=True)
 class IfExists(KgtkFormat):
-    left_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
-    right_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
-    output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    input_reader_args: typing.Mapping[str, typing.Any] = attr.ib()
+    input_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                                            iterable_validator=attr.validators.instance_of(list))))
 
-    invert: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    filter_reader_args: typing.Mapping[str, typing.Any] = attr.ib()
+    filter_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                                             iterable_validator=attr.validators.instance_of(list))))
 
-    left_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                                            iterable_validator=attr.validators.instance_of(list))),
-                                                           default=None)
-    right_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                                             iterable_validator=attr.validators.instance_of(list))),
-                                                            default=None)
+    output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
 
-    # Ignore records with too many or too few fields?
-    short_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
-    long_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+    invert: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # Require or fill trailing fields?
-    fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
-    invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.PASS)
     # TODO: find a working validator
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
-
-    gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
-    error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=KgtkReader.ERROR_LIMIT_DEFAULT)
 
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -135,8 +121,8 @@ class IfExists(KgtkFormat):
     def process(self):
         # Open the input files once.
         if self.verbose:
-            print("Opening the left input file: %s" % self.left_file_path, flush=True)
-        left_kr: KgtkReader =  KgtkReader.open(self.left_file_path,
+            print("Opening the input file: %s" % self.left_file_path, flush=True)
+            left_kr: KgtkReader =  KgtkReader.open(self.left_file_path,
                                                short_line_action=self.short_line_action,
                                                long_line_action=self.long_line_action,
                                                fill_short_lines=self.fill_short_lines,
@@ -215,71 +201,41 @@ def main():
     """
     Test the KGTK file joiner.
     """
-    parser = ArgumentParser()
-
-    parser.add_argument(dest="left_kgtk_file", help="The left KGTK file to join", type=Path)
-
-    parser.add_argument(dest="right_kgtk_file", help="The right KGTK file to join", type=Path)
-
-    parser.add_argument(      "--error-limit", dest="error_limit",
-                              help="The maximum number of errors to report before failing", type=int, default=KgtkReader.ERROR_LIMIT_DEFAULT)
-
-    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
-
-    parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
-                              help="Fill missing trailing columns in short lines with empty values.", action='store_true')
-
-    parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
-
-    parser.add_argument(      "--invalid-value-action", dest="invalid_value_action",
-                              help="The action to take when an invalid data value is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.PASS)
-
-    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists).", action='store_true')
-
-    parser.add_argument(      "--left-keys", dest="left_keys", help="The key columns in the left file.", nargs='*')
-
-    parser.add_argument(      "--long-line-action", dest="long_line_action",
-                              help="The action to take when a long line is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+    parser: ArgumentParser = ArgumentParser()
+    KgtkReader.add_operation_arguments(parser)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
-
-    parser.add_argument(      "--right-keys", dest="right_keys", help="The key columns in the right file.", nargs='*')
-
-    parser.add_argument(      "--short-line-action", dest="short_line_action",
-                              help="The action to take whe a short line is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
     
-    parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
-                              help="Remove excess trailing columns in long lines.", action='store_true')
+    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
+   
+    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists).", action='store_true')
 
-    parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+    parser.add_argument(      "--input-keys", dest="_input_keys", help="The key columns in the input file.", nargs='*')
+    parser.add_argument(      "--filter-keys", dest="_filter_keys", help="The key columns in the filter file.", nargs='*')
 
-    parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
+    KgtkReader.add_file_arguments(parser, mode_options=True, who="input")
+
+    # TODO: Find a way to use "--filter-on"
+    KgtkReader.add_file_arguments(parser, mode_options=True, who="filter", optional_file=True)
 
     KgtkValueOptions.add_arguments(parser)
 
-    args = parser.parse_args()
+    args: Namespace = parser.parse_args()
+
+    input_args: typing.Mapping[str, typing.Any] = dict(((item[0][len("input_"):], item[1]) for item in vars(args) if item[0].startswith("input_")))
+    filter_args: typing.Mapping[str, typing.Any] = dict(((item[0][len("filter_"):], item[1]) for item in vars(args) if item[0].startswith("filter_")))
 
     # Build the value parsing option structure.
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-    ie: IfExists = IfExists(left_file_path=args.left_kgtk_file,
-                            right_file_path=args.right_kgtk_file,
-                            output_path=args.output_file_path,
-                            invert=args.invert,
-                            left_keys=args.left_keys,
-                            right_keys=args.right_keys,
+    ie: IfExists = IfExists(input_reader_args=input_args,
+                            input_keys=args._input_keys,
+                            filter_reader_args=filter_args,
+                            filter_keys=args._filter_keys,
+                            output_file_path=args.output_file_path,
                             field_separator=args.field_separator,
-                            short_line_action=args.short_line_action,
-                            long_line_action=args.long_line_action,
-                            fill_short_lines=args.fill_short_lines,
-                            truncate_long_lines=args.truncate_long_lines,
-                            invalid_value_action=args.invalid_valid_action,
+                            invert=args.invert,
                             value_options=value_options,
-                            gzip_in_parallel=args.gzip_in_parallel,
-                            error_limit=args.error_limit,
                             verbose=args.verbose,
                             very_verbose=args.very_verbose)
 

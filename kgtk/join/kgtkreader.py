@@ -839,12 +839,16 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                            node_options: bool = False,
                            edge_options: bool = False,
                            mode_options: bool = False,
+                           optional_file: bool = True,
                            who: str = ""):
         prefix1: str = "--" if len(who) == 0 else "--" + who + "-"
         prefix2: str = "" if len(who) == 0 else who + "_"
         prefix3: str = "" if len(who) == 0 else who + " "
 
-        parser.add_argument(dest=prefix2 + "kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
+        if optional_file:
+            parser.add_argument(dest=prefix2 + "kgtk_file", help="The " + who + " KGTK file to read", type=Path, nargs="?")
+        else:
+            parser.add_argument(dest=prefix2 + "kgtk_file", help="The " + who + " KGTK file to read", type=Path)
 
         fgroup: _ArgumentGroup = parser.add_argument_group(prefix3 + "File options",
                                                            "Options affecting " + prefix3 + "processing")
