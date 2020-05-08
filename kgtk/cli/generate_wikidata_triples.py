@@ -161,30 +161,3 @@ def run(
         else:
             generator.entry_point(line_num+1,edge)
     generator.finalize()
-
-# testing profiling locally with direct call
-# pip3 install snakeviz
-# run `snakeviz /tmp/tmp.dat` to visualize the call stacks.
-# python3 -m cProfile -o /tmp/tmp.dat  generate_wikidata_triples.py
-if __name__ == "__main__":
-    import gzip
-    from kgtk.triple_generator import TripleGenerator
-    import sys
-    with open("/tmp/gwt.log","w") as dest_fp:
-        generator = TripleGenerator(
-            prop_file="/Users/rongpeng/Documents/ISI/Covid19/covid_data/v1.3/heng_props.tsv",
-            label_set="label",
-            alias_set="aliases",
-            description_set="descriptions",
-            n=10000,
-            ignore=True,
-            truthy=True,
-            dest_fp = dest_fp
-        )   
-        with open("/Users/rongpeng/Documents/ISI/Covid19/covid_data/v1.3/kgtk_sample_sorted.tsv","r") as fp:
-            for num, edge in enumerate(fp.readlines()):
-                if edge.startswith("#") or num == 0:
-                    continue
-                else:
-                    generator.entry_point(num+1,edge)
-            generator.finalize() 
