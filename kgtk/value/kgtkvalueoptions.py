@@ -58,62 +58,83 @@ class KgtkValueOptions:
     
 
     @classmethod
-    def add_arguments(cls, parser: ArgumentParser):
-        vgroup = parser.add_argument_group("Data value parsing", "Options controlling the parsing and processing of KGTK data values.")
-        vgroup.add_argument(      "--additional-language-codes", dest="additional_language_codes",
-                                  help="Additional language codes.", nargs="*", default=None)
+    def add_arguments(cls, parser: ArgumentParser, who: str = "", desc: str = "."):
+        """Add arguments for KgtkValue option processing.
+
+        When "who" is not empty, it prefixes the options, destinations, and
+        help messages.  This facilitates constructing command lines with
+        multiple sets of KGTKValue options, such as for different input files.
+        """
+        prefix1: str = "--" # The command line argument prefix.
+        prefix2: str = ""   # The destination name prefix.
+        prefix3: str = ""   # The help message prefix.
+
+        if len(who) > 0:
+            prefix1 = "--" + who + "-"
+            prefix2 = who + "_"
+            prefix3 = who + ": "
+        
+        vgroup = parser.add_argument_group(prefix3 + "Data value parsing", "Options controlling the parsing and processing of KGTK data values" + desc)
+        vgroup.add_argument(      prefix1 + "additional-language-codes", dest=prefix2 + "additional_language_codes",
+                                  help=prefix3 + "Additional language codes.", nargs="*", default=None)
 
         lsgroup= vgroup.add_mutually_exclusive_group()
-        lsgroup.add_argument(      "--allow-language-suffixes", dest="allow_language_suffixes",
-                                   help="Allow language identifier suffixes starting with a dash.", action='store_true', default=True)
+        lsgroup.add_argument(      prefix1 + "allow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
+                                   help=prefix3 + "Allow language identifier suffixes starting with a dash.", action='store_true', default=True)
 
-        lsgroup.add_argument(      "--disallow-language-suffixes", dest="allow_language_suffixes",
-                                   help="Disallow language identifier suffixes starting with a dash.", action='store_false')
+        lsgroup.add_argument(      prefix1 + "disallow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
+                                   help=prefix3 + "Disallow language identifier suffixes starting with a dash.", action='store_false')
 
         laxgroup= vgroup.add_mutually_exclusive_group()
-        laxgroup.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
-                                    help="Do not check if double quotes are backslashed inside strings.", action='store_true', default=False)
+        laxgroup.add_argument(      prefix1 + "allow-lax-strings", dest=prefix2 + "allow_lax_strings",
+                                    help=prefix3 + "Do not check if double quotes are backslashed inside strings.", action='store_true', default=False)
 
-        laxgroup.add_argument(      "--disallow-lax-strings", dest="allow_lax_strings",
-                                    help="Check if double quotes are backslashed inside strings.", action='store_false')
+        laxgroup.add_argument(      prefix1 + "disallow-lax-strings", dest=prefix2 + "allow_lax_strings",
+                                    help=prefix3 + "Check if double quotes are backslashed inside strings.", action='store_false')
 
         lqgroup= vgroup.add_mutually_exclusive_group()
-        lqgroup.add_argument(      "--allow-lax-lq-strings", dest="allow_lax_lq_strings",
-                                   help="Do not check if single quotes are backslashed inside language qualified strings.", action='store_true', default=False)
+        lqgroup.add_argument(      prefix1 + "allow-lax-lq-strings", dest=prefix2 + "allow_lax_lq_strings",
+                                   help=prefix3 + "Do not check if single quotes are backslashed inside language qualified strings.",
+                                   action='store_true', default=False)
 
-        lqgroup.add_argument(      "--disallow-lax-lq-strings", dest="allow_lax_lq_strings",
-                                   help="Check if single quotes are backslashed inside language qualified strings.", action='store_false')
+        lqgroup.add_argument(      prefix1 + "disallow-lax-lq-strings", dest=prefix2 + "allow_lax_lq_strings",
+                                   help=prefix3 + "Check if single quotes are backslashed inside language qualified strings.",
+                                   action='store_false')
 
         amd0group= vgroup.add_mutually_exclusive_group()
-        amd0group.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
-                                    help="Allow month or day zero in dates.", action='store_true', default=False)
+        amd0group.add_argument(      prefix1 + "allow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
+                                    help=prefix3 + "Allow month or day zero in dates.", action='store_true', default=False)
 
-        amd0group.add_argument(      "--disallow-month-or-day-zero", dest="allow_month_or_day_zero",
-                                    help="Allow month or day zero in dates.", action='store_false')
+        amd0group.add_argument(      prefix1 + "disallow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
+                                    help=prefix3 + "Allow month or day zero in dates.", action='store_false')
 
         rmd0group= vgroup.add_mutually_exclusive_group()
-        rmd0group.add_argument(      "--repair-month-or-day-zero", dest="repair_month_or_day_zero",
-                                    help="Repair month or day zero in dates.", action='store_true', default=False)
+        rmd0group.add_argument(      prefix1 + "repair-month-or-day-zero", dest=prefix2 + "repair_month_or_day_zero",
+                                    help=prefix3 + "Repair month or day zero in dates.", action='store_true', default=False)
 
-        rmd0group.add_argument(      "--no-repair-month-or-day-zero", dest="repair_month_or_day_zero",
-                                    help="Do not repair month or day zero in dates.", action='store_false')
+        rmd0group.add_argument(      prefix1 + "no-repair-month-or-day-zero", dest=prefix2 + "repair_month_or_day_zero",
+                                    help=prefix3 + "Do not repair month or day zero in dates.", action='store_false')
 
-        vgroup.add_argument(      "--minimum-valid-year", dest="minimum_valid_year",
-                                  help="The minimum valid year in dates.", type=int, default=cls.MINIMUM_VALID_YEAR)
+        vgroup.add_argument(      prefix1 + "minimum-valid-year", dest=prefix2 + "minimum_valid_year",
+                                  help=prefix3 + "The minimum valid year in dates.", type=int, default=cls.MINIMUM_VALID_YEAR)
 
-        vgroup.add_argument(      "--maximum-valid-year", dest="maximum_valid_year",
-                                  help="The maximum valid year in dates.", type=int, default=cls.MAXIMUM_VALID_YEAR)
+        vgroup.add_argument(      prefix1 + "maximum-valid-year", dest=prefix2 + "maximum_valid_year",
+                                  help=prefix3 + "The maximum valid year in dates.", type=int, default=cls.MAXIMUM_VALID_YEAR)
 
         elsgroup= vgroup.add_mutually_exclusive_group()
-        elsgroup.add_argument(      "--escape-list-separators", dest="escape_list_separators",
-                                    help="Escape all list separators instead of splitting on them.", action='store_true', default=False)
+        elsgroup.add_argument(      prefix1 + "escape-list-separators", dest=prefix2 + "escape_list_separators",
+                                    help=prefix3 + "Escape all list separators instead of splitting on them.", action='store_true', default=False)
 
-        elsgroup.add_argument(      "--no-escape-list-separators", dest="escape_list_separators",
-                                    help="Do not escape list separators.", action='store_false')
+        elsgroup.add_argument(      prefix1 + "no-escape-list-separators", dest=prefix2 + "escape_list_separators",
+                                    help=prefix3 + "Do not escape list separators.", action='store_false')
 
     @classmethod
     # Build the value parsing option structure.
-    def from_dict(cls, d: dict, prefix: str = "")->'KgtkValueOptions':
+    def from_dict(cls, d: dict, who: str = "")->'KgtkValueOptions':
+        prefix: str = ""   # The destination name prefix.
+        if len(who) > 0:
+            prefix = who + "_"
+
         return cls(allow_month_or_day_zero=d.get(prefix + "allow_month_or_day_zero", False),
                    repair_month_or_day_zero=d.get(prefix + "repair_month_or_day_zero", False),
                    allow_language_suffixes=d.get(prefix + "allow_language_suffixes", True),
@@ -126,8 +147,8 @@ class KgtkValueOptions:
 
     @classmethod
     # Build the value parsing option structure.
-    def from_args(cls, args: Namespace, prefix: str = "")->'KgtkValueOptions':
-        return cls.from_dict(vars(args), prefix=prefix)
+    def from_args(cls, args: Namespace, who: str = "")->'KgtkValueOptions':
+        return cls.from_dict(vars(args), who=who)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
@@ -137,6 +158,8 @@ def main():
     """
     parser: ArgumentParser = ArgumentParser()
     KgtkValueOptions.add_arguments(parser)
+    KgtkValueOptions.add_arguments(parser, who="left", desc=" for the left file.")
+    KgtkValueOptions.add_arguments(parser, who="right", desc=" for the right file.")
     args: Namespace = parser.parse_args()
 
     # Build the value parsing option structure.
@@ -150,6 +173,13 @@ def main():
         print("additional_language_codes: None")
     else:
         print("additional_language_codes: [ %s ]" % ", ".join(value_options.additional_language_codes))
+    
+    # Test prefixed value option processing.
+    left_value_options: KgtkValueOptions = KgtkValueOptions.from_args(args, who="left")
+    print("left_allow_month_or_day_zero: %s" % str(left_value_options.allow_month_or_day_zero))
+
+    right_value_options: KgtkValueOptions = KgtkValueOptions.from_args(args, who="right")
+    print("right_allow_month_or_day_zero: %s" % str(right_value_options.allow_month_or_day_zero))
 
 if __name__ == "__main__":
     main()
