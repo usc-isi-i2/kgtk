@@ -38,6 +38,8 @@ def add_arguments(parser):
         "--label-property",
         action="store",
         type=str,
+        default="label",
+        required=False,
         help="property identifiers which will create labels, separated by comma','.",
         dest="labels",
     )
@@ -46,6 +48,8 @@ def add_arguments(parser):
         "--alias-property",
         action="store",
         type=str,
+        required = False,
+        default="aliases",
         help="alias identifiers which will create labels, separated by comma','.",
         dest="aliases",
     )
@@ -54,6 +58,8 @@ def add_arguments(parser):
         "--description-property",
         action="store",
         type=str,
+        required = False,
+        default="descriptions",
         help="description identifiers which will create labels, separated by comma','.",
         dest="descriptions",
     )
@@ -62,6 +68,7 @@ def add_arguments(parser):
         "--property-types",
         action="store",
         type=str,
+        required = True,
         help="path to the file which contains the property datatype mapping in kgtk format.",
         dest="prop_file",
     )
@@ -70,6 +77,8 @@ def add_arguments(parser):
         "--output-n-lines",
         action="store",
         type=int,
+        required = False,
+        default=1000,
         help="output triples approximately every {n} lines of reading stdin.",
         dest="n",
     )
@@ -78,7 +87,9 @@ def add_arguments(parser):
         "--generate-truthy",
         action="store",
         type=str2bool,
-        help="the default is to not generate truthy triples. Specify this option to generate truthy triples. NOTIMPLEMENTED",
+        required = False,
+        default="yes",
+        help="the default is to not generate truthy triples. Specify this option to generate truthy triples.",
         dest="truthy",
     )
     parser.add_argument(
@@ -86,6 +97,8 @@ def add_arguments(parser):
         "--ignore",
         action="store",
         type=str2bool,
+        required = False,
+        default="no",
         help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging",
         dest="ignore",
     )
@@ -94,13 +107,21 @@ def add_arguments(parser):
         "--use-gz",
         action="store",
         type=str2bool,
+        required = False,
+        default="no",
         help="if set to yes, read from compressed gz file",
         dest="use_gz",
     )
-    # logging level
-    # parser.add_argument('-l', '--logging-level', action='store', dest='logging_level',
-    #         default="info", choices=("error", "warning", "info", "debug"),
-    #         help="set up the logging level, default is INFO level")
+    parser.add_argument(
+        "-sid",
+        "--use-id",
+        action="store",
+        type=str2bool,
+        required = False,
+        default="no",
+        help="if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement",
+        dest="use_id",
+    )
 
 
 def run(
@@ -111,7 +132,8 @@ def run(
     n: int,
     truthy: bool,
     ignore: bool,
-    use_gz: bool
+    use_gz: bool,
+    use_id:bool
 ):
     # import modules locally
     import gzip
@@ -124,22 +146,45 @@ def run(
         description_set=descriptions,
         n=n,
         ignore=ignore,
-        truthy=truthy
+        truthy=truthy,
+        use_id=use_id
     )
     # process stdin
-    num_line = 0
     if use_gz:
         fp = gzip.open(sys.stdin.buffer, 'rt')
     else:
         fp = sys.stdin
-    while True:
-        edge = fp.readline()
-        if not edge:
-            break
-        if edge.startswith("#") or num_line == 0: # TODO First line omit
-            num_line += 1
+        # not line by line
+    for line_num, edge in enumerate(fp):
+        if edge.startswith("#"):
             continue
         else:
-            generator.entry_point(num_line, edge)
-            num_line += 1
+            generator.entry_point(line_num+1,edge)
     generator.finalize()
+
+# testing profiling locally with direct call
+# pip3 install snakeviz
+# run `snakeviz /tmp/tmp.dat` to visualize the call stacks.
+# python3 -m cProfile -o /tmp/tmp.dat  generate_wikidata_triples.py
+if __name__ == "__main__":
+    import gzip
+    from kgtk.triple_generator import TripleGenerator
+    import sys
+    with open("/tmp/gwt.log","w") as dest_fp:
+        generator = TripleGenerator(
+            prop_file="/Users/rongpeng/Documents/ISI/Covid19/covid_data/v1.3/heng_props.tsv",
+            label_set="label",
+            alias_set="aliases",
+            description_set="descriptions",
+            n=10000,
+            ignore=True,
+            truthy=True,
+            dest_fp = dest_fp
+        )   
+        with open("/Users/rongpeng/Documents/ISI/Covid19/covid_data/v1.3/kgtk_sample_sorted.tsv","r") as fp:
+            for num, edge in enumerate(fp.readlines()):
+                if edge.startswith("#") or num == 0:
+                    continue
+                else:
+                    generator.entry_point(num+1,edge)
+            generator.finalize() 
