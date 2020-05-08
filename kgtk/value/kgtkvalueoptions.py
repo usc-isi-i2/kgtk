@@ -113,16 +113,21 @@ class KgtkValueOptions:
 
     @classmethod
     # Build the value parsing option structure.
-    def from_args(cls, args: Namespace)->'KgtkValueOptions':
-        return cls(allow_month_or_day_zero=args.allow_month_or_day_zero,
-                   repair_month_or_day_zero=args.repair_month_or_day_zero,
-                   allow_language_suffixes=args.allow_language_suffixes,
-                   allow_lax_strings=args.allow_lax_strings,
-                   allow_lax_lq_strings=args.allow_lax_lq_strings,
-                   additional_language_codes=args.additional_language_codes,
-                   minimum_valid_year=args.minimum_valid_year,
-                   maximum_valid_year=args.maximum_valid_year,
-                   escape_list_separators=args.escape_list_separators)
+    def from_dict(cls, d: dict, prefix: str = "")->'KgtkValueOptions':
+        return cls(allow_month_or_day_zero=d.get(prefix + "allow_month_or_day_zero", False),
+                   repair_month_or_day_zero=d.get(prefix + "repair_month_or_day_zero", False),
+                   allow_language_suffixes=d.get(prefix + "allow_language_suffixes", True),
+                   allow_lax_strings=d.get(prefix + "allow_lax_strings", False),
+                   allow_lax_lq_strings=d.get(prefix + "allow_lax_lq_strings", False),
+                   additional_language_codes=d.get(prefix + "additional_language_codes", None),
+                   minimum_valid_year=d.get(prefix + "minimum_valid_year", cls.MINIMUM_VALID_YEAR),
+                   maximum_valid_year=d.get(prefix + "maximum_valid_year", cls.MAXIMUM_VALID_YEAR),
+                   escape_list_separators=d.get(prefix + "escape_list_separators", False))
+
+    @classmethod
+    # Build the value parsing option structure.
+    def from_args(cls, args: Namespace, prefix: str = "")->'KgtkValueOptions':
+        return cls.from_dict(vars(args), prefix=prefix)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
