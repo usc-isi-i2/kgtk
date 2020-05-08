@@ -15,11 +15,11 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions
-from kgtk.join.validationaction import ValidationAction
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkreader import KgtkReader
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -148,15 +148,6 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         invalid_value_action: ValidationAction = ValidationAction.REPORT,
         header_error_action: ValidationAction = ValidationAction.EXIT,
         unsafe_column_name_action: ValidationAction = ValidationAction.REPORT,
-        additional_language_codes: typing.Optional[typing.List[str]] = None,
-        allow_language_suffixes: bool = False,
-        allow_lax_strings: bool = False,
-        allow_lax_lq_strings: bool = False,
-        allow_month_or_day_zero: bool = False,
-        repair_month_or_day_zero: bool = False,
-        escape_list_separators: bool = False,
-        minimum_valid_year: int = KgtkValueOptions.MINIMUM_VALID_YEAR,
-        maximum_valid_year: int = KgtkValueOptions.MAXIMUM_VALID_YEAR,
         compression_type: typing.Optional[str] = None,
         gzip_in_parallel: bool = False,
         gzip_queue_size: int = KgtkReader.GZIP_QUEUE_SIZE_DEFAULT,
@@ -165,6 +156,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         header_only: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
+        **kwargs # Whatever KgtkValueOptions wants.
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
@@ -176,15 +168,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
     error_file: typing.TextIO = sys.stderr if errors_to_stderr else sys.stdout
 
     # Build the value parsing option structure.
-    value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=allow_month_or_day_zero,
-                                                       repair_month_or_day_zero=repair_month_or_day_zero,
-                                                       allow_lax_strings=allow_lax_strings,
-                                                       allow_lax_lq_strings=allow_lax_lq_strings,
-                                                       allow_language_suffixes=allow_language_suffixes,
-                                                       additional_language_codes=additional_language_codes,
-                                                       minimum_valid_year=minimum_valid_year,
-                                                       maximum_valid_year=maximum_valid_year,
-                                                       escape_list_separators=escape_list_separators)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     try:
         kgtk_file: typing.Optional[Path]
