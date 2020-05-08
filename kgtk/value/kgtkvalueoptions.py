@@ -121,6 +121,18 @@ class KgtkValueOptions:
         vgroup.add_argument(      prefix1 + "maximum-valid-year", dest=prefix2 + "maximum_valid_year",
                                   help=prefix3 + "The maximum valid year in dates.", type=int, default=cls.MAXIMUM_VALID_YEAR)
 
+        vgroup.add_argument(      prefix1 + "minimum-valid-lat", dest=prefix2 + "minimum_valid_lat",
+                                  help=prefix3 + "The minimum valid latitude.", type=int, default=cls.MINIMUM_VALID_LAT)
+
+        vgroup.add_argument(      prefix1 + "maximum-valid-lat", dest=prefix2 + "maximum_valid_lat",
+                                  help=prefix3 + "The maximum valid latitude.", type=int, default=cls.MAXIMUM_VALID_LAT)
+
+        vgroup.add_argument(      prefix1 + "minimum-valid-lon", dest=prefix2 + "minimum_valid_lon",
+                                  help=prefix3 + "The minimum valid longitude.", type=int, default=cls.MINIMUM_VALID_LON)
+
+        vgroup.add_argument(      prefix1 + "maximum-valid-lon", dest=prefix2 + "maximum_valid_lon",
+                                  help=prefix3 + "The maximum valid longitude.", type=int, default=cls.MAXIMUM_VALID_LON)
+
         elsgroup= vgroup.add_mutually_exclusive_group()
         elsgroup.add_argument(      prefix1 + "escape-list-separators", dest=prefix2 + "escape_list_separators",
                                     help=prefix3 + "Escape all list separators instead of splitting on them.", action='store_true', default=False)
