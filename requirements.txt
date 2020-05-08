@@ -16,3 +16,4 @@ attrs
 pycountry
 iso-639
 redis
+rfc3986
