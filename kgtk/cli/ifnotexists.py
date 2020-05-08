@@ -76,17 +76,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         verbose: bool = False,
         very_verbose: bool = False,
 
-        # Arguments from KgtkValueOptions:
-        additional_language_codes: typing.Optional[typing.List[str]] = None,
-        allow_language_suffixes: bool = False,
-        allow_lax_strings: bool = False,
-        allow_lax_lq_strings: bool = False,
-        allow_month_or_day_zero: bool = False,
-        repair_month_or_day_zero: bool = False,
-        minimum_valid_year: int = KgtkValueOptions.MINIMUM_VALID_YEAR,
-        maximum_valid_year: int = KgtkValueOptions.MAXIMUM_VALID_YEAR,
-        escape_list_separators: bool = False,
-
+        **kwargs # Whatever KgtkValueOptions wants.
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
@@ -100,15 +90,7 @@ def run(input_kgtk_file: typing.Optional[Path],
     error_file: typing.TextIO = sys.stderr if errors_to_stderr else sys.stdout
 
     # Build the value parsing option structure.
-    value_options: KgtkValueOptions = KgtkValueOptions(allow_month_or_day_zero=allow_month_or_day_zero,
-                                                       repair_month_or_day_zero=repair_month_or_day_zero,
-                                                       allow_lax_strings=allow_lax_strings,
-                                                       allow_lax_lq_strings=allow_lax_lq_strings,
-                                                       allow_language_suffixes=allow_language_suffixes,
-                                                       additional_language_codes=additional_language_codes,
-                                                       minimum_valid_year=minimum_valid_year,
-                                                       maximum_valid_year=maximum_valid_year,
-                                                       escape_list_separators=escape_list_separators)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     try:
         ie: IfExists = IfExists(left_file_path=input_kgtk_file,
