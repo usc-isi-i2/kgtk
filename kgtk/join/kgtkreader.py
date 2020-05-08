@@ -834,83 +834,123 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
         
     @classmethod
-    def add_shared_arguments(cls, parser: ArgumentParser)->typing.Tuple[_ArgumentGroup, _ArgumentGroup, _ArgumentGroup]:
-        parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
+    def add_arguments(cls,
+                      parser: ArgumentParser,
+                      node_options: bool = False,
+                      edge_options: bool = False,
+                      mode_options: bool = False,
+                      who: str = ""):
+        prefix1: str = "--" if len(who) == 0 else "--" + who + "-"
+        prefix2: str = "" if len(who) == 0 else who + "_"
+        prefix3: str = "" if len(who) == 0 else who + " "
 
-        fgroup: _ArgumentGroup = parser.add_argument_group("File options", "Options affecting file processing")
-        fgroup.add_argument(      "--column-separator", dest="column_separator",
-                                  help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
+        parser.add_argument(dest=prefix2 + "kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
 
-        fgroup.add_argument(      "--compression-type", dest="compression_type", help="Specify the compression type.")
+        fgroup: _ArgumentGroup = parser.add_argument_group(prefix3 + "File options",
+                                                           "Options affecting " + prefix3 + "processing")
+        fgroup.add_argument(prefix1 + "column-separator",
+                            dest=prefix2 + "column_separator",
+                            help="Column separator.", type=str, default=cls.COLUMN_SEPARATOR)
 
-        fgroup.add_argument(      "--error-limit", dest="error_limit",
-                                  help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
+        fgroup.add_argument(prefix1 + "compression-type",
+                            dest=prefix2 + "compression_type", help="Specify the compression type.")
 
-        fgroup.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
+        fgroup.add_argument(prefix1 + "error-limit",
+                            dest=prefix2 + "error_limit",
+                            help="The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
 
-        fgroup.add_argument(      "--gzip-queue-size", dest="gzip_queue_size",
-                                  help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
+        fgroup.add_argument(prefix1 + "gzip-in-parallel",
+                            dest=prefix2 + "gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
 
-        hgroup: _ArgumentGroup = parser.add_argument_group("Header parsing", "Options affecting header parsing")
+        fgroup.add_argument(prefix1 + "gzip-queue-size",
+                            dest=prefix2 + "gzip_queue_size",
+                            help="Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
 
-        hgroup.add_argument(      "--force-column-names", dest="force_column_names", help="Force the column names.", nargs='+')
+        if mode_options:
+            fgroup.add_argument(prefix1 + "mode",
+                                dest=prefix2 + "mode",
+                                help="Determine the KGTK file mode.",
+                                type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
+            
+        hgroup: _ArgumentGroup = parser.add_argument_group(prefix3 + "Header parsing", "Options affecting header parsing")
 
-        hgroup.add_argument(      "--header-error-action", dest="header_error_action",
-                                  help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
+        hgroup.add_argument(prefix1 + "force-column-names",
+                            dest=prefix2 + "force_column_names", help="Force the column names.", nargs='+')
 
-        hgroup.add_argument(      "--skip-first-record", dest="skip_first_record",
-                                  help="Skip the first record when forcing column names.", action='store_true')
+        hgroup.add_argument(prefix1 + "header-error-action",
+                            dest=prefix2 + "header_error_action",
+                            help="The action to take when a header error is detected  Only ERROR or EXIT are supported.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
 
-        hgroup.add_argument(      "--unsafe-column-name-action", dest="unsafe_column_name_action",
-                                  help="The action to take when a column name is unsafe.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+        hgroup.add_argument(prefix1 + "skip-first-record",
+                            dest=prefix2 + "skip_first_record",
+                            help="Skip the first record when forcing column names.", action='store_true')
+
+        hgroup.add_argument(prefix1 + "unsafe-column-name-action",
+                            dest=prefix2 + "unsafe_column_name_action",
+                            help="The action to take when a column name is unsafe.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
         lgroup: _ArgumentGroup = parser.add_argument_group("Line parsing", "Options affecting data line parsing")
 
-        lgroup.add_argument(      "--blank-required-field-line-action", dest="blank_line_action",
-                                  help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+        if node_options:
+            lgroup.add_argument(prefix1 + "blank-id-line-action",
+                                dest=prefix2 + "blank_id_line_action",
+                                help="The action to take when a blank id field is detected.",
+                                type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+        if edge_options:
+            lgroup.add_argument(prefix1 + "blank-node1-line-action",
+                                dest=prefix2 + "blank_node1_line_action",
+                                help="The action to take when a blank node1 field is detected.",
+                                type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+
+            lgroup.add_argument(prefix1 + "blank-node2-line-action",
+                                dest=prefix2 + "blank_node2_line_action",
+                                help="The action to take when a blank node2 field is detected.",
+                                type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+        lgroup.add_argument(prefix1 + "blank-required-field-line-action",
+                            dest=prefix2 + "blank_line_action",
+                            help="The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
                                   
-        lgroup.add_argument(      "--comment-line-action", dest="comment_line_action",
-                                  help="The action to take when a comment line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+        lgroup.add_argument(prefix1 + "comment-line-action",
+                            dest=prefix2 + "comment_line_action",
+                            help="The action to take when a comment line is detected.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
-        lgroup.add_argument(      "--empty-line-action", dest="empty_line_action",
-                                  help="The action to take when an empty line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+        lgroup.add_argument(prefix1 + "empty-line-action",
+                            dest=prefix2 + "empty_line_action",
+                            help="The action to take when an empty line is detected.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
-        lgroup.add_argument(      "--fill-short-lines", dest="fill_short_lines",
-                                  help="Fill missing trailing columns in short lines with empty values.", action='store_true')
+        lgroup.add_argument(prefix1 + "fill-short-lines",
+                            dest=prefix2 + "fill_short_lines",
+                            help="Fill missing trailing columns in short lines with empty values.", action='store_true')
 
-        lgroup.add_argument(      "--invalid-value-action", dest="invalid_value_action",
-                                  help="The action to take when a data cell value is invalid.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+        lgroup.add_argument(prefix1 + "invalid-value-action",
+                            dest=prefix2 + "invalid_value_action",
+                            help="The action to take when a data cell value is invalid.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
-        lgroup.add_argument(      "--long-line-action", dest="long_line_action",
-                                  help="The action to take when a long line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+        lgroup.add_argument(prefix1 + "long-line-action",
+                            dest=prefix2 + "long_line_action",
+                            help="The action to take when a long line is detected.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
-        lgroup.add_argument(      "--short-line-action", dest="short_line_action",
-                                  help="The action to take when a short line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+        lgroup.add_argument(prefix1 + "short-line-action",
+                            dest=prefix2 + "short_line_action",
+                            help="The action to take when a short line is detected.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
-        lgroup.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
-                                  help="Remove excess trailing columns in long lines.", action='store_true')
+        lgroup.add_argument(prefix1 + "truncate-long-lines",
+                            dest=prefix2 + "truncate_long_lines",
+                            help="Remove excess trailing columns in long lines.", action='store_true')
 
-        lgroup.add_argument(      "--whitespace-line-action", dest="whitespace_line_action",
-                                  help="The action to take when a whitespace line is detected.",
-                                  type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
-
-        return (fgroup, hgroup, lgroup)
-                                  
-    # May be overridden
-    @classmethod
-    def add_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(      "--mode", dest="mode",
-                                  help="Determine the KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
-
-
+        lgroup.add_argument(prefix1 + "whitespace-line-action",
+                            dest=prefix2 + "whitespace_line_action",
+                            help="The action to take when a whitespace line is detected.",
+                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
     
 def main():
     """
@@ -923,10 +963,7 @@ def main():
 
     parser = ArgumentParser()
     KgtkReader.add_operation_arguments(parser)
-    (fgroup, hgroup, lgroup) = KgtkReader.add_shared_arguments(parser)
-    KgtkReader.add_arguments(fgroup)
-    EdgeReader.add_arguments(lgroup)
-    NodeReader.add_arguments(lgroup)
+    KgtkReader.add_arguments(parser, node_options=True, edge_options=True, mode_options=True)
     KgtkValueOptions.add_arguments(parser)
 
     parser.add_argument(       "--test", dest="test_method", help="The test to perform",
