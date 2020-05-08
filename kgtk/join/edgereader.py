@@ -153,7 +153,7 @@ def main():
     """
     parser = ArgumentParser()
     KgtkReader.add_operation_arguments(parser)
-    KgtkReader.add_arguments(parser, edge_options=True)
+    KgtkReader.add_file_arguments(parser, edge_options=True)
     KgtkValueOptions.add_arguments(parser)
     args = parser.parse_args()
 

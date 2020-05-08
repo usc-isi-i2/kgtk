@@ -834,12 +834,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
         
     @classmethod
-    def add_arguments(cls,
-                      parser: ArgumentParser,
-                      node_options: bool = False,
-                      edge_options: bool = False,
-                      mode_options: bool = False,
-                      who: str = ""):
+    def add_file_arguments(cls,
+                           parser: ArgumentParser,
+                           node_options: bool = False,
+                           edge_options: bool = False,
+                           mode_options: bool = False,
+                           who: str = ""):
         prefix1: str = "--" if len(who) == 0 else "--" + who + "-"
         prefix2: str = "" if len(who) == 0 else who + "_"
         prefix3: str = "" if len(who) == 0 else who + " "
@@ -963,7 +963,7 @@ def main():
 
     parser = ArgumentParser()
     KgtkReader.add_operation_arguments(parser)
-    KgtkReader.add_arguments(parser, node_options=True, edge_options=True, mode_options=True)
+    KgtkReader.add_file_arguments(parser, node_options=True, edge_options=True, mode_options=True)
     KgtkValueOptions.add_arguments(parser)
 
     parser.add_argument(       "--test", dest="test_method", help="The test to perform",
