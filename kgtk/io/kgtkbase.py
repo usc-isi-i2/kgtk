@@ -7,9 +7,9 @@ from enum import Enum
 import sys
 import typing
 
-from kgtk.join.validationaction import ValidationAction
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkvalue import KgtkValue
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalue import KgtkValue
 
 class KgtkBase(KgtkFormat):
     @classmethod
