@@ -8,9 +8,9 @@ import re
 import sys
 import typing
 
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
-from kgtk.join.languagevalidator import LanguageValidator
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
+from kgtk.value.languagevalidator import LanguageValidator
 
 @attr.s(slots=True, frozen=False)
 class KgtkValue(KgtkFormat):
