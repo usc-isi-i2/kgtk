@@ -24,12 +24,12 @@ from multiprocessing import Queue
 import sys
 import typing
 
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkwriter import KgtkWriter
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions
-from kgtk.join.validationaction import ValidationAction
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkreader import KgtkReader
+from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class IfExists(KgtkFormat):

@@ -10,11 +10,11 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.join.closableiter import ClosableIter
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions
-from kgtk.join.validationaction import ValidationAction
+from kgtk.io.kgtkreader import KgtkReader
+from kgtk.utils.closableiter import ClosableIter
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=False)
 class NodeReader(KgtkReader):
