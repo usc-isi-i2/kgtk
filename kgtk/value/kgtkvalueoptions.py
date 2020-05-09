@@ -59,51 +59,52 @@ class KgtkValueOptions:
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(      "--additional-language-codes", dest="additional_language_codes",
+        vgroup = parser.add_argument_group("Data value parsing", "Options controlling the parsing and processing of KGTK data values.")
+        vgroup.add_argument(      "--additional-language-codes", dest="additional_language_codes",
                                   help="Additional language codes.", nargs="*", default=None)
 
-        lsgroup= parser.add_mutually_exclusive_group()
+        lsgroup= vgroup.add_mutually_exclusive_group()
         lsgroup.add_argument(      "--allow-language-suffixes", dest="allow_language_suffixes",
                                    help="Allow language identifier suffixes starting with a dash.", action='store_true', default=True)
 
         lsgroup.add_argument(      "--disallow-language-suffixes", dest="allow_language_suffixes",
                                    help="Disallow language identifier suffixes starting with a dash.", action='store_false')
 
-        laxgroup= parser.add_mutually_exclusive_group()
+        laxgroup= vgroup.add_mutually_exclusive_group()
         laxgroup.add_argument(      "--allow-lax-strings", dest="allow_lax_strings",
                                     help="Do not check if double quotes are backslashed inside strings.", action='store_true', default=False)
 
         laxgroup.add_argument(      "--disallow-lax-strings", dest="allow_lax_strings",
                                     help="Check if double quotes are backslashed inside strings.", action='store_false')
 
-        lqgroup= parser.add_mutually_exclusive_group()
+        lqgroup= vgroup.add_mutually_exclusive_group()
         lqgroup.add_argument(      "--allow-lax-lq-strings", dest="allow_lax_lq_strings",
                                    help="Do not check if single quotes are backslashed inside language qualified strings.", action='store_true', default=False)
 
         lqgroup.add_argument(      "--disallow-lax-lq-strings", dest="allow_lax_lq_strings",
                                    help="Check if single quotes are backslashed inside language qualified strings.", action='store_false')
 
-        amd0group= parser.add_mutually_exclusive_group()
+        amd0group= vgroup.add_mutually_exclusive_group()
         amd0group.add_argument(      "--allow-month-or-day-zero", dest="allow_month_or_day_zero",
                                     help="Allow month or day zero in dates.", action='store_true', default=False)
 
         amd0group.add_argument(      "--disallow-month-or-day-zero", dest="allow_month_or_day_zero",
                                     help="Allow month or day zero in dates.", action='store_false')
 
-        rmd0group= parser.add_mutually_exclusive_group()
+        rmd0group= vgroup.add_mutually_exclusive_group()
         rmd0group.add_argument(      "--repair-month-or-day-zero", dest="repair_month_or_day_zero",
                                     help="Repair month or day zero in dates.", action='store_true', default=False)
 
         rmd0group.add_argument(      "--no-repair-month-or-day-zero", dest="repair_month_or_day_zero",
                                     help="Do not repair month or day zero in dates.", action='store_false')
 
-        parser.add_argument(      "--minimum-valid-year", dest="minimum_valid_year",
+        vgroup.add_argument(      "--minimum-valid-year", dest="minimum_valid_year",
                                   help="The minimum valid year in dates.", type=int, default=cls.MINIMUM_VALID_YEAR)
 
-        parser.add_argument(      "--maximum-valid-year", dest="maximum_valid_year",
+        vgroup.add_argument(      "--maximum-valid-year", dest="maximum_valid_year",
                                   help="The maximum valid year in dates.", type=int, default=cls.MAXIMUM_VALID_YEAR)
 
-        elsgroup= parser.add_mutually_exclusive_group()
+        elsgroup= vgroup.add_mutually_exclusive_group()
         elsgroup.add_argument(      "--escape-list-separators", dest="escape_list_separators",
                                     help="Escape all list separators instead of splitting on them.", action='store_true', default=False)
 
