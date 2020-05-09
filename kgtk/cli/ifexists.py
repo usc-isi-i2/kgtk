@@ -6,13 +6,13 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.kgtkformat import KgtkFormat
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkreader import KgtkReader
+from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.ifexists import IfExists
-from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkwriter import KgtkWriter
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions
-from kgtk.join.validationaction import ValidationAction
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -116,6 +116,7 @@ def run(input_kgtk_file: typing.Optional[Path],
                                 left_keys=left_keys,
                                 right_keys=right_keys,
                                 field_separator=field_separator,
+                                invalid_value_action=ValidationAction.PASS,
                                 value_options=value_options,
                                 error_limit=error_limit,
                                 verbose=verbose,

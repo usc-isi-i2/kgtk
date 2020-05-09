@@ -24,12 +24,12 @@ from multiprocessing import Queue
 import sys
 import typing
 
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkwriter import KgtkWriter
-from kgtk.join.kgtkvalueoptions import KgtkValueOptions
-from kgtk.join.validationaction import ValidationAction
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkreader import KgtkReader
+from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class IfExists(KgtkFormat):
@@ -57,6 +57,7 @@ class IfExists(KgtkFormat):
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.PASS)
     # TODO: find a working validator
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
@@ -140,6 +141,7 @@ class IfExists(KgtkFormat):
                                                long_line_action=self.long_line_action,
                                                fill_short_lines=self.fill_short_lines,
                                                truncate_long_lines=self.truncate_long_lines,
+                                               invalid_value_action=self.invalid_value_action,
                                                value_options = self.value_options,
                                                error_limit=self.error_limit,
                                                verbose=self.verbose,
@@ -153,6 +155,7 @@ class IfExists(KgtkFormat):
                                                long_line_action=self.long_line_action,
                                                fill_short_lines=self.fill_short_lines,
                                                truncate_long_lines=self.truncate_long_lines,
+                                               invalid_value_action=self.invalid_value_action,
                                                value_options = self.value_options,
                                                error_limit=self.error_limit,
                                                verbose=self.verbose,
@@ -228,6 +231,10 @@ def main():
 
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
 
+    parser.add_argument(      "--invalid-value-action", dest="invalid_value_action",
+                              help="The action to take when an invalid data value is detected.",
+                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.PASS)
+
     parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists).", action='store_true')
 
     parser.add_argument(      "--left-keys", dest="left_keys", help="The key columns in the left file.", nargs='*')
@@ -269,6 +276,7 @@ def main():
                             long_line_action=args.long_line_action,
                             fill_short_lines=args.fill_short_lines,
                             truncate_long_lines=args.truncate_long_lines,
+                            invalid_value_action=args.invalid_valid_action,
                             value_options=value_options,
                             gzip_in_parallel=args.gzip_in_parallel,
                             error_limit=args.error_limit,
