@@ -460,16 +460,17 @@ class EmbeddingVector:
 
                     if node_property in properties_reversed:
                         roles = properties_reversed[node_property]
+                        node_value = self.get_real_label_name(node_value)
+                        # if we get property_values, it should be saved to isa-properties part
                         if "property_values" in roles:
                             # for property values part, changed to be "{property} {value}"
-                            node_value = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
-                        else:
-                            node_value = self.get_real_label_name(node_value)
+                            node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
+                            each_node_attributes["isa_properties"].append(node_value_combine)
+                            # remove those 2 roles in case we have duplicate using of this node later
+                            roles.discard("property_values")
+                            roles.discard("has_properties")
                         for each_role in roles:
-                            if each_role == "property_values" and "has_properties" not in roles:
-                                each_node_attributes["has_properties"].append(node_value)
-                            else:
-                                each_node_attributes[each_role].append(node_value)
+                            each_node_attributes[each_role].append(node_value)
                     elif add_all_properties:  # add remained properties if need all properties
                         each_node_attributes["has_properties"].append(self.get_real_label_name(node_property))
 
