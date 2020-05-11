@@ -111,7 +111,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="kgtk_file", help="The KGTK edge file to read", type=Path, nargs="?")
     KgtkReader.add_debug_arguments(parser)
-    KgtkReaderOptions.add_arguments(parser)
+    KgtkReaderOptions.add_arguments(parser, validate=True)
     KgtkValueOptions.add_arguments(parser)
     args = parser.parse_args()
 

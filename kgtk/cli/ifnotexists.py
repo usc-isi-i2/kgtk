@@ -37,15 +37,9 @@ def add_arguments(parser):
 
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
 
-    KgtkReader.add_file_arguments(parser, mode_options=True, who="input")
-    KgtkReader.add_file_arguments(parser, mode_options=True, who="filter")
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input")
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter")
     KgtkValueOptions.add_arguments(parser)
-
-
-    # Note: Any arguments described by KgtkValueOptions.add_arguments(...)
-    # need to be included in the arguments to run(...), below.
-    KgtkValueOptions.add_arguments(parser)
-
 
 def run(input_kgtk_file: typing.Optional[Path],
         filter_kgtk_file: Path,

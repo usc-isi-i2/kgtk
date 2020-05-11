@@ -65,6 +65,10 @@ class KgtkReaderOptions():
     # How do we handle errors?
     error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=ERROR_LIMIT_DEFAULT) # >0 ==> limit error reports
 
+    # Top-level validation controls:
+    repair_and_validate_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    repair_and_validate_values: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # Ignore empty lines, comments, and all whitespace lines, etc.?
     empty_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
     comment_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
@@ -97,6 +101,7 @@ class KgtkReaderOptions():
     def add_arguments(cls,
                       parser: ArgumentParser,
                       mode_options: bool = False,
+                      validate: bool = False,
                       who: str = ""):
         prefix1: str = "--" if len(who) == 0 else "--" + who + "-"
         prefix2: str = "" if len(who) == 0 else who + "_"
@@ -156,6 +161,26 @@ class KgtkReaderOptions():
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
         lgroup: _ArgumentGroup = parser.add_argument_group("Line parsing", "Options affecting " + prefix4 + "data line parsing")
+
+        lgroup.add_argument(prefix1 + "repair-and-validate-lines",
+                            dest=prefix2 + "repair_and_validate_lines",
+                            help=prefix3 + "Repair and validate lines (default=%(default)s).",
+                            action='store_true', default=validate)
+
+        lgroup.add_argument(prefix1 + "do-not-repair-and-validate-lines",
+                            dest=prefix2 + "repair_and_validate_lines",
+                            help=prefix3 + "Do not repair and validate lines.",
+                            action='store_false')
+
+        lgroup.add_argument(prefix1 + "repair-and-validate-values",
+                            dest=prefix2 + "repair_and_validate_values",
+                            help=prefix3 + "Repair and validate values (default=%(default)s).",
+                            action='store_true', default=validate)
+
+        lgroup.add_argument(prefix1 + "do-not-repair-and-validate-values",
+                            dest=prefix2 + "repair-and-validate_values",
+                            help=prefix3 + "Do not repair and validate values.",
+                            action='store_false')
 
         lgroup.add_argument(prefix1 + "blank-required-field-line-action",
                             dest=prefix2 + "blank_required_field_line_action",
@@ -234,6 +259,8 @@ class KgtkReaderOptions():
             invalid_value_action=d.get(prefix + "invalid_value_action", ValidationAction.REPORT),
             long_line_action=d.get(prefix + "long_line_action", ValidationAction.EXCLUDE),
             mode=reader_mode,
+            repair_and_validate_lines=d.get(prefix + "repair_and_validate_lines", False),
+            repair_and_validate_values=d.get(prefix + "repair_and_validate_values", False),
             short_line_action=d.get(prefix + "short_line_action", ValidationAction.EXCLUDE),
             skip_first_record=d.get(prefix + "skip_first_recordb", False),
             truncate_long_lines=d.get(prefix + "truncate_long_lines", False),
@@ -258,7 +285,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     source: ClosableIter[str] = attr.ib() # Todo: validate
 
-    options: KgtkReaderOptions = attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
+    # TODO: Fix this validator:
+    # options: KgtkReaderOptions = attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
+    options: KgtkReaderOptions = attr.ib()
 
     value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions))
 
@@ -581,6 +610,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     def nextrow(self)-> typing.List[str]:
         row: typing.List[str]
 
+        repair_and_validate_lines: bool = self.options.repair_and_validate_lines
+        repair_and_validate_values: bool = self.options.repair_and_validate_values
+
         # This loop accomodates lines that are ignored.
         while (True):
             line: str
@@ -600,69 +632,73 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # Strip the end-of-line characters:
             line = line.rstrip("\r\n")
 
-            if self.very_verbose:
-                print("'%s'" % line, file=self.error_file, flush=True)
+            if repair_and_validate_lines:
+                # TODO: Use a sepearate option to control this.
+                if self.very_verbose:
+                    print("'%s'" % line, file=self.error_file, flush=True)
+                
+                # Ignore empty lines.
+                if self.options.empty_line_action != ValidationAction.PASS and len(line) == 0:
+                    if self.exclude_line(self.options.empty_line_action, "saw an empty line", line):
+                        continue
 
-            # Ignore empty lines.
-            if self.options.empty_line_action != ValidationAction.PASS and len(line) == 0:
-                if self.exclude_line(self.options.empty_line_action, "saw an empty line", line):
-                    continue
+                # Ignore comment lines:
+                if self.options.comment_line_action != ValidationAction.PASS  and line[0] == self.COMMENT_INDICATOR:
+                    if self.exclude_line(self.options.comment_line_action, "saw a comment line", line):
+                        continue
 
-            # Ignore comment lines:
-            if self.options.comment_line_action != ValidationAction.PASS  and line[0] == self.COMMENT_INDICATOR:
-                if self.exclude_line(self.options.comment_line_action, "saw a comment line", line):
-                    continue
-
-            # Ignore whitespace lines
-            if self.options.whitespace_line_action != ValidationAction.PASS and line.isspace():
-                if self.exclude_line(self.options.whitespace_line_action, "saw a whitespace line", line):
-                    continue
+                # Ignore whitespace lines
+                if self.options.whitespace_line_action != ValidationAction.PASS and line.isspace():
+                    if self.exclude_line(self.options.whitespace_line_action, "saw a whitespace line", line):
+                        continue
 
             row = line.split(self.options.column_separator)
 
-            # Optionally fill missing trailing columns with empty row:
-            if self.options.fill_short_lines and len(row) < self.column_count:
-                while len(row) < self.column_count:
-                    row.append("")
+            if repair_and_validate_lines:
+                # Optionally fill missing trailing columns with empty row:
+                if self.options.fill_short_lines and len(row) < self.column_count:
+                    while len(row) < self.column_count:
+                        row.append("")
                     
-            # Optionally remove extra trailing columns:
-            if self.options.truncate_long_lines and len(row) > self.column_count:
-                row = row[:self.column_count]
-
-            # Optionally validate that the line contained the right number of columns:
-            #
-            # When we report line numbers in error messages, line 1 is the first line after the header line.
-            if self.options.short_line_action != ValidationAction.PASS and len(row) < self.column_count:
-                if self.exclude_line(self.options.short_line_action,
-                                     "Required %d columns, saw %d: '%s'" % (self.column_count,
-                                                                            len(row),
-                                                                            line),
-                                     line):
-                    continue
+                # Optionally remove extra trailing columns:
+                if self.options.truncate_long_lines and len(row) > self.column_count:
+                    row = row[:self.column_count]
+                            
+                # Optionally validate that the line contained the right number of columns:
+                #
+                # When we report line numbers in error messages, line 1 is the first line after the header line.
+                if self.options.short_line_action != ValidationAction.PASS and len(row) < self.column_count:
+                    if self.exclude_line(self.options.short_line_action,
+                                         "Required %d columns, saw %d: '%s'" % (self.column_count,
+                                                                                len(row),
+                                                                                line),
+                                         line):
+                        continue
                              
-            if self.options.long_line_action != ValidationAction.PASS and len(row) > self.column_count:
-                if self.exclude_line(self.options.long_line_action,
-                                     "Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
-                                                                                       len(row),
-                                                                                       len(row) - self.column_count,
-                                                                                       line),
-                                     line):
+                if self.options.long_line_action != ValidationAction.PASS and len(row) > self.column_count:
+                    if self.exclude_line(self.options.long_line_action,
+                                         "Required %d columns, saw %d (%d extra): '%s'" % (self.column_count,
+                                                                                           len(row),
+                                                                                           len(row) - self.column_count,
+                                                                                           line),
+                                         line):
+                        continue
+
+                if self._ignore_if_blank_fields(row, line):
                     continue
 
-            if self._ignore_if_blank_fields(row, line):
-                continue
-
-            if self.options.invalid_value_action != ValidationAction.PASS:
+            if repair_and_validate_values and self.options.invalid_value_action != ValidationAction.PASS:
                 # TODO: find a way to optionally cache the KgtkValue objects
                 # so we don't have to create them a second time in the conversion
                 # and iterator methods below.
                 if self._ignore_invalid_values(row, line):
                     continue
 
-            self.data_lines_passed += 1
-            if self.very_verbose:
-                sys.stdout.write(".")
-                sys.stdout.flush()
+                self.data_lines_passed += 1
+                # TODO: User a seperate option to control this.
+                # if self.very_verbose:
+                #     self.error_file.write(".")
+                #    self.error_file.flush()
             
             return row
 
@@ -919,7 +955,7 @@ def main():
                                default="rows")
     parser.add_argument(       "--test-validate", dest="test_validate", help="Validate KgtkValue objects in test.", action='store_true')
 
-    KgtkReaderOptions.add_arguments(parser, mode_options=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate=True)
     KgtkValueOptions.add_arguments(parser)
     args = parser.parse_args()
 
