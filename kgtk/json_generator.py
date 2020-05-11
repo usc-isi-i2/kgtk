@@ -88,7 +88,59 @@ class JsonGenerator:
         # update label_json_dict
         if prop in self.label_set:
             self.update_label_json_dict(node1, prop, node2)
+        # update label and descriptions
+        if prop in self.description_set:
+            self.update_misc_json_dict(node1, prop, node2, "descriptions")
+        if prop in self.alias_set:
+            self.update_misc_json_dict(node1, prop, node2, "aliases")
+        
+    #    "Q42": {
+    #   "pageid": 138,
+    #   "ns": 0,
+    #   "title": "Q42",
+    #   "lastrevid": 1175340593,
+    #   "modified": "2020-05-06T19:28:31Z",
+    #   "type": "item",
+    #   "id": "Q42"
+    # }
+        # update info_json_dict
+        self.update_info_json_dict(node1)
+        if (prop not in self.alias_set) and (prop not in self.label_set) and (prop not in self.description_set):
+            if prop in self.prop_types:
+                self.update_info_json_dict(prop)
+                if self.prop_types[prop] == "wikibase-item":
+                    # self.update_info_json_dict(node2) TODO
+                    pass
+
         return
+
+    def update_info_json_dict(self, node:str):
+        if node in self.info_json_dict:
+            return
+        #TODO, not robust but no easy way to figure it out
+        if node.startswith("Q"):
+            self.info_json_dict[node] = {
+                "pageid":-1,
+                "ns":-1,
+                "title":node,
+                "lastrevid":"2020-05-06T19:28:31Z",
+                "type":"item",
+                "id":node}
+        elif node.startswith("P"):
+            self.info_json_dict[node] = {
+                "pageid":-1,
+                "ns":-1,
+                "title":node,
+                "lastrevid":"2020-05-06T19:28:31Z",
+                "type":"property",
+                "id":node}
+        else:
+            raise KGTKException("node {} is neither an entity nor a property.".format(node))
+        return
+
+    def update_misc_json_dict(self, node1:str, prop:str, node2:str, field:str):
+        return 
+
  
     def update_label_json_dict(self,node1:str, prop:str, node2:str):
         # for label_dict
