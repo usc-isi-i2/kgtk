@@ -9,20 +9,6 @@ def parser():
     }
 
 
-def convert_scientific_notation(num):
-    if isinstance(num, float):
-        num = str(num)
-        if 'e' in num:
-            vals = num.split('e')
-            formatter = int(vals[1].replace('-', '')) + 2
-            try:
-                return "{:.{formatter}f}".format(float(num), formatter=formatter)
-            except:
-                print(num, vals, formatter)
-                raise
-    return num
-
-
 def add_arguments(parser):
     """
     Parse arguments
@@ -177,7 +163,7 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
                 for vprop in G2.vertex_properties.keys():
                     if vprop == id_col: continue
                     sys.stdout.write(
-                        '%s\t%s\t%s\t%s\n' % (v_id, v_prop_dict[vprop], convert_scientific_notation(G2.vp[vprop][v]),
+                        '%s\t%s\t%s\t%s\n' % (v_id, v_prop_dict[vprop], G2.vp[vprop][v],
                                               '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count)))
                     id_count += 1
 
