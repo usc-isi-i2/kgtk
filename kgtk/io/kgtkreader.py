@@ -160,7 +160,7 @@ class KgtkReaderOptions():
                             help=prefix3 + "The action to take when a column name is unsafe (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
-        lgroup: _ArgumentGroup = parser.add_argument_group("Line parsing", "Options affecting " + prefix4 + "data line parsing")
+        lgroup: _ArgumentGroup = parser.add_argument_group(prefix3 + "Line parsing", "Options affecting " + prefix4 + "data line parsing")
 
         lgroup.add_argument(prefix1 + "repair-and-validate-lines",
                             dest=prefix2 + "repair_and_validate_lines",
