@@ -217,8 +217,8 @@ def main():
     parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file.", nargs='*')
     parser.add_argument(      "--filter-keys", dest="filter_keys", help="The key columns in the filter file.", nargs='*')
 
-    KgtkReader.add_file_arguments(parser, mode_options=True, who="input")
-    KgtkReader.add_file_arguments(parser, mode_options=True, who="filter")
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input")
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter")
     KgtkValueOptions.add_arguments(parser)
 
     args: Namespace = parser.parse_args()

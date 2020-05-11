@@ -36,7 +36,7 @@ def add_arguments(parser):
                               help="Process the only the header of the input file.", action="store_true")
 
     KgtkReader.add_debug_arguments(parser)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate=True)
     KgtkValueOptions.add_arguments(parser)
 
 
