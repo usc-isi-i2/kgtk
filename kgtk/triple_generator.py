@@ -19,6 +19,7 @@ from etk.wikidata.value import (
     ExternalIdentifier,
     URLValue
 )
+from etk.knowledge_graph.node import LiteralType
 
 BAD_CHARS = [":", "-", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
@@ -199,6 +200,12 @@ class TripleGenerator:
         self.doc.kg.add_subject(prop)
         return True
 
+    @staticmethod
+    def xsd_number_type(num):
+        if isinstance(num, float) and 'e' in str(num).lower():
+            return LiteralType.double
+        return LiteralType.decimal
+
     def generate_normal_triple(
             self, node1: str, label: str, node2: str, is_qualifier_edge: bool, e_id: str) -> bool:
         if self.use_id:
@@ -268,20 +275,22 @@ class TripleGenerator:
             amount, lower_bound, upper_bound, unit = res
 
             amount = TripleGenerator.clean_number_string(amount)
+            num_type = self.xsd_number_type(amount)
+            print(amount, num_type)
             lower_bound = TripleGenerator.clean_number_string(lower_bound)
             upper_bound = TripleGenerator.clean_number_string(upper_bound)
             if unit != None:
                 if upper_bound != None and lower_bound != None:
                     object = QuantityValue(amount, unit=Item(
-                        unit), upper_bound=upper_bound, lower_bound=lower_bound)
+                        unit), upper_bound=upper_bound, lower_bound=lower_bound, type=num_type)
                 else:
-                    object = QuantityValue(amount, unit=Item(unit))
+                    object = QuantityValue(amount, unit=Item(unit), type=num_type)
             else:
                 if upper_bound != None and lower_bound != None:
                     object = QuantityValue(
-                        amount, upper_bound=upper_bound, lower_bound=lower_bound)
+                        amount, upper_bound=upper_bound, lower_bound=lower_bound, type=num_type)
                 else:
-                    object = QuantityValue(amount)
+                    object = QuantityValue(amount, type=num_type)
 
         elif edge_type == MonolingualText:
             text_string, lang = TripleGenerator.process_text_string(node2)
