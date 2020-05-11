@@ -1,7 +1,7 @@
 """
 Generate mediawiki API json files from kgtk file
 
-This command line tool will create three json files. Each will mimic the return of the following media wiki API for each entity existed in the kgtk file.
+This command line tool will create three json files. Each will mimic the return of the following media wiki API for each entity existed in the kgtk file. 
 
 """
 
@@ -23,7 +23,7 @@ def parser():
     """
     return {
         "help": "Generates mediawiki json responses from kgtk file",
-        "description": "Generating json files that mimic mediawiki *wbgetentities* api call response.",
+        "description": "Generating json files that mimic mediawiki *wbgetentities* api call response. This tool assumes statements and qualifiers related to one entity will be bundled close as the `generate_wikidata_triples` function assumes. If this requirement is not met, please set `n` to a number LARGER than the total number of entities in the kgtk file",
     }
 
 def add_arguments(parser):
@@ -31,11 +31,41 @@ def add_arguments(parser):
     Parse arguments
     Args:
         parser (argparse.ArgumentParser)
-        prop_file: str, labelSet: str, aliasSet: str, descriptionSet: str, n: str, dest: Any  --output-n-lines --generate-truthy
+        prop_file: str
     """
     parser.add_argument(
+        "-lp",
+        "--label-property",
+        action="store",
+        type=str,
+        default="label",
+        required=False,
+        help="property identifiers which will create labels, separated by comma','.",
+        dest="labels",
+    )
+    parser.add_argument(
+        "-ap",
+        "--alias-property",
+        action="store",
+        type=str,
+        required = False,
+        default="aliases",
+        help="alias identifiers which will create labels, separated by comma','.",
+        dest="aliases",
+    )
+    parser.add_argument(
+        "-dp",
+        "--description-property",
+        action="store",
+        type=str,
+        required = False,
+        default="descriptions",
+        help="description identifiers which will create labels, separated by comma','.",
+        dest="descriptions",
+    )
+    parser.add_argument(
         "-pf",
-        "--property-types",
+        "--property-file",
         action="store",
         type=str,
         required = True,
@@ -52,19 +82,50 @@ def add_arguments(parser):
         help="if set to yes, read from compressed gz file",
         dest="use_gz",
     )
+    # parser.add_argument(
+    #     "-pr",
+    #     "--output-file-prefix",
+    #     action="store",
+    #     type=str,
+    #     default = "kgtk",
+    #     required = False,
+    #     help="set the prefix of the output files. Default to `kgtk`",
+    #     dest="output_prefix",
+    # )
+    parser.add_argument(
+        "-n",
+        "--output-n-lines",
+        action="store",
+        type=int,
+        required = False,
+        default=1000,
+        help="output json file when the corresponding dictionary size reaches n. Default to 1000",
+        dest="n",
+    )
 
 
 def run(
-    prop_file:str = prop_file,
-    use_gz:bool = use_gz
+    labels: str,
+    aliases: str,
+    descriptions: str,
+    prop_file:str,
+    use_gz:bool,
+    # ouput_prefix:str,
+    n:int,
 ):
     # import modules locally
     from kgtk.json_generator import JsonGenerator
     import sys
     import gzip
+    
     generator = JsonGenerator(
+        label_set=labels,
+        alias_set=aliases,
+        description_set=descriptions,
         prop_file=prop_file,
-        use_gz = use_gz
+        use_gz = use_gz,
+        # ouput_prefix = ouput_prefix,
+        n = n,
     )
     # process stdin
     if use_gz:
