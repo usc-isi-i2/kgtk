@@ -27,7 +27,7 @@ def add_arguments(parser):
     """
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
 
-    parser.add_argument(      "--filter-on", dest="_filter_kgtk_file", help="The KGTK file to filter against.", type=Path, required=True)
+    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against.", type=Path, required=True)
 
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write", type=Path, default=None)
 
@@ -37,6 +37,7 @@ def add_arguments(parser):
 
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
 
+    KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input")
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter")
     KgtkValueOptions.add_arguments(parser)
