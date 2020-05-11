@@ -77,25 +77,30 @@ class KgtkValueOptions:
         
         vgroup = parser.add_argument_group(prefix3 + "Data value parsing", "Options controlling the parsing and processing of KGTK data values" + desc)
         vgroup.add_argument(      prefix1 + "additional-language-codes", dest=prefix2 + "additional_language_codes",
-                                  help=prefix3 + "Additional language codes.", nargs="*", default=None)
+                                  help=prefix3 + "Additional language codes (default=None).",
+                                  nargs="*", default=None)
 
         lsgroup= vgroup.add_mutually_exclusive_group()
         lsgroup.add_argument(      prefix1 + "allow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
-                                   help=prefix3 + "Allow language identifier suffixes starting with a dash.", action='store_true', default=True)
+                                   help=prefix3 + "Allow language identifier suffixes starting with a dash (default=%(default)s).",
+                                   action='store_true', default=True)
 
         lsgroup.add_argument(      prefix1 + "disallow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
-                                   help=prefix3 + "Disallow language identifier suffixes starting with a dash.", action='store_false')
+                                   help=prefix3 + "Disallow language identifier suffixes starting with a dash.",
+                                   action='store_false')
 
         laxgroup= vgroup.add_mutually_exclusive_group()
         laxgroup.add_argument(      prefix1 + "allow-lax-strings", dest=prefix2 + "allow_lax_strings",
-                                    help=prefix3 + "Do not check if double quotes are backslashed inside strings.", action='store_true', default=False)
+                                    help=prefix3 + "Do not check if double quotes are backslashed inside strings (default=%(default)s).",
+                                    action='store_true', default=False)
 
         laxgroup.add_argument(      prefix1 + "disallow-lax-strings", dest=prefix2 + "allow_lax_strings",
-                                    help=prefix3 + "Check if double quotes are backslashed inside strings.", action='store_false')
+                                    help=prefix3 + "Check if double quotes are backslashed inside strings.",
+                                    action='store_false')
 
         lqgroup= vgroup.add_mutually_exclusive_group()
         lqgroup.add_argument(      prefix1 + "allow-lax-lq-strings", dest=prefix2 + "allow_lax_lq_strings",
-                                   help=prefix3 + "Do not check if single quotes are backslashed inside language qualified strings.",
+                                   help=prefix3 + "Do not check if single quotes are backslashed inside language qualified strings (default=%(default)s).",
                                    action='store_true', default=False)
 
         lqgroup.add_argument(      prefix1 + "disallow-lax-lq-strings", dest=prefix2 + "allow_lax_lq_strings",
@@ -104,39 +109,48 @@ class KgtkValueOptions:
 
         amd0group= vgroup.add_mutually_exclusive_group()
         amd0group.add_argument(      prefix1 + "allow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
-                                    help=prefix3 + "Allow month or day zero in dates.", action='store_true', default=False)
+                                     help=prefix3 + "Allow month or day zero in dates (default=%(default)s).", action='store_true', default=False)
 
         amd0group.add_argument(      prefix1 + "disallow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
-                                    help=prefix3 + "Allow month or day zero in dates.", action='store_false')
+                                     help=prefix3 + "Allow month or day zero in dates.",
+                                     action='store_false')
 
         rmd0group= vgroup.add_mutually_exclusive_group()
         rmd0group.add_argument(      prefix1 + "repair-month-or-day-zero", dest=prefix2 + "repair_month_or_day_zero",
-                                    help=prefix3 + "Repair month or day zero in dates.", action='store_true', default=False)
+                                    help=prefix3 + "Repair month or day zero in dates (default=%(default)s).",
+                                     action='store_true', default=False)
 
         rmd0group.add_argument(      prefix1 + "no-repair-month-or-day-zero", dest=prefix2 + "repair_month_or_day_zero",
                                     help=prefix3 + "Do not repair month or day zero in dates.", action='store_false')
 
         vgroup.add_argument(      prefix1 + "minimum-valid-year", dest=prefix2 + "minimum_valid_year",
-                                  help=prefix3 + "The minimum valid year in dates.", type=int, default=cls.MINIMUM_VALID_YEAR)
+                                  help=prefix3 + "The minimum valid year in dates (default=%(default)d).",
+                                  type=int, default=cls.MINIMUM_VALID_YEAR)
 
         vgroup.add_argument(      prefix1 + "maximum-valid-year", dest=prefix2 + "maximum_valid_year",
-                                  help=prefix3 + "The maximum valid year in dates.", type=int, default=cls.MAXIMUM_VALID_YEAR)
+                                  help=prefix3 + "The maximum valid year in dates (default=%(default)d).",
+                                  type=int, default=cls.MAXIMUM_VALID_YEAR)
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lat", dest=prefix2 + "minimum_valid_lat",
-                                  help=prefix3 + "The minimum valid latitude.", type=int, default=cls.MINIMUM_VALID_LAT)
+                                  help=prefix3 + "The minimum valid latitude (default=%(default)d).",
+                                  type=int, default=cls.MINIMUM_VALID_LAT)
 
         vgroup.add_argument(      prefix1 + "maximum-valid-lat", dest=prefix2 + "maximum_valid_lat",
-                                  help=prefix3 + "The maximum valid latitude.", type=int, default=cls.MAXIMUM_VALID_LAT)
+                                  help=prefix3 + "The maximum valid latitude (default=%(default)d).",
+                                  type=int, default=cls.MAXIMUM_VALID_LAT)
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lon", dest=prefix2 + "minimum_valid_lon",
-                                  help=prefix3 + "The minimum valid longitude.", type=int, default=cls.MINIMUM_VALID_LON)
+                                  help=prefix3 + "The minimum valid longitude (default=%(default)d).",
+                                  type=int, default=cls.MINIMUM_VALID_LON)
 
         vgroup.add_argument(      prefix1 + "maximum-valid-lon", dest=prefix2 + "maximum_valid_lon",
-                                  help=prefix3 + "The maximum valid longitude.", type=int, default=cls.MAXIMUM_VALID_LON)
+                                  help=prefix3 + "The maximum valid longitude (default=%(default)d).",
+                                  type=int, default=cls.MAXIMUM_VALID_LON)
 
         elsgroup= vgroup.add_mutually_exclusive_group()
         elsgroup.add_argument(      prefix1 + "escape-list-separators", dest=prefix2 + "escape_list_separators",
-                                    help=prefix3 + "Escape all list separators instead of splitting on them.", action='store_true', default=False)
+                                    help=prefix3 + "Escape all list separators instead of splitting on them (default=%(default)s).",
+                                    action='store_true', default=False)
 
         elsgroup.add_argument(      prefix1 + "no-escape-list-separators", dest=prefix2 + "escape_list_separators",
                                     help=prefix3 + "Do not escape list separators.", action='store_false')
