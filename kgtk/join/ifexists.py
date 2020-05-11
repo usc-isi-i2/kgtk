@@ -124,7 +124,7 @@ class IfExists(KgtkFormat):
     def process(self):
         # Open the input files once.
         if self.verbose:
-            if self.left_file_path is not None:
+            if self.input_file_path is not None:
                 print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
             else:
                 print("Reading the input data from stdin", file=self.error_file, flush=True)
@@ -164,9 +164,9 @@ class IfExists(KgtkFormat):
                 print("Keys: %s" % " ".join(key_set), file=self.error_file, flush=True)
 
         if self.verbose:
-            print("Opening the output file: %s" % self.output_path, file=self.error_file, flush=True)
-        ew: KgtkWriter = KgtkWriter.open(left_kr.column_names,
-                                         self.output_path,
+            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+        ew: KgtkWriter = KgtkWriter.open(input_kr.column_names,
+                                         self.output_file_path,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
@@ -204,7 +204,7 @@ def main():
     parser: ArgumentParser = ArgumentParser()
     KgtkReader.add_debug_arguments(parser)
 
-    parser.add_argument(dest="input_file", help="The KGTK file with the input data", type=Path, nargs="?")
+    parser.add_argument(dest="input_file_path", help="The KGTK file with the input data", type=Path, nargs="?")
 
     parser.add_argument(      "--filter-on", dest="filter_file_path", help="The KGTK file with the filter data", type=Path, required=True)
 
