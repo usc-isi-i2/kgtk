@@ -15,10 +15,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.utils.enumnameaction import EnumNameAction
-from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
@@ -35,7 +32,6 @@ def add_arguments(parser):
     """
     parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
 
-
     parser.add_argument(      "--header-only", dest="header_only",
                               help="Process the only the header of the input file.", action="store_true")
 
@@ -50,7 +46,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         header_only: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
-        **kwargs # Whatever KgtkValueOptions wants.
+        **kwargs # Whatever KgtkReaderOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
