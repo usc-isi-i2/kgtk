@@ -63,7 +63,7 @@ class KgtkReaderOptions():
     skip_first_record: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # How do we handle errors?
-    error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=KgtkReaderOptions.ERROR_LIMIT_DEFAULT) # >0 ==> limit error reports
+    error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=ERROR_LIMIT_DEFAULT) # >0 ==> limit error reports
 
     # Ignore empty lines, comments, and all whitespace lines, etc.?
     empty_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
