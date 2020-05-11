@@ -202,7 +202,6 @@ def main():
     Test the KGTK file joiner.
     """
     parser: ArgumentParser = ArgumentParser()
-    KgtkReader.add_debug_arguments(parser)
 
     parser.add_argument(dest="input_file_path", help="The KGTK file with the input data", type=Path, nargs="?")
 
@@ -217,6 +216,7 @@ def main():
     parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file.", nargs='*')
     parser.add_argument(      "--filter-keys", dest="filter_keys", help="The key columns in the filter file.", nargs='*')
 
+    KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input")
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter")
     KgtkValueOptions.add_arguments(parser)

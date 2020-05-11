@@ -37,6 +37,7 @@ def add_arguments(parser):
 
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
 
+    KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input")
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter")
     KgtkValueOptions.add_arguments(parser)
