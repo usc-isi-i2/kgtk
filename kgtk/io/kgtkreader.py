@@ -107,91 +107,99 @@ class KgtkReaderOptions():
                                                            "Options affecting " + prefix4 + "processing")
         fgroup.add_argument(prefix1 + "column-separator",
                             dest=prefix2 + "column_separator",
-                            help=prefix3 + "Column separator.", type=str, default=KgtkFormat.COLUMN_SEPARATOR)
+                            help=prefix3 + "Column separator (default=<TAB>).", # TODO: provide the default with escapes, e.g. \t
+                            type=str, default=KgtkFormat.COLUMN_SEPARATOR)
 
         fgroup.add_argument(prefix1 + "compression-type",
-                            dest=prefix2 + "compression_type", help=prefix3 + "Specify the compression type.")
+                            dest=prefix2 + "compression_type",
+                            help=prefix3 + "Specify the compression type (default=%(default)s).")
 
         fgroup.add_argument(prefix1 + "error-limit",
                             dest=prefix2 + "error_limit",
-                            help=prefix3 + "The maximum number of errors to report before failing", type=int, default=cls.ERROR_LIMIT_DEFAULT)
+                            help=prefix3 + "The maximum number of errors to report before failing (default=%(default)s)",
+                            type=int, default=cls.ERROR_LIMIT_DEFAULT)
 
         fgroup.add_argument(prefix1 + "gzip-in-parallel",
-                            dest=prefix2 + "gzip_in_parallel", help=prefix3 + "Execute gzip in parallel.", action='store_true')
+                            dest=prefix2 + "gzip_in_parallel",
+                            help=prefix3 + "Execute gzip in parallel (default=%(default)s).", action='store_true')
 
         fgroup.add_argument(prefix1 + "gzip-queue-size",
                             dest=prefix2 + "gzip_queue_size",
-                            help=prefix3 + "Queue size for parallel gzip.", type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
+                            help=prefix3 + "Queue size for parallel gzip (default=%(default)s).",
+                            type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
 
         if mode_options:
             fgroup.add_argument(prefix1 + "mode",
                                 dest=prefix2 + "mode",
-                                help=prefix3 + "Determine the KGTK file mode.",
+                                help=prefix3 + "Determine the KGTK file mode (default=%(default)s).",
                                 type=KgtkReaderMode, action=EnumNameAction, default=KgtkReaderMode.AUTO)
             
         hgroup: _ArgumentGroup = parser.add_argument_group(prefix3 + "Header parsing", "Options affecting " + prefix4 + "header parsing")
 
         hgroup.add_argument(prefix1 + "force-column-names",
                             dest=prefix2 + "force_column_names",
-                            help=prefix3 + "Force the column names.", nargs='+')
+                            help=prefix3 + "Force the column names (default=None).",
+                            nargs='+')
 
         hgroup.add_argument(prefix1 + "header-error-action",
                             dest=prefix2 + "header_error_action",
-                            help=prefix3 + "The action to take when a header error is detected  Only ERROR or EXIT are supported.",
+                            help=prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
 
         hgroup.add_argument(prefix1 + "skip-first-record",
                             dest=prefix2 + "skip_first_record",
-                            help=prefix3 + "Skip the first record when forcing column names.", action='store_true')
+                            help=prefix3 + "Skip the first record when forcing column names (default=%(default)s).", action='store_true')
 
         hgroup.add_argument(prefix1 + "unsafe-column-name-action",
                             dest=prefix2 + "unsafe_column_name_action",
-                            help=prefix3 + "The action to take when a column name is unsafe.",
+                            help=prefix3 + "The action to take when a column name is unsafe (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
         lgroup: _ArgumentGroup = parser.add_argument_group("Line parsing", "Options affecting " + prefix4 + "data line parsing")
 
         lgroup.add_argument(prefix1 + "blank-required-field-line-action",
                             dest=prefix2 + "blank_required_field_line_action",
-                            help=prefix3 + "The action to take when a line with a blank node1, node2, or id field (per mode) is detected.",
+                            help=prefix3 + "The action to take when a line with a blank node1, node2, or id field (per mode) is detected (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
                                   
         lgroup.add_argument(prefix1 + "comment-line-action",
                             dest=prefix2 + "comment_line_action",
-                            help=prefix3 + "The action to take when a comment line is detected.",
+                            help=prefix3 + "The action to take when a comment line is detected (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         lgroup.add_argument(prefix1 + "empty-line-action",
                             dest=prefix2 + "empty_line_action",
-                            help=prefix3 + "The action to take when an empty line is detected.",
+                            help=prefix3 + "The action to take when an empty line is detected (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         lgroup.add_argument(prefix1 + "fill-short-lines",
                             dest=prefix2 + "fill_short_lines",
-                            help=prefix3 + "Fill missing trailing columns in short lines with empty values.", action='store_true')
+                            help=prefix3 + "Fill missing trailing columns in short lines with empty values (default=%(default)s).",
+                            action='store_true')
 
         lgroup.add_argument(prefix1 + "invalid-value-action",
                             dest=prefix2 + "invalid_value_action",
-                            help=prefix3 + "The action to take when a data cell value is invalid.",
+                            help=prefix3 + "The action to take when a data cell value is invalid (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
         lgroup.add_argument(prefix1 + "long-line-action",
                             dest=prefix2 + "long_line_action",
-                            help=prefix3 + "The action to take when a long line is detected.",
+                            help=prefix3 + "The action to take when a long line is detected (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         lgroup.add_argument(prefix1 + "short-line-action",
                             dest=prefix2 + "short_line_action",
-                            help=prefix3 + "The action to take when a short line is detected.",
+                            help=prefix3 + "The action to take when a short line is detected (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         lgroup.add_argument(prefix1 + "truncate-long-lines",
                             dest=prefix2 + "truncate_long_lines",
-                            help=prefix3 + "Remove excess trailing columns in long lines.", action='store_true')
+                            help=prefix3 + "Remove excess trailing columns in long lines (default=%(default)s).",
+                            action='store_true')
 
         lgroup.add_argument(prefix1 + "whitespace-line-action",
                             dest=prefix2 + "whitespace_line_action",
-                            help=prefix3 + "The action to take when a whitespace line is detected.",
+                            help=prefix3 + "The action to take when a whitespace line is detected (default=%(default)s).",
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
     
     @classmethod
