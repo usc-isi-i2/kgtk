@@ -42,15 +42,22 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
 
-    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against.", type=Path, required=True)
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write", type=Path, default=None)
-
     parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys", help="The key columns in the file being filtered.", nargs='*')
+
+    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against.", type=Path, required=True)
 
     parser.add_argument(      "--filter-keys", "--right-keys", dest="filter_keys", help="The key columns in the filter-on file.", nargs='*')
 
-    parser.add_argument(      "--field-separator", dest="field_separator", help=h("Separator for multifield keys"), default=IfExists.FIELD_SEPARATOR_DEFAULT)
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write", type=Path, default=None)
+
+    # This argument is retained for compatability with earlier versions of this command.
+    parser.add_argument(      "--error-limit", dest="error_limit",
+                              help=h("The maximum number of errors per input fule (default=%(default)s)"),
+                              default=KgtkReaderOptions.ERROR_LIMIT_DEFAULT)
+
+    parser.add_argument(      "--field-separator", dest="field_separator",
+                              help=h("Separator for multifield keys (default=%(default)s)")
+                              , default=IfExists.FIELD_SEPARATOR_DEFAULT)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert)
@@ -80,8 +87,8 @@ def run(input_kgtk_file: typing.Optional[Path],
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
-    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="input")
-    filter_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="filter")
+    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="input", fallback=True)
+    filter_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="filter", fallback=True)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     try:
