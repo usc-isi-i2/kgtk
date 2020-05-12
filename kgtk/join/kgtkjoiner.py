@@ -55,6 +55,7 @@ class KgtkJoiner(KgtkFormat):
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
+    error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -111,26 +112,26 @@ class KgtkJoiner(KgtkFormat):
         col_num: int = 1
         if join_columns is not None and len(join_columns) > 0:
             if self.verbose:
-                print("Using %s file join columns: %s" % (who, " ".join(join_columns)), flush=True)
+                print("Using %s file join columns: %s" % (who, " ".join(join_columns)), file=self.error_file, flush=True)
             join_column:str
             for join_column in join_columns:
                 if join_column not in kr.column_name_map:
                     raise ValueError("Join column %s not found in in the %s input file" % (join_column, who))
                 join_idx = kr.column_name_map[join_column]
                 if self.verbose:
-                    print("Join column %d: %s (index %d in the %s input file)" % (col_num, join_column, join_idx, who), flush=True)
+                    print("Join column %d: %s (index %d in the %s input file)" % (col_num, join_column, join_idx, who), file=self.error_file, flush=True)
                 join_idx_list.append(join_idx)
             return join_idx_list
 
         if kr.is_edge_file:
             join_idx = self.node1_column_idx(kr, who)
             if self.verbose:
-                print("Joining on node1 (index %s in the %s input file)" % (join_idx, who), flush=True)
+                print("Joining on node1 (index %s in the %s input file)" % (join_idx, who), file=self.error_file, flush=True)
             join_idx_list.append(join_idx)
         elif kr.is_node_file:
             join_idx = self.id_column_idx(kr, who)
             if self.verbose:
-                print("Joining on id (index %s in the %s input file)" % (join_idx, who), flush=True)
+                print("Joining on id (index %s in the %s input file)" % (join_idx, who), file=self.error_file, flush=True)
             join_idx_list.append(join_idx)
         else:
             raise ValueError("Unknown file type in build_join_idx_list(...)")
@@ -141,21 +142,21 @@ class KgtkJoiner(KgtkFormat):
                 if kr.label_column_idx < 0:
                     raise ValueError("join_on_label may not be used because the %s input file does not have a label column." % who)
                 if self.verbose:
-                    print("Joining on label (index %s in the %s input file)" % (kr.label_column_idx, who), flush=True)
+                    print("Joining on label (index %s in the %s input file)" % (kr.label_column_idx, who), file=self.error_file, flush=True)
                 join_idx_list.append(kr.label_column_idx)
                 
             if self.join_on_node2:
                 if kr.node2_column_idx < 0:
                     raise ValueError("join_on_node2 may not be used because the %s input file does not have a node2 column." % who)
                 if self.verbose:
-                    print("Joining on node2 (index %s in the %s input file)" % (kr.node2_column_idx, who), flush=True)
+                    print("Joining on node2 (index %s in the %s input file)" % (kr.node2_column_idx, who), file=self.error_file, flush=True)
                 join_idx_list.append(kr.node2_column_idx)
         return join_idx_list
         
 
     def extract_join_key_set(self, file_path: Path, who: str, join_idx_list: typing.List[int])->typing.Set[str]:
         if self.verbose:
-            print("Extracting the join key set from the %s input file: %s" % (who, str(file_path)), flush=True)
+            print("Extracting the join key set from the %s input file: %s" % (who, str(file_path)), file=self.error_file, flush=True)
         reader_options: typing.Optional[KgtkReaderOptions]
         if who == self.LEFT:
             reader_options = self.left_reader_options
@@ -167,9 +168,6 @@ class KgtkJoiner(KgtkFormat):
                                          value_options = self.value_options,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
-
-        if not kr.is_edge_file:
-            raise ValueError("The %s file is not an edge file" % who)
 
         if len(join_idx_list) == 1:
             # This uses optimized code:
@@ -185,36 +183,36 @@ class KgtkJoiner(KgtkFormat):
         join_key_set: typing.Set[str]
         if self.left_join and self.right_join:
             if self.verbose:
-                print("Outer join, no need to compute join keys.", flush=True)
+                print("Outer join, no need to compute join keys.", file=self.error_file, flush=True)
             return None
         elif self.left_join and not self.right_join:
             if self.verbose:
-                print("Computing the left join key set", flush=True)
+                print("Computing the left join key set", file=self.error_file, flush=True)
             join_key_set = self.extract_join_key_set(self.left_file_path, self.LEFT, left_join_idx_list).copy()
             if self.verbose:
-                print("There are %d keys in the left join key set." % len(join_key_set), flush=True)
+                print("There are %d keys in the left join key set." % len(join_key_set), file=self.error_file, flush=True)
             return join_key_set
 
         elif self.right_join and not self.left_join:
             if self.verbose:
-                print("Computing the right join key set", flush=True)
+                print("Computing the right join key set", file=self.error_file, flush=True)
             join_key_set = self.extract_join_key_set(self.right_file_path, self.RIGHT, right_join_idx_list).copy()
             if self.verbose:
-                print("There are %d keys in the right join key set." % len(join_key_set), flush=True)
+                print("There are %d keys in the right join key set." % len(join_key_set), file=self.error_file, flush=True)
             return join_key_set
 
         else:
             if self.verbose:
-                print("Computing the inner join key set", flush=True)
+                print("Computing the inner join key set", file=self.error_file, flush=True)
             left_join_key_set: typing.Set[str] = self.extract_join_key_set(self.left_file_path, self.LEFT, left_join_idx_list)
             if self.verbose:
-                print("There are %d keys in the left file key set." % len(left_join_key_set), flush=True)
+                print("There are %d keys in the left file key set." % len(left_join_key_set), file=self.error_file, flush=True)
             right_join_key_set: typing.Set[str] = self.extract_join_key_set(self.right_file_path, self.RIGHT, right_join_idx_list)
             if self.verbose:
-                print("There are %d keys in the right file key set." % len(right_join_key_set), flush=True)
+                print("There are %d keys in the right file key set." % len(right_join_key_set), file=self.error_file, flush=True)
             join_key_set = left_join_key_set.intersection(right_join_key_set)
             if self.verbose:
-                print("There are %d keys in the inner join key set." % len(join_key_set), flush=True)
+                print("There are %d keys in the inner join key set." % len(join_key_set), file=self.error_file, flush=True)
             return join_key_set
     
     def merge_columns(self, left_kr: KgtkReader, right_kr: KgtkReader)->typing.Tuple[typing.List[str], typing.List[str]]:
@@ -228,14 +226,12 @@ class KgtkJoiner(KgtkFormat):
 
         idx: int = 0
         for column_name in right_kr.column_names:
-            if idx == right_kr.node1_column_idx:
-                # The right file is an edge file and this is its node1 column index.
-                if left_kr.node1_column_idx >= 0:
-                    # The left file has a node1 column.  Map to that.
-                    column_name = left_kr.column_names[left_kr.node1_column_idx]
-                else:
-                    # Apparently we don't have a destination in the left file.  Punt.
-                    raise ValueError("Can't map right join column name to the left file #2.")
+            if idx == right_kr.id_column_idx and left_kr.id_column_idx >= 0:
+                # Map the id columns to the name used in the left file.
+                column_name = left_kr.column_names[left_kr.id_column_idx]
+            elif idx == right_kr.node1_column_idx and left_kr.node1_column_idx >= 0:
+                # Map the node1 columns to the name used in the left file,
+                column_name = left_kr.column_names[left_kr.node1_column_idx]
             elif idx == right_kr.label_column_idx and left_kr.label_column_idx >= 0:
                 # Map the right file's label column to the left file's label column.
                 column_name = left_kr.column_names[left_kr.label_column_idx]
@@ -256,34 +252,34 @@ class KgtkJoiner(KgtkFormat):
 
     def process(self):
         if self.verbose:
-            print("Opening the left edge file: %s" % str(self.left_file_path), flush=True)
+            print("Opening the left edge file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
         left_kr: KgtkReader = KgtkReader.open(self.left_file_path,
                                               options=self.left_reader_options,
                                               value_options = self.value_options,
-                                              error_limit=self.error_limit)
+        )
 
 
         if self.verbose:
-            print("Opening the right edge file: %s" % str(self.right_file_path), flush=True)
+            print("Opening the right edge file: %s" % str(self.right_file_path), file=self.error_file, flush=True)
         right_kr: KgtkReader = KgtkReader.open(self.right_file_path,
                                                options=self.right_reader_options,
                                                value_options = self.value_options,
-                                               error_limit=self.error_limit)
+        )
 
         if left_kr.is_edge_file and right_kr.is_edge_file:
             if self.verbose:
-                print("Both input files are edge files.", flush=True)
+                print("Both input files are edge files.", file=self.error_file, flush=True)
         elif left_kr.is_node_file and right_kr.is_node_file:
             if self.verbose:
-                print("Both input files are node files.", flush=True)
+                print("Both input files are node files.", file=self.error_file, flush=True)
         else:
-            print("Cannot join edge and node files.", flush=True)
+            print("Cannot join edge and node files.", file=self.error_file, flush=True)
             return
 
         left_join_idx_list: typing.List[int] = self.build_join_idx_list(left_kr, self.LEFT, self.left_join_columns)
         right_join_idx_list: typing.List[int] = self.build_join_idx_list(right_kr, self.RIGHT, self.right_join_columns)
         if len(left_join_idx_list) != len(right_join_idx_list):
-            print("the left join key has %d components, the right join key has %d columns. Exiting." % (len(left_join_idx_list), len(right_join_idx_list)), flush=True)
+            print("the left join key has %d components, the right join key has %d columns. Exiting." % (len(left_join_idx_list), len(right_join_idx_list)), file=self.error_file, flush=True)
             left_kr.close()
             right_kr.close()
             return
@@ -292,19 +288,19 @@ class KgtkJoiner(KgtkFormat):
         joined_key_set: typing.Optional[typing.Set[str]] = self.join_key_sets(left_join_idx_list, right_join_idx_list)
 
         if self.verbose:
-            print("Mapping the column names for the join.", flush=True)
+            print("Mapping the column names for the join.", file=self.error_file, flush=True)
         joined_column_names: typing.List[str]
         right_column_names: typing.List[str]
         (joined_column_names, right_column_names)  = self.merge_columns(left_kr, right_kr)
 
         if self.verbose:
-            print("       left   columns: %s" % " ".join(left_kr.column_names), flush=True)
-            print("       right  columns: %s" % " ".join(right_kr.column_names), flush=True)
-            print("mapped right  columns: %s" % " ".join(right_column_names), flush=True)
-            print("       joined columns: %s" % " ".join(joined_column_names), flush=True)
+            print("       left   columns: %s" % " ".join(left_kr.column_names), file=self.error_file, flush=True)
+            print("       right  columns: %s" % " ".join(right_kr.column_names), file=self.error_file, flush=True)
+            print("mapped right  columns: %s" % " ".join(right_column_names), file=self.error_file, flush=True)
+            print("       joined columns: %s" % " ".join(joined_column_names), file=self.error_file, flush=True)
         
         if self.verbose:
-            print("Opening the output edge file: %s" % str(self.output_path), flush=True)
+            print("Opening the output edge file: %s" % str(self.output_path), file=self.error_file, flush=True)
         ew: KgtkWriter = KgtkWriter.open(joined_column_names,
                                          self.output_path,
                                          require_all_columns=False,
@@ -321,7 +317,7 @@ class KgtkJoiner(KgtkFormat):
         right_data_lines_kept: int = 0
         
         if self.verbose:
-            print("Processing the left input file: %s" % str(self.left_file_path), flush=True)
+            print("Processing the left input file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
         row: typing.list[str]
         for row in left_kr:
             left_data_lines_read += 1
@@ -339,7 +335,7 @@ class KgtkJoiner(KgtkFormat):
         ew.flush()
 
         if self.verbose:
-            print("Processing the right input file: %s" % str(self.right_file_path), flush=True)
+            print("Processing the right input file: %s" % str(self.right_file_path), file=self.error_file, flush=True)
         right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_column_names)
         for row in right_kr:
             right_data_lines_read += 1
@@ -356,10 +352,10 @@ class KgtkJoiner(KgtkFormat):
             
         ew.close()
         if self.verbose:
-            print("The join is complete", flush=True)
-            print("%d left input data lines read, %d kept" % (left_data_lines_read, left_data_lines_kept), flush=True)
-            print("%d right input data lines read, %d kept" % (right_data_lines_read, right_data_lines_kept), flush=True)
-            print("%d data lines written." % output_data_lines, flush=True)
+            print("The join is complete", file=self.error_file, flush=True)
+            print("%d left input data lines read, %d kept" % (left_data_lines_read, left_data_lines_kept), file=self.error_file, flush=True)
+            print("%d right input data lines read, %d kept" % (right_data_lines_read, right_data_lines_kept), file=self.error_file, flush=True)
+            print("%d data lines written." % output_data_lines, file=self.error_file, flush=True)
         
 def main():
     """
@@ -385,14 +381,14 @@ def main():
     parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
 
-    parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
-    parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
-
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, who=KgtkJoiner.LEFT)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, who=KgtkJoiner.RIGHT)
-    KgtkValueOptions.add_arguments(parser)
+    KgtkReader.add_debug_arguments(parser, expert=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who=KgtkJoiner.LEFT, expert=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who=KgtkJoiner.RIGHT, expert=True)
+    KgtkValueOptions.add_arguments(parser, expert=True)
 
     args = parser.parse_args()
+
+    error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the option structures.
     left_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who=KgtkJoiner.LEFT)
@@ -413,6 +409,7 @@ def main():
                                 left_reader_options=left_reader_options,
                                 right_reader_options=right_reader_options,
                                 value_options=value_options,
+                                error_file=error_file,
                                 verbose=args.verbose,
                                 very_verbose=args.very_verbose)
 
