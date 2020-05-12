@@ -248,39 +248,50 @@ class KgtkReaderOptions():
                   d: dict,
                   who: str = "",
                   mode: typing.Optional[KgtkReaderMode] = None,
+                  fallback: bool = False,
     )->'KgtkReaderOptions':
         prefix: str = ""   # The destination name prefix.
         if len(who) > 0:
             prefix = who + "_"
 
+        # TODO: Figure out how to type check this method.
+        def lookup(name: str, default):
+            prefixed_name = prefix + name
+            if prefixed_name in d:
+                return d[prefixed_name]
+            elif fallback and name in d:
+                return d[name]
+            else:
+                return default
+            
         reader_mode: KgtkReaderMode
-        if mode is None:
-            reader_mode = d.get(prefix + "mode", KgtkReaderMode.AUTO)
-        else:
+        if mode is not None:
             reader_mode = mode
+        else:
+            reader_mode = lookup("mode", KgtkReaderMode.AUTO)
 
         return cls(
-            blank_required_field_line_action=d.get(prefix + "blank_required_field_line_action", ValidationAction.EXCLUDE),
-            column_separator=d.get(prefix + "column_separator", KgtkFormat.COLUMN_SEPARATOR),
-            comment_line_action=d.get(prefix + "comment_line_action", ValidationAction.EXCLUDE),
-            compression_type=d.get(prefix + "compression_type", None),
-            empty_line_action=d.get(prefix + "empty_line_action", ValidationAction.EXCLUDE),
-            error_limit=d.get(prefix + "error_limit", cls.ERROR_LIMIT_DEFAULT),
-            fill_short_lines=d.get(prefix + "fill_short_lines", False),
-            force_column_names=d.get(prefix + "force_column_names", None),
-            gzip_in_parallel=d.get(prefix + "gzip_in_parallel", False),
-            gzip_queue_size=d.get(prefix + "gzip_queue_size", KgtkReaderOptions.GZIP_QUEUE_SIZE_DEFAULT),
-            header_error_action=d.get(prefix + "header_error_action", ValidationAction.EXCLUDE),
-            invalid_value_action=d.get(prefix + "invalid_value_action", ValidationAction.REPORT),
-            long_line_action=d.get(prefix + "long_line_action", ValidationAction.EXCLUDE),
+            blank_required_field_line_action=lookup("blank_required_field_line_action", ValidationAction.EXCLUDE),
+            column_separator=lookup("column_separator", KgtkFormat.COLUMN_SEPARATOR),
+            comment_line_action=lookup("comment_line_action", ValidationAction.EXCLUDE),
+            compression_type=lookup("compression_type", None),
+            empty_line_action=lookup("empty_line_action", ValidationAction.EXCLUDE),
+            error_limit=lookup("error_limit", cls.ERROR_LIMIT_DEFAULT),
+            fill_short_lines=lookup("fill_short_lines", False),
+            force_column_names=lookup("force_column_names", None),
+            gzip_in_parallel=lookup("gzip_in_parallel", False),
+            gzip_queue_size=lookup("gzip_queue_size", KgtkReaderOptions.GZIP_QUEUE_SIZE_DEFAULT),
+            header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
+            invalid_value_action=lookup("invalid_value_action", ValidationAction.REPORT),
+            long_line_action=lookup("long_line_action", ValidationAction.EXCLUDE),
             mode=reader_mode,
-            repair_and_validate_lines=d.get(prefix + "repair_and_validate_lines", False),
-            repair_and_validate_values=d.get(prefix + "repair_and_validate_values", False),
-            short_line_action=d.get(prefix + "short_line_action", ValidationAction.EXCLUDE),
-            skip_first_record=d.get(prefix + "skip_first_recordb", False),
-            truncate_long_lines=d.get(prefix + "truncate_long_lines", False),
-            unsafe_column_name_action=d.get(prefix + "unsafe_column_name_action", ValidationAction.REPORT),
-            whitespace_line_action=d.get(prefix + "whitespace_line_action", ValidationAction.EXCLUDE),
+            repair_and_validate_lines=lookup("repair_and_validate_lines", False),
+            repair_and_validate_values=lookup("repair_and_validate_values", False),
+            short_line_action=lookup("short_line_action", ValidationAction.EXCLUDE),
+            skip_first_record=lookup("skip_first_recordb", False),
+            truncate_long_lines=lookup("truncate_long_lines", False),
+            unsafe_column_name_action=lookup("unsafe_column_name_action", ValidationAction.REPORT),
+            whitespace_line_action=lookup("whitespace_line_action", ValidationAction.EXCLUDE),
         )
 
     @classmethod
@@ -289,8 +300,9 @@ class KgtkReaderOptions():
                   args: Namespace,
                   who: str = "",
                   mode: typing.Optional[KgtkReaderMode] = None,
+                  fallback: bool = False,
     )->'KgtkReaderOptions':
-        return cls.from_dict(vars(args), who=who, mode=mode)
+        return cls.from_dict(vars(args), who=who, mode=mode, fallback=fallback)
 
 DEFAULT_KGTK_READER_OPTIONS: KgtkReaderOptions = KgtkReaderOptions()
 
