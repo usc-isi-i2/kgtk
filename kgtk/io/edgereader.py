@@ -110,9 +110,9 @@ def main():
     """
     parser = ArgumentParser()
     parser.add_argument(dest="kgtk_file", help="The KGTK edge file to read", type=Path, nargs="?")
-    KgtkReader.add_debug_arguments(parser)
-    KgtkReaderOptions.add_arguments(parser, validate=True)
-    KgtkValueOptions.add_arguments(parser)
+    KgtkReader.add_debug_arguments(parser, expert=True)
+    KgtkReaderOptions.add_arguments(parser, validate_by_default=True, expert=True)
+    KgtkValueOptions.add_arguments(parser, expert=True)
     args = parser.parse_args()
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr

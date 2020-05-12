@@ -11,10 +11,12 @@ Certain constraints can be overlooked or repaired.
 This program does not validate individual fields.
 """
 
+from argparse import Namespace
 from pathlib import Path
 import sys
 import typing
 
+from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -24,20 +26,22 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
         parser (argparse.ArgumentParser)
     """
+    _expert: bool = parsed_shared_args._expert
+
     parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
 
     parser.add_argument(      "--header-only", dest="header_only",
                               help="Process the only the header of the input file.", action="store_true")
 
-    KgtkReader.add_debug_arguments(parser)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate=True)
-    KgtkValueOptions.add_arguments(parser)
+    KgtkReader.add_debug_arguments(parser, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=True)
+    KgtkValueOptions.add_arguments(parser, expert=True)
 
 
 def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
