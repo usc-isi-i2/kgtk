@@ -12,10 +12,163 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 from kgtk.value.languagevalidator import LanguageValidator
 
+
+@attr.s(slots=True, frozen=False)
+class KgtkValueFields():
+    data_type: KgtkFormat.DataType = attr.ib(validator=attr.validators.instance_of(KgtkFormat.DataType))
+    valid: bool = attr.ib(validator=attr.validators.instance_of(bool))
+
+    # The following members offer access to the components (fields) of a
+    # KgtkValue.  They are accessible immediately after validating the
+    # contents of the KgtkValue object when kgtk_value.parse_fields is True.
+    #
+    # obj.is_valid() return True
+    # obj.validate() returns True
+    # obj.revalidate() returns True
+    # obj.is_language_qualified_string(validate=True) returns True
+    #... etc.
+    #
+    # The fields may be accessed directly from this object or they may be
+    # obtained as a map via obj.get_fields()
+
+    # >0 if this is a list.
+    list_len: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+
+    # Offer the components of a string or language-qualified string, after validating the item.
+    # String contents without the enclosing quotes
+    contents: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    # 2- or 3-character language code code without suffix.
+    lang: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    # The language code suffix, including the leading dash.
+    suffix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    # Offer the components of a number or quantity, after validating the item.
+    numberstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    number: typing.Optional[typing.Union[int, float]] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of((int, float))), default=None)
+
+    low_tolerancestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    high_tolerancestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    si_units: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    wikidata_node: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    # Offer the components of a location coordinates, after validaating the item:
+    latstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    lat: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
+
+    lonstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    lon: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
+
+    # Offer the components of a date and times, after validating the item:
+    yearstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    year: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
+
+    monthstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    month: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
+
+    daystr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    day: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
+    
+    hourstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    hour: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
+
+    minutesstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    minutes: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
+    
+    secondsstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    seconds: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
+    
+    # Z or [-+]HH or [-+]HHSS or [-+]HH:SS
+    zonestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    
+    precisionstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    
+    # True when hyphens/colons are present.
+    iso8601extended: typing.Optional[bool] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)), default=None)
+
+    # Offer the contents of a boolean, after validating the item:
+    truth: typing.Optional[bool] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)), default=None)
+
+    def to_map(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
+        results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
+        results["list_len"] = self.list_len
+        if self.data_type is not None:
+            results["data_type"] = self.data_type.name
+        if self.valid is not None:
+            results["valid"] = self.valid
+        if self.contents is not None:
+            results["contents"] = self.contents
+        if self.lang is not None:
+            results["lang"] = self.lang
+        if self.suffix is not None:
+            results["suffix"] = self.suffix
+        if self.numberstr is not None:
+            results["numberstr"] = self.numberstr
+        if self.number is not None:
+            results["number"] = self.number
+        if self.low_tolerancestr is not None:
+            results["low_tolerancestr"] = self.low_tolerancestr
+        if self.high_tolerancestr is not None:
+            results["high_tolerancestr"] = self.high_tolerancestr
+        if self.si_units is not None:
+            results["si_units"] = self.si_units
+        if self.wikidata_node is not None:
+            results["wikidata_node"] = self.wikidata_node
+        if self.latstr is not None:
+            results["latstr"] = self.latstr
+        if self.lat is not None:
+            results["lat"] = self.lat
+        if self.lonstr is not None:
+            results["lonstr"] = self.lonstr
+        if self.lon is not None:
+            results["lon"] = self.lon
+        if self.yearstr is not None:
+            results["yearstr"] = self.yearstr
+        if self.year is not None:
+            results["year"] = self.year
+        if self.monthstr is not None:
+            results["monthstr"] = self.monthstr
+        if self.month is not None:
+            results["month"] = self.month
+        if self.daystr is not None:
+            results["daystr"] = self.daystr
+        if self.day is not None:
+            results["day"] = self.day
+        if self.hourstr is not None:
+            results["hourstr"] = self.hourstr
+        if self.hour is not None:
+            results["hour"] = self.hour
+        if self.minutesstr is not None:
+            results["minutesstr"] = self.minutesstr
+        if self.minutes is not None:
+            results["minutes"] = self.minutes
+        if self.secondsstr is not None:
+            results["secondsstr"] = self.secondsstr
+        if self.seconds is not None:
+            results["seconds"] = self.seconds
+        if self.zonestr is not None:
+            results["zonestr"] = self.zonestr
+        if self.precisionstr is not None:
+            results["precisionstr"] = self.precisionstr
+        if self.iso8601extended is not None:
+            results["iso8601extended"] = self.iso8601extended
+        if self.truth is not None:
+            results["truth"] = self.truth
+        return results
+    
 @attr.s(slots=True, frozen=False)
 class KgtkValue(KgtkFormat):
     value: str = attr.ib(validator=attr.validators.instance_of(str))
     options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
+    parse_fields: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # The current fields when available:
+    # fields: typing.Optional[KgtkValueFields] = attr.ib(attr.validators.instance_of(KgtkValueFields), default=None, init=False)
+    fields: typing.Optional[KgtkValueFields] = attr.ib(default=None, init=False)
 
     # TODO: proper validation.
     parent: typing.Optional['KgtkValue'] = attr.ib(default=None)
@@ -29,58 +182,6 @@ class KgtkValue(KgtkFormat):
     #
     # Note: Please do not access this list directly.  Use get_list_items().
     list_items: typing.Optional[typing.List['KgtkValue']] = None
-
-    # The following members offer access to the components (fields) of a
-    # KgtkValue.  They are accessible immediately after validating the
-    # contents of the KgtkValue object:
-    #
-    # obj.is_valid() return True
-    # obj.validate() returns True
-    # obj.revalidate() returns True
-    # obj.is_language_qualified_string(validate=True) returns True
-    #... etc.
-    #
-    # The fields may be accessed directly from this object or they may be
-    # obtained as a map via obj.get_fields()
-
-    # Offer the components of a string or language-qualified string, after validating the item.
-    contents: typing.Optional[str] = None # String contents without the enclosing quotes
-    lang: typing.Optional[str] = None # 2- or 3-character code without suffix.
-    suffix: typing.Optional[str] = None # Language code suffix, including the leading dash.
-
-    # Offer the components of a number or quantity, after validating the item.
-    numberstr: typing.Optional[str] = None # Note: not converted to int or float
-    number: typing.Optional[typing.Union[int, float]] = None
-    low_tolerancestr: typing.Optional[str] = None # Note: not converted to int or float
-    high_tolerancestr: typing.Optional[str] = None # Note: not converted to int or float
-    si_units: typing.Optional[str] = None
-    wikidata_node: typing.Optional[str] = None
-
-    # Offer the components of a location coordinates, after validaating the item:
-    latstr: typing.Optional[str] = None
-    lat: typing.Optional[float] = None
-    lonstr: typing.Optional[str] = None
-    lon: typing.Optional[float] = None
-
-    # Offer the components of a date and times, after validating the item:
-    yearstr: typing.Optional[str] = None # Note: before conversion to int
-    year: typing.Optional[int] = None
-    monthstr: typing.Optional[str] = None # Note: before conversion to int
-    month: typing.Optional[int] = None
-    daystr: typing.Optional[str] = None # Note: before conversion to int
-    day: typing.Optional[int] = None
-    hourstr: typing.Optional[str] = None # Note: before conversion to int or float
-    hour: typing.Optional[int] = None
-    minutesstr: typing.Optional[str] = None # Note: before conversion to int or float
-    minutes: typing.Optional[int] = None
-    secondsstr: typing.Optional[str] = None # Note: before conversion to int or float
-    seconds: typing.Optional[int] = None
-    zonestr: typing.Optional[str] = None # Z or [-+]HH or [-+]HHSS or [-+]HH:SS
-    precisionstr: typing.Optional[str] = None
-    iso8601extended: typing.Optional[bool] = None # True when hyphens/colons are present.
-
-    # Offer the contents of a boolean, after validating the item:
-    truth: typing.Optional[bool] = None
 
     def is_valid(self)->bool:
         # Is this a valid whatever it is?
@@ -101,6 +202,8 @@ class KgtkValue(KgtkFormat):
         # We are certain that this is an empty value.  We can be certain it is valid.
         self.data_type = KgtkFormat.DataType.EMPTY
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=self.data_type, valid=self.valid)
         return True
 
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
@@ -146,6 +249,12 @@ class KgtkValue(KgtkFormat):
         if self.valid is not None:
             return self.valid
         
+        # We will save the list length even if invalid.
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LIST,
+                                          valid=False,
+                                          list_len=len(self.get_list_items()))
+
         # Validate the list.
         item: 'KgtkValue'
         for item in self.get_list_items():
@@ -156,6 +265,10 @@ class KgtkValue(KgtkFormat):
 
         # This is a valid list.
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LIST,
+                                          valid=self.valid,
+                                          list_len=len(self.get_list_items()))
         return True
 
     def rebuild_list(self):
@@ -169,7 +282,6 @@ class KgtkValue(KgtkFormat):
         for item in list_items:
             values.append(item.value)
         self.value = KgtkFormat.LIST_SEPARATOR.join(values)
-        
 
     def _is_number_or_quantity(self)->bool:
         return self.value.startswith(("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "."))
@@ -275,20 +387,7 @@ class KgtkValue(KgtkFormat):
             elif self.data_type == KgtkFormat.DataType.QUANTITY:
                 return self.is_quantity(validate=validate)
             else:
-                # Clear the number or quantity components:
-                self.numberstr = None
-                self.low_tolerancestr = None
-                self.high_tolerancestr = None
-                self.si_units = None
-                self.wikidata_node = None
                 return False # Not a number or quantity.
-
-        # Clear the number or quantity components:
-        self.numberstr = None
-        self.low_tolerancestr = None
-        self.high_tolerancestr = None
-        self.si_units = None
-        self.wikidata_node = None
 
         if not self._is_number_or_quantity():
             return False
@@ -304,24 +403,25 @@ class KgtkValue(KgtkFormat):
             return False
 
         # Extract the number or quantity components:
-        self.numberstr = m.group("number")
-        self.low_tolerancestr = m.group("low_tolerance")
-        self.high_tolerancestr = m.group("high_tolerance")
-        self.si_units = m.group("si_units")
-        self.wikidata_node = m.group("wikidata_node")
+        numberstr: str = m.group("number")
+        low_tolerancestr: str = m.group("low_tolerance")
+        high_tolerancestr: str = m.group("high_tolerance")
+        si_units: str = m.group("si_units")
+        wikidata_node: str = m.group("wikidata_node")
 
         # For convenience, convert the numeric part to int or float:
         #
         # TODO: go to this extra work only when requested?
-        if self.numberstr is None:
+        if numberstr is None:
             raise ValueError("Missing numeric part")
-        n: str = self.numberstr.lower()
+        n: str = numberstr.lower()
+        number: typing.Union[float, int]
         if "." in n or ("e" in n and not n.startswith("0x")):
-            self.number = float(n)
+            number = float(n)
         else:
-            self.number = int(n)
+            number = int(n)
 
-        if self.low_tolerancestr is not None or self.high_tolerancestr is not None or self.si_units is not None or self.wikidata_node is not None:
+        if low_tolerancestr is not None or high_tolerancestr is not None or si_units is not None or wikidata_node is not None:
             # We can be certain that this is a quantity.
             self.data_type = KgtkFormat.DataType.QUANTITY
         else:
@@ -329,6 +429,15 @@ class KgtkValue(KgtkFormat):
             self.data_type = KgtkFormat.DataType.NUMBER
 
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=self.data_type,
+                                          valid=self.valid,
+                                          numberstr=numberstr,
+                                          number=number,
+                                          low_tolerancestr=low_tolerancestr,
+                                          high_tolerancestr=high_tolerancestr,
+                                          si_units=si_units,
+                                          wikidata_node=wikidata_node)
         return True
     
     def is_number(self, validate: bool=False)->bool:
@@ -373,22 +482,28 @@ class KgtkValue(KgtkFormat):
             return False
 
         # Extract the number components:
-        self.numberstr = m.group("number")
+        numberstr: str = m.group("number")
 
         # For convenience, convert the numeric part to int or float:
         #
         # TODO: go to this extra work only when requested?
-        if self.numberstr is None:
+        if numberstr is None:
             raise ValueError("Missing numeric part")
-        n: str = self.numberstr.lower()
+        n: str = numberstr.lower()
+        number: typing.Union[float, int]
         if "." in n or ("e" in n and not n.startswith("0x")):
-            self.number = float(n)
+            number = float(n)
         else:
-            self.number = int(n)
+            number = int(n)
 
         # Now we can be certain that this is a number.
         self.data_type = KgtkFormat.DataType.NUMBER
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=self.data_type,
+                                          valid=self.valid,
+                                          numberstr=numberstr,
+                                          number=number)
         return True
         
     
@@ -399,12 +514,6 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is not None:
             if self.data_type != KgtkFormat.DataType.QUANTITY:
-                # Clear the quantity components:
-                self.numberstr = None
-                self.low_tolerancestr = None
-                self.high_tolerancestr = None
-                self.si_units = None
-                self.wikidata_node = None
                 return False
             
             if not validate:
@@ -412,13 +521,6 @@ class KgtkValue(KgtkFormat):
             if self.valid is not None:
                 return self.valid
         
-        # Clear the quantity components:
-        self.numberstr = None
-        self.low_tolerancestr = None
-        self.high_tolerancestr = None
-        self.si_units = None
-        self.wikidata_node = None
-
         if not self._is_number_or_quantity():
             return False
         # We don't know yet if this is a quantity.  It could be a number.
@@ -428,36 +530,51 @@ class KgtkValue(KgtkFormat):
             return False
 
         # Extract the quantity components:
-        self.numberstr = m.group("number")
-        self.low_tolerancestr = m.group("low_tolerance")
-        self.high_tolerancestr = m.group("high_tolerance")
-        self.si_units = m.group("si_units")
-        self.wikidata_node = m.group("wikidata_node")
+        numberstr:str = m.group("number")
+        low_tolerancestr:str = m.group("low_tolerance")
+        high_tolerancestr:str = m.group("high_tolerance")
+        si_units:str = m.group("si_units")
+        wikidata_node:str = m.group("wikidata_node")
 
         # For convenience, convert the numeric part to int or float:
         #
         # TODO: go to this extra work only when requested?
-        if self.numberstr is None:
+        if numberstr is None:
             raise ValueError("Missing numeric part")
-        n: str = self.numberstr.lower()
+        n: str = numberstr.lower()
+        number: typing.Union[float, int]
         if "." in n or ("e" in n and not n.startswith("0x")):
-            self.number = float(n)
+            number = float(n)
         else:
-            self.number = int(n)
+            number = int(n)
 
-        if self.low_tolerancestr is None and self.high_tolerancestr is None and self.si_units is None and self.wikidata_node is None:
+        if low_tolerancestr is None and high_tolerancestr is None and si_units is None and wikidata_node is None:
             # This is a number, not a quantity
             self.data_type = KgtkFormat.DataType.NUMBER
             self.valid = True
+            if self.parse_fields:
+                self.fields = KgtkValueFields(data_type=self.data_type,
+                                              valid=self.valid,
+                                              numberstr=numberstr,
+                                              number=number)
             return False
 
         # Now we can be certain that this is a quantity.
         self.data_type = KgtkFormat.DataType.QUANTITY
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=self.data_type,
+                                          valid=self.valid,
+                                          numberstr=numberstr,
+                                          number=number,
+                                          low_tolerancestr=low_tolerancestr,
+                                          high_tolerancestr=high_tolerancestr,
+                                          si_units=si_units,
+                                          wikidata_node=wikidata_node)
         return True
     
     lax_string_re: typing.Pattern = re.compile(r'^"(?P<contents>.*)"$')
-    strict_string_re: typing.Pattern = re.compile(r'^"(?P<contents>(?:[^"\\]|\\.)*"$)')
+    strict_string_re: typing.Pattern = re.compile(r'^"(?P<contents>(?:[^"\\]|\\.)*)"$')
 
     def is_string(self, validate: bool = False)->bool:
         """
@@ -470,24 +587,17 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is None:
             if not self.value.startswith('"'):
-                # Clear the string components:
-                self.contents = None
                 return False
             # We are certain this is a string.  We don't yet know if it is valid.
             self.data_type = KgtkFormat.DataType.STRING
         else:
             if self.data_type != KgtkFormat.DataType.STRING:
-                # Clear the string components:
-                self.contents = None
                 return False
 
         if not validate:
             return True
         if self.valid is not None:
             return self.valid
-        
-        # Clear the string components:
-        self.contents = None
         
         # Validate the string:
         m: typing.Optional[typing.Match]
@@ -498,11 +608,12 @@ class KgtkValue(KgtkFormat):
         if m is None:
             return False
 
-        # Extract the contents components:
-        self.contents = m.group("contents")
-
         # We are certain that this is a valid string.
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.STRING,
+                                          valid=self.valid,
+                                          contents=m.group("contents"))
         return True
 
     def is_structured_literal(self)->bool:
@@ -527,30 +638,31 @@ class KgtkValue(KgtkFormat):
         # We are certain this is a symbol.  We assume that it is valid.
         self.data_type = KgtkFormat.DataType.SYMBOL
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=self.data_type,
+                                          valid=self.valid)
         return True
 
     def is_boolean(self, validate: bool = False)->bool:
         """
         Return True if the value matches one of the special boolean symbols.
 
-        The validate parameter is ignored.
+        The validate parameter is ignored, we always validate.
         """
         if self.data_type is not None:
-            if self.data_type != KgtkFormat.DataType.BOOLEAN:
-                self.truth = None
-                return False
-            self.truth = self.value == KgtkFormat.TRUE_SYMBOL
-            return True
+            return self.data_type == KgtkFormat.DataType.BOOLEAN
 
         # Is this a boolean?
         if self.value != KgtkFormat.TRUE_SYMBOL and self.value != KgtkFormat.FALSE_SYMBOL:
-            self.truth = None
             return False
             
         # We are certain this is a valid boolean.
         self.data_type = KgtkFormat.DataType.BOOLEAN
         self.valid = True
-        self.truth = self.value == KgtkFormat.TRUE_SYMBOL
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=self.data_type,
+                                          valid=self.valid,
+                                          truth=self.value == KgtkFormat.TRUE_SYMBOL)
         return True
 
     # Support two or three character language codes.  Suports hyphenated codes
@@ -564,19 +676,11 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is None:
             if not self.value.startswith("'"):
-                # Clear the cached components of the language qualified string:
-                self.contents = None
-                self.lang = None
-                self.suffix = None
                 return False
             # We are certain that this is a language qualified string, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING
         else:
             if self.data_type != KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
-                # Clear the cached components of the language qualified string:
-                self.contents = None
-                self.lang = None
-                self.suffix = None
                 return False
 
         if not validate:
@@ -584,11 +688,6 @@ class KgtkValue(KgtkFormat):
         if self.valid is not None:
             return self.valid
         
-        # Clear the cached components of the language qualified string:
-        self.contents = None
-        self.lang = None
-        self.suffix = None
-
         # Validate the language qualified string.
         # print("checking %s" % self.value)
         m: typing.Optional[typing.Match]
@@ -600,22 +699,23 @@ class KgtkValue(KgtkFormat):
             # print("match failed for %s" % self.value)
             return False
 
-        # Extract the contents, lang, and optional suffix components:
-        self.contents = m.group("contents")
-        self.lang = m.group("lang")
-        self.suffix = m.group("suffix")
-
         # Extract the combined lang and suffix for use by the LanguageValidator.
-        lang_suffix: str = m.group("lang_suffix")
-        # print("lang: %s" % lang_suffix)
+        lang_and_suffix: str = m.group("lang_suffix")
+        # print("lang_and_suffix: %s" % lang_and_suffix)
 
         # Validate the language code:
-        if not LanguageValidator.validate(lang_suffix.lower(), options=self.options):
+        if not LanguageValidator.validate(lang_and_suffix.lower(), options=self.options):
             # print("language validation failed for %s" % self.value)
             return False
 
         # We are certain that this is a valid language qualified string.
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING,
+                                          valid=self.valid,
+                                          contents=m.group("contents"),
+                                          lang=m.group("lang"),
+                                          suffix=m.group("suffix"))
         return True
 
     #location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?\d{3}\.\d{5})/(?P<lon>[-+]?\d{3}\.\d{5})$")
@@ -631,19 +731,11 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is None:
             if not self.value.startswith("@"):
-                self.latstr = None
-                self.lat = None
-                self.lonstr = None
-                self.lon = None
                 return False
             # We are certain that this is location coordinates, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.LOCATION_COORDINATES
         else:
             if self.data_type != KgtkFormat.DataType.LOCATION_COORDINATES:
-                self.latstr = None
-                self.lat = None
-                self.lonstr = None
-                self.lon = None
                 return False
 
         if not validate:
@@ -651,40 +743,39 @@ class KgtkValue(KgtkFormat):
         if self.valid is not None:
             return self.valid
         
-        # Clear the lat/lon components:
-        self.latstr = None
-        self.lat = None
-        self.lonstr = None
-        self.lon = None
-
         # Validate the location coordinates:
         m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(self.value)
         if m is None:
             return False
 
         latstr: str = m.group("lat")
-        self.latstr = latstr
         lonstr: str = m.group("lon")
-        self.lonstr = lonstr
 
         # Latitude normally runs from -90 to +90:
         try:
-            self.lat = float(latstr)
-            if  self.lat < self.options.minimum_valid_lat or self.lat > self.options.maximum_valid_lat:
+            lat: float = float(latstr)
+            if  lat < self.options.minimum_valid_lat or lat > self.options.maximum_valid_lat:
                 return False
         except ValueError:
             return False
 
         # Longitude normally runs from -180 to +180:
         try:
-            self.lon = float(lonstr)
-            if self.lon < self.options.minimum_valid_lon or self.lon > self.options.maximum_valid_lon:
+            lon: float = float(lonstr)
+            if lon < self.options.minimum_valid_lon or lon > self.options.maximum_valid_lon:
                 return False
         except ValueError:
             return False
 
         # We are certain that this is valid.
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LOCATION_COORDINATES,
+                                          valid=self.valid,
+                                          latstr=latstr,
+                                          lat=lat,
+                                          lonstr=lonstr,
+                                          lon=lon)
         return True
 
     # https://en.wikipedia.org/wiki/ISO_8601
@@ -780,43 +871,11 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is None:
             if not self.value.startswith("^"):
-                # Clear the cached date and times components:
-                self.yearstr = None
-                self.monthstr = None
-                self.daystr = None
-                self.hourstr = None
-                self.minutesstr = None
-                self.secondsstr = None
-                self.year = None
-                self.month = None
-                self.day = None
-                self.hour = None
-                self.minutes = None
-                self.seconds = None
-                self.zonestr = None
-                self.precisionstr = None
-                self.iso8601extended = None
                 return False
             # We are certain that this is location coordinates, although we haven't checked validity.
             self.data_type = KgtkFormat.DataType.DATE_AND_TIMES
         else:
             if self.data_type != KgtkFormat.DataType.DATE_AND_TIMES:
-                # Clear the cached date and times components:
-                self.yearstr = None
-                self.monthstr = None
-                self.daystr = None
-                self.hourstr = None
-                self.minutesstr = None
-                self.secondsstr = None
-                self.year = None
-                self.month = None
-                self.day = None
-                self.hour = None
-                self.minutes = None
-                self.seconds = None
-                self.zonestr = None
-                self.precisionstr = None
-                self.iso8601extended = None
                 return False
 
         if not validate:
@@ -825,105 +884,109 @@ class KgtkValue(KgtkFormat):
             return self.valid
         
         # Clear the cached date and times components:
-        self.yearstr = None
-        self.monthstr = None
-        self.daystr = None
-        self.hourstr = None
-        self.minutesstr = None
-        self.secondsstr = None
-        self.year = None
-        self.month = None
-        self.day = None
-        self.hour = None
-        self.minutes = None
-        self.seconds = None
-        self.zonestr = None
-        self.precisionstr = None
-        self.iso8601extended = None
 
         # Validate the date and times:
         m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
         if m is None:
             return False
 
-        self.yearstr = m.group("year")
-        self.monthstr = m.group("month")
-        self.daystr = m.group("day")
-        self.hourstr = m.group("hour")
-        self.minutesstr = m.group("minutes")
-        self.secondsstr = m.group("seconds")
-        self.zonestr = m.group("zone")
-        self.precisionstr = m.group("precision")
-        self.iso8601extended = m.group("hyphen") is not None
+        yearstr: str = m.group("year")
+        monthstr: str = m.group("month")
+        daystr: str = m.group("day")
+        hourstr: str = m.group("hour")
+        minutesstr: str = m.group("minutes")
+        secondsstr: str = m.group("seconds")
+        zonestr: str = m.group("zone")
+        precisionstr: str = m.group("precision")
+        iso8601extended: bool = m.group("hyphen") is not None
 
         fixup_needed: bool = False
 
         # Validate the year:
-        if self.yearstr is None or len(self.yearstr) == 0:
+        if yearstr is None or len(yearstr) == 0:
             return False # Years are mandatory
         try:
-            self.year: int = int(self.yearstr)
+            year: int = int(yearstr)
         except ValueError:
             return False
-        if self.year < self.options.minimum_valid_year:
+        if year < self.options.minimum_valid_year:
             return False
-        if self.year > self.options.maximum_valid_year:
+        if year > self.options.maximum_valid_year:
             return False
 
-        if self.monthstr is not None:
+        if monthstr is not None:
             try:
-                self.month: int = int(self.monthstr)
+                month: int = int(monthstr)
             except ValueError:
                 return False # shouldn't happen
-            if self.month == 0:
+            if month == 0:
                 if self.options.repair_month_or_day_zero:
-                    self.month = 1
-                    self.monthstr = "01"
+                    month = 1
+                    monthstr = "01"
                     fixup_needed = True
                 elif not self.options.allow_month_or_day_zero:
                     return False # month 0 was disallowed.
 
-        if self.daystr is not None:
+        if daystr is not None:
             try:
-                self.day: int = int(self.daystr)
+                day: int = int(daystr)
             except ValueError:
                 return False # shouldn't happen
-            if self.day == 0:
+            if day == 0:
                 if self.options.repair_month_or_day_zero:
-                    self.day = 1
-                    self.daystr = "01"
+                    day = 1
+                    daystr = "01"
                     fixup_needed = True
                 elif not self.options.allow_month_or_day_zero:
                     return False # day 0 was disallowed.
 
         # Convert the time fields to ints:
-        if self.hourstr is not None:
+        if hourstr is not None:
             try:
-                self.hour: int = int(self.hourstr)
+                hour: int = int(hourstr)
             except ValueError:
                 return False # shouldn't happen
 
-        if self.minutesstr is not None:
+        if minutesstr is not None:
             try:
-                self.minutes: int = int(self.minutesstr)
+                minutes: int = int(minutesstr)
             except ValueError:
                 return False # shouldn't happen
 
-        if self.secondsstr is not None:
+        if secondsstr is not None:
             try:
-                self.seconds: int = int(self.secondsstr)
+                seconds: int = int(secondsstr)
             except ValueError:
                 return False # shouldn't happen
 
         if fixup_needed:
-            # Rapair a month or day zero problem.  If this value is the child
-            #of a list, repair the list parent value, too.
+            # Repair a month or day zero problem.  If this value is the child
+            # of a list, repair the list parent value, too.
             self.update_date_and_times()
             if self.parent is not None:
                 self.parent.rebuild_list()
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True
+        if self.parse_fields:
+            self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.DATE_AND_TIMES,
+                                          valid=self.valid,
+                                          yearstr=yearstr,
+                                          monthstr=monthstr,
+                                          daystr=daystr,
+                                          hourstr=hourstr,
+                                          minutesstr=minutesstr,
+                                          secondsstr=secondsstr,
+                                          year=year,
+                                          month=month,
+                                          day=day,
+                                          hour=hour,
+                                          minutes=minutes,
+                                          seconds=seconds,
+                                          zonestr=zonestr,
+                                          precisionstr=precisionstr,
+                                          iso8601extended=iso8601extended,
+            )
         return True
 
     def update_date_and_times(self):
@@ -1019,6 +1082,7 @@ class KgtkValue(KgtkFormat):
         # Classify this KgtkValue into a KgtkDataType, ignoring any cached data_type.
         self.data_type = None
         self.valid = None
+        self.fields = None
         return self.classify()
 
     def validate(self)->bool:
@@ -1030,6 +1094,9 @@ class KgtkValue(KgtkFormat):
         # If the valid flag has already been cached, return that.
         if self.valid is not None:
             return self.valid
+
+        # Clear any fields from prior validation:
+        self.fields = None
         
         # Validate the value.
         if dt == KgtkFormat.DataType.EMPTY:
@@ -1062,6 +1129,7 @@ class KgtkValue(KgtkFormat):
         if reclassify:
             self.data_type = None
         self.valid = None
+        self.fields = None
         return self.validate()
         
     def describe(self)->str:
@@ -1089,7 +1157,7 @@ class KgtkValue(KgtkFormat):
         elif dt == KgtkFormat.DataType.STRING:
             return "String" if self.is_string(validate=True) else "Invalid String"
         elif dt == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
-            return "Language Qualified String (%s)" % self.lang if self.is_language_qualified_string(validate=True) else "Invalid Language Qualified String"
+            return "Language Qualified String" if self.is_language_qualified_string(validate=True) else "Invalid Language Qualified String"
         elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
             return "Location Coordinates" if self.is_location_coordinates(validate=True) else "Invalid Location Coordinates"
         elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
@@ -1103,79 +1171,19 @@ class KgtkValue(KgtkFormat):
         else:
             return "Unknown"
 
-    def get_fields(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
-        results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
-        if self.data_type is not None:
-            results["data_type"] = str(self.data_type)
-        if self.valid is not None:
-            results["valid"] = self.valid
-        if self.contents is not None:
-            results["contents"] = self.contents
-        if self.lang is not None:
-            results["lang"] = self.lang
-        if self.suffix is not None:
-            results["suffix"] = self.suffix
-        if self.numberstr is not None:
-            results["numberstr"] = self.numberstr
-        if self.number is not None:
-            results["number"] = self.number
-        if self.low_tolerancestr is not None:
-            results["low_tolerancestr"] = self.low_tolerancestr
-        if self.high_tolerancestr is not None:
-            results["high_tolerancestr"] = self.high_tolerancestr
-        if self.si_units is not None:
-            results["si_units"] = self.si_units
-        if self.wikidata_node is not None:
-            results["wikidata_node"] = self.wikidata_node
-        if self.latstr is not None:
-            results["latstr"] = self.latstr
-        if self.lat is not None:
-            results["lat"] = self.lat
-        if self.lonstr is not None:
-            results["lonstr"] = self.lonstr
-        if self.lon is not None:
-            results["lon"] = self.lon
-        if self.yearstr is not None:
-            results["yearstr"] = self.yearstr
-        if self.year is not None:
-            results["year"] = self.year
-        if self.monthstr is not None:
-            results["monthstr"] = self.monthstr
-        if self.month is not None:
-            results["month"] = self.month
-        if self.daystr is not None:
-            results["daystr"] = self.daystr
-        if self.day is not None:
-            results["day"] = self.day
-        if self.hourstr is not None:
-            results["hourstr"] = self.hourstr
-        if self.hour is not None:
-            results["hour"] = self.hour
-        if self.minutesstr is not None:
-            results["minutesstr"] = self.minutesstr
-        if self.minutes is not None:
-            results["minutes"] = self.minutes
-        if self.secondsstr is not None:
-            results["secondsstr"] = self.secondsstr
-        if self.seconds is not None:
-            results["seconds"] = self.seconds
-        if self.zonestr is not None:
-            results["zonestr"] = self.zonestr
-        if self.precisionstr is not None:
-            results["precisionstr"] = self.precisionstr
-        if self.iso8601extended is not None:
-            results["iso8601extended"] = self.iso8601extended
-        list_items: typing.List[KgtkValue] = self.get_list_items()
-        if len(list_items) > 0:
-            results["list_len"] = len(list_items)
-        return results
-    
+    def get_field_map(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
+        if self.fields is None:
+            return { }
+        else:
+            return self.fields.to_map()
+
 def main():
     """
     Test the KGTK value parser.
     """
     parser: ArgumentParser = ArgumentParser()
     parser.add_argument(dest="values", help="The values(s) to test", type=str, nargs="+")
+    parser.add_argument("-p", "--parse-fields", dest="parse_fields", help="Print additional progress messages.", action='store_true')
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     KgtkValueOptions.add_arguments(parser)
@@ -1186,7 +1194,7 @@ def main():
 
     value: str
     for value in args.values:
-        kv: KgtkValue = KgtkValue(value, options=value_options)
+        kv: KgtkValue = KgtkValue(value, options=value_options, parse_fields=args.parse_fields)
         kv.validate()
         if value == kv.value:
             print("%s: %s" % (value, kv.describe()), flush=True)
@@ -1194,7 +1202,7 @@ def main():
             print("%s => %s: %s" % (value, kv.value, kv.describe()), flush=True)
 
         if args.verbose:
-            fields = kv.get_fields()
+            fields: typing.Mapping[str, typing.Any] = kv.get_field_map()
             for key in sorted(fields.keys()):
                 print("%s: %s" % (key, str(fields[key])))
             list_items: typing.List[KgtkValue] = kv.get_list_items()
