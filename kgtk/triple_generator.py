@@ -19,6 +19,7 @@ from etk.wikidata.value import (
     ExternalIdentifier,
     URLValue
 )
+from etk.knowledge_graph.node import LiteralType
 
 BAD_CHARS = [":", "-", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
@@ -43,6 +44,16 @@ class TripleGenerator:
     ):
         from etk.wikidata.statement import Rank
         self.ignore = ignore
+        self.datatype_mapping = {
+            "item": Item,
+            "time": TimeValue,
+            "globe-coordinate": GlobeCoordinate,
+            "quantity": QuantityValue,
+            "monolingualtext": MonolingualText,
+            "string": StringValue,
+            "external-identifier": ExternalIdentifier,
+            "url": URLValue
+        }
         self.prop_types = self.set_properties(prop_file)
         self.label_set, self.alias_set, self.description_set = self.set_sets(
             label_set, alias_set, description_set
@@ -68,34 +79,25 @@ class TripleGenerator:
         self.order_map = {}
         self.use_id = use_id
 
+
     def _node_2_entity(self, node: str):
         '''
         A node can be Qxxx or Pxxx, return the proper entity.
         '''
         if node in self.prop_types:
-            entity = WDProperty(node, self.prop_types[node])
+            entity = WDProperty(node, self.datatype_mapping[self.prop_types[node]])
         else:
             entity = WDItem(TripleGenerator.replace_illegal_string(node))
         return entity
 
     def set_properties(self, prop_file: str):
-        datatype_mapping = {
-            "item": Item,
-            "time": TimeValue,
-            "globe-coordinate": GlobeCoordinate,
-            "quantity": QuantityValue,
-            "monolingualtext": MonolingualText,
-            "string": StringValue,
-            "external-identifier": ExternalIdentifier,
-            "url": URLValue
-        }
         with open(prop_file, "r") as fp:
             props = fp.readlines()
         prop_types = {}
         for line in props[1:]:
             node1, _, node2 = line.split("\t")
             try:
-                prop_types[node1] = datatype_mapping[node2.strip()]
+                prop_types[node1] = self.datatype_mapping[node2.strip()]
             except:
                 if not self.ignore:
                     raise KGTKException(
@@ -195,9 +197,19 @@ class TripleGenerator:
         return True
 
     def generate_prop_declaration_triple(self, node1: str, label: str, node2: str) -> bool:
-        prop = WDProperty(node1, self.prop_types[node1])
+        # update the known prop_types
+        if node1 in self.prop_types:
+            raise KGTKException("Duplicated property definition of {} found!".format(node1))
+        self.prop_types[node1] = node2
+        prop = WDProperty(node1, self.datatype_mapping[node2])
         self.doc.kg.add_subject(prop)
         return True
+
+    @staticmethod
+    def xsd_number_type(num):
+        if isinstance(num, float) and 'e' in str(num).lower():
+            return LiteralType.double
+        return LiteralType.decimal
 
     def generate_normal_triple(
             self, node1: str, label: str, node2: str, is_qualifier_edge: bool, e_id: str) -> bool:
@@ -268,20 +280,22 @@ class TripleGenerator:
             amount, lower_bound, upper_bound, unit = res
 
             amount = TripleGenerator.clean_number_string(amount)
+            num_type = self.xsd_number_type(amount)
+
             lower_bound = TripleGenerator.clean_number_string(lower_bound)
             upper_bound = TripleGenerator.clean_number_string(upper_bound)
             if unit != None:
                 if upper_bound != None and lower_bound != None:
                     object = QuantityValue(amount, unit=Item(
-                        unit), upper_bound=upper_bound, lower_bound=lower_bound)
+                        unit), upper_bound=upper_bound, lower_bound=lower_bound, type=num_type)
                 else:
-                    object = QuantityValue(amount, unit=Item(unit))
+                    object = QuantityValue(amount, unit=Item(unit), type=num_type)
             else:
                 if upper_bound != None and lower_bound != None:
                     object = QuantityValue(
-                        amount, upper_bound=upper_bound, lower_bound=lower_bound)
+                        amount, upper_bound=upper_bound, lower_bound=lower_bound, type=num_type)
                 else:
-                    object = QuantityValue(amount)
+                    object = QuantityValue(amount, type=num_type)
 
         elif edge_type == MonolingualText:
             text_string, lang = TripleGenerator.process_text_string(node2)
@@ -420,7 +434,7 @@ class TripleGenerator:
             success = self.generate_description_triple(node1, prop, node2)
         elif prop in self.alias_set:
             success = self.generate_alias_triple(node1, prop, node2)
-        elif prop == "type":
+        elif prop == "data_type":
             # special edge of prop declaration
             success = self.generate_prop_declaration_triple(
                 node1, prop, node2)
