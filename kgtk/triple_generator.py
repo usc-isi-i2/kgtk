@@ -73,19 +73,19 @@ class TripleGenerator:
         self.yyyy_mm_dd_pattern = re.compile(
             "[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
         self.yyyy_pattern = re.compile("[12]\d{3}")
+        # self.quantity_pattern = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
         self.quantity_pattern = re.compile(
-            "([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
+            "([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
         # order map, know the column index of ["node1","property","node2",id]
         self.order_map = {}
         self.use_id = use_id
-
 
     def _node_2_entity(self, node: str):
         '''
         A node can be Qxxx or Pxxx, return the proper entity.
         '''
         if node in self.prop_types:
-            entity = WDProperty(node, self.datatype_mapping[self.prop_types[node]])
+            entity = WDProperty(node, self.prop_types[node])
         else:
             entity = WDItem(TripleGenerator.replace_illegal_string(node))
         return entity
@@ -276,12 +276,13 @@ class TripleGenerator:
 
         elif edge_type == QuantityValue:
             # +70[+60,+80]Q743895
+
             res = self.quantity_pattern.match(node2).groups()
             amount, lower_bound, upper_bound, unit = res
 
             amount = TripleGenerator.clean_number_string(amount)
             num_type = self.xsd_number_type(amount)
-
+            
             lower_bound = TripleGenerator.clean_number_string(lower_bound)
             upper_bound = TripleGenerator.clean_number_string(upper_bound)
             if unit != None:
