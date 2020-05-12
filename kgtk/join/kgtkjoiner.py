@@ -226,14 +226,12 @@ class KgtkJoiner(KgtkFormat):
 
         idx: int = 0
         for column_name in right_kr.column_names:
-            if idx == right_kr.node1_column_idx:
-                # The right file is an edge file and this is its node1 column index.
-                if left_kr.node1_column_idx >= 0:
-                    # The left file has a node1 column.  Map to that.
-                    column_name = left_kr.column_names[left_kr.node1_column_idx]
-                else:
-                    # Apparently we don't have a destination in the left file.  Punt.
-                    raise ValueError("Can't map right join column name to the left file #2.")
+            if idx == right_kr.id_column_idx and left_kr.id_column_idx >= 0:
+                # Map the id columns to the name used in the left file.
+                column_name = left_kr.column_names[left_kr.id_column_idx]
+            elif idx == right_kr.node1_column_idx and left_kr.node1_column_idx >= 0:
+                # Map the node1 columns to the name used in the left file,
+                column_name = left_kr.column_names[left_kr.node1_column_idx]
             elif idx == right_kr.label_column_idx and left_kr.label_column_idx >= 0:
                 # Map the right file's label column to the left file's label column.
                 column_name = left_kr.column_names[left_kr.label_column_idx]
