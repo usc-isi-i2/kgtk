@@ -145,34 +145,39 @@ class KgtkBase(KgtkFormat):
         return column_name_map
 
     @classmethod
-    def required_edge_columns(cls,
-                              column_name_map: typing.Mapping[str, int],
-                              header_line: str,
-                              error_action: ValidationAction,
-                              error_file: typing.TextIO = sys.stderr
-    )->typing.Tuple[int, int, int]:
-        # Ensure that the three required columns are present:
+    def get_special_columns(cls,
+                            column_name_map: typing.Mapping[str, int],
+                            header_line: str,
+                            error_action: ValidationAction,
+                            error_file: typing.TextIO = sys.stderr,
+                            is_edge_file: bool = False,
+                            is_node_file: bool = False,
+    )->typing.Tuple[int, int, int, int]:
+        """
+        Four predefined column names are special: they may have name aliases, and
+        they may be required in ede or node files.
+
+        """
+
+        # These three predefined columns columns are required for edge files:
         node1_column_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map,
-                                                   header_line=header_line, error_action=error_action, error_file=error_file)
+                                                   header_line=header_line, error_action=error_action, error_file=error_file,
+                                                   is_optional=not is_edge_file)
+
+        label_column_idx: int = cls.get_column_idx(cls.LABEL_COLUMN_NAMES, column_name_map,
+                                                   header_line=header_line, error_action=error_action, error_file=error_file,
+                                                   is_optional=not is_edge_file)
 
         node2_column_idx: int = cls.get_column_idx(cls.NODE2_COLUMN_NAMES, column_name_map,
-                                                   header_line=header_line, error_action=error_action, error_file=error_file)
+                                                   header_line=header_line, error_action=error_action, error_file=error_file,
+                                                   is_optional=not is_edge_file)
                                                    
-        label_column_idx: int = cls.get_column_idx(cls.LABEL_COLUMN_NAMES, column_name_map,
-                                                   header_line=header_line, error_action=error_action, error_file=error_file)
+        # This predefined column is required for node files:
+        id_column_idx: int = cls.get_column_idx(cls.ID_COLUMN_NAMES, column_name_map,
+                                                header_line=header_line, error_action=error_action, error_file=error_file,
+                                                is_optional=not is_node_file)
 
-        return (node1_column_idx, node2_column_idx, label_column_idx)
-
-    @classmethod
-    def required_node_column(cls,
-                             column_name_map: typing.Mapping[str, int],
-                             header_line: str,
-                             error_action: ValidationAction,
-                             error_file: typing.TextIO = sys.stderr
-    )->int:
-        # Ensure that the required column is present:
-        return cls.get_column_idx(cls.ID_COLUMN_NAMES, column_name_map,
-                                  header_line=header_line, error_action=error_action, error_file=error_file)
+        return (node1_column_idx, label_column_idx, node2_column_idx, id_column_idx)
 
     @classmethod
     def additional_edge_columns(cls, column_names: typing.List[str])->typing.List[str]:

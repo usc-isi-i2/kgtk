@@ -56,7 +56,7 @@ def add_arguments(parser):
         type=str,
         dest="lang",
         default="en",
-        help='language to extract, default en')
+        help='languages to extract, comma separated, default en')
     parser.add_argument(
         "--source",
         action="store",
@@ -129,7 +129,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
             self.cnt=0
             self.write_mode='w'
 
-        def process(self,line,node_file,edge_file,qual_file,lang,doc_id):
+        def process(self,line,node_file,edge_file,qual_file,languages,doc_id):
             write_mode='a'
             if self.first==True:
                 write_mode='w'
@@ -140,7 +140,6 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
             nrows=[]
             erows=[]
             qrows=[]
-            site_filter = '{}wiki'.format(lang)
             clean_line = line.strip()
             if clean_line.endswith(b","):
                 clean_line = clean_line[:-1]
@@ -156,43 +155,50 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
 
                     if self.parse_labels:
                         labels = obj["labels"]
+                        label_list=[]
                         if labels:
-                            lang_label = labels.get(lang, None)
-                            if lang_label:
-                                row.append(
-                                    '\'' + lang_label['value'] + '\'' + "@" + lang)
-                            else:
-                                row.append("")
+                            for lang in languages:
+                                lang_label = labels.get(lang, None)
+                                if lang_label:
+                                    lang_label['value']=lang_label['value'].replace('|','\\|')
+                                    label_list.append(
+                                        '\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
+                        if len(label_list)>0:
+                            row.append("|".join(label_list))
                         else:
                             row.append("")
                     row.append(entry_type)
 
                     if self.parse_descr:
                         descriptions = obj["descriptions"]
+                        descr_list=[]
                         if descriptions:
-                            lang_descr = descriptions.get(lang, None)
-                            if lang_descr:
-                                row.append(
-                                    '\'' + lang_descr['value'] + '\'' + "@" + lang)
-                            else:
-                                row.append("")
+                            for lang in languages:
+                                lang_descr = descriptions.get(lang, None)
+                                if lang_descr:
+                                    lang_descr['value']=lang_descr['value'].replace('|','\\|')
+                                    descr_list.append(
+                                        '\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
+                        if len(descr_list)>0:
+                            row.append("|".join(descr_list))
                         else:
                             row.append("")
 
                     if self.parse_aliases:
                         aliases = obj["aliases"]
+                        alias_list = []
                         if aliases:
-                            lang_aliases = aliases.get(lang, None)
-                            if lang_aliases:
-                                alias_list = []
-                                for item in lang_aliases:
-                                    alias_list.append(
-                                        '\'' + item['value'] + '\'' + "@" + lang)
-                                row.append("|".join(alias_list))
-                            else:
-                                row.append('')
+                            for lang in languages:
+                                lang_aliases = aliases.get(lang, None)
+                                if lang_aliases:
+                                    for item in lang_aliases:
+                                        item['value']=item['value'].replace('|','\\|')
+                                        alias_list.append(
+                                            '\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
+                        if len(alias_list)>0:
+                            row.append("|".join(alias_list))
                         else:
-                            row.append('')
+                            row.append("")
 
                     #row.append(doc_id)
                     if node_file:
@@ -229,6 +235,8 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                     value = ''
                                     mag = ''
                                     unit = ''
+                                    date=''
+                                    item=''
                                     lower = ''
                                     upper = ''
                                     precision = ''
@@ -239,6 +247,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                     if typ.startswith('wikibase'):
                                         enttype = val.get('entity-type')
                                         value = val.get('id', '')
+                                        item=value
                                     elif typ == 'quantity':
                                         value = val['amount']
                                         mag = val['amount']
@@ -261,17 +270,21 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                         precision = val.get('precision', '')
                                         value = '@' + lat + '/' + long
                                     elif typ == 'time':
-                                        mag = "^" + val['time'][1:]
+                                        if val['time'][0]=='-':
+                                            pre="^-"
+                                        else:
+                                            pre="^"
+                                        date = pre + val['time'][1:]
                                         precision = str(val['precision'])
                                         calendar = val.get(
                                             'calendarmodel', '').split('/')[-1]
-                                        value = "^" + \
+                                        value = pre + \
                                             val['time'][1:] + '/' + str(val['precision'])
                                     elif typ == 'monolingualtext':
                                         value = '\'' + \
-                                            val['text'] + '\'' + '@' + val['language']
+                                            val['text'].replace("'","\\'") + '\'' + '@' + val['language']
                                     else:
-                                        value = '\"' + val + '\"'
+                                        value = '\"' + val.replace('"','\\"') + '\"'
                                     if edge_file:
                                         erows.append([sid,
                                                      qnode,
@@ -280,6 +293,8 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                      rank,
                                                      mag,
                                                      unit,
+                                                     date,
+                                                     item,
                                                      lower,
                                                      upper,
                                                      lat,
@@ -298,6 +313,8 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                         value = ''
                                                         mag = ''
                                                         unit = ''
+                                                        date= ''
+                                                        item=''
                                                         lower = ''
                                                         upper = ''
                                                         precision = ''
@@ -317,6 +334,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                                 'entity-type')
                                                             value = val.get(
                                                                 'id', '')
+                                                            item=value
                                                         elif typ == 'quantity':
                                                             value = val['amount']
                                                             mag = val['amount']
@@ -345,19 +363,23 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                                 'precision', '')
                                                             value = '@' + lat + '/' + long
                                                         elif typ == 'time':
-                                                            mag = "^" + \
+                                                            if val['time'][0]=='-':
+                                                                pre="^-"
+                                                            else:
+                                                                pre="^"
+                                                            date = pre + \
                                                                 val['time'][1:]
                                                             precision = str(
                                                                 val['precision'])
                                                             calendar = val.get(
                                                                 'calendarmodel', '').split('/')[-1]
-                                                            value = "^" + \
+                                                            value = pre + \
                                                                 val['time'][1:] + '/' + str(val['precision'])
                                                         elif typ == 'monolingualtext':
                                                             value = '\'' + \
-                                                                val['text'] + '\'' + '@' + val['language']
+                                                                val['text'].replace("'","\\'") + '\'' + '@' + val['language']
                                                         else:
-                                                            value = '\"' + val + '\"'
+                                                            value = '\"' + val.replace('"','\\"') + '\"'
                                                         qrows.append(
                                                             [
                                                                 tempid,
@@ -366,6 +388,8 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                                                 value,
                                                                 mag,
                                                                 unit,
+                                                                date,
+                                                                item,
                                                                 lower,
                                                                 upper,
                                                                 lat,
@@ -384,11 +408,11 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                                     sitelang=link.split('wiki')[0].replace('_','-')
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
                                     if edge_file:
-                                        erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','',
+                                        erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','','','',
                                                       '','','','',''])
                                     if qual_file:
                                         tempid=sid+'-language-1'
-                                        qrows.append([tempid,sid,'language',sitelang,'','','','','','','','',''])
+                                        qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','',''])
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
@@ -425,6 +449,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
     
     try:
         start=time.time()
+        languages=lang.split(',')
         if node_file:
             header = ['id','label','type','description','alias']
             with open(node_file+'_header', 'w', newline='') as myfile:
@@ -435,7 +460,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
                     escapechar="\n",
                     quotechar='')
                 wr.writerow(header)
-        header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;lower','node2;upper',
+        header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
               'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type']
         if edge_file:
             with open(edge_file+'_header', 'w', newline='') as myfile:
@@ -463,7 +488,7 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
             for cnt, line in enumerate(file):
                 if limit and cnt >= limit:
                     break
-                pp.add_task(line,node_file,edge_file,qual_file,lang,source)
+                pp.add_task(line,node_file,edge_file,qual_file,languages,source)
         pp.task_done()
         pp.join()
         if node_file:
