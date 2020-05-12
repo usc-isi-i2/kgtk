@@ -326,10 +326,16 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     column_name_map: typing.Mapping[str, int] = attr.ib(validator=attr.validators.deep_mapping(key_validator=attr.validators.instance_of(str),
                                                                                                value_validator=attr.validators.instance_of(int)))
 
-    # The index of the mandatory columns.  -1 means missing:
+    # The actual mode used.
+    #
+    # TODO: fix the validator.
+    # mode: KgtkReaderMode = attr.ib(validator=attr.validators.instance_of(KgtkReaderMode), default=KgtkReaderMode.NONE)
+    mode: KgtkReaderMode = attr.ib(default=KgtkReaderMode.NONE)
+
+    # The index of the mandatory/aliased columns.  -1 means missing:
     node1_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
-    node2_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
     label_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
+    node2_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # edge file
     id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # node file
 
     data_lines_read: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
@@ -364,6 +370,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     def open(cls,
              file_path: typing.Optional[Path],
              error_file: typing.TextIO = sys.stderr,
+             mode: typing.Optional[KgtkReaderMode] = None,
              options: typing.Optional[KgtkReaderOptions] = None,
              value_options: typing.Optional[KgtkValueOptions] = None,
              verbose: bool = False,
@@ -395,9 +402,11 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                               error_file=error_file)
 
         # Should we automatically determine if this is an edge file or a node file?
+        if mode is None:
+            mode = options.mode
         is_edge_file: bool = False
         is_node_file: bool = False
-        if options.mode is KgtkReaderMode.AUTO:
+        if mode is KgtkReaderMode.AUTO:
             # If we have a node1 (or alias) column, then this must be an edge file. Otherwise, assume it is a node file.
             node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES,
                                                 column_name_map,
@@ -416,88 +425,71 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 if verbose:
                     print("node1 column not found, assuming this is a KGTK node file", file=error_file, flush=True)
 
-        elif options.mode is KgtkReaderMode.EDGE:
+        elif mode is KgtkReaderMode.EDGE:
             is_edge_file = True
-        elif options.mode is KgtkReaderMode.NODE:
+        elif mode is KgtkReaderMode.NODE:
             is_node_file = True
-        elif options.mode is KgtkReaderMode.NONE:
+        elif mode is KgtkReaderMode.NONE:
             pass
 
+        # Get the indices of the special columns.
+        node1_column_idx: int
+        label_column_idx: int
+        node2_column_idx: int
+        id_column_idx: int
+        (node1_column_idx,
+         label_column_idx,
+         node2_column_idx,
+         id_column_idx) = cls.get_special_columns(column_name_map,
+                                                  header_line=header,
+                                                  error_action=options.header_error_action,
+                                                  error_file=error_file,
+                                                  is_edge_file=is_edge_file,
+                                                  is_node_file=is_node_file)
+        
+        if verbose:
+            print("KgtkReader: Special columns: node1=%d label=%d node2=%d id=%d" % (node1_column_idx,
+                                                                                     label_column_idx,
+                                                                                     node2_column_idx,
+                                                                                     id_column_idx), file=error_file, flush=True)
         if is_edge_file:
             # We'll instantiate an EdgeReader, which is a subclass of KgtkReader.
             # The EdgeReader import is deferred to avoid circular imports.
             from kgtk.io.edgereader import EdgeReader
             
-            # Get the indices of the required columns.
-            node1_column_idx: int
-            node2_column_idx: int
-            label_column_idx: int
-            (node1_column_idx, node2_column_idx, label_column_idx) = cls.required_edge_columns(column_name_map,
-                                                                                               header_line=header,
-                                                                                               error_action=options.header_error_action,
-                                                                                               error_file=error_file)
-
             if verbose:
-                print("KgtkReader: Reading an edge file. node1=%d label=%d node2=%d" % (node1_column_idx, label_column_idx, node2_column_idx), file=error_file, flush=True)
+                print("KgtkReader: Reading an edge file.", file=error_file, flush=True)
 
-            return EdgeReader(file_path=file_path,
-                              source=source,
-                              column_names=column_names,
-                              column_name_map=column_name_map,
-                              column_count=len(column_names),
-                              node1_column_idx=node1_column_idx,
-                              node2_column_idx=node2_column_idx,
-                              label_column_idx=label_column_idx,
-                              error_file=error_file,
-                              options=options,
-                              value_options=value_options,
-                              is_edge_file=is_edge_file,
-                              is_node_file=is_node_file,
-                              verbose=verbose,
-                              very_verbose=very_verbose)
+            cls = EdgeReader
         
         elif is_node_file:
             # We'll instantiate an NodeReader, which is a subclass of KgtkReader.
             # The NodeReader import is deferred to avoid circular imports.
             from kgtk.io.nodereader import NodeReader
             
-            # Get the index of the required column:
-            id_column_idx: int = cls.required_node_column(column_name_map,
-                                                          header_line=header,
-                                                          error_action=options.header_error_action,
-                                                          error_file=error_file)
-
             if verbose:
-                print("KgtkReader: Reading an node file. id=%d" % (id_column_idx), file=error_file, flush=True)
+                print("KgtkReader: Reading an node file.", file=error_file, flush=True)
 
-            return NodeReader(file_path=file_path,
-                              source=source,
-                              column_names=column_names,
-                              column_name_map=column_name_map,
-                              column_count=len(column_names),
-                              id_column_idx=id_column_idx,
-                              error_file=error_file,
-                              options=options,
-                              value_options=value_options,
-                              is_edge_file=is_edge_file,
-                              is_node_file=is_node_file,
-                              verbose=verbose,
-                              very_verbose=very_verbose,
-            )
-        else:
-            return cls(file_path=file_path,
-                       source=source,
-                       column_names=column_names,
-                       column_name_map=column_name_map,
-                       column_count=len(column_names),
-                       error_file=error_file,
-                       options=options,
-                       value_options=value_options,
-                       is_edge_file=is_edge_file,
-                       is_node_file=is_node_file,
-                       verbose=verbose,
-                       very_verbose=very_verbose,
-            )
+            cls = NodeReader
+
+        return cls(file_path=file_path,
+                   source=source,
+                   column_names=column_names,
+                   column_name_map=column_name_map,
+                   column_count=len(column_names),
+                   mode=mode,
+                   node1_column_idx=node1_column_idx,
+                   label_column_idx=label_column_idx,
+                   node2_column_idx=node2_column_idx,
+                   id_column_idx=id_column_idx,
+                   error_file=error_file,
+                   options=options,
+                   value_options=value_options,
+                   is_edge_file=is_edge_file,
+                   is_node_file=is_node_file,
+                   verbose=verbose,
+                   very_verbose=very_verbose,
+        )
 
     @classmethod
     def _open_compressed_file(cls,
