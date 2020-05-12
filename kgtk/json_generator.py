@@ -192,9 +192,13 @@ class JsonGenerator:
             self.misc_json_dict[node1]["sitelinks"] = {}
         
         if field == "descriptions":
-            pass
+            description_text, lang = JsonGenerator.process_text_string(node2)
+            temp_des_dict = {lang:{"languange":lang,"value":description_text}}
+            self.misc_json_dict[node1]["descriptions"] = {**self.misc_json_dict[node1]["descriptions"], **temp_des_dict}
         if field == "aliases":
-            pass
+            alias_text, lang = JsonGenerator.process_text_string(node2)
+            if lang in self.misc_json_dict[node1]["aliases"]:
+                pass
         
         # update claims
 
