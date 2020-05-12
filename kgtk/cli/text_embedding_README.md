@@ -13,7 +13,7 @@ kgtk text_embedding \
     --model/ -m <list_of_string> \  # optional, default is `bert-base-wikipedia-sections-mean-tokens`
     --label-properties <list_of_string> \ # optional, default is ["label"]
     --description-properties <list_of_string> \ # optional, default is ["description"]
-    --isa-properties <list_of_string> \ # optional, default is ["P279"]
+    --isa-properties <list_of_string> \ # optional, default is ["P31"]
     --has-properties <list_of_string> \ # optional, default is ["all"]
     --property-labels-file/ -p <string> \ #optional
     --output-format <string> # optional, default is `kgtk_format`
@@ -22,21 +22,22 @@ kgtk text_embedding \
     --embedding-projector-path/ -o <string> # optional, default is the home directory of current user
     --black-list/ -b <string> # optional,default is None
     --logging-level/ -l <string> \ # optional, default is `info`
-    --run-TSNE False # optional, default is True
+    --dimensional-reduction pca \ # optional, default is none
+    --dimension 5 \ #optional, default is 2
+    --parallel 4 # optional, default is 1
 ```
 ##### Example 1:
 For easiest running, just give the input file as 
 `kgtk text_embedding -i input_file.csv`
 ##### Example 2:
-Running with more specific parameters and not run TSNE (output original embedding vectors):
+Running with more specific parameters and then run TSNE to reduce output dimension:
 ```
-kgtk text_embedding \ 
+kgtk text_embedding --debug \ 
     --input test_edges_file.tsv \
     --model bert-base-wikipedia-sections-mean-tokens bert-base-nli-cls-token \
     --label-properties P1449 P1559 \
     --description-properties P94 \
-    --logging-level debug \
-    --run-TSNE false
+    --dimensional-reduction tsne
 ```
 ##### Example 3:
 Running with test format input and tsv output(for visulization at google embedding projector)
@@ -112,23 +113,45 @@ If not given, the program will try to use the default edge(property) name as `de
 
 ##### --isa-properties
 an ordered list of properties. When a property contains multiple values, the first value will selected. When a property value is not a literal, output the label of the property value. When multiple isa-properties are present, the values are output comma-separated.
-If not given, the program will try to use the default edge(property) name as `P279`. Those words in properties will be for vector embedding later.
+If not given, the program will try to use the default edge(property) name as `P31`. Those words in properties will be for vector embedding later.
 
 ##### --has-properties
-an ordered list of properties. The output consists of a comma-separated text with the labels of the properties, using and for the last item, e.g., “country, place of birth, religion and canonization status” 
+an ordered list of properties. The output consists of a comma-separated text with the labels of the properties, using and for the last item, e.g., “country, place of birth, religion and canonization status” .
 If not given, the program will use all of the found properties found for the node. Those words in properties will be for vector embedding later.
+
+##### --property-value
+If the properties in `has-properties` is a property which need to check for details, specify the edge name here and the system will go further to get the property values of this node instead of use the name of this edge (using template `{property} {value}`) instead of `{property}` to represent this has-property). Default is empty `[]`
+
+For example: For wikidata node `Q41421` (Michael Jordan) `P544` (member of sports team), if specified here, the generated sentence will be `Michael Jordan, ..., has member of sports team Chicago Bulls` instead of `Michael Jordan,..., has member of sports team`. 
 
 ##### --out-properties
 the property used to record the embedding. If not given, the program will use the edge(property) name as `text_embedding`.
 This option is only available when output format is set to `kgtk_format`.
 
+##### --property-labels-file
+This parameter only works for KGTK format input. For some condition, KGTK format's value is just a reference to another P node. In this condition, user need to specify another label file for KGTK to read.
+
+For example, if run without the labels file on the wikidata dump file, we will get some generated sentence like:
+`WALS genus code is a Q19847637, Q20824104, and has P1855 and P2302` (sentence generated for P1467). After add the labels file, we will get the correct sentence as: `WALS genus code is a Wikidata property for an identifier, Wikidata property for items about languages, and has WALS family code and WALS lect code`.
+This property labels file should also be a KGTK format file. One example file is [here](https://drive.google.com/open?id=1F7pb4LEx5MT1YTqycUCQcs8H2OWmBbB6 "here") (accessable only for KGTK developers).
+
+
+#### Dimensional Reduction Algorithm
+
+##### --dimensional-reduction
+User can choose to whether run some dimensional reduction algorithm to reduce the output vector dimensions. Default is not run. 
+Currently 3 choices can be made:
+- `none`: not run dimensional reduction algorithm)
+- `tsne`: run TSNE algorithm, note that TSNE only works for some special dimensional number
+- `pca`: run PCA alogirhtm
+
+##### --dimension
+If specified to run dimensional algorithm, user can run with this choice to specify how many dimensions to keep for the final vector output.
+
 ### Output
 There will be 2 part of files:
-##### --run-TSNE
-User can choose to whether run TSNE to reduce the dimension of the output vectors after getting the embeding vectors or not. The default is True.
-
 ##### Logger file
-User can set up the different logging level to records different infomation. Default is `warning` level. Available options are: `debug / info / warning / error / none`. If set to `none`, no logging file will generate.
+If passed with global parameter `--debug`, an extra debugging logger file will be stored at user's home directory.
 
 ##### Metadata File
 User can specify where to store the metadata file for the vectors. If not given, the default is to save the metadata file at user's home directly. If set to `none`, no metadata file will generate.
@@ -147,9 +170,25 @@ First column is the node name.
 Second column is the property name as required, default is `text_embedding`.
 Third column is the embeded vecotrs.
 
+##### parallel
+You can also set up the parallel count to some number larger than 1 to run in multiprocess mode. Currently only support for kgtk format input data. For example: `--parallel 4`
+
 ##### Reduced Embedding Vectors
-This will have embedded vectors values after running TSNE and reduced dimension to 2-dimensions for each Q nodes. This is used for visulization. (for example, you can view it at Google's online tools here: http://projector.tensorflow.org/)
+This will have embedded vectors values after running dimensional reduction algorithm and reduced dimension to 2-dimensions for each Q nodes. This is used for visulization. (for example, you can view it at Google's online tools here: http://projector.tensorflow.org/)
 3. Metadata for the generated vectors: This will contains the metadata information for the Q nodes generated from 2 files mentioned above. It will contains the Q node value of each vector, the type (it is a `candidate` or a `ground truth` node), the given label of the Q node and corresponding fetched description information from wikidata.
+
+#### Query / cache related
+##### --query-server
+You can change the query wikidata server address when the input format is `test_format`. The default is to use wikidata official query server, but it has limit on query time and frequency. Alternatively, you can choose to use dsbox02's one as `https://dsbox02.isi.edu:8888/bigdata/namespace/wdq/sparql` (vpn needed).
+
+##### --use-cache
+If set to be true, the system will try to get the cached results for embedding computations. The default value is False, not to use cache. Basically the cache service is a Redis server.
+
+##### --cache-host
+The host address for the Redis cache service. Default is `dsbox01.isi.edu`
+
+##### --cache-port
+The host port for the Redis cache service. Default is `6379`
 
 #### Usage of vector projector
 You can apply any of the tsv vector files along with the metadata file to display it on google's tools for further experiment.
