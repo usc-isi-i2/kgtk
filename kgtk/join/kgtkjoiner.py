@@ -166,6 +166,7 @@ class KgtkJoiner(KgtkFormat):
         kr: KgtkReader = KgtkReader.open(file_path,
                                          options=reader_options,
                                          value_options = self.value_options,
+                                         error_file=self.error_file,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
@@ -256,6 +257,9 @@ class KgtkJoiner(KgtkFormat):
         left_kr: KgtkReader = KgtkReader.open(self.left_file_path,
                                               options=self.left_reader_options,
                                               value_options = self.value_options,
+                                              error_file=self.error_file,
+                                              verbose=self.verbose,
+                                              very_verbose=self.very_verbose
         )
 
 
@@ -264,6 +268,9 @@ class KgtkJoiner(KgtkFormat):
         right_kr: KgtkReader = KgtkReader.open(self.right_file_path,
                                                options=self.right_reader_options,
                                                value_options = self.value_options,
+                                               error_file=self.error_file,
+                                               verbose=self.verbose,
+                                               very_verbose=self.very_verbose
         )
 
         if left_kr.is_edge_file and right_kr.is_edge_file:
