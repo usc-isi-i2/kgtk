@@ -25,7 +25,7 @@ def add_arguments(parser):
     parser.add_argument("--subj", action="store", type=int, dest="sub", help='Column in which the subject is given, default 0', default=0)
     parser.add_argument("--obj", action="store", type=int, dest="obj", help='Column in which the subject is given, default 2', default=2)
     parser.add_argument("--pred",action="store" ,type=int, dest="pred",help='Column in which predicate is given, default 1',default=1)
-    parser.add_argument("--props", action="store", type=str, dest="props",help='Properties to consider while finding reachable nodes - comma-separated string',default=None)
+    parser.add_argument("--props", action="store", type=str, dest="props",help='Properties to consider while finding reachable nodes - comma-separated string,default all properties',default=None)
     parser.add_argument('--undirected', action='store_true', dest="undirected", help="Option to specify graph as undirected?")
 
 
@@ -56,8 +56,8 @@ def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_boo
     label='c'+str(find_pred_position(sub,pred,obj))
     header=['node1','label','node2']
     root_set=set()
-    root_list=[]
     property_list=[]
+
     if (rootfile):
         tsv_file = open(rootfile)
         read_tsv = csv.reader(tsv_file, delimiter="\t")
@@ -71,23 +71,24 @@ def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_boo
     if (root):
         for r in root.split(','):
             root_set.add(r)
-    root_list=list(root_set)
-    property_list = [item for item in props.split(',')]
+
     G = load_graph_from_csv(filename,not(undirected),skip_first=not(header_bool),hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
 
     name = G.vp["name"]
 
     index_list = []
     for v in G.vertices():
-        if name[v] in root_list:
+        if name[v] in root_set:
             index_list.append(v)
 
     edge_filter_set = set()
-    for prop in property_list:
-        edge_filter_set.update(get_edges_by_edge_prop(G, label,prop));
-        
-    G.clear_edges()
-    G.add_edge_list(list(edge_filter_set))
+    if props:
+        property_list = [item for item in props.split(',')]
+        for prop in property_list:
+            edge_filter_set.update(get_edges_by_edge_prop(G, label,prop));        
+        G.clear_edges()
+        G.add_edge_list(list(edge_filter_set))
+
     if output:
         f=open(output,'w')
         tsv_writer = csv.writer(f, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
