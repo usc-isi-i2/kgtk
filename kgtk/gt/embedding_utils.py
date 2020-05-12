@@ -430,10 +430,15 @@ class EmbeddingVector:
                     if "@" in node_value and node_value[0] != "@":
                         node_value = node_value[:node_value.index("@")]
 
+                    # in case we meet an empty value, skip it
+                    if node_value == "":
+                        self._logger.warning("""Skip line "{}" because of empty value.""".format(each_line))
+                        continue
+
                     # remove extra double quote " and single quote '
-                    while node_value[0] == '"' and node_value[-1] == '"':
+                    while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
                         node_value = node_value[1:-1]
-                    while node_value[0] == "'" and node_value[-1] == "'":
+                    while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
                         node_value = node_value[1:-1]
 
                     if current_process_node_id != node_id:
