@@ -52,7 +52,7 @@ class TripleGenerator:
             "monolingualtext": MonolingualText,
             "string": StringValue,
             "external-identifier": ExternalIdentifier,
-            "url": URLValue
+            "url": StringValue
         }
         self.prop_types = self.set_properties(prop_file)
         self.label_set, self.alias_set, self.description_set = self.set_sets(
