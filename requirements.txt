@@ -8,8 +8,8 @@ sh
 sklearn
 SPARQLWrapper
 tqdm
-rdflib==5.0.0
-etk==2.2.1
+rdflib
+etk
 simplejson
 pyrallel.lib
 attrs
