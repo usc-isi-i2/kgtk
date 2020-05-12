@@ -374,7 +374,7 @@ class TripleGenerator:
         Call corresponding downstream functions
         """
 
-        edge_list = edge.strip().split("\t")
+        edge_list = edge.strip("\n").split("\t")
         l = len(edge_list)
         if line_number == 1:
             # initialize the order_map
