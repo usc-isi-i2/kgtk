@@ -1,3 +1,73 @@
+
+# labels:
+
+#     "P1855": {
+#       "type": "property",
+#       "datatype": "wikibase-item",
+#       "id": "P1855",
+#       "labels": {
+#         "en": { "language": "en", "value": "Wikidata property example" }
+#       }
+#     },
+
+#     "Q20898239": {
+#       "type": "item",
+#       "id": "Q20898239",
+#       "labels": {
+#         "en": {
+#           "language": "en",
+#           "value": "The Hitch Hiker's Guide to the Galaxy (1979 edition)"
+#         }
+#       }
+#     },
+
+# info:
+
+#     "Q42": {
+#       "pageid": 138,
+#       "ns": 0,
+#       "title": "Q42",
+#       "lastrevid": 1175340593,
+#       "modified": "2020-05-06T19:28:31Z",
+#       "type": "item",
+#       "id": "Q42"
+#     }
+
+#     "P31": {
+#       "pageid": 3918489,
+#       "ns": 120,
+#       "title": "Property:P31",
+#       "lastrevid": 1179261400,
+#       "modified": "2020-05-11T22:37:17Z",
+#       "type": "property",
+#       "datatype": "wikibase-item",
+#       "id": "P31"
+#     }
+
+# misc:
+
+#     "Q42": {
+#         "pageid": 138,
+#         "ns": 0,
+#         "title": "Q42",
+#         "lastrevid": 1175340593,
+#         "modified": "2020-05-06T19:28:31Z",
+#         "type": "item",
+#         "id": "Q42",
+#         "labels": { "en": { "language": "en", "value": "Douglas Adams" } },
+#         "descriptions:{},
+#         "aliases":{},
+#         "claims":{},
+#         "sitelinks:{}
+#       }
+
+
+
+
+
+
+
+
 import sys
 import re
 import json
@@ -5,7 +75,6 @@ from kgtk.exceptions import KGTKException
 
 BAD_CHARS = [":", "-", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
-
 
 class JsonGenerator:
     """
@@ -32,9 +101,7 @@ class JsonGenerator:
         # TODO no qualifiers or references for version 1
         self.e_ids = set()
         self.set_properties(prop_file)
-        self.set_sets(
-            label_set, alias_set, description_set
-        )
+        self.set_sets(label_set, alias_set, description_set)
         self.order_map = {}
     
     def entry_point(self,line_number, edge):
@@ -67,79 +134,69 @@ class JsonGenerator:
         e_id = edge_list[self.order_map["id"]].strip()
         self.e_ids.add(e_id)
         if node1 in self.e_ids:
-            return
-    
-        # check label
-        # "P1423": {
-        #   "type": "property",
-        #   "datatype": "wikibase-item",
-        #   "id": "P1423",
-        #   "labels": { "en": { "language": "en", "value": "template's main topic" } }
-        # },
-        # "Q22898962": {
-        #   "type": "item",
-        #   "id": "Q22898962",
-        #   "labels": {
-        #     "en": { "language": "en", "value": "Template:Douglas Adams" }
-        #   }
-        # },
-
-        
+            return #TODO not handling qualifiers        
         # update label_json_dict
         if prop in self.label_set:
             self.update_label_json_dict(node1, prop, node2)
-        # update label and descriptions
+
+        # update info_json_dict
+        if node1 in self.prop_types:
+            self.update_info_json_dict(node1, self.prop_types[node1])
+        else:
+            self.update_info_json_dict(node1, None)
+        
+        if prop in self.prop_types:
+            self.update_info_json_dict(prop,self.prop_types[prop])
+            if self.prop_types[prop] == "wikibase-item":
+                self.update_info_json_dict(node2)
+        
+        # update alias and descriptions
         if prop in self.description_set:
             self.update_misc_json_dict(node1, prop, node2, "descriptions")
         if prop in self.alias_set:
             self.update_misc_json_dict(node1, prop, node2, "aliases")
         
-    #    "Q42": {
-    #   "pageid": 138,
-    #   "ns": 0,
-    #   "title": "Q42",
-    #   "lastrevid": 1175340593,
-    #   "modified": "2020-05-06T19:28:31Z",
-    #   "type": "item",
-    #   "id": "Q42"
-    # }
-        # update info_json_dict
-        self.update_info_json_dict(node1)
-        if (prop not in self.alias_set) and (prop not in self.label_set) and (prop not in self.description_set):
-            if prop in self.prop_types:
-                self.update_info_json_dict(prop)
-                if self.prop_types[prop] == "wikibase-item":
-                    # self.update_info_json_dict(node2) TODO
-                    pass
+        # normal update for claims
 
-        return
 
-    def update_info_json_dict(self, node:str):
-        if node in self.info_json_dict:
-            return
+    def update_info_json_dict(self, node:str,data_type = None):
+        # if node in self.info_json_dict:
+        #     return
         #TODO, not robust but no easy way to figure it out
         if node.startswith("Q"):
             self.info_json_dict[node] = {
                 "pageid":-1,
                 "ns":-1,
                 "title":node,
-                "lastrevid":"2020-05-06T19:28:31Z",
+                "lastrevid":"2000-01-01T00:00:00Z", #TODO
                 "type":"item",
                 "id":node}
         elif node.startswith("P"):
             self.info_json_dict[node] = {
                 "pageid":-1,
                 "ns":-1,
-                "title":node,
-                "lastrevid":"2020-05-06T19:28:31Z",
+                "title":"Property:"+node,
+                "lastrevid":"2000-01-01T00:00:00Z",
                 "type":"property",
+                "datatype":data_type,
                 "id":node}
         else:
             raise KGTKException("node {} is neither an entity nor a property.".format(node))
-        return
-
+    
     def update_misc_json_dict(self, node1:str, prop:str, node2:str, field:str):
-        return 
+        if node1 not in self.misc_json_dict:
+            self.misc_json_dict[node1] = {**self.label_json_dict[node1], **self.info_json_dict[node1]}
+            self.misc_json_dict[node1]["descriptions"] = {}
+            self.misc_json_dict[node1]["aliases"] = {}
+            self.misc_json_dict[node1]["claims"] = {}
+            self.misc_json_dict[node1]["sitelinks"] = {}
+        
+        if field == "descriptions":
+            pass
+        if field == "aliases":
+            pass
+        
+        # update claims
 
  
     def update_label_json_dict(self,node1:str, prop:str, node2:str):
@@ -158,16 +215,8 @@ class JsonGenerator:
             }
         self.label_json_dict[node1]["id"] = node1
         self.label_json_dict[node1]["labels"] = {}
-        if "@" in node2:
-            res = node2.split("@")
-            text_string = "@".join(res[:-1])
-            lang = res[-1]
-        else:
-            text_string, lang = node2, "en"
-        self.label_json_dict[node1]["labels"][lang] = {
-            "language":lang, "value": text_string
-        }
-        return
+        text_string, lang = JsonGenerator.process_text_string(node2)
+        self.label_json_dict[node1]["labels"][lang] = {"language":lang, "value": text_string}
 
 
     def set_sets(self, label_set: str, alias_set: str, description_set: str):
@@ -233,3 +282,21 @@ class JsonGenerator:
         self.label_json_file =  prefix + "labels.json"
         self.misc_json_file = prefix + "misc.json"
         self.info_json_file = prefix + "info.json"
+
+    @staticmethod
+    def process_text_string(string: str) -> [str, str]:
+        ''' 
+        Language detection is removed from triple generation. The user is responsible for detect the language
+        '''
+        if len(string) == 0:
+            return ["", "en"]
+        if "@" in string:
+            res = string.split("@")
+            text_string = "@".join(res[:-1]).replace('"', "").replace("'", "")
+            lang = res[-1].replace('"', '').replace("'", "")
+            if len(lang) > 2:
+                lang = "en"
+        else:
+            text_string = string.replace('"', "").replace("'", "")
+            lang = "en"
+        return [text_string, lang]
