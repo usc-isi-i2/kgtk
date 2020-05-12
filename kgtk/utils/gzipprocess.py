@@ -5,7 +5,7 @@ Support classes for gzip/gunzip in seperate processes.
 from multiprocessing import Process, Queue
 import typing
 
-from kgtk.join.closableiter import ClosableIter
+from kgtk.utils.closableiter import ClosableIter
 
 # This helper class supports running gzip in parallel.
 #

@@ -16,7 +16,7 @@ the second file.
 
 """
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 import attr
 import gzip
 from pathlib import Path
@@ -24,38 +24,37 @@ from multiprocessing import Queue
 import sys
 import typing
 
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.kgtkwriter import KgtkWriter
-from kgtk.join.validationaction import ValidationAction
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class IfExists(KgtkFormat):
-    left_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
-    right_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
-    output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    input_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    input_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                                            iterable_validator=attr.validators.instance_of(list))))
 
-    left_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                                            iterable_validator=attr.validators.instance_of(list))),
-                                                           default=None)
-    right_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                                                             iterable_validator=attr.validators.instance_of(list))),
-                                                            default=None)
+    filter_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
+    filter_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                                             iterable_validator=attr.validators.instance_of(list))))
+
+    output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
 
-    # Ignore records with too many or too few fields?
-    short_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
-    long_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+    invert: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # Require or fill trailing fields?
-    fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    # TODO: find working validators
+    # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
+    input_reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
+    filter_reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
+    value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
-    gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
+    error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -78,11 +77,11 @@ class IfExists(KgtkFormat):
         if not kr.is_edge_file:
             raise ValueError("get_edge_keys called on %s at wrong time." % who)
         if kr.node1_column_idx < 0:
-            raise ValueError("The node1 column is missing from the %s node file." % who)
+            raise ValueError("The node1 column is missing from the %s edge file." % who)
         if kr.label_column_idx < 0:
-            raise ValueError("The label column is missing from the %s node file." % who)
+            raise ValueError("The label column is missing from the %s edge file." % who)
         if kr.node2_column_idx < 0:
-            raise ValueError("The node2 column is missing from the %s node file." % who)
+            raise ValueError("The node2 column is missing from the %s edge file." % who)
         return [ kr.node1_column_idx, kr.label_column_idx, kr.node2_column_idx ]
 
     def get_supplied_key_columns(self, supplied_keys: typing.List[str], kr: KgtkReader, who: str)->typing.List[int]:
@@ -93,7 +92,7 @@ class IfExists(KgtkFormat):
                 raise ValueError("Column %s is not in the %s file" % (key, who))
             result.append(kr.column_name_map[key])
         return result
-
+    
     def get_key_columns(self, supplied_keys: typing.Optional[typing.List[str]], kr: KgtkReader, other_kr: KgtkReader, who: str)->typing.List[int]:
         if supplied_keys is not None and len(supplied_keys) > 0:
             return self.get_supplied_key_columns(supplied_keys, kr, who)
@@ -106,8 +105,13 @@ class IfExists(KgtkFormat):
     def build_key(self, row: typing.List[str], key_columns: typing.List[int])->str:
         key: str = ""
         idx: int
+        first: bool = True
         for idx in key_columns:
-            key += self.field_separator+ row[idx]
+            if first:
+                first = False
+            else:
+                key += self.field_separator
+            key += row[idx]
         return key
 
     def extract_key_set(self, kr: KgtkReader, who: str, key_columns: typing.List[int])->typing.Set[str]:
@@ -119,95 +123,129 @@ class IfExists(KgtkFormat):
 
     def process(self):
         # Open the input files once.
-        left_kr: KgtkReader =  KgtkReader.open(self.left_file_path,
-                                               short_line_action=self.short_line_action,
-                                               long_line_action=self.long_line_action,
-                                               fill_short_lines=self.fill_short_lines,
-                                               truncate_long_lines=self.truncate_long_lines)
+        if self.verbose:
+            if self.input_file_path is not None:
+                print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
+            else:
+                print("Reading the input data from stdin", file=self.error_file, flush=True)
 
-        right_kr: KgtkReader = KgtkReader.open(self.right_file_path,
-                                               short_line_action=self.short_line_action,
-                                               long_line_action=self.long_line_action,
-                                               fill_short_lines=self.fill_short_lines,
-                                               truncate_long_lines=self.truncate_long_lines)
+        input_kr: KgtkReader =  KgtkReader.open(self.input_file_path,
+                                               error_file=self.error_file,
+                                               options=self.input_reader_options,
+                                               value_options = self.value_options,
+                                               verbose=self.verbose,
+                                               very_verbose=self.very_verbose,
+        )
 
-        left_key_columns: typing.List[int] = self.get_key_columns(self.left_keys, left_kr, right_kr, "left")
-        right_key_columns: typing.List[int] = self.get_key_columns(self.right_keys, right_kr, left_kr, "right")
+        if self.verbose:
+            print("Opening the filter input file: %s" % self.filter_file_path, flush=True)
+        filter_kr: KgtkReader = KgtkReader.open(self.filter_file_path,
+                                                error_file=self.error_file,
+                                                options=self.filter_reader_options,
+                                                value_options=self.value_options,
+                                                verbose=self.verbose,
+                                                very_verbose=self.very_verbose,
+        )
 
-        key_set: typint.Set[str] = self.extract_key_set(right_kr, "right", right_key_columns)
+        input_key_columns: typing.List[int] = self.get_key_columns(self.input_keys, input_kr, filter_kr, "input")
+        filter_key_columns: typing.List[int] = self.get_key_columns(self.filter_keys, filter_kr, input_kr, "filter")
 
-        ew: KgtkWriter = KgtkWriter.open(left_kr.column_names,
-                                         self.output_path,
+        if len(input_key_columns) != len(filter_key_columns):
+            print("There are %d input key columns but %d filter key columns.  Exiting." % (len(input_key_columns), len(filter_key_columns)),
+                  file=self.error_file, flush=True)
+            return
+
+        if self.verbose:
+            print("Building the filter key set from %s" % self.filter_file_path, file=self.error_file, flush=True)
+        key_set: typint.Set[str] = self.extract_key_set(filter_kr, "fitler", filter_key_columns)
+        if self.verbose or self.very_verbose:
+            print("There are %d entries in the filter key set." % len(key_set), file=self.error_file, flush=True)
+            if self.very_verbose:
+                print("Keys: %s" % " ".join(key_set), file=self.error_file, flush=True)
+
+        if self.verbose:
+            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+        ew: KgtkWriter = KgtkWriter.open(input_kr.column_names,
+                                         self.output_file_path,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
-                                         gzip_in_parallel=self.gzip_in_parallel,
+                                         gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
+        if self.verbose:
+            print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
+        input_line_count: int = 0
+        output_line_count: int = 0;
+
         row: typing.list[str]
-        for row in left_kr:
-            left_key: str = self.build_key(row, left_key_columns)
-            if left_key in key_set:
-                ew.write(line)
-        ew.close()
+        for row in input_kr:
+            input_line_count += 1
+            input_key: str = self.build_key(row, input_key_columns)
+            if self.invert:
+                if input_key not in key_set:
+                    ew.write(row)
+                    output_line_count += 1
+            else:
+                if input_key in key_set:
+                    ew.write(row)
+                    output_line_count += 1
+
+        if self.verbose:
+            print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
         
+        ew.close()
+
 def main():
     """
     Test the KGTK file joiner.
     """
-    parser = ArgumentParser()
+    parser: ArgumentParser = ArgumentParser()
 
-    parser.add_argument(dest="left_file_path", help="The left KGTK file to join", type=Path)
+    parser.add_argument(dest="input_file_path", help="The KGTK file with the input data", type=Path, nargs="?")
 
-    parser.add_argument(dest="right_file_path", help="The right KGTK file to join", type=Path)
-
-    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
-
-    parser.add_argument(      "--fill-short-lines", dest="fill_short_lines",
-                              help="Fill missing trailing columns in short lines with empty values.", action='store_true')
-
-    parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in parallel.", action='store_true')
-
-    parser.add_argument(      "--left-keys", dest="left_keys", help="The key columns in the left file.", nargs='*')
-
-    parser.add_argument(      "--long-line-action", dest="long_line_action",
-                              help="The action to take when a long line is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+    parser.add_argument(      "--filter-on", dest="filter_file_path", help="The KGTK file with the filter data", type=Path, required=True)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
-
-    parser.add_argument(      "--right-keys", dest="right_keys", help="The key columns in the right file.", nargs='*')
-
-    parser.add_argument(      "--short-line-action", dest="short_line_action",
-                              help="The action to take whe a short line is detected.",
-                              type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
     
-    parser.add_argument(      "--truncate-long-lines", dest="truncate_long_lines",
-                              help="Remove excess trailing columns in long lines.", action='store_true')
+    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
+   
+    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists).", action='store_true')
 
-    parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+    parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file.", nargs='*')
+    parser.add_argument(      "--filter-keys", dest="filter_keys", help="The key columns in the filter file.", nargs='*')
 
-    parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
+    KgtkReader.add_debug_arguments(parser)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input")
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter")
+    KgtkValueOptions.add_arguments(parser)
 
-    args = parser.parse_args()
+    args: Namespace = parser.parse_args()
 
-    ie: IfExists = IfExists(left_file_path=args.left_file_path,
-                            right_file_path=args.right_file_path,
-                            output_path=args.output_file_path,
-                            left_keys=args.left_keys,
-                            right_keys=args.right_keys,
-                            field_separator=args.field_separator,
-                            short_line_action=args.short_line_action,
-                            long_line_action=args.long_line_action,
-                            fill_short_lines=args.fill_short_lines,
-                            truncate_long_lines=args.truncate_long_lines,
-                            gzip_in_parallel=args.gzip_in_parallel,
-                            verbose=args.verbose,
-                            very_verbose=args.very_verbose)
+    error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+
+    # Build the option structures.                                                                                                                          
+    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who="input")
+    filter_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who="filter")
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
+
+    ie: IfExists = IfExists(
+        input_file_path=args.input_file_path,
+        input_keys=args.input_keys,
+        filter_file_path=args.filter_file_path,
+        filter_keys=args.filter_keys,
+        output_file_path=args.output_file_path,
+        field_separator=args.field_separator,
+        invert=args.invert,
+        input_reader_options=input_reader_options,
+        filter_reader_options=filter_reader_options,
+        value_options=value_options,
+        error_file=error_file,
+        verbose=args.verbose,
+        very_verbose=args.very_verbose)
 
     ie.process()
 
 if __name__ == "__main__":
     main()
-

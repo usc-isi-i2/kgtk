@@ -15,14 +15,15 @@ from multiprocessing import Queue
 import sys
 import typing
 
-from kgtk.join.kgtkreader import KgtkReader
-from kgtk.join.enumnameaction import EnumNameAction
-from kgtk.join.gzipprocess import GzipProcess
-from kgtk.join.kgtkformat import KgtkFormat
-from kgtk.join.validationaction import ValidationAction
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkbase import KgtkBase
+from kgtk.io.kgtkreader import KgtkReader
+from kgtk.utils.enumnameaction import EnumNameAction
+from kgtk.utils.gzipprocess import GzipProcess
+from kgtk.utils.validationaction import ValidationAction
 
 @attr.s(slots=True, frozen=False)
-class KgtkWriter(KgtkFormat):
+class KgtkWriter(KgtkBase):
     GZIP_QUEUE_SIZE_DEFAULT: int = GzipProcess.GZIP_QUEUE_SIZE_DEFAULT
 
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
@@ -287,6 +288,10 @@ class KgtkWriter(KgtkFormat):
         if self.very_verbose:
             sys.stdout.write(".")
             sys.stdout.flush()
+
+    def flush(self):
+        if self.gzip_thread is None:
+            self.file_out.flush()
 
     def close(self):
         if self.gzip_thread is not None:

@@ -3,24 +3,15 @@ Constants and helpers for the KGTK file format.
 
 """
 
+from enum import Enum
 import sys
 import typing
 
-from kgtk.join.validationaction import ValidationAction
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.utils.validationaction import ValidationAction
+from kgtk.value.kgtkvalue import KgtkValue
 
-class KgtkFormat:
-    COLUMN_SEPARATOR: str = "\t"
-    COMMENT_INDICATOR: str = "#"
-    LIST_SEPARATOR: str = "|"
-
-    # These are the required columns in an edge file:
-    NODE1_COLUMN_NAMES: typing.List[str] = ["node1", "from", "subject"]
-    NODE2_COLUMN_NAMES: typing.List[str] = ["node2", "to", "object"]
-    LABEL_COLUMN_NAMES: typing.List[str] = ["label", "predicate", "relation", "relationship"]
-
-    # There is only one required column in a node file:
-    ID_COLUMN_NAMES: typing.List[str] = ["id", "ID"]
-
+class KgtkBase(KgtkFormat):
     @classmethod
     def _yelp(cls,
               msg: str,
@@ -36,7 +27,7 @@ class KgtkFormat:
             raise ValueError("In input header'%s': %s" % (header_line, msg))
 
         if (error_action in [ValidationAction.REPORT, ValidationAction.COMPLAIN, ValidationAction.EXIT ]):
-            print("In input header '%s': %s" % (header_line, msg), file=error_file)
+            print("In input header '%s': %s" % (header_line, msg), file=error_file, flush=True)
         if error_action == ValidationAction.EXIT:
             sys.exit(1)
         return error_action in [ValidationAction.PASS, ValidationAction.REPORT]
@@ -84,7 +75,7 @@ class KgtkFormat:
         #    1) except inside "" and '' quoted strings
         # 4) Check for commas
         # 5) Check for vertical bars
-        # 6) Check for semicolons
+        # 6) Check for semicolons (disabled)
         #
         # TODO: It might be possible to make some of these checks more efficient.
         results: typing.List[str] = [ ]
@@ -96,13 +87,15 @@ class KgtkFormat:
             if ''.join(column_name.split()) != column_name.strip():
                 results.append("Column name '%s' contains internal white space" % column_name)
         if "," in column_name:
-            results.append("Column name '%s' contains a comma (,)" % column_name)
+            results.append("Warning: Column name '%s' contains a comma (,)" % column_name)
         if "|" in column_name:
-            results.append("Column name '%s' contains a vertical bar (|)" % column_name)
-        if ";" in column_name:
-            results.append("Column name '%s' contains a semicolon (;)" % column_name)
+            results.append("Warning: Column name '%s' contains a vertical bar (|)" % column_name)
+        # if ";" in column_name:
+        #    results.append("Warning: Column name '%s' contains a semicolon (;)" % column_name)
+        kv: KgtkValue = KgtkValue(column_name)
+        if not kv.is_valid():
+            results.append(kv.describe())
         return results
-    
 
     @classmethod
     def check_column_names(cls,
