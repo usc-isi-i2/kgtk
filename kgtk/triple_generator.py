@@ -374,11 +374,9 @@ class TripleGenerator:
         Call corresponding downstream functions
         """
 
-        edge_list = edge.strip().split("\t")
-        l = len(edge_list)
+        edge_list = edge.strip("\n").split("\t")
         if line_number == 1:
             # initialize the order_map
-            edge_list = edge.strip().split("\t")
             node1_index = edge_list.index("node1")
             node2_index = edge_list.index("node2")
             prop_index = edge_list.index("property")
@@ -394,7 +392,6 @@ class TripleGenerator:
                 return
 
         # use the order_map to map the node
-
         node1 = edge_list[self.order_map["node1"]].strip()
         node2 = edge_list[self.order_map["node2"]].strip()
         prop = edge_list[self.order_map["prop"]].strip()
