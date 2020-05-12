@@ -6,10 +6,12 @@ TODO: Need KgtkWriterOptions.
 
 """
 
+from argparse import Namespace, SUPPRESS
 from pathlib import Path
 import sys
 import typing
 
+from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -20,18 +22,20 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
         parser (argparse.ArgumentParser)
     """
+    _expert: bool = parsed_shared_args._expert
+
     parser.add_argument(      "input_file", nargs="?", help="The KGTK file to read.  May be omitted or '-' for stdin.", type=Path)
     parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write.  May be omitted or '-' for stdout.", type=Path)
     
-    KgtkReader.add_debug_arguments(parser)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True)
-    KgtkValueOptions.add_arguments(parser)
+    KgtkReader.add_debug_arguments(parser, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=True)
+    KgtkValueOptions.add_arguments(parser, expert=True)
 
 
 def run(input_file: typing.Optional[Path],

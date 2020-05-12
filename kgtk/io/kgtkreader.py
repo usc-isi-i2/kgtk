@@ -16,7 +16,7 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 """
 
-from argparse import ArgumentParser, _ArgumentGroup, Namespace
+from argparse import ArgumentParser, _ArgumentGroup, Namespace, SUPPRESS
 import attr
 import bz2
 from enum import Enum
@@ -101,130 +101,145 @@ class KgtkReaderOptions():
     def add_arguments(cls,
                       parser: ArgumentParser,
                       mode_options: bool = False,
-                      validate: bool = False,
+                      validate_by_default: bool = False,
+                      expert: bool = False,
                       who: str = ""):
+
+        # This helper function makes it easy to suppress options from
+        # The help message.  The options are still there, and initialize
+        # what they need to initialize.
+        def h(msg: str)->str:
+            if expert:
+                return msg
+            else:
+                return SUPPRESS
+
         prefix1: str = "--" if len(who) == 0 else "--" + who + "-"
         prefix2: str = "" if len(who) == 0 else who + "_"
         prefix3: str = "" if len(who) == 0 else who + ": "
         prefix4: str = "" if len(who) == 0 else who + " file "
 
-        fgroup: _ArgumentGroup = parser.add_argument_group(prefix3 + "File options",
-                                                           "Options affecting " + prefix4 + "processing")
+        fgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "File options"),
+                                                           h("Options affecting " + prefix4 + "processing"))
         fgroup.add_argument(prefix1 + "column-separator",
                             dest=prefix2 + "column_separator",
-                            help=prefix3 + "Column separator (default=<TAB>).", # TODO: provide the default with escapes, e.g. \t
+                            help=h(prefix3 + "Column separator (default=<TAB>)."), # TODO: provide the default with escapes, e.g. \t
                             type=str, default=KgtkFormat.COLUMN_SEPARATOR)
 
         fgroup.add_argument(prefix1 + "compression-type",
                             dest=prefix2 + "compression_type",
-                            help=prefix3 + "Specify the compression type (default=%(default)s).")
+                            help=h(prefix3 + "Specify the compression type (default=%(default)s)."))
 
         fgroup.add_argument(prefix1 + "error-limit",
                             dest=prefix2 + "error_limit",
-                            help=prefix3 + "The maximum number of errors to report before failing (default=%(default)s)",
+                            help=h(prefix3 + "The maximum number of errors to report before failing (default=%(default)s)"),
                             type=int, default=cls.ERROR_LIMIT_DEFAULT)
 
         fgroup.add_argument(prefix1 + "gzip-in-parallel",
                             dest=prefix2 + "gzip_in_parallel",
-                            help=prefix3 + "Execute gzip in parallel (default=%(default)s).", action='store_true')
+                            help=h(prefix3 + "Execute gzip in parallel (default=%(default)s)."),
+                            action='store_true')
 
         fgroup.add_argument(prefix1 + "gzip-queue-size",
                             dest=prefix2 + "gzip_queue_size",
-                            help=prefix3 + "Queue size for parallel gzip (default=%(default)s).",
+                            help=h(prefix3 + "Queue size for parallel gzip (default=%(default)s)."),
                             type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
 
         if mode_options:
             fgroup.add_argument(prefix1 + "mode",
                                 dest=prefix2 + "mode",
-                                help=prefix3 + "Determine the KGTK file mode (default=%(default)s).",
+                                help=h(prefix3 + "Determine the KGTK file mode (default=%(default)s)."),
                                 type=KgtkReaderMode, action=EnumNameAction, default=KgtkReaderMode.AUTO)
             
-        hgroup: _ArgumentGroup = parser.add_argument_group(prefix3 + "Header parsing", "Options affecting " + prefix4 + "header parsing")
+        hgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Header parsing"),
+                                                           h("Options affecting " + prefix4 + "header parsing"))
 
         hgroup.add_argument(prefix1 + "force-column-names",
                             dest=prefix2 + "force_column_names",
-                            help=prefix3 + "Force the column names (default=None).",
+                            help=h(prefix3 + "Force the column names (default=None)."),
                             nargs='+')
 
         hgroup.add_argument(prefix1 + "header-error-action",
                             dest=prefix2 + "header_error_action",
-                            help=prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
 
         hgroup.add_argument(prefix1 + "skip-first-record",
                             dest=prefix2 + "skip_first_record",
-                            help=prefix3 + "Skip the first record when forcing column names (default=%(default)s).", action='store_true')
+                            help=h(prefix3 + "Skip the first record when forcing column names (default=%(default)s)."),
+                            action='store_true')
 
         hgroup.add_argument(prefix1 + "unsafe-column-name-action",
                             dest=prefix2 + "unsafe_column_name_action",
-                            help=prefix3 + "The action to take when a column name is unsafe (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when a column name is unsafe (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
-        lgroup: _ArgumentGroup = parser.add_argument_group(prefix3 + "Line parsing", "Options affecting " + prefix4 + "data line parsing")
+        lgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Line parsing"),
+                                                           h("Options affecting " + prefix4 + "data line parsing"))
 
         lgroup.add_argument(prefix1 + "repair-and-validate-lines",
                             dest=prefix2 + "repair_and_validate_lines",
-                            help=prefix3 + "Repair and validate lines (default=%(default)s).",
-                            action='store_true', default=validate)
+                            help=h(prefix3 + "Repair and validate lines (default=%(default)s)."),
+                            action='store_true', default=validate_by_default)
 
         lgroup.add_argument(prefix1 + "do-not-repair-and-validate-lines",
                             dest=prefix2 + "repair_and_validate_lines",
-                            help=prefix3 + "Do not repair and validate lines.",
+                            help=h(prefix3 + "Do not repair and validate lines."),
                             action='store_false')
 
         lgroup.add_argument(prefix1 + "repair-and-validate-values",
                             dest=prefix2 + "repair_and_validate_values",
-                            help=prefix3 + "Repair and validate values (default=%(default)s).",
-                            action='store_true', default=validate)
+                            help=h(prefix3 + "Repair and validate values (default=%(default)s)."),
+                            action='store_true', default=validate_by_default)
 
         lgroup.add_argument(prefix1 + "do-not-repair-and-validate-values",
                             dest=prefix2 + "repair-and-validate_values",
-                            help=prefix3 + "Do not repair and validate values.",
+                            help=h(prefix3 + "Do not repair and validate values."),
                             action='store_false')
 
         lgroup.add_argument(prefix1 + "blank-required-field-line-action",
                             dest=prefix2 + "blank_required_field_line_action",
-                            help=prefix3 + "The action to take when a line with a blank node1, node2, or id field (per mode) is detected (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when a line with a blank node1, node2, or id field (per mode) is detected (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
                                   
         lgroup.add_argument(prefix1 + "comment-line-action",
                             dest=prefix2 + "comment_line_action",
-                            help=prefix3 + "The action to take when a comment line is detected (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when a comment line is detected (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         lgroup.add_argument(prefix1 + "empty-line-action",
                             dest=prefix2 + "empty_line_action",
-                            help=prefix3 + "The action to take when an empty line is detected (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when an empty line is detected (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         lgroup.add_argument(prefix1 + "fill-short-lines",
                             dest=prefix2 + "fill_short_lines",
-                            help=prefix3 + "Fill missing trailing columns in short lines with empty values (default=%(default)s).",
+                            help=h(prefix3 + "Fill missing trailing columns in short lines with empty values (default=%(default)s)."),
                             action='store_true')
 
         lgroup.add_argument(prefix1 + "invalid-value-action",
                             dest=prefix2 + "invalid_value_action",
-                            help=prefix3 + "The action to take when a data cell value is invalid (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when a data cell value is invalid (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
 
         lgroup.add_argument(prefix1 + "long-line-action",
                             dest=prefix2 + "long_line_action",
-                            help=prefix3 + "The action to take when a long line is detected (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when a long line is detected (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         lgroup.add_argument(prefix1 + "short-line-action",
                             dest=prefix2 + "short_line_action",
-                            help=prefix3 + "The action to take when a short line is detected (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when a short line is detected (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
 
         lgroup.add_argument(prefix1 + "truncate-long-lines",
                             dest=prefix2 + "truncate_long_lines",
-                            help=prefix3 + "Remove excess trailing columns in long lines (default=%(default)s).",
+                            help=h(prefix3 + "Remove excess trailing columns in long lines (default=%(default)s)."),
                             action='store_true')
 
         lgroup.add_argument(prefix1 + "whitespace-line-action",
                             dest=prefix2 + "whitespace_line_action",
-                            help=prefix3 + "The action to take when a whitespace line is detected (default=%(default)s).",
+                            help=h(prefix3 + "The action to take when a whitespace line is detected (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
     
     @classmethod
@@ -924,16 +939,31 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         return merged_columns
 
     @classmethod
-    def add_debug_arguments(cls, parser: ArgumentParser):
+    def add_debug_arguments(cls, parser: ArgumentParser, expert: bool = False):
+        # This helper function makes it easy to suppress options from
+        # The help message.  The options are still there, and initialize
+        # what they need to initialize.
+        def h(msg: str)->str:
+            if expert:
+                return msg
+            else:
+                return SUPPRESS
+
+        # TODO: Fix the argparse bug that prevents these two arguments from
+        # having their help messages suppressed.
         errors_to = parser.add_mutually_exclusive_group()
         errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
-                                     help="Send errors to stdout instead of stderr", action="store_true")
+                                     help="Send errors to stdout instead of stderr",
+                                     action="store_true")
         errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
-                                     help="Send errors to stderr instead of stdout", action="store_true")
+                                     help="Send errors to stderr instead of stdout",
+                                     action="store_true")
 
         parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
 
-        parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
+        parser.add_argument(      "--very-verbose", dest="very_verbose",
+                                  help=h("Print additional progress messages."),
+                                  action='store_true')
         
 def main():
     """
@@ -946,7 +976,7 @@ def main():
 
     parser = ArgumentParser()
     parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
-    KgtkReader.add_debug_arguments(parser)
+    KgtkReader.add_debug_arguments(parser, expert=True)
     parser.add_argument(       "--test", dest="test_method", help="The test to perform",
                                choices=["rows", "concise-rows",
                                         "kgtk-values", "concise-kgtk-values",
@@ -955,8 +985,8 @@ def main():
                                default="rows")
     parser.add_argument(       "--test-validate", dest="test_validate", help="Validate KgtkValue objects in test.", action='store_true')
 
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate=True)
-    KgtkValueOptions.add_arguments(parser)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=True)
+    KgtkValueOptions.add_arguments(parser, expert=True)
     args = parser.parse_args()
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
