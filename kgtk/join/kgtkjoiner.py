@@ -169,9 +169,6 @@ class KgtkJoiner(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
-        if not kr.is_edge_file:
-            raise ValueError("The %s file is not an edge file" % who)
-
         if len(join_idx_list) == 1:
             # This uses optimized code:
             return self.single_column_key_set(kr, join_idx_list[0]) # closes er file
