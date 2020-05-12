@@ -276,7 +276,7 @@ class TripleGenerator:
 
             amount = TripleGenerator.clean_number_string(amount)
             num_type = self.xsd_number_type(amount)
-            print(amount, num_type)
+
             lower_bound = TripleGenerator.clean_number_string(lower_bound)
             upper_bound = TripleGenerator.clean_number_string(upper_bound)
             if unit != None:
