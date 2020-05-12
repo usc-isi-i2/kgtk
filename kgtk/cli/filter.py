@@ -62,5 +62,8 @@ def run(datatype, pattern, input, subj_col, pred_col, obj_col):
             elif not sys.stdin.isatty():
                 sh.mlr('--%slite' % datatype, 'filter', filter_str, 
                         _in=sys.stdin, _out=sys.stdout, _err=sys.stderr)
-    except:
-        raise KGTKException
+    except sh.SignalException_SIGPIPE:
+        # handles SIGPIPE, if it raises to upper level, it will cause another error
+        pass
+    except Exception as e:
+        raise KGTKException(e)

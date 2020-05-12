@@ -202,18 +202,14 @@ class KgtkWriter(KgtkBase):
         elif mode is KgtkWriter.Mode.NONE:
             pass
         
-        if is_edge_file:
-            # Validate that we have the proper columns for an edge file.
-            cls.required_edge_columns(column_name_map,
-                                      header_line=header,
-                                      error_action=header_error_action,
-                                      error_file=error_file)
-        elif is_node_file:
-            # Validate that we have the proper columns for an node file.
-            cls.required_node_column(column_name_map,
-                                     header_line=header,
-                                     error_action=header_error_action,
-                                     error_file=error_file)
+        # Validate that we have the proper columns for an edge or node file,
+        # ignoring the result.
+        cls.get_special_columns(column_name_map,
+                                header_line=header,
+                                error_action=header_error_action,
+                                error_file=error_file,
+                                is_edge_file=is_edge_file,
+                                is_node_file=is_node_file)
 
         # Write the column names to the first line.
         if verbose:
