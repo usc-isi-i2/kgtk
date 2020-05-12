@@ -19,9 +19,10 @@ from etk.wikidata.value import (
     ExternalIdentifier,
     URLValue
 )
+from etk.knowledge_graph.node import LiteralType
 
 BAD_CHARS = [":", "-", "&", ",", " ",
-             "(", ")", "\'", '\"', "/", "\\", "[", "]", ";","|"]
+             "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
 
 
 class TripleGenerator:
@@ -30,16 +31,16 @@ class TripleGenerator:
     """
 
     def __init__(
-        self,
-        prop_file: str,
-        label_set: str,
-        alias_set: str,
-        description_set: str,
-        ignore: bool,
-        n: int,
-        dest_fp: TextIO = sys.stdout,
-        truthy: bool = False,
-        use_id:bool=False,
+            self,
+            prop_file: str,
+            label_set: str,
+            alias_set: str,
+            description_set: str,
+            ignore: bool,
+            n: int,
+            dest_fp: TextIO = sys.stdout,
+            truthy: bool = False,
+            use_id: bool = False,
     ):
         from etk.wikidata.statement import Rank
         self.ignore = ignore
@@ -199,8 +200,14 @@ class TripleGenerator:
         self.doc.kg.add_subject(prop)
         return True
 
+    @staticmethod
+    def xsd_number_type(num):
+        if isinstance(num, float) and 'e' in str(num).lower():
+            return LiteralType.double
+        return LiteralType.decimal
+
     def generate_normal_triple(
-            self, node1: str, label: str, node2: str, is_qualifier_edge: bool,e_id:str) -> bool:
+            self, node1: str, label: str, node2: str, is_qualifier_edge: bool, e_id: str) -> bool:
         if self.use_id:
             e_id = TripleGenerator.replace_illegal_string(e_id)
         entity = self._node_2_entity(node1)
@@ -244,7 +251,7 @@ class TripleGenerator:
                             dateTimeString.split("-00-00"))
                     elif dateTimeString[8:10] == "00":
                         dateTimeString = dateTimeString[:8] + \
-                            "01" + dateTimeString[10:]
+                                         "01" + dateTimeString[10:]
                     object = TimeValue(
                         value=dateTimeString,
                         calendar=Item("Q1985727"),
@@ -267,24 +274,24 @@ class TripleGenerator:
             res = self.quantity_pattern.match(node2).groups()
             amount, lower_bound, upper_bound, unit = res
 
-            # Handle extra small numbers for now. TODO
-            if TripleGenerator.is_invalid_decimal_string(amount) or TripleGenerator.is_invalid_decimal_string(lower_bound) or TripleGenerator.is_invalid_decimal_string(upper_bound):
-                return False
             amount = TripleGenerator.clean_number_string(amount)
+            num_type = self.xsd_number_type(amount)
+
             lower_bound = TripleGenerator.clean_number_string(lower_bound)
             upper_bound = TripleGenerator.clean_number_string(upper_bound)
             if unit != None:
                 if upper_bound != None and lower_bound != None:
                     object = QuantityValue(amount, unit=Item(
-                        unit), upper_bound=upper_bound, lower_bound=lower_bound)
+                        unit), upper_bound=upper_bound, lower_bound=lower_bound, type=num_type)
                 else:
-                    object = QuantityValue(amount, unit=Item(unit))
+                    object = QuantityValue(amount, unit=Item(unit), type=num_type)
             else:
                 if upper_bound != None and lower_bound != None:
                     object = QuantityValue(
-                        amount, upper_bound=upper_bound, lower_bound=lower_bound)
+                        amount, upper_bound=upper_bound, lower_bound=lower_bound, type=num_type)
                 else:
-                    object = QuantityValue(amount)
+                    object = QuantityValue(amount, type=num_type)
+
         elif edge_type == MonolingualText:
             text_string, lang = TripleGenerator.process_text_string(node2)
             object = MonolingualText(text_string, lang)
@@ -314,10 +321,10 @@ class TripleGenerator:
                 self.doc.kg.add_subject(object)
             if self.truthy:
                 self.to_append_statement = entity.add_truthy_statement(
-                    label, object,statement_id=e_id) if self.use_id else entity.add_truthy_statement(label,object)
+                    label, object, statement_id=e_id) if self.use_id else entity.add_truthy_statement(label, object)
             else:
                 self.to_append_statement = entity.add_statement(
-                    label, object,statement_id=e_id) if self.use_id else entity.add_statement(label, object)
+                    label, object, statement_id=e_id) if self.use_id else entity.add_statement(label, object)
             self.doc.kg.add_subject(entity)
         return True
 
@@ -370,8 +377,9 @@ class TripleGenerator:
             node2_index = edge_list.index("node2")
             prop_index = edge_list.index("property")
             id_index = edge_list.index("id")
-            if not all([node1_index>-1,node2_index>-1,prop_index>-1,id_index>-1]):
-                raise KGTKException("Header of kgtk file misses at least one of required column names: (node1, node2, property and id)")
+            if not all([node1_index > -1, node2_index > -1, prop_index > -1, id_index > -1]):
+                raise KGTKException(
+                    "Header of kgtk file misses at least one of required column names: (node1, node2, property and id)")
             else:
                 self.order_map["node1"] = node1_index
                 self.order_map["node2"] = node2_index
@@ -380,12 +388,12 @@ class TripleGenerator:
                 return
 
         # use the order_map to map the node
-         
+
         node1 = edge_list[self.order_map["node1"]].strip()
         node2 = edge_list[self.order_map["node2"]].strip()
         prop = edge_list[self.order_map["prop"]].strip()
         e_id = edge_list[self.order_map["id"]].strip()
-        if line_number == 2: 
+        if line_number == 2:
             # by default a statement edge
             is_qualifier_edge = False
             # print("#Debug Info: ",line_number, self.to_append_statement_id, e_id, is_qualifier_edge,self.to_append_statement)
@@ -428,7 +436,7 @@ class TripleGenerator:
         else:
             if prop in self.prop_types:
                 success = self.generate_normal_triple(
-                    node1, prop, node2, is_qualifier_edge,e_id)
+                    node1, prop, node2, is_qualifier_edge, e_id)
             else:
                 if not self.ignore:
                     raise KGTKException(
@@ -438,8 +446,9 @@ class TripleGenerator:
                     success = False
         if (not success) and (not is_qualifier_edge) and (not self.ignore):
             # We have a corrupted edge here.
-            self.ignore_file.write("Corrupted statement at line number: {} with id {} with current corrupted id {}\n".format(
-                line_number, e_id, self.corrupted_statement_id))
+            self.ignore_file.write(
+                "Corrupted statement at line number: {} with id {} with current corrupted id {}\n".format(
+                    line_number, e_id, self.corrupted_statement_id))
             self.ignore_file.flush()
             self.corrupted_statement_id = e_id
         else:

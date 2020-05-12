@@ -111,7 +111,7 @@ def run(input_file, output_file, limit):
                             if '@' in subject:
                                 str_parts = subject.split('@')
                                 final_value = '\'' + \
-                                    str_parts[0] + '\'@' + str_parts[1]
+                                    str_parts[0].replace("'","\\'") + '\'@' + str_parts[1]
                             else:
                                 final_value = '\"' + str(subject) + '\"'
                     final_row.append(final_value)
