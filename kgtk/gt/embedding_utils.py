@@ -407,7 +407,7 @@ class EmbeddingVector:
                 self._logger.debug(str(column_references))
                 # read contents
                 each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
-                                        "description_properties": []}
+                                        "description_properties": [], "has_properties_values": []}
                 current_process_node_id = None
 
                 if self._parallel_count > 1:
@@ -454,22 +454,23 @@ class EmbeddingVector:
 
                             # after write down finish, we can clear and start parsing next one
                             each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
-                                                    "description_properties": []}
+                                                    "description_properties": [], "has_properties_values": []}
                             # update to new id
                             current_process_node_id = node_id
 
                     if node_property in properties_reversed:
-                        roles = properties_reversed[node_property]
+                        roles = properties_reversed[node_property].copy()
+                        node_value = self.get_real_label_name(node_value)
+                        # if we get property_values, it should be saved to isa-properties part
                         if "property_values" in roles:
                             # for property values part, changed to be "{property} {value}"
-                            node_value = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
-                        else:
-                            node_value = self.get_real_label_name(node_value)
+                            node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
+                            each_node_attributes["has_properties_values"].append(node_value_combine)
+                            # remove those 2 roles in case we have duplicate using of this node later
+                            roles.discard("property_values")
+                            roles.discard("has_properties")
                         for each_role in roles:
-                            if each_role == "property_values" and "has_properties" not in roles:
-                                each_node_attributes["has_properties"].append(node_value)
-                            else:
-                                each_node_attributes[each_role].append(node_value)
+                            each_node_attributes[each_role].append(node_value)
                     elif add_all_properties:  # add remained properties if need all properties
                         each_node_attributes["has_properties"].append(self.get_real_label_name(node_property))
 
@@ -513,11 +514,21 @@ class EmbeddingVector:
                         each = each.replace("||", " ")
                 temp += each + ", "
             if concated_sentence != "" and temp != "":
-                concated_sentence += " is a "
+                concated_sentence += " is "
             elif concated_sentence == "":
-                concated_sentence += "It is a "
+                concated_sentence += "It is "
             # remove last ", "
             concated_sentence += temp[:-2]
+        if "has_properties_values" in attribute_dict and len(attribute_dict["has_properties_values"]) > 0:
+            temp = [self.get_real_label_name(each) for each in attribute_dict["has_properties_values"]]
+            if concated_sentence != "":
+                if not have_isa_properties:
+                    concated_sentence += " is "
+                else:
+                    concated_sentence += ", "
+            else:
+                concated_sentence += "It is "
+            concated_sentence += " and ".join(temp)
         if "has_properties" in attribute_dict and len(attribute_dict["has_properties"]) > 0:
             temp = [self.get_real_label_name(each) for each in attribute_dict["has_properties"]]
             if concated_sentence != "" and temp[0] != "":
@@ -528,6 +539,9 @@ class EmbeddingVector:
             elif temp[0] != "":
                 concated_sentence += "It has "
             concated_sentence += " and ".join(temp)
+        # add ending period
+        if concated_sentence != "":
+            concated_sentence += "."
         self._logger.debug("Transform node {} --> {}".format(node_id, concated_sentence))
         return concated_sentence
 

@@ -15,20 +15,21 @@ def add_arguments(parser):
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_argument('-i','--inp',action="store", type=str, dest="filename", metavar='filename', help='filename here')
-    parser.add_argument('-o', '--out', action='store', type=str, dest='output', help='File to output the nodes file with respective components')
-    parser.add_argument("--header", action="store",type=bool, dest="header_bool", help="Does the file contain a header in its first row",default=True)
+    parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='input filename here')
+    parser.add_argument('-o', '--out', action='store', type=str, dest='output', help='File to output the nodes file with respective components,if empty will be written out to standard output',default=None)
+    parser.add_argument("--header", action="store_true", dest="header_bool", help="Does the file contain a header in its first row")
     parser.add_argument("--subj", action="store", type=int, dest="sub", help='Column in which the subject is given, default 0', default=0)
     parser.add_argument("--obj", action="store", type=int, dest="obj", help='Column in which the subject is given, default 2', default=2)
     parser.add_argument("--props", action="store", type=str, dest="props",help='Properties to consider while finding connected components - comma-separated string, default all properties considered',default=None)
-    parser.add_argument('--directed', action='store',type=bool, dest="directed", help="Is the graph directed or not?",default=True)
-    parser.add_argument('--strong', action='store',type=bool, dest="strong", help="If graph is directed, strongly connected components or treat graph as undirected",default=False)
+    parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
+    parser.add_argument('--strong', action='store_true', dest="strong", help="If graph is directed, strongly connected components or treat graph as undirected")
 
 
     
-def run(filename,output,directed,header,sub,obj,props,strong):
+def run(filename,output,header_bool,sub,obj,props,directed,strong):
     # import modules locally
     import csv 
+    import sys
     from graph_tool import load_graph_from_csv
     from graph_tool.util import find_edge
     from graph_tool.topology import label_components
@@ -36,7 +37,8 @@ def run(filename,output,directed,header,sub,obj,props,strong):
     from kgtk.cli_argparse import KGTKArgumentParser
     
     try:
-        g=load_graph_from_csv(filename,directed,skip_first=header,hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
+        header=['node1','label','node2']
+        g=load_graph_from_csv(filename,directed,skip_first=header_bool,hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
         es=[]
         if props:
             properties=props.split(',')
@@ -45,11 +47,16 @@ def run(filename,output,directed,header,sub,obj,props,strong):
             g.clear_edges()
             g.add_edge_list(list(set(es)))
         comp, hist= label_components(g,directed=strong)
-        f=open(output,'w')
-        wr = csv.writer(f, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
-        wr.writerow(['node','component'])
-        for v,c in enumerate(comp):
-            wr.writerow([g.vertex_properties['name'][v],c])
-        f.close()
+        if output:
+            f=open(output,'w')
+            wr = csv.writer(f, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
+            wr.writerow(header)
+            for v,c in enumerate(comp):
+                wr.writerow([g.vertex_properties['name'][v],'connected_component',c])
+            f.close()
+        else:
+            sys.stdout.write('%s\t%s\t%s\n' % ('node1', 'label', 'node2'))
+            for v,c in enumerate(comp):
+                sys.stdout.write('%s\t%s\t%s\n' % (g.vertex_properties['name'][v], 'connected_component', str(c)))
     except:
         raise KGTKException
