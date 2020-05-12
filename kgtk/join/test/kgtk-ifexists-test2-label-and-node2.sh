@@ -5,4 +5,4 @@ python3 -m kgtk ifexists \
 	--filter-on kgtk/join/test/ifexists-test2-file2.tsv \
 	--filter-keys label node2 \
 	--filter-mode NONE \
-	--output-file kgtk/join/test/ifexists-test1-node1-output.tsv
+	--output-file kgtk/join/test/ifexists-test2-label-and-node2-output.tsv
