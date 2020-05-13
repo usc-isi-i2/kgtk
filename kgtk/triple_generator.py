@@ -85,7 +85,7 @@ class TripleGenerator:
         A node can be Qxxx or Pxxx, return the proper entity.
         '''
         if node in self.prop_types:
-            entity = WDProperty(node, self.datatype_mapping[self.prop_types[node]])
+            entity = WDProperty(node, self.prop_types[node])
         else:
             entity = WDItem(TripleGenerator.replace_illegal_string(node))
         return entity
@@ -374,7 +374,7 @@ class TripleGenerator:
         Call corresponding downstream functions
         """
 
-        edge_list = edge.strip().split("\t")
+        edge_list = edge.strip("\n").split("\t")
         l = len(edge_list)
         if line_number == 1:
             # initialize the order_map
