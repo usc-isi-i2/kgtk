@@ -71,6 +71,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         print("input: %s" % " ".join((str(kgtk_file) for kgtk_file in kgtk_files)), file=error_file)
         print("--header-only=%s" % str(header_only), file=error_file)
         reader_options.show(out=error_file)
+        value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:

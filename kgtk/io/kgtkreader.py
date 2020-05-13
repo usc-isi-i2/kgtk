@@ -1072,6 +1072,7 @@ def main():
         print("--test=%s" % str(args.test), file=error_file)
         print("--test-validate=%s" % str(args.test_validate), file=error_file)
         reader_options.show(out=error_file)
+        value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     kr: KgtkReader = KgtkReader.open(args.kgtk_file,

@@ -99,6 +99,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         print("--field-separator='%s'" % repr(field_separator), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
+        value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:
