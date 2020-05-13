@@ -86,7 +86,7 @@ class KgtkCat():
                 print("Mapping the %d column names in %s." % (len(kr.column_names), input_file_path), file=self.error_file, flush=True)
             if self.very_verbose:
                 print(" ".join(kr.column_names), file=self.error_file, flush=True)
-            new_column_names: typing.List[str] =  kmc.merge(kr)
+            new_column_names: typing.List[str] =  kmc.merge(kr.column_names)
             if self.very_verbose:
                 print(" ".join(new_column_names), file=self.error_file, flush=True)
 
