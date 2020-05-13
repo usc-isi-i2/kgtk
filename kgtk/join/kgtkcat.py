@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import typing
 
-1>from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
