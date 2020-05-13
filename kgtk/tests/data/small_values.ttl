@@ -1,0 +1,90 @@
+@prefix wikibase: <http://wikiba.se/ontology#> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix wdt: <http://www.wikidata.org/prop/direct/> .
+@prefix wdtn: <http://www.wikidata.org/prop/direct-normalized/> .
+@prefix wdno: <http://www.wikidata.org/prop/novalue/> .
+@prefix wds: <http://www.wikidata.org/entity/statement/> .
+@prefix wdv: <http://www.wikidata.org/value/> .
+@prefix wdref: <http://www.wikidata.org/reference/> .
+@prefix p: <http://www.wikidata.org/prop/> .
+@prefix pr: <http://www.wikidata.org/prop/reference/> .
+@prefix prv: <http://www.wikidata.org/prop/reference/value/> .
+@prefix prn: <http://www.wikidata.org/prop/reference/value-normalized/> .
+@prefix ps: <http://www.wikidata.org/prop/statement/> .
+@prefix psv: <http://www.wikidata.org/prop/statement/value/> .
+@prefix psn: <http://www.wikidata.org/prop/statement/value-normalized/> .
+@prefix pq: <http://www.wikidata.org/prop/qualifier/> .
+@prefix pqv: <http://www.wikidata.org/prop/qualifier/value/> .
+@prefix pqn: <http://www.wikidata.org/prop/qualifier/value-normalized/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+
+wd:Q00005550-chemical-MESHC000006 a wikibase:Item ;
+    p:P6897 wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020013-18300 ;
+    p:P7015 wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020014-18301 ;
+    p:P7079 wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020015-18302 ;
+    p:P7080 wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020016-18304 ;
+    p:P7083 wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020017-18303 ;
+    wdtn:P6897 wdv:Quantityc0c0c0c0 ;
+    wdtn:P7015 wdv:Quantityc7c0c0c0 ;
+    wdtn:P7079 wdv:Quantityc0-00000019860001065575846c0c0c0 ;
+    wdtn:P7080 wdv:Quantityc0-0004846436908691038c0c0c0 ;
+    wdtn:P7083 wdv:Quantityc0c0c0c0 ;
+    wdt:P6897 0.0 ;
+    wdt:P7015 7.0 ;
+    wdt:P7079 1.9860001065575846E-7 ;
+    wdt:P7080 0.0004846436908691038 ;
+    wdt:P7083 0.0 .
+
+wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020013-18300 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P6897 0.0 ;
+    psn:P6897 wdv:Quantityc0c0c0c0 ;
+    psv:P6897 wdv:Quantityc0c0c0c0 .
+
+wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020014-18301 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P7015 7.0 ;
+    psn:P7015 wdv:Quantityc7c0c0c0 ;
+    psv:P7015 wdv:Quantityc7c0c0c0 .
+
+wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020015-18302 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P7079 1.9860001065575846E-7 ;
+    psn:P7079 wdv:Quantityc0-00000019860001065575846c0c0c0 ;
+    psv:P7079 wdv:Quantityc0-00000019860001065575846c0c0c0 .
+
+wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020016-18304 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P7080 0.0004846436908691038 ;
+    psn:P7080 wdv:Quantityc0-0004846436908691038c0c0c0 ;
+    psv:P7080 wdv:Quantityc0-0004846436908691038c0c0c0 .
+
+wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020017-18303 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P7083 0.0 ;
+    psn:P7083 wdv:Quantityc0c0c0c0 ;
+    psv:P7083 wdv:Quantityc0c0c0c0 .
+
+wdv:Quantityc0-00000019860001065575846c0c0c0 a wikibase:QuantityValue ;
+    wikibase:quantityAmount 1.9860001065575846E-7 ;
+    wikibase:quantityNormalized wdv:Quantityc0-00000019860001065575846c0c0c0 .
+
+wdv:Quantityc0-0004846436908691038c0c0c0 a wikibase:QuantityValue ;
+    wikibase:quantityAmount 0.0004846436908691038 ;
+    wikibase:quantityNormalized wdv:Quantityc0-0004846436908691038c0c0c0 .
+
+wdv:Quantityc7c0c0c0 a wikibase:QuantityValue ;
+    wikibase:quantityAmount 7.0 ;
+    wikibase:quantityNormalized wdv:Quantityc7c0c0c0 .
+
+wdv:Quantityc0c0c0c0 a wikibase:QuantityValue ;
+    wikibase:quantityAmount 0.0 ;
+    wikibase:quantityNormalized wdv:Quantityc0c0c0c0 .
+

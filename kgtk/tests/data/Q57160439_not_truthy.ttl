@@ -1,0 +1,200 @@
+@prefix wikibase: <http://wikiba.se/ontology#> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix wdt: <http://www.wikidata.org/prop/direct/> .
+@prefix wdtn: <http://www.wikidata.org/prop/direct-normalized/> .
+@prefix wdno: <http://www.wikidata.org/prop/novalue/> .
+@prefix wds: <http://www.wikidata.org/entity/statement/> .
+@prefix wdv: <http://www.wikidata.org/value/> .
+@prefix wdref: <http://www.wikidata.org/reference/> .
+@prefix p: <http://www.wikidata.org/prop/> .
+@prefix pr: <http://www.wikidata.org/prop/reference/> .
+@prefix prv: <http://www.wikidata.org/prop/reference/value/> .
+@prefix prn: <http://www.wikidata.org/prop/reference/value-normalized/> .
+@prefix ps: <http://www.wikidata.org/prop/statement/> .
+@prefix psv: <http://www.wikidata.org/prop/statement/value/> .
+@prefix psn: <http://www.wikidata.org/prop/statement/value-normalized/> .
+@prefix pq: <http://www.wikidata.org/prop/qualifier/> .
+@prefix pqv: <http://www.wikidata.org/prop/qualifier/value/> .
+@prefix pqn: <http://www.wikidata.org/prop/qualifier/value-normalized/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+
+wd:Q57160439 a wikibase:Item ;
+    rdfs:label "A quantitative test to estimate neutralizing antibodies to the hepatitis C virus: cytofluorimetric assessment of envelope glycoprotein 2 binding to target cells"@en ;
+    schema:name "A quantitative test to estimate neutralizing antibodies to the hepatitis C virus: cytofluorimetric assessment of envelope glycoprotein 2 binding to target cells"@en ;
+    skos:prefLabel "A quantitative test to estimate neutralizing antibodies to the hepatitis C virus: cytofluorimetric assessment of envelope glycoprotein 2 binding to target cells"@en ;
+    p:P1433 wds:Q57160439-Q57160439-P1433-1 ;
+    p:P1476 wds:Q57160439-Q57160439-P1476-1 ;
+    p:P2093 wds:Q57160439-Q57160439-P2093-1,
+        wds:Q57160439-Q57160439-P2093-10,
+        wds:Q57160439-Q57160439-P2093-11,
+        wds:Q57160439-Q57160439-P2093-12,
+        wds:Q57160439-Q57160439-P2093-13,
+        wds:Q57160439-Q57160439-P2093-14,
+        wds:Q57160439-Q57160439-P2093-2,
+        wds:Q57160439-Q57160439-P2093-3,
+        wds:Q57160439-Q57160439-P2093-4,
+        wds:Q57160439-Q57160439-P2093-5,
+        wds:Q57160439-Q57160439-P2093-6,
+        wds:Q57160439-Q57160439-P2093-7,
+        wds:Q57160439-Q57160439-P2093-8,
+        wds:Q57160439-Q57160439-P2093-9 ;
+    p:P304 wds:Q57160439-Q57160439-P304-1 ;
+    p:P31 wds:Q57160439-Q57160439-P31-1 ;
+    p:P356 wds:Q57160439-Q57160439-P356-1 ;
+    p:P407 wds:Q57160439-Q57160439-P407-1 ;
+    p:P433 wds:Q57160439-Q57160439-P433-1 ;
+    p:P478 wds:Q57160439-Q57160439-P478-1 ;
+    p:P577 wds:Q57160439-Q57160439-P577-1 ;
+    p:P921 wds:Q57160439-Q57160439-P921-1 .
+
+wd:Q1146531 a wikibase:Item .
+
+wd:Q13442814 a wikibase:Item .
+
+wd:Q1860 a wikibase:Item .
+
+wd:Q79460 a wikibase:Item .
+
+wds:Q57160439-Q57160439-P1433-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1433 wd:Q1146531 .
+
+wds:Q57160439-Q57160439-P1476-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1476 "A quantitative test to estimate neutralizing antibodies to the hepatitis C virus: cytofluorimetric assessment of envelope glycoprotein 2 binding to target cells"@en .
+
+wds:Q57160439-Q57160439-P2093-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "1"^^xsd:string ;
+    ps:P2093 "D. Rosa"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-10 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "10"^^xsd:string ;
+    ps:P2093 "Q. L. Choo"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-11 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "11"^^xsd:string ;
+    ps:P2093 "D. Chien"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-12 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "12"^^xsd:string ;
+    ps:P2093 "P. Pileri"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-13 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "13"^^xsd:string ;
+    ps:P2093 "M. Houghton"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-14 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "14"^^xsd:string ;
+    ps:P2093 "S. Abrignani"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-2 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "2"^^xsd:string ;
+    ps:P2093 "S. Campagnoli"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-3 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "3"^^xsd:string ;
+    ps:P2093 "C. Moretto"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-4 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "4"^^xsd:string ;
+    ps:P2093 "E. Guenzi"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-5 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "5"^^xsd:string ;
+    ps:P2093 "L. Cousens"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-6 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "6"^^xsd:string ;
+    ps:P2093 "M. Chin"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-7 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "7"^^xsd:string ;
+    ps:P2093 "C. Dong"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-8 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "8"^^xsd:string ;
+    ps:P2093 "A. J. Weiner"^^xsd:string .
+
+wds:Q57160439-Q57160439-P2093-9 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P1545 "9"^^xsd:string ;
+    ps:P2093 "J. Y. Lau"^^xsd:string .
+
+wds:Q57160439-Q57160439-P304-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P304 "1759-1763"^^xsd:string .
+
+wds:Q57160439-Q57160439-P31-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q13442814 .
+
+wds:Q57160439-Q57160439-P356-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P356 "10.1073/PNAS.93.5.1759"^^xsd:string .
+
+wds:Q57160439-Q57160439-P407-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P407 wd:Q1860 .
+
+wds:Q57160439-Q57160439-P433-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P433 "5"^^xsd:string .
+
+wds:Q57160439-Q57160439-P478-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P478 "93"^^xsd:string .
+
+wds:Q57160439-Q57160439-P577-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P577 "1996-03-05T00:00:00"^^xsd:dateTime ;
+    psv:P577 wdv:Timec1996-03-05T000000cQc11c0 .
+
+wds:Q57160439-Q57160439-P921-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P921 wd:Q79460 .
+
+wdv:Timec1996-03-05T000000cQc11c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 11 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "1996-03-05T00:00:00"^^xsd:dateTime .
+

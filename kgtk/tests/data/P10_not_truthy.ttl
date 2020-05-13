@@ -1,0 +1,154 @@
+@prefix wikibase: <http://wikiba.se/ontology#> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix wdt: <http://www.wikidata.org/prop/direct/> .
+@prefix wdtn: <http://www.wikidata.org/prop/direct-normalized/> .
+@prefix wdno: <http://www.wikidata.org/prop/novalue/> .
+@prefix wds: <http://www.wikidata.org/entity/statement/> .
+@prefix wdv: <http://www.wikidata.org/value/> .
+@prefix wdref: <http://www.wikidata.org/reference/> .
+@prefix p: <http://www.wikidata.org/prop/> .
+@prefix pr: <http://www.wikidata.org/prop/reference/> .
+@prefix prv: <http://www.wikidata.org/prop/reference/value/> .
+@prefix prn: <http://www.wikidata.org/prop/reference/value-normalized/> .
+@prefix ps: <http://www.wikidata.org/prop/statement/> .
+@prefix psv: <http://www.wikidata.org/prop/statement/value/> .
+@prefix psn: <http://www.wikidata.org/prop/statement/value-normalized/> .
+@prefix pq: <http://www.wikidata.org/prop/qualifier/> .
+@prefix pqv: <http://www.wikidata.org/prop/qualifier/value/> .
+@prefix pqn: <http://www.wikidata.org/prop/qualifier/value-normalized/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+
+wd:P10 a wikibase:Property ;
+    rdfs:label "video"@en ;
+    schema:description "relevant video. For images, use the property P18. For film trailers, qualify with object has role (P3831)=trailer (Q622550)"@en ;
+    schema:name "video"@en ;
+    wikibase:claim p:P10 ;
+    wikibase:directClaim wdt:P10 ;
+    wikibase:directClaimNormalized wdtn:P10 ;
+    wikibase:novalue wdno:P10 ;
+    wikibase:propertyType wikibase:String ;
+    wikibase:qualifier pq:P10 ;
+    wikibase:qualifierValue pqv:P10 ;
+    wikibase:qualifierValueNormalized pqn:P10 ;
+    wikibase:reference pr:P10 ;
+    wikibase:referenceValue prv:P10 ;
+    wikibase:referenceValueNormalized prn:P10 ;
+    wikibase:statementProperty ps:P10 ;
+    wikibase:statementValue psv:P10 ;
+    wikibase:statementValueNormalized psn:P10 ;
+    skos:altLabel "animation"@en,
+        "gif"@en,
+        "media"@en,
+        "trailer (Commons)"@en ;
+    skos:prefLabel "video"@en ;
+    p:P1628 wds:P10-P10-P1628-1,
+        wds:P10-P10-P1628-2 ;
+    p:P1629 wds:P10-P10-P1629-1 ;
+    p:P1659 wds:P10-P10-P1659-1,
+        wds:P10-P10-P1659-2,
+        wds:P10-P10-P1659-3,
+        wds:P10-P10-P1659-4 ;
+    p:P1855 wds:P10-P10-P1855-1,
+        wds:P10-P10-P1855-2,
+        wds:P10-P10-P1855-3,
+        wds:P10-P10-P1855-4 ;
+    p:P2302 wds:P10-P10-P2302-1,
+        wds:P10-P10-P2302-2,
+        wds:P10-P10-P2302-3 ;
+    p:P31 wds:P10-P10-P31-1 .
+
+wd:Q15075950 a wikibase:Item .
+
+wd:Q18610173 a wikibase:Item .
+
+wd:Q21502404 a wikibase:Item .
+
+wd:Q21510851 a wikibase:Item .
+
+wd:Q21510852 a wikibase:Item .
+
+wd:Q34508 a wikibase:Item .
+
+wd:Q4504 a wikibase:Item .
+
+wd:Q69063653 a wikibase:Item .
+
+wd:Q7378 a wikibase:Item .
+
+wds:P10-P10-P1628-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1628 "http://schema.org/video"^^xsd:string .
+
+wds:P10-P10-P1628-2 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1628 "http://www.w3.org/2006/vcard/ns#Video"^^xsd:string .
+
+wds:P10-P10-P1629-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1629 wd:Q34508 .
+
+wds:P10-P10-P1659-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1659 "P1651"^^xsd:string .
+
+wds:P10-P10-P1659-2 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1659 "P51"^^xsd:string .
+
+wds:P10-P10-P1659-3 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1659 "P18"^^xsd:string .
+
+wds:P10-P10-P1659-4 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1659 "P4238"^^xsd:string .
+
+wds:P10-P10-P1855-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1855 wd:Q4504 .
+
+wds:P10-P10-P1855-2 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1855 wd:Q69063653 .
+
+wds:P10-P10-P1855-3 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1855 wd:Q15075950 .
+
+wds:P10-P10-P1855-4 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1855 wd:Q7378 .
+
+wds:P10-P10-P2302-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P2302 wd:Q21510852 .
+
+wds:P10-P10-P2302-2 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P2302 wd:Q21502404 .
+
+wds:P10-P10-P2302-3 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P2302 wd:Q21510851 .
+
+wds:P10-P10-P31-1 a wikibase:Statement ;
+    wikibase:rank wikibase:NormalRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18610173 .
+
