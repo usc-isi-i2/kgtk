@@ -65,16 +65,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join (default=%(default)s).", action='store_true')
 
-    # This argument is retained for compatability with earlier versions of this command.
-    parser.add_argument(      "--error-limit", dest="error_limit",
-                              help=h("The maximum number of errors per input fule (default=%(default)s)"),
-                              default=KgtkReaderOptions.ERROR_LIMIT_DEFAULT)
-
     parser.add_argument(      "--field-separator", dest="field_separator",
                               help=h("Separator for multifield keys (default=%(default)s)")
                               , default=KgtkJoiner.FIELD_SEPARATOR_DEFAULT)
 
+    # Build the command arguments. File arguments can be set for individual
+    # files, or for all files.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="left", expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="right", expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
