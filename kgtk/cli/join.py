@@ -30,6 +30,8 @@ Specify --left-join to get a left outer join.
 Specify --right-join to get a right outer join.
 Specify both to get a full outer join (equivalent to cat).
 Specify neither to get an inner join.
+
+Expert mode provides additional command arguments.
 """
     }
 
