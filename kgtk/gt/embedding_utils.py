@@ -430,10 +430,15 @@ class EmbeddingVector:
                     if "@" in node_value and node_value[0] != "@":
                         node_value = node_value[:node_value.index("@")]
 
+                    # in case we meet an empty value, skip it
+                    if node_value == "":
+                        self._logger.warning("""Skip line "{}" because of empty value.""".format(each_line))
+                        continue
+
                     # remove extra double quote " and single quote '
-                    while node_value[0] == '"' and node_value[-1] == '"':
+                    while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
                         node_value = node_value[1:-1]
-                    while node_value[0] == "'" and node_value[-1] == "'":
+                    while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
                         node_value = node_value[1:-1]
 
                     if current_process_node_id != node_id:
@@ -592,35 +597,26 @@ class EmbeddingVector:
                     _ = f.write("\n")
 
     def print_vector(self, vectors, output_properties: str = "text_embedding", output_format="kgtk_format"):
+        self._logger.debug("START printing the vectors")
         if output_format == "kgtk_format":
             print("node\tproperty\tvalue\n", end="")
-            if self.input_format == "kgtk_format":
-                for i, each_vector in enumerate(vectors):
-                    print(str(list(self.candidates.keys())[i]) + "\t", end="")
-                    print(output_properties + "\t", end="")
-                    for j, each_dimension in enumerate(each_vector):
-                        if j != len(each_vector) - 1:
-                            print(str(each_dimension) + ",", end="")
-                        else:
-                            print(str(each_dimension) + "\n", end="")
-            elif self.input_format == "test_format":
-                all_nodes = list(self.vectors_map.keys())
-                for i, each_vector in enumerate(vectors):
-                    print(all_nodes[i] + "\t", end="")
-                    print(output_properties + "\t", end="")
-                    for j, each_dimension in enumerate(each_vector):
-                        if j != len(each_vector) - 1:
-                            print(str(each_dimension) + ",", end="")
-                        else:
-                            print(str(each_dimension) + "\n", end="")
+            all_nodes = list(self.vectors_map.keys())
+            ten_percent_len = math.ceil(len(vectors) / 10)
+            for i, each_vector in enumerate(vectors):
+                if i % ten_percent_len == 0:
+                    percent = i / ten_percent_len * 10
+                    self._logger.debug("Finished {}%".format(percent))
+                print("{}\t{}\t".format(all_nodes[i], output_properties), end="")
+                for each_dimension in each_vector[:-1]:
+                    print(str(each_dimension) + ",", end="")
+                print(str(each_vector[-1]))
 
         elif output_format == "tsv_format":
             for each_vector in vectors:
-                for i, each_dimension in enumerate(each_vector):
-                    if i != len(each_vector) - 1:
-                        print(str(each_dimension) + "\t", end="")
-                    else:
-                        print(str(each_dimension) + "\n", end="")
+                for each_dimension in each_vector[:-1]:
+                    print(str(each_dimension) + "\t", end="")
+                print(str(each_vector[-1]))
+        self._logger.debug("END printing the vectors")
 
     def plot_result(self, output_properties: dict, input_format="kgtk_format",
                     output_uri: str = "", output_format="kgtk_format",
@@ -650,48 +646,51 @@ class EmbeddingVector:
         else:
             raise KGTKException("Unknown or unsupport dimensional reduction type: {}".format(dimensional_reduction))
 
-        if input_format == "test_format":
-            gt_indexes = set()
-            vector_map_keys = list(self.vectors_map.keys())
-            for each_node in self.gt_nodes:
-                gt_indexes.add(vector_map_keys.index(each_node))
+        if output_uri not in {"", "none"}:
+            if not os.path.exists(output_uri):
+                raise ValueError("The given metadata output folder does not exist!")
 
-            self.metadata.append("Q_nodes\tType\tLabel\tDescription")
-            for i, each in enumerate(self.vectors_map.keys()):
-                label = self.node_labels[each]
-                description = self.candidates[each]["sentence"]
-                if i in gt_indexes:
-                    self.metadata.append("{}\tground_truth_node\t{}\t{}".format(each, label, description))
+            metadata_output_path = os.path.join(output_uri, self.vector_dump_file.split("/")[-1])
+            if input_format == "test_format":
+                gt_indexes = set()
+                vector_map_keys = list(self.vectors_map.keys())
+                for each_node in self.gt_nodes:
+                    gt_indexes.add(vector_map_keys.index(each_node))
+
+                self.metadata.append("Q_nodes\tType\tLabel\tDescription")
+                for i, each in enumerate(self.vectors_map.keys()):
+                    label = self.node_labels[each]
+                    description = self.candidates[each]["sentence"]
+                    if i in gt_indexes:
+                        self.metadata.append("{}\tground_truth_node\t{}\t{}".format(each, label, description))
+                    else:
+                        self.metadata.append("{}\tcandidates\t{}\t{}".format(each, label, description))
+                self.gt_indexes = gt_indexes
+
+            elif input_format == "kgtk_format":
+                if len(output_properties.get("metadata_properties", [])) == 0:
+                    for k, v in self.candidates.items():
+                        label = v.get("label_properties", "")
+                        if len(label) > 0 and isinstance(label, list):
+                            label = label[0]
+                        description = v.get("description_properties", "")
+                        if len(description) > 0 and isinstance(description, list):
+                            description = description[0]
+                        self.metadata.append("{}\t\t{}\t{}".format(k, label, description))
                 else:
-                    self.metadata.append("{}\tcandidates\t{}\t{}".format(each, label, description))
-            self.gt_indexes = gt_indexes
+                    required_properties = output_properties["metadata_properties"]
+                    self.metadata.append("node\t" + "\t".join(required_properties))
+                    for k, v in self.candidates.items():
+                        each_metadata = k + "\t"
+                        for each in required_properties:
+                            each_metadata += v.get(each, " ") + "\t"
+                        self.metadata.append(each_metadata)
+            self.dump_vectors(metadata_output_path, "metadata")
 
-        elif input_format == "kgtk_format":
-            if len(output_properties.get("metadata_properties", [])) == 0:
-                for k, v in self.candidates.items():
-                    label = v.get("label_properties", "")
-                    if len(label) > 0 and isinstance(label, list):
-                        label = label[0]
-                    description = v.get("description_properties", "")
-                    if len(description) > 0 and isinstance(description, list):
-                        description = description[0]
-                    self.metadata.append("{}\t\t{}\t{}".format(k, label, description))
-            else:
-                required_properties = output_properties["metadata_properties"]
-                self.metadata.append("node\t" + "\t".join(required_properties))
-                for k, v in self.candidates.items():
-                    each_metadata = k + "\t"
-                    for each in required_properties:
-                        each_metadata += v.get(each, " ") + "\t"
-                    self.metadata.append(each_metadata)
-
-        metadata_output_path = os.path.join(output_uri, self.vector_dump_file.split("/")[-1])
         if self.vectors_2D is not None:
             self.print_vector(self.vectors_2D, output_properties.get("output_properties"), output_format)
         else:
             self.print_vector(vectors, output_properties.get("output_properties"), output_format)
-        if output_uri != "none":
-            self.dump_vectors(metadata_output_path, "metadata")
 
     def evaluate_result(self):
         """
