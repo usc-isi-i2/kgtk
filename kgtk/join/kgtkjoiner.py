@@ -8,17 +8,14 @@ each input file.
 
 from argparse import ArgumentParser
 import attr
-import gzip
 from pathlib import Path
-from multiprocessing import Queue
 import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.utils.enumnameaction import EnumNameAction
-from kgtk.utils.validationaction import ValidationAction
+from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
@@ -166,6 +163,7 @@ class KgtkJoiner(KgtkFormat):
         kr: KgtkReader = KgtkReader.open(file_path,
                                          options=reader_options,
                                          value_options = self.value_options,
+                                         error_file=self.error_file,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
@@ -215,47 +213,15 @@ class KgtkJoiner(KgtkFormat):
                 print("There are %d keys in the inner join key set." % len(join_key_set), file=self.error_file, flush=True)
             return join_key_set
     
-    def merge_columns(self, left_kr: KgtkReader, right_kr: KgtkReader)->typing.Tuple[typing.List[str], typing.List[str]]:
-        joined_column_names: typing.List[str] = [ ]
-        right_column_names: typing.List[str] = [ ]
-
-        # First step: copy the left column names.
-        column_name: str
-        for column_name in left_kr.column_names:
-            joined_column_names.append(column_name)
-
-        idx: int = 0
-        for column_name in right_kr.column_names:
-            if idx == right_kr.id_column_idx and left_kr.id_column_idx >= 0:
-                # Map the id columns to the name used in the left file.
-                column_name = left_kr.column_names[left_kr.id_column_idx]
-            elif idx == right_kr.node1_column_idx and left_kr.node1_column_idx >= 0:
-                # Map the node1 columns to the name used in the left file,
-                column_name = left_kr.column_names[left_kr.node1_column_idx]
-            elif idx == right_kr.label_column_idx and left_kr.label_column_idx >= 0:
-                # Map the right file's label column to the left file's label column.
-                column_name = left_kr.column_names[left_kr.label_column_idx]
-            elif idx == right_kr.node2_column_idx and left_kr.node2_column_idx >= 0:
-                # Map the right file's node2 column to the left file's node2 column.
-                column_name = left_kr.column_names[left_kr.node2_column_idx]
-            else:
-                # Apply the prefix.
-                if self.prefix is not None and len(self.prefix) > 0:
-                    column_name = self.prefix + column_name
-
-            right_column_names.append(column_name)
-            if column_name not in joined_column_names:
-                joined_column_names.append(column_name)
-            idx += 1        
-
-        return (joined_column_names, right_column_names)
-
     def process(self):
         if self.verbose:
             print("Opening the left edge file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
         left_kr: KgtkReader = KgtkReader.open(self.left_file_path,
                                               options=self.left_reader_options,
                                               value_options = self.value_options,
+                                              error_file=self.error_file,
+                                              verbose=self.verbose,
+                                              very_verbose=self.very_verbose
         )
 
 
@@ -264,6 +230,9 @@ class KgtkJoiner(KgtkFormat):
         right_kr: KgtkReader = KgtkReader.open(self.right_file_path,
                                                options=self.right_reader_options,
                                                value_options = self.value_options,
+                                               error_file=self.error_file,
+                                               verbose=self.verbose,
+                                               very_verbose=self.very_verbose
         )
 
         if left_kr.is_edge_file and right_kr.is_edge_file:
@@ -289,9 +258,10 @@ class KgtkJoiner(KgtkFormat):
 
         if self.verbose:
             print("Mapping the column names for the join.", file=self.error_file, flush=True)
-        joined_column_names: typing.List[str]
-        right_column_names: typing.List[str]
-        (joined_column_names, right_column_names)  = self.merge_columns(left_kr, right_kr)
+        kmc: KgtkMergeColumns = KgtkMergeColumns()
+        kmc.merge(left_kr.column_names)
+        right_column_names: typing.List[str] = kmc.merge(right_kr.column_names, prefix=self.prefix)
+        joined_column_names: typing.List[str] = kmc.column_names
 
         if self.verbose:
             print("       left   columns: %s" % " ".join(left_kr.column_names), file=self.error_file, flush=True)
@@ -318,7 +288,7 @@ class KgtkJoiner(KgtkFormat):
         
         if self.verbose:
             print("Processing the left input file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
-        row: typing.list[str]
+        row: typing.List[str]
         for row in left_kr:
             left_data_lines_read += 1
             if joined_key_set is None:
@@ -376,8 +346,8 @@ def main():
     parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
 
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
-    parser.add_argument(      "--prefix", dest="prefix", help="The prefix applied to right file column names in the output file.")
+    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write", type=Path, default=None)
+    parser.add_argument(      "--prefix", dest="prefix", help="An optional prefix applied to right file column names in the output file (default=None).")
     parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
 
