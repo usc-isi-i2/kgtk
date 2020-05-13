@@ -953,19 +953,31 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             else:
                 return SUPPRESS
 
-        # TODO: Fix the argparse bug that prevents these two arguments from
-        # having their help messages suppressed.
-        errors_to = parser.add_mutually_exclusive_group()
-        errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
-                                     help="Send errors to stdout instead of stderr",
-                                     action="store_true")
-        errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
-                                     help="Send errors to stderr instead of stdout",
-                                     action="store_true")
+        egroup: _ArgumentGroup = parser.add_argument_group(h("Error and feedback messages"),
+                                                           h("Send error messages and feedback to stderr or stdout, " +
+                                                             "control the amount of feedback and debugging messages."))
 
-        parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+        # Avoid the argparse bug that prevents these two arguments from having
+        # their help messages suppressed directly.
+        if expert:
+            errors_to = egroup.add_mutually_exclusive_group()
+            errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                                         help="Send errors to stdout instead of stderr",
+                                         action="store_true")
+            errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+                                         help="Send errors to stderr instead of stdout",
+                                         action="store_true")
+        else:
+            egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                                      help=h("Send errors to stdout instead of stderr"),
+                                      action="store_true")
+            egroup.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+                                      help=h("Send errors to stderr instead of stdout"),
+                                      action="store_true")
 
-        parser.add_argument(      "--very-verbose", dest="very_verbose",
+        egroup.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+
+        egroup.add_argument(      "--very-verbose", dest="very_verbose",
                                   help=h("Print additional progress messages."),
                                   action='store_true')
         
