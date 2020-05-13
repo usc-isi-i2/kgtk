@@ -213,6 +213,21 @@ class KgtkJoiner(KgtkFormat):
                 print("There are %d keys in the inner join key set." % len(join_key_set), file=self.error_file, flush=True)
             return join_key_set
     
+    def ok_to_join(self, left_kr: KgtkReader, right_kr: KgtkReader)->bool:
+        if left_kr.is_edge_file and right_kr.is_edge_file:
+            if self.verbose:
+                print("Both input files are edge files.", file=self.error_file, flush=True)
+            return True
+
+        elif left_kr.is_node_file and right_kr.is_node_file:
+            if self.verbose:
+                print("Both input files are node files.", file=self.error_file, flush=True)
+            return True
+
+        else:
+            print("Cannot join edge and node files.", file=self.error_file, flush=True)
+            return False
+
     def process(self):
         if self.verbose:
             print("Opening the left edge file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
@@ -235,15 +250,10 @@ class KgtkJoiner(KgtkFormat):
                                                very_verbose=self.very_verbose
         )
 
-        if left_kr.is_edge_file and right_kr.is_edge_file:
-            if self.verbose:
-                print("Both input files are edge files.", file=self.error_file, flush=True)
-        elif left_kr.is_node_file and right_kr.is_node_file:
-            if self.verbose:
-                print("Both input files are node files.", file=self.error_file, flush=True)
-        else:
-            print("Cannot join edge and node files.", file=self.error_file, flush=True)
-            return
+        if not self.ok_to_join(left_kr, right_kr):
+            left_kr.close()
+            right_kr.close()
+            return 1
 
         left_join_idx_list: typing.List[int] = self.build_join_idx_list(left_kr, self.LEFT, self.left_join_columns)
         right_join_idx_list: typing.List[int] = self.build_join_idx_list(right_kr, self.RIGHT, self.right_join_columns)
@@ -251,7 +261,7 @@ class KgtkJoiner(KgtkFormat):
             print("the left join key has %d components, the right join key has %d columns. Exiting." % (len(left_join_idx_list), len(right_join_idx_list)), file=self.error_file, flush=True)
             left_kr.close()
             right_kr.close()
-            return
+            return 1
 
         # This might open the input files for a second time. This won't work with stdin.
         joined_key_set: typing.Optional[typing.Set[str]] = self.join_key_sets(left_join_idx_list, right_join_idx_list)
