@@ -18,7 +18,19 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 def parser():
     return {
         'help': 'Join two KGTK files',
-        'description': 'Join two KGTK edge files or two KGTK node files. Two passes may be needed, stdin may be forbidden.'
+        'description': """Join two KGTK edge files or two KGTK node files.
+Join keys are extracted from one or both input files and stored in memory,
+then the data is processed in a second pass.
+stdin will not work as an input file if two passes are needed.
+
+The output file contains the union of the columns in the two
+input files, adjusted for predefined name aliasing.
+
+Specify --left-join to get a left outer join.
+Specify --right-join to get a right outer join.
+Specify both to get a full outer join (equivalent to cat).
+Specify neither to get an inner join.
+"""
     }
 
 
@@ -40,9 +52,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "left_file_path", help="The left-side KGTK file to join (no default).", type=Path, default=None)
+    parser.add_argument(      "left_file_path", help="The left-side KGTK file to join (required).", type=Path, default=None)
 
-    parser.add_argument(      "right_file_path", help="The right-side KGTK file to join (no default).", type=Path, default=None)
+    parser.add_argument(      "right_file_path", help="The right-side KGTK file to join (required).", type=Path, default=None)
 
     parser.add_argument(      "--join-on-label", dest="join_on_label",
                               help="If both input files are edge files, include the label column in the join (default=%(default)s).",
