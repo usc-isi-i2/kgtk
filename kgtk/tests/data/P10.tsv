@@ -1,0 +1,22 @@
+node1	property	node2	id
+P10	P1628	http://schema.org/video	P10-P1628-1
+P10	P1628	http://www.w3.org/2006/vcard/ns#Video	P10-P1628-2
+P10	P1629	Q34508	P10-P1629-1
+P10	P1659	P1651	P10-P1659-1
+P10	P1659	P51	P10-P1659-2
+P10	P1659	P18	P10-P1659-3
+P10	P1659	P4238	P10-P1659-4
+P10	P1855	Q4504	P10-P1855-1
+P10	P1855	Q69063653	P10-P1855-2
+P10	P1855	Q15075950	P10-P1855-3
+P10	P1855	Q7378	P10-P1855-4
+P10	P2302	Q21510852	P10-P2302-1
+P10	P2302	Q21502404	P10-P2302-2
+P10	P2302	Q21510851	P10-P2302-3
+P10	P31	Q18610173	P10-P31-1
+P10	aliases	'media'@en	P10-alias-0
+P10	aliases	'animation'@en	P10-alias-1
+P10	aliases	'gif'@en	P10-alias-2
+P10	aliases	'trailer (Commons)'@en	P10-alias-3
+P10	descriptions	"'relevant video. For images, use the property P18. For film trailers, qualify with ""object has role"" (P3831)=""trailer"" (Q622550)'@en"	P10-description-0
+P10	label	'video'@en	P10-label-1
