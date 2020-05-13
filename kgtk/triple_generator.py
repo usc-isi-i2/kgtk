@@ -21,7 +21,7 @@ from etk.wikidata.value import (
 )
 from etk.knowledge_graph.node import LiteralType
 
-BAD_CHARS = [":", "-", "&", ",", " ",
+BAD_CHARS = [":", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
 
 
