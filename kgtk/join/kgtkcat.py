@@ -171,7 +171,7 @@ def main():
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-    ec: KgtkCat = KgtkCat(input_file_paths=args.input_file_paths,
+    kc: KgtkCat = KgtkCat(input_file_paths=args.input_file_paths,
                           output_path=args.output_file_path,
                           reader_options=reader_options,
                           value_options=value_options,
@@ -179,7 +179,7 @@ def main():
                           verbose=args.verbose,
                           very_verbose=args.very_verbose)
 
-    ec.process()
+    kc.process()
 
 if __name__ == "__main__":
     main()
