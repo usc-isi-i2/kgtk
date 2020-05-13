@@ -2,7 +2,7 @@ import attr
 import typing
 
 
-from kgtk.io.kgtkreader import KgtkReader
+from kgtk.kgtkformat import KgtkFormat
 
 @attr.s(slots=True, frozen=False)
 class KgtkMergeColumns:
@@ -33,46 +33,49 @@ class KgtkMergeColumns:
     old_column_name_lists: typing.List[typing.List[str]] = attr.ib(factory=list)
     new_column_name_lists: typing.List[typing.List[str]] = attr.ib(factory=list)
 
-    def merge(self, kr: KgtkReader):
-        """
-        Add the columns from a KgtkReader into the merged column list,
-        respecting predefined column names with aliases.
+    def merge(self, column_names: typing.List[str], prefix: typing.Optional[str]=None):
+        """Add column names into the merged column name list, respecting predefined
+        column names with aliases.
 
-        Return a list of new column names for the KgtkReader, with
-        predefined names replaced with the name first used in the 
-        joint list of column names.
+        Return a list of new column names with predefined name aliases replaced with
+        the name first used in each alias group in the joint list of column names.
+
         """
         new_column_names: typing.List[str] = [ ]
 
         # Record the old column names for debugging.
-        self.old_column_name_lists.append(kr.column_names)
+        self.old_column_name_lists.append(column_names.copy())
 
         column_name: str
         idx: int = 0
-        for idx, column_name in enumerate(kr.column_names):
-            if idx == kr.id_column_idx:
+        for idx, column_name in enumerate(column_names):
+            if column_name in KgtkFormat.ID_COLUMN_NAMES:
                 if self.id_column_idx >= 0:
                     column_name = self.column_names[self.id_column_idx]
                 else:
                     self.idx_column_idx = len(self.column_names)
 
-            elif idx == kr.node1_column_idx:
+            elif column_name in KgtkFormat.NODE1_COLUMN_NAMES:
                 if self.node1_column_idx >= 0:
                     column_name = self.column_names[self.node1_column_idx]
                 else:
                     self.node1_column_idx = len(self.column_names)
             
-            elif idx == kr.label_column_idx:
+            elif column_name in KgtkFormat.LABEL_COLUMN_NAMES:
                 if self.label_column_idx >= 0:
                     column_name = self.column_names[self.label_column_idx]
                 else:
                     self.label_column_idx = len(self.column_names)
             
-            elif idx == kr.node2_column_idx:
+            elif column_name in KgtkFormat.NODE2_COLUMN_NAMES:
                 if self.node2_column_idx >= 0:
                     column_name = self.column_names[self.node2_column_idx]
                 else:
                     self.node2_column_idx = len(self.column_names)
+            else:
+                # Apply the optional prefix.
+                if prefix is not None and len(prefix) > 0:
+                    column_name = prefix + column_name
             
             new_column_names.append(column_name)
             if column_name not in self.column_name_map:
