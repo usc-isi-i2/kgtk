@@ -346,8 +346,8 @@ def main():
     parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
 
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
-    parser.add_argument(      "--prefix", dest="prefix", help="The prefix applied to right file column names in the output file.")
+    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write", type=Path, default=None)
+    parser.add_argument(      "--prefix", dest="prefix", help="An optional prefix applied to right file column names in the output file (default=None).")
     parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
 
