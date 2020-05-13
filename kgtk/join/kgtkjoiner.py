@@ -8,17 +8,13 @@ each input file.
 
 from argparse import ArgumentParser
 import attr
-import gzip
 from pathlib import Path
-from multiprocessing import Queue
 import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.utils.enumnameaction import EnumNameAction
-from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
@@ -325,7 +321,7 @@ class KgtkJoiner(KgtkFormat):
         
         if self.verbose:
             print("Processing the left input file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
-        row: typing.list[str]
+        row: typing.List[str]
         for row in left_kr:
             left_data_lines_read += 1
             if joined_key_set is None:
