@@ -8,7 +8,6 @@ class TestTripleGeneration(unittest.TestCase):
     def test_truthy_property_triple_generation(self):
         property_tsv_file = 'data/P10.tsv'
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        
         o = open('data/P10_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', ignore=True, n=100, truthy=True, use_id=True,
