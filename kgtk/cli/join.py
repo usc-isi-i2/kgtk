@@ -18,7 +18,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 def parser():
     return {
         'help': 'Join two KGTK files',
-        'description': 'Join two KGTK edge files or two KGTK node files. '
+        'description': 'Join two KGTK edge files or two KGTK node files. Two passes may be needed, stdin may be forbidden.'
     }
 
 
