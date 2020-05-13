@@ -4,6 +4,7 @@ KGTK value processing options.
 
 from argparse import ArgumentParser, Namespace, SUPPRESS
 import attr
+import sys
 import typing
 
 @attr.s(slots=True, frozen=True)
@@ -188,12 +189,33 @@ class KgtkValueOptions:
                    additional_language_codes=d.get(prefix + "additional_language_codes", None),
                    minimum_valid_year=d.get(prefix + "minimum_valid_year", cls.MINIMUM_VALID_YEAR),
                    maximum_valid_year=d.get(prefix + "maximum_valid_year", cls.MAXIMUM_VALID_YEAR),
+                   minimum_valid_lat=d.get(prefix + "minimum_valid_lat", cls.MINIMUM_VALID_LAT),
+                   maximum_valid_lat=d.get(prefix + "maximum_valid_lat", cls.MAXIMUM_VALID_LAT),
+                   minimum_valid_lon=d.get(prefix + "minimum_valid_lon", cls.MINIMUM_VALID_LON),
+                   maximum_valid_lon=d.get(prefix + "maximum_valid_lon", cls.MAXIMUM_VALID_LON),
                    escape_list_separators=d.get(prefix + "escape_list_separators", False))
 
     @classmethod
     # Build the value parsing option structure.
     def from_args(cls, args: Namespace, who: str = "")->'KgtkValueOptions':
         return cls.from_dict(vars(args), who=who)
+
+    def show(self, who: str="", out: typing.TextIO=sys.stderr):
+        prefix: str = "--" if len(who) == 0 else "--" + who + "-"
+        print("%sallow-month-or-day-zero=%s" % (prefix, str(self.allow_month_or_day_zero)), file=out)
+        print("%srepair-month-or-day-zero=%s" % (prefix, str(self.repair_month_or_day_zero)), file=out)
+        print("%sallow-language-suffixes=%s" % (prefix, str(self.allow_language_suffixes)), file=out)
+        print("%sallow-lax-strings=%s" % (prefix, str(self.allow_lax_strings)), file=out)
+        print("%sallow-lax-lq-strings=%s" % (prefix, str(self.allow_lax_lq_strings)), file=out)
+        if self.additional_language_codes is not None:
+            print("%sadditional-language-codes=%s" % (prefix, " ".join(self.additional_language_codes)), file=out)
+        print("%sminimum-valid-year=%d" % (prefix, self.minimum_valid_year), file=out)
+        print("%smaximum-valid-year=%d" % (prefix, self.maximum_valid_year), file=out)
+        print("%sminimum-valid-lat=%f" % (prefix, self.minimum_valid_lat), file=out)
+        print("%smaximum-valid-lat=%f" % (prefix, self.maximum_valid_lat), file=out)
+        print("%sminimum-valid-lon=%f" % (prefix, self.minimum_valid_lon), file=out)
+        print("%smaximum-valid-lon=%f" % (prefix, self.maximum_valid_lon), file=out)
+        print("%sescape-list-separators=%s" % (prefix, str(self.escape_list_separators)), file=out)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
@@ -210,15 +232,8 @@ def main():
     # Build the value parsing option structure.
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-    print("allow_month_or_day_zero: %s" % str(value_options.allow_month_or_day_zero))
-    print("allow_lax_strings: %s" % str(value_options.allow_lax_strings))
-    print("allow_lax_lq_strings: %s" % str(value_options.allow_lax_lq_strings))
-    print("allow_language_suffixes: %s" % str(value_options.allow_language_suffixes))
-    if value_options.additional_language_codes is None:
-        print("additional_language_codes: None")
-    else:
-        print("additional_language_codes: [ %s ]" % ", ".join(value_options.additional_language_codes))
-    
+    value_options.show()
+
     # Test prefixed value option processing.
     left_value_options: KgtkValueOptions = KgtkValueOptions.from_args(args, who="left")
     print("left_allow_month_or_day_zero: %s" % str(left_value_options.allow_month_or_day_zero))

@@ -237,6 +237,7 @@ def main():
     if show_options:
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
+        value_options.show(out=error_file)
 
     ie: IfExists = IfExists(
         input_file_path=args.input_file_path,

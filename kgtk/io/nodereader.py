@@ -79,6 +79,11 @@ def main():
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, mode=KgtkReaderMode.NODE)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
+    if args.show_options:
+        reader_options.show(out=error_file)
+        value_options.show(out=error_file)
+        print("=======", file=error_file, flush=True)
+
     nr: NodeReader = NodeReader.open_node_file(args.kgtk_file,
                                                error_file=error_file,
                                                options=reader_options,

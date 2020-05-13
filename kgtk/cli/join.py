@@ -176,6 +176,7 @@ def run(left_file_path: typing.Optional[Path],
               
         left_reader_options.show(out=error_file, who="left")
         right_reader_options.show(out=error_file, who="right")
+        value_options.show(out=error_file)
 
     try:
         kr: KgtkJoiner = KgtkJoiner(

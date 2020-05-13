@@ -384,6 +384,7 @@ def main():
     if args.show_options:
         left_reader_options.show(out=error_file, who="left")
         right_reader_options.show(out=error_file, who="right")
+        value_options.show(out=error_file)
 
     ej: KgtkJoiner = KgtkJoiner(left_file_path=args.left_file_path,
                                 right_file_path=args.right_file_path,

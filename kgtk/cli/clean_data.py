@@ -62,6 +62,7 @@ def run(input_file: typing.Optional[Path],
         print("input: %s" % (str(input_file) if input_file is not None else "-"), file=error_file)
         print("output: %s" % (str(output_file) if output_file is not None else "-"), file=error_file)
         reader_options.show(out=error_file)
+        value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     if verbose:
