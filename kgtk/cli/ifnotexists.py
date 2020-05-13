@@ -96,7 +96,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         if filter_keys is not None:
             print("--filter-keys=%s" % " ".join(filter_keys), file=error_file)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
-        print("--field-separator='%s'" % str(field_separator), file=error_file)
+        print("--field-separator='%s'" % repr(field_separator), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
         print("=======", file=error_file, flush=True)
