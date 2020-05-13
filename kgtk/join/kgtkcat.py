@@ -157,7 +157,7 @@ def main():
     """
     parser = ArgumentParser()
     parser.add_argument(dest="input_file_paths", help="The KGTK files to concatenate", type=Path, nargs='+')
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read (default=%(default)s)", type=Path, default="-")
+    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s)", type=Path, default="-")
 
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=True)
