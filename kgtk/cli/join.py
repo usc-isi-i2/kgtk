@@ -19,9 +19,10 @@ def parser():
     return {
         'help': 'Join two KGTK files',
         'description': """Join two KGTK edge files or two KGTK node files.
+
 Join keys are extracted from one or both input files and stored in memory,
-then the data is processed in a second pass.
-stdin will not work as an input file if two passes are needed.
+then the data files are processed in a second pass.  stdin will not work as an
+input file if join keys are needed from it.
 
 The output file contains the union of the columns in the two
 input files, adjusted for predefined name aliasing.
@@ -30,6 +31,16 @@ Specify --left-join to get a left outer join.
 Specify --right-join to get a right outer join.
 Specify both to get a full outer join (equivalent to cat).
 Specify neither to get an inner join.
+
+By default, node files are joined on the id column, while edge files are joined
+on the node1 column. The label and node2 columns may be added to the edge file
+join criteria.  Alternatively, the left and right file join columns may be
+listed explicitly.
+
+To join an edge file to a node file, or to join quasi-KGTK files, use the
+following option (enable expert mode for more information):
+
+--mode=NONE
 
 Expert mode provides additional command arguments.
 """
@@ -87,8 +98,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # files, or for all files.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="left", expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="right", expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="left", expert=_expert, defaults=False)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="right", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(left_file_path: typing.Optional[Path],
@@ -106,6 +117,7 @@ def run(left_file_path: typing.Optional[Path],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
+        show_options: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
 
@@ -143,6 +155,12 @@ def run(left_file_path: typing.Optional[Path],
     left_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="left", fallback=True)
     right_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="right", fallback=True)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+    # Show the final option structures for debugging and documentation.
+    if show_options:
+        # TODO: left_file_path, right_file_path, --join-on-label, etc.
+        left_reader_options.show(out=error_file, who="left")
+        right_reader_options.show(out=error_file, who="right")
 
     try:
         kr: KgtkJoiner = KgtkJoiner(

@@ -71,7 +71,7 @@ class IfExists(KgtkFormat):
                 raise ValueError("The node1 column is missing from the %s node file." % who)
             return [ kr.node1_column_idx ]
         else:
-            raise ValueError("The %s file is neither edge nore node." % who)
+            raise ValueError("The %s file is neither edge nor node." % who)
 
     def get_edge_key_columns(self, kr: KgtkReader, who: str)-> typing.List[int]:
         if not kr.is_edge_file:
@@ -96,6 +96,9 @@ class IfExists(KgtkFormat):
     def get_key_columns(self, supplied_keys: typing.Optional[typing.List[str]], kr: KgtkReader, other_kr: KgtkReader, who: str)->typing.List[int]:
         if supplied_keys is not None and len(supplied_keys) > 0:
             return self.get_supplied_key_columns(supplied_keys, kr, who)
+
+        if not (kr.is_node_file or kr.is_edge_file):
+            raise ValueError("The %s file is a quasi-KGTK file.  Please supply its keys." % who)
 
         if kr.is_node_file or other_kr.is_node_file:
             return self.get_primary_key_column(kr, who)
@@ -229,6 +232,11 @@ def main():
     input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who="input")
     filter_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who="filter")
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
+
+   # Show the final option structures for debugging and documentation.                                                                                             
+    if show_options:
+        input_reader_options.show(out=error_file, who="input")
+        filter_reader_options.show(out=error_file, who="filter")
 
     ie: IfExists = IfExists(
         input_file_path=args.input_file_path,

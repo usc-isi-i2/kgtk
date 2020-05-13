@@ -131,7 +131,7 @@ class KgtkJoiner(KgtkFormat):
                 print("Joining on id (index %s in the %s input file)" % (join_idx, who), file=self.error_file, flush=True)
             join_idx_list.append(join_idx)
         else:
-            raise ValueError("Unknown file type in build_join_idx_list(...)")
+            raise ValueError("Quasi-KGTK files require an explicit list of join columns")
 
         # join_on_label and join_on_node2 may be specified
         if self.join_on_label or self.join_on_node2:
@@ -222,6 +222,11 @@ class KgtkJoiner(KgtkFormat):
         elif left_kr.is_node_file and right_kr.is_node_file:
             if self.verbose:
                 print("Both input files are node files.", file=self.error_file, flush=True)
+            return True
+
+        elif (not (left_kr.is_node_file or left_kr.is_edge_file)) or (not(right_kr.is_edge_file or right_kr.is_node_file)):
+            if self.verbose:
+               print("One or both input files are quasi-KGTK files.", file=self.error_file, flush=True)
             return True
 
         else:
@@ -374,6 +379,11 @@ def main():
     left_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who=KgtkJoiner.LEFT)
     right_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who=KgtkJoiner.RIGHT)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
+
+   # Show the final option structures for debugging and documentation.                                                                                             
+    if args.show_options:
+        left_reader_options.show(out=error_file, who="left")
+        right_reader_options.show(out=error_file, who="right")
 
     ej: KgtkJoiner = KgtkJoiner(left_file_path=args.left_file_path,
                                 right_file_path=args.right_file_path,
