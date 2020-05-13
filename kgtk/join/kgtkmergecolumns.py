@@ -64,7 +64,7 @@ class KgtkMergeColumns:
             
             elif idx == kr.label_column_idx:
                 if self.label_column_idx >= 0:
-                    column_name = self.column_names[self.labelcolumn_idx]
+                    column_name = self.column_names[self.label_column_idx]
                 else:
                     self.label_column_idx = len(self.column_names)
             

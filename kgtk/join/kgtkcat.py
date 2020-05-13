@@ -73,27 +73,27 @@ class KgtkCat():
                 if is_node_file:
                     raise ValueError("Cannot merge an edge file to a node file: %s" % input_file_path)
                 if is_edge_file == False and self.verbose:
-                    print("The output file will be an edge file.")
+                    print("The output file will be an edge file.", file=self.error_file, flush=True)
                 is_edge_file = True
             elif kr.is_node_file:
                 if is_edge_file:
                     raise ValueError("Cannot merge a node file to an edge file: %s" % input_file_path)
                 if is_node_file == False and self.verbose:
-                    print("The output file will be an node file.")
+                    print("The output file will be an node file.", file=self.error_file, flush=True)
                 is_node_file = True
 
             if self.verbose or self.very_verbose:
                 print("Mapping the %d column names in %s." % (len(kr.column_names), input_file_path), file=self.error_file, flush=True)
             if self.very_verbose:
-                print(" ".join(kr.column_names))
+                print(" ".join(kr.column_names), file=self.error_file, flush=True)
             new_column_names: typing.List[str] =  kmc.merge(kr)
             if self.very_verbose:
-                print(" ".join(new_column_names))
+                print(" ".join(new_column_names), file=self.error_file, flush=True)
 
         if self.verbose or self.very_verbose:
-            print("There are %d merged columns." % len(kmc.column_names))
+            print("There are %d merged columns." % len(kmc.column_names), file=self.error_file, flush=True)
         if self.very_verbose:
-            print(" ".join(self.column_names))
+            print(" ".join(self.column_names), file=self.error_file, flush=True)
             
         output_mode: KgtkWriter.Mode = KgtkWriter.Mode.NONE
         if is_edge_file:
@@ -127,9 +127,9 @@ class KgtkCat():
                 #
                 # TODO: throw a better exception.
                 raise ValueError("Missing file path.")
-            input_file_path = self.file_path
+            input_file_path = kr.file_path
             if self.verbose:
-                print("Copying data from file %d: %s" % (idx + 1, input_file_path))
+                print("Copying data from file %d: %s" % (idx + 1, input_file_path), file=self.error_file, flush=True)
 
             shuffle_list: typing.List[int] = ew.build_shuffle_list(kmc.new_column_name_lists[idx])
 
@@ -146,9 +146,10 @@ class KgtkCat():
             if self.verbose:
                 print("Read %d data lines from file %d: %s" % (input_data_lines, idx + 1, input_file_path))
         
-        ew.close()
         if self.verbose:
-            print("Wrote %d lines total from %d files" % (output_data_lines, len(krs)))
+            print("Wrote %d lines total from %d files" % (output_data_lines, len(krs)), file=self.error_file, flush=True)
+
+        ew.close()
         
 def main():
     """
@@ -156,7 +157,7 @@ def main():
     """
     parser = ArgumentParser()
     parser.add_argument(dest="input_file_paths", help="The KGTK files to concatenate", type=Path, nargs='+')
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read", type=Path, default=None)
+    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to read (default=%(default)s)", type=Path, default="-")
 
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=True)
@@ -170,15 +171,15 @@ def main():
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-    ec: KgtkCat = KgtkCatr(input_file_paths=args.input_file_paths,
-                                output_path=args.output_file_path,
-                                reader_options=reader_options,
-                                value_options=value_options,
-                                error_file=error_file,
-                                verbose=args.verbose,
-                                very_verbose=args.very_verbose)
+    ec: KgtkCat = KgtkCat(input_file_paths=args.input_file_paths,
+                          output_path=args.output_file_path,
+                          reader_options=reader_options,
+                          value_options=value_options,
+                          error_file=error_file,
+                          verbose=args.verbose,
+                          very_verbose=args.very_verbose)
 
-    ej.process()
+    ec.process()
 
 if __name__ == "__main__":
     main()
