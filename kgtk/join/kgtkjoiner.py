@@ -213,12 +213,6 @@ class KgtkJoiner(KgtkFormat):
                 print("There are %d keys in the inner join key set." % len(join_key_set), file=self.error_file, flush=True)
             return join_key_set
     
-    def merge_columns(self, left_kr: KgtkReader, right_kr: KgtkReader)->typing.Tuple[typing.List[str], typing.List[str]]:
-        kmc: KgtkMergeColumns = KgtkMergeColumns()
-        kmc.merge(left_kr.column_names)
-        right_column_names: typing.List[str] = kmc.merge(right_kr.column_names, prefix=self.prefix)
-        return (kmc.column_names, right_column_names)
-
     def process(self):
         if self.verbose:
             print("Opening the left edge file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
@@ -264,9 +258,10 @@ class KgtkJoiner(KgtkFormat):
 
         if self.verbose:
             print("Mapping the column names for the join.", file=self.error_file, flush=True)
-        joined_column_names: typing.List[str]
-        right_column_names: typing.List[str]
-        (joined_column_names, right_column_names)  = self.merge_columns(left_kr, right_kr)
+        kmc: KgtkMergeColumns = KgtkMergeColumns()
+        kmc.merge(left_kr.column_names)
+        right_column_names: typing.List[str] = kmc.merge(right_kr.column_names, prefix=self.prefix)
+        joined_column_names: typing.List[str] = kmc.column_names
 
         if self.verbose:
             print("       left   columns: %s" % " ".join(left_kr.column_names), file=self.error_file, flush=True)
