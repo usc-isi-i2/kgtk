@@ -6,6 +6,7 @@ install:
 - sudo apt-get update
 - pip install --upgrade pip
 - pip install -r requirements.txt
+- pip install .
 script:
 - python -m spacy download en_core_web_sm
 - cd kgtk/tests
