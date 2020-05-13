@@ -18,7 +18,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 def parser():
     return {
         'help': 'Join two KGTK files',
-        'description': 'Join two KGTK edge files or two KGTK node files.'
+        'description': 'Join two KGTK edge files or two KGTK node files. '
     }
 
 
@@ -40,9 +40,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "left_file_path", help="The left-side KGTK file to join. Use '-' for stdin (default=%(default)s).", type=Path, default="-")
+    parser.add_argument(      "left_file_path", help="The left-side KGTK file to join (no default).", type=Path, default=None)
 
-    parser.add_argument(      "right_file_path", help="The right-side KGTK file to join (no default).", type=Path, default="-")
+    parser.add_argument(      "right_file_path", help="The right-side KGTK file to join (no default).", type=Path, default=None)
 
     parser.add_argument(      "--join-on-label", dest="join_on_label",
                               help="If both input files are edge files, include the label column in the join (default=%(default)s).",
@@ -79,8 +79,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="right", expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(left_file_path: Path,
-        right_file_path: Path,
+def run(left_file_path: typing.Optional[Path],
+        right_file_path: typing.Optional[Path],
         left_join: bool,
         right_join: bool,
         join_on_label: bool,
@@ -105,6 +105,27 @@ def run(left_file_path: Path,
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+
+    if not right_join:
+        if left_file_path is None or str(left_file_path) == "-":
+            print("The left file may not be stdin when an inner join or left join is requested.", file=error_file, flush=True)
+            return 1
+
+    if not left_join:
+        if right_file_path is None or str(right_file_path) == "-":
+            print("The right file may not be stdin when an inner join or right join is requested.", file=error_file, flush=True)
+            return 1
+
+    if (left_file_path is None or str(left_file_path) == "-") and (right_file_path is None or str(right_file_path) == "-"):
+        print("The left and right files may not both be stdin.", file=error_file, flush=True)
+        return 1
+
+    if left_file_path is None:
+        left_file_path = Path("-")
+        
+    if right_file_path is None:
+        right_file_path = Path("-")
+        
 
     # Build the option structures.
     left_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="left", fallback=True)
