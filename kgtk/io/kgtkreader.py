@@ -103,6 +103,7 @@ class KgtkReaderOptions():
                       mode_options: bool = False,
                       validate_by_default: bool = False,
                       expert: bool = False,
+                      defaults: bool = True,
                       who: str = ""):
 
         # This helper function makes it easy to suppress options from
@@ -114,6 +115,25 @@ class KgtkReaderOptions():
             else:
                 return SUPPRESS
 
+        # This helper function decices whether or not to include defaults
+        # in argument declarations. If we plan to make arguments with
+        # prefixes and fallbacks, the fallbacks (the ones without prefixes)
+        # should get defaults value, while the prefixed arguments should
+        # not get defaults.
+        #
+        # At the present time, boolean arguments can't use fallbacks.
+        #
+        # Note: In obscure circumstances (EnumNameAction, I'm looking at you),
+        # explicitly setting "default=None" may fail, whereas omitting the
+        # "default=" phrase succeeds.
+        #
+        # TODO: continue researching these issues.
+        def d(default: typing.Any)->typing.Mapping[str, typing.Any]:
+            if defaults:
+                return {"default": default}
+            else:
+                return { }
+
         prefix1: str = "--" if len(who) == 0 else "--" + who + "-"
         prefix2: str = "" if len(who) == 0 else who + "_"
         prefix3: str = "" if len(who) == 0 else who + ": "
@@ -124,8 +144,9 @@ class KgtkReaderOptions():
         fgroup.add_argument(prefix1 + "column-separator",
                             dest=prefix2 + "column_separator",
                             help=h(prefix3 + "Column separator (default=<TAB>)."), # TODO: provide the default with escapes, e.g. \t
-                            type=str, default=KgtkFormat.COLUMN_SEPARATOR)
+                            type=str, **d(default=KgtkFormat.COLUMN_SEPARATOR))
 
+        # TODO: use an Enum or add choices.
         fgroup.add_argument(prefix1 + "compression-type",
                             dest=prefix2 + "compression_type",
                             help=h(prefix3 + "Specify the compression type (default=%(default)s)."))
@@ -133,7 +154,7 @@ class KgtkReaderOptions():
         fgroup.add_argument(prefix1 + "error-limit",
                             dest=prefix2 + "error_limit",
                             help=h(prefix3 + "The maximum number of errors to report before failing (default=%(default)s)"),
-                            type=int, default=cls.ERROR_LIMIT_DEFAULT)
+                            type=int, **d(default=cls.ERROR_LIMIT_DEFAULT))
 
         fgroup.add_argument(prefix1 + "gzip-in-parallel",
                             dest=prefix2 + "gzip_in_parallel",
@@ -143,13 +164,13 @@ class KgtkReaderOptions():
         fgroup.add_argument(prefix1 + "gzip-queue-size",
                             dest=prefix2 + "gzip_queue_size",
                             help=h(prefix3 + "Queue size for parallel gzip (default=%(default)s)."),
-                            type=int, default=cls.GZIP_QUEUE_SIZE_DEFAULT)
+                            type=int, **d(default=cls.GZIP_QUEUE_SIZE_DEFAULT))
 
         if mode_options:
             fgroup.add_argument(prefix1 + "mode",
                                 dest=prefix2 + "mode",
                                 help=h(prefix3 + "Determine the KGTK file mode (default=%(default)s)."),
-                                type=KgtkReaderMode, action=EnumNameAction, default=KgtkReaderMode.AUTO)
+                                type=KgtkReaderMode, action=EnumNameAction, **d(KgtkReaderMode.AUTO))
             
         hgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Header parsing"),
                                                            h("Options affecting " + prefix4 + "header parsing"))
@@ -162,7 +183,7 @@ class KgtkReaderOptions():
         hgroup.add_argument(prefix1 + "header-error-action",
                             dest=prefix2 + "header_error_action",
                             help=h(prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXIT))
 
         hgroup.add_argument(prefix1 + "skip-first-record",
                             dest=prefix2 + "skip_first_record",
@@ -172,7 +193,7 @@ class KgtkReaderOptions():
         hgroup.add_argument(prefix1 + "unsafe-column-name-action",
                             dest=prefix2 + "unsafe_column_name_action",
                             help=h(prefix3 + "The action to take when a column name is unsafe (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.REPORT))
 
         lgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Line parsing"),
                                                            h("Options affecting " + prefix4 + "data line parsing"))
@@ -200,17 +221,17 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "blank-required-field-line-action",
                             dest=prefix2 + "blank_required_field_line_action",
                             help=h(prefix3 + "The action to take when a line with a blank node1, node2, or id field (per mode) is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
                                   
         lgroup.add_argument(prefix1 + "comment-line-action",
                             dest=prefix2 + "comment_line_action",
                             help=h(prefix3 + "The action to take when a comment line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
 
         lgroup.add_argument(prefix1 + "empty-line-action",
                             dest=prefix2 + "empty_line_action",
                             help=h(prefix3 + "The action to take when an empty line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
 
         lgroup.add_argument(prefix1 + "fill-short-lines",
                             dest=prefix2 + "fill_short_lines",
@@ -220,17 +241,17 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "invalid-value-action",
                             dest=prefix2 + "invalid_value_action",
                             help=h(prefix3 + "The action to take when a data cell value is invalid (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.REPORT)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.REPORT))
 
         lgroup.add_argument(prefix1 + "long-line-action",
                             dest=prefix2 + "long_line_action",
                             help=h(prefix3 + "The action to take when a long line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
 
         lgroup.add_argument(prefix1 + "short-line-action",
                             dest=prefix2 + "short_line_action",
                             help=h(prefix3 + "The action to take when a short line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
 
         lgroup.add_argument(prefix1 + "truncate-long-lines",
                             dest=prefix2 + "truncate_long_lines",
@@ -240,7 +261,7 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "whitespace-line-action",
                             dest=prefix2 + "whitespace_line_action",
                             help=h(prefix3 + "The action to take when a whitespace line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXCLUDE)
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
     
     @classmethod
     # Build the value parsing option structure.
@@ -257,9 +278,9 @@ class KgtkReaderOptions():
         # TODO: Figure out how to type check this method.
         def lookup(name: str, default):
             prefixed_name = prefix + name
-            if prefixed_name in d:
+            if prefixed_name in d and d[prefixed_name] is not None:
                 return d[prefixed_name]
-            elif fallback and name in d:
+            elif fallback and name in d and d[name] is not None:
                 return d[name]
             else:
                 return default
@@ -303,6 +324,34 @@ class KgtkReaderOptions():
                   fallback: bool = False,
     )->'KgtkReaderOptions':
         return cls.from_dict(vars(args), who=who, mode=mode, fallback=fallback)
+
+    def show(self, who: str="", out: typing.TextIO=sys.stderr):
+        prefix: str = "--" if len(who) == 0 else "--" + who + "-"
+        print("%smode=%s" % (prefix, self.mode.name), file=out)
+        print("%scolumn-separator='%s'" % (prefix, self.column_separator), file=out)
+        if self.force_column_names is not None:
+            print("%sforce_column_names=%s" % (prefix, " ".join(self.force_column_names)), file=out)
+        print("%sskip_first_record=%s" % (prefix, str(self.skip_first_record)), file=out)
+        print("%serror-limit=%s" % (prefix, str(self.error_limit)), file=out)
+        print("%srepair-and-validate-lines=%s" % (prefix, str(self.repair_and_validate_lines)), file=out)
+        print("%srepair-and-validate-values=%s" % (prefix, str(self.repair_and_validate_values)), file=out)
+        print("%sempty-line-action=%s" % (prefix, self.empty_line_action.name), file=out)
+        print("%scomment-line-action=%s" % (prefix, self.comment_line_action.name), file=out)
+        print("%swhitespace-line-action=%s" % (prefix, self.whitespace_line_action.name), file=out)
+        print("%sblank-required-field-line-action=%s" % (prefix, self.blank_required_field_line_action.name), file=out)
+        print("%sshort-line-action=%s" % (prefix, self.short_line_action.name), file=out)
+        print("%slong-line-action=%s" % (prefix, self.long_line_action.name), file=out)
+        print("%sheader-error-action=%s" % (prefix, self.header_error_action.name), file=out)
+        print("%sunsafe-column-name-action=%s" % (prefix, self.unsafe_column_name_action.name), file=out)
+        print("%sinvalid-value-action=%s" % (prefix, self.invalid_value_action.name), file=out)
+        print("%sfill-short-lines=%s" % (prefix, str(self.fill_short_lines)), file=out)
+        print("%struncate-long-lines=%s" % (prefix, str(self.truncate_long_lines)), file=out)
+        if self.compression_type is not None:
+            print("%scompression-type=%s" % (prefix, str(self.compression_type)), file=out)
+        print("%sgzip-in-parallel=%s" % (prefix, str(self.gzip_in_parallel)), file=out)
+        print("%sgzip-queue-size=%s" % (prefix, str(self.gzip_queue_size)), file=out)
+              
+        
 
 DEFAULT_KGTK_READER_OPTIONS: KgtkReaderOptions = KgtkReaderOptions()
 
@@ -959,6 +1008,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         # Avoid the argparse bug that prevents these two arguments from having
         # their help messages suppressed directly.
+        #
+        # TODO: Is there a better fix?
+        #
+        # TODO: replace --errors-to-stdout and --errors-to-stderr with
+        # --errors-to=stdout and --errors-to=stderr, using either an enum
+        # or choices.  That will avoid the argparse bug, too.
         if expert:
             errors_to = egroup.add_mutually_exclusive_group()
             errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
@@ -968,17 +1023,19 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                          help="Send errors to stderr instead of stdout",
                                          action="store_true")
         else:
-            egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
-                                      help=h("Send errors to stdout instead of stderr"),
-                                      action="store_true")
             egroup.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
                                       help=h("Send errors to stderr instead of stdout"),
                                       action="store_true")
+            egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                                      help=h("Send errors to stdout instead of stderr"),
+                                      action="store_true")
 
-        egroup.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
+        egroup.add_argument(      "--show-options", dest="show_options", help="Print the options selected (default=%(default)s).", action='store_true')
+
+        egroup.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages (default=%(default)s).", action='store_true')
 
         egroup.add_argument(      "--very-verbose", dest="very_verbose",
-                                  help=h("Print additional progress messages."),
+                                  help=h("Print additional progress messages (default=%(default)s)."),
                                   action='store_true')
         
 def main():
@@ -1003,13 +1060,19 @@ def main():
 
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=True)
     KgtkValueOptions.add_arguments(parser, expert=True)
-    args = parser.parse_args()
+    args: Namespace = parser.parse_args()
 
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
+
+    if args.show_options:
+        print("--test=%s" % str(args.test), file=error_file)
+        print("--test-validate=%s" % str(args.test_validate), file=error_file)
+        reader_options.show(out=error_file)
+        print("=======", file=error_file, flush=True)
 
     kr: KgtkReader = KgtkReader.open(args.kgtk_file,
                                      error_file = error_file,

@@ -53,6 +53,7 @@ def run(input_file_paths: typing.List[Path],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
+        show_options: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
 
@@ -70,6 +71,13 @@ def run(input_file_paths: typing.List[Path],
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+    # Show the final option structures for debugging and documentation.
+    if show_options:
+        print("input: %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file)
+        print("--output-file=%s" % str(output_file_path), file=error_file)
+        reader_options.show(out=error_file)
+        print("=======", file=error_file, flush=True)
 
     try:
         kc: KgtkCat = KgtkCat(input_file_paths=input_file_paths,
