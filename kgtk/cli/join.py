@@ -159,6 +159,21 @@ def run(left_file_path: typing.Optional[Path],
     # Show the final option structures for debugging and documentation.
     if show_options:
         # TODO: left_file_path, right_file_path, --join-on-label, etc.
+        print("left: %s" % (str(left_file_path) if left_file_path is not None else "-"), file=error_file)
+        print("right: %s" % (str(left_file_path) if left_file_path is not None else "-"), file=error_file)
+        print("--output-file=%s" % (str(output_file_path) if output_file_path is not None else "-"), file=error_file)
+        print("--left-join=%s" % str(left_join), file=error_file)
+        print("--right-join=%s" % str(right_join), file=error_file)
+        print("--join-on-label=%s" % str(join_on_label), file=error_file)
+        print("--join-on-node2=%s" % str(join_on_node2), file=error_file)
+        if left_join_columns is not None:
+            print("--left-join-columns=%s" % " ".join(left_join_columns), file=error_file)
+        if right_join_columns is not None:
+            print("--right-join-columns=%s" % " ".join(right_join_columns), file=error_file)
+        if prefix is not None:
+            print("--prefix=%s" % str(prefix), file=error_file)
+        print("--field-separator=%s" % repr(field_separator), file=error_file)
+              
         left_reader_options.show(out=error_file, who="left")
         right_reader_options.show(out=error_file, who="right")
 

@@ -328,7 +328,7 @@ class KgtkReaderOptions():
     def show(self, who: str="", out: typing.TextIO=sys.stderr):
         prefix: str = "--" if len(who) == 0 else "--" + who + "-"
         print("%smode=%s" % (prefix, self.mode.name), file=out)
-        print("%scolumn-separator='%s'" % (prefix, self.column_separator), file=out)
+        print("%scolumn-separator=%s" % (prefix, repr(self.column_separator)), file=out)
         if self.force_column_names is not None:
             print("%sforce_column_names=%s" % (prefix, " ".join(self.force_column_names)), file=out)
         print("%sskip_first_record=%s" % (prefix, str(self.skip_first_record)), file=out)
