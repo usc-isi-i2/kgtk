@@ -27,6 +27,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.utils.enumnameaction import EnumNameAction
 from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -208,16 +209,18 @@ def main():
 
     parser.add_argument(dest="input_file_path", help="The KGTK file with the input data", type=Path, nargs="?")
 
-    parser.add_argument(      "--filter-on", dest="filter_file_path", help="The KGTK file with the filter data", type=Path, required=True)
+    parser.add_argument(      "--filter-on", dest="filter_file_path", help="The KGTK file with the filter data (required).", type=Path, required=True)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
-    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
+    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys (default=%(default)s)",
+                              default=IfExists.FIELD_SEPARATOR_DEFAULT)
    
-    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists).", action='store_true')
+    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists) (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file.", nargs='*')
-    parser.add_argument(      "--filter-keys", dest="filter_keys", help="The key columns in the filter file.", nargs='*')
+    parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file (default=None).", nargs='*')
+    parser.add_argument(      "--filter-keys", dest="filter_keys", help="The key columns in the filter file (default=None).", nargs='*')
 
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input")

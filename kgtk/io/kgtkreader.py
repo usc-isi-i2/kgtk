@@ -30,6 +30,7 @@ import typing
 
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkbase import KgtkBase
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.utils.closableiter import ClosableIter, ClosableIterTextIOWrapper
 from kgtk.utils.enumnameaction import EnumNameAction
 from kgtk.utils.gzipprocess import GunzipProcess
@@ -104,7 +105,8 @@ class KgtkReaderOptions():
                       validate_by_default: bool = False,
                       expert: bool = False,
                       defaults: bool = True,
-                      who: str = ""):
+                      who: str = "",
+    ):
 
         # This helper function makes it easy to suppress options from
         # The help message.  The options are still there, and initialize
@@ -120,8 +122,6 @@ class KgtkReaderOptions():
         # prefixes and fallbacks, the fallbacks (the ones without prefixes)
         # should get defaults value, while the prefixed arguments should
         # not get defaults.
-        #
-        # At the present time, boolean arguments can't use fallbacks.
         #
         # Note: In obscure circumstances (EnumNameAction, I'm looking at you),
         # explicitly setting "default=None" may fail, whereas omitting the
@@ -159,7 +159,7 @@ class KgtkReaderOptions():
         fgroup.add_argument(prefix1 + "gzip-in-parallel",
                             dest=prefix2 + "gzip_in_parallel",
                             help=h(prefix3 + "Execute gzip in parallel (default=%(default)s)."),
-                            action='store_true')
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
 
         fgroup.add_argument(prefix1 + "gzip-queue-size",
                             dest=prefix2 + "gzip_queue_size",
@@ -188,7 +188,7 @@ class KgtkReaderOptions():
         hgroup.add_argument(prefix1 + "skip-first-record",
                             dest=prefix2 + "skip_first_record",
                             help=h(prefix3 + "Skip the first record when forcing column names (default=%(default)s)."),
-                            action='store_true')
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
 
         hgroup.add_argument(prefix1 + "unsafe-column-name-action",
                             dest=prefix2 + "unsafe_column_name_action",
@@ -201,22 +201,12 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "repair-and-validate-lines",
                             dest=prefix2 + "repair_and_validate_lines",
                             help=h(prefix3 + "Repair and validate lines (default=%(default)s)."),
-                            action='store_true', default=validate_by_default)
-
-        lgroup.add_argument(prefix1 + "do-not-repair-and-validate-lines",
-                            dest=prefix2 + "repair_and_validate_lines",
-                            help=h(prefix3 + "Do not repair and validate lines."),
-                            action='store_false')
+                            type=optional_bool, nargs='?', const=True, **d(default=validate_by_default))
 
         lgroup.add_argument(prefix1 + "repair-and-validate-values",
                             dest=prefix2 + "repair_and_validate_values",
                             help=h(prefix3 + "Repair and validate values (default=%(default)s)."),
-                            action='store_true', default=validate_by_default)
-
-        lgroup.add_argument(prefix1 + "do-not-repair-and-validate-values",
-                            dest=prefix2 + "repair-and-validate_values",
-                            help=h(prefix3 + "Do not repair and validate values."),
-                            action='store_false')
+                            type=optional_bool, nargs='?', const=True, **d(default=validate_by_default))
 
         lgroup.add_argument(prefix1 + "blank-required-field-line-action",
                             dest=prefix2 + "blank_required_field_line_action",
@@ -236,7 +226,7 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "fill-short-lines",
                             dest=prefix2 + "fill_short_lines",
                             help=h(prefix3 + "Fill missing trailing columns in short lines with empty values (default=%(default)s)."),
-                            action='store_true')
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
 
         lgroup.add_argument(prefix1 + "invalid-value-action",
                             dest=prefix2 + "invalid_value_action",
@@ -256,7 +246,7 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "truncate-long-lines",
                             dest=prefix2 + "truncate_long_lines",
                             help=h(prefix3 + "Remove excess trailing columns in long lines (default=%(default)s)."),
-                            action='store_true')
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
 
         lgroup.add_argument(prefix1 + "whitespace-line-action",
                             dest=prefix2 + "whitespace_line_action",
@@ -1050,13 +1040,14 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
     KgtkReader.add_debug_arguments(parser, expert=True)
-    parser.add_argument(       "--test", dest="test_method", help="The test to perform",
+    parser.add_argument(       "--test", dest="test_method", help="The test to perform (default=%(default)s).",
                                choices=["rows", "concise-rows",
                                         "kgtk-values", "concise-kgtk-values",
                                         "dicts", "concise-dicts",
                                         "kgtk-value-dicts", "concise-kgtk-value-dicts"],
                                default="rows")
-    parser.add_argument(       "--test-validate", dest="test_validate", help="Validate KgtkValue objects in test.", action='store_true')
+    parser.add_argument(       "--test-validate", dest="test_validate", help="Validate KgtkValue objects in test (default=%(default)s).",
+                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=True)
     KgtkValueOptions.add_arguments(parser, expert=True)
