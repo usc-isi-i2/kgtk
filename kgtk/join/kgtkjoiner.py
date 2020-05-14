@@ -16,6 +16,7 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
@@ -356,15 +357,25 @@ def main():
     parser.add_argument(dest="right_file_path", help="The right KGTK file to join", type=Path)
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=KgtkJoiner.FIELD_SEPARATOR_DEFAULT)
 
-    parser.add_argument(      "--join-on-label", dest="join_on_label", help="If both input files are edge files, include the label column in the join.", action='store_true')
-    parser.add_argument(      "--join-on-node2", dest="join_on_node2", help="If both input files are edge files, include the node2 column in the join.", action='store_true')
+    parser.add_argument(      "--join-on-label", dest="join_on_label",
+                              help="If both input files are edge files, include the label column in the join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+    
+    parser.add_argument(      "--join-on-node2", dest="join_on_node2",
+                              help="If both input files are edge files, include the node2 column in the join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+    
     parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
-    parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
+
+    parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write", type=Path, default=None)
     parser.add_argument(      "--prefix", dest="prefix", help="An optional prefix applied to right file column names in the output file (default=None).")
     parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
-    parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
+
+    parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who=KgtkJoiner.LEFT, expert=True)

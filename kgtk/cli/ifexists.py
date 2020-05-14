@@ -42,13 +42,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
 
-    parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys", help="The key columns in the file being filtered.", nargs='*')
+    parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys",
+                              help="The key columns in the file being filtered (default=None).", nargs='*')
 
-    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against.", type=Path, required=True)
+    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against (required).", type=Path, required=True)
 
-    parser.add_argument(      "--filter-keys", "--right-keys", dest="filter_keys", help="The key columns in the filter-on file.", nargs='*')
+    parser.add_argument(      "--filter-keys", "--right-keys", dest="filter_keys",
+                              help="The key columns in the filter-on file (default=None).", nargs='*')
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write", type=Path, default=None)
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (required).", type=Path, default=None)
 
     parser.add_argument(      "--field-separator", dest="field_separator",
                               help=h("Separator for multifield keys (default=%(default)s)")

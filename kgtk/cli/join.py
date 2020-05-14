@@ -13,6 +13,7 @@ from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkjoiner import KgtkJoiner
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
@@ -71,15 +72,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--join-on-label", dest="join_on_label",
                               help="If both input files are edge files, include the label column in the join (default=%(default)s).",
-                              action='store_true')
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--join-on-node2", dest="join_on_node2",
                               help="If both input files are edge files, include the node2 column in the join (default=%(default)s).",
-                              action='store_true')
+                              type=optional_bool, nargs='?', const=True, default=False)
     
     parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns (default=None).", nargs='+')
 
-    parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join (default=%(default)s).", action='store_true')
+    parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
@@ -88,7 +90,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     
     parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns (default=None).", nargs='+')
     
-    parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join (default=%(default)s).", action='store_true')
+    parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--field-separator", dest="field_separator",
                               help=h("Separator for multifield keys (default=%(default)s)")
