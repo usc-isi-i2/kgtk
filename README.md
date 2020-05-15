@@ -4,7 +4,7 @@ KGTK is a Python library for easy manipulation with knowledge graphs. It provide
 
 ## Documentation
 
-To-do.
+https://kgtk.readthedocs.io/en/latest/
 
 ## Features
 
