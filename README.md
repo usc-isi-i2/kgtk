@@ -1,4 +1,4 @@
-# KGTK: Knowledge Graph Toolkit I](https://zenodo.org/badge/DOI/10.5281/zenodo.3828069.svg)](https://doi.org/10.5281/zenodo.3828069)
+# KGTK: Knowledge Graph Toolkit [![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828069.svg)](https://doi.org/10.5281/zenodo.3828069)
 
 KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs. 
 
