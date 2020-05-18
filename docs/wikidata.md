@@ -95,7 +95,7 @@ Expected output that ETK should generate:
  wd:Q123 rdfs:label     "Hello"@en .
  wd:Q123 skos:prefLabel "Hello"@en .
  wd:Q123 schema:name    "Hello"@en .
- ```
+```
 
 Note: should check that there is a single label statement for each language.
 
