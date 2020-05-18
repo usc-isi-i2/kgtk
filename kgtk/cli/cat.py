@@ -20,7 +20,7 @@ def parser():
         'help': 'Concatenate KGTK files',
         'description': 'Concatenate two or more KGTK files, merging the columns appropriately. ' +
         'All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). ' +
-        '\n\nAdditonal options are shown in expert help.\nkgtk --expert cat --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert cat --help'
     }
 
 
