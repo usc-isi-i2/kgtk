@@ -790,9 +790,16 @@ class KgtkValue(KgtkFormat):
     #
     # Year-month-day
     year_pat: str = r'(?P<year>[-+]?[0-9]{4})'
+    month_pat: str = r'(?P<month>1[0-2]|0[1-9])'
+    day_pat: str = r'(?P<day>3[01]|0[1-9]|[12][0-9])'
+    date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=year_pat,
+                                                                                          month=month_pat,
+                                                                                          day=day_pat)
+
+    lax_year_pat: str = r'(?P<year>[-+]?[0-9]{4}(?:[0-9]+(?=-))?)' # Extra digits must by followed by hyphen.
     lax_month_pat: str = r'(?P<month>1[0-2]|0[0-9])'
     lax_day_pat: str = r'(?P<day>3[01]|0[0-9]|[12][0-9])'
-    lax_date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=year_pat,
+    lax_date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=lax_year_pat,
                                                                                               month=lax_month_pat,
                                                                                               day=lax_day_pat)
     # hour-minutes-seconds
@@ -850,6 +857,7 @@ class KgtkValue(KgtkFormat):
         -HH:MM
 
         NOTE: This code also accepts the following, which are disallowed by the standard:
+        YYYY-
         YYYYT...
         YYYYMM
         YYYYMMT...
