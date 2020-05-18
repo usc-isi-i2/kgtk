@@ -89,6 +89,11 @@ def main():
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, mode=KgtkReaderMode.EDGE)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
+    if args.show_options:
+        reader_options.show(out=error_file)
+        value_options.show(out=error_file)
+        print("=======", file=error_file, flush=True)
+
     # Force the edge mode:
     er: EdgeReader = EdgeReader.open_edge_file(args.kgtk_file,
                                                error_file=error_file,

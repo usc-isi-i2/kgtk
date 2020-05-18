@@ -1,0 +1,13 @@
+site_name: KGTK documentation
+nav:
+  - Home: index.md
+  - KGTK file specification: specification.md
+theme:
+  name: material
+
+markdown_extensions:
+  - admonition
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true

@@ -27,6 +27,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.utils.enumnameaction import EnumNameAction
 from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -71,7 +72,7 @@ class IfExists(KgtkFormat):
                 raise ValueError("The node1 column is missing from the %s node file." % who)
             return [ kr.node1_column_idx ]
         else:
-            raise ValueError("The %s file is neither edge nore node." % who)
+            raise ValueError("The %s file is neither edge nor node." % who)
 
     def get_edge_key_columns(self, kr: KgtkReader, who: str)-> typing.List[int]:
         if not kr.is_edge_file:
@@ -96,6 +97,9 @@ class IfExists(KgtkFormat):
     def get_key_columns(self, supplied_keys: typing.Optional[typing.List[str]], kr: KgtkReader, other_kr: KgtkReader, who: str)->typing.List[int]:
         if supplied_keys is not None and len(supplied_keys) > 0:
             return self.get_supplied_key_columns(supplied_keys, kr, who)
+
+        if not (kr.is_node_file or kr.is_edge_file):
+            raise ValueError("The %s file is a quasi-KGTK file.  Please supply its keys." % who)
 
         if kr.is_node_file or other_kr.is_node_file:
             return self.get_primary_key_column(kr, who)
@@ -205,16 +209,18 @@ def main():
 
     parser.add_argument(dest="input_file_path", help="The KGTK file with the input data", type=Path, nargs="?")
 
-    parser.add_argument(      "--filter-on", dest="filter_file_path", help="The KGTK file with the filter data", type=Path, required=True)
+    parser.add_argument(      "--filter-on", dest="filter_file_path", help="The KGTK file with the filter data (required).", type=Path, required=True)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
-    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=IfExists.FIELD_SEPARATOR_DEFAULT)
+    parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys (default=%(default)s)",
+                              default=IfExists.FIELD_SEPARATOR_DEFAULT)
    
-    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists).", action='store_true')
+    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists) (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file.", nargs='*')
-    parser.add_argument(      "--filter-keys", dest="filter_keys", help="The key columns in the filter file.", nargs='*')
+    parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file (default=None).", nargs='*')
+    parser.add_argument(      "--filter-keys", dest="filter_keys", help="The key columns in the filter file (default=None).", nargs='*')
 
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input")
@@ -229,6 +235,12 @@ def main():
     input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who="input")
     filter_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who="filter")
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
+
+   # Show the final option structures for debugging and documentation.                                                                                             
+    if show_options:
+        input_reader_options.show(out=error_file, who="input")
+        filter_reader_options.show(out=error_file, who="filter")
+        value_options.show(out=error_file)
 
     ie: IfExists = IfExists(
         input_file_path=args.input_file_path,
