@@ -18,6 +18,7 @@ import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
@@ -37,10 +38,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
 
     parser.add_argument(      "--header-only", dest="header_only",
-                              help="Process the only the header of the input file.", action="store_true")
+                              help="Process the only the header of the input file.",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=True)
 
 
@@ -48,6 +50,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
         header_only: bool = False,
+        show_options: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
         **kwargs # Whatever KgtkReaderOptions and KgtkValueOptions want.
@@ -64,6 +67,14 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+    # Show the final option structures for debugging and documentation.
+    if show_options:
+        print("input: %s" % " ".join((str(kgtk_file) for kgtk_file in kgtk_files)), file=error_file)
+        print("--header-only=%s" % str(header_only), file=error_file)
+        reader_options.show(out=error_file)
+        value_options.show(out=error_file)
+        print("=======", file=error_file, flush=True)
 
     try:
         kgtk_file: typing.Optional[Path]

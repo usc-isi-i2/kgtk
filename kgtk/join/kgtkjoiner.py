@@ -16,6 +16,7 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
@@ -131,7 +132,7 @@ class KgtkJoiner(KgtkFormat):
                 print("Joining on id (index %s in the %s input file)" % (join_idx, who), file=self.error_file, flush=True)
             join_idx_list.append(join_idx)
         else:
-            raise ValueError("Unknown file type in build_join_idx_list(...)")
+            raise ValueError("Quasi-KGTK files require an explicit list of join columns")
 
         # join_on_label and join_on_node2 may be specified
         if self.join_on_label or self.join_on_node2:
@@ -213,6 +214,26 @@ class KgtkJoiner(KgtkFormat):
                 print("There are %d keys in the inner join key set." % len(join_key_set), file=self.error_file, flush=True)
             return join_key_set
     
+    def ok_to_join(self, left_kr: KgtkReader, right_kr: KgtkReader)->bool:
+        if left_kr.is_edge_file and right_kr.is_edge_file:
+            if self.verbose:
+                print("Both input files are edge files.", file=self.error_file, flush=True)
+            return True
+
+        elif left_kr.is_node_file and right_kr.is_node_file:
+            if self.verbose:
+                print("Both input files are node files.", file=self.error_file, flush=True)
+            return True
+
+        elif (not (left_kr.is_node_file or left_kr.is_edge_file)) or (not(right_kr.is_edge_file or right_kr.is_node_file)):
+            if self.verbose:
+               print("One or both input files are quasi-KGTK files.", file=self.error_file, flush=True)
+            return True
+
+        else:
+            print("Cannot join edge and node files.", file=self.error_file, flush=True)
+            return False
+
     def process(self):
         if self.verbose:
             print("Opening the left edge file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
@@ -235,15 +256,10 @@ class KgtkJoiner(KgtkFormat):
                                                very_verbose=self.very_verbose
         )
 
-        if left_kr.is_edge_file and right_kr.is_edge_file:
-            if self.verbose:
-                print("Both input files are edge files.", file=self.error_file, flush=True)
-        elif left_kr.is_node_file and right_kr.is_node_file:
-            if self.verbose:
-                print("Both input files are node files.", file=self.error_file, flush=True)
-        else:
-            print("Cannot join edge and node files.", file=self.error_file, flush=True)
-            return
+        if not self.ok_to_join(left_kr, right_kr):
+            left_kr.close()
+            right_kr.close()
+            return 1
 
         left_join_idx_list: typing.List[int] = self.build_join_idx_list(left_kr, self.LEFT, self.left_join_columns)
         right_join_idx_list: typing.List[int] = self.build_join_idx_list(right_kr, self.RIGHT, self.right_join_columns)
@@ -251,7 +267,7 @@ class KgtkJoiner(KgtkFormat):
             print("the left join key has %d components, the right join key has %d columns. Exiting." % (len(left_join_idx_list), len(right_join_idx_list)), file=self.error_file, flush=True)
             left_kr.close()
             right_kr.close()
-            return
+            return 1
 
         # This might open the input files for a second time. This won't work with stdin.
         joined_key_set: typing.Optional[typing.Set[str]] = self.join_key_sets(left_join_idx_list, right_join_idx_list)
@@ -341,15 +357,25 @@ def main():
     parser.add_argument(dest="right_file_path", help="The right KGTK file to join", type=Path)
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=KgtkJoiner.FIELD_SEPARATOR_DEFAULT)
 
-    parser.add_argument(      "--join-on-label", dest="join_on_label", help="If both input files are edge files, include the label column in the join.", action='store_true')
-    parser.add_argument(      "--join-on-node2", dest="join_on_node2", help="If both input files are edge files, include the node2 column in the join.", action='store_true')
+    parser.add_argument(      "--join-on-label", dest="join_on_label",
+                              help="If both input files are edge files, include the label column in the join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+    
+    parser.add_argument(      "--join-on-node2", dest="join_on_node2",
+                              help="If both input files are edge files, include the node2 column in the join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+    
     parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
-    parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join.", action='store_true')
+
+    parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write", type=Path, default=None)
     parser.add_argument(      "--prefix", dest="prefix", help="An optional prefix applied to right file column names in the output file (default=None).")
     parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
-    parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join.", action='store_true')
+
+    parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who=KgtkJoiner.LEFT, expert=True)
@@ -364,6 +390,12 @@ def main():
     left_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who=KgtkJoiner.LEFT)
     right_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who=KgtkJoiner.RIGHT)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
+
+   # Show the final option structures for debugging and documentation.                                                                                             
+    if args.show_options:
+        left_reader_options.show(out=error_file, who="left")
+        right_reader_options.show(out=error_file, who="right")
+        value_options.show(out=error_file)
 
     ej: KgtkJoiner = KgtkJoiner(left_file_path=args.left_file_path,
                                 right_file_path=args.right_file_path,

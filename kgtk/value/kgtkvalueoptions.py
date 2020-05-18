@@ -4,7 +4,10 @@ KGTK value processing options.
 
 from argparse import ArgumentParser, Namespace, SUPPRESS
 import attr
+import sys
 import typing
+
+from kgtk.utils.argparsehelpers import optional_bool
 
 @attr.s(slots=True, frozen=True)
 class KgtkValueOptions:
@@ -64,6 +67,7 @@ class KgtkValueOptions:
                       who: str = "",
                       desc: str = ".",
                       expert: bool = False,
+                      defaults: bool = True,
     ):
         """Add arguments for KgtkValue option processing.
 
@@ -89,89 +93,77 @@ class KgtkValueOptions:
             else:
                 return SUPPRESS
 
+        # This helper function decices whether or not to include defaults
+        # in argument declarations. If we plan to make arguments with
+        # prefixes and fallbacks, the fallbacks (the ones without prefixes)
+        # should get defaults value, while the prefixed arguments should
+        # not get defaults.
+        #
+        # Note: In obscure circumstances (EnumNameAction, I'm looking at you),
+        # explicitly setting "default=None" may fail, whereas omitting the
+        # "default=" phrase succeeds.
+        #
+        # TODO: continue researching these issues.
+        def d(default: typing.Any)->typing.Mapping[str, typing.Any]:
+            if defaults:
+                return {"default": default}
+            else:
+                return { }
+
         vgroup = parser.add_argument_group(h(prefix3 + "Data value parsing"),
                                            h("Options controlling the parsing and processing of KGTK data values" + desc))
         vgroup.add_argument(      prefix1 + "additional-language-codes", dest=prefix2 + "additional_language_codes",
                                   help=h(prefix3 + "Additional language codes (default=None)."),
                                   nargs="*", default=None)
 
-        lsgroup= vgroup.add_mutually_exclusive_group()
-        lsgroup.add_argument(      prefix1 + "allow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
+        vgroup.add_argument(      prefix1 + "allow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
                                    help=h(prefix3 + "Allow language identifier suffixes starting with a dash (default=%(default)s)."),
-                                   action='store_true', default=True)
+                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
-        lsgroup.add_argument(      prefix1 + "disallow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
-                                   help=h(prefix3 + "Disallow language identifier suffixes starting with a dash."),
-                                   action='store_false')
 
-        laxgroup= vgroup.add_mutually_exclusive_group()
-        laxgroup.add_argument(      prefix1 + "allow-lax-strings", dest=prefix2 + "allow_lax_strings",
-                                    help=h(prefix3 + "Do not check if double quotes are backslashed inside strings (default=%(default)s)."),
-                                    action='store_true', default=False)
+        vgroup.add_argument(      prefix1 + "allow-lax-strings", dest=prefix2 + "allow_lax_strings",
+                                  help=h(prefix3 + "Do not check if double quotes are backslashed inside strings (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
 
-        laxgroup.add_argument(      prefix1 + "disallow-lax-strings", dest=prefix2 + "allow_lax_strings",
-                                    help=h(prefix3 + "Check if double quotes are backslashed inside strings."),
-                                    action='store_false')
+        vgroup.add_argument(      prefix1 + "allow-lax-lq-strings", dest=prefix2 + "allow_lax_lq_strings",
+                                  help=h(prefix3 + "Do not check if single quotes are backslashed inside language qualified strings (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
 
-        lqgroup= vgroup.add_mutually_exclusive_group()
-        lqgroup.add_argument(      prefix1 + "allow-lax-lq-strings", dest=prefix2 + "allow_lax_lq_strings",
-                                   help=h(prefix3 + "Do not check if single quotes are backslashed inside language qualified strings (default=%(default)s)."),
-                                   action='store_true', default=False)
+        vgroup.add_argument(      prefix1 + "allow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
+                                  help=h(prefix3 + "Allow month or day zero in dates (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
 
-        lqgroup.add_argument(      prefix1 + "disallow-lax-lq-strings", dest=prefix2 + "allow_lax_lq_strings",
-                                   help=h(prefix3 + "Check if single quotes are backslashed inside language qualified strings."),
-                                   action='store_false')
-
-        amd0group= vgroup.add_mutually_exclusive_group()
-        amd0group.add_argument(      prefix1 + "allow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
-                                     help=h(prefix3 + "Allow month or day zero in dates (default=%(default)s)."),
-                                     action='store_true', default=False)
-
-        amd0group.add_argument(      prefix1 + "disallow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
-                                     help=h(prefix3 + "Allow month or day zero in dates."),
-                                     action='store_false')
-
-        rmd0group= vgroup.add_mutually_exclusive_group()
-        rmd0group.add_argument(      prefix1 + "repair-month-or-day-zero", dest=prefix2 + "repair_month_or_day_zero",
-                                     help=h(prefix3 + "Repair month or day zero in dates (default=%(default)s)."),
-                                     action='store_true', default=False)
-
-        rmd0group.add_argument(      prefix1 + "no-repair-month-or-day-zero", dest=prefix2 + "repair_month_or_day_zero",
-                                     help=h(prefix3 + "Do not repair month or day zero in dates."),
-                                     action='store_false')
+        vgroup.add_argument(      prefix1 + "repair-month-or-day-zero", dest=prefix2 + "repair_month_or_day_zero",
+                                  help=h(prefix3 + "Repair month or day zero in dates (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-year", dest=prefix2 + "minimum_valid_year",
                                   help=h(prefix3 + "The minimum valid year in dates (default=%(default)d)."),
-                                  type=int, default=cls.MINIMUM_VALID_YEAR)
+                                  type=int, **d(default=cls.MINIMUM_VALID_YEAR))
 
         vgroup.add_argument(      prefix1 + "maximum-valid-year", dest=prefix2 + "maximum_valid_year",
                                   help=h(prefix3 + "The maximum valid year in dates (default=%(default)d)."),
-                                  type=int, default=cls.MAXIMUM_VALID_YEAR)
+                                  type=int, **d(default=cls.MAXIMUM_VALID_YEAR))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lat", dest=prefix2 + "minimum_valid_lat",
-                                  help=h(prefix3 + "The minimum valid latitude (default=%(default)d)."),
-                                  type=int, default=cls.MINIMUM_VALID_LAT)
+                                  help=h(prefix3 + "The minimum valid latitude (default=%(default)f)."),
+                                  type=int, **d(default=cls.MINIMUM_VALID_LAT))
 
         vgroup.add_argument(      prefix1 + "maximum-valid-lat", dest=prefix2 + "maximum_valid_lat",
-                                  help=h(prefix3 + "The maximum valid latitude (default=%(default)d)."),
-                                  type=int, default=cls.MAXIMUM_VALID_LAT)
+                                  help=h(prefix3 + "The maximum valid latitude (default=%(default)f)."),
+                                  type=int, **d(default=cls.MAXIMUM_VALID_LAT))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lon", dest=prefix2 + "minimum_valid_lon",
-                                  help=h(prefix3 + "The minimum valid longitude (default=%(default)d)."),
-                                  type=int, default=cls.MINIMUM_VALID_LON)
+                                  help=h(prefix3 + "The minimum valid longitude (default=%(default)f)."),
+                                  type=int, **d(default=cls.MINIMUM_VALID_LON))
 
         vgroup.add_argument(      prefix1 + "maximum-valid-lon", dest=prefix2 + "maximum_valid_lon",
-                                  help=h(prefix3 + "The maximum valid longitude (default=%(default)d)."),
-                                  type=int, default=cls.MAXIMUM_VALID_LON)
+                                  help=h(prefix3 + "The maximum valid longitude (default=%(default)f)."),
+                                  type=int, **d(default=cls.MAXIMUM_VALID_LON))
 
-        elsgroup= vgroup.add_mutually_exclusive_group()
-        elsgroup.add_argument(      prefix1 + "escape-list-separators", dest=prefix2 + "escape_list_separators",
-                                    help=h(prefix3 + "Escape all list separators instead of splitting on them (default=%(default)s)."),
-                                    action='store_true', default=False)
-
-        elsgroup.add_argument(      prefix1 + "no-escape-list-separators", dest=prefix2 + "escape_list_separators",
-                                    help=h(prefix3 + "Do not escape list separators."),
-                                    action='store_false')
+        vgroup.add_argument(      prefix1 + "escape-list-separators", dest=prefix2 + "escape_list_separators",
+                                  help=h(prefix3 + "Escape all list separators instead of splitting on them (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
 
     @classmethod
     # Build the value parsing option structure.
@@ -188,12 +180,33 @@ class KgtkValueOptions:
                    additional_language_codes=d.get(prefix + "additional_language_codes", None),
                    minimum_valid_year=d.get(prefix + "minimum_valid_year", cls.MINIMUM_VALID_YEAR),
                    maximum_valid_year=d.get(prefix + "maximum_valid_year", cls.MAXIMUM_VALID_YEAR),
+                   minimum_valid_lat=d.get(prefix + "minimum_valid_lat", cls.MINIMUM_VALID_LAT),
+                   maximum_valid_lat=d.get(prefix + "maximum_valid_lat", cls.MAXIMUM_VALID_LAT),
+                   minimum_valid_lon=d.get(prefix + "minimum_valid_lon", cls.MINIMUM_VALID_LON),
+                   maximum_valid_lon=d.get(prefix + "maximum_valid_lon", cls.MAXIMUM_VALID_LON),
                    escape_list_separators=d.get(prefix + "escape_list_separators", False))
 
     @classmethod
     # Build the value parsing option structure.
     def from_args(cls, args: Namespace, who: str = "")->'KgtkValueOptions':
         return cls.from_dict(vars(args), who=who)
+
+    def show(self, who: str="", out: typing.TextIO=sys.stderr):
+        prefix: str = "--" if len(who) == 0 else "--" + who + "-"
+        print("%sallow-month-or-day-zero=%s" % (prefix, str(self.allow_month_or_day_zero)), file=out)
+        print("%srepair-month-or-day-zero=%s" % (prefix, str(self.repair_month_or_day_zero)), file=out)
+        print("%sallow-language-suffixes=%s" % (prefix, str(self.allow_language_suffixes)), file=out)
+        print("%sallow-lax-strings=%s" % (prefix, str(self.allow_lax_strings)), file=out)
+        print("%sallow-lax-lq-strings=%s" % (prefix, str(self.allow_lax_lq_strings)), file=out)
+        if self.additional_language_codes is not None:
+            print("%sadditional-language-codes=%s" % (prefix, " ".join(self.additional_language_codes)), file=out)
+        print("%sminimum-valid-year=%d" % (prefix, self.minimum_valid_year), file=out)
+        print("%smaximum-valid-year=%d" % (prefix, self.maximum_valid_year), file=out)
+        print("%sminimum-valid-lat=%f" % (prefix, self.minimum_valid_lat), file=out)
+        print("%smaximum-valid-lat=%f" % (prefix, self.maximum_valid_lat), file=out)
+        print("%sminimum-valid-lon=%f" % (prefix, self.minimum_valid_lon), file=out)
+        print("%smaximum-valid-lon=%f" % (prefix, self.maximum_valid_lon), file=out)
+        print("%sescape-list-separators=%s" % (prefix, str(self.escape_list_separators)), file=out)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
@@ -210,15 +223,8 @@ def main():
     # Build the value parsing option structure.
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-    print("allow_month_or_day_zero: %s" % str(value_options.allow_month_or_day_zero))
-    print("allow_lax_strings: %s" % str(value_options.allow_lax_strings))
-    print("allow_lax_lq_strings: %s" % str(value_options.allow_lax_lq_strings))
-    print("allow_language_suffixes: %s" % str(value_options.allow_language_suffixes))
-    if value_options.additional_language_codes is None:
-        print("additional_language_codes: None")
-    else:
-        print("additional_language_codes: [ %s ]" % ", ".join(value_options.additional_language_codes))
-    
+    value_options.show()
+
     # Test prefixed value option processing.
     left_value_options: KgtkValueOptions = KgtkValueOptions.from_args(args, who="left")
     print("left_allow_month_or_day_zero: %s" % str(left_value_options.allow_month_or_day_zero))

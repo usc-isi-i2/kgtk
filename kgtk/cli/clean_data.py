@@ -42,6 +42,7 @@ def run(input_file: typing.Optional[Path],
         output_file: typing.Optional[Path],
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
+        show_options: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
         **kwargs # Whatever KgtkReaderOptions and KgtkValueOptions want.
@@ -55,6 +56,14 @@ def run(input_file: typing.Optional[Path],
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+    # Show the final option structures for debugging and documentation.
+    if show_options:
+        print("input: %s" % (str(input_file) if input_file is not None else "-"), file=error_file)
+        print("output: %s" % (str(output_file) if output_file is not None else "-"), file=error_file)
+        reader_options.show(out=error_file)
+        value_options.show(out=error_file)
+        print("=======", file=error_file, flush=True)
 
     if verbose:
         if input_file is not None:
