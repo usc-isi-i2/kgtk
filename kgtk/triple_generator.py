@@ -375,10 +375,6 @@ class TripleGenerator:
         """
 
         edge_list = edge.strip("\n").split("\t")
-<<<<<<< HEAD
-=======
-        l = len(edge_list)
->>>>>>> dev
         if line_number == 1:
             # initialize the order_map
             node1_index = edge_list.index("node1")
