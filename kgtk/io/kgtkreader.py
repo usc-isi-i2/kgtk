@@ -1020,13 +1020,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                       help=h("Send errors to stdout instead of stderr"),
                                       action="store_true")
 
-        egroup.add_argument(      "--show-options", dest="show_options", help="Print the options selected (default=%(default)s).", action='store_true')
+        if expert:
+            egroup.add_argument(      "--show-options", dest="show_options", help="Print the options selected (default=%(default)s).", action='store_true')
 
         egroup.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages (default=%(default)s).", action='store_true')
 
-        egroup.add_argument(      "--very-verbose", dest="very_verbose",
-                                  help=h("Print additional progress messages (default=%(default)s)."),
-                                  action='store_true')
+        if expert:
+            egroup.add_argument(      "--very-verbose", dest="very_verbose",
+                                      help=h("Print additional progress messages (default=%(default)s)."),
+                                      action='store_true')
         
 def main():
     """
