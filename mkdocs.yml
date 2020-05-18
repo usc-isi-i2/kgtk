@@ -1,7 +1,20 @@
 site_name: KGTK documentation
 nav:
   - Home: index.md
+  - Getting started: install.md
   - KGTK file specification: specification.md
+  - 'KGTK commands':
+      - 'filter': 'filter.md'
+      - 'generate_wikidata_triples': 'wikidata.md'
+      - 'gtloader': 'loader.md'
+      - 'instances': 'instances.md'  
+      - 'merge_identical_nodes': 'merge.md'
+      - 'reachable_nodes': 'rnodes.md'
+      - 'remove_columns': 'remove_col.md'
+      - 'sort': 'sort.md'
+      - 'text_embeddings': 'embedding.md'
+      - 'validate': 'validate.md'
+      - 'zconcat': 'zconcat.md'
 theme:
   name: material
 
