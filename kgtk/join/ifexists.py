@@ -237,7 +237,7 @@ def main():
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
    # Show the final option structures for debugging and documentation.                                                                                             
-    if show_options:
+    if args.show_options:
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
         value_options.show(out=error_file)
