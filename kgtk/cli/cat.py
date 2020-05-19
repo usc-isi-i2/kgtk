@@ -17,8 +17,10 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Join two KGTK files',
-        'description': 'Join two KGTK edge files or two KGTK node files. Two passes may be needed, stdin may be forbidden.'
+        'help': 'Concatenate KGTK files',
+        'description': 'Concatenate two or more KGTK files, merging the columns appropriately. ' +
+        'All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). ' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert cat --help'
     }
 
 
@@ -77,6 +79,7 @@ def run(input_file_paths: typing.List[Path],
         print("input: %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file)
         print("--output-file=%s" % str(output_file_path), file=error_file)
         reader_options.show(out=error_file)
+        value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:

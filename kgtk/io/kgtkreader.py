@@ -655,10 +655,11 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # Immediately raise an exception.
             raise ValueError("In input data line %d, %s: %s" % (self.data_lines_read, msg, line))
         elif action == ValidationAction.EXIT:
-            print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
+            print("Data line %d:\n%s\n%s" % (self.data_lines_read, line, msg), file=self.error_file, flush=True)
             sys.exit(1)
             
-        print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
+        # print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
+        print("Data line %d:\n%s\n%s" % (self.data_lines_read, line, msg), file=self.error_file, flush=True)
         self.data_errors_reported += 1
         if self.options.error_limit > 0 and self.data_errors_reported >= self.options.error_limit:
             raise ValueError("Too many data errors, exiting.")
@@ -945,7 +946,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             return False
 
         return self.exclude_line(self.options.invalid_value_action,
-                                 "; ".join(problems),
+                                 "\n".join(problems),
                                  line)
 
     # May be overridden
@@ -1020,7 +1021,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                       help=h("Send errors to stdout instead of stderr"),
                                       action="store_true")
 
-        egroup.add_argument(      "--show-options", dest="show_options", help="Print the options selected (default=%(default)s).", action='store_true')
+        egroup.add_argument(      "--show-options", dest="show_options", help=h("Print the options selected (default=%(default)s)."), action='store_true')
 
         egroup.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages (default=%(default)s).", action='store_true')
 
