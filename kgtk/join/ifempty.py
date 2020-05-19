@@ -2,6 +2,10 @@
 Copy records from the first KGTK file to the output file, if
 one or more columns are (any/all) (not) empty.
 
+TODO:  add --count-only to suppress copying?
+
+TODO: add --distribution?
+
 """
 
 from argparse import ArgumentParser, Namespace
@@ -127,7 +131,7 @@ class IfEmpty(KgtkFormat):
 
 def main():
     """
-    Test the KGTK file joiner.
+    Test the KGTK ifempty processor.
     """
     parser: ArgumentParser = ArgumentParser()
 
