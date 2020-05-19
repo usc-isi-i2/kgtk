@@ -1,10 +1,6 @@
-"""
-Copy records from the first KGTK file to the output file, if
-one or more columns are (any/all) (not) empty.
-
-TODO:  add --count-only to suppress copying?
-
-TODO: add --distribution?
+"""Copy records from the first KGTK file to the output file, if one or more
+columns are (any/all) (not) empty.  If --only-count is True, report the count
+of qualifying records but do not write the output file.
 
 """
 
@@ -35,6 +31,8 @@ class IfEmpty(KgtkFormat):
 
     allare: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     notempty: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    only_count: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -101,16 +99,17 @@ class IfEmpty(KgtkFormat):
             filter_idx_list.append(kr.column_name_map[column_name])
             
 
-        if self.verbose:
-            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
-        ew: KgtkWriter = KgtkWriter.open(kr.column_names,
-                                         self.output_file_path,
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)        
+        if not self.only_count:
+            if self.verbose:
+                print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+            ew: KgtkWriter = KgtkWriter.open(kr.column_names,
+                                             self.output_file_path,
+                                             require_all_columns=False,
+                                             prohibit_extra_columns=True,
+                                             fill_missing_columns=True,
+                                             gzip_in_parallel=False,
+                                             verbose=self.verbose,
+                                             very_verbose=self.very_verbose)        
 
         if self.verbose:
             print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
@@ -121,13 +120,18 @@ class IfEmpty(KgtkFormat):
         for row in kr:
             input_line_count += 1
             if self.filter(row, filter_idx_list):
-                ew.write(row)
+                if not self.only_count:
+                    ew.write(row)
                 output_line_count += 1
 
-        if self.verbose:
-            print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
+
+        if self.only_count:
+            print("Read %d records, %d records passed the filter." % (input_line_count, output_line_count), file=self.error_file, flush=True)
+        else:
+            if self.verbose:
+                print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
         
-        ew.close()
+            ew.close()
 
 def main():
     """
@@ -145,6 +149,9 @@ def main():
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--not-empty", dest="notempty", help="False: test if empty, True: test if not empty (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--only-count", dest="only_count", help="Only count the records, do not copy them. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
 
@@ -171,6 +178,7 @@ def main():
         output_file_path=args.output_file_path,
         allare=args.allare,
         notempty=args.notempty,
+        only_count = args.only_count,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
