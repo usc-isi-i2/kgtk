@@ -270,9 +270,10 @@ class TripleGenerator:
 
         elif edge_type == GlobeCoordinate:
             latitude, longitude = node2[1:].split("/")
+            latitude = float(latitude)
+            longitude = float(longitude)
             object = GlobeCoordinate(
-                latitude, longitude, 0.0001, globe=StringValue("Earth")
-            )
+                latitude, longitude, 0.0001, globe=Item("Q2")) # earth
 
         elif edge_type == QuantityValue:
             # +70[+60,+80]Q743895
