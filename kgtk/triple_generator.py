@@ -222,7 +222,7 @@ class TripleGenerator:
         if edge_type == Item:
             object = WDItem(TripleGenerator.replace_illegal_string(node2))
         elif edge_type == WDProperty:
-            object = WDProperty(TripleGenerator.replace_illegal_string(node2))
+            object = WDProperty(TripleGenerator.replace_illegal_string(node2),self.prop_types[node2])
         elif edge_type == TimeValue:
             # https://www.wikidata.org/wiki/Help:Dates
             # ^2013-01-01T00:00:00Z/11
