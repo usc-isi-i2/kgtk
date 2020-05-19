@@ -1,6 +1,8 @@
 ## KGTK File Format
 
-**Authors:** Hans Chalupsky, Craig Roger, Pedro Szekely
+**Authors:** Hans Chalupsky, Craig Milo Rogers, Pedro Szekely
+
+**Contributors:** Daniel Garijo
 
 **Version:** 2.0
 
