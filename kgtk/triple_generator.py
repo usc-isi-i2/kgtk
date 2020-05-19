@@ -52,7 +52,8 @@ class TripleGenerator:
             "monolingualtext": MonolingualText,
             "string": StringValue,
             "external-identifier": ExternalIdentifier,
-            "url": StringValue
+            "url": StringValue,
+            "property":WDProperty,
         }
         self.prop_types = self.set_properties(prop_file)
         self.label_set, self.alias_set, self.description_set = self.set_sets(
@@ -220,6 +221,8 @@ class TripleGenerator:
         edge_type = self.prop_types[label]
         if edge_type == Item:
             object = WDItem(TripleGenerator.replace_illegal_string(node2))
+        elif edge_type == WDProperty:
+            object = WDProperty(TripleGenerator.replace_illegal_string(node2))
         elif edge_type == TimeValue:
             # https://www.wikidata.org/wiki/Help:Dates
             # ^2013-01-01T00:00:00Z/11
@@ -312,20 +315,19 @@ class TripleGenerator:
         else:
             # treat everything else as stringValue
             object = StringValue(node2)
+
+        if type(object) == WDItem or type(object) == WDProperty:
+            self.doc.kg.add_subject(object)
+
         if is_qualifier_edge:
             # edge: e8 p9 ^2013-01-01T00:00:00Z/11
             # create qualifier edge on previous STATEMENT and return the updated STATEMENT
-            if type(object) == WDItem:
-                self.doc.kg.add_subject(object)
             self.to_append_statement.add_qualifier(label, object)
             # TODO maybe can be positioned better for the edge cases.
             self.doc.kg.add_subject(self.to_append_statement)
-
         else:
             # edge: q1 p8 q2 e8
             # create brand new property edge and replace STATEMENT
-            if type(object) == WDItem:
-                self.doc.kg.add_subject(object)
             if self.truthy:
                 self.to_append_statement = entity.add_truthy_statement(
                     label, object, statement_id=e_id) if self.use_id else entity.add_truthy_statement(label, object)
