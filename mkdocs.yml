@@ -4,13 +4,16 @@ nav:
   - Getting started: install.md
   - KGTK file specification: specification.md
   - 'KGTK commands':
+      - 'connected_components': 'connected_components.md'
       - 'export_gt': 'export_gt.md'
       - 'filter': 'filter.md'
-      - 'generate_wikidata_triples': 'wikidata.md'
+      - 'generate_wikidata_triples': 'generate_wikidata_triples.md'
       - 'graph_statistics': 'stats.md'
       - 'import_conceptnet': 'import_conceptnet.md'
+      - 'import_ntriples': 'import_ntriples.md'
+      - 'import_wikidata': 'import_wikidata.md'
       - 'instances': 'instances.md'  
-      - 'reachable_nodes': 'rnodes.md'
+      - 'reachable_nodes': 'reachable_nodes.md'
       - 'remove_columns': 'remove_col.md'
       - 'sort': 'sort.md'
       - 'text_embeddings': 'embedding.md'
