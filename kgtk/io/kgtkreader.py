@@ -231,7 +231,7 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "invalid-value-action",
                             dest=prefix2 + "invalid_value_action",
                             help=h(prefix3 + "The action to take when a data cell value is invalid (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.REPORT))
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
 
         lgroup.add_argument(prefix1 + "long-line-action",
                             dest=prefix2 + "long_line_action",
@@ -925,7 +925,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             except StopIteration:
                 return
 
-    def _ignore_invalid_values(self, values: typing.List[str], line: str)->bool:
+    def _ignore_invalid_values(self, row: typing.List[str], line: str)->bool:
         """Give a row of values, validate each value.  If we find one or more
         validation problems, we might want to emit error messages and we might
         want to ignore the entire row.
@@ -935,12 +935,17 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         """
         problems: typing.List[str] = [ ] # Build a list of problems.
         idx: int
-        value: str
-        for idx, value in enumerate(values):
-            if len(value) > 0: # Optimize the common case of empty columns.
-                kv: KgtkValue = KgtkValue(value, options=self.value_options)
+        item: str
+        for idx, item in enumerate(row):
+            if len(item) > 0: # Optimize the common case of empty columns.
+                kv: KgtkValue = KgtkValue(item, options=self.value_options)
                 if not kv.is_valid():
-                    problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], value, kv.describe()))
+                    problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], item, kv.describe()))
+                if kv.repaired:
+                    # If this value was repaired, update the item in the row.
+                    #
+                    # Warning: We expect this change to be seen by the caller.
+                    row[idx] = kv.value
 
         if len(problems) == 0:
             return False
