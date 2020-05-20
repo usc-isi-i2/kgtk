@@ -6,9 +6,7 @@ of qualifying records but do not write the output file.
 
 from argparse import ArgumentParser, Namespace
 import attr
-import gzip
 from pathlib import Path
-from multiprocessing import Queue
 import sys
 import typing
 
@@ -167,6 +165,7 @@ def main():
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
+        # TODO: show ifempty-specific options.
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
