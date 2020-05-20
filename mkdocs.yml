@@ -8,6 +8,7 @@ nav:
       - 'filter': 'filter.md'
       - 'generate_wikidata_triples': 'wikidata.md'
       - 'graph_statistics': 'stats.md'
+      - 'import_conceptnet': 'import_conceptnet.md'
       - 'instances': 'instances.md'  
       - 'reachable_nodes': 'rnodes.md'
       - 'remove_columns': 'remove_col.md'
