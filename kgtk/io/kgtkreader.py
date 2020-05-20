@@ -79,15 +79,15 @@ class KgtkReaderOptions():
     blank_required_field_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
     
     # Ignore records with too many or too few fields?
-    short_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
-    long_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+    short_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
+    long_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
 
     # How should header errors be processed?
     header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXIT)
     unsafe_column_name_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
 
     # Validate data cell values?
-    invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
+    invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
 
     # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -231,17 +231,17 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "invalid-value-action",
                             dest=prefix2 + "invalid_value_action",
                             help=h(prefix3 + "The action to take when a data cell value is invalid (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "long-line-action",
                             dest=prefix2 + "long_line_action",
                             help=h(prefix3 + "The action to take when a long line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "short-line-action",
                             dest=prefix2 + "short_line_action",
                             help=h(prefix3 + "The action to take when a short line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "truncate-long-lines",
                             dest=prefix2 + "truncate_long_lines",
