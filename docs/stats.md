@@ -2,7 +2,7 @@ This command loads a TSV edges file into Graph-tool. Then, it can compute centra
 
 ## Usage
 ```
-kgtk compute_stats [-h] [--directed] [--degrees] [--pagerank] [--hits]
+kgtk graph_statistics [-h] [--directed] [--degrees] [--pagerank] [--hits]
                       [--log LOG_FILE]
                       filename
 ```
@@ -27,5 +27,5 @@ optional arguments:
 Import a TSV file into Graph-tool, and compute degrees, pagerank and hits. We store the statistics to log.txt. 
 
 ```
-kgtk compute_stats --directed --degrees --pagerank --hits --log log.txt ./data/conceptnet_first10.tsv
+kgtk graph_statistics --directed --degrees --pagerank --hits --log log.txt ./data/conceptnet_first10.tsv
 ```
