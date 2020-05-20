@@ -34,8 +34,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write.  May be omitted or '-' for stdout.", type=Path)
     
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=True)
-    KgtkValueOptions.add_arguments(parser, expert=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
 def run(input_file: typing.Optional[Path],
