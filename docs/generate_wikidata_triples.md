@@ -1,4 +1,4 @@
-The `generate_wikidata_triples` command generate triple files from a kgtk files. The generated triple files can be loaded into Blazegraph directly.
+The `generate_wikidata_triples` command generates triple files from a kgtk files. The generated triple files can be loaded into Blazegraph directly.
 
 The triple generator take a tab-separated kgtk file from standard input. The kgtk file is required to have at least the following 4 fields: `node1`, `property`, `node2` and `id`. The `node1` field is the subject; `property` is the predicate and `node2` is the object. 
 
