@@ -28,8 +28,6 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.utils.enumnameaction import EnumNameAction
-from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
