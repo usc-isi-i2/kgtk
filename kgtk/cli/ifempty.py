@@ -33,15 +33,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
 
-    # This helper function makes it easy to suppress options from
-    # The help message.  The options are still there, and initialize
-    # what they need to initialize.
-    def h(msg: str)->str:
-        if _expert:
-            return msg
-        else:
-            return SUPPRESS
-
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
 
     parser.add_argument(      "--columns", dest="filter_column_names",
