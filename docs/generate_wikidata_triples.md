@@ -1,6 +1,9 @@
-## The generate_wikidata_triples command converts a kgtk file to a ttl file that can be loaded into a wikidata Blazegraph.
+The `generate_wikidata_triples` command generate triple files from a kgtk files. The generated triple files can be loaded into Blazegraph directly.
 
-The triple generator take a tab-separated kgtk file from standard input.
+The triple generator take a tab-separated kgtk file from standard input. The kgtk file is required to have at least the following 4 fields: `node1`, `property`, `node2` and `id`. The `node1` field is the subject; `property` is the predicate and `node2` is the object. 
+
+The following tsv file is a minimal sample input file.
+
 ```
 node1	property	node2	id
 Q2140726727_mag_author	P6366	2140726727	id1
@@ -8,7 +11,7 @@ Q2140726727_mag_author	label	Zunyou Wu@en	id2
 Q2140726727_mag_author	P1416	Q184490438_mag_affiliation	id3
 Q184490438_mag_affiliation	label	Chinese Center For Disease Control And Prevention@en	id4
 ```
-to an rdf file like this.
+The generated triple file (without prefix) is below. The built-in prefix can be found [here](https://github.com/usc-isi-i2/etk/blob/master/etk/wikidata/__init__.py).
 
 ```
 rdfs:label "Zunyou Wu"@en ;
@@ -20,6 +23,27 @@ wdt:P1416 wd:Q184490438_mag_affiliation ;
 wdt:P6366 "2140726727"^^xsd:string .
 
 ```
+
+`generate_wikidata_triples` currently supports qualifiers. Reuse the `id` of a record as next record's `node1`, then this next record will be treated as a qualifier for previous record. For example, the following sample input is legitmate.
+
+```
+node1 property  node2 id
+Q1  P1  Q2	id1
+id1 P2  Q3  id3
+id1 P3  Q4  id4
+Q2  P5  "string"@en id5
+```
+
+However, the following sample input is not legal and will be converted to incorrect triples..
+
+```
+node1 property  node2 id
+Q1  P1  Q2	id1
+id1 P2  Q3  id2
+Q2  P5  "string"@en id3
+id1 P3  Q4  id4
+```
+`generate_wikidata_triples` is **memoryless**, the qualifers has to follow the statement **immediately**. In the example above, the `id1` (in column `node1`) in 5th line will be treated as a new subject rather than an id of previous statement. Users should sort the kgtk file in a way such that qualifiers follow corresponding statement immediately. This can be done by creating meaningful ids.
 
 
 ## Required Option
@@ -58,7 +82,14 @@ P500	property_type	item
 P501	property_type	item
 P502	property_type	string
 ```
-The header line is necessary. If property *P493* is used in the input kgtk file, then the edge `P493	property_type	external-identifier` must exists in the `example_prop.tsv` to tell triple generator that the object of `P493` is an external-identifier. If `p495` is used in the input kgtk file, then the object of `P495` will be treated as an entity.
+
+The header line is necessary. If property *P493* is used in the input kgtk file, then the edge `P493	property_type	external-identifier` must exists in the `example_prop.tsv` to tell triple generator that the object of `P493` is an `external-identifier`. On another hand If `p495` is used in the input kgtk file, then the object of `P495` will be treated as an entity.
+
+User can also define properties in the input kgtk file with the following syntax. The `data_type` syntax indicates a new property is defined. Note that any usage of `P20200101` must appear after the definition in the kgtk file or `P20200101` will be incorrectly treated as `item`.
+
+```
+P20200101 data_type string
+```
 
 ### label, aliases and descriptions
 
@@ -103,7 +134,7 @@ kgtk generate_wikidata_triples -pf example_prop.tsv < input_file.tsv > output_fi
 
 ```
 
-### Run in parallel
+### Parallel Usage
 
 You can split the input files into several smaller pieces and run the command simultaneuously. 
 
@@ -112,3 +143,5 @@ Let's say you are in a directory which contains the `tsv` files. The following c
 ```bash
 ls *tsv | parallel -j+0 --eta 'kgtk generate_wikidata_triples -pf example_props.tsv -n 1000 -ig no --debug -gt yes < {} > {.}.ttl'
 ```
+
+Attention: split a large tsv file into small tsv files directly may make qualifier edges statementless. The header `node1 property  node2 id` needs to be inserted at the beginning of splited files as well.
