@@ -4,11 +4,11 @@ nav:
   - Getting started: install.md
   - KGTK file specification: specification.md
   - 'KGTK commands':
+      - 'export_gt': 'export_gt.md'
       - 'filter': 'filter.md'
       - 'generate_wikidata_triples': 'wikidata.md'
-      - 'compute_stats': 'stats.md'
+      - 'graph_statistics': 'stats.md'
       - 'instances': 'instances.md'  
-      - 'merge_identical_nodes': 'merge.md'
       - 'reachable_nodes': 'rnodes.md'
       - 'remove_columns': 'remove_col.md'
       - 'sort': 'sort.md'
