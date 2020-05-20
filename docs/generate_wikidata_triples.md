@@ -2,7 +2,17 @@ The `generate_wikidata_triples` command generates triple files from a kgtk files
 
 The triple generator take a tab-separated kgtk file from standard input. The kgtk file is required to have at least the following 4 fields: `node1`, `property`, `node2` and `id`. The `node1` field is the subject; `property` is the predicate and `node2` is the object. 
 
-The following tsv file is a minimal sample input file.
+## Usage
+```{shell}
+cat input.tsv > kgtk generate_wikidata_triples OPTIONS > output.ttl
+```
+or 
+```
+kgtk generate_wikidata_triples OPTIONS < input.tsv > output.ttl
+```
+
+
+The following tsv file is a minimal sample `input.tsv` file.
 
 ```
 node1	property	node2	id
@@ -24,7 +34,7 @@ wdt:P6366 "2140726727"^^xsd:string .
 
 ```
 
-`generate_wikidata_triples` currently supports qualifiers. Reuse the `id` of a record as next record's `node1`, then this next record will be treated as a qualifier for previous record. For example, the following sample input is legitmate.
+`generate_wikidata_triples` currently supports qualifiers. Reuse the `id` of an edge as next edge's `node1`, then this next edge will be treated as a qualifier for previous edge. For example, the following sample input is legitmate.
 
 ```
 node1 property  node2 id
@@ -45,12 +55,13 @@ id1 P3  Q4  id4
 ```
 `generate_wikidata_triples` is **memoryless**, the qualifers has to follow the statement **immediately**. In the example above, the `id1` (in column `node1`) in 5th line will be treated as a new subject rather than an id of previous statement. Users should sort the kgtk file in a way such that qualifiers follow corresponding statement immediately. This can be done by creating meaningful ids.
 
+## Options
 
-## Required Option
+### Required Option
 
-- `--pf --property-types {path}`: path to the file which contains the property datatype mapping in kgtk format.
+- `--pf --property-types {path}`: path to the **property file** which contains the property datatype mapping in kgtk format.
 
-## Optional Options
+### Optional Options
 
 - `-lp --label-property {str}`: property identifiers which will create labels, separated by comma','. Default to **label**.
 - `-ap --alias-property {str}`: alias identifiers which will create labels, separated by comma','. Default to **aliases**.
@@ -62,11 +73,11 @@ id1 P3  Q4  id4
 - `-sid --use-id {bool}`: if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement. Default to **False**
 
 
-## Shared Options
+### Shared Options
 
 - `--debug` run the command in debug mode.
 
-### property-types
+## Explanation of Options
 
 **--property-types** is the most important input file. It is also a kgtk file. Here is an example file `example_prop.tsv`
 
@@ -85,23 +96,18 @@ P502	property_type	string
 
 The header line is necessary. If property *P493* is used in the input kgtk file, then the edge `P493	property_type	external-identifier` must exists in the `example_prop.tsv` to tell triple generator that the object of `P493` is an `external-identifier`. On another hand If `p495` is used in the input kgtk file, then the object of `P495` will be treated as an entity.
 
-User can also define properties in the input kgtk file with the following syntax. The `data_type` syntax indicates a new property is defined. Note that any usage of `P20200101` must appear after the definition in the kgtk file or `P20200101` will be incorrectly treated as `item`.
+Currently the following datatypes are supported. The complete list of possible data types can be found [here](https://www.wikidata.org/wiki/Help:Data_type).
 
-```
-P20200101 data_type string
-```
+1. Item 
+2. Quantity
+3. Globe-coordinate
+4. Time 
+5. Monolingualtext 
+6. Url 
+7. External identifier 
+8. String
 
-### label, aliases and descriptions
-
-**-lp**, **-ap**, **-dp** defines how you want the triple generator to identify the label, description and aliases. 
-
-For example, if you have `-ap aliases,alias`, then when the following edge is met, both `Alice` and `Alicia` will be treated as aliases to the node `q2020`.
-
-```
-node1	property	node2	id
-q2020	aliases	Alice@en	id1
-q2020	alias	Alicia@sp	id2
-```
+In ETK, the possible property types are defined [here](https://github.com/usc-isi-i2/etk/blob/9c79a597fa0917b4e4bf78b4acbd863f5a0bb917/etk/wikidata/value.py#L190).
 
 ### truthy
 
@@ -123,8 +129,50 @@ Use compressed file as input.
 
 If `--use-id` is set to true, the `id` column of the kgtk file will be used as the statement id if the corresponding edge is a statement edge. It is the user's responsiblity to make sure there is no duplicated statement id across the whole knowledge graph then.
 
-## Usage
 
+## How Triple Generator handles Different Types of Edges
+
+### label, aliases and descriptions
+
+**-lp**, **-ap**, **-dp** defines properties that triple generator should identify as label, description or aliases creation. There can be multiple choices separated by `,`.
+
+For example, if you have `-ap aliases,alias`, then when the following edge is met, both `Alice` and `Alicia` will be treated as aliases to the node `q2020`.
+
+```
+node1	property	node2	id
+q2020	aliases	Alice@en	id1
+q2020	alias	Alicia@sp	id2
+```
+
+Another example for `label`:
+
+```
+Q123 label ‘Hello’@en
+```
+
+The triple will be:
+
+```
+wd:Q123 rdfs:label "Hello"@en . 
+wd:Q123 skos:prefLabel "Hello"@en . 
+wd:Q123 schema:name "Hello"@en .
+```
+
+`label` should be unique.
+
+### Property Declaration in Input kgtk File
+
+User can also define properties in the input kgtk file with the following syntax. The `data_type` syntax indicates a new property is defined. Note that any usage of `P20200101` must appear after the definition in the kgtk file or `P20200101` will be incorrectly treated as `item`.
+
+```
+P20200101 data_type string
+```
+
+### Regular Edges
+
+Regular edges will be generated according to the data type of the property defined in the property file.
+
+## Examples
 
 ### Standard Usage
 
@@ -144,4 +192,4 @@ Let's say you are in a directory which contains the `tsv` files. The following c
 ls *tsv | parallel -j+0 --eta 'kgtk generate_wikidata_triples -pf example_props.tsv -n 1000 -ig no --debug -gt yes < {} > {.}.ttl'
 ```
 
-Attention: split a large tsv file into small tsv files directly may make qualifier edges statementless. The header `node1 property  node2 id` needs to be inserted at the beginning of splited files as well.
+Splitting a large tsv file into small tsv files directly may make qualifier edges statementless and cause serious mistake. **Do** make sure the splited files start with an statement edge rather than qualifier edge. The header `node1 property  node2 id` needs to be inserted back at the beginning of splited files as well.
