@@ -186,13 +186,13 @@ kgtk clean_data file1.tsv
 ```
 
 Standard output will get the following data:
-```bash
+```
 node1   label   node2
 john    woke    ^2020-05-02T00:00
 ```
 
 The following complaint will be issued on standard error:
-```bash
+```
 Data line 1:
 john    woke    ^2020-05-00T00:00
 col 2 (node2) value '^2020-05-00T00:00'is an Invalid Date and Times
@@ -206,6 +206,10 @@ changing day "00" to day "01:
 
 ```bash
 kgtk clean_data file1.tsv --repair-month-or-day-zero
+```
+
+Standard output will get the following data, and no errors will be issued:
+```
 node1   label   node2
 john    woke    ^2020-05-01T00:00
 john    woke    ^2020-05-02T00:00
