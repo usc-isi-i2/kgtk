@@ -16,7 +16,7 @@ kgtk reachable_nodes filename OPTIONS
 
 `--rootfilecolumn`: column of the root file that contains the root nodes. Default: 0.
 
-`--norootheader' Option to specify that file containing root nodes does not contain a header.
+`--norootheader` Option to specify that file containing root nodes does not contain a header.
 
 `-o {string}`: Path to the output edge file.
 
