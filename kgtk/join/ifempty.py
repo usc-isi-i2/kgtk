@@ -16,8 +16,6 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.utils.enumnameaction import EnumNameAction
-from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
@@ -29,7 +27,7 @@ class IfEmpty(KgtkFormat):
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
-    allare: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    all_are: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     notempty: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     only_count: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -47,21 +45,21 @@ class IfEmpty(KgtkFormat):
                row: typing.List[str],
                filter_idx_list: typing.List[int])->bool:
         idx: int
-        if self.notempty == False and self.allare == False:
+        if self.notempty == False and self.all_are == False:
             # if any are empty.
             for idx in filter_idx_list:
                 if len(row[idx]) == 0:
                     return True
             return False
 
-        elif self.notempty == False and self.allare == True:
+        elif self.notempty == False and self.all_are == True:
             # if all are empty.
             for idx in filter_idx_list:
                 if len(row[idx]) != 0:
                     return False
             return True
             
-        elif self.notempty == True and self.allare == False:
+        elif self.notempty == True and self.all_are == False:
             # If any are not empty.
             for idx in filter_idx_list:
                 if len(row[idx]) != 0:
@@ -143,15 +141,15 @@ def main():
 
     parser.add_argument(      "--columns", dest="filter_column_names", help="The columns to filter on (default=None).", nargs='+', required=True)
 
+    parser.add_argument(      "--count", dest="only_count", help="Only count the records, do not copy them. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
-    parser.add_argument(      "--all-are", dest="allare", help="False: Test if any are, True: test if all are (default=%(default)s).",
+    parser.add_argument(      "--all", dest="all_are", help="False: Test if any are, True: test if all are (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--not-empty", dest="notempty", help="False: test if empty, True: test if not empty (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False)
-
-    parser.add_argument(      "--only-count", dest="only_count", help="Only count the records, do not copy them. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
 
@@ -176,7 +174,7 @@ def main():
         input_file_path=args.input_file_path,
         filter_column_names=args.filter_column_names,
         output_file_path=args.output_file_path,
-        allare=args.allare,
+        all_are=args.all_are,
         notempty=args.notempty,
         only_count = args.only_count,
         reader_options=reader_options,
