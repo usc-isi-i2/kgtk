@@ -9,6 +9,7 @@ This command will find all nodes reachable from given root nodes in a KGTK edge 
 kgtk reachable_nodes filename OPTIONS
 ```
 ***OPTIONS***:
+
 `--root {r1, r2, ...}`: Root nodes to be considered specified as a command line argument.
 
 `--rootfile {string}`: edge file that contains the root nodes in some column.
