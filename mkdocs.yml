@@ -6,7 +6,7 @@ nav:
   - 'KGTK commands':
       - 'filter': 'filter.md'
       - 'generate_wikidata_triples': 'wikidata.md'
-      - 'gtloader': 'loader.md'
+      - 'compute_stats': 'stats.md'
       - 'instances': 'instances.md'  
       - 'merge_identical_nodes': 'merge.md'
       - 'reachable_nodes': 'rnodes.md'
