@@ -43,7 +43,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
-    KgtkValueOptions.add_arguments(parser, expert=True)
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
 def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
