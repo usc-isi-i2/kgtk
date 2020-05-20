@@ -14,12 +14,11 @@ optional arguments:
 ```
   -h, --help      show this help message and exit
   --english_only  Only english conceptnet?
-  --sort          Should we sort the file on s-p-o?
 ```
 
 ## Examples
 
-Import the English part of ConceptNet into KGTK, without sorting it. 
+Import the English part of ConceptNet into KGTK. 
 
 ```
 kgtk import_conceptnet --english_only examples/conceptnet-assertions-5.7.0.csv
