@@ -34,7 +34,7 @@ kgtk reachable_nodes filename OPTIONS
 
 ### Examples
 
-Find all the classes that rootnodes are a subclass of (transitive closure). Root nodes are obtained from node2 of P31.tsv (instance of) file. Command is run on P279.tsv (subclass of) file. Generates P279*.tsv. Note that example file P279.tsv contains an initial 'id' column so we need to specify the columns for subject(node1), predicate(label), and object(node2)
+Find all the classes that given root nodes are a subclass of (transitive closure). Root nodes are obtained from node2 of P31.tsv (instance of) file. Command is run on P279.tsv (subclass of) file. Generates P279*.tsv. Note that example file P279.tsv contains an initial 'id' column so we need to specify the columns for subject(node1), predicate(label), and object(node2)
 
 ```
 kgtk reachable_nodes P279.tsv --subj 1 --pred 2 --obj 3 --rootfile P31.tsv --rootfilecolumn 3 -o P279*.tsv
