@@ -40,9 +40,9 @@ dataTypeMappings = {
 }
 results = get_results(endpoint_url, query)
 
-with open("../data/wikidataProps.tsv", "w") as fp:
+with open("wikidata_props.tsv", "w") as fp:
     for prop in results["results"]["bindings"]:
-        pID = prop["property"]["value"].split("/")[-1]
-        pType = prop["propertyType"]["value"].split("#")[-1]
-        pType = dataTypeMappings.get(pType,"string")
-        fp.write(pID + "\tproperty_type\t" + pType+"\n")
+        p_id = prop["property"]["value"].split("/")[-1]
+        p_type = prop["propertyType"]["value"].split("#")[-1]
+        p_type = dataTypeMappings.get(p_type,"string")
+        fp.write(p_id + "\tproperty_type\t" + p_type+"\n")
