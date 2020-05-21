@@ -15,6 +15,9 @@ usage: kgtk ifempty [-h] [--columns FILTER_COLUMN_NAMES [FILTER_COLUMN_NAMES ...
 
 Filter a KGTK file based on whether one or more fields are empty. When multiple fields are specified, either any field or all fields must be empty.
 
+Additional options are shown in expert help.
+kgtk --expert ifempty --help
+
 positional arguments:
   input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin.
 

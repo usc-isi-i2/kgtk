@@ -20,7 +20,8 @@ def parser():
     return {
         'help': 'Filter a KGTK file for nonempty fields',
         'description': 'Filter a KGTK file based on whether one or more fields are not empty. ' +
-        'When multiple fields are specified, either any field or all fields must be not empty.'
+        'When multiple fields are specified, either any field or all fields must be not empty.' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert ifnotempty --help'
     }
 
 
