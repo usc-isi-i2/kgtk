@@ -1,7 +1,5 @@
 """
-Generate wikidata triples from two edge files:
-1. A statement and qualifier edge file that contains an edge id, node1, label, and node2
-2. A kgtk file that contains the mapping information from property identifier to its datatype
+Generate wikidata triples from two a kgtk edge file
 
 """
 
@@ -137,7 +135,8 @@ def run(
 ):
     # import modules locally
     import gzip
-    from kgtk.triple_generator import TripleGenerator
+    # from kgtk.triple_generator import TripleGenerator
+    from kgtk.generator import TripleGenerator
     import sys
     generator = TripleGenerator(
         prop_file=prop_file,
@@ -147,7 +146,8 @@ def run(
         n=n,
         ignore=ignore,
         truthy=truthy,
-        use_id=use_id
+        use_id=use_id,
+        dest_fp=sys.stdout
     )
     # process stdin
     if use_gz:

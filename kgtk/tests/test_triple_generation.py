@@ -1,5 +1,6 @@
 import unittest
-from kgtk.triple_generator import TripleGenerator
+# from kgtk.triple_generator import TripleGenerator
+from kgtk.generator import TripleGenerator
 from pathlib import Path
 
 
@@ -9,16 +10,18 @@ class TestTripleGeneration(unittest.TestCase):
         property_tsv_file = 'data/P10.tsv'
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/P10_truthy_tmp.ttl', 'w')
-        generator = TripleGenerator(wikidata_property_file, label_set='label', alias_set='aliases',
+        generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', ignore=True, n=100, truthy=True, use_id=True,
                                     dest_fp=o)
-        for line_num, edge in enumerate(open(property_tsv_file)):
+        fp = open(property_tsv_file)
+        for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
                 continue
             else:
                 generator.entry_point(line_num + 1, edge)
         generator.finalize()
         o.close()
+        fp.close()
         f1 = open('data/P10_truthy.ttl')
         f2 = open('data/P10_truthy_tmp.ttl')
         self.assertEqual(f1.readlines(), f2.readlines())
@@ -31,15 +34,17 @@ class TestTripleGeneration(unittest.TestCase):
         property_tsv_file = 'data/P10.tsv'
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/P10_not_truthy_tmp.ttl', 'w')
-        generator = TripleGenerator(wikidata_property_file, label_set='label', alias_set='aliases',
+        generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', ignore=True, n=100, truthy=False, use_id=True,
                                     dest_fp=o)
-        for line_num, edge in enumerate(open(property_tsv_file)):
+        fp = open(property_tsv_file)
+        for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
                 continue
             else:
                 generator.entry_point(line_num + 1, edge)
         generator.finalize()
+        fp.close()
         o.close()
         f1 = open('data/P10_not_truthy.ttl')
         f2 = open('data/P10_not_truthy_tmp.ttl')
@@ -53,10 +58,11 @@ class TestTripleGeneration(unittest.TestCase):
         qnode_tsv_file = 'data/Q57160439.tsv'
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/Q57160439_truthy_tmp.ttl', 'w')
-        generator = TripleGenerator(wikidata_property_file, label_set='label', alias_set='aliases',
+        generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', ignore=True, n=100, truthy=True, use_id=True,
                                     dest_fp=o)
-        for line_num, edge in enumerate(open(qnode_tsv_file)):
+        fp = open(qnode_tsv_file)
+        for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
                 continue
             else:
@@ -64,7 +70,7 @@ class TestTripleGeneration(unittest.TestCase):
         generator.finalize()
 
         o.close()
-
+        fp.close()
         f1 = open('data/Q57160439_truthy.ttl')
         f2 = open('data/Q57160439_truthy_tmp.ttl')
         self.assertEqual(f1.readlines(), f2.readlines())
@@ -77,16 +83,17 @@ class TestTripleGeneration(unittest.TestCase):
         qnode_tsv_file = 'data/Q57160439.tsv'
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/Q57160439_not_truthy_tmp.ttl', 'w')
-        generator = TripleGenerator(wikidata_property_file, label_set='label', alias_set='aliases',
+        generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', ignore=True, n=100, truthy=False, use_id=True,
                                     dest_fp=o)
-        for line_num, edge in enumerate(open(qnode_tsv_file)):
+        fp = open(qnode_tsv_file)
+        for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
                 continue
             else:
                 generator.entry_point(line_num + 1, edge)
         generator.finalize()
-
+        fp.close()
         o.close()
         f1 = open('data/Q57160439_not_truthy.ttl')
         f2 = open('data/Q57160439_not_truthy_tmp.ttl')
@@ -100,10 +107,11 @@ class TestTripleGeneration(unittest.TestCase):
         small_values_file = 'data/small_values.tsv'
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/small_values_tmp.ttl', 'w')
-        generator = TripleGenerator(wikidata_property_file, label_set='label', alias_set='aliases',
+        generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', ignore=True, n=100, truthy=True, use_id=True,
                                     dest_fp=o)
-        for line_num, edge in enumerate(open(small_values_file)):
+        fp = open(small_values_file)
+        for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
                 continue
             else:
@@ -111,7 +119,7 @@ class TestTripleGeneration(unittest.TestCase):
         generator.finalize()
 
         o.close()
-
+        fp.close()
         f1 = open('data/small_values.ttl')
         f2 = open('data/small_values_tmp.ttl')
         self.assertEqual(f1.readlines(), f2.readlines())

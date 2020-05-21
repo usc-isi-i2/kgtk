@@ -7,7 +7,9 @@ from etk.etk_module import ETKModule
 from etk.etk import ETK
 from etk.knowledge_graph import KGSchema
 from etk.wikidata import wiki_namespaces
+from etk.wikidata.statement import Rank
 import rfc3986
+import json
 from etk.wikidata.value import (
     Precision,
     Item,
@@ -24,63 +26,121 @@ from etk.knowledge_graph.node import LiteralType
 BAD_CHARS = [":", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
 
+class Generator:
+    def __init__(self,**kwargs):
+        label_set = kwargs.pop("label_set")
+        description_set = kwargs.pop("description_set")
+        alias_set = kwargs.pop("alias_set")
+        n = int(kwargs.pop("n"))
+        # set sets
+        self.set_sets(label_set,description_set,alias_set)
+        # column name order_map
+        self.order_map = {}
+        self.n = n
+    def serialize(self):
+        raise NotImplemented
+    def finalize(self):
+        self.serialize()
+    def set_sets(self,label_set:str,description_set:str,alias_set:str):
+        self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(alias_set.split(",")), set(description_set.split(","))
+    
+    @staticmethod
+    def process_text_string(string: str) -> [str, str]:
+        ''' 
+        Language detection is removed from triple generation. The user is responsible for detect the language
+        '''
+        if len(string) == 0:
+            return ["", "en"]
+        if "@" in string:
+            res = string.split("@")
+            text_string = "@".join(res[:-1]).replace('"', "").replace("'", "")
+            lang = res[-1].replace('"', '').replace("'", "")
+            if len(lang) > 2:
+                lang = "en"
+        else:
+            text_string = string.replace('"', "").replace("'", "")
+            lang = "en"
+        return [text_string, lang]
+    
+    @staticmethod
+    def is_invalid_decimal_string(num_string)->bool:
+        '''
+        if a decimal string too small, return True TODO
+        '''
+        if num_string == None:
+            return False
+        else:
+            if abs(float(num_string)) < 0.0001 and float(num_string) != 0:
+                return True
+            return False
 
-class TripleGenerator:
-    """
-    A class to maintain the status of the generator
-    """
+    @staticmethod
+    def is_valid_uri_with_scheme_and_host(uri: str)->bool:
+        '''
+        https://github.com/python-hyper/rfc3986/issues/30#issuecomment-461661883
+        '''
+        try:
+            uri = rfc3986.URIReference.from_string(uri)
+            rfc3986.validators.Validator().require_presence_of(
+                "scheme", "host").check_validity_of("scheme", "host").validate(uri)
+            return True
+        except:
+            return False
 
-    def __init__(
-            self,
-            prop_file: str,
-            label_set: str,
-            alias_set: str,
-            description_set: str,
-            ignore: bool,
-            n: int,
-            dest_fp: TextIO = sys.stdout,
-            truthy: bool = False,
-            use_id: bool = False,
-    ):
-        from etk.wikidata.statement import Rank
+    @staticmethod
+    def clean_number_string(num:str)->str:
+        from numpy import format_float_positional
+        if num == None:
+            return None
+        else:
+            return format_float_positional(float(num), trim="-")
+    
+    @staticmethod
+    def replace_illegal_string(s: str) -> str:
+        '''
+        this function serves as the last gate of keeping illegal characters outside of entity creation.
+        '''
+        for char in BAD_CHARS:
+            s = s.replace(char, "_")
+        return s
+
+class TripleGenerator(Generator):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        prop_file = kwargs.pop("prop_file")
+        ignore = kwargs.pop("ignore")
+        dest_fp = kwargs.pop("dest_fp")
+        truthy = kwargs.pop("truthy")
+        use_id = kwargs.pop("use_id")
         self.ignore = ignore
-        self.prop_types = self.set_properties(prop_file)
-        self.label_set, self.alias_set, self.description_set = self.set_sets(
-            label_set, alias_set, description_set
-        )
+        self.datatype_mapping = {
+            "item": Item,
+            "time": TimeValue,
+            "globe-coordinate": GlobeCoordinate,
+            "quantity": QuantityValue,
+            "monolingualtext": MonolingualText,
+            "string": StringValue,
+            "external-identifier": ExternalIdentifier,
+            "url": StringValue,
+            "property":WDProperty,
+        }
+        self.set_properties(prop_file)
         self.fp = dest_fp
-        self.n = int(n)
         self.read_num_of_lines = 0
-        # ignore-logging, if not ignore, log them and move on.
         if not self.ignore:
             self.ignore_file = open("ignored.log", "w")
-        # corrupted statement id
         self.corrupted_statement_id = None
-        # truthy
         self.truthy = truthy
         self.reset_etk_doc()
         self.serialize_prefix()
         self.yyyy_mm_dd_pattern = re.compile(
             "[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
         self.yyyy_pattern = re.compile("[12]\d{3}")
-        # self.quantity_pattern = re.compile("([\+|\-]?[0-9]+\.?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
         self.quantity_pattern = re.compile(
             "([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
-        # order map, know the column index of ["node1","property","node2",id]
-        self.order_map = {}
         self.use_id = use_id
-
-    def _node_2_entity(self, node: str):
-        '''
-        A node can be Qxxx or Pxxx, return the proper entity.
-        '''
-        if node in self.prop_types:
-            entity = WDProperty(node, self.prop_types[node])
-        else:
-            entity = WDItem(TripleGenerator.replace_illegal_string(node))
-        return entity
-
-    def set_properties(self, prop_file: str):
+    
+    def set_properties(self,prop_file:str):
         self.datatype_mapping = {
             "item": Item,
             "time": TimeValue,
@@ -94,11 +154,11 @@ class TripleGenerator:
         }
         with open(prop_file, "r") as fp:
             props = fp.readlines()
-        prop_types = {}
+        self.prop_types = {}
         for line in props[1:]:
             node1, _, node2 = line.split("\t")
             try:
-                prop_types[node1] = self.datatype_mapping[node2.strip()]
+                self.prop_types[node1] = self.datatype_mapping[node2.strip()]
             except:
                 if not self.ignore:
                     raise KGTKException(
@@ -106,15 +166,17 @@ class TripleGenerator:
                             node2, node1
                         )
                     )
-        return prop_types
-
-    def set_sets(self, label_set: str, alias_set: str, description_set: str):
-        return (
-            set(label_set.split(",")),
-            set(alias_set.split(",")),
-            set(description_set.split(",")),
-        )
-
+    
+    def _node_2_entity(self, node: str):
+        '''
+        A node can be Qxxx or Pxxx, return the proper entity.
+        '''
+        if node in self.prop_types:
+            entity = WDProperty(node, self.prop_types[node])
+        else:
+            entity = WDItem(TripleGenerator.replace_illegal_string(node))
+        return entity
+    
     def reset_etk_doc(self, doc_id: str = "http://isi.edu/default-ns/projects"):
         """
         reset the doc object and return it. Called at initialization and after outputting triples.
@@ -135,7 +197,7 @@ class TripleGenerator:
             docs[0].kg.serialize("ttl").split("\n\n")[1:]))
         self.fp.flush()
         self.reset()
-
+    
     def serialize_prefix(self):
         """
         This function should be called only once after the doc object is initialized.
@@ -154,28 +216,7 @@ class TripleGenerator:
         self.to_append_statement = None
         self.read_num_of_lines = 0
         self.reset_etk_doc()
-
-    def finalize(self):
-        self.serialize()
-
-    @staticmethod
-    def process_text_string(string: str) -> [str, str]:
-        ''' 
-        Language detection is removed from triple generation. The user is responsible for detect the language
-        '''
-        if len(string) == 0:
-            return ["", "en"]
-        if "@" in string:
-            res = string.split("@")
-            text_string = "@".join(res[:-1]).replace('"', "").replace("'", "")
-            lang = res[-1].replace('"', '').replace("'", "")
-            if len(lang) > 2:
-                lang = "en"
-        else:
-            text_string = string.replace('"', "").replace("'", "")
-            lang = "en"
-        return [text_string, lang]
-
+    
     def generate_label_triple(self, node1: str, label: str, node2: str) -> bool:
         entity = self._node_2_entity(node1)
         text_string, lang = TripleGenerator.process_text_string(node2)
@@ -205,12 +246,6 @@ class TripleGenerator:
         prop = WDProperty(node1, self.datatype_mapping[node2])
         self.doc.kg.add_subject(prop)
         return True
-
-    @staticmethod
-    def xsd_number_type(num):
-        if isinstance(num, float) and 'e' in str(num).lower():
-            return LiteralType.double
-        return LiteralType.decimal
 
     def generate_normal_triple(
             self, node1: str, label: str, node2: str, is_qualifier_edge: bool, e_id: str) -> bool:
@@ -336,39 +371,20 @@ class TripleGenerator:
                     label, object, statement_id=e_id) if self.use_id else entity.add_statement(label, object)
             self.doc.kg.add_subject(entity)
         return True
-
-    @staticmethod
-    def is_invalid_decimal_string(num_string):
-        '''
-        if a decimal string too small, return True TODO
-        '''
-        if num_string == None:
-            return False
+    
+    def initialize_order_map(self, edge_list:list):
+        node1_index = edge_list.index("node1")
+        node2_index = edge_list.index("node2")
+        prop_index = edge_list.index("property")
+        id_index = edge_list.index("id")
+        if not all([node1_index > -1, node2_index > -1, prop_index > -1, id_index > -1]):
+            raise KGTKException(
+                "Header of kgtk file misses at least one of required column names: (node1, node2, property and id)")
         else:
-            if abs(float(num_string)) < 0.0001 and float(num_string) != 0:
-                return True
-            return False
-
-    @staticmethod
-    def is_valid_uri_with_scheme_and_host(uri: str):
-        '''
-        https://github.com/python-hyper/rfc3986/issues/30#issuecomment-461661883
-        '''
-        try:
-            uri = rfc3986.URIReference.from_string(uri)
-            rfc3986.validators.Validator().require_presence_of(
-                "scheme", "host").check_validity_of("scheme", "host").validate(uri)
-            return True
-        except:
-            return False
-
-    @staticmethod
-    def clean_number_string(num):
-        from numpy import format_float_positional
-        if num == None:
-            return None
-        else:
-            return format_float_positional(float(num), trim="-")
+            self.order_map["node1"] = node1_index
+            self.order_map["node2"] = node2_index
+            self.order_map["prop"] = prop_index
+            self.order_map["id"] = id_index
 
     def entry_point(self, line_number: int, edge: str):
         """
@@ -380,19 +396,8 @@ class TripleGenerator:
         edge_list = edge.strip("\n").split("\t")
         if line_number == 1:
             # initialize the order_map
-            node1_index = edge_list.index("node1")
-            node2_index = edge_list.index("node2")
-            prop_index = edge_list.index("property")
-            id_index = edge_list.index("id")
-            if not all([node1_index > -1, node2_index > -1, prop_index > -1, id_index > -1]):
-                raise KGTKException(
-                    "Header of kgtk file misses at least one of required column names: (node1, node2, property and id)")
-            else:
-                self.order_map["node1"] = node1_index
-                self.order_map["node2"] = node2_index
-                self.order_map["prop"] = prop_index
-                self.order_map["id"] = id_index
-                return
+            self.initialize_order_map(edge_list)
+            return
 
         # use the order_map to map the node
         node1 = edge_list[self.order_map["node1"]].strip()
@@ -460,12 +465,11 @@ class TripleGenerator:
         else:
             self.read_num_of_lines += 1
             self.corrupted_statement_id = None
-
+    
     @staticmethod
-    def replace_illegal_string(s: str) -> str:
-        '''
-        this function serves as the last gate of keeping illegal characters outside of entity creation.
-        '''
-        for char in BAD_CHARS:
-            s = s.replace(char, "_")
-        return s
+    def xsd_number_type(num):
+        if isinstance(num, float) and 'e' in str(num).lower():
+            return LiteralType.double
+        return LiteralType.decimal
+
+

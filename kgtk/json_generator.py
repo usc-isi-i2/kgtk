@@ -1,7 +1,6 @@
 import sys
 import re
 import json
-from time import sleep
 from kgtk.exceptions import KGTKException
 
 BAD_CHARS = [":", "-", "&", ",", " ",
@@ -18,7 +17,6 @@ class JsonGenerator:
             label_set: str,
             alias_set: str,
             description_set: str,
-            use_gz:bool,
             # output_prefix:str="",
             n:int,
     ):
@@ -43,7 +41,6 @@ class JsonGenerator:
     def entry_point(self,line_number, edge):
         # TODO
         # first version only handles statement, not qualifiers
-
         # serialization
         edge_list = edge.strip("\n").split("\t")
         l = len(edge_list)
@@ -447,7 +444,6 @@ class JsonGenerator:
     def finalize(self):
         # finalize the generator
         self.serialize()
-        return
 
     def set_json_dict(self):
         self.label_json_dict = {}
