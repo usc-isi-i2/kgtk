@@ -150,7 +150,7 @@ def main():
 
     parser.add_argument(dest="input_file_path", help="The KGTK file with the input data (default=%(default)s)", type=Path, nargs="?", default="-")
 
-    parser.add_argument(      "--columns", dest="key_column_names", help="The columns columns that will not be expanded (default=None).", nargs='+', default = [ ])
+    parser.add_argument(      "--columns", dest="key_column_names", help="The key columns will not be expanded (default=None).", nargs='+', default = [ ])
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
