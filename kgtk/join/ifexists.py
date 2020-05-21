@@ -18,9 +18,7 @@ the second file.
 
 from argparse import ArgumentParser, Namespace
 import attr
-import gzip
 from pathlib import Path
-from multiprocessing import Queue
 import sys
 import typing
 
@@ -236,6 +234,15 @@ def main():
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
+        print("input: %s" % (str(args.input_file_path) if args.input_file_path is not None else "-"), file=error_file)
+        print("--filter-on=%s" % str(args.filter_file_path), file=error_file)
+        print("--output-file=%s" % str(args.output_file_path), file=error_file)
+        print("--field-separator=%s" % repr(args.field_separator), file=error_file)
+        print("--invert=%s" % str(args.invert), file=error_file)
+        if args.input_keys is not None:
+            print("--input-keys %s" % " ".join(args.input_keys), file=error_file)
+        if args.filter_keys is not None:
+            print("--filter-keys %s" % " ".join(args.filter_keys), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
         value_options.show(out=error_file)

@@ -53,7 +53,7 @@ class KgtkMergeColumns:
                 if self.id_column_idx >= 0:
                     column_name = self.column_names[self.id_column_idx]
                 else:
-                    self.idx_column_idx = len(self.column_names)
+                    self.id_column_idx = len(self.column_names)
 
             elif column_name in KgtkFormat.NODE1_COLUMN_NAMES:
                 if self.node1_column_idx >= 0:

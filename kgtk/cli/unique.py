@@ -12,15 +12,13 @@ import typing
 from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.join.ifempty import IfEmpty
-from kgtk.utils.argparsehelpers import optional_bool
+from kgtk.join.unique import Unique
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Filter a KGTK file for nonempty fields',
-        'description': 'Filter a KGTK file based on whether one or more fields are not empty. ' +
-        'When multiple fields are specified, either any field or all fields must be not empty.'
+        'help': 'Count unique values',
+        'description': 'Count the unique value in a column in a KGTK file. Write the unique values and counts as a new KGTK edge file.'
     }
 
 
@@ -33,18 +31,31 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
 
+    # This helper function makes it easy to suppress options from
+    # The help message.  The options are still there, and initialize
+    # what they need to initialize.
+    def h(msg: str)->str:
+        if _expert:
+            return msg
+        else:
+            return SUPPRESS
+
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
 
-    parser.add_argument(      "--columns", dest="filter_column_names",
-                              help="The columns in the file being filtered (Required).", nargs='+')
+    parser.add_argument(      "--column", dest="column_name",
+                              help="The column to count unique values (required).", required=True)
 
-    parser.add_argument(      "--count", dest="only_count", help="Only count the records, do not copy them. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False)
+    parser.add_argument(      "--empty", dest="empty_value", help="A value to substitute for empty values (default=%(default)s).", default="")
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (required).", type=Path, default=None)
 
-    parser.add_argument(      "--all", dest="all_are", help="False: Test if any are, True: test if all are (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False)
+    parser.add_argument(      "--label", dest="label_value", help="The output file label column value (default=%(default)s).", default="count")
+
+    # TODO: use an emum
+    parser.add_argument(      "--format", dest="output_format", help=h("The output file format and mode (default=%(default)s)."),
+                              default="edge", choices=["edge", "node"])
+
+    parser.add_argument(      "--prefix", dest="prefix", help=h("The value prefix (default=%(default)s)."), default="")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -52,10 +63,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_kgtk_file: typing.Optional[Path],
         output_kgtk_file: typing.Optional[Path],
-        filter_column_names: typing.List[str],
-        all_are: bool = False,
 
-        only_count: bool = False,
+        column_name: str,
+        empty_value: str = "",
+        label_value: str = "count",
+
+        output_format: str = "edge",
+        prefix: str = "",
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -68,6 +82,7 @@ def run(input_kgtk_file: typing.Optional[Path],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
@@ -78,22 +93,25 @@ def run(input_kgtk_file: typing.Optional[Path],
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
-        print("--columns=%s" % " ".join(filter_column_names), file=error_file)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
-        print("--count=%s" % str(only_count))
-        print("--all=%s" % str(all_are))
+        print("--column=%s" % str(column_name), file=error_file)
+        print("--empty=%s" % str(empty_value), file=error_file)
+        print("--label=%s" % str(label_value), file=error_file)
+        print("--format=%s" % output_format, file=error_file)
+        print("--prefix=%s" % prefix, file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:
-        ie: IfEmpty = IfEmpty(
+        uniq: Unique = Unique(
             input_file_path=input_kgtk_file,
-            filter_column_names=filter_column_names,
             output_file_path=output_kgtk_file,
-            all_are=all_are,
-            notempty=True,
-            only_count=only_count,
+            column_name=column_name,
+            label_value=label_value,
+            empty_value=empty_value,
+            output_format=output_format,
+            prefix=prefix,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,
@@ -101,7 +119,7 @@ def run(input_kgtk_file: typing.Optional[Path],
             very_verbose=very_verbose,
         )
         
-        ie.process()
+        uniq.process()
 
         return 0
 
