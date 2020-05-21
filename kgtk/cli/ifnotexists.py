@@ -17,7 +17,9 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Filter a KGTK file based on whether one or more records do not exist in a second KGTK file with matching values for one or more fields.'
+        'help': 'Filter a KGTK file by not matching records in a second KGTK file.',
+        'description': 'Filter a KGTK file based on whether one or more records do not exist in a second KGTK file with matching values for one or more fields.' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert ifnotexists --help'
     }
 
 
@@ -44,7 +46,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys",
                               help="The key columns in the file being filtered (default=None).", nargs='*')
 
-    parser.add_argument(      "--filter-on", dest="_filter_kgtk_file", help="The KGTK file to filter against (required).", type=Path, required=True)
+    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against (required).", type=Path, required=True)
 
     parser.add_argument(      "--filter-keys", "--right-keys", dest="filter_keys",
                               help="The key columns in the filter-on file (default=None).", nargs='*')

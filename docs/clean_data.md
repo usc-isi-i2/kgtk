@@ -1,87 +1,77 @@
-Validate one or more KGTK files, optionally decompressing
-the input files.
+Validate and clean the data in a KGTK file, optionally decompressing
+the input files and compressing the output file.
 
-Input files may be (de)compressed using a algorithm selected
+Input and output files may be (de)compressed using a algorithm selected
 by the file extension: .bz2 .gz .lz4 .xy
-
-The expert option --compression-type may be used to override the
-decompression selectin algorithim;  this is useful when reading from piped input.
 
 ## Usage
 ```
-usage: kgtk validate [-h] [--header-only [HEADER_ONLY]] [-v] [kgtk_files [kgtk_files ...]]
+usage: kgtk clean_data [-h] [-v] [input_file] [output_file]
 
-Validate a KGTK file. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
-
-To validate data and pass clean data to an output file or pipe, use the kgtk clean_data command.
+Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
 
 Additional options are shown in expert help.
-kgtk --expert validate --help
+kgtk --expert clean_data --help
 
 positional arguments:
-  kgtk_files            The KGTK file(s) to validate. May be omitted or '-' for stdin.
+  input_file     The KGTK file to read. May be omitted or '-' for stdin.
+  output_file    The KGTK file to write. May be omitted or '-' for stdout.
 
 optional arguments:
-  -h, --help            show this help message and exit
-  --header-only [HEADER_ONLY]
-                        Process the only the header of the input file (default=False).
+  -h, --help     show this help message and exit
 
-  -v, --verbose         Print additional progress messages (default=False).
+  -v, --verbose  Print additional progress messages (default=False).
+
 ```
 
 Expert help:
-
 ```
-usage: kgtk validate [-h] [--header-only [HEADER_ONLY]]
-                     [--errors-to-stdout | --errors-to-stderr] [--show-options] [-v]
-                     [--very-verbose] [--column-separator COLUMN_SEPARATOR]
-                     [--compression-type COMPRESSION_TYPE] [--error-limit ERROR_LIMIT]
-                     [--gzip-in-parallel [GZIP_IN_PARALLEL]]
-                     [--gzip-queue-size GZIP_QUEUE_SIZE] [--mode {NONE,EDGE,NODE,AUTO}]
-                     [--force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
-                     [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--skip-first-record [SKIP_FIRST_RECORD]]
-                     [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--repair-and-validate-lines [REPAIR_AND_VALIDATE_LINES]]
-                     [--repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]]
-                     [--blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--fill-short-lines [FILL_SHORT_LINES]]
-                     [--invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--truncate-long-lines [TRUNCATE_LONG_LINES]]
-                     [--whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]]
-                     [--allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]]
-                     [--allow-lax-strings [ALLOW_LAX_STRINGS]]
-                     [--allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]]
-                     [--allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]]
-                     [--repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]]
-                     [--minimum-valid-year MINIMUM_VALID_YEAR]
-                     [--maximum-valid-year MAXIMUM_VALID_YEAR]
-                     [--minimum-valid-lat MINIMUM_VALID_LAT]
-                     [--maximum-valid-lat MAXIMUM_VALID_LAT]
-                     [--minimum-valid-lon MINIMUM_VALID_LON]
-                     [--maximum-valid-lon MAXIMUM_VALID_LON]
-                     [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
-                     [kgtk_files [kgtk_files ...]]
+usage: kgtk clean_data [-h] [--errors-to-stdout | --errors-to-stderr] [--show-options] [-v]
+                       [--very-verbose] [--column-separator COLUMN_SEPARATOR]
+                       [--compression-type COMPRESSION_TYPE] [--error-limit ERROR_LIMIT]
+                       [--gzip-in-parallel [GZIP_IN_PARALLEL]]
+                       [--gzip-queue-size GZIP_QUEUE_SIZE] [--mode {NONE,EDGE,NODE,AUTO}]
+                       [--force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
+                       [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--skip-first-record [SKIP_FIRST_RECORD]]
+                       [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--repair-and-validate-lines [REPAIR_AND_VALIDATE_LINES]]
+                       [--repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]]
+                       [--blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--fill-short-lines [FILL_SHORT_LINES]]
+                       [--invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--truncate-long-lines [TRUNCATE_LONG_LINES]]
+                       [--whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                       [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]]
+                       [--allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]]
+                       [--allow-lax-strings [ALLOW_LAX_STRINGS]]
+                       [--allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]]
+                       [--allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]]
+                       [--repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]]
+                       [--minimum-valid-year MINIMUM_VALID_YEAR]
+                       [--maximum-valid-year MAXIMUM_VALID_YEAR]
+                       [--minimum-valid-lat MINIMUM_VALID_LAT]
+                       [--maximum-valid-lat MAXIMUM_VALID_LAT]
+                       [--minimum-valid-lon MINIMUM_VALID_LON]
+                       [--maximum-valid-lon MAXIMUM_VALID_LON]
+                       [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
+                       [input_file] [output_file]
 
-Validate a KGTK file. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
-
-To validate data and pass clean data to an output file or pipe, use the kgtk clean_data command.
+Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
 
 Additional options are shown in expert help.
-kgtk --expert validate --help
+kgtk --expert clean_data --help
 
 positional arguments:
-  kgtk_files            The KGTK file(s) to validate. May be omitted or '-' for stdin.
+  input_file            The KGTK file to read. May be omitted or '-' for stdin.
+  output_file           The KGTK file to write. May be omitted or '-' for stdout.
 
 optional arguments:
   -h, --help            show this help message and exit
-  --header-only [HEADER_ONLY]
-                        Process the only the header of the input file (default=False).
 
 Error and feedback messages:
   Send error messages and feedback to stderr or stdout, control the amount of feedback and debugging messages.
@@ -130,7 +120,7 @@ Line parsing:
   --repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]
                         Repair and validate values (default=True).
   --blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a line with a blank node1, node2, or id field
+                          The action to take when a line with a blank node1, node2, or id field
                         (per mode) is detected (default=ValidationAction.EXCLUDE).
   --comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a comment line is detected
@@ -200,10 +190,10 @@ By default, the following rules apply:
    - An ambiguous required column name (e.g., `id` and `ID` are both present)
  - empty data lines are silently ignored and not passed through.
  - data lines containing only whitespace are silently ignored and not passed through.
- - data lines with empty required fields (node1 and node2 for KGTK edge files, id for KGTK node files) are silently ignored.
- - data lines that have too few fields cause a complaint to be issued.
- - data lines that have too many fields cause a complaint to be issued.
- - lines with data value validation errors cause a complaint to be issued.
+ - data lines with empty required fields (node1 and node2 for KGTK edge files, id for KGTK node files) are silently ignored and not passed through.
+ - data lines that have too few fields cause a complaint to be issued, and are not passed through.
+ - data lines that have too many fields cause a complaint to be issued, and are not passed through.
+ - lines with data value validation errors cause a complaint to be issued, and are not passed through.
 
 These defaults may be changed through expert options.
 
@@ -218,32 +208,6 @@ These defaults may be changed through expert options.
 | ERROR          | Raise a ValueError |
 | EXIT           | sys.exit(1) |
 
-### --header-error-action
-The action to take if a header error is detected, such as:
-
-- An empty column name
-- A duplicate column name
-- A missing required column name for an edge or node file
-- An ambiguous required column name (e.g., ‘id’ and ‘ID’ are both present)
-Only ERROR and EXIT actions are implemented for header errors.
-
-### --unsafe-column-name
-The action to take if a header column name contains one of the following:
-- Leading white space
-- Trailing white space
-- Internal white space except in strings or language-qualified strings
-- Commas
-- Vertical bars
-
-### KGTK File Mode
-
-|Mode|Meaning|
-|----|-------|
-|NONE|Do not require node1, node1, or id columns|
-|EDGE|Treat the input file as a KGTK edge file and require the |presence of node1 and node2 columns or their allowable aliases.
-|NODE|Treat the input file as a KGTK node file and require the presence of an id column or its allowable alias (ID).|
-|AUTO|Automatically determine if an input file is an edge file or a node file. If a node1 (or allowable alias) column is present, assume that the file is a KGTK edge file. Otherwise, assume that it is a KGTK node file|
-
 ## Examples
 
 Suppose that `file1.tsv` contains the following table in KGTK format:
@@ -252,50 +216,38 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | john  | woke  | ^2020-05-00T00:00 |
 | john  | woke  | ^2020-05-02T00:00 |
 
-### Validate the data, using default options
+### Clean the data, using default options
 
 ```bash
-kgtk validate file1.tsv
+kgtk clean_data file1.tsv
 ```
 
-The following complaint will be issued:
+Standard output will get the following data:
+```
+node1   label   node2
+john    woke    ^2020-05-02T00:00
+```
+
+The following complaint will be issued on standard error:
 ```
 Data line 1:
 john    woke    ^2020-05-00T00:00
 col 2 (node2) value '^2020-05-00T00:00'is an Invalid Date and Times
 ```
 
-The first data line was flagged because it contained "00" in the day
+The first data line was excluded because it contained "00" in the day
 field, which violates the ISO 8601 specification.
 
-### Allow month or day zero
-Instruct the validator to accept month or day 00, even though
-this is not allowed in ISO 6801.
+### Clean the data, repairing the invalid date/time string
+Change day "00" to day "01:
 
 ```bash
-kgtk validate file1.tsv --allow-month-or-day-zero
-```
-This results in no error messages.
-
-### Validate with verbose feedback
-
-Sometimes you may wish to get more feedback about what kgtk verbose is
-doing.
-
-```bash
-kgtk validate file1.tsv --allow-month-or-day-zero --verbose
+kgtk clean_data file1.tsv --repair-month-or-day-zero
 ```
 
-This results in the following output:
+Standard output will get the following data, and no errors will be issued:
 ```
-====================================================
-Validating 'kgtk/join/test/clean_data-file1.tsv'
-KgtkReader: File_path.suffix: .tsv
-KgtkReader: reading file kgtk/join/test/clean_data-file1.tsv
-header: node1   label   node2
-node1 column found, this is a KGTK edge file
-KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
-KgtkReader: Reading an edge file.
-Validated 2 data lines
-
+node1   label   node2
+john    woke    ^2020-05-01T00:00
+john    woke    ^2020-05-02T00:00
 ```
