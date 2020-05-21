@@ -173,6 +173,9 @@ class KgtkValue(KgtkFormat):
     # TODO: proper validation.
     parent: typing.Optional['KgtkValue'] = attr.ib(default=None)
 
+    # Has this value been repaired?
+    repaired: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # Cache some properties of the value that would be expensive to
     # continuously recompute.
     data_type: typing.Optional[KgtkFormat.DataType] = None
@@ -281,6 +284,7 @@ class KgtkValue(KgtkFormat):
         item: KgtkValue
         for item in list_items:
             values.append(item.value)
+            self.repaired = self.repaired or item.repaired
         self.value = KgtkFormat.LIST_SEPARATOR.join(values)
 
     def _is_number_or_quantity(self)->bool:
@@ -898,14 +902,14 @@ class KgtkValue(KgtkFormat):
         if m is None:
             return False
 
-        yearstr: str = m.group("year")
-        monthstr: str = m.group("month")
-        daystr: str = m.group("day")
-        hourstr: str = m.group("hour")
-        minutesstr: str = m.group("minutes")
-        secondsstr: str = m.group("seconds")
-        zonestr: str = m.group("zone")
-        precisionstr: str = m.group("precision")
+        yearstr: typing.Optional[str] = m.group("year")
+        monthstr: typing.Optional[str] = m.group("month")
+        daystr: typing.Optional[str] = m.group("day")
+        hourstr: typing.Optional[str] = m.group("hour")
+        minutesstr: typing.Optional[str] = m.group("minutes")
+        secondsstr: typing.Optional[str] = m.group("seconds")
+        zonestr: typing.Optional[str] = m.group("zone")
+        precisionstr: typing.Optional[str] = m.group("precision")
         iso8601extended: bool = m.group("hyphen") is not None
 
         fixup_needed: bool = False
@@ -970,7 +974,16 @@ class KgtkValue(KgtkFormat):
         if fixup_needed:
             # Repair a month or day zero problem.  If this value is the child
             # of a list, repair the list parent value, too.
-            self.update_date_and_times()
+            self.update_date_and_times(yearstr,
+                                       monthstr,
+                                       daystr,
+                                       hourstr,
+                                       minutesstr,
+                                       secondsstr,
+                                       zonestr,
+                                       precisionstr,
+                                       iso8601extended
+            )
             if self.parent is not None:
                 self.parent.rebuild_list()
 
@@ -997,33 +1010,44 @@ class KgtkValue(KgtkFormat):
             )
         return True
 
-    def update_date_and_times(self):
-        v: str = "^" + self.yearstr
-        if self.monthstr is not None:
-            if self.iso8601extended:
+    def update_date_and_times(self,
+                              yearstr: str,
+                              monthstr: typing.Optional[str],
+                              daystr: typing.Optional[str],
+                              hourstr: typing.Optional[str],
+                              minutesstr: typing.Optional[str],
+                              secondsstr: typing.Optional[str],
+                              zonestr: typing.Optional[str],
+                              precisionstr: typing.Optional[str],
+                              iso8601extended: bool
+    ):
+        v: str = "^" + yearstr
+        if monthstr is not None:
+            if iso8601extended:
                 v += "-"
-            v += self.monthstr
-        if self.daystr is not None:
-            if self.iso8601extended:
+            v += monthstr
+        if daystr is not None:
+            if iso8601extended:
                 v += "-"
-            v += self.daystr
-        if self.hourstr is not None:
+            v += daystr
+        if hourstr is not None:
             v += "T"
-            v += self.hourstr
-        if self.minutesstr is not None:
-            if self.iso8601extended:
+            v += hourstr
+        if minutesstr is not None:
+            if iso8601extended:
                 v += ":"
-            v += self.minutesstr
-        if self.secondsstr is not None:
-            if self.iso8601extended:
+            v += minutesstr
+        if secondsstr is not None:
+            if iso8601extended:
                 v += ":"
-            v += self.secondsstr
-        if self.zonestr is not None:
-            v += self.zonestr
-        if self.precisionstr is not None:
+            v += secondsstr
+        if zonestr is not None:
+            v += zonestr
+        if precisionstr is not None:
             v += "/"
-            v += self.precisionstr
+            v += precisionstr
         self.value = v
+        self.repaired = True
 
     def is_extension(self, validate=False)->bool:
         """Return True if the first character is !
