@@ -121,6 +121,42 @@ class IfExists(KgtkFormat):
             result.add(self.build_key(row, key_columns))
         return result
 
+    def process_cacheing_filter(self,
+                                input_kr: KgtkReader,
+                                filter_kr: KgtkReader,
+                                input_key_columns: typing.List[int],
+                                filter_key_columns: typing.List[int],
+                                ew: KgtkWriter):
+        if self.verbose:
+            print("Building the filter key set from %s" % self.filter_file_path, file=self.error_file, flush=True)
+        key_set: typing.Set[str] = self.extract_key_set(filter_kr, "filter", filter_key_columns)
+        if self.verbose or self.very_verbose:
+            print("There are %d entries in the filter key set." % len(key_set), file=self.error_file, flush=True)
+            if self.very_verbose:
+                print("Keys: %s" % " ".join(key_set), file=self.error_file, flush=True)
+
+        if self.verbose:
+            print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
+        input_line_count: int = 0
+        output_line_count: int = 0;
+
+        row: typing.List[str]
+        for row in input_kr:
+            input_line_count += 1
+            input_key: str = self.build_key(row, input_key_columns)
+            if self.invert:
+                if input_key not in key_set:
+                    ew.write(row)
+                    output_line_count += 1
+            else:
+                if input_key in key_set:
+                    ew.write(row)
+                    output_line_count += 1
+
+        if self.verbose:
+            print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
+        
+
     def process(self):
         # Open the input files once.
         if self.verbose:
@@ -156,14 +192,6 @@ class IfExists(KgtkFormat):
             return
 
         if self.verbose:
-            print("Building the filter key set from %s" % self.filter_file_path, file=self.error_file, flush=True)
-        key_set: typint.Set[str] = self.extract_key_set(filter_kr, "fitler", filter_key_columns)
-        if self.verbose or self.very_verbose:
-            print("There are %d entries in the filter key set." % len(key_set), file=self.error_file, flush=True)
-            if self.very_verbose:
-                print("Keys: %s" % " ".join(key_set), file=self.error_file, flush=True)
-
-        if self.verbose:
             print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
         ew: KgtkWriter = KgtkWriter.open(input_kr.column_names,
                                          self.output_file_path,
@@ -174,27 +202,12 @@ class IfExists(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
-        if self.verbose:
-            print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
-        input_line_count: int = 0
-        output_line_count: int = 0;
+        self.process_cacheing_filter(input_kr=input_kr,
+                                     filter_kr=filter_kr,
+                                     input_key_columns=input_key_columns,
+                                     filter_key_columns=filter_key_columns,
+                                     ew=ew)
 
-        row: typing.list[str]
-        for row in input_kr:
-            input_line_count += 1
-            input_key: str = self.build_key(row, input_key_columns)
-            if self.invert:
-                if input_key not in key_set:
-                    ew.write(row)
-                    output_line_count += 1
-            else:
-                if input_key in key_set:
-                    ew.write(row)
-                    output_line_count += 1
-
-        if self.verbose:
-            print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
-        
         ew.close()
 
 def main():
