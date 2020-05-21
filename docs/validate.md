@@ -9,6 +9,29 @@ decompression selectin algorithim;  this is useful when reading from piped input
 
 ## Usage
 ```
+usage: kgtk validate [-h] [--header-only [HEADER_ONLY]] [-v] [kgtk_files [kgtk_files ...]]
+
+Validate a KGTK file. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
+
+To validate data and pass clean data to an output file or pipe, use the kgtk clean_data command.
+
+Additional options are shown in expert help.
+kgtk --expert validate --help
+
+positional arguments:
+  kgtk_files            The KGTK file(s) to validate. May be omitted or '-' for stdin.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --header-only [HEADER_ONLY]
+                        Process the only the header of the input file (default=False).
+
+  -v, --verbose         Print additional progress messages (default=False).
+```
+
+Expert help:
+
+```
 usage: kgtk validate [-h] [--header-only [HEADER_ONLY]]
                      [--errors-to-stdout | --errors-to-stderr] [--show-options] [-v]
                      [--very-verbose] [--column-separator COLUMN_SEPARATOR]
@@ -168,6 +191,7 @@ Data value parsing:
                         (default=False).
 ```
 
+### Default Rules
 By default, the following rules apply:
  - errors that occur while processing a KGTK file's column header line cause an immediate exit:
    - An empty column name
@@ -182,6 +206,43 @@ By default, the following rules apply:
  - lines with data value validation errors cause a complaint to be issued.
 
 These defaults may be changed through expert options.
+
+### Action Codes
+
+| Action keyword | Action when condition detected |
+| -------------- | ------------------------------ |
+| PASS           | Silently allow the data line to pass through |
+| REPORT         | Report the data line and let it pass through |
+| EXCLUDE        | Silently exclude (ignore) the data line |
+| COMPLAIN       | Report the data line and exclude (ignore) it |
+| ERROR          | Raise a ValueError |
+| EXIT           | sys.exit(1) |
+
+### --header-error-action
+The action to take if a header error is detected, such as:
+
+- An empty column name
+- A duplicate column name
+- A missing required column name for an edge or node file
+- An ambiguous required column name (e.g., ‘id’ and ‘ID’ are both present)
+Only ERROR and EXIT actions are implemented for header errors.
+
+### --unsafe-column-name
+The action to take if a header column name contains one of the following:
+- Leading white space
+- Trailing white space
+- Internal white space except in strings or language-qualified strings
+- Commas
+- Vertical bars
+
+### KGTK File Mode
+
+|Mode|Meaning|
+|----|-------|
+|NONE|Do not require node1, node1, or id columns|
+|EDGE|Treat the input file as a KGTK edge file and require the |presence of node1 and node2 columns or their allowable aliases.
+|NODE|Treat the input file as a KGTK node file and require the presence of an id column or its allowable alias (ID).|
+|AUTO|Automatically determine if an input file is an edge file or a node file. If a node1 (or allowable alias) column is present, assume that the file is a KGTK edge file. Otherwise, assume that it is a KGTK node file|
 
 ## Examples
 
@@ -216,4 +277,25 @@ kgtk validate file1.tsv --allow-month-or-day-zero
 ```
 This results in no error messages.
 
+### Validate with verbose feedback
 
+Sometimes you may wish to get more feedback about what kgtk verbose is
+doing.
+
+```bash
+kgtk validate file1.tsv --allow-month-or-day-zero --verbose
+```
+
+This results in the following output:
+```
+====================================================
+Validating 'kgtk/join/test/clean_data-file1.tsv'
+KgtkReader: File_path.suffix: .tsv
+KgtkReader: reading file kgtk/join/test/clean_data-file1.tsv
+header: node1   label   node2
+node1 column found, this is a KGTK edge file
+KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
+KgtkReader: Reading an edge file.
+Validated 2 data lines
+
+```

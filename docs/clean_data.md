@@ -23,6 +23,7 @@ optional arguments:
   -v, --verbose  Print additional progress messages (default=False).
 
 ```
+
 Expert help:
 ```
 usage: kgtk clean_data [-h] [--errors-to-stdout | --errors-to-stderr] [--show-options] [-v]
@@ -180,6 +181,7 @@ Data value parsing:
                         (default=False).
 ```
 
+### Default Rules
 By default, the following rules apply:
  - errors that occur while processing a KGTK file's column header line cause an immediate exit:
    - An empty column name
@@ -194,6 +196,17 @@ By default, the following rules apply:
  - lines with data value validation errors cause a complaint to be issued, and are not passed through.
 
 These defaults may be changed through expert options.
+
+### Action Codes
+
+| Action keyword | Action when condition detected |
+| -------------- | ------------------------------ |
+| PASS           | Silently allow the data line to pass through |
+| REPORT         | Report the data line and let it pass through |
+| EXCLUDE        | Silently exclude (ignore) the data line |
+| COMPLAIN       | Report the data line and exclude (ignore) it |
+| ERROR          | Raise a ValueError |
+| EXIT           | sys.exit(1) |
 
 ## Examples
 
