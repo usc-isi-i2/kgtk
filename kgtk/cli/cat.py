@@ -17,7 +17,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Concatenate KGTK files',
+        'help': 'Concatenate KGTK files.',
         'description': 'Concatenate two or more KGTK files, merging the columns appropriately. ' +
         'All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert cat --help'
