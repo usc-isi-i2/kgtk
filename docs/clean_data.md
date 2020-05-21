@@ -1,25 +1,30 @@
-The clean_data command a KGTK file, optionally decompressing
-the input files and compressing the output file, while validating
-and optionally repairing the data in the file.
+Validate and clean the data in a KGTK file, optionally decompressing
+the input files and compressing the output file.
 
 Input and output files may be (de)compressed using a algorithm selected
 by the file extension: .bz2 .gz .lz4 .xy
 
 ## Usage
-
-```bash
-kgtk clean_data [-h] [-v] [input_file] [output_file]
 ```
-- `input_file` The input file name or "-" for data piped from another command (default is "-").
-- `ouput_file` The output file name or "-" to pipe data to another command (default is "-").
-- `-v` gives verbose feedback.
+usage: kgtk clean_data [-h] [-v] [input_file] [output_file]
 
-Additional options are described in expert help:
-```bash
+Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
+
+Additional options are shown in expert help.
 kgtk --expert clean_data --help
-```
 
-```bash
+positional arguments:
+  input_file     The KGTK file to read. May be omitted or '-' for stdin.
+  output_file    The KGTK file to write. May be omitted or '-' for stdout.
+
+optional arguments:
+  -h, --help     show this help message and exit
+
+  -v, --verbose  Print additional progress messages (default=False).
+
+```
+Expert help:
+```
 usage: kgtk clean_data [-h] [--errors-to-stdout | --errors-to-stderr] [--show-options] [-v]
                        [--very-verbose] [--column-separator COLUMN_SEPARATOR]
                        [--compression-type COMPRESSION_TYPE] [--error-limit ERROR_LIMIT]
@@ -54,6 +59,11 @@ usage: kgtk clean_data [-h] [--errors-to-stdout | --errors-to-stderr] [--show-op
                        [--maximum-valid-lon MAXIMUM_VALID_LON]
                        [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
                        [input_file] [output_file]
+
+Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
+
+Additional options are shown in expert help.
+kgtk --expert clean_data --help
 
 positional arguments:
   input_file            The KGTK file to read. May be omitted or '-' for stdin.
@@ -109,7 +119,7 @@ Line parsing:
   --repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]
                         Repair and validate values (default=True).
   --blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a line with a blank node1, node2, or id field
+                          The action to take when a line with a blank node1, node2, or id field
                         (per mode) is detected (default=ValidationAction.EXCLUDE).
   --comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a comment line is detected
@@ -122,13 +132,13 @@ Line parsing:
                         (default=False).
   --invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a data cell value is invalid
-                        (default=ValidationAction.REPORT).
+                        (default=ValidationAction.COMPLAIN).
   --long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a long line is detected
-                        (default=ValidationAction.EXCLUDE).
+                        (default=ValidationAction.COMPLAIN).
   --short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a short line is detected
-                        (default=ValidationAction.EXCLUDE).
+                        (default=ValidationAction.COMPLAIN).
   --truncate-long-lines [TRUNCATE_LONG_LINES]
                         Remove excess trailing columns in long lines (default=False).
   --whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
@@ -168,10 +178,24 @@ Data value parsing:
   --escape-list-separators [ESCAPE_LIST_SEPARATORS]
                         Escape all list separators instead of splitting on them
                         (default=False).
+```
 
+By default, the following rules apply:
+ - errors that occur while processing a KGTK file's column header line cause an immediate exit:
+   - An empty column name
+   - A duplicate column name
+   - A missing required column name for an edge or node file
+   - An ambiguous required column name (e.g., `id` and `ID` are both present)
+ - empty data lines are silently ignored and not passed through.
+ - data lines containing only whitespace are silently ignored and not passed through.
+ - data lines with empty required fields (node1 and node2 for KGTK edge files, id for KGTK node files) are silently ignored and not passed through.
+ - data lines that have too few fields cause a complaint to be issued, and are not passed through.
+ - data lines that have too many fields cause a complaint to be issued, and are not passed through.
+ - lines with data value validation errors cause a complaint to be issued, and are not passed through.
+
+These defaults may be changed through expert options.
 
 ## Examples
-
 
 Suppose that `file1.tsv` contains the following table in KGTK format:
 
@@ -179,20 +203,20 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | john  | woke  | ^2020-05-00T00:00 |
 | john  | woke  | ^2020-05-02T00:00 |
 
-Clean the data, using default options:
+### Clean the data, using default options
 
 ```bash
 kgtk clean_data file1.tsv
 ```
 
 Standard output will get the following data:
-```bash
+```
 node1   label   node2
 john    woke    ^2020-05-02T00:00
 ```
 
 The following complaint will be issued on standard error:
-```bash
+```
 Data line 1:
 john    woke    ^2020-05-00T00:00
 col 2 (node2) value '^2020-05-00T00:00'is an Invalid Date and Times
@@ -201,11 +225,15 @@ col 2 (node2) value '^2020-05-00T00:00'is an Invalid Date and Times
 The first data line was excluded because it contained "00" in the day
 field, which violates the ISO 8601 specification.
 
-Clean the data, repairing the invalid date/time string by
-changing day "00" to day "01:
+### Clean the data, repairing the invalid date/time string
+Change day "00" to day "01:
 
 ```bash
 kgtk clean_data file1.tsv --repair-month-or-day-zero
+```
+
+Standard output will get the following data, and no errors will be issued:
+```
 node1   label   node2
 john    woke    ^2020-05-01T00:00
 john    woke    ^2020-05-02T00:00
