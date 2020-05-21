@@ -23,7 +23,15 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Validate a KGTK file '
+        'help': 'Validate a KGTK file ',
+        
+        'description': 'Validate a KGTK file. ' +
+        'Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. ' +
+        'Header errors cause an immediate exception. Data value errors are reported. ' +
+
+        '\n\nTo validate data and pass clean data to an output file or pipe, use the kgtk clean_data command.' +
+
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert validate --help'
     }
 
 
@@ -38,12 +46,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
 
     parser.add_argument(      "--header-only", dest="header_only",
-                              help="Process the only the header of the input file.",
+                              help="Process the only the header of the input file (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
-    KgtkValueOptions.add_arguments(parser, expert=True)
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
 def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
@@ -86,24 +94,24 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                 else:
                     print ("Validating from stdin", file=error_file, flush=True)
 
-                kr: KgtkReader = KgtkReader.open(kgtk_file,
-                                                 error_file=error_file,
-                                                 options=reader_options,
-                                                 value_options=value_options,
-                                                 verbose=verbose,
-                                                 very_verbose=very_verbose)
+            kr: KgtkReader = KgtkReader.open(kgtk_file,
+                                             error_file=error_file,
+                                             options=reader_options,
+                                             value_options=value_options,
+                                             verbose=verbose,
+                                             very_verbose=very_verbose)
         
-                if header_only:
-                    kr.close()
-                    if verbose:
-                        print("Validated the header only.", file=error_file, flush=True)
-                else:
-                    line_count: int = 0
-                    row: typing.List[str]
-                    for row in kr:
-                        line_count += 1
-                    if verbose:
-                        print("Validated %d data lines" % line_count, file=error_file, flush=True)
+            if header_only:
+                kr.close()
+                if verbose:
+                    print("Validated the header only.", file=error_file, flush=True)
+            else:
+                line_count: int = 0
+                row: typing.List[str]
+                for row in kr:
+                    line_count += 1
+                if verbose:
+                    print("Validated %d data lines" % line_count, file=error_file, flush=True)
         return 0
 
     except SystemExit as e:
