@@ -94,24 +94,24 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
                 else:
                     print ("Validating from stdin", file=error_file, flush=True)
 
-                kr: KgtkReader = KgtkReader.open(kgtk_file,
-                                                 error_file=error_file,
-                                                 options=reader_options,
-                                                 value_options=value_options,
-                                                 verbose=verbose,
-                                                 very_verbose=very_verbose)
+            kr: KgtkReader = KgtkReader.open(kgtk_file,
+                                             error_file=error_file,
+                                             options=reader_options,
+                                             value_options=value_options,
+                                             verbose=verbose,
+                                             very_verbose=very_verbose)
         
-                if header_only:
-                    kr.close()
-                    if verbose:
-                        print("Validated the header only.", file=error_file, flush=True)
-                else:
-                    line_count: int = 0
-                    row: typing.List[str]
-                    for row in kr:
-                        line_count += 1
-                    if verbose:
-                        print("Validated %d data lines" % line_count, file=error_file, flush=True)
+            if header_only:
+                kr.close()
+                if verbose:
+                    print("Validated the header only.", file=error_file, flush=True)
+            else:
+                line_count: int = 0
+                row: typing.List[str]
+                for row in kr:
+                    line_count += 1
+                if verbose:
+                    print("Validated %d data lines" % line_count, file=error_file, flush=True)
         return 0
 
     except SystemExit as e:

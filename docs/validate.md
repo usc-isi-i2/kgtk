@@ -194,35 +194,26 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 ### Validate the data, using default options
 
 ```bash
-kgtk clean_data file1.tsv
+kgtk validate file1.tsv
 ```
 
-Standard output will get the following data:
-```
-node1   label   node2
-john    woke    ^2020-05-02T00:00
-```
-
-The following complaint will be issued on standard error:
+The following complaint will be issued:
 ```
 Data line 1:
 john    woke    ^2020-05-00T00:00
 col 2 (node2) value '^2020-05-00T00:00'is an Invalid Date and Times
 ```
 
-The first data line was excluded because it contained "00" in the day
+The first data line was flagged because it contained "00" in the day
 field, which violates the ISO 8601 specification.
 
-### Clean the data, repairing the invalid date/time string
-Change day "00" to day "01:
+### Allow month or day zero
+Instruct the validator to accept month or day 00, even though
+this is not allowed in ISO 6801.
 
 ```bash
-kgtk clean_data file1.tsv --repair-month-or-day-zero
+kgtk validate file1.tsv --allow-month-or-day-zero
 ```
+This results in no error messages.
 
-Standard output will get the following data, and no errors will be issued:
-```
-node1   label   node2
-john    woke    ^2020-05-01T00:00
-john    woke    ^2020-05-02T00:00
-```
+
