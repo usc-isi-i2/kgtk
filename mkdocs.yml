@@ -5,6 +5,7 @@ nav:
   - KGTK file specification: specification.md
   - 'KGTK commands':
       - 'connected_components': 'connected_components.md'
+      - 'clean_data': 'clean_data.md'
       - 'export_gt': 'export_gt.md'
       - 'filter': 'filter.md'
       - 'generate_wikidata_triples': 'generate_wikidata_triples.md'
