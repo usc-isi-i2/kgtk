@@ -1,0 +1,19 @@
+sudo: false
+dist: xenial
+language: python
+python:
+- 3.7.7
+
+install:
+- sudo apt-get update
+- pip install --upgrade pip
+- pip install -r requirements.txt
+- pip install --force-reinstall numpy --no-cache
+- pip install .
+script:
+- python -m spacy download en_core_web_sm
+- cd kgtk/tests
+- python -m unittest discover
+notifications:
+  slack:
+    secure: FfFhdBv7FgVTZrA/UUm3EcsH/dOvyOusIJ0o+Y+Ysf9DVeasBjJ2E7xaCMcs0KM8ypQuXTVMJyT88uGiJ3fNU/Sy5C/TEireGOWCqy84et/iFjMfIIHnPb3Nz6yLIrDsrrEufcLm1RDeMtQkvn55FfuLOoelfKe10/eAfR/luscoCr1LLqFxGZizpkYION9FCTlZ1CX+OK13ALuG9hqeCKy+k/PkmuwboQDW1N0Q7JcJTs90Pr02TZp83efePRmayXSjjhiy3npVsBYP/oQPyec1mgCSizn+lkTJJ80yzHe++e7zzpg5XbyLjSoA/ddz8AdRq5wD+BooVegJB0cxnMioEzHvpocIyUC28vGEBTbHCU+songs7z9WJyySTy3G1GaBSbcp6dOVDgTmizouBQbkL4/k+PJUDndsMN7hykDYzvlaVt2HZykiA+sf6EiW2RWPhWThmzo3ACJf30OTK78pUfuh1UcuxHcUz/Ve7V/2pP8wGnD2Imbj78GxKa+hzGQ+7lggExVUpPMCMPAJeFcSjbiLeUVO/muyqoRC6Mr1Y1ZlqL1EcKC9LC6jkXs0XV6jB3DRlr8YHiq6X1GPe0rSzV0/XUain9WY5jO15P8HBU2Pv4Y4hsU8LjVqBbX5r22Xquv6KaLQZVIJUOe2FGzfzYiiIXivYNvtATkxSfY=
