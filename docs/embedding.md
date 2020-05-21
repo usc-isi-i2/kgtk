@@ -1,6 +1,7 @@
 Computes embeddings of nodes using properties of nodes. The values are concatenated into sentences defined by a template, and embedded using a pre-trained language model.
 
 The following language models are supported:
+
 - bert-base-nli-cls-token
 - bert-base-nli-max-tokens
 - bert-base-nli-mean-tokens
