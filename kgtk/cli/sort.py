@@ -112,12 +112,18 @@ def build_command(input=None, output=None, columns='1', colsep='\t', options='',
 
     # define these in here, so we can pass in some process-local variables via closures:
     def record_key_spec(chunk):
+        # starting with sh 1.13 it looks like we can get either strings or bytes here;
+        # if we get bytes we convert to an identical string using `latin1' encoding:
+        if isinstance(chunk, bytes):
+            chunk = chunk.decode('latin1')
         buffer.write(chunk)
         header = buffer.getvalue()
         eol = header.find('\n')
         if eol >= 0:
             with open(sort_env['KGTK_HEADER'], 'w') as out:
                 out.write(header[0:eol+1])
+            # reencode from latin1 to utf8 for header processing:
+            header = header[0:eol].encode('latin1').decode(zcat.kgtk_encoding)
             with open(sort_env['KGTK_SORT_KEY_SPEC'], 'w') as out:
                 out.write(build_sort_key_spec(header, columns, colsep))
             # this signals to ignore the callback once we are done collecting the header:
