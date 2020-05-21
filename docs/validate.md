@@ -235,6 +235,12 @@ The action to take if a header column name contains one of the following:
 - Commas
 - Vertical bars
 
+### --error-limit
+Execution will stop if the error limit is exceeded.  To avoid that, either
+raise the error limit or set it to zero:
+
+  --error-limit=0
+
 ### KGTK File Mode
 
 |Mode|Meaning|
