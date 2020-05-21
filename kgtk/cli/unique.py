@@ -17,8 +17,9 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Count unique values',
-        'description': 'Count the unique value in a column in a KGTK file. Write the unique values and counts as a new KGTK edge file.'
+        'help': 'Count unique values in a column.',
+        'description': 'Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert unique --help'
     }
 
 

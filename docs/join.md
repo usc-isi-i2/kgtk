@@ -23,18 +23,23 @@ input files, adjusted for predefined name aliasing.
 * Specify --right-join to get a right outer join.
 * Specify both to get a full outer join (equivalent to cat).
 * Specify neither to get an inner join.
-* By default, node files are joined on the id column, while edge files are joined on the node1 column. The label and node2 columns may be added to the edge file join criteria.  Alternatively, the left and right file join columns may be
-listed explicitly.
+* By default, node files are joined on the id column, while edge files are joined on the node1 column. The label and node2 columns may be added to the edge file join  criteria.  Alternatively, the left and right file join columns may be
+  listed explicitly.
 
 To join an edge file to a node file, or to join quasi-KGTK files, use the
 following option (enable expert mode for more information):
 
 ```
 --mode=NONE
+```
+
 Expert mode provides additional command arguments.
+
+```
 positional arguments:
   left_file_path        The left-side KGTK file to join (required).
   right_file_path       The right-side KGTK file to join (required).
+
 optional arguments:
   -h, --help            show this help message and exit
   --join-on-label [JOIN_ON_LABEL]
@@ -57,3 +62,112 @@ optional arguments:
                         Perform a right outer join (default=False).
   -v, --verbose         Print additional progress messages (default=False).
 ```
+
+## Examples
+
+Suppose that `file1.tsv` contains the following table in KGTK format:
+
+| node1 | label   | node2 | location |
+| ----- | ------- | ----- | -------- |
+| john  | zipcode | 12345 | home     |
+| john  | zipcode | 12346 | work     |
+| peter | zipcode | 12040 | home     |
+| peter | zipcode | 12040 | work     |
+| steve | zipcode | 45601 | home     |
+| steve | zipcode | 45601 | work     |
+
+and `file2.tsv` contains the following table in KGTK format:
+
+| node1  | label    | node2      | years |
+| ------ | -------- | ---------- | ----- |
+| john   | position | programmer | 3     |
+| peter  | position | engineer   | 2     |
+| edward | position | supervisor | 10    |
+| john   | laptop   | dell       | 4     |
+| peter  | laptop   | apple      | 7     |
+
+Do an inner join on two KGTK files on node1, sending the output to standard output.
+
+```bash
+kgtk join file1.tsv file2.tsv
+```
+
+The result will be the following table in KGTK format:
+
+| node1 | label    | node2      | location | years |
+| ----- | -------- | ---------- | -------- | ----- |
+| john  | zipcode  | 12345      | home     |       |
+| john  | zipcode  | 12346      | work     |       |
+| peter | zipcode  | 12040      | home     |       |
+| peter | zipcode  | 12040      | work     |       |
+| john  | position | programmer |          | 3     |
+| peter | position | engineer   |          | 2     |
+| john  | laptop   | dell       |          | 4     |
+| peter | laptop   | apple      |          | 7     |
+
+
+Do a left outer join on two KGTK files on node1, sending the output to standard output.
+
+```bash
+kgtk join file1.tsv file2.tsv --left-join
+```
+
+The result will be the following table in KGTK format:
+
+| node1 | label    | node2      | location | years |
+| ----- | -------- | ---------- | -------- | ----- |
+| john  | zipcode  | 12345      | home     |       |
+| john  | zipcode  | 12346      | work     |       |
+| peter | zipcode  | 12040      | home     |       |
+| peter | zipcode  | 12040      | work     |       |
+| steve | zipcode  | 45601      | home     |       |
+| steve | zipcode  | 45601      | work     |       |
+| john  | position | programmer |          | 3     |
+| peter | position | engineer   |          | 2     |
+| john  | laptop   | dell       |          | 4     |
+| peter | laptop   | apple      |          | 7     |
+
+
+Do a right outer join on two KGTK files on node1, sending the output to standard output.
+
+```bash
+kgtk join file1.tsv file2.tsv --right-join
+```
+
+The result will be the following table in KGTK format:
+
+| node1  | label    | node2      | location | years |
+| ------ | -------- | ---------- | -------- | ----- |
+| john   | zipcode  | 12345      | home     |       |
+| john   | zipcode  | 12346      | work     |       |
+| peter  | zipcode  | 12040      | home     |       |
+| peter  | zipcode  | 12040      | work     |       |
+| john   | position | programmer |          | 3     |
+| peter  | position | engineer   |          | 2     |
+| edward | position | supervisor |          | 10    |
+| john   | laptop   | dell       |          | 4     |
+| peter  | laptop   | apple      |          | 7     |
+
+Do a full outer join on two KGTK files on node1, sending the output to standard output.
+This produces the same output as the `kgtk cat` command.
+
+```bash
+kgtk join file1.tsv file2.tsv --left-join --right-join
+```
+
+The result will be the following table in KGTK format:
+
+| node1  | label    | node2      | location | years |
+| ------ | -------- | ---------- | -------- | ----- |
+| john   | zipcode  | 12345      | home     |       |
+| john   | zipcode  | 12346      | work     |       |
+| peter  | zipcode  | 12040      | home     |       |
+| peter  | zipcode  | 12040      | work     |       |
+| steve  | zipcode  | 45601      | home     |       |
+| steve  | zipcode  | 45601      | work     |       |
+| john   | position | programmer |          | 3     |
+| peter  | position | engineer   |          | 2     |
+| edward | position | supervisor |          | 10    |
+| john   | laptop   | dell       |          | 4     |
+| peter  | laptop   | apple      |          | 7     |
+

@@ -116,7 +116,7 @@ class Unique(KgtkFormat):
 
         if self.output_format == "edge":
             for value in sorted(value_counts.keys()):
-                ew.write([prefix + value, self.label_value, str(value_counts[value])])
+                ew.write([value, self.label_value, str(value_counts[value])])
         elif self.output_format == "node":
             row = [ self.column_name ]
             for value in sorted(value_counts.keys()):

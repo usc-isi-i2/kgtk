@@ -17,8 +17,9 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Filter a KGTK file',
-        'description': 'Filter a KGTK file based on whether one or more records exist in a second KGTK file with matching values for one or more fields.'
+        'help': 'Filter a KGTK file by matching records in a second KGTK file.',
+        'description': 'Filter a KGTK file based on whether one or more records exist in a second KGTK file with matching values for one or more fields.' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert ifexists --help'
     }
 
 
