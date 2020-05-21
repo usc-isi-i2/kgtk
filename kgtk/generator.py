@@ -467,11 +467,10 @@ class JsonGenerator(Generator):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
         prop_file = kwargs.pop("prop_file")
-        self.output_prefix = "kgtk"
+        self.output_prefix = kwargs.pop("output_prefix")
         self.e_ids = set()
         self.file_num = 0
         self.set_properties(prop_file)
-        self.set_json_file_names()
         # curret dictionaries
         self.set_json_dict()
 
@@ -482,7 +481,6 @@ class JsonGenerator(Generator):
             # initialize the order_map
             self.initialize_order_map(edge_list)
             return
-        
         node1 = edge_list[self.order_map["node1"]].strip()
         node2 = edge_list[self.order_map["node2"]].strip()
         prop = edge_list[self.order_map["prop"]].strip()
@@ -493,23 +491,19 @@ class JsonGenerator(Generator):
 
         # update info_json_dict
         if node1 in self.prop_types:
-            self.update_info_json_dict(node1, self.prop_types[node1])
+            self.update_misc_json_dict_info(node1, self.prop_types[node1])
         else:
-            self.update_info_json_dict(node1, None)
+            self.update_misc_json_dict_info(node1, None)
         
         if prop in self.prop_types:
-            self.update_info_json_dict(prop,self.prop_types[prop])
+            self.update_misc_json_dict_info(prop,self.prop_types[prop])
             if self.prop_types[prop] == "wikibase-item":
-                self.update_info_json_dict(node2)
+                self.update_misc_json_dict_info(node2)
         
         # update label_json_dict
         if prop in self.label_set:
-            self.update_label_json_dict(node1, prop, node2)
+            self.update_misc_json_dict_label(node1, prop, node2)
             return
-        else :
-            # update with empty label
-            if node1 not in self.label_json_dict:
-                self.update_label_json_dict(node1, prop, None)
         
         # update alias and descriptions
         if prop in self.description_set:
@@ -524,41 +518,50 @@ class JsonGenerator(Generator):
         self.update_misc_json_dict(node1,prop,node2,line_number,None)
         return
 
-    def update_label_json_dict(self,node1:str, prop:str, node2:str):
-        # for label_dict
+    def init_entity_in_json(self,node:str):
+        self.misc_json_dict[node] = {}
+        self.misc_json_dict[node]["labels"] = {}
+        self.misc_json_dict[node]["descriptions"] = {}
+        self.misc_json_dict[node]["aliases"] = {}
+        self.misc_json_dict[node]["claims"] = {}
+        self.misc_json_dict[node]["sitelinks"] = {}
+
+    def update_misc_json_dict_label(self,node1:str, prop:str, node2:str):
+        if node1 not in self.misc_json_dict:
+            self.init_entity_in_json(node1)
+        temp_dict = {}
         if node1 not in self.prop_types:
             label_type = "item"
-            self.label_json_dict[node1] = {
-            "type":label_type
-            }
         else:
             label_type = "property"
             label_datatype = self.prop_types[node1]
-            self.label_json_dict[node1] = {
-            "type":label_type,
-            "datatype":label_datatype,
-            }
-        self.label_json_dict[node1]["id"] = node1
-        self.label_json_dict[node1]["labels"] = {}
+            temp_dict["datatype"] = label_datatype
+        temp_dict["type"] = label_type
+
+        temp_dict["id"] = node1
+        temp_dict["labels"] = {}
         if node2 != None:
             text_string, lang = JsonGenerator.process_text_string(node2)
-            self.label_json_dict[node1]["labels"][lang] = {"language":lang, "value": text_string}
-        return
+            temp_dict["labels"][lang] = {"language":lang, "value": text_string}
+        self.misc_json_dict[node1].update(temp_dict)
+    
+    def update_misc_json_dict_info(self, node:str,data_type = None):
+        if node not in self.misc_json_dict:
+            self.init_entity_in_json(node)
 
-    def update_info_json_dict(self, node:str,data_type = None):
-        # if node in self.info_json_dict:
-        #     return
-        #TODO, not robust but no easy way to figure it out
         if node.startswith("Q"):
-            self.info_json_dict[node] = {
+            self.misc_json_dict[node].update(
+                {
                 "pageid":-1,
                 "ns":-1,
                 "title":node,
-                "lastrevid":"2000-01-01T00:00:00Z", #TODO
+                "lastrevid":"2000-01-01T00:00:00Z", 
                 "type":"item",
                 "id":node}
+                )
         elif node.startswith("P"):
-            self.info_json_dict[node] = {
+            self.misc_json_dict[node].update(
+                {
                 "pageid":-1,
                 "ns":-1,
                 "title":"Property:"+node,
@@ -566,20 +569,17 @@ class JsonGenerator(Generator):
                 "type":"property",
                 "datatype":data_type,
                 "id":node}
+                )
         else:
             raise KGTKException("node {} is neither an entity nor a property.".format(node)) 
     def update_misc_json_dict(self, node1:str, prop:str, node2:str, line_number:int, field:str):
         if node1 not in self.misc_json_dict:
-            self.misc_json_dict[node1] = {**self.label_json_dict[node1], **self.info_json_dict[node1]}
-            self.misc_json_dict[node1]["descriptions"] = {}
-            self.misc_json_dict[node1]["aliases"] = {}
-            self.misc_json_dict[node1]["claims"] = {}
-            self.misc_json_dict[node1]["sitelinks"] = {}
+            self.init_entity_in_json(node1)
         
         if field == "descriptions":
             description_text, lang = JsonGenerator.process_text_string(node2)
             temp_des_dict = {lang:{"languange":lang,"value":description_text}}
-            self.misc_json_dict[node1]["descriptions"] = {**self.misc_json_dict[node1]["descriptions"], **temp_des_dict}
+            self.misc_json_dict[node1]["descriptions"].update(temp_des_dict)
             return 
         
         if field == "aliases":
@@ -640,7 +640,6 @@ class JsonGenerator(Generator):
                 "qualifiers":{}
             }
         self.misc_json_dict[node1]["claims"][prop].append(temp_item_dict)
-        return
     def update_misc_json_dict_time(self,node1,prop,node2):
         if self.yyyy_pattern.match(node2):
             time_string = node2 + "-01-01"
@@ -677,8 +676,7 @@ class JsonGenerator(Generator):
             "references":[],
             "qualifiers":{}
             }
-        self.misc_json_dict[node1]["claims"][prop].append(temp_time_dict)          
-        return
+        self.misc_json_dict[node1]["claims"][prop].append(temp_time_dict)
     def update_misc_json_dict_coordinate(self,node1,prop,node2):
         latitude, longitude = node2[1:].split("/")
         latitude = float(latitude)
@@ -707,7 +705,6 @@ class JsonGenerator(Generator):
             "qualifiers":{}
             }
         self.misc_json_dict[node1]["claims"][prop].append(temp_coordinate_dict)  
-        return
     def update_misc_json_dict_quantity(self,node1,prop,node2):
         res = self.quantity_pattern.match(node2).groups()
         amount, lower_bound, upper_bound, unit = res
@@ -738,7 +735,6 @@ class JsonGenerator(Generator):
             "qualifiers":{}
             }
         self.misc_json_dict[node1]["claims"][prop].append(temp_quantity_dict)  
-        return
     def update_misc_json_dict_monolingualtext(self,node1,prop,node2):
         text_string, lang = JsonGenerator.process_text_string(node2)
         temp_mono_dict ={
@@ -816,7 +812,6 @@ class JsonGenerator(Generator):
         }
         self.misc_json_dict[node1]["claims"][prop].append(temp_url_dict) 
         return
-
     def set_properties(self, prop_file:str):
         datatype_mapping = {
             "item": "wikibase-item",
@@ -843,12 +838,6 @@ class JsonGenerator(Generator):
                         )
                     )
 
-    def set_json_file_names(self):
-        self.file_num += 1
-        prefix = self.output_prefix + "_" + str(self.file_num) + "_"
-        self.label_json_file =  prefix + "labels.json"
-        self.misc_json_file = prefix + "misc.json"
-        self.info_json_file = prefix + "info.json"
 
     def set_json_dict(self):
         self.label_json_dict = {}
@@ -857,17 +846,23 @@ class JsonGenerator(Generator):
 
     def serialize(self):
         '''
-        serialize the dictionaries to the file pointer
+        serialize the dictionaries. 
         '''
-        with open(self.label_json_file,"w") as fp:
-            json.dump(self.label_json_dict,fp)
-
-        with open(self.misc_json_file,"w") as fp:
-            json.dump(self.misc_json_dict,fp)
-        
-        with open(self.info_json_file,"w") as fp:
-            json.dump(self.info_json_dict,fp)
-        
+        # data are aggregated into one file
+        JsonGenerator.merge_dict(self.label_json_dict, self.misc_json_dict)
+        JsonGenerator.merge_dict(self.info_json_dict, self.misc_json_dict)
         # update dict and files
-        self.set_json_file_names()
+        with open(self.output_prefix + ".json","w") as fp:
+            json.dump(self.misc_json_dict,fp)
         self.set_json_dict()
+    
+    @staticmethod
+    def merge_dict(source:dict, target: dict):
+        for key, value in source.items():
+            if isinstance(value, dict):
+                # get node or create one
+                node = target.setdefault(key, {})
+                JsonGenerator.merge_dict(value, node)
+            else:
+                target[key] = value
+        return target

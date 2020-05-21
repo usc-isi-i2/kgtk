@@ -82,16 +82,16 @@ def add_arguments(parser):
         help="if set to yes, read from compressed gz file",
         dest="use_gz",
     )
-    # parser.add_argument(
-    #     "-pr",
-    #     "--output-file-prefix",
-    #     action="store",
-    #     type=str,
-    #     default = "kgtk",
-    #     required = False,
-    #     help="set the prefix of the output files. Default to `kgtk`",
-    #     dest="output_prefix",
-    # )
+    parser.add_argument(
+        "-pr",
+        "--output-file-prefix",
+        action="store",
+        type=str,
+        default = "kgtk",
+        required = False,
+        help="set the prefix of the output files. Default to `kgtk`",
+        dest="output_prefix",
+    )
     parser.add_argument(
         "-n",
         "--output-n-lines",
@@ -110,7 +110,7 @@ def run(
     descriptions: str,
     prop_file:str,
     use_gz:bool,
-    # ouput_prefix:str,
+    output_prefix:str,
     n:int,
 ):
     # import modules locally
@@ -123,7 +123,7 @@ def run(
         alias_set=aliases,
         description_set=descriptions,
         prop_file=prop_file,
-        # ouput_prefix = ouput_prefix,
+        output_prefix = output_prefix,
         n = n,
     )
     # process stdin
