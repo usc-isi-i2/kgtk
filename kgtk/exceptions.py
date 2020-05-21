@@ -1,6 +1,7 @@
 import sys
 import warnings
 import traceback
+import sh
 
 
 class KGTKException(BaseException):
@@ -9,6 +10,14 @@ class KGTKException(BaseException):
 
     def __init__(self, message):
         self.message = message
+
+
+def kgtk_exception_auto_handler(e: Exception):
+    if isinstance(e, (sh.SignalException_SIGPIPE, BrokenPipeError)):
+        return
+    elif isinstance(e, KGTKException):
+        raise e
+    raise KGTKException(KGTKException.message + str(e))
 
 
 class KGTKArgumentParseException(KGTKException):
@@ -34,7 +43,7 @@ class KGTKExceptionHandler(object):
             if return_code != 0:
                 warnings.warn('Please raise exception instead of returning non-zero value')
             return return_code
-        except BrokenPipeError:
+        except (sh.SignalException_SIGPIPE, BrokenPipeError):
             pass
         except BaseException:
             type_, exc_val, exc_tb = sys.exc_info()
@@ -45,11 +54,11 @@ class KGTKExceptionHandler(object):
             traceback.print_exception(type_, exc_val, exc_tb)  # the output goes to sys.stderr
 
         if isinstance(exc_val, KGTKException):
-            sys.stderr.write(exc_val.message)
+            print("%s" % exc_val.message, file=sys.stderr)
             return exc_val.return_code
 
         warnings.warn('Please raise KGTKException instead of {}'.format(type_))
-        sys.stderr.write(KGTKException.message)
+        print("%s" %KGTKException.message, file=sys.stderr)
         return KGTKException.return_code
 
 

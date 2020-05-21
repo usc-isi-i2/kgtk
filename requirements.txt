@@ -8,7 +8,12 @@ sh
 sklearn
 SPARQLWrapper
 tqdm
+rdflib
 etk
 simplejson
 pyrallel.lib
 attrs
+pycountry
+iso-639
+redis
+rfc3986
