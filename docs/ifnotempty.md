@@ -1,7 +1,7 @@
-The ifnotempty command filters KGTK files, passing through only those rows for
-which one (or more) specified columns contain nonempty values.  When multiple
-columns are specified, there is the choice of requiring any of the columns to
-be not empty or all of the columns to be not empty.
+The ifnotempty command filters a KGTK file, passing through only those rows
+for which one (or more) specified columns contain nonempty values.  When
+multiple columns are specified, there is the choice of requiring any of the
+columns to be not empty or all of the columns to be not empty.
 
 Optionally, report the count of rows that passed the filter instead of
 copying the rows to the output file.

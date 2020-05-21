@@ -1,4 +1,4 @@
-The ifempty command filters KGTK files, passing through only those rows for
+The ifempty command filters a KGTK file, passing through only those rows for
 which one (or more) specified columns contain empty values.  When multiple
 columns are specified, there is the choice of requiring any of the columns to
 be empty or all of the columns to be empty.
