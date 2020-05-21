@@ -114,7 +114,7 @@ def run(
     n:int,
 ):
     # import modules locally
-    from kgtk.json_generator import JsonGenerator
+    from kgtk.generator import JsonGenerator
     import sys
     import gzip
     
@@ -123,7 +123,6 @@ def run(
         alias_set=aliases,
         description_set=descriptions,
         prop_file=prop_file,
-        use_gz = use_gz,
         # ouput_prefix = ouput_prefix,
         n = n,
     )
