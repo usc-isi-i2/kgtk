@@ -36,14 +36,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
 
     parser.add_argument(      "--columns", dest="filter_column_names",
-                              help="The columns in the file being filtered (Required).", nargs='+')
+                              help="The columns in the file being filtered (Required).", nargs='+', required=True)
 
     parser.add_argument(      "--count", dest="only_count", help="Only count the records, do not copy them. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
-    parser.add_argument(      "--all", dest="all_are", help="False: Test if any are, True: test if all are (default=%(default)s).",
+    parser.add_argument(      "--all", dest="all_are", help="False: Test if any are empty, True: test if all are empty (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
