@@ -14,6 +14,7 @@ nav:
       - 'import_ntriples': 'import_ntriples.md'
       - 'import_wikidata': 'import_wikidata.md'
       - 'instances': 'instances.md'  
+      - 'join': 'join.md'
       - 'reachable_nodes': 'reachable_nodes.md'
       - 'remove_columns': 'remove_col.md'
       - 'sort': 'sort.md'
