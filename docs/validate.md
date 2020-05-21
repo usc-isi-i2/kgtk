@@ -1,252 +1,228 @@
-Command that will validate that a KGTK file complies with the specification in KGTK File Format v2. Currently, validation is limited to header column names and data column counts. It does not yet validate that headers and cells are compliant with the KGTK data type rules.
+Validate one or more KGTK files, optionally decompressing
+the input files.
 
+Input files may be (de)compressed using a algorithm selected
+by the file extension: .bz2 .gz .lz4 .xy
+
+The expert option --compression-type may be used to override the
+decompression selectin algorithim;  this is useful when reading from piped input.
 
 ## Usage
-usage: 
 ```
-kgtk validate [-h]
-                     [--blank-id-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--blank-node1-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--blank-node2-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--column-separator COLUMN_SEPARATOR]
-                        [--comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--compression-type COMPRESSION_TYPE]
-                     [--empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--errors-to-stdout] [--error-limit ERROR_LIMIT]
-                     [--fill-short-lines]
+usage: kgtk validate [-h] [--header-only [HEADER_ONLY]]
+                     [--errors-to-stdout | --errors-to-stderr] [--show-options] [-v]
+                     [--very-verbose] [--column-separator COLUMN_SEPARATOR]
+                     [--compression-type COMPRESSION_TYPE] [--error-limit ERROR_LIMIT]
+                     [--gzip-in-parallel [GZIP_IN_PARALLEL]]
+                     [--gzip-queue-size GZIP_QUEUE_SIZE] [--mode {NONE,EDGE,NODE,AUTO}]
                      [--force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
-                     [--gzip-in-parallel] [--gzip-queue-size GZIP_QUEUE_SIZE]
                      [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                     [--skip-first-record [SKIP_FIRST_RECORD]]
+                     [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                     [--repair-and-validate-lines [REPAIR_AND_VALIDATE_LINES]]
+                     [--repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]]
+                     [--blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                     [--comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                     [--empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                     [--fill-short-lines [FILL_SHORT_LINES]]
                      [--invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                        [--long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--mode {NONE,EDGE,NODE,AUTO}]
+                     [--long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--skip-first-record] [--truncate-long-lines] [-v]
-                        [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--very-verbose]
+                     [--truncate-long-lines [TRUNCATE_LONG_LINES]]
                      [--whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [kgtk_file [kgtk_file …]]
-```
+                     [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]]
+                     [--allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]]
+                     [--allow-lax-strings [ALLOW_LAX_STRINGS]]
+                     [--allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]]
+                     [--allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]]
+                     [--repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]]
+                     [--minimum-valid-year MINIMUM_VALID_YEAR]
+                     [--maximum-valid-year MAXIMUM_VALID_YEAR]
+                     [--minimum-valid-lat MINIMUM_VALID_LAT]
+                     [--maximum-valid-lat MAXIMUM_VALID_LAT]
+                     [--minimum-valid-lon MINIMUM_VALID_LON]
+                     [--maximum-valid-lon MAXIMUM_VALID_LON]
+                     [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
+                     [kgtk_files [kgtk_files ...]]
+
+Validate a KGTK file. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
+
+To validate data and pass clean data to an output file or pipe, use the kgtk clean_data command.
+
+Additional options are shown in expert help.
+kgtk --expert validate --help
 
 positional arguments:
-```
-  kgtk_file             The KGTK file(s) to validate. May be omitted or '-' for stdin.
-```
+  kgtk_files            The KGTK file(s) to validate. May be omitted or '-' for stdin.
 
 optional arguments:
-```
   -h, --help            show this help message and exit
-  --blank-id-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a blank id field is detected.
-  --blank-node1-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a blank node1 field is detected.
-  --blank-node2-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a blank node2 field is detected.
-  --blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a line with a blank node1, node2, or
-                        id field (per mode) is detected.
-  --column-separator COLUMN_SEPARATOR
-                        Column separator.
-  --comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a comment line is detected.
-  --compression-type COMPRESSION_TYPE
-                        Specify the input file compression type, otherwise use the
-                        extension.
-  --empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when an empty line is detected.
+  --header-only [HEADER_ONLY]
+                        Process the only the header of the input file (default=False).
+
+Error and feedback messages:
+  Send error messages and feedback to stderr or stdout, control the amount of feedback and debugging messages.
+
   --errors-to-stdout    Send errors to stdout instead of stderr
+  --errors-to-stderr    Send errors to stderr instead of stdout
+  --show-options        Print the options selected (default=False).
+  -v, --verbose         Print additional progress messages (default=False).
+  --very-verbose        Print additional progress messages (default=False).
+
+File options:
+  Options affecting processing
+
+  --column-separator COLUMN_SEPARATOR
+                        Column separator (default=<TAB>).
+  --compression-type COMPRESSION_TYPE
+                        Specify the compression type (default=None).
   --error-limit ERROR_LIMIT
-                        The maximum number of errors to report before failing
-  --fill-short-lines    Fill missing trailing columns in short lines with empty
-                        values.
-  --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
-                        Force the column names.
-  --gzip-in-parallel    Execute gzip in parallel.
+                        The maximum number of errors to report before failing (default=1000)
+  --gzip-in-parallel [GZIP_IN_PARALLEL]
+                        Execute gzip in parallel (default=False).
   --gzip-queue-size GZIP_QUEUE_SIZE
-                        Queue size for parallel gzip.
-  --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a header error is detected Only ERROR
-                        or EXIT are supported.
-  --header-only Process only the header of the input file.
-  --invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a a data cell value is invalid.
-  --long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a long line is detected.
+                        Queue size for parallel gzip (default=1000).
   --mode {NONE,EDGE,NODE,AUTO}
-                        Determine the KGTK input file mode.
-  --short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take whe a short line is detected.
-  --skip-first-record   Skip the first record when forcing column names.
-  --truncate-long-lines
-                        Remove excess trailing columns in long lines.
+                        Determine the KGTK file mode (default=KgtkReaderMode.AUTO).
+
+Header parsing:
+  Options affecting header parsing
+
+  --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
+                        Force the column names (default=None).
+  --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
+                        The action to take when a header error is detected. Only ERROR or EXIT
+                        are supported (default=ValidationAction.EXIT).
+  --skip-first-record [SKIP_FIRST_RECORD]
+                        Skip the first record when forcing column names (default=False).
   --unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a column name is unsafe.
-  -v, --verbose         Print additional progress messages.
-  --very-verbose        Print additional progress messages.
+                        The action to take when a column name is unsafe
+                        (default=ValidationAction.REPORT).
+
+Line parsing:
+  Options affecting data line parsing
+
+  --repair-and-validate-lines [REPAIR_AND_VALIDATE_LINES]
+                        Repair and validate lines (default=True).
+  --repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]
+                        Repair and validate values (default=True).
+  --blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
+                        The action to take when a line with a blank node1, node2, or id field
+                        (per mode) is detected (default=ValidationAction.EXCLUDE).
+  --comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
+                        The action to take when a comment line is detected
+                        (default=ValidationAction.EXCLUDE).
+  --empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
+                        The action to take when an empty line is detected
+                        (default=ValidationAction.EXCLUDE).
+  --fill-short-lines [FILL_SHORT_LINES]
+                        Fill missing trailing columns in short lines with empty values
+                        (default=False).
+  --invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
+                        The action to take when a data cell value is invalid
+                        (default=ValidationAction.COMPLAIN).
+  --long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
+                        The action to take when a long line is detected
+                        (default=ValidationAction.COMPLAIN).
+  --short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
+                        The action to take when a short line is detected
+                        (default=ValidationAction.COMPLAIN).
+  --truncate-long-lines [TRUNCATE_LONG_LINES]
+                        Remove excess trailing columns in long lines (default=False).
   --whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a whitespace line is detected.
+                        The action to take when a whitespace line is detected
+                        (default=ValidationAction.EXCLUDE).
+
+Data value parsing:
+  Options controlling the parsing and processing of KGTK data values.
+
+  --additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]
+                        Additional language codes (default=None).
+  --allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]
+                        Allow language identifier suffixes starting with a dash
+                        (default=False).
+  --allow-lax-strings [ALLOW_LAX_STRINGS]
+                        Do not check if double quotes are backslashed inside strings
+                        (default=False).
+  --allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]
+                        Do not check if single quotes are backslashed inside language qualified
+                        strings (default=False).
+  --allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]
+                        Allow month or day zero in dates (default=False).
+  --repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]
+                        Repair month or day zero in dates (default=False).
+  --minimum-valid-year MINIMUM_VALID_YEAR
+                        The minimum valid year in dates (default=1583).
+  --maximum-valid-year MAXIMUM_VALID_YEAR
+                        The maximum valid year in dates (default=2100).
+  --minimum-valid-lat MINIMUM_VALID_LAT
+                        The minimum valid latitude (default=-90.000000).
+  --maximum-valid-lat MAXIMUM_VALID_LAT
+                        The maximum valid latitude (default=90.000000).
+  --minimum-valid-lon MINIMUM_VALID_LON
+                        The minimum valid longitude (default=-180.000000).
+  --maximum-valid-lon MAXIMUM_VALID_LON
+                        The maximum valid longitude (default=180.000000).
+  --escape-list-separators [ESCAPE_LIST_SEPARATORS]
+                        Escape all list separators instead of splitting on them
+                        (default=False).
 ```
 
-## Additional Usage Notes
-### kgtk_file
-The input file may be specified by path.  The file path “-” is reserved for standard input; omitting the input file also defaults to standard input. Multiple files may be specified.
+By default, the following rules apply:
+ - errors that occur while processing a KGTK file's column header line cause an immediate exit:
+   - An empty column name
+   - A duplicate column name
+   - A missing required column name for an edge or node file
+   - An ambiguous required column name (e.g., `id` and `ID` are both present)
+ - empty data lines are silently ignored and not passed through.
+ - data lines containing only whitespace are silently ignored and not passed through.
+ - data lines with empty required fields (node1 and node2 for KGTK edge files, id for KGTK node files) are silently ignored.
+ - data lines that have too few fields cause a complaint to be issued.
+ - data lines that have too many fields cause a complaint to be issued.
+ - lines with data value validation errors cause a complaint to be issued.
 
-### --blank-id-line-action
-KGTK File Format v2 specifies that lines in node files that contain empty values in the id column (or an allowable alias) are to be ignored.
-
-|Action keyword|Action when condition detected|
-|--------------|------------------------------|
-|PASS|Silently allow the data line to pass through|
-|REPORT|Report the data line and let it pass through|
-|EXCLUDE|Silently exclude (ignore) the data line|
-|COMPLAIN|Report the data line and exclude (ignore) it|
-|ERROR|Raise a ValueError|
-|EXIT|sys.exit(1)|
-
-### --blank-node1-line-action
-KGTK File Format v2 specifies that lines in edge files that contain empty values in the node1 column (or an allowable alias) are to be ignored. 
-
-### --blank-node2-line-action
-KGTK File Format v2 specifies that lines in edge files that contain empty values in the node2 column (or an allowable alias) are to be ignored. 
-
-### --blank-required-field-line-action
-This option is intended for use in auto detection mode.  It supplies the default value for --blank-id-line-action for node files and the default values for --blank-node1-line-actin and 
-
-### --blank-node2-line-action for edge files.
-KGTK File Format v2 specifies that lines containing only whitespace are to be ignored. 
-
-### --column-separator
-KGTK File Format v2 specifies that columns are separated by the tab character. The column separator may be overridden to allow a different separator, such as a comma, although there may be complications, such as comma characters inside quoted strings.
-### --compression-type
-If the input path ends with one of the following extensions, it will be automatically decompressed. Alternatively, the --compression-type option may be specified to force the selection of a specific decompressor.
-
-|Extension|Decompression|
-|---------|-------------|
-|.bz2|bzip2|
-|.gz|gzip|
-|.lz4|lz4|
-|.xz|lzma|
-
-### --comment-line-action
-KGTK File Format v2 specifies that lines beginning with “#” are comment lines.
-
-### --empty-line-action
-KGTK File Format v2 specifies that empty lines (a special case of whitespace lines) should be ignored. 
-
-### --errors-to-stdout
-Error messages are normally written to stdout. This option causes error messages to be written to stdout, which is occasionally useful when debugging.
-
-### --error-limit
-Ths maximum number of errors to report before failing. The default value is 1000.
-
-### --force-column-names
-Supply a set of column names to either override the first line of the input file or to supply column headers, when missing from the input file (see --skip-first-record). The column names are a whitespace separated list.
-
-### --gzip-in-parallel
-This option runs the select decompressor or compressor in a parallel process. This currently results in degraded performance, but it may be possible to gain a performance advantage with more sophisticated inter-process communication.
-
-### --gzip-queue-size
-This is an implementation parameter for the (de)compression parallelization.
-
-### --header-error-action
-The action to take if a header error is detected, such as:
-
-- An empty column name
-- A duplicate column name
-- A missing required column name for an edge or node file
-- An ambiguous required column name (e.g., ‘id’ and ‘ID’ are both present)
-Only ERROR and EXIT actions are implemented for header errors.
-
-### --invalid-value-action
-The action to take if a data cell does not meet the data type requirements given in the KGTK File Format v2.
-
-- Numbers
-- Strings
-- Language-qualified strings
-- Date and times
-- Location coordinates
-- Symbols
-- Quantities are not recognized yet.
-
-
-The default is to check for valid values, complain about a row with any invalid values, and continue to process the row.  If you select the PASS action, then data cell value validation will be bypassed, with significant performance benefits.
-
-### --long-line-action
-KGTK File Format v2 specifies that data lines should have the same number of fields as there are columns.
-
-### --mode
-Determine the KGTk input file mode.
-
-|Mode|Meaning|
-|----|-------|
-|NONE|Do not require node1, node1, or id columns|
-|EDGE|Treat the input file as a KGTK edge file and require the |presence of node1 and node2 columns or their allowable aliases.
-|NODE|Treat the input file as a KGTK node file and require the presence of an id column or its allowable alias (ID).|
-|AUTO|Automatically determine if an input file is an edge file or a node file. If a node1 (or allowable alias) column is present, assume that the file is a KGTK edge file. Otherwise, assume that it is a KGTK node file|
-
-### --short-line-action
-KGTK File Format v2 specifies that data lines should have the same number of fields as there are columns. 
-
-### --skip-first-record
-When --force-column-names has supplied a set of column names, this option may be supplied to indicate that the forced column names should replace the first (header) line of the input file.
-
-### --unsafe-column-name
-The action to take if a header column name contains one of the following:
-- Leading white space
-- Trailing white space
-- Internal white space except in strings or language-qualified strings
-- Commas
-- Vertical bars
-- Semicolons
-  
-### --whitespace-line-action
-KGTK File Format v2 specifies that data lines containing only whitespace characters should be ignored. 
+These defaults may be changed through expert options.
 
 ## Examples
-In this example, the input file has spaces instead of tabs in the header line.
-```bash
-python3 -m kgtk validate -v ../../drive/datasets/edges-v2-property-stats-labeled.tsv
-Validating '../../drive/datasets/edges-v2-property-stats-labeled.tsv'
-KgtkReader: File_path.suffix: .tsv
-KgtkReader: reading file ../../drive/datasets/edges-v2-property-stats-labeled.tsv
-header: id      count   label
-In input header 'id      count   label': Column name 'id      count   label' contains internal white space
-node1 column not found, assuming this is a KGTK node file
-In input header 'id      count   label': Missing required column: id | ID
-Exit requested
-```
 
-In this example, some of the data lines are missing columns.
-```bash
-Validating '../../drive/datasets/edges-v3-short-ids-extra-columns.tsv.gz'
-KgtkReader: File_path.suffix: .gz
-KgtkReader: reading gzip ../../drive/datasets/edges-v3-short-ids-extra-columns.tsv.gz
-header: id      node1   label   node2   magnitude       unit    lower   upper   latitude        longitude       precision       calendar        entity-type
-node1 column found, this is a KGTK edge file
-KgtkReader: Reading an edge file. node1=1 label=2 node2=3
-In input data line 1445572, Required 13 columns, saw 4: '__1445572      Q503323 P3625   &"': __1445572  Q503323 P3625   &"
-In input data line 1445582, saw an empty line:
-In input data line 1445583, Required 13 columns, saw 1: 'Q503323': Q503323
-In input data line 1445584, Required 13 columns, saw 2: '       P2859':         P2859
-In input data line 1445585, Required 13 columns, saw 11: '      6"                                                                      ':      6"
-In input data line 2237571, Required 13 columns, saw 4: '__2237558      Q864677 P3625   r"': __2237558  Q864677 P3625   r"
-In input data line 2237581, saw an empty line:
-In input data line 2237582, Required 13 columns, saw 1: 'Q864677': Q864677
-In input data line 2237583, Required 13 columns, saw 2: '       P3917':         P3917
-In input data line 2237584, Required 13 columns, saw 2: '       +123':  +123
-In input data line 2237585, Required 13 columns, saw 2: '       +123':  +123
-In input data line 2237594, saw an empty line:
-```
-In this example, the KGTk file starts with a comment instead of a header line.
+Suppose that `file1.tsv` contains the following table in KGTK format:
+
+| node1 | label | node2             |
+| john  | woke  | ^2020-05-00T00:00 |
+| john  | woke  | ^2020-05-02T00:00 |
+
+### Validate the data, using default options
 
 ```bash
-Validating '../../drive/datasets/edges-v2-property-stats.tsv'
-KgtkReader: File_path.suffix: .tsv
-KgtkReader: reading file ../../drive/datasets/edges-v2-property-stats.tsv
-header: # > date; zcat edges-v2.csv.gz | cut -f 3 | sort | uniq -c > property-stats.log; date
-In input header '# > date; zcat edges-v2.csv.gz | cut -f 3 | sort | uniq -c > property-stats.log; date': Column name '# > date; zcat edges-v2.csv.gz | cut -f 3 | sort | uniq -c > property-stats.log; date' contains internal white space, Column name '# > date; zcat edges-v2.csv.gz | cut -f 3 | sort | uniq -c > property-stats.log; date' contains a vertical bar (|), Column name '# > date; zcat edges-v2.csv.gz | cut -f 3 | sort | uniq -c > property-stats.log; date' contains a semicolon (;)
-node1 column not found, assuming this is a KGTK node file
-In input header '# > date; zcat edges-v2.csv.gz | cut -f 3 | sort | uniq -c > property-stats.log; date': Missing required column: id | ID
-Command exited with non-zero status 1
+kgtk clean_data file1.tsv
+```
+
+Standard output will get the following data:
+```
+node1   label   node2
+john    woke    ^2020-05-02T00:00
+```
+
+The following complaint will be issued on standard error:
+```
+Data line 1:
+john    woke    ^2020-05-00T00:00
+col 2 (node2) value '^2020-05-00T00:00'is an Invalid Date and Times
+```
+
+The first data line was excluded because it contained "00" in the day
+field, which violates the ISO 8601 specification.
+
+### Clean the data, repairing the invalid date/time string
+Change day "00" to day "01:
+
+```bash
+kgtk clean_data file1.tsv --repair-month-or-day-zero
+```
+
+Standard output will get the following data, and no errors will be issued:
+```
+node1   label   node2
+john    woke    ^2020-05-01T00:00
+john    woke    ^2020-05-02T00:00
 ```

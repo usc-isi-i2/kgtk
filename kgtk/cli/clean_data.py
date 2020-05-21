@@ -18,7 +18,11 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Validate a KGTK file and output a clean copy: no comments, whitespace lines, invalid lines, etc. '
+        'help': 'Validate a KGTK file and output a clean copy: no comments, whitespace lines, invalid lines, etc. ',
+        'description': 'Validate a KGTK file and output a clean copy. ' +
+        'Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. ' +
+        'Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. ' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert clean_data --help'
     }
 
 
