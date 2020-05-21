@@ -35,7 +35,8 @@ dataTypeMappings = {
     "Monolingualtext": "monolingualtext",
     "String": "string",
     "ExternalId":"external-identifier",
-    "Url":"url"
+    "Url":"url",
+    "WikibaseProperty":"property"
 }
 results = get_results(endpoint_url, query)
 
