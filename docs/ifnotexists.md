@@ -1,5 +1,5 @@
-The ifexists command filters a KGTK file, passing through only those rows for
-which one or more specified columns match records in a second KGTK file.
+The ifnotexists command filters a KGTK file, passing through only those rows for
+which one or more specified columns do not match records in a second KGTK file.
 
 The fields to match may be supplied by the user.  If not supplied,
 the following defaults will be used.  "left" refers to the KFTK
@@ -18,12 +18,12 @@ matching records.
 ## Usage
 
 ```bash
-usage: kgtk ifexists [-h] [--input-keys [INPUT_KEYS [INPUT_KEYS ...]]] --filter-on
-                     FILTER_KGTK_FILE [--filter-keys [FILTER_KEYS [FILTER_KEYS ...]]]
-                     [-o OUTPUT_KGTK_FILE] [-v]
-                     [input_kgtk_file]
+usage: kgtk ifnotexists [-h] [--input-keys [INPUT_KEYS [INPUT_KEYS ...]]] --filter-on
+                        _FILTER_KGTK_FILE [--filter-keys [FILTER_KEYS [FILTER_KEYS ...]]]
+                        [-o OUTPUT_KGTK_FILE] [-v]
+                        [input_kgtk_file]
 
-Filter a KGTK file based on whether one or more records exist in a second KGTK file with matching values for one or more fields.
+Filter a KGTK file based on whether one or more records do not exist in a second KGTK file with matching values for one or more fields.
 
 Additional options are shown in expert help.
 kgtk --expert ifexists --help
@@ -35,12 +35,12 @@ optional arguments:
   -h, --help            show this help message and exit
   --input-keys [INPUT_KEYS [INPUT_KEYS ...]], --left-keys [INPUT_KEYS [INPUT_KEYS ...]]
                         The key columns in the file being filtered (default=None).
-  --filter-on FILTER_KGTK_FILE
+  --filter-on _FILTER_KGTK_FILE
                         The KGTK file to filter against (required).
   --filter-keys [FILTER_KEYS [FILTER_KEYS ...]], --right-keys [FILTER_KEYS [FILTER_KEYS ...]]
                         The key columns in the filter-on file (default=None).
   -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (required).
+                        The KGTK file to write (required),
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
@@ -85,17 +85,7 @@ Suppose that `file5.tsv` contains the following table in KGTK format:
 | home |
 
 ```bash
-kgtk ifexists file1.tsv --filter-on file2.tsv
-
-```
-
-| node1 | label   | node2 | location | years |
-| ----- | ------- | ----- | -------- | ----- |
-| peter | zipcode | 12040 | home     |       |
-| peter | zipcode | 12040 | work     | 6     |
-
-```bash
-kgtk ifexists file1.tsv --filter-on file3.tsv
+kgtk ifnotexists file1.tsv --filter-on file2.tsv
 
 ```
 | node1 | label   | node2 | location | years |
@@ -105,13 +95,23 @@ kgtk ifexists file1.tsv --filter-on file3.tsv
 | steve | zipcode | 45600 |          | 3     |
 | steve | zipcode | 45601 | work     |       |
 
+
 ```bash
-kgtk ifexists file4.tsv --filter-on file3.tsv
+kgtk ifnotexists file1.tsv --filter-on file3.tsv
+
+```
+| node1 | label   | node2 | location | years |
+| ----- | ------- | ----- | -------- | ----- |
+| peter | zipcode | 12040 | home     |       |
+| peter | zipcode | 12040 | work     | 6     |
+
+```bash
+kgtk ifnotexists file4.tsv --filter-on file3.tsv
 
 ```
 | id    |
 | ----- |
-| john  |
+| peter  |
 
 ```bash
 kgtk ifexists file1.tsv --filter-on file5.tsv --input-keys location
@@ -119,5 +119,8 @@ kgtk ifexists file1.tsv --filter-on file5.tsv --input-keys location
 ```
 | node1 | label   | node2 | location | years |
 | ----- | ------- | ----- | -------- | ----- |
-| john  | zipcode | 12345 | home     | 10    |
-| peter | zipcode | 12040 | home     |       |
+| john  | zipcode | 12346 |          |       |
+| peter | zipcode | 12040 | work     | 6     |
+| steve | zipcode | 45600 |          | 3     |
+| steve | zipcode | 45601 | work     |       |
+
