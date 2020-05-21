@@ -49,6 +49,7 @@ def cli_entry(*args):
     )
     shared_args = base_parser.add_argument_group('shared optional arguments')
     shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
+    shared_args.add_argument('--expert', dest='_expert', action='store_true', default=False, help='enable expert mode')
     add_shared_arguments(shared_args)
 
     # parse shared arguments
@@ -70,7 +71,10 @@ def cli_entry(*args):
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         sub_parser = sub_parsers.add_parser(h, **mod.parser())
         add_default_arguments(sub_parser)  # call this before adding other arguments
-        mod.add_arguments(sub_parser)
+        if hasattr(mod, "add_arguments_extended"):
+            mod.add_arguments_extended(sub_parser, parsed_shared_args)
+        else:
+            mod.add_arguments(sub_parser)
 
     # add root level usage after sub-parsers are created
     # this won't pollute help info in sub-parsers
