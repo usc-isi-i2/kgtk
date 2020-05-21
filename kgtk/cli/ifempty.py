@@ -18,9 +18,10 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Filter a KGTK file for empty fields',
+        'help': 'Filter a KGTK file for empty fields.',
         'description': 'Filter a KGTK file based on whether one or more fields are empty. ' +
-        'When multiple fields are specified, either any field or all fields must be empty.'
+        'When multiple fields are specified, either any field or all fields must be empty.' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert ifempty --help'
     }
 
 
