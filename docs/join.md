@@ -28,6 +28,7 @@ listed explicitly.
 
 To join an edge file to a node file, or to join quasi-KGTK files, use the
 following option (enable expert mode for more information):
+
 ```
 --mode=NONE
 Expert mode provides additional command arguments.
@@ -55,4 +56,4 @@ optional arguments:
   --right-join [RIGHT_JOIN]
                         Perform a right outer join (default=False).
   -v, --verbose         Print additional progress messages (default=False).
-  ```
+```
