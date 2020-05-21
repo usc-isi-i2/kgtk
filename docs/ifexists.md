@@ -1,10 +1,13 @@
 The ifexists command filters a KGTK file, passing through only those rows for
 which one or more specified columns match records in a second KGTK file.
 
-The fields to match may be supplied by the user.  If not supplied,
-the following defaults will be used.  "left" refers to the KFTK
-file being filtered, and "right" refers to the file supplying the
-matching records.
+This implementation, in Python, builds an im-memory dictionary of the key
+values in the --filter-on file.  Performance will be poor, and execution may
+fail, if the --filter-on file is very large.
+
+The fields to match may be supplied by the user.  If not supplied, the
+following defaults will be used.  "left" refers to the KFTK file being
+filtered, and "right" refers to the file supplying the matching records.
 
 | Left    | Right   | Key fields |
 | ------- | ------- | ---------- |
