@@ -47,18 +47,27 @@ class KgtkValueOptions:
     # Minimum and maximum year range in dates.
     MINIMUM_VALID_YEAR: int = 1583 # Per ISO 8601, years before this one require special agreement.
     minimum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MINIMUM_VALID_YEAR)
+    clamp_minimum_year: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     MAXIMUM_VALID_YEAR: int = 2100 # Arbitrarily chosen.
     maximum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MAXIMUM_VALID_YEAR)
+    clamp_maximum_year: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     MINIMUM_VALID_LAT: float = -90.
     minimum_valid_lat: float = attr.ib(validator=attr.validators.instance_of(float), default=MINIMUM_VALID_LAT)
+    clamp_minimum_lat: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     MAXIMUM_VALID_LAT: float = 90.
     maximum_valid_lat: float = attr.ib(validator=attr.validators.instance_of(float), default=MAXIMUM_VALID_LAT)
+    clamp_maximum_lat: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
     MINIMUM_VALID_LON: float = -180.
     minimum_valid_lon: float = attr.ib(validator=attr.validators.instance_of(float), default=MINIMUM_VALID_LON)
+    clamp_minimum_lon: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     MAXIMUM_VALID_LON: float = 180.
     maximum_valid_lon: float = attr.ib(validator=attr.validators.instance_of(float), default=MAXIMUM_VALID_LON)
+    clamp_maximum_lon: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
 
     @classmethod
@@ -141,25 +150,49 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "The minimum valid year in dates (default=%(default)d)."),
                                   type=int, **d(default=cls.MINIMUM_VALID_YEAR))
 
+        vgroup.add_argument(      prefix1 + "clamp-minimum-year", dest=prefix2 + "clamp_minimum_year",
+                                  help=h(prefix3 + "Clamp years at the minimum value (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "maximum-valid-year", dest=prefix2 + "maximum_valid_year",
                                   help=h(prefix3 + "The maximum valid year in dates (default=%(default)d)."),
                                   type=int, **d(default=cls.MAXIMUM_VALID_YEAR))
+
+        vgroup.add_argument(      prefix1 + "clamp-maximum-year", dest=prefix2 + "clamp_maximum_year",
+                                  help=h(prefix3 + "Clamp years at the maximum value (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lat", dest=prefix2 + "minimum_valid_lat",
                                   help=h(prefix3 + "The minimum valid latitude (default=%(default)f)."),
                                   type=int, **d(default=cls.MINIMUM_VALID_LAT))
 
+        vgroup.add_argument(      prefix1 + "clamp-minimum-lat", dest=prefix2 + "clamp_minimum_lat",
+                                  help=h(prefix3 + "Clamp latitudes at the minimum value (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "maximum-valid-lat", dest=prefix2 + "maximum_valid_lat",
                                   help=h(prefix3 + "The maximum valid latitude (default=%(default)f)."),
                                   type=int, **d(default=cls.MAXIMUM_VALID_LAT))
+
+        vgroup.add_argument(      prefix1 + "clamp-maximum-lat", dest=prefix2 + "clamp_maximum_lat",
+                                  help=h(prefix3 + "Clamp latitudes at the maximum value (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lon", dest=prefix2 + "minimum_valid_lon",
                                   help=h(prefix3 + "The minimum valid longitude (default=%(default)f)."),
                                   type=int, **d(default=cls.MINIMUM_VALID_LON))
 
+        vgroup.add_argument(      prefix1 + "clamp-minimum-lon", dest=prefix2 + "clamp_minimum_lon",
+                                  help=h(prefix3 + "Clamp longitudes at the minimum value (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "maximum-valid-lon", dest=prefix2 + "maximum_valid_lon",
                                   help=h(prefix3 + "The maximum valid longitude (default=%(default)f)."),
                                   type=int, **d(default=cls.MAXIMUM_VALID_LON))
+
+        vgroup.add_argument(      prefix1 + "clamp-maximum-lon", dest=prefix2 + "clamp_maximum_lon",
+                                  help=h(prefix3 + "Clamp longitudes at the maximum value (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "escape-list-separators", dest=prefix2 + "escape_list_separators",
                                   help=h(prefix3 + "Escape all list separators instead of splitting on them (default=%(default)s)."),
@@ -179,11 +212,17 @@ class KgtkValueOptions:
                    allow_lax_lq_strings=d.get(prefix + "allow_lax_lq_strings", False),
                    additional_language_codes=d.get(prefix + "additional_language_codes", None),
                    minimum_valid_year=d.get(prefix + "minimum_valid_year", cls.MINIMUM_VALID_YEAR),
+                   clamp_minimum_year=d.get(prefix + "clamp_minimum_year", False),
                    maximum_valid_year=d.get(prefix + "maximum_valid_year", cls.MAXIMUM_VALID_YEAR),
+                   clamp_maximum_year=d.get(prefix + "clamp_maximum_year", False),
                    minimum_valid_lat=d.get(prefix + "minimum_valid_lat", cls.MINIMUM_VALID_LAT),
+                   clamp_minimum_lat=d.get(prefix + "clamp_minimum_lat", False),
                    maximum_valid_lat=d.get(prefix + "maximum_valid_lat", cls.MAXIMUM_VALID_LAT),
+                   clamp_maximum_lat=d.get(prefix + "clamp_maximum_lat", False),
                    minimum_valid_lon=d.get(prefix + "minimum_valid_lon", cls.MINIMUM_VALID_LON),
+                   clamp_minimum_lon=d.get(prefix + "clamp_minimum_lon", False),
                    maximum_valid_lon=d.get(prefix + "maximum_valid_lon", cls.MAXIMUM_VALID_LON),
+                   clamp_maximum_lon=d.get(prefix + "clamp_maximum_lon", False),
                    escape_list_separators=d.get(prefix + "escape_list_separators", False))
 
     @classmethod
@@ -201,11 +240,17 @@ class KgtkValueOptions:
         if self.additional_language_codes is not None:
             print("%sadditional-language-codes=%s" % (prefix, " ".join(self.additional_language_codes)), file=out)
         print("%sminimum-valid-year=%d" % (prefix, self.minimum_valid_year), file=out)
+        print("%sclamp-minimum-year=%d" % (prefix, self.clamp_minimum_year), file=out)
         print("%smaximum-valid-year=%d" % (prefix, self.maximum_valid_year), file=out)
+        print("%sclamp-maximum-year=%d" % (prefix, self.clamp_maximum_year), file=out)
         print("%sminimum-valid-lat=%f" % (prefix, self.minimum_valid_lat), file=out)
+        print("%sclamp-minimum-lat=%d" % (prefix, self.clamp_minimum_lat), file=out)
         print("%smaximum-valid-lat=%f" % (prefix, self.maximum_valid_lat), file=out)
+        print("%sclamp-maximum-lat=%d" % (prefix, self.clamp_maximum_lat), file=out)
         print("%sminimum-valid-lon=%f" % (prefix, self.minimum_valid_lon), file=out)
+        print("%sclamp-minimum-lon=%d" % (prefix, self.clamp_minimum_lon), file=out)
         print("%smaximum-valid-lon=%f" % (prefix, self.maximum_valid_lon), file=out)
+        print("%sclamp-maximum-lon=%d" % (prefix, self.clamp_maximum_lon), file=out)
         print("%sescape-list-separators=%s" % (prefix, str(self.escape_list_separators)), file=out)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()

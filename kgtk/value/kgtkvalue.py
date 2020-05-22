@@ -751,21 +751,51 @@ class KgtkValue(KgtkFormat):
         latstr: str = m.group("lat")
         lonstr: str = m.group("lon")
 
+        fixup_needed: bool = False
+
         # Latitude normally runs from -90 to +90:
         try:
             lat: float = float(latstr)
-            if  lat < self.options.minimum_valid_lat or lat > self.options.maximum_valid_lat:
-                return False
+            if  lat < self.options.minimum_valid_lat:
+                if self.options.clamp_minimum_lat:
+                    lat = self.options.minimum_valid_lat
+                    latstr = str(lat)
+                    fixup_needed = True
+                else:
+                    return False
+            elif lat > self.options.maximum_valid_lat:
+                if self.options.clamp_maximum_lat:
+                    lat = self.options.maximum_valid_lat
+                    latstr = str(lat)
+                    fixup_needed = True
+                else:
+                    return False
         except ValueError:
             return False
 
         # Longitude normally runs from -180 to +180:
         try:
             lon: float = float(lonstr)
-            if lon < self.options.minimum_valid_lon or lon > self.options.maximum_valid_lon:
-                return False
+            if  lon < self.options.minimum_valid_lon:
+                if self.options.clamp_minimum_lon:
+                    lon = self.options.minimum_valid_lon
+                    lonstr = str(lon)
+                    fixup_needed = True
+                else:
+                    return False
+            elif lon > self.options.maximum_valid_lon:
+                if self.options.clamp_maximum_lon:
+                    lon = self.options.maximum_valid_lon
+                    lonstr = str(lon)
+                    fixup_needed = True
+                else:
+                    return False
         except ValueError:
             return False
+
+        if fixup_needed:
+            # Repair a location coordinates problem.
+            self.update_location_coordinates(latstr, lonstr)
 
         # We are certain that this is valid.
         self.valid = True
@@ -777,6 +807,13 @@ class KgtkValue(KgtkFormat):
                                           lonstr=lonstr,
                                           lon=lon)
         return True
+
+    def update_location_coordinates(self, latstr: str, lonstr: str):
+        self.value = "@" + latstr + "/" + lonstr
+
+        # If this value is the child of a list, repair the list parent value.
+        if self.parent is not None:
+            self.parent.rebuild_list()
 
     # https://en.wikipedia.org/wiki/ISO_8601
     #
@@ -898,14 +935,14 @@ class KgtkValue(KgtkFormat):
         if m is None:
             return False
 
-        yearstr: str = m.group("year")
-        monthstr: str = m.group("month")
-        daystr: str = m.group("day")
-        hourstr: str = m.group("hour")
-        minutesstr: str = m.group("minutes")
-        secondsstr: str = m.group("seconds")
-        zonestr: str = m.group("zone")
-        precisionstr: str = m.group("precision")
+        yearstr: typing.Optional[str] = m.group("year")
+        monthstr: typing.Optional[str] = m.group("month")
+        daystr: typing.Optional[str] = m.group("day")
+        hourstr: typing.Optional[str] = m.group("hour")
+        minutesstr: typing.Optional[str] = m.group("minutes")
+        secondsstr: typing.Optional[str] = m.group("seconds")
+        zonestr: typing.Optional[str] = m.group("zone")
+        precisionstr: typing.Optional[str] = m.group("precision")
         iso8601extended: bool = m.group("hyphen") is not None
 
         fixup_needed: bool = False
@@ -918,9 +955,27 @@ class KgtkValue(KgtkFormat):
         except ValueError:
             return False
         if year < self.options.minimum_valid_year:
-            return False
-        if year > self.options.maximum_valid_year:
-            return False
+            if self.options.clamp_minimum_year:
+                year = self.options.minimum_valid_year
+                if year >= 0:
+                    yearstr = str(year).zfill(4)
+                else:
+                    # Minus sign *and* at least 4 digits.
+                    yearstr = str(year).zfill(5)
+                fixup_needed = True
+            else:
+                return False
+        elif year > self.options.maximum_valid_year:
+            if self.options.clamp_maximum_year:
+                year = self.options.maximum_valid_year
+                if year >= 0:
+                    yearstr = str(year).zfill(4)
+                else:
+                    # Minus sign *and* at least 4 digits.
+                    yearstr = str(year).zfill(5)
+                fixup_needed = True
+            else:
+                return False
 
         if monthstr is not None:
             try:
@@ -968,11 +1023,8 @@ class KgtkValue(KgtkFormat):
                 return False # shouldn't happen
 
         if fixup_needed:
-            # Repair a month or day zero problem.  If this value is the child
-            # of a list, repair the list parent value, too.
-            self.update_date_and_times()
-            if self.parent is not None:
-                self.parent.rebuild_list()
+            # Repair a month or day zero problem.
+            self.update_date_and_times(yearstr, monthstr, daystr, hourstr, minutesstr, secondsstr, zonestr, precisionstr, iso8601extended)
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True
@@ -997,33 +1049,46 @@ class KgtkValue(KgtkFormat):
             )
         return True
 
-    def update_date_and_times(self):
-        v: str = "^" + self.yearstr
-        if self.monthstr is not None:
-            if self.iso8601extended:
+    def update_date_and_times(self,
+                              yearstr: str,
+                              monthstr: typing.Optional[str],
+                              daystr: typing.Optional[str],
+                              hourstr: typing.Optional[str],
+                              minutesstr: typing.Optional[str],
+                              secondsstr: typing.Optional[str],
+                              zonestr: typing.Optional[str],
+                              precisionstr: typing.Optional[str],
+                              iso8601extended: bool):
+        v: str = "^" + yearstr
+        if monthstr is not None:
+            if iso8601extended:
                 v += "-"
-            v += self.monthstr
-        if self.daystr is not None:
-            if self.iso8601extended:
+            v += monthstr
+        if daystr is not None:
+            if iso8601extended:
                 v += "-"
-            v += self.daystr
-        if self.hourstr is not None:
+            v += daystr
+        if hourstr is not None:
             v += "T"
-            v += self.hourstr
-        if self.minutesstr is not None:
-            if self.iso8601extended:
+            v += hourstr
+        if minutesstr is not None:
+            if iso8601extended:
                 v += ":"
-            v += self.minutesstr
-        if self.secondsstr is not None:
-            if self.iso8601extended:
+            v += minutesstr
+        if secondsstr is not None:
+            if iso8601extended:
                 v += ":"
-            v += self.secondsstr
-        if self.zonestr is not None:
-            v += self.zonestr
-        if self.precisionstr is not None:
+            v += secondsstr
+        if zonestr is not None:
+            v += zonestr
+        if precisionstr is not None:
             v += "/"
-            v += self.precisionstr
+            v += precisionstr
         self.value = v
+
+        # If this value is the child of a list, repair the list parent value.
+        if self.parent is not None:
+            self.parent.rebuild_list()
 
     def is_extension(self, validate=False)->bool:
         """Return True if the first character is !
