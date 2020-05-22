@@ -67,11 +67,11 @@ id1 P3  Q4  id4
 - `-ap --alias-property {str}`: alias identifiers which will create labels, separated by comma','. Default to **aliases**.
 - `-dp --description-property {str}`: description identifiers which will create labels, separated by comma','. Default to **descriptions**.
 - `-gt --generate-truthy {bool}`: the default is to not generate truthy triples. Specify this option to generate truthy triples. Default to **Yes**.
-- `-ig --ignore {bool}`: if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging. Default to **False**.
+- `-w --warning {bool}`: if set to yes, warn various kinds of exceptions and mistakes and log them to a log file with line number in input file. Default to **False**.
 - `-n --output-n-lines {number}`: output triples approximately every {n} lines of reading stdin. Default to **1000**.
 - `-gz --use-gz {number}`: if set to yes, read from compressed gz file. Default to **False**.
 - `-sid --use-id {bool}`: if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement. Default to **False**
-
+- `-log --log-path {str}`: set the path of the log file. Default to **warning.log**
 
 ### Shared Options
 
@@ -106,6 +106,7 @@ Currently the following datatypes are supported. The complete list of possible d
 6. Url 
 7. External identifier 
 8. String
+9. Property
 
 In ETK, the possible property types are defined [here](https://github.com/usc-isi-i2/etk/blob/9c79a597fa0917b4e4bf78b4acbd863f5a0bb917/etk/wikidata/value.py#L190).
 
@@ -113,7 +114,7 @@ In ETK, the possible property types are defined [here](https://github.com/usc-is
 
 If `-gt --generate-truthy` set to `True`, the statement will be truthy. Truthy statements will have an additional spo with propert prefix `wdt`.
 
-### ignore
+### warning
 
 ignore allows you to ignore various kind of errors written to the `ignore.log` file.
 
@@ -129,6 +130,9 @@ Use compressed file as input.
 
 If `--use-id` is set to true, the `id` column of the kgtk file will be used as the statement id if the corresponding edge is a statement edge. It is the user's responsiblity to make sure there is no duplicated statement id across the whole knowledge graph then.
 
+### log-path
+
+If using `-log`, the warning `-w` must be set to true.
 
 ## How Triple Generator handles Different Types of Edges
 
