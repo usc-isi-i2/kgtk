@@ -4,6 +4,7 @@ Validate KGTK File data types.
 
 from argparse import ArgumentParser, Namespace
 import attr
+import math
 import re
 import sys
 import typing
@@ -777,14 +778,22 @@ class KgtkValue(KgtkFormat):
         try:
             lon: float = float(lonstr)
             if  lon < self.options.minimum_valid_lon:
-                if self.options.clamp_minimum_lon:
+                if self.options.modulo_repair_lon:
+                    lon = self.wrap_longitude(lon)
+                    lonstr = str(lon)
+                    fixup_needed = True
+                elif self.options.clamp_minimum_lon:
                     lon = self.options.minimum_valid_lon
                     lonstr = str(lon)
                     fixup_needed = True
                 else:
                     return False
             elif lon > self.options.maximum_valid_lon:
-                if self.options.clamp_maximum_lon:
+                if self.options.modulo_repair_lon:
+                    lon = self.wrap_longitude(lon)
+                    lonstr = str(lon)
+                    fixup_needed = True
+                elif self.options.clamp_maximum_lon:
                     lon = self.options.maximum_valid_lon
                     lonstr = str(lon)
                     fixup_needed = True
@@ -814,6 +823,19 @@ class KgtkValue(KgtkFormat):
         # If this value is the child of a list, repair the list parent value.
         if self.parent is not None:
             self.parent.rebuild_list()
+
+    def wrap_longitude(self, lon: float)->float:
+        # Result:
+        # -360.0 <= longitude_reduced <=- 360.0
+        # Credit: https://stackoverflow.com/questions/13368525/modulus-to-limit-latitude-and-longitude-values
+        lon_reduced: float = math.fmod(lon, 360.0)
+
+        if lon_reduced > 180.0:
+                lon_reduced -= 360.0
+        elif lon_reduced <= -180.0:
+            lon_reduced += 360.0
+
+        return lon_reduced
 
     # https://en.wikipedia.org/wiki/ISO_8601
     #
