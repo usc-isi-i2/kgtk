@@ -1,5 +1,12 @@
 """
 Validate language qualifiers.
+
+TODO: Extend pour language tag recognition to RFC 3066.
+https://tools.ietf.org/html/rfc3066
+
+TODO: Cite RDF compliance:  BCP46 Section 2-2-9.
+https://tools.ietf.org/html/bcp47#section-2.2.9
+https://www.w3.org/TR/2014/REC-rdf11-concepts-20140225/#section-Graph-Literal
 """
 
 from argparse import ArgumentParser, Namespace
