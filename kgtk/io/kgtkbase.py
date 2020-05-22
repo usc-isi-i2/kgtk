@@ -1,6 +1,8 @@
 """
 Constants and helpers for the KGTK file format.
 
+TODO: _yelp and its callers need a who parameter.
+
 """
 
 from enum import Enum
@@ -24,10 +26,10 @@ class KgtkBase(KgtkFormat):
         result: bool
         if error_action == ValidationAction.ERROR:
             # Immediately raise an exception.
-            raise ValueError("In input header'%s': %s" % (header_line, msg))
+            raise ValueError("In header'%s': %s" % (header_line, msg))
 
         if (error_action in [ValidationAction.REPORT, ValidationAction.COMPLAIN, ValidationAction.EXIT ]):
-            print("In input header '%s': %s" % (header_line, msg), file=error_file, flush=True)
+            print("In header '%s': %s" % (header_line, msg), file=error_file, flush=True)
         if error_action == ValidationAction.EXIT:
             sys.exit(1)
         return error_action in [ValidationAction.PASS, ValidationAction.REPORT]
