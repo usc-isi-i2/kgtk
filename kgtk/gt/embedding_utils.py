@@ -529,11 +529,11 @@ class EmbeddingVector:
             temp = [self.get_real_label_name(each) for each in attribute_dict["has_properties_values"]]
             if concated_sentence != "":
                 if not have_isa_properties:
-                    concated_sentence += " is "
+                    concated_sentence += " "
                 else:
                     concated_sentence += ", "
             else:
-                concated_sentence += "It is "
+                concated_sentence += "It "
             concated_sentence += " and ".join(temp)
         if "has_properties" in attribute_dict and len(attribute_dict["has_properties"]) > 0:
             temp = [self.get_real_label_name(each) for each in attribute_dict["has_properties"]]

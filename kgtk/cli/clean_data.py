@@ -18,7 +18,11 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Validate a KGTK file and output a clean copy: no comments, whitespace lines, invalid lines, etc. '
+        'help': 'Validate a KGTK file and output a clean copy: no comments, whitespace lines, invalid lines, etc. ',
+        'description': 'Validate a KGTK file and output a clean copy. ' +
+        'Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. ' +
+        'Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. ' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert clean_data --help'
     }
 
 
@@ -34,14 +38,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "output_file", nargs="?", help="The KGTK file to write.  May be omitted or '-' for stdout.", type=Path)
     
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=True)
-    KgtkValueOptions.add_arguments(parser, expert=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
 def run(input_file: typing.Optional[Path],
         output_file: typing.Optional[Path],
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
+        show_options: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
         **kwargs # Whatever KgtkReaderOptions and KgtkValueOptions want.
@@ -55,6 +60,14 @@ def run(input_file: typing.Optional[Path],
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+    # Show the final option structures for debugging and documentation.
+    if show_options:
+        print("input: %s" % (str(input_file) if input_file is not None else "-"), file=error_file)
+        print("output: %s" % (str(output_file) if output_file is not None else "-"), file=error_file)
+        reader_options.show(out=error_file)
+        value_options.show(out=error_file)
+        print("=======", file=error_file, flush=True)
 
     if verbose:
         if input_file is not None:

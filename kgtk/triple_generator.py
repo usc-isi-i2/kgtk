@@ -21,7 +21,7 @@ from etk.wikidata.value import (
 )
 from etk.knowledge_graph.node import LiteralType
 
-BAD_CHARS = [":", "-", "&", ",", " ",
+BAD_CHARS = [":", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
 
 
@@ -52,7 +52,7 @@ class TripleGenerator:
             "monolingualtext": MonolingualText,
             "string": StringValue,
             "external-identifier": ExternalIdentifier,
-            "url": URLValue
+            "url": StringValue
         }
         self.prop_types = self.set_properties(prop_file)
         self.label_set, self.alias_set, self.description_set = self.set_sets(
@@ -270,9 +270,10 @@ class TripleGenerator:
 
         elif edge_type == GlobeCoordinate:
             latitude, longitude = node2[1:].split("/")
+            latitude = float(latitude)
+            longitude = float(longitude)
             object = GlobeCoordinate(
-                latitude, longitude, 0.0001, globe=StringValue("Earth")
-            )
+                latitude, longitude, 0.0001, globe=Item("Q2")) # earth
 
         elif edge_type == QuantityValue:
             # +70[+60,+80]Q743895

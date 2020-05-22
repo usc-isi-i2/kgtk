@@ -28,9 +28,8 @@ def add_arguments(parser):
 
 def run(datatype, pattern, input, subj_col, pred_col, obj_col):
     # import modules locally
-    import socket
     import sh # type: ignore
-    from kgtk.exceptions import KGTKException
+    from kgtk.exceptions import kgtk_exception_auto_handler
 
     props=[subj_col, pred_col, obj_col]
 
@@ -62,8 +61,5 @@ def run(datatype, pattern, input, subj_col, pred_col, obj_col):
             elif not sys.stdin.isatty():
                 sh.mlr('--%slite' % datatype, 'filter', filter_str, 
                         _in=sys.stdin, _out=sys.stdout, _err=sys.stderr)
-    except sh.SignalException_SIGPIPE:
-        # handles SIGPIPE, if it raises to upper level, it will cause another error
-        pass
     except Exception as e:
-        raise KGTKException(e)
+        kgtk_exception_auto_handler(e)
