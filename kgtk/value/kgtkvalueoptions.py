@@ -72,6 +72,7 @@ class KgtkValueOptions:
     maximum_valid_lon: float = attr.ib(validator=attr.validators.instance_of(float), default=MAXIMUM_VALID_LON)
     clamp_maximum_lon: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
+    modulo_repair_lon: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     @classmethod
     def add_arguments(cls,
@@ -197,6 +198,10 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "Clamp longitudes at the maximum value (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        vgroup.add_argument(      prefix1 + "modulo-repair-lon", dest=prefix2 + "modulo_repair_lon",
+                                  help=h(prefix3 + "Wrap longitude to (-180.0,180.0] (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "escape-list-separators", dest=prefix2 + "escape_list_separators",
                                   help=h(prefix3 + "Escape all list separators instead of splitting on them (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
@@ -218,14 +223,18 @@ class KgtkValueOptions:
                    clamp_minimum_year=d.get(prefix + "clamp_minimum_year", False),
                    maximum_valid_year=d.get(prefix + "maximum_valid_year", cls.MAXIMUM_VALID_YEAR),
                    clamp_maximum_year=d.get(prefix + "clamp_maximum_year", False),
+
                    minimum_valid_lat=d.get(prefix + "minimum_valid_lat", cls.MINIMUM_VALID_LAT),
                    clamp_minimum_lat=d.get(prefix + "clamp_minimum_lat", False),
                    maximum_valid_lat=d.get(prefix + "maximum_valid_lat", cls.MAXIMUM_VALID_LAT),
                    clamp_maximum_lat=d.get(prefix + "clamp_maximum_lat", False),
+
                    minimum_valid_lon=d.get(prefix + "minimum_valid_lon", cls.MINIMUM_VALID_LON),
                    clamp_minimum_lon=d.get(prefix + "clamp_minimum_lon", False),
                    maximum_valid_lon=d.get(prefix + "maximum_valid_lon", cls.MAXIMUM_VALID_LON),
                    clamp_maximum_lon=d.get(prefix + "clamp_maximum_lon", False),
+                   modulo_repair_lon=d.get(prefix + "modulo_repair_lon", False),
+
                    escape_list_separators=d.get(prefix + "escape_list_separators", False))
 
     @classmethod
@@ -242,18 +251,23 @@ class KgtkValueOptions:
         print("%sallow-lax-lq-strings=%s" % (prefix, str(self.allow_lax_lq_strings)), file=out)
         if self.additional_language_codes is not None:
             print("%sadditional-language-codes=%s" % (prefix, " ".join(self.additional_language_codes)), file=out)
+
         print("%sminimum-valid-year=%d" % (prefix, self.minimum_valid_year), file=out)
         print("%sclamp-minimum-year=%s" % (prefix, str(self.clamp_minimum_year)), file=out)
         print("%smaximum-valid-year=%d" % (prefix, self.maximum_valid_year), file=out)
         print("%sclamp-maximum-year=%s" % (prefix, str(self.clamp_maximum_year)), file=out)
+
         print("%sminimum-valid-lat=%f" % (prefix, self.minimum_valid_lat), file=out)
         print("%sclamp-minimum-lat=%s" % (prefix, str(self.clamp_minimum_lat)), file=out)
         print("%smaximum-valid-lat=%f" % (prefix, self.maximum_valid_lat), file=out)
         print("%sclamp-maximum-lat=%s" % (prefix, str(self.clamp_maximum_lat)), file=out)
+
         print("%sminimum-valid-lon=%f" % (prefix, self.minimum_valid_lon), file=out)
         print("%sclamp-minimum-lon=%s" % (prefix, str(self.clamp_minimum_lon)), file=out)
         print("%smaximum-valid-lon=%f" % (prefix, self.maximum_valid_lon), file=out)
         print("%sclamp-maximum-lon=%s" % (prefix, str(self.clamp_maximum_lon)), file=out)
+        print("%smodulo-repair-lon=%s" % (prefix, str(self.modulo_repair_lon)), file=out)
+
         print("%sescape-list-separators=%s" % (prefix, str(self.escape_list_separators)), file=out)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
