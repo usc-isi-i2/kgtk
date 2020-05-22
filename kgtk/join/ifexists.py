@@ -14,6 +14,9 @@ Note: By default, this implementation builds im-memory sets of all the key
 values in the second file (the filter file). Optionally, it will cache the
 first file (the input file) instead.
 
+Note: By default, input records are passed in order to the output file.  When
+the input file is cached, the output records are order by key value (alpha
+sort), then by input order.
 """
 
 from argparse import ArgumentParser, Namespace

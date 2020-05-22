@@ -4,7 +4,11 @@ which one or more specified columns match records in a second KGTK file.
 This implementation, in Python, builds an in-memory dictionary of the key
 values in the --filter-on file.  Performance will be poor, and execution may
 fail, if the --filter-on file is very large.  Alternatively, the --cache-input
-option causes the code to cache the input file and not eh --on-filter-file.
+option causes the code to cache the input file and not the --on-filter-file.
+
+By default, input records are passed in order to the output file.  When                                                                                        
+the input file is cached, the output records are order by key value (alpha                                                                                           
+sort), then by input order.
 
 The fields to match may be supplied by the user.  If not supplied, the
 following defaults will be used.  "left" refers to the KFTK file being
