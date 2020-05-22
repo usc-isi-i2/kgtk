@@ -408,6 +408,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     @classmethod
     def open(cls,
              file_path: typing.Optional[Path],
+             who: str = "input",
              error_file: typing.TextIO = sys.stderr,
              mode: typing.Optional[KgtkReaderMode] = None,
              options: typing.Optional[KgtkReaderOptions] = None,
@@ -431,12 +432,14 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # Check for unsafe column names.
         cls.check_column_names(column_names,
                                header_line=header,
+                               who=who,
                                error_action=options.unsafe_column_name_action,
                                error_file=error_file)
 
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
                                                                               header_line=header,
+                                                                              who=who,
                                                                               error_action=options.header_error_action,
                                                                               error_file=error_file)
 
@@ -450,6 +453,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES,
                                                 column_name_map,
                                                 header_line=header,
+                                                who=who,
                                                 error_action=options.header_error_action,
                                                 error_file=error_file,
                                                 is_optional=True)
@@ -481,6 +485,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
          node2_column_idx,
          id_column_idx) = cls.get_special_columns(column_name_map,
                                                   header_line=header,
+                                                  who=who,
                                                   error_action=options.header_error_action,
                                                   error_file=error_file,
                                                   is_edge_file=is_edge_file,

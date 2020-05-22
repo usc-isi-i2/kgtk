@@ -7,7 +7,7 @@ Input and output files may be (de)compressed using a algorithm selected
 by the file extension: .bz2 .gz .lz4 .xy
 
 When merging the column headers, KGTK's required column aliases are respected,
-which the leftmost alias seen taking priority.  For example, if the first
+with the leftmost alias seen taking priority.  For example, if the first
 input file has a "node1" column and the second has a "from" column, the two
 columns will be combined as the "node1" column in the output file.
 

@@ -69,6 +69,7 @@ class KgtkWriter(KgtkBase):
     def open(cls,
              column_names: typing.List[str],
              file_path: typing.Optional[Path],
+             who: str = "output",
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
              fill_missing_columns: bool = False,
@@ -85,6 +86,7 @@ class KgtkWriter(KgtkBase):
                 print("KgtkWriter: writing stdout", file=sys.stderr)
             return cls._setup(column_names=column_names,
                               file_path=None,
+                              who=who,
                               file_out=sys.stdout,
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
@@ -123,6 +125,7 @@ class KgtkWriter(KgtkBase):
 
             return cls._setup(column_names=column_names,
                               file_path=file_path,
+                              who=who,
                               file_out=gzip_file,
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
@@ -142,6 +145,7 @@ class KgtkWriter(KgtkBase):
                 print("KgtkWriter: writing file %s" % str(file_path), file=sys.stderr)
             return cls._setup(column_names=column_names,
                               file_path=file_path,
+                              who=who,
                               file_out=open(file_path, "w"),
                               require_all_columns=require_all_columns,
                               prohibit_extra_columns=prohibit_extra_columns,
@@ -160,6 +164,7 @@ class KgtkWriter(KgtkBase):
     def _setup(cls,
                column_names: typing.List[str],
                file_path: typing.Optional[Path],
+               who: str,
                file_out: typing.TextIO,
                require_all_columns: bool,
                prohibit_extra_columns: bool,
@@ -180,6 +185,7 @@ class KgtkWriter(KgtkBase):
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
                                                                               header_line=header,
+                                                                              who=who,
                                                                               error_action=header_error_action,
                                                                               error_file=error_file)
 
@@ -190,6 +196,7 @@ class KgtkWriter(KgtkBase):
             # If we have a node1 (or alias) column, then this must be an edge file. Otherwise, assume it is a node file.
             node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map,
                                                 header_line=header,
+                                                who=who,
                                                 error_action=header_error_action,
                                                 error_file=error_file,
                                                 is_optional=True)
@@ -206,6 +213,7 @@ class KgtkWriter(KgtkBase):
         # ignoring the result.
         cls.get_special_columns(column_name_map,
                                 header_line=header,
+                                who=who,
                                 error_action=header_error_action,
                                 error_file=error_file,
                                 is_edge_file=is_edge_file,

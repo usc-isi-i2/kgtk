@@ -78,15 +78,14 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
 
         with open(filename, 'r') as f:
             header = next(f).split('\t')
+            header=[h.strip() for h in header]
             subj_index = infer_index(header, options=['node1', 'subject'])
             obj_index = infer_index(header, options=['node2', 'object', 'value'])
             predicate = infer_predicate(header, options=['property', 'predicate', 'label'])
-
             p = []
             for i, header_col in enumerate(header):
                 if i in [subj_index, obj_index]: continue
                 p.append(header_col)
-
         with open(log_file, 'w') as writer:
 
             writer.write('loading the TSV graph now ...\n')
