@@ -49,7 +49,7 @@ def add_arguments(parser):
         action="store",
         type=str,
         required = False,
-        default="aliases",
+        default="alias",
         help="alias identifiers which will create labels, separated by comma','.",
         dest="aliases",
     )
@@ -59,7 +59,7 @@ def add_arguments(parser):
         action="store",
         type=str,
         required = False,
-        default="descriptions",
+        default="description",
         help="description identifiers which will create labels, separated by comma','.",
         dest="descriptions",
     )
