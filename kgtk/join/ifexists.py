@@ -265,6 +265,7 @@ class IfExists(KgtkFormat):
             print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
         ew: KgtkWriter = KgtkWriter.open(input_kr.column_names,
                                          self.output_file_path,
+                                         mode=input_kr.mode,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
