@@ -102,16 +102,38 @@ def add_arguments(parser):
         help="output json file when the corresponding dictionary size reaches n. Default to 1000",
         dest="n",
     )
+    parser.add_argument(
+        "-log",
+        "--log-path",
+        action="store",
+        type=str,
+        required = False,
+        default="warning.log",
+        help="set the path of the log file",
+        dest="log_path",
+    )
+    parser.add_argument(
+        "-w",
+        "--warning",
+        action="store",
+        type=str2bool,
+        required = False,
+        default="no",
+        help="if set to yes, warn various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging",
+        dest="warning",
+    )
 
 
 def run(
     labels: str,
     aliases: str,
     descriptions: str,
-    prop_file:str,
-    use_gz:bool,
-    output_prefix:str,
-    n:int,
+    prop_file: str,
+    use_gz: bool,
+    output_prefix: str,
+    n: int,
+    log_path: str,
+    warning: bool
 ):
     # import modules locally
     from kgtk.generator import JsonGenerator
@@ -125,6 +147,8 @@ def run(
         prop_file=prop_file,
         output_prefix = output_prefix,
         n = n,
+        log_path = log_path,
+        warning = warning
     )
     # process stdin
     if use_gz:

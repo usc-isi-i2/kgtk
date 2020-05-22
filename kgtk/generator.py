@@ -32,6 +32,8 @@ class Generator:
         description_set = kwargs.pop("description_set")
         alias_set = kwargs.pop("alias_set")
         n = int(kwargs.pop("n"))
+        warning = kwargs.pop("warning")
+        log_path = kwargs.pop("log_path")
         # set sets
         self.set_sets(label_set,description_set,alias_set)
         # column name order_map
@@ -42,9 +44,15 @@ class Generator:
         self.yyyy_pattern = re.compile("[12]\d{3}")
         self.quantity_pattern = re.compile(
             "([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
+        self.warning = warning
+        if self.warning:
+            self.warn_log = open(log_path,"w")
+        self.to_append_statement_id = None
+        self.currupted_statment_id = None
     def serialize(self):
         raise NotImplemented
     def finalize(self):
+        self.warn_log.close()
         self.serialize()
     def set_sets(self,label_set:str,description_set:str,alias_set:str):
         self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(alias_set.split(",")), set(description_set.split(","))
@@ -127,17 +135,12 @@ class TripleGenerator(Generator):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         prop_file = kwargs.pop("prop_file")
-        ignore = kwargs.pop("ignore")
         dest_fp = kwargs.pop("dest_fp")
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
-        self.ignore = ignore
         self.set_properties(prop_file)
         self.fp = dest_fp
         self.read_num_of_lines = 0
-        if not self.ignore:
-            self.ignore_file = open("ignored.log", "w")
-        self.corrupted_statement_id = None
         self.truthy = truthy
         self.reset_etk_doc()
         self.serialize_prefix()
@@ -163,12 +166,11 @@ class TripleGenerator(Generator):
             try:
                 self.prop_types[node1] = self.datatype_mapping[node2.strip()]
             except:
-                if not self.ignore:
-                    raise KGTKException(
-                        "DataType {} of node {} is not supported.\n".format(
-                            node2, node1
-                        )
+                raise KGTKException(
+                    "DataType {} of node {} is not supported.\n".format(
+                        node2, node1
                     )
+                )
     
     def _node_2_entity(self, node: str):
         '''
@@ -220,28 +222,28 @@ class TripleGenerator(Generator):
         self.read_num_of_lines = 0
         self.reset_etk_doc()
     
-    def generate_label_triple(self, node1: str, label: str, node2: str) -> bool:
+    def generate_label_triple(self, node1: str, node2: str) -> bool:
         entity = self._node_2_entity(node1)
         text_string, lang = TripleGenerator.process_text_string(node2)
         entity.add_label(text_string, lang=lang)
         self.doc.kg.add_subject(entity)
         return True
 
-    def generate_description_triple(self, node1: str, label: str, node2: str) -> bool:
+    def generate_description_triple(self, node1: str, node2: str) -> bool:
         entity = self._node_2_entity(node1)
         text_string, lang = TripleGenerator.process_text_string(node2)
         entity.add_description(text_string, lang=lang)
         self.doc.kg.add_subject(entity)
         return True
 
-    def generate_alias_triple(self, node1: str, label: str, node2: str) -> bool:
+    def generate_alias_triple(self, node1: str, node2: str) -> bool:
         entity = self._node_2_entity(node1)
         text_string, lang = TripleGenerator.process_text_string(node2)
         entity.add_alias(text_string, lang=lang)
         self.doc.kg.add_subject(entity)
         return True
 
-    def generate_prop_declaration_triple(self, node1: str, label: str, node2: str) -> bool:
+    def generate_prop_declaration_triple(self, node1: str, node2: str) -> bool:
         # update the known prop_types
         if node1 in self.prop_types:
             raise KGTKException("Duplicated property definition of {} found!".format(node1))
@@ -251,20 +253,16 @@ class TripleGenerator(Generator):
         return True
 
     def generate_normal_triple(
-            self, node1: str, label: str, node2: str, is_qualifier_edge: bool, e_id: str) -> bool:
+            self, node1: str, property: str, node2: str, is_qualifier_edge: bool, e_id: str) -> bool:
         if self.use_id:
             e_id = TripleGenerator.replace_illegal_string(e_id)
         entity = self._node_2_entity(node1)
-        # determine the edge type
-        edge_type = self.prop_types[label]
+        edge_type = self.prop_types[property]
         if edge_type == Item:
             object = WDItem(TripleGenerator.replace_illegal_string(node2))
         elif edge_type == WDProperty:
             object = WDProperty(TripleGenerator.replace_illegal_string(node2),self.prop_types[node2])
         elif edge_type == TimeValue:
-            # https://www.wikidata.org/wiki/Help:Dates
-            # ^2013-01-01T00:00:00Z/11
-            # ^8000000-00-00T00:00:00Z/3
             if self.yyyy_mm_dd_pattern.match(node2):
                 try:
                     dateTimeString = node2
@@ -291,7 +289,6 @@ class TripleGenerator(Generator):
                 try:
                     dateTimeString, precision = node2[1:].split("/")
                     dateTimeString = dateTimeString[:-1]  # remove "Z"
-                    # 2016-00-00T00:00:00 case
                     if "-00-00" in dateTimeString:
                         dateTimeString = "-01-01".join(
                             dateTimeString.split("-00-00"))
@@ -318,7 +315,6 @@ class TripleGenerator(Generator):
 
         elif edge_type == QuantityValue:
             # +70[+60,+80]Q743895
-
             res = self.quantity_pattern.match(node2).groups()
             amount, lower_bound, upper_bound, unit = res
 
@@ -360,18 +356,17 @@ class TripleGenerator(Generator):
         if is_qualifier_edge:
             # edge: e8 p9 ^2013-01-01T00:00:00Z/11
             # create qualifier edge on previous STATEMENT and return the updated STATEMENT
-            self.to_append_statement.add_qualifier(label, object)
-            # TODO maybe can be positioned better for the edge cases.
+            self.to_append_statement.add_qualifier(property, object)
             self.doc.kg.add_subject(self.to_append_statement)
         else:
             # edge: q1 p8 q2 e8
             # create brand new property edge and replace STATEMENT
             if self.truthy:
                 self.to_append_statement = entity.add_truthy_statement(
-                    label, object, statement_id=e_id) if self.use_id else entity.add_truthy_statement(label, object)
+                    property, object, statement_id=e_id) if self.use_id else entity.add_truthy_statement(property, object)
             else:
                 self.to_append_statement = entity.add_statement(
-                    label, object, statement_id=e_id) if self.use_id else entity.add_statement(label, object)
+                    property, object, statement_id=e_id) if self.use_id else entity.add_statement(property, object)
             self.doc.kg.add_subject(entity)
         return True
     
@@ -397,7 +392,6 @@ class TripleGenerator(Generator):
         if line_number == 2:
             # by default a statement edge
             is_qualifier_edge = False
-            # print("#Debug Info: ",line_number, self.to_append_statement_id, e_id, is_qualifier_edge,self.to_append_statement)
             self.to_append_statement_id = e_id
             self.corrupted_statement_id = None
         else:
@@ -415,47 +409,42 @@ class TripleGenerator(Generator):
                 if self.corrupted_statement_id == e_id:
                     # Met a qualifier which associates with a corrupted statement
                     return
-                if prop != "type" and node1 != self.to_append_statement_id:
+                if prop != "data_type" and node1 != self.to_append_statement_id:
                     # 1. not a property declaration edge and
                     # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
-                    if not self.ignore:
                         raise KGTKException(
                             "Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
                                 node1, line_number, self.to_append_statement_id
                             )
                         )
         if prop in self.label_set:
-            success = self.generate_label_triple(node1, prop, node2)
+            success = self.generate_label_triple(node1, node2)
         elif prop in self.description_set:
-            success = self.generate_description_triple(node1, prop, node2)
+            success = self.generate_description_triple(node1, node2)
         elif prop in self.alias_set:
-            success = self.generate_alias_triple(node1, prop, node2)
+            success = self.generate_alias_triple(node1, node2)
         elif prop == "data_type":
             # special edge of prop declaration
             success = self.generate_prop_declaration_triple(
-                node1, prop, node2)
+                node1, node2)
         else:
             if prop in self.prop_types:
                 success = self.generate_normal_triple(
                     node1, prop, node2, is_qualifier_edge, e_id)
             else:
-                if not self.ignore:
-                    raise KGTKException(
-                        "property {}'s type is unknown at line {}.\n".format(
-                            prop, line_number)
-                    )
-                    success = False
-        if (not success) and (not is_qualifier_edge) and (not self.ignore):
+                raise KGTKException(
+                    "property {}'s type is unknown at line {}.\n".format(
+                        prop, line_number)
+                )
+        if (not success) and (not is_qualifier_edge) and self.warning:
             # We have a corrupted edge here.
-            self.ignore_file.write(
+            self.warn_log.write(
                 "Corrupted statement at line number: {} with id {} with current corrupted id {}\n".format(
                     line_number, e_id, self.corrupted_statement_id))
-            self.ignore_file.flush()
             self.corrupted_statement_id = e_id
         else:
             self.read_num_of_lines += 1
             self.corrupted_statement_id = None
-    
     @staticmethod
     def xsd_number_type(num):
         if isinstance(num, float) and 'e' in str(num).lower():
@@ -507,11 +496,11 @@ class JsonGenerator(Generator):
         
         # update alias and descriptions
         if prop in self.description_set:
-            self.update_misc_json_dict(node1, prop, node2, line_number,"descriptions")
+            self.update_misc_json_dict(node1, prop, node2, line_number,"description")
             return
 
         if prop in self.alias_set:
-            self.update_misc_json_dict(node1, prop, node2, line_number,"aliases")
+            self.update_misc_json_dict(node1, prop, node2, line_number,"alias")
             return
         
         # normal update for claims
@@ -576,13 +565,13 @@ class JsonGenerator(Generator):
         if node1 not in self.misc_json_dict:
             self.init_entity_in_json(node1)
         
-        if field == "descriptions":
+        if field == "description":
             description_text, lang = JsonGenerator.process_text_string(node2)
             temp_des_dict = {lang:{"languange":lang,"value":description_text}}
             self.misc_json_dict[node1]["descriptions"].update(temp_des_dict)
             return 
         
-        if field == "aliases":
+        if field == "alias":
             alias_text, lang = JsonGenerator.process_text_string(node2)
             temp_alias_dict = {lang, {"languange": lang, "value":alias_text}}
             if lang in self.misc_json_dict[node1]["aliases"]:
@@ -651,7 +640,7 @@ class JsonGenerator(Generator):
             time_string, precision = node2.split("/")
             precision = int(precision)
         except:
-            return # ignore the illegal time format for now
+            return
         temp_time_dict = {
             "mainsnak":{
                 "snaktype":"value",
@@ -831,19 +820,15 @@ class JsonGenerator(Generator):
             try:
                 self.prop_types[node1] = datatype_mapping[node2.strip()]
             except:
-                if not self.ignore:
-                    raise KGTKException(
-                        "DataType {} of node {} is not supported.\n".format(
-                            node2, node1
-                        )
+                raise KGTKException(
+                    "DataType {} of node {} is not supported.\n".format(
+                        node2, node1
                     )
-
-
+                )
     def set_json_dict(self):
         self.label_json_dict = {}
         self.misc_json_dict = {}
         self.info_json_dict = {}
-
     def serialize(self):
         '''
         serialize the dictionaries. 
@@ -855,7 +840,6 @@ class JsonGenerator(Generator):
         with open(self.output_prefix + ".json","w") as fp:
             json.dump(self.misc_json_dict,fp)
         self.set_json_dict()
-    
     @staticmethod
     def merge_dict(source:dict, target: dict):
         for key, value in source.items():

@@ -91,14 +91,14 @@ def add_arguments(parser):
         dest="truthy",
     )
     parser.add_argument(
-        "-ig",
-        "--ignore",
+        "-w",
+        "--warning",
         action="store",
         type=str2bool,
         required = False,
         default="no",
-        help="if set to yes, ignore various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging",
-        dest="ignore",
+        help="if set to yes, warn various kinds of exceptions and mistakes and log them to a log file with line number in input file, rather than stopping. logging",
+        dest="warning",
     )
     parser.add_argument(
         "-gz",
@@ -120,6 +120,16 @@ def add_arguments(parser):
         help="if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement",
         dest="use_id",
     )
+    parser.add_argument(
+        "-log",
+        "--log-path",
+        action="store",
+        type=str,
+        required = False,
+        default="warning.log",
+        help="set the path of the log file",
+        dest="log_path",
+    )
 
 
 def run(
@@ -129,9 +139,10 @@ def run(
     prop_file: str,
     n: int,
     truthy: bool,
-    ignore: bool,
+    warning: bool,
     use_gz: bool,
-    use_id:bool
+    use_id:bool,
+    log_path:str,
 ):
     # import modules locally
     import gzip
@@ -144,10 +155,11 @@ def run(
         alias_set=aliases,
         description_set=descriptions,
         n=n,
-        ignore=ignore,
+        warning=warning,
         truthy=truthy,
         use_id=use_id,
-        dest_fp=sys.stdout
+        dest_fp=sys.stdout,
+        log_path = log_path
     )
     # process stdin
     if use_gz:
