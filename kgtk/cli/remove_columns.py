@@ -35,10 +35,10 @@ def run(datatype, columns, input):
 		if input:
 
 			print(input)
-			sh.mlr('--tsv', 'cut', '-x', '-f', columns, 
+			sh.mlr('--tsvlite', 'cut', '-x', '-f', columns, 
 					input, _out=sys.stdout, _err=sys.stderr)
 		elif not sys.stdin.isatty():
-			print(sh.mlr('--tsv', 'cut', '-x', '-f', columns,
+			print(sh.mlr('--tsvlite', 'cut', '-x', '-f', columns,
 						 _in=sys.stdin, _out=sys.stdout, _err=sys.stderr))
 		else:
 			raise KGTKException
