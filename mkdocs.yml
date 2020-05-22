@@ -7,6 +7,7 @@ nav:
       - 'cat': 'cat.md'
       - 'clean_data': 'clean_data.md'
       - 'connected_components': 'connected_components.md'
+      - 'expand': 'expand.md'
       - 'export_gt': 'export_gt.md'
       - 'filter': 'filter.md'
       - 'generate_wikidata_triples': 'generate_wikidata_triples.md'

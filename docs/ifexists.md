@@ -1,10 +1,18 @@
 The ifexists command filters a KGTK file, passing through only those rows for
 which one or more specified columns match records in a second KGTK file.
 
-The fields to match may be supplied by the user.  If not supplied,
-the following defaults will be used.  "left" refers to the KFTK
-file being filtered, and "right" refers to the file supplying the
-matching records.
+This implementation, in Python, builds an in-memory dictionary of the key
+values in the --filter-on file.  Performance will be poor, and execution may
+fail, if the --filter-on file is very large.  Alternatively, the --cache-input
+option causes the code to cache the input file and not the --on-filter-file.
+
+By default, input records are passed in order to the output file.  When                                                                                        
+the input file is cached, the output records are order by key value (alpha                                                                                           
+sort), then by input order.
+
+The fields to match may be supplied by the user.  If not supplied, the
+following defaults will be used.  "left" refers to the KFTK file being
+filtered, and "right" refers to the file supplying the matching records.
 
 | Left    | Right   | Key fields |
 | ------- | ------- | ---------- |
@@ -20,7 +28,7 @@ matching records.
 ```bash
 usage: kgtk ifexists [-h] [--input-keys [INPUT_KEYS [INPUT_KEYS ...]]] --filter-on
                      FILTER_KGTK_FILE [--filter-keys [FILTER_KEYS [FILTER_KEYS ...]]]
-                     [-o OUTPUT_KGTK_FILE] [-v]
+                     [-o OUTPUT_KGTK_FILE] [--cache-input [CACHE_INPUT]] [-v]
                      [input_kgtk_file]
 
 Filter a KGTK file based on whether one or more records exist in a second KGTK file with matching values for one or more fields.
@@ -41,6 +49,8 @@ optional arguments:
                         The key columns in the filter-on file (default=None).
   -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
                         The KGTK file to write (required).
+  --cache-input [CACHE_INPUT]
+                        Cache the input file instead of the filter keys (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```

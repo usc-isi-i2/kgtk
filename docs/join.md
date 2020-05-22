@@ -14,8 +14,7 @@ kgtk join [-h] [--join-on-label [JOIN_ON_LABEL]]
 ```
 ## Usage considerations
 
-* Join keys are extracted from one or both input files and stored in memory,
-then the data files are processed in a second pass.  
+* Join keys are extracted from one or both input files and stored in memory, then the data files are processed in a second pass.  Performance will be poor, and execution may fail, if the files are very large.
 * stdin will not work as an input file if join keys are needed from it.
 * The output file contains the union of the columns in the two
 input files, adjusted for predefined name aliasing.
