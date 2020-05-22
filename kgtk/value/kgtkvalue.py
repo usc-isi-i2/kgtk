@@ -755,6 +755,8 @@ class KgtkValue(KgtkFormat):
         fixup_needed: bool = False
 
         # Latitude normally runs from -90 to +90:
+        #
+        # TODO: Offer a wrapping repair for latitude, which will also affect latitude.
         try:
             lat: float = float(latstr)
             if  lat < self.options.minimum_valid_lat:
