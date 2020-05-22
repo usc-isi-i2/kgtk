@@ -25,6 +25,7 @@ kgtk text_embedding \
     --dimensional-reduction pca \ # optional, default is none
     --dimension 5 \ #optional, default is 2
     --parallel 4 # optional, default is 1
+    --save-embedding-sentence # optional
 ```
 ##### Example 1:
 For easiest running, just give the input file as 
@@ -102,7 +103,7 @@ roberta-base-nli-stsb-mean-tokens
 roberta-large-nli-mean-tokens
 roberta-large-nli-stsb-mean-tokens
 ```
-#### sentence embedding vectors
+#### Sentence Embedding Vectors
 ##### --label-properties
 an ordered list of properties. The output is the value of the first property that returns a non-empty value. 
 If not given, the program will try to use the default edge(property) name as `label`. Those words in properties will be for vector embedding later.
@@ -148,15 +149,15 @@ Currently 3 choices can be made:
 ##### --dimension
 If specified to run dimensional algorithm, user can run with this choice to specify how many dimensions to keep for the final vector output.
 
-### Output
-There will be 2 part of files:
+### Output files
+There will be 3 part of files:
 ##### Logger file
 If passed with global parameter `--debug`, an extra debugging logger file will be stored at user's home directory.
 
 ##### Metadata File
-User can specify where to store the metadata file for the vectors. If not given, the default is to save the metadata file at user's home directly. If set to `none`, no metadata file will generate.
+User can specify where to store the metadata file for the vectors. If not given, the default is to save the metadata file at user's home directly. If set with value `none`, no metadata file will generate.
 
-##### Original Embedding Vectors
+##### Embedding Vectors
 This will have all the embedded vectors values for each Q nodes. This will be print on stddout and can be redirected to a file.
 
 If output as `kgtk_format`, the output file will looks like:
@@ -169,6 +170,13 @@ The oupput will be a TSV file with 3 columns:
 First column is the node name.
 Second column is the property name as required, default is `text_embedding`.
 Third column is the embeded vecotrs.
+
+##### Embedding Sentences
+There is an extra optional flag `--save-embedding-sentence` for output.
+If send with this flag, the embedding sentence will also generated as part of output file.
+First column is the node name.
+Second column is the property name `embedding_sentence`.
+Third column is the embeded sentence.
 
 ##### parallel
 You can also set up the parallel count to some number larger than 1 to run in multiprocess mode. Currently only support for kgtk format input data. For example: `--parallel 4`
