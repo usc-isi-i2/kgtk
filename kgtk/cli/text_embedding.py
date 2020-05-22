@@ -143,6 +143,7 @@ def main(**kwargs):
         output_format = kwargs.get("output_format", "kgtk_format")
         property_labels_files = kwargs.get("property_labels_file_uri", [])
         query_server = kwargs.get("query_server")
+        save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
 
         cache_config = {
             "use_cache": kwargs.get("use_cache", False),
@@ -199,7 +200,7 @@ def main(**kwargs):
                 process.plot_result(output_properties=output_properties,
                                     input_format=input_format, output_uri=output_uri,
                                     dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
-                                    output_format=output_format)
+                                    output_format=output_format, save_embedding_sentence=save_embedding_sentence)
                 # process.evaluate_result()
                 _logger.info("*" * 20 + "finished" + "*" * 20)
     except Exception as e:
@@ -262,6 +263,8 @@ def add_arguments(parser):
                         help="""The output property name used to record the embedding. Default is `output_properties`. \n
                         This argument is only valid for output in kgtk format.""")
     # output
+    parser.add_argument('--save-embedding-sentence', action='store_true', dest='save_embedding_sentence',
+                        help="if set, will also save the embedding sentences to output.")
     parser.add_argument('-o', '--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
     parser.add_argument('--output-format', action='store', dest='output_format',

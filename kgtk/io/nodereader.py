@@ -22,6 +22,7 @@ class NodeReader(KgtkReader):
     @classmethod
     def open_node_file(cls,
                        file_path: typing.Optional[Path],
+                       who: str = "node input",
                        error_file: typing.TextIO = sys.stderr,
                        options: typing.Optional[KgtkReaderOptions] = None,
                        value_options: typing.Optional[KgtkValueOptions] = None,
@@ -29,6 +30,7 @@ class NodeReader(KgtkReader):
                        very_verbose: bool = False)->"NodeReader":
 
         result: KgtkReader = cls.open(file_path=file_path,
+                                      who=who,
                                       error_file=error_file,
                                       mode=KgtkReaderMode.NODE,
                                       options=options,

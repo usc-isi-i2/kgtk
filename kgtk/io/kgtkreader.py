@@ -79,15 +79,15 @@ class KgtkReaderOptions():
     blank_required_field_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
     
     # Ignore records with too many or too few fields?
-    short_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
-    long_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXCLUDE)
+    short_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
+    long_line_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
 
     # How should header errors be processed?
     header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXIT)
     unsafe_column_name_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
 
     # Validate data cell values?
-    invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.REPORT)
+    invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
 
     # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -231,17 +231,17 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "invalid-value-action",
                             dest=prefix2 + "invalid_value_action",
                             help=h(prefix3 + "The action to take when a data cell value is invalid (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.REPORT))
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "long-line-action",
                             dest=prefix2 + "long_line_action",
                             help=h(prefix3 + "The action to take when a long line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "short-line-action",
                             dest=prefix2 + "short_line_action",
                             help=h(prefix3 + "The action to take when a short line is detected (default=%(default)s)."),
-                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXCLUDE))
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "truncate-long-lines",
                             dest=prefix2 + "truncate_long_lines",
@@ -408,6 +408,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     @classmethod
     def open(cls,
              file_path: typing.Optional[Path],
+             who: str = "input",
              error_file: typing.TextIO = sys.stderr,
              mode: typing.Optional[KgtkReaderMode] = None,
              options: typing.Optional[KgtkReaderOptions] = None,
@@ -431,12 +432,14 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # Check for unsafe column names.
         cls.check_column_names(column_names,
                                header_line=header,
+                               who=who,
                                error_action=options.unsafe_column_name_action,
                                error_file=error_file)
 
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
                                                                               header_line=header,
+                                                                              who=who,
                                                                               error_action=options.header_error_action,
                                                                               error_file=error_file)
 
@@ -450,6 +453,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES,
                                                 column_name_map,
                                                 header_line=header,
+                                                who=who,
                                                 error_action=options.header_error_action,
                                                 error_file=error_file,
                                                 is_optional=True)
@@ -481,6 +485,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
          node2_column_idx,
          id_column_idx) = cls.get_special_columns(column_name_map,
                                                   header_line=header,
+                                                  who=who,
                                                   error_action=options.header_error_action,
                                                   error_file=error_file,
                                                   is_edge_file=is_edge_file,
@@ -655,10 +660,11 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # Immediately raise an exception.
             raise ValueError("In input data line %d, %s: %s" % (self.data_lines_read, msg, line))
         elif action == ValidationAction.EXIT:
-            print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
+            print("Data line %d:\n%s\n%s" % (self.data_lines_read, line, msg), file=self.error_file, flush=True)
             sys.exit(1)
             
-        print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
+        # print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
+        print("Data line %d:\n%s\n%s" % (self.data_lines_read, line, msg), file=self.error_file, flush=True)
         self.data_errors_reported += 1
         if self.options.error_limit > 0 and self.data_errors_reported >= self.options.error_limit:
             raise ValueError("Too many data errors, exiting.")
@@ -924,7 +930,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             except StopIteration:
                 return
 
-    def _ignore_invalid_values(self, values: typing.List[str], line: str)->bool:
+    def _ignore_invalid_values(self, row: typing.List[str], line: str)->bool:
         """Give a row of values, validate each value.  If we find one or more
         validation problems, we might want to emit error messages and we might
         want to ignore the entire row.
@@ -934,18 +940,23 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         """
         problems: typing.List[str] = [ ] # Build a list of problems.
         idx: int
-        value: str
-        for idx, value in enumerate(values):
-            if len(value) > 0: # Optimize the common case of empty columns.
-                kv: KgtkValue = KgtkValue(value, options=self.value_options)
+        item: str
+        for idx, item in enumerate(row):
+            if len(item) > 0: # Optimize the common case of empty columns.
+                kv: KgtkValue = KgtkValue(item, options=self.value_options)
                 if not kv.is_valid():
-                    problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], value, kv.describe()))
+                    problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], item, kv.describe()))
+                if kv.repaired:
+                    # If this value was repaired, update the item in the row.
+                    #
+                    # Warning: We expect this change to be seen by the caller.
+                    row[idx] = kv.value
 
         if len(problems) == 0:
             return False
 
         return self.exclude_line(self.options.invalid_value_action,
-                                 "; ".join(problems),
+                                 "\n".join(problems),
                                  line)
 
     # May be overridden
@@ -1020,15 +1031,13 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                       help=h("Send errors to stdout instead of stderr"),
                                       action="store_true")
 
-        if expert:
-            egroup.add_argument(      "--show-options", dest="show_options", help="Print the options selected (default=%(default)s).", action='store_true')
+        egroup.add_argument(      "--show-options", dest="show_options", help=h("Print the options selected (default=%(default)s)."), action='store_true')
 
         egroup.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages (default=%(default)s).", action='store_true')
 
-        if expert:
-            egroup.add_argument(      "--very-verbose", dest="very_verbose",
-                                      help=h("Print additional progress messages (default=%(default)s)."),
-                                      action='store_true')
+        egroup.add_argument(      "--very-verbose", dest="very_verbose",
+                                  help=h("Print additional progress messages (default=%(default)s)."),
+                                  action='store_true')
         
 def main():
     """
