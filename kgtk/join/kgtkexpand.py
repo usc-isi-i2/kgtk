@@ -77,6 +77,7 @@ class KgtkExpand(KgtkFormat):
         # Open the output file.
         ew: KgtkWriter = KgtkWriter.open(kr.column_names,
                                          self.output_file_path,
+                                         mode=kr.mode,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,

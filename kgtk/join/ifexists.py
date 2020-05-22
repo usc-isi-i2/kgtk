@@ -236,16 +236,18 @@ class IfExists(KgtkFormat):
                 print("Reading the input data from stdin", file=self.error_file, flush=True)
 
         input_kr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                               error_file=self.error_file,
-                                               options=self.input_reader_options,
-                                               value_options = self.value_options,
-                                               verbose=self.verbose,
-                                               very_verbose=self.very_verbose,
+                                                error_file=self.error_file,
+                                                who="input",
+                                                options=self.input_reader_options,
+                                                value_options = self.value_options,
+                                                verbose=self.verbose,
+                                                very_verbose=self.very_verbose,
         )
 
         if self.verbose:
             print("Opening the filter input file: %s" % self.filter_file_path, flush=True)
         filter_kr: KgtkReader = KgtkReader.open(self.filter_file_path,
+                                                who="filter",
                                                 error_file=self.error_file,
                                                 options=self.filter_reader_options,
                                                 value_options=self.value_options,
