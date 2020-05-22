@@ -162,6 +162,7 @@ class KgtkJoiner(KgtkFormat):
             reader_options = self.right_reader_options
             
         kr: KgtkReader = KgtkReader.open(file_path,
+                                         who=who + " input",
                                          options=reader_options,
                                          value_options = self.value_options,
                                          error_file=self.error_file,
@@ -238,6 +239,7 @@ class KgtkJoiner(KgtkFormat):
         if self.verbose:
             print("Opening the left edge file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
         left_kr: KgtkReader = KgtkReader.open(self.left_file_path,
+                                              who="left input",
                                               options=self.left_reader_options,
                                               value_options = self.value_options,
                                               error_file=self.error_file,
@@ -249,6 +251,7 @@ class KgtkJoiner(KgtkFormat):
         if self.verbose:
             print("Opening the right edge file: %s" % str(self.right_file_path), file=self.error_file, flush=True)
         right_kr: KgtkReader = KgtkReader.open(self.right_file_path,
+                                               who="right input",
                                                options=self.right_reader_options,
                                                value_options = self.value_options,
                                                error_file=self.error_file,
@@ -289,6 +292,7 @@ class KgtkJoiner(KgtkFormat):
             print("Opening the output edge file: %s" % str(self.output_path), file=self.error_file, flush=True)
         ew: KgtkWriter = KgtkWriter.open(joined_column_names,
                                          self.output_path,
+                                         mode=left_kr.mode,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
