@@ -38,7 +38,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-
     _expert: bool = parsed_shared_args._expert
 
     # This helper function makes it easy to suppress options from
@@ -65,9 +64,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--preserve-order", dest="preserve_order", help="Preserve record order when cacheing the input file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--field-separator", dest="field_separator",
-                              help=h("Separator for multifield keys (default=%(default)s)")
-                              , default=IfExists.FIELD_SEPARATOR_DEFAULT)
+                              help=h("Separator for multifield keys (default=%(default)s)"),
+                              default=IfExists.FIELD_SEPARATOR_DEFAULT)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -82,6 +84,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         filter_keys: typing.Optional[typing.List[str]],
         
         cache_input: bool = False,
+        preserve_order: bool = False,
 
         field_separator: str = IfExists.FIELD_SEPARATOR_DEFAULT,
 
@@ -115,6 +118,7 @@ def run(input_kgtk_file: typing.Optional[Path],
             print("--filter-keys=%s" % " ".join(filter_keys), file=error_file)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
         print("--cache-input=%s" % str(cache_input), file=error_file)
+        print("--preserve-order=%s" % str(preserve_order), file=error_file)
         print("--field-separator=%s" % repr(field_separator), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
@@ -130,6 +134,7 @@ def run(input_kgtk_file: typing.Optional[Path],
             output_file_path=output_kgtk_file,
             invert=False,
             cache_input=cache_input,
+            preserve_order=preserve_order,
             field_separator=field_separator,
             input_reader_options=input_reader_options,
             filter_reader_options=filter_reader_options,
