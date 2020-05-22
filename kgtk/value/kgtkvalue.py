@@ -1056,7 +1056,7 @@ class KgtkValue(KgtkFormat):
         force self.valid to False.
 
         """
-        if self.data_type is not None:
+        if self.data_type is None:
             if not self.value.startswith("!"):
                 return False
             # This is an extension, but for now, assume that all extensions are invalid.
