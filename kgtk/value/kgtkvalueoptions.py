@@ -1,5 +1,8 @@
 """
 KGTK value processing options.
+
+TODO: Instead of clamping invalid lat/lon values, perhaps we'd
+want to modulo them?
 """
 
 from argparse import ArgumentParser, Namespace, SUPPRESS
@@ -240,17 +243,17 @@ class KgtkValueOptions:
         if self.additional_language_codes is not None:
             print("%sadditional-language-codes=%s" % (prefix, " ".join(self.additional_language_codes)), file=out)
         print("%sminimum-valid-year=%d" % (prefix, self.minimum_valid_year), file=out)
-        print("%sclamp-minimum-year=%d" % (prefix, self.clamp_minimum_year), file=out)
+        print("%sclamp-minimum-year=%s" % (prefix, str(self.clamp_minimum_year)), file=out)
         print("%smaximum-valid-year=%d" % (prefix, self.maximum_valid_year), file=out)
-        print("%sclamp-maximum-year=%d" % (prefix, self.clamp_maximum_year), file=out)
+        print("%sclamp-maximum-year=%s" % (prefix, str(self.clamp_maximum_year)), file=out)
         print("%sminimum-valid-lat=%f" % (prefix, self.minimum_valid_lat), file=out)
-        print("%sclamp-minimum-lat=%d" % (prefix, self.clamp_minimum_lat), file=out)
+        print("%sclamp-minimum-lat=%s" % (prefix, str(self.clamp_minimum_lat)), file=out)
         print("%smaximum-valid-lat=%f" % (prefix, self.maximum_valid_lat), file=out)
-        print("%sclamp-maximum-lat=%d" % (prefix, self.clamp_maximum_lat), file=out)
+        print("%sclamp-maximum-lat=%s" % (prefix, str(self.clamp_maximum_lat)), file=out)
         print("%sminimum-valid-lon=%f" % (prefix, self.minimum_valid_lon), file=out)
-        print("%sclamp-minimum-lon=%d" % (prefix, self.clamp_minimum_lon), file=out)
+        print("%sclamp-minimum-lon=%s" % (prefix, str(self.clamp_minimum_lon)), file=out)
         print("%smaximum-valid-lon=%f" % (prefix, self.maximum_valid_lon), file=out)
-        print("%sclamp-maximum-lon=%d" % (prefix, self.clamp_maximum_lon), file=out)
+        print("%sclamp-maximum-lon=%s" % (prefix, str(self.clamp_maximum_lon)), file=out)
         print("%sescape-list-separators=%s" % (prefix, str(self.escape_list_separators)), file=out)
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
