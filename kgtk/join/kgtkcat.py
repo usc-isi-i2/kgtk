@@ -59,6 +59,7 @@ class KgtkCat():
                     print("Opening file %d: %s" % (idx + 1, str(input_file_path)), file=self.error_file, flush=True)
 
             kr = KgtkReader.open(input_file_path,
+                                 who="input " + str(idx + 1),
                                  options=self.reader_options,
                                  value_options = self.value_options,
                                  error_file=self.error_file,
@@ -112,7 +113,6 @@ class KgtkCat():
 
         ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
                                          self.output_path,
-                                         mode = krs[0].mode, # Use the first input file's mode.
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
