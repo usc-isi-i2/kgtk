@@ -46,14 +46,7 @@ class EmbeddingVector:
         if cache_config and cache_config.get("use_cache", False):
             host = cache_config.get("host", "dsbox01.isi.edu")
             port = cache_config.get("port", 6379)
-            self.redis_server = redis.Redis(host=host, port=port, db=0)
-            try:
-                _ = self.redis_server.get("foo")
-                self._logger.debug("Cache server {}:{} connected!".format(host, port))
-            except Exception as e:
-                self._logger.error("Cache server {}:{} is not able to be connected! Will not use cache!".format(host, port))
-                self._logger.debug(e, exc_info=True)
-                self.redis_server = None
+            self.redis_server = connect_to_redis(host, port)
         else:
             self.redis_server = None
         self._parallel_count = int(parallel_count)
@@ -366,7 +359,6 @@ class EmbeddingVector:
                 temp.extend(gt_nodes)
 
                 for each_q in temp:
-                    self.node_labels[each_q] = label
                     if skip_nodes_set is not None and each_q in skip_nodes_set:
                         to_remove_q.add(each_q)
                 temp = set(temp) - to_remove_q
@@ -396,13 +388,22 @@ class EmbeddingVector:
                     column_references = {"node": headers.index("node"),
                                          "property": headers.index("property"),
                                          "value": headers.index("value")}
+
+                elif "node1" in headers and "label" in headers and "node2" in headers:
+                    column_references = {"node": headers.index("node1"),
+                                         "property": headers.index("label"),
+                                         "value": headers.index("node2")}
+
                 elif len(headers) == 3:
                     column_references = {"node": 0,
                                          "property": 1,
                                          "value": 2}
                 else:
-                    missing_column = {"node", "property", "value"} - set(headers)
-                    raise KGTKException("Missing column {}".format(missing_column))
+                    missing_column1 = {"node", "property", "value"} - set(headers)
+                    missing_column2 = {"node1", "label", "node2"} - set(headers)
+                    missing_column = missing_column1 if len(missing_column1) < len(missing_column2) else missing_column2
+                    raise KGTKException("Missing column: {}".format(missing_column))
+
                 self._logger.debug("column index information: ")
                 self._logger.debug(str(column_references))
                 # read contents
@@ -596,7 +597,8 @@ class EmbeddingVector:
                         _ = f.write(str(i) + "\t")
                     _ = f.write("\n")
 
-    def print_vector(self, vectors, output_properties: str = "text_embedding", output_format="kgtk_format"):
+    def print_vector(self, vectors, output_properties: str = "text_embedding",
+                     output_format="kgtk_format", save_embedding_sentence=False):
         self._logger.debug("START printing the vectors")
         if output_format == "kgtk_format":
             print("node\tproperty\tvalue\n", end="")
@@ -610,6 +612,8 @@ class EmbeddingVector:
                 for each_dimension in each_vector[:-1]:
                     print(str(each_dimension) + ",", end="")
                 print(str(each_vector[-1]))
+                if save_embedding_sentence:
+                    print("{}\t{}\t{}".format(all_nodes[i], "embedding_sentence", self.candidates[all_nodes[i]]["sentence"]))
 
         elif output_format == "tsv_format":
             for each_vector in vectors:
@@ -620,7 +624,8 @@ class EmbeddingVector:
 
     def plot_result(self, output_properties: dict, input_format="kgtk_format",
                     output_uri: str = "", output_format="kgtk_format",
-                    dimensional_reduction="none", dimension_val=2
+                    dimensional_reduction="none", dimension_val=2,
+                    save_embedding_sentence=False
                     ):
         """
             transfer the vectors to lower dimension so that we can plot
@@ -688,9 +693,9 @@ class EmbeddingVector:
             self.dump_vectors(metadata_output_path, "metadata")
 
         if self.vectors_2D is not None:
-            self.print_vector(self.vectors_2D, output_properties.get("output_properties"), output_format)
+            self.print_vector(self.vectors_2D, output_properties.get("output_properties"), output_format, save_embedding_sentence)
         else:
-            self.print_vector(vectors, output_properties.get("output_properties"), output_format)
+            self.print_vector(vectors, output_properties.get("output_properties"), output_format, save_embedding_sentence)
 
     def evaluate_result(self):
         """
@@ -737,3 +742,16 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def connect_to_redis(host, port):
+    _logger = logging.getLogger(__name__)
+    redis_server = redis.Redis(host=host, port=port, db=0)
+    try:
+        _ = redis_server.get("foo")
+        _logger.debug("Cache server {}:{} connected!".format(host, port))
+    except Exception as e:
+        _logger.error("Cache server {}:{} is not able to be connected! Will not use cache!".format(host, port))
+        _logger.debug(e, exc_info=True)
+        redis_server = None
+    return redis_server
