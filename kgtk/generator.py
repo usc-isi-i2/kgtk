@@ -48,11 +48,12 @@ class Generator:
         if self.warning:
             self.warn_log = open(log_path,"w")
         self.to_append_statement_id = None
-        self.currupted_statment_id = None
+        self.corrupted_statement_id = None
     def serialize(self):
         raise NotImplemented
     def finalize(self):
-        self.warn_log.close()
+        if self.warning:
+            self.warn_log.close()
         self.serialize()
     def set_sets(self,label_set:str,description_set:str,alias_set:str):
         self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(alias_set.split(",")), set(description_set.split(","))
@@ -377,7 +378,6 @@ class TripleGenerator(Generator):
         the second element is a bool indicating whether this is a valid property edge or qualifier edge.
         Call corresponding downstream functions
         """
-
         edge_list = edge.strip("\n").split("\t")
         if line_number == 1:
             # initialize the order_map
@@ -392,31 +392,22 @@ class TripleGenerator(Generator):
         if line_number == 2:
             # by default a statement edge
             is_qualifier_edge = False
-            self.to_append_statement_id = e_id
-            self.corrupted_statement_id = None
         else:
-            if node1 != self.to_append_statement_id:
+            if node1 != self.to_append_statement_id and node1 != self.corrupted_statement_id:
+                is_qualifier_edge = False
                 # also a new statement edge
                 if self.read_num_of_lines >= self.n:
                     self.serialize()
-                is_qualifier_edge = False
-                # print("#Debug Info: ",line_number, self.to_append_statement_id, node1, is_qualifier_edge,self.to_append_statement)
-                self.to_append_statement_id = e_id
-                self.corrupted_statement_id = None
             else:
                 # qualifier edge or property declaration edge
                 is_qualifier_edge = True
-                if self.corrupted_statement_id == e_id:
-                    # Met a qualifier which associates with a corrupted statement
-                    return
-                if prop != "data_type" and node1 != self.to_append_statement_id:
-                    # 1. not a property declaration edge and
-                    # 2. the current qualifier's node1 is not the latest property edge id, throw errors.
-                        raise KGTKException(
-                            "Node1 {} at line {} doesn't agree with latest property edge id {}.\n".format(
-                                node1, line_number, self.to_append_statement_id
+                if node1 == self.corrupted_statement_id:
+                        self.warn_log.write(
+                            "QUALIFIER edge at line [{}] associated of corrupted statement edge of id [{}] dropped.\n".format(
+                                line_number, self.corrupted_statement_id
                             )
                         )
+                        return
         if prop in self.label_set:
             success = self.generate_label_triple(node1, node2)
         elif prop in self.description_set:
@@ -433,18 +424,26 @@ class TripleGenerator(Generator):
                     node1, prop, node2, is_qualifier_edge, e_id)
             else:
                 raise KGTKException(
-                    "property {}'s type is unknown at line {}.\n".format(
+                    "property [{}]'s type is unknown at line [{}].\n".format(
                         prop, line_number)
                 )
-        if (not success) and (not is_qualifier_edge) and self.warning:
-            # We have a corrupted edge here.
-            self.warn_log.write(
-                "Corrupted statement at line number: {} with id {} with current corrupted id {}\n".format(
-                    line_number, e_id, self.corrupted_statement_id))
-            self.corrupted_statement_id = e_id
+        if (not success):
+            if not is_qualifier_edge: 
+                if self.warning:
+                    self.warn_log.write(
+                        "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
+                self.corrupted_statement_id = e_id
+            else:
+                if self.warning:
+                    self.warn_log.write(
+                        "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))                    
+            
         else:
             self.read_num_of_lines += 1
-            self.corrupted_statement_id = None
+            if not is_qualifier_edge:
+                self.to_append_statement_id = e_id
     @staticmethod
     def xsd_number_type(num):
         if isinstance(num, float) and 'e' in str(num).lower():

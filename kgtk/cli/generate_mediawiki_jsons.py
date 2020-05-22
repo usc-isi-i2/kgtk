@@ -157,7 +157,7 @@ def run(
         fp = sys.stdin
         # not line by line
     for line_num, edge in enumerate(fp):
-        if edge.startswith("#"):
+        if edge.startswith("#") or len(edge.strip("\n")) == 0:
             continue
         else:
             generator.entry_point(line_num+1,edge)
