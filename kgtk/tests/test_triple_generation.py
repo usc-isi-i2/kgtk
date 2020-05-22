@@ -11,7 +11,7 @@ class TestTripleGeneration(unittest.TestCase):
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/P10_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
-                                    description_set='descriptions', ignore=True, n=100, truthy=True, use_id=True,
+                                    description_set='descriptions', warning=False, n=100, truthy=True, use_id=True,
                                     dest_fp=o)
         fp = open(property_tsv_file)
         for line_num, edge in enumerate(fp):
@@ -35,7 +35,7 @@ class TestTripleGeneration(unittest.TestCase):
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/P10_not_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
-                                    description_set='descriptions', ignore=True, n=100, truthy=False, use_id=True,
+                                    description_set='descriptions', warning=False, n=100, truthy=False, use_id=True,
                                     dest_fp=o)
         fp = open(property_tsv_file)
         for line_num, edge in enumerate(fp):
@@ -59,7 +59,7 @@ class TestTripleGeneration(unittest.TestCase):
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/Q57160439_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
-                                    description_set='descriptions', ignore=True, n=100, truthy=True, use_id=True,
+                                    description_set='descriptions', warning=False, n=100, truthy=True, use_id=True,
                                     dest_fp=o)
         fp = open(qnode_tsv_file)
         for line_num, edge in enumerate(fp):
@@ -84,7 +84,7 @@ class TestTripleGeneration(unittest.TestCase):
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/Q57160439_not_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
-                                    description_set='descriptions', ignore=True, n=100, truthy=False, use_id=True,
+                                    description_set='descriptions', warning=False, n=100, truthy=False, use_id=True,
                                     dest_fp=o)
         fp = open(qnode_tsv_file)
         for line_num, edge in enumerate(fp):
@@ -108,7 +108,7 @@ class TestTripleGeneration(unittest.TestCase):
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/small_values_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
-                                    description_set='descriptions', ignore=True, n=100, truthy=True, use_id=True,
+                                    description_set='descriptions', warning=False, n=100, truthy=True, use_id=True,
                                     dest_fp=o)
         fp = open(small_values_file)
         for line_num, edge in enumerate(fp):
