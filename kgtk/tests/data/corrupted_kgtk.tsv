@@ -1,1 +1,11 @@
 node1	property	node2	id
+Q1	P577	2020000000	corrupted_id1
+corrupted_id1	P577	2020	corrupted_id_legal1
+corrupted_id1	P577	2020	corrupted_id_legal1
+Q2	P577	2020	legal_id1
+legal_id1	P577	2020	legal_id1_legal1
+legal_id1	P577	2020000000	legal_id_illegal2
+Q3	P577	2020	legal_id3
+
+
+# corrupt corrupted_kgtk file contains only corruption casued by illegal `Time` Value. More causes will be tested
