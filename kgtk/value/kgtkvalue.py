@@ -174,6 +174,9 @@ class KgtkValue(KgtkFormat):
     # TODO: proper validation.
     parent: typing.Optional['KgtkValue'] = attr.ib(default=None)
 
+    # Has this value been repaired?
+    repaired: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # Cache some properties of the value that would be expensive to
     # continuously recompute.
     data_type: typing.Optional[KgtkFormat.DataType] = None
@@ -282,6 +285,7 @@ class KgtkValue(KgtkFormat):
         item: KgtkValue
         for item in list_items:
             values.append(item.value)
+            self.repaired = self.repaired or item.repaired
         self.value = KgtkFormat.LIST_SEPARATOR.join(values)
 
     def _is_number_or_quantity(self)->bool:
@@ -1109,6 +1113,7 @@ class KgtkValue(KgtkFormat):
             v += "/"
             v += precisionstr
         self.value = v
+        self.repaired = True
 
         # If this value is the child of a list, repair the list parent value.
         if self.parent is not None:
@@ -1121,7 +1126,7 @@ class KgtkValue(KgtkFormat):
         force self.valid to False.
 
         """
-        if self.data_type is not None:
+        if self.data_type is None:
             if not self.value.startswith("!"):
                 return False
             # This is an extension, but for now, assume that all extensions are invalid.

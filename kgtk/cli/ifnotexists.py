@@ -1,6 +1,14 @@
 """Filter a KGTK file based on whether one or more records exist in a second
 KGTK file with matching values for one or more fields.
 
+Note: By default, this implementation builds im-memory sets of all the key
+values in the second file (the filter file). Optionally, it will cache the
+first file (the input file) instead.
+
+Note: By default, input records are passed in order to the output file.  When
+the input file is cached, the output records are order by key value (alpha
+sort), then by input order.
+
 TODO: Need KgtkWriterOptions
 """
 
@@ -13,11 +21,14 @@ from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.ifexists import IfExists
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Filter a KGTK file based on whether one or more records do not exist in a second KGTK file with matching values for one or more fields.'
+        'help': 'Filter a KGTK file by not matching records in a second KGTK file.',
+        'description': 'Filter a KGTK file based on whether one or more records do not exist in a second KGTK file with matching values for one or more fields.' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert ifnotexists --help'
     }
 
 
@@ -44,12 +55,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys",
                               help="The key columns in the file being filtered (default=None).", nargs='*')
 
-    parser.add_argument(      "--filter-on", dest="_filter_kgtk_file", help="The KGTK file to filter against (required).", type=Path, required=True)
+    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against (required).", type=Path, required=True)
 
     parser.add_argument(      "--filter-keys", "--right-keys", dest="filter_keys",
                               help="The key columns in the filter-on file (default=None).", nargs='*')
 
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (required),", type=Path, default=None)
+
+    parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--field-separator", dest="field_separator",
                               help=h("Separator for multifield keys"),
@@ -67,6 +81,8 @@ def run(input_kgtk_file: typing.Optional[Path],
         input_keys: typing.Optional[typing.List[str]],
         filter_keys: typing.Optional[typing.List[str]],
         
+        cache_input: bool = False,
+
         field_separator: str = IfExists.FIELD_SEPARATOR_DEFAULT,
 
         errors_to_stdout: bool = False,
@@ -98,6 +114,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         if filter_keys is not None:
             print("--filter-keys=%s" % " ".join(filter_keys), file=error_file)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
+        print("--cache-input=%s" % str(cache_input), file=error_file)
         print("--field-separator='%s'" % repr(field_separator), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
@@ -112,6 +129,7 @@ def run(input_kgtk_file: typing.Optional[Path],
             filter_keys=filter_keys,
             output_file_path=output_kgtk_file,
             invert=True,
+            cache_input=cache_input,
             field_separator=field_separator,
             input_reader_options=input_reader_options,
             filter_reader_options=filter_reader_options,
