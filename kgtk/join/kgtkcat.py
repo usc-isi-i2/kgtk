@@ -112,7 +112,6 @@ class KgtkCat():
 
         ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
                                          self.output_path,
-                                         mode = krs[0].mode, # Use the first input file's mode.
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
