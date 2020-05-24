@@ -234,7 +234,9 @@ def main():
 
     parser.add_argument(dest="input_file_path", help="The KGTK file with the input data (default=%(default)s)", type=Path, nargs="?", default="-")
 
-    parser.add_argument(      "--columns", dest="key_column_names", help="The key columns will not be expanded (default=None).", nargs='+', default = [ ])
+    parser.add_argument(      "--columns", dest="key_column_names",
+                              help="The key columns to identify records for compaction. " +
+                              "(default=id for node files, (node1, label, node2) for edge files).", nargs='+', default=[ ])
 
     parser.add_argument(      "--presorted", dest="sorted_input",
                               help="Indicate that the input has been presorted (or at least pregrouped) (default=%(default)s).",
@@ -260,7 +262,7 @@ def main():
         # TODO: show ifempty-specific options.
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
         print("--columns %s" % " ".join(args.key_column_names), file=error_file, flush=True)
-        print("--grouped=%s" % str(args.sorted_input))
+        print("--presorted=%s" % str(args.sorted_input))
         print("--output-file=%s" % str(args.output_file_path))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
