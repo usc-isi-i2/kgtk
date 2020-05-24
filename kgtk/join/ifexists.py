@@ -66,7 +66,6 @@ class IfExists(KgtkFormat):
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
-
     
     def get_primary_key_column(self, kr: KgtkReader, who: str)->typing.List[int]:
         if kr.is_node_file:
