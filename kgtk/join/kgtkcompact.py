@@ -70,7 +70,7 @@ class KgtkCompact(KgtkFormat):
         if self.current_row_lists is None:
             return
 
-        # Preallocate for kicks.
+        # Preallocate the list, this might be more efficient than appending to it..
         self.current_row = [None] * len(self.current_row_lists)
         idx: int
         item_list: typing.list[str]
@@ -124,6 +124,9 @@ class KgtkCompact(KgtkFormat):
 
         # Are we starting a new key?
         if self.current_key is None:
+            # Save the new row as the current row.  If the nexy row
+            # doesn't have the same input key, we'll write this
+            # row out with a minimum of handling.
             self.current_key = input_key
             self.current_row = row
             return
