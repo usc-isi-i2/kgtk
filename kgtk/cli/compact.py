@@ -20,6 +20,11 @@ def parser():
     return {
         'help': 'Copy a KGTK file compacting | lists.',
         'description': 'Copy a KGTK file, compacting multiple records into | lists. ' +
+        '\n\nBy default, the input file is sorted in memory to achieve the ' +
+        'grouping necessary for the compaction algorithm. This may cause ' +
+        ' memory usage issues for large input files. If the input file has ' +
+        'already been sorted (or at least grouped), the `--presorted` ' +
+        'option may be used.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert compact --help'
     }
 
