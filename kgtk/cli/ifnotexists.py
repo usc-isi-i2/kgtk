@@ -18,9 +18,9 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.iff.kgtkifexists import KgtkIfExists
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.join.ifexists import IfExists
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -44,11 +44,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # The help message.  The options are still there, and initialize
     # what they need to initialize.
     def h(msg: str)->str:
-        if not _expert:
-            return SUPPRESS
-        else:
+        if _expert:
             return msg
-
+        else:
+            return SUPPRESS
 
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
 
@@ -65,9 +64,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--preserve-order", dest="preserve_order", help="Preserve record order when cacheing the input file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--field-separator", dest="field_separator",
-                              help=h("Separator for multifield keys"),
-                              default=IfExists.FIELD_SEPARATOR_DEFAULT)
+                              help=h("Separator for multifield keys (default=%(default)s)"),
+                              default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -82,8 +84,9 @@ def run(input_kgtk_file: typing.Optional[Path],
         filter_keys: typing.Optional[typing.List[str]],
         
         cache_input: bool = False,
+        preserve_order: bool = False,
 
-        field_separator: str = IfExists.FIELD_SEPARATOR_DEFAULT,
+        field_separator: str = KgtkIfExists.FIELD_SEPARATOR_DEFAULT,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -115,6 +118,7 @@ def run(input_kgtk_file: typing.Optional[Path],
             print("--filter-keys=%s" % " ".join(filter_keys), file=error_file)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
         print("--cache-input=%s" % str(cache_input), file=error_file)
+        print("--preserve-order=%s" % str(preserve_order), file=error_file)
         print("--field-separator='%s'" % repr(field_separator), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
@@ -122,7 +126,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         print("=======", file=error_file, flush=True)
 
     try:
-        ie: IfExists = IfExists(
+        ie: KgtkIfExists = KgtkIfExists(
             input_file_path=input_kgtk_file,
             input_keys=input_keys,
             filter_file_path=filter_kgtk_file,
@@ -130,6 +134,7 @@ def run(input_kgtk_file: typing.Optional[Path],
             output_file_path=output_kgtk_file,
             invert=True,
             cache_input=cache_input,
+            preserve_order=preserve_order,
             field_separator=field_separator,
             input_reader_options=input_reader_options,
             filter_reader_options=filter_reader_options,
