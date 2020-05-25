@@ -50,9 +50,11 @@ class LanguageValidator:
     DEFAULT_ADDITIONAL_LANGUAGE_CODES: typing.List[str] = [
         # New codes:
         "cnr", # Montenegrin.  Added 21-Dec-2017. https://iso639-3.sil.org/code/cnr
-        "hyw", # Wester Armenian.  Added 23-Jan-2018. https://iso639-3.sil.org/code/hyw
+        "hyw", # Western Armenian.  Added 23-Jan-2018. https://iso639-3.sil.org/code/hyw
+        "szy", # Sakizawa.  Added 25-Jan-2019. https://iso639-3.sil.org/code/szy
 
         # Obsolete codes:
+        "bh", # Bihari lanuages, apparently replaced by "bih".
         "mo", # Moldavian. Retired 3-Nov-2008. Replaced by the codes for Romanian.
               # http://www.personal.psu.edu/ejp10/blogs/gotunicode/2008/11/language-tage-mo-for-moldovan.html
         "eml", # Emiliano-Romagnolo. Split and retired 16-Jan-2009. https://iso639-3.sil.org/code/eml

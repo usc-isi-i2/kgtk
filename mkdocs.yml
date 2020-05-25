@@ -6,6 +6,7 @@ nav:
   - 'KGTK commands':
       - 'cat': 'cat.md'
       - 'clean_data': 'clean_data.md'
+      - 'compact': 'compact.md'
       - 'connected_components': 'connected_components.md'
       - 'expand': 'expand.md'
       - 'export_gt': 'export_gt.md'

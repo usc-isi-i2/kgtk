@@ -4,6 +4,7 @@ Validate KGTK File data types.
 
 from argparse import ArgumentParser, Namespace
 import attr
+import math
 import re
 import sys
 import typing
@@ -342,7 +343,7 @@ class KgtkValue(KgtkFormat):
                                                                                               floatnumber=floatnumber_pat,
                                                                                               imagnumber=imagnumber_pat)
 
-    # Numeric literals with componet labeling:
+    # Numeric literals with component labeling:
     number_pat: str = r'(?P<number>{numeric})'.format(numeric=numeric_pat)
 
     # Tolerances
@@ -726,6 +727,16 @@ class KgtkValue(KgtkFormat):
     degrees_pat: str = r'(?:[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))'
     location_coordinates_re: typing.Pattern = re.compile(r'^@(?P<lat>{degrees})/(?P<lon>{degrees})$'.format(degrees=degrees_pat))
 
+    # The lax degrees pattern allows scientific notation, but not numbers iin
+    # other bases or imaginary numbers.
+    lax_degrees_pat: str = r'(?:{plus_or_minus}?(?:{integer}|{floatnumber}))'.format(plus_or_minus=plus_or_minus_pat,
+                                                                                     integer=decinteger_pat,
+                                                                                     floatnumber=floatnumber_pat)
+    lax_location_coordinates_re: typing.Pattern = re.compile(r'^@(?P<lat>{degrees})/(?P<lon>{degrees})$'.format(degrees=lax_degrees_pat))
+
+    def format_degrees(self, num: float)->str:
+        return '{:011.6f}'.format(num)
+
     def is_location_coordinates(self, validate: bool=False)->bool:
         """
         Return False if this value is a list and idx is None.
@@ -748,28 +759,81 @@ class KgtkValue(KgtkFormat):
             return self.valid
         
         # Validate the location coordinates:
+        rewrite_needed: bool = False
         m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(self.value)
         if m is None:
-            return False
+            if self.options.allow_lax_coordinates or self.options.repair_lax_coordinates:
+                m = KgtkValue.lax_location_coordinates_re.match(self.value)
+                if m is None:
+                    return False
+                rewrite_needed = self.options.repair_lax_coordinates
+            else:
+                return False
 
         latstr: str = m.group("lat")
         lonstr: str = m.group("lon")
 
+        fixup_needed: bool = False
+
         # Latitude normally runs from -90 to +90:
+        #
+        # TODO: Offer a wrapping repair for latitude, which will also affect latitude.
         try:
             lat: float = float(latstr)
-            if  lat < self.options.minimum_valid_lat or lat > self.options.maximum_valid_lat:
-                return False
+            if  lat < self.options.minimum_valid_lat:
+                if self.options.clamp_minimum_lat:
+                    lat = self.options.minimum_valid_lat
+                    latstr = str(lat)
+                    fixup_needed = True
+                else:
+                    return False
+            elif lat > self.options.maximum_valid_lat:
+                if self.options.clamp_maximum_lat:
+                    lat = self.options.maximum_valid_lat
+                    latstr = str(lat)
+                    fixup_needed = True
+                else:
+                    return False
+            elif rewrite_needed:
+                latstr = self.format_degrees(lat)
+                fixup_needed = True
         except ValueError:
             return False
 
         # Longitude normally runs from -180 to +180:
         try:
             lon: float = float(lonstr)
-            if lon < self.options.minimum_valid_lon or lon > self.options.maximum_valid_lon:
-                return False
+            if  lon < self.options.minimum_valid_lon:
+                if self.options.modulo_repair_lon:
+                    lon = self.wrap_longitude(lon)
+                    lonstr = str(lon)
+                    fixup_needed = True
+                elif self.options.clamp_minimum_lon:
+                    lon = self.options.minimum_valid_lon
+                    lonstr = str(lon)
+                    fixup_needed = True
+                else:
+                    return False
+            elif lon > self.options.maximum_valid_lon:
+                if self.options.modulo_repair_lon:
+                    lon = self.wrap_longitude(lon)
+                    lonstr = str(lon)
+                    fixup_needed = True
+                elif self.options.clamp_maximum_lon:
+                    lon = self.options.maximum_valid_lon
+                    lonstr = str(lon)
+                    fixup_needed = True
+                else:
+                    return False
+            elif rewrite_needed:
+                lonstr = self.format_degrees(lon)
+                fixup_needed = True
         except ValueError:
             return False
+
+        if fixup_needed:
+            # Repair a location coordinates problem.
+            self.update_location_coordinates(latstr, lonstr)
 
         # We are certain that this is valid.
         self.valid = True
@@ -781,6 +845,26 @@ class KgtkValue(KgtkFormat):
                                           lonstr=lonstr,
                                           lon=lon)
         return True
+
+    def update_location_coordinates(self, latstr: str, lonstr: str):
+        self.value = "@" + latstr + "/" + lonstr
+
+        # If this value is the child of a list, repair the list parent value.
+        if self.parent is not None:
+            self.parent.rebuild_list()
+
+    def wrap_longitude(self, lon: float)->float:
+        # Result:
+        # -360.0 <= longitude_reduced <=- 360.0
+        # Credit: https://stackoverflow.com/questions/13368525/modulus-to-limit-latitude-and-longitude-values
+        lon_reduced: float = math.fmod(lon, 360.0)
+
+        if lon_reduced > 180.0:
+                lon_reduced -= 360.0
+        elif lon_reduced <= -180.0:
+            lon_reduced += 360.0
+
+        return lon_reduced
 
     # https://en.wikipedia.org/wiki/ISO_8601
     #
@@ -922,9 +1006,27 @@ class KgtkValue(KgtkFormat):
         except ValueError:
             return False
         if year < self.options.minimum_valid_year:
-            return False
-        if year > self.options.maximum_valid_year:
-            return False
+            if self.options.clamp_minimum_year:
+                year = self.options.minimum_valid_year
+                if year >= 0:
+                    yearstr = str(year).zfill(4)
+                else:
+                    # Minus sign *and* at least 4 digits.
+                    yearstr = str(year).zfill(5)
+                fixup_needed = True
+            else:
+                return False
+        elif year > self.options.maximum_valid_year:
+            if self.options.clamp_maximum_year:
+                year = self.options.maximum_valid_year
+                if year >= 0:
+                    yearstr = str(year).zfill(4)
+                else:
+                    # Minus sign *and* at least 4 digits.
+                    yearstr = str(year).zfill(5)
+                fixup_needed = True
+            else:
+                return False
 
         if monthstr is not None:
             try:
@@ -972,20 +1074,8 @@ class KgtkValue(KgtkFormat):
                 return False # shouldn't happen
 
         if fixup_needed:
-            # Repair a month or day zero problem.  If this value is the child
-            # of a list, repair the list parent value, too.
-            self.update_date_and_times(yearstr,
-                                       monthstr,
-                                       daystr,
-                                       hourstr,
-                                       minutesstr,
-                                       secondsstr,
-                                       zonestr,
-                                       precisionstr,
-                                       iso8601extended
-            )
-            if self.parent is not None:
-                self.parent.rebuild_list()
+            # Repair a month or day zero problem.
+            self.update_date_and_times(yearstr, monthstr, daystr, hourstr, minutesstr, secondsstr, zonestr, precisionstr, iso8601extended)
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True
@@ -1019,8 +1109,7 @@ class KgtkValue(KgtkFormat):
                               secondsstr: typing.Optional[str],
                               zonestr: typing.Optional[str],
                               precisionstr: typing.Optional[str],
-                              iso8601extended: bool
-    ):
+                              iso8601extended: bool):
         v: str = "^" + yearstr
         if monthstr is not None:
             if iso8601extended:
@@ -1048,6 +1137,10 @@ class KgtkValue(KgtkFormat):
             v += precisionstr
         self.value = v
         self.repaired = True
+
+        # If this value is the child of a list, repair the list parent value.
+        if self.parent is not None:
+            self.parent.rebuild_list()
 
     def is_extension(self, validate=False)->bool:
         """Return True if the first character is !

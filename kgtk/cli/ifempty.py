@@ -10,9 +10,9 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.iff.kgtkifempty import KgtkIfEmpty
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.join.ifempty import IfEmpty
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -88,7 +88,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         print("=======", file=error_file, flush=True)
 
     try:
-        ie: IfEmpty = IfEmpty(
+        ie: KgtkIfEmpty = KgtkIfEmpty(
             input_file_path=input_kgtk_file,
             filter_column_names=filter_column_names,
             output_file_path=output_kgtk_file,
