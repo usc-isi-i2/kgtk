@@ -47,6 +47,13 @@ class KgtkValueOptions:
 
     escape_list_separators: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # When repair_lax_coordinates is true, coordinates using scientific notation
+    # will be parsed.
+    allow_lax_coordinates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    # When repair_lax_coordinates is true, coordinates using scientific notation
+    # will be parsed, but they will be rewritten to fixed point notation.
+    repair_lax_coordinates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # Minimum and maximum year range in dates.
     MINIMUM_VALID_YEAR: int = 1583 # Per ISO 8601, years before this one require special agreement.
     minimum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MINIMUM_VALID_YEAR)
@@ -126,84 +133,92 @@ class KgtkValueOptions:
         vgroup = parser.add_argument_group(h(prefix3 + "Data value parsing"),
                                            h("Options controlling the parsing and processing of KGTK data values" + desc))
         vgroup.add_argument(      prefix1 + "additional-language-codes", dest=prefix2 + "additional_language_codes",
-                                  help=h(prefix3 + "Additional language codes (default=None)."),
+                                  help=h(prefix3 + "Additional language codes. (default=None)."),
                                   nargs="*", default=None)
 
         vgroup.add_argument(      prefix1 + "allow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
-                                   help=h(prefix3 + "Allow language identifier suffixes starting with a dash (default=%(default)s)."),
+                                   help=h(prefix3 + "Allow language identifier suffixes starting with a dash. (default=%(default)s)."),
                                    type=optional_bool, nargs='?', const=True, **d(default=False))
 
 
         vgroup.add_argument(      prefix1 + "allow-lax-strings", dest=prefix2 + "allow_lax_strings",
-                                  help=h(prefix3 + "Do not check if double quotes are backslashed inside strings (default=%(default)s)."),
+                                  help=h(prefix3 + "Do not check if double quotes are backslashed inside strings. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "allow-lax-lq-strings", dest=prefix2 + "allow_lax_lq_strings",
-                                  help=h(prefix3 + "Do not check if single quotes are backslashed inside language qualified strings (default=%(default)s)."),
+                                  help=h(prefix3 + "Do not check if single quotes are backslashed inside language qualified strings. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "allow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
-                                  help=h(prefix3 + "Allow month or day zero in dates (default=%(default)s)."),
+                                  help=h(prefix3 + "Allow month or day zero in dates. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "repair-month-or-day-zero", dest=prefix2 + "repair_month_or_day_zero",
-                                  help=h(prefix3 + "Repair month or day zero in dates (default=%(default)s)."),
+                                  help=h(prefix3 + "Repair month or day zero in dates. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-year", dest=prefix2 + "minimum_valid_year",
-                                  help=h(prefix3 + "The minimum valid year in dates (default=%(default)d)."),
+                                  help=h(prefix3 + "The minimum valid year in dates. (default=%(default)d)."),
                                   type=int, **d(default=cls.MINIMUM_VALID_YEAR))
 
         vgroup.add_argument(      prefix1 + "clamp-minimum-year", dest=prefix2 + "clamp_minimum_year",
-                                  help=h(prefix3 + "Clamp years at the minimum value (default=%(default)s)."),
+                                  help=h(prefix3 + "Clamp years at the minimum value. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "maximum-valid-year", dest=prefix2 + "maximum_valid_year",
-                                  help=h(prefix3 + "The maximum valid year in dates (default=%(default)d)."),
+                                  help=h(prefix3 + "The maximum valid year in dates. (default=%(default)d)."),
                                   type=int, **d(default=cls.MAXIMUM_VALID_YEAR))
 
         vgroup.add_argument(      prefix1 + "clamp-maximum-year", dest=prefix2 + "clamp_maximum_year",
-                                  help=h(prefix3 + "Clamp years at the maximum value (default=%(default)s)."),
+                                  help=h(prefix3 + "Clamp years at the maximum value. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
+        vgroup.add_argument(      prefix1 + "allow-lax-coordinates", dest=prefix2 + "allow_lax_coordinates",
+                                  help=h(prefix3 + "Allow coordinates using scientific notation. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
+        vgroup.add_argument(      prefix1 + "repair-lax-coordinates", dest=prefix2 + "repair_lax_coordinates",
+                                  help=h(prefix3 + "Allow coordinates using scientific notation. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lat", dest=prefix2 + "minimum_valid_lat",
-                                  help=h(prefix3 + "The minimum valid latitude (default=%(default)f)."),
+                                  help=h(prefix3 + "The minimum valid latitude. (default=%(default)f)."),
                                   type=int, **d(default=cls.MINIMUM_VALID_LAT))
 
         vgroup.add_argument(      prefix1 + "clamp-minimum-lat", dest=prefix2 + "clamp_minimum_lat",
-                                  help=h(prefix3 + "Clamp latitudes at the minimum value (default=%(default)s)."),
+                                  help=h(prefix3 + "Clamp latitudes at the minimum value. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "maximum-valid-lat", dest=prefix2 + "maximum_valid_lat",
-                                  help=h(prefix3 + "The maximum valid latitude (default=%(default)f)."),
+                                  help=h(prefix3 + "The maximum valid latitude. (default=%(default)f)."),
                                   type=int, **d(default=cls.MAXIMUM_VALID_LAT))
 
         vgroup.add_argument(      prefix1 + "clamp-maximum-lat", dest=prefix2 + "clamp_maximum_lat",
-                                  help=h(prefix3 + "Clamp latitudes at the maximum value (default=%(default)s)."),
+                                  help=h(prefix3 + "Clamp latitudes at the maximum value. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lon", dest=prefix2 + "minimum_valid_lon",
-                                  help=h(prefix3 + "The minimum valid longitude (default=%(default)f)."),
+                                  help=h(prefix3 + "The minimum valid longitude. (default=%(default)f)."),
                                   type=int, **d(default=cls.MINIMUM_VALID_LON))
 
         vgroup.add_argument(      prefix1 + "clamp-minimum-lon", dest=prefix2 + "clamp_minimum_lon",
-                                  help=h(prefix3 + "Clamp longitudes at the minimum value (default=%(default)s)."),
+                                  help=h(prefix3 + "Clamp longitudes at the minimum value. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "maximum-valid-lon", dest=prefix2 + "maximum_valid_lon",
-                                  help=h(prefix3 + "The maximum valid longitude (default=%(default)f)."),
+                                  help=h(prefix3 + "The maximum valid longitude. (default=%(default)f)."),
                                   type=int, **d(default=cls.MAXIMUM_VALID_LON))
 
         vgroup.add_argument(      prefix1 + "clamp-maximum-lon", dest=prefix2 + "clamp_maximum_lon",
-                                  help=h(prefix3 + "Clamp longitudes at the maximum value (default=%(default)s)."),
+                                  help=h(prefix3 + "Clamp longitudes at the maximum value. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "modulo-repair-lon", dest=prefix2 + "modulo_repair_lon",
-                                  help=h(prefix3 + "Wrap longitude to (-180.0,180.0] (default=%(default)s)."),
+                                  help=h(prefix3 + "Wrap longitude to (-180.0,180.0]. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "escape-list-separators", dest=prefix2 + "escape_list_separators",
-                                  help=h(prefix3 + "Escape all list separators instead of splitting on them (default=%(default)s)."),
+                                  help=h(prefix3 + "Escape all list separators instead of splitting on them. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
     @classmethod
@@ -223,6 +238,9 @@ class KgtkValueOptions:
                    clamp_minimum_year=d.get(prefix + "clamp_minimum_year", False),
                    maximum_valid_year=d.get(prefix + "maximum_valid_year", cls.MAXIMUM_VALID_YEAR),
                    clamp_maximum_year=d.get(prefix + "clamp_maximum_year", False),
+
+                   allow_lax_coordinates=d.get(prefix + "allow_lax_coordinates", False),
+                   repair_lax_coordinates=d.get(prefix + "repair_lax_coordinates", False),
 
                    minimum_valid_lat=d.get(prefix + "minimum_valid_lat", cls.MINIMUM_VALID_LAT),
                    clamp_minimum_lat=d.get(prefix + "clamp_minimum_lat", False),
@@ -256,6 +274,9 @@ class KgtkValueOptions:
         print("%sclamp-minimum-year=%s" % (prefix, str(self.clamp_minimum_year)), file=out)
         print("%smaximum-valid-year=%d" % (prefix, self.maximum_valid_year), file=out)
         print("%sclamp-maximum-year=%s" % (prefix, str(self.clamp_maximum_year)), file=out)
+
+        print("%sallow-lax-coordinates=%s" % (prefix, str(self.allow_lax_coordinates)), file=out)
+        print("%srepair-lax-coordinates=%s" % (prefix, str(self.repair_lax_coordinates)), file=out)
 
         print("%sminimum-valid-lat=%f" % (prefix, self.minimum_valid_lat), file=out)
         print("%sclamp-minimum-lat=%s" % (prefix, str(self.clamp_minimum_lat)), file=out)
