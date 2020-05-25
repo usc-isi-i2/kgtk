@@ -16,7 +16,12 @@ first file (the input file) instead.
 
 Note: By default, input records are passed in order to the output file.  When
 the input file is cached, the output records are order by key value (alpha
-sort), then by input order.
+sort), then by input order.  However, --preserve-order can be used to retain
+the input file's order in the output file.
+
+TODO: Study the time and space tradeoff between process_cacheing_input(...)
+and process_cacheing_input_preserving_order(...).  Perhaps there's no reason
+for both algorithms?
 """
 
 from argparse import ArgumentParser, Namespace
@@ -32,7 +37,7 @@ from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
-class IfExists(KgtkFormat):
+class KgtkIfExists(KgtkFormat):
     input_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     input_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                                                             iterable_validator=attr.validators.instance_of(list))))
@@ -48,6 +53,7 @@ class IfExists(KgtkFormat):
 
     invert: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     cache_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    preserve_order: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -60,7 +66,6 @@ class IfExists(KgtkFormat):
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
-
     
     def get_primary_key_column(self, kr: KgtkReader, who: str)->typing.List[int]:
         if kr.is_node_file:
@@ -119,11 +124,20 @@ class IfExists(KgtkFormat):
         return key
 
     def extract_key_set(self, kr: KgtkReader, who: str, key_columns: typing.List[int])->typing.Set[str]:
-        result: typing.Set[str] = set()
+        key_set: typing.Set[str] = set()
         row: typing.List[str]
         for row in kr:
-            result.add(self.build_key(row, key_columns))
-        return result
+            key_set.add(self.build_key(row, key_columns))
+        return key_set
+
+    def extract_key_set_and_cache(self, kr: KgtkReader, who: str, key_columns: typing.List[int])->typing.Tuple[typing.Set[str], typing.List[typing.List[str]]]:
+        key_set: typing.Set[str] = set()
+        cache: typing.List[typing.List[str]] = [ ]
+        row: typing.List[str]
+        for row in kr:
+            key_set.add(self.build_key(row, key_columns))
+            cache.append(row)
+        return key_set, cache
 
     def process_cacheing_filter(self,
                                 input_kr: KgtkReader,
@@ -147,15 +161,20 @@ class IfExists(KgtkFormat):
         input_line_count: int = 0
         output_line_count: int = 0;
 
+        # TODO: join these two code paths using xor?
         row: typing.List[str]
-        for row in input_kr:
-            input_line_count += 1
-            input_key: str = self.build_key(row, input_key_columns)
-            if self.invert:
+        input_key: str
+        if self.invert:
+            for row in input_kr:
+                input_line_count += 1
+                input_key = self.build_key(row, input_key_columns)
                 if input_key not in key_set:
                     ew.write(row)
                     output_line_count += 1
-            else:
+        else:
+            for row in input_kr:
+                input_line_count += 1
+                input_key = self.build_key(row, input_key_columns)
                 if input_key in key_set:
                     ew.write(row)
                     output_line_count += 1
@@ -174,7 +193,7 @@ class IfExists(KgtkFormat):
             print("Processing by cacheing the input file.")
         input_line_count: int = 0
         filter_line_count: int = 0
-        output_line_count: int = 0;
+        output_line_count: int = 0
         
         # Map key values to lists of input and output data.
         inputmap: typing.MutableMapping[str, typing.List[typing.List[str]]] = { }
@@ -227,6 +246,66 @@ class IfExists(KgtkFormat):
                                                                                         output_line_count),
                   file=self.error_file, flush=True)
 
+    def process_cacheing_input_preserving_order(self,
+                                                input_kr: KgtkReader,
+                                                filter_kr: KgtkReader,
+                                                input_key_columns: typing.List[int],
+                                                filter_key_columns: typing.List[int],
+                                                ew: KgtkWriter):
+        # This algorithm preserves the input file's record order in the output file,
+        # at the cost of extra work building keys.
+
+        if self.verbose:
+            print("Processing by cacheing the input file while preserving record order.")
+
+        # Step one:  read the input file, cache it, and build the input key set
+        if self.verbose:
+            print("Building the input key set from %s" % self.input_file_path, file=self.error_file, flush=True)
+        input_key_set: typing.Set[str]
+        input_cache: typing.List[typing.List[str]]
+        input_key_set, input_cache = self.extract_key_set_and_cache(input_kr, "input", input_key_columns)
+        input_line_count: int = len(input_cache)
+        if self.verbose or self.very_verbose:
+            print("There are %d rows in the input cache." % input_line_count, file=self.error_file, flush=True)
+            print("There are %d entries in the input key set." % len(input_key_set), file=self.error_file, flush=True)
+            if self.very_verbose:
+                print("Keys: %s" % " ".join(input_key_set), file=self.error_file, flush=True)
+
+        # Step two: read the filter file and act on the key_set.
+        output_key_set: typing.Set[str] = set()
+        if self.verbose:
+            print("Applying the filter from %s" % self.filter_file_path, file=self.error_file, flush=True)
+        filter_key: str
+        filter_line_count: int = 0
+        row: typing.List[str]
+        if self.invert:
+            output_key_set = input_key_set
+            for row in filter_kr:
+                filter_line_count += 1
+                filter_key = self.build_key(row, filter_key_columns)
+                if filter_key in output_key_set:
+                    output_key_set.remove(filter_key)
+        else:
+            for row in filter_kr:
+                filter_line_count += 1
+                filter_key = self.build_key(row, filter_key_columns)
+                if filter_key in input_key_set:
+                    output_key_set.add(filter_key)
+        if self.verbose:
+            print("Read %d rows from the filter file." % filter_line_count, file=self.error_file, flush=True)
+            print("There are %d entries in the output key set." % len(output_key_set), file=self.error_file, flush=True)
+
+        # Step three: read the input rows from the cache and write only the
+        # ones with keys in the output key set.
+        output_line_count: int = 0
+        for row in input_cache:
+            input_key: str = self.build_key(row, input_key_columns)
+            if input_key in output_key_set:
+                ew.write(row)
+                output_line_count += 1
+        if self.verbose:
+            print("Wrote %d rows to the output file." % output_line_count, file=self.error_file, flush=True)
+        
     def process(self):
         # Open the input files once.
         if self.verbose:
@@ -276,11 +355,19 @@ class IfExists(KgtkFormat):
                                          very_verbose=self.very_verbose)
 
         if self.cache_input:
-            self.process_cacheing_input(input_kr=input_kr,
-                                         filter_kr=filter_kr,
-                                         input_key_columns=input_key_columns,
-                                         filter_key_columns=filter_key_columns,
-                                         ew=ew)
+            if self.preserve_order:
+                pass
+                self.process_cacheing_input_preserving_order(input_kr=input_kr,
+                                                             filter_kr=filter_kr,
+                                                             input_key_columns=input_key_columns,
+                                                             filter_key_columns=filter_key_columns,
+                                                             ew=ew)
+            else:
+                self.process_cacheing_input(input_kr=input_kr,
+                                            filter_kr=filter_kr,
+                                            input_key_columns=input_key_columns,
+                                            filter_key_columns=filter_key_columns,
+                                            ew=ew)
         else:
             self.process_cacheing_filter(input_kr=input_kr,
                                          filter_kr=filter_kr,
@@ -303,12 +390,15 @@ def main():
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys (default=%(default)s)",
-                              default=IfExists.FIELD_SEPARATOR_DEFAULT)
+                              default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
    
     parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists) (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys (default=%(default)s).",
+    parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--preserve-order", dest="preserve_order", help="Preserve record order when cacheing the input file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file (default=None).", nargs='*')
@@ -336,6 +426,7 @@ def main():
         print("--field-separator=%s" % repr(args.field_separator), file=error_file)
         print("--invert=%s" % str(args.invert), file=error_file)
         print("--cache-input=%s" % str(args.cache_input), file=error_file)
+        print("--preserve-order=%s" % str(args.preserve_order), file=error_file)
         if args.input_keys is not None:
             print("--input-keys %s" % " ".join(args.input_keys), file=error_file)
         if args.filter_keys is not None:
@@ -344,7 +435,7 @@ def main():
         filter_reader_options.show(out=error_file, who="filter")
         value_options.show(out=error_file)
 
-    ie: IfExists = IfExists(
+    ie: KgtkIfExists = KgtkIfExists(
         input_file_path=args.input_file_path,
         input_keys=args.input_keys,
         filter_file_path=args.filter_file_path,
@@ -353,6 +444,7 @@ def main():
         field_separator=args.field_separator,
         invert=args.invert,
         cache_input=args.cache_input,
+        preserve_order=args.preserve_order,
         input_reader_options=input_reader_options,
         filter_reader_options=filter_reader_options,
         value_options=value_options,
