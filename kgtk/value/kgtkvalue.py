@@ -343,7 +343,7 @@ class KgtkValue(KgtkFormat):
                                                                                               floatnumber=floatnumber_pat,
                                                                                               imagnumber=imagnumber_pat)
 
-    # Numeric literals with componet labeling:
+    # Numeric literals with component labeling:
     number_pat: str = r'(?P<number>{numeric})'.format(numeric=numeric_pat)
 
     # Tolerances
@@ -727,6 +727,16 @@ class KgtkValue(KgtkFormat):
     degrees_pat: str = r'(?:[-+]?(?:\d+(?:\.\d*)?)|(?:\.\d+))'
     location_coordinates_re: typing.Pattern = re.compile(r'^@(?P<lat>{degrees})/(?P<lon>{degrees})$'.format(degrees=degrees_pat))
 
+    # The lax degrees pattern allows scientific notation, but not numbers iin
+    # other bases or imaginary numbers.
+    lax_degrees_pat: str = r'(?:{plus_or_minus}?(?:{integer}|{floatnumber}))'.format(plus_or_minus=plus_or_minus_pat,
+                                                                                     integer=decinteger_pat,
+                                                                                     floatnumber=floatnumber_pat)
+    lax_location_coordinates_re: typing.Pattern = re.compile(r'^@(?P<lat>{degrees})/(?P<lon>{degrees})$'.format(degrees=lax_degrees_pat))
+
+    def format_degrees(self, num: float)->str:
+        return '{:011.6f}'.format(num)
+
     def is_location_coordinates(self, validate: bool=False)->bool:
         """
         Return False if this value is a list and idx is None.
@@ -749,9 +759,16 @@ class KgtkValue(KgtkFormat):
             return self.valid
         
         # Validate the location coordinates:
+        rewrite_needed: bool = False
         m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(self.value)
         if m is None:
-            return False
+            if self.options.allow_lax_coordinates or self.options.repair_lax_coordinates:
+                m = KgtkValue.lax_location_coordinates_re.match(self.value)
+                if m is None:
+                    return False
+                rewrite_needed = self.options.repair_lax_coordinates
+            else:
+                return False
 
         latstr: str = m.group("lat")
         lonstr: str = m.group("lon")
@@ -777,6 +794,9 @@ class KgtkValue(KgtkFormat):
                     fixup_needed = True
                 else:
                     return False
+            elif rewrite_needed:
+                latstr = self.format_degrees(lat)
+                fixup_needed = True
         except ValueError:
             return False
 
@@ -805,6 +825,9 @@ class KgtkValue(KgtkFormat):
                     fixup_needed = True
                 else:
                     return False
+            elif rewrite_needed:
+                lonstr = self.format_degrees(lon)
+                fixup_needed = True
         except ValueError:
             return False
 
