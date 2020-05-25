@@ -37,7 +37,7 @@ from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
-class IfExists(KgtkFormat):
+class KgtkIfExists(KgtkFormat):
     input_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     input_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                                                             iterable_validator=attr.validators.instance_of(list))))
@@ -390,7 +390,7 @@ def main():
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys (default=%(default)s)",
-                              default=IfExists.FIELD_SEPARATOR_DEFAULT)
+                              default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
    
     parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists) (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -435,7 +435,7 @@ def main():
         filter_reader_options.show(out=error_file, who="filter")
         value_options.show(out=error_file)
 
-    ie: IfExists = IfExists(
+    ie: KgtkIfExists = KgtkIfExists(
         input_file_path=args.input_file_path,
         input_keys=args.input_keys,
         filter_file_path=args.filter_file_path,

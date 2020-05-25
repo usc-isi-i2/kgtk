@@ -18,9 +18,9 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.iff.kgtkifexists import KgtkIfExists
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.join.ifexists import IfExists
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -69,7 +69,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--field-separator", dest="field_separator",
                               help=h("Separator for multifield keys (default=%(default)s)"),
-                              default=IfExists.FIELD_SEPARATOR_DEFAULT)
+                              default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -86,7 +86,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         cache_input: bool = False,
         preserve_order: bool = False,
 
-        field_separator: str = IfExists.FIELD_SEPARATOR_DEFAULT,
+        field_separator: str = KgtkIfExists.FIELD_SEPARATOR_DEFAULT,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -126,7 +126,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         print("=======", file=error_file, flush=True)
 
     try:
-        ie: IfExists = IfExists(
+        ie: KgtkIfExists = KgtkIfExists(
             input_file_path=input_kgtk_file,
             input_keys=input_keys,
             filter_file_path=filter_kgtk_file,

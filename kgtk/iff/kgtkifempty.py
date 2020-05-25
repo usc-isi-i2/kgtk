@@ -17,7 +17,7 @@ from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
-class IfEmpty(KgtkFormat):
+class KgtkIfEmpty(KgtkFormat):
     input_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
     filter_column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
@@ -170,7 +170,7 @@ def main():
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
-    ie: IfEmpty = IfEmpty(
+    ie: KgtkIfEmpty = KgtkIfEmpty(
         input_file_path=args.input_file_path,
         filter_column_names=args.filter_column_names,
         output_file_path=args.output_file_path,

@@ -12,7 +12,7 @@ import typing
 from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.join.kgtkcompact import KgtkCompact
+from kgtk.reshape.kgtkcompact import KgtkCompact
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
