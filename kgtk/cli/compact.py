@@ -82,7 +82,7 @@ def run(input_kgtk_file: typing.Optional[Path],
     if show_options:
         print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
         print("--columns=%s" % " ".join(key_column_names), file=error_file)
-        print("--presorted=%s" % str(args.sorted_input))
+        print("--presorted=%s" % str(sorted_input))
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
