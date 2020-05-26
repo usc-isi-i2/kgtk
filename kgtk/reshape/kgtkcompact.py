@@ -174,6 +174,12 @@ class KgtkCompact(KgtkFormat):
             key_idx: int = kr.column_name_map[column_name]
             if key_idx not in key_idx_list:
                 key_idx_list.append(key_idx)
+
+        if self.verbose:
+            key_idx_list_str: typing.List[str] = [ ]
+            for key_idx in key_idx_list:
+                key_idx_list_str.append(str(key_idx))
+            print("key indexes: %s" % " ".join(key_idx_list_str))
             
         # Open the output file.
         ew: KgtkWriter = KgtkWriter.open(kr.column_names,
