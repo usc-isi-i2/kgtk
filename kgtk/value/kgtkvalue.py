@@ -50,8 +50,10 @@ class KgtkValueFields():
     number: typing.Optional[typing.Union[int, float]] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of((int, float))), default=None)
 
     low_tolerancestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    low_tolerance: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
 
     high_tolerancestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    high_tolerance: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
 
     si_units: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
@@ -83,10 +85,11 @@ class KgtkValueFields():
     secondsstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     seconds: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
     
-    # Z or [-+]HH or [-+]HHSS or [-+]HH:SS
+    # Z or [-+]HH or [-+]HHMM or [-+]HH:MM
     zonestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     
     precisionstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    precision: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
     
     # True when hyphens/colons are present.
     iso8601extended: typing.Optional[bool] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)), default=None)
@@ -104,7 +107,9 @@ class KgtkValueFields():
         "numberstr",
         "number",
         "low_tolerancestr",
+        "low_tolerance",
         "high_tolerancestr",
+        "high_tolerance",
         "si_units",
         "wikidata_node",
         "latstr",
@@ -125,6 +130,7 @@ class KgtkValueFields():
         "seconds",
         "zonestr",
         "precisionstr",
+        "precision",
         "iso8601extended",
         "truth",
         ]
@@ -137,8 +143,8 @@ class KgtkValueFields():
         "lang",
         "suffix",
         "number",
-        "low_tolerancestr",
-        "high_tolerancestr",
+        "low_tolerance",
+        "high_tolerance",
         "si_units",
         "wikidata_node",
         "lat",
@@ -150,7 +156,7 @@ class KgtkValueFields():
         "minutes",
         "seconds",
         "zonestr",
-        "precisionstr",
+        "precision",
         "iso8601extended",
         "truth",
         ]
@@ -174,8 +180,12 @@ class KgtkValueFields():
             results["number"] = self.number
         if self.low_tolerancestr is not None:
             results["low_tolerancestr"] = self.low_tolerancestr
+        if self.low_tolerance is not None:
+            results["low_tolerance"] = self.low_tolerance
         if self.high_tolerancestr is not None:
             results["high_tolerancestr"] = self.high_tolerancestr
+        if self.high_tolerance is not None:
+            results["high_tolerance"] = self.high_tolerance
         if self.si_units is not None:
             results["si_units"] = self.si_units
         if self.wikidata_node is not None:
@@ -216,6 +226,8 @@ class KgtkValueFields():
             results["zonestr"] = self.zonestr
         if self.precisionstr is not None:
             results["precisionstr"] = self.precisionstr
+        if self.precision is not None:
+            results["precision"] = self.precision
         if self.iso8601extended is not None:
             results["iso8601extended"] = self.iso8601extended
         if self.truth is not None:
@@ -469,11 +481,29 @@ class KgtkValue(KgtkFormat):
             return False
 
         # Extract the number or quantity components:
-        numberstr: str = m.group("number")
-        low_tolerancestr: str = m.group("low_tolerance")
-        high_tolerancestr: str = m.group("high_tolerance")
-        si_units: str = m.group("si_units")
-        wikidata_node: str = m.group("wikidata_node")
+        numberstr: typing.Optional[str] = m.group("number")
+        low_tolerancestr: typing.Optional[str] = m.group("low_tolerance")
+        high_tolerancestr: typing.Optional[str] = m.group("high_tolerance")
+        si_units: typing.Optional[str] = m.group("si_units")
+        wikidata_node: typing.Optional[str] = m.group("wikidata_node")
+
+        low_tolerance: typing.Optional[float]
+        if low_tolerancestr is None:
+            low_tolerance = None
+        else:
+            try:
+                low_tolerance = float(low_tolerancestr)
+            except valueError:
+                return False                
+
+        high_tolerance: typing.Optional[float]
+        if high_tolerancestr is None:
+            high_tolerance = None
+        else:
+            try:
+                high_tolerance = float(high_tolerancestr)
+            except valueError:
+                return False                
 
         # For convenience, convert the numeric part to int or float:
         #
@@ -501,7 +531,9 @@ class KgtkValue(KgtkFormat):
                                           numberstr=numberstr,
                                           number=number,
                                           low_tolerancestr=low_tolerancestr,
+                                          low_tolerance=low_tolerance,
                                           high_tolerancestr=high_tolerancestr,
+                                          high_tolerance=high_tolerance,
                                           si_units=si_units,
                                           wikidata_node=wikidata_node)
         return True
@@ -602,6 +634,24 @@ class KgtkValue(KgtkFormat):
         si_units:str = m.group("si_units")
         wikidata_node:str = m.group("wikidata_node")
 
+        low_tolerance: typing.Optional[float]
+        if low_tolerancestr is None:
+            low_tolerance = None
+        else:
+            try:
+                low_tolerance = float(low_tolerancestr)
+            except valueError:
+                return False                
+
+        high_tolerance: typing.Optional[float]
+        if high_tolerancestr is None:
+            high_tolerance = None
+        else:
+            try:
+                high_tolerance = float(high_tolerancestr)
+            except valueError:
+                return False                
+
         # For convenience, convert the numeric part to int or float:
         #
         # TODO: go to this extra work only when requested?
@@ -634,7 +684,9 @@ class KgtkValue(KgtkFormat):
                                           numberstr=numberstr,
                                           number=number,
                                           low_tolerancestr=low_tolerancestr,
+                                          low_tolerance=low_tolerance,
                                           high_tolerancestr=high_tolerancestr,
+                                          high_tolerance=high_tolerance,
                                           si_units=si_units,
                                           wikidata_node=wikidata_node)
         return True
@@ -1149,6 +1201,15 @@ class KgtkValue(KgtkFormat):
             except ValueError:
                 return False # shouldn't happen
 
+        precision: typing.Optional[int]
+        if precisionstr is None:
+            precision = None
+        else:
+            try:
+                precision: int = int(precisionstr)
+            except ValueError:
+                return False # shouldn't happen
+
         if fixup_needed:
             # Repair a month or day zero problem.
             self.update_date_and_times(yearstr, monthstr, daystr, hourstr, minutesstr, secondsstr, zonestr, precisionstr, iso8601extended)
@@ -1172,6 +1233,7 @@ class KgtkValue(KgtkFormat):
                                           seconds=seconds,
                                           zonestr=zonestr,
                                           precisionstr=precisionstr,
+                                          precision=precision,
                                           iso8601extended=iso8601extended,
             )
         return True
