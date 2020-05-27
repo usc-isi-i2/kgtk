@@ -171,9 +171,9 @@ class KgtkExplode(KgtkFormat):
         idx: int
         for field_name, idx in explosion.items():
             if field_name in field_map:
-                if field_name == "contents":
+                if KgtkValueFields.FIELD_NAME_FORMATS[field_name] == "str":
                     # Format this as a KGTK string.
-                    newrow[idx] = '"' + field_map[field_name] + '"'
+                    newrow[idx] = '"' + str(field_map[field_name]) + '"'
                 else:
                     # Convert everything else to a KGTK number or symbol
                     newrow[idx] = str(field_map[field_name])
