@@ -97,6 +97,9 @@ class KgtkValueFields():
     # Offer the contents of a boolean, after validating the item:
     truth: typing.Optional[bool] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)), default=None)
 
+    # Everything else must be a symbol.
+    symbol: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
     FIELD_NAMES: typing.List[str] = [
         "list_len",
         "data_type",
@@ -133,6 +136,7 @@ class KgtkValueFields():
         "precision",
         "iso8601extended",
         "truth",
+        "symbol"
         ]
 
     DEFAULT_FIELD_NAMES: typing.List[str] = [
@@ -159,6 +163,7 @@ class KgtkValueFields():
         "precision",
         "iso8601extended",
         "truth",
+        "symbol"
         ]
 
     FIELD_NAME_FORMATS: typing.Mapping[str, str] = {
@@ -181,22 +186,23 @@ class KgtkValueFields():
         "lonstr": "str",
         "lon": "num",
         "yearstr": "str",
-        "year": "num",
+        "year": "int",
         "monthstr": "str",
-        "month": "num",
+        "month": "int",
         "daystr": "str",
-        "day": "num",
+        "day": "int",
         "hourstr": "str",
-        "hour": "num",
+        "hour": "int",
         "minutesstr": "str",
-        "minutes": "num",
+        "minutes": "int",
         "secondsstr": "str",
-        "seconds": "num",
+        "seconds": "int",
         "zonestr": "str",
         "precisionstr": "str",
-        "precision": "num",
+        "precision": "int",
         "iso8601extended": "bool",
         "truth": "bool",
+        "symbol": "sym",
     }
 
     def to_map(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
@@ -270,6 +276,8 @@ class KgtkValueFields():
             results["iso8601extended"] = self.iso8601extended
         if self.truth is not None:
             results["truth"] = self.truth
+        if self.symbol is not None:
+            results["symbol"] = self.symbol
         return results
     
 @attr.s(slots=True, frozen=False)
@@ -796,7 +804,9 @@ class KgtkValue(KgtkFormat):
         self.valid = True
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=self.data_type,
-                                          valid=self.valid)
+                                          valid=self.valid,
+                                          symbol=self.value,
+            )
         return True
 
     def is_boolean(self, validate: bool = False)->bool:
