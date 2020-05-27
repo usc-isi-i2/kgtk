@@ -94,6 +94,41 @@ class KgtkValueFields():
     # Offer the contents of a boolean, after validating the item:
     truth: typing.Optional[bool] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)), default=None)
 
+    FIELD_NAMES: typing.List[str] = [
+        "list_len",
+        "data_type",
+        "valid",
+        "contents"
+        "lang",
+        "suffix",
+        "numberstr",
+        "number",
+        "low_tolerancestr",
+        "high_tolerancestr",
+        "si_units",
+        "wikidata_node",
+        "latstr",
+        "lat"
+        "lonstr",
+        "lon",
+        "yearstr",
+        "year",
+        "monthstr",
+        "month",
+        "daystr",
+        "day",
+        "hourstr",
+        "hour",
+        "minutesstr",
+        "minutes"
+        "secondsstr"
+        "seconds",
+        "zonestr",
+        "precisionstr",
+        "iso8601extended",
+        "truth",
+        ]
+
     def to_map(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
         results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
         results["list_len"] = self.list_len
@@ -234,7 +269,7 @@ class KgtkValue(KgtkFormat):
             # Populate list_items with a KgtkValue for each item in the list:
             item_value: str
             for item_value in values:
-                self.list_items.append(KgtkValue(item_value, options=self.options, parent=self))
+                self.list_items.append(KgtkValue(item_value, options=self.options, parse_fields=self.parse_fields, parent=self))
         return self.list_items
 
     def is_list(self, validate: bool = False)->bool:

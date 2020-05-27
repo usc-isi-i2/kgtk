@@ -798,7 +798,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             yield results
                     
 
-    def to_kgtk_values(self, row: typing.List[str], validate: bool = False)->typing.List[KgtkValue]:
+    def to_kgtk_values(self, row: typing.List[str],
+                       validate: bool = False,
+                       parse_fields: bool = False)->typing.List[KgtkValue]:
         """
         Convert an input row into a list of KgtkValue instances.
 
@@ -807,13 +809,16 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         results: typing.List[KgtkValue] = [ ]
         field: str
         for field in row:
-            kv = KgtkValue(field, options=self.value_options)
+            kv = KgtkValue(field, options=self.value_options, parse_fields=parse_fields)
             if validate:
                 kv.validate()
             results.append(kv)
         return results
 
-    def kgtk_values(self, validate: bool = False)->typing.Iterator[typing.List[KgtkValue]]:
+    def kgtk_values(self,
+                    validate: bool = False,
+                    parse_fields: bool = False
+    )->typing.Iterator[typing.List[KgtkValue]]:
         """
         Using a generator function, create an iterator that returns rows of fields
         as KgtkValue objects.
@@ -822,11 +827,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         """
         while True:
             try:
-                yield self.to_kgtk_values(self.nextrow(), validate=validate)
+                yield self.to_kgtk_values(self.nextrow(), validate=validate, parse_fields=parse_fields)
             except StopIteration:
                 return
 
-    def to_concise_kgtk_values(self, row: typing.List[str], validate: bool = False)->typing.List[typing.Optional[KgtkValue]]:
+    def to_concise_kgtk_values(self,
+                               row: typing.List[str],
+                               validate: bool = False,
+                               parse_fields: bool = False
+    )->typing.List[typing.Optional[KgtkValue]]:
         """
         Convert an input row into a list of KgtkValue instances.  Empty fields will be returned as None.
 
@@ -838,13 +847,16 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if len(field) == 0:
                 results.append(None)
             else:
-                kv = KgtkValue(field, options=self.value_options)
+                kv = KgtkValue(field, options=self.value_options, parse_fields=parse_fields)
                 if validate:
                     kv.validate()
                 results.append(kv)
         return results
 
-    def concise_kgtk_values(self, validate: bool = False)->typing.Iterator[typing.List[typing.Optional[KgtkValue]]]:
+    def concise_kgtk_values(self,
+                            validate: bool = False,
+                            parse_fields: bool = False
+    )->typing.Iterator[typing.List[typing.Optional[KgtkValue]]]:
         """
         Using a generator function, create an iterator that returns rows of fields
         as KgtkValue objects, with empty fields returned as None.
@@ -857,7 +869,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             except StopIteration:
                 return
 
-    def to_dict(self, row: typing.List[str], concise: bool=False)->typing.Mapping[str, str]:
+    def to_dict(self, row: typing.List[str], concise: bool=False
+    )->typing.Mapping[str, str]:
         """
         Convert an input row into a dict of named fields.
 
@@ -880,7 +893,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 idx += 1
         return results
 
-    def dicts(self, concise: bool=False)->typing.Iterator[typing.Mapping[str, str]]:
+    def dicts(self, concise: bool=False
+    )->typing.Iterator[typing.Mapping[str, str]]:
         """
         Using a generator function, create an iterator that returns each row as a dict of named fields.
 
@@ -893,7 +907,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             except StopIteration:
                 return
 
-    def to_kgtk_value_dict(self, row: typing.List[str], validate: bool=False, concise: bool=False)->typing.Mapping[str, KgtkValue]:
+    def to_kgtk_value_dict(self,
+                           row: typing.List[str],
+                           validate: bool=False,
+                           parse_fields: bool=False,
+                           concise: bool=False
+    )->typing.Mapping[str, KgtkValue]:
         """
         Convert an input row into a dict of named fields.
 
@@ -908,14 +927,18 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if concise and len(field) == 0:
                 pass # Skip the empty field.
             else:
-                kv = KgtkValue(field, options=self.value_options)
+                kv = KgtkValue(field, options=self.value_options, parse_fields=parse_fields)
                 if validate:
                     kv.validate()
                 results[self.column_names[idx]] = kv
             idx += 1
         return results
 
-    def kgtk_value_dicts(self, validate: bool=False, concise: bool=False)->typing.Iterator[typing.Mapping[str, KgtkValue]]:
+    def kgtk_value_dicts(self,
+                         validate: bool=False,
+                         parse_fields: bool=False,
+                         concise: bool=False
+    )->typing.Iterator[typing.Mapping[str, KgtkValue]]:
         """
         Using a generator function, create an iterator that returns each row as a
         dict of named KgtkValue objects.
@@ -926,7 +949,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         """
         while True:
             try:
-                yield self.to_kgtk_value_dict(self.nextrow(), validate=validate, concise=concise)
+                yield self.to_kgtk_value_dict(self.nextrow(), validate=validate, parse_fields=parse_fields, concise=concise)
             except StopIteration:
                 return
 
