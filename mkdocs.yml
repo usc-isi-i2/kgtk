@@ -9,6 +9,7 @@ nav:
       - 'compact': 'compact.md'
       - 'connected_components': 'connected_components.md'
       - 'expand': 'expand.md'
+      - 'explode': 'explode.md'
       - 'export_gt': 'export_gt.md'
       - 'filter': 'filter.md'
       - 'generate_wikidata_triples': 'generate_wikidata_triples.md'
