@@ -98,7 +98,7 @@ class KgtkValueFields():
         "list_len",
         "data_type",
         "valid",
-        "contents"
+        "contents",
         "lang",
         "suffix",
         "numberstr",
@@ -108,7 +108,7 @@ class KgtkValueFields():
         "si_units",
         "wikidata_node",
         "latstr",
-        "lat"
+        "lat",
         "lonstr",
         "lon",
         "yearstr",
@@ -120,8 +120,34 @@ class KgtkValueFields():
         "hourstr",
         "hour",
         "minutesstr",
-        "minutes"
-        "secondsstr"
+        "minutes",
+        "secondsstr",
+        "seconds",
+        "zonestr",
+        "precisionstr",
+        "iso8601extended",
+        "truth",
+        ]
+
+    DEFAULT_FIELD_NAMES: typing.List[str] = [
+        "list_len",
+        "data_type",
+        "valid",
+        "contents",
+        "lang",
+        "suffix",
+        "number",
+        "low_tolerancestr",
+        "high_tolerancestr",
+        "si_units",
+        "wikidata_node",
+        "lat",
+        "lon",
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minutes",
         "seconds",
         "zonestr",
         "precisionstr",
@@ -133,7 +159,7 @@ class KgtkValueFields():
         results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
         results["list_len"] = self.list_len
         if self.data_type is not None:
-            results["data_type"] = self.data_type.name
+            results["data_type"] = self.data_type.name.lower()
         if self.valid is not None:
             results["valid"] = self.valid
         if self.contents is not None:
@@ -1063,9 +1089,12 @@ class KgtkValue(KgtkFormat):
             else:
                 return False
 
-        if monthstr is not None:
+        month: typing.Optional[int]
+        if monthstr is None:
+            month = None
+        else:
             try:
-                month: int = int(monthstr)
+                month = int(monthstr)
             except ValueError:
                 return False # shouldn't happen
             if month == 0:
@@ -1076,9 +1105,12 @@ class KgtkValue(KgtkFormat):
                 elif not self.options.allow_month_or_day_zero:
                     return False # month 0 was disallowed.
 
-        if daystr is not None:
+        day: typing.Optional[int]
+        if daystr is None:
+            day = None
+        else:
             try:
-                day: int = int(daystr)
+                day = int(daystr)
             except ValueError:
                 return False # shouldn't happen
             if day == 0:
@@ -1090,19 +1122,28 @@ class KgtkValue(KgtkFormat):
                     return False # day 0 was disallowed.
 
         # Convert the time fields to ints:
-        if hourstr is not None:
+        hour: typing.Optional[int]
+        if hourstr is None:
+            hour = None
+        else:
             try:
-                hour: int = int(hourstr)
+                hour = int(hourstr)
             except ValueError:
                 return False # shouldn't happen
 
-        if minutesstr is not None:
+        minutes: typing.Optional[int]
+        if minutesstr is None:
+            mminutes = None
+        else:
             try:
                 minutes: int = int(minutesstr)
             except ValueError:
                 return False # shouldn't happen
 
-        if secondsstr is not None:
+        seconds: typing.Optional[int]
+        if secondsstr is None:
+            seconds = None
+        else:
             try:
                 seconds: int = int(secondsstr)
             except ValueError:
