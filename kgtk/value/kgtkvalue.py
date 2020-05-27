@@ -161,6 +161,44 @@ class KgtkValueFields():
         "truth",
         ]
 
+    FIELD_NAME_FORMATS: typing.Mapping[str, str] = {
+        "list_len": "int",
+        "data_type": "sym",
+        "valid": "bool",
+        "contents": "str",
+        "lang": "sym",
+        "suffix": "sym",
+        "numberstr": "str",
+        "number": "num",
+        "low_tolerancestr": "str",
+        "low_tolerance": "num",
+        "high_tolerancestr": "str",
+        "high_tolerance": "num",
+        "si_units": "sym",
+        "wikidata_node": "sym",
+        "latstr": "str",
+        "lat": "num",
+        "lonstr": "str",
+        "lon": "num",
+        "yearstr": "str",
+        "year": "num",
+        "monthstr": "str",
+        "month": "num",
+        "daystr": "str",
+        "day": "num",
+        "hourstr": "str",
+        "hour": "num",
+        "minutesstr": "str",
+        "minutes": "num",
+        "secondsstr": "str",
+        "seconds": "num",
+        "zonestr": "str",
+        "precisionstr": "str",
+        "precision": "num",
+        "iso8601extended": "bool",
+        "truth": "bool",
+    }
+
     def to_map(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
         results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
         results["list_len"] = self.list_len
