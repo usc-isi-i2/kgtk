@@ -83,9 +83,9 @@ class KgtkExplode(KgtkFormat):
             exploded_name: str = self.prefix + field_name
             if self.verbose:
                 print("Field '%s' becomes '%s'" % (field_name, exploded_name), file=self.error_file, flush=True)
-            if self.exploded_name in explosion:
+            if exploded_name in explosion:
                 raise ValueError("Field name '%s' is duplicated in the field list.")
-            if self.exploded_name in kr.column_names:
+            if exploded_name in kr.column_names:
                 if self.overwrite_columns:
                     existing_idx = kr.column_name_map[exploded_name]
                     explosion[field_name] = existing_idx
@@ -96,11 +96,14 @@ class KgtkExplode(KgtkFormat):
                     raise ValueError("Exploded column '%s' already exists and not allowed to overwrite" % exploded_name)
             else:
                 column_names.append(exploded_name)
-                exploded_idx: int = len(column_names)
+                exploded_idx: int = len(column_names) - 1
                 explosion[field_name] = exploded_idx
                 if self.verbose:
                     print("Field '%s' becomes new column '%s' (idx=%d)" % (field_name, exploded_name, exploded_idx), file=self.error_file, flush=True)
         new_column_count: int = len(column_names) - kr.column_count
+        if self.verbose:
+            print("%d columns + %d columns = %d columns" % (kr.column_count, new_column_count, len(column_names)))
+            print("Explosion length: %d" % len(explosion))
                 
         # Open the output file.
         ew: KgtkWriter = KgtkWriter.open(column_names,
@@ -153,7 +156,7 @@ class KgtkExplode(KgtkFormat):
         
         ew.close()
 
-    def explosion(self, value: KgtkValue, row: typing.List[str], explosion: typing.Mapping[str, int], new_column_count: int)->typing.List[str]:
+    def explode(self, value: KgtkValue, row: typing.List[str], explosion: typing.Mapping[str, int], new_column_count: int)->typing.List[str]:
         newrow: typing.List[str] = row.copy()
         if new_column_count > 0:
             # Would it be better to do:
@@ -168,7 +171,10 @@ class KgtkExplode(KgtkFormat):
         idx: int
         for field_name, idx in explosion.items():
             if field_name in field_map:
-                newrow[idx] = repr(field_map[field_name])
+                if field_name == "contents":
+                    newrow[idx] = '"' + field_map[field_name] + '"'
+                else:
+                    newrow[idx] = str(field_map[field_name])
         return newrow
             
 
@@ -183,7 +189,7 @@ def main():
     parser.add_argument(      "--column", dest="column_name", help="The name of the column to explode. (default=%(default)s).", default="node2")
 
     parser.add_argument(      "--fields", dest="field_names", help="The names of the field to extract. (default=%(default)s).", nargs='+',
-                              default=KgtkValueFields.FIELD_NAMES, choices=KgtkValueFields.FIELD_NAMES)
+                              default=KgtkValueFields.DEFAULT_FIELD_NAMES, choices=KgtkValueFields.FIELD_NAMES)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
