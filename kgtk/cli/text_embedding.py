@@ -215,13 +215,8 @@ def parser():
 
 
 def add_arguments(parser):
-    from kgtk.gt.embedding_utils import str2bool
+    from kgtk.utils.argparsehelpers import optional_bool
     parser.accept_shared_argument('_debug')
-    # logging level, no longer need as there is a global --debug choice for it
-    # parser.add_argument('-l', '--logging-level', action='store', dest='logging_level',
-    #         default="info", choices=("error", "warning", "info", "debug", "none"),
-    #         help="set up the logging level, default is INFO level")
-    # parser.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
 
     # model name
     all_models_names = ALL_EMBEDDING_MODELS_NAMES
@@ -298,7 +293,7 @@ def add_arguments(parser):
                         default="1", dest="parallel_count",
                         help="How many processes to be run in same time, default is 1.")
     # cache config
-    parser.add_argument("--use-cache", type=str2bool, nargs='?', action='store',
+    parser.add_argument("--use-cache", type=optional_bool, nargs='?', action='store',
                         default=False, dest="use_cache",
                         help="whether to use cache to get some embedding vectors quicker, default is False")
     parser.add_argument("--cache-host", nargs='?', action='store',
