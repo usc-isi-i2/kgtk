@@ -225,9 +225,9 @@ def main():
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
         print("--column %s" % args.column_name, file=error_file, flush=True)
         print("--prefix %s" % args.prefix, file=error_file, flush=True)
-        print("--overwrite %s" % str(args.overwrite), file=error_file, flush=True)
+        print("--overwrite %s" % str(args.overwrite_columns), file=error_file, flush=True)
         print("--expand %s" % str(args.expand_list), file=error_file, flush=True)
-        if args.fields is not None:
+        if args.field_names is not None:
             print("--fields %s" % " ".join(args.field_names), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path))
         reader_options.show(out=error_file)
