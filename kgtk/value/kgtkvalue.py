@@ -136,9 +136,9 @@ class KgtkValueFields():
         ]
 
     DEFAULT_FIELD_NAMES: typing.List[str] = [
-        "list_len",
         "data_type",
         "valid",
+        "list_len",
         "contents",
         "lang",
         "suffix",
