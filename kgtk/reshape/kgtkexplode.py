@@ -136,9 +136,9 @@ class KgtkExplode(KgtkFormat):
                 output_line_count += 1
                 continue
 
-            if value.is_list():
+            if self.expand_list and value.is_list():
                 if self.verbose:
-                    print("Exploding a list: '%s'" % item_to_explode, file=self.error_file, flush=True)
+                    print("Expanding a list: '%s'" % item_to_explode, file=self.error_file, flush=True)
                 subvalue: KgtkValue
                 for subvalue in value.get_list_items():
                     if self.very_verbose:
@@ -171,12 +171,14 @@ class KgtkExplode(KgtkFormat):
         idx: int
         for field_name, idx in explosion.items():
             if field_name in field_map:
+                newvalue: str
                 if KgtkValueFields.FIELD_NAME_FORMATS[field_name] == "str":
                     # Format this as a KGTK string.
-                    newrow[idx] = '"' + str(field_map[field_name]) + '"'
+                    newvalue = '"' + str(field_map[field_name]) + '"'
                 else:
                     # Convert everything else to a KGTK number or symbol
-                    newrow[idx] = str(field_map[field_name])
+                    newvalue = str(field_map[field_name])
+                newrow[idx] = newvalue
         return newrow
             
 
@@ -190,7 +192,7 @@ def main():
 
     parser.add_argument(      "--column", dest="column_name", help="The name of the column to explode. (default=%(default)s).", default="node2")
 
-    parser.add_argument(      "--fields", dest="field_names", help="The names of the field to extract. (default=%(default)s).", nargs='+',
+    parser.add_argument(      "--fields", dest="field_names", help="The names of the fields to extract. (default=%(default)s).", nargs='+',
                               default=KgtkValueFields.DEFAULT_FIELD_NAMES, choices=KgtkValueFields.FIELD_NAMES)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
