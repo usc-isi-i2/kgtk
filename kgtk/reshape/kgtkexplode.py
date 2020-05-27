@@ -172,8 +172,10 @@ class KgtkExplode(KgtkFormat):
         for field_name, idx in explosion.items():
             if field_name in field_map:
                 if field_name == "contents":
+                    # Format this as a KGTK string.
                     newrow[idx] = '"' + field_map[field_name] + '"'
                 else:
+                    # Convert everything else to a KGTK number or symbol
                     newrow[idx] = str(field_map[field_name])
         return newrow
             
