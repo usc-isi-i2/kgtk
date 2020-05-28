@@ -67,6 +67,10 @@ class KgtkValueFields():
     longitude: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
 
     # Offer the components of a date and times, after validating the item:
+    date: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    time: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # includes timezone
+    date_and_time: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # includes timezone
+    
     yearstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     year: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
 
@@ -119,6 +123,9 @@ class KgtkValueFields():
         "lattitude",
         "longitudestr",
         "longitude",
+        "date",
+        "time",
+        "date_and_time",
         "yearstr",
         "year",
         "monthstr",
@@ -153,15 +160,8 @@ class KgtkValueFields():
         "wikidata_node",
         "latitude",
         "longitude",
-        "year",
-        "month",
-        "day",
-        "hour",
-        "minutes",
-        "seconds",
-        "zonestr",
+        "date_and_time",
         "precision",
-        "iso8601extended",
         "truth",
         "symbol"
         ]
@@ -185,6 +185,9 @@ class KgtkValueFields():
         "latitide": "num",
         "longitudestr": "str",
         "longitude": "num",
+        "date": "str",
+        "time": "str",
+        "date_and_time": "str",
         "yearstr": "str",
         "year": "int",
         "monthstr": "str",
@@ -242,6 +245,12 @@ class KgtkValueFields():
             results["longitudestr"] = self.longitudestr
         if self.longitude is not None:
             results["longitude"] = self.longitude
+        if self.date is not None:
+            results["date"] = self.date
+        if self.time is not None:
+            results["time"] = self.time
+        if self.date_and_time is not None:
+            results["date_and_time"] = self.date_and_time
         if self.yearstr is not None:
             results["yearstr"] = self.yearstr
         if self.year is not None:
@@ -1048,9 +1057,9 @@ class KgtkValue(KgtkFormat):
     lax_year_pat: str = r'(?P<year>[-+]?[0-9]{4}(?:[0-9]+(?=-))?)' # Extra digits must by followed by hyphen.
     lax_month_pat: str = r'(?P<month>1[0-2]|0[0-9])'
     lax_day_pat: str = r'(?P<day>3[01]|0[0-9]|[12][0-9])'
-    lax_date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=lax_year_pat,
-                                                                                              month=lax_month_pat,
-                                                                                              day=lax_day_pat)
+    lax_date_pat: str = r'(?P<date>(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?))'.format(year=lax_year_pat,
+                                                                                                        month=lax_month_pat,
+                                                                                                        day=lax_day_pat)
     # hour-minutes-seconds
     hour_pat: str = r'(?P<hour>2[0-3]|[01][0-9])'
     minutes_pat: str = r'(?P<minutes>[0-5][0-9])'
@@ -1065,16 +1074,16 @@ class KgtkValue(KgtkFormat):
     # TODO: consult the actual standard about the colon.
     zone_pat: str = r'(?P<zone>Z|[-+][01][0-9](?::?[0-5][0-9])?)'
 
-    time_pat: str = r'(?:{hour}(?:(?(hyphen):){minutes}(?:(?(hyphen):){seconds})?)?{zone}?)'.format(hour=hour_pat,
-                                                                                                   minutes=minutes_pat,
-                                                                                                   seconds=seconds_pat,
-                                                                                                   zone=zone_pat)
+    time_pat: str = r'(?P<time>(?:{hour}(?:(?(hyphen):){minutes}(?:(?(hyphen):){seconds})?)?{zone}?))'.format(hour=hour_pat,
+                                                                                                              minutes=minutes_pat,
+                                                                                                              seconds=seconds_pat,
+                                                                                                              zone=zone_pat)
 
     precision_pat: str = r'(?P<precision>[0-1]?[0-9])'
 
-    lax_date_and_times_pat: str = r'(?:\^{date}(?:T{time})?(?:/{precision})?)'.format(date=lax_date_pat,
-                                                                                      time=time_pat,
-                                                                                      precision=precision_pat)
+    lax_date_and_times_pat: str = r'(?:\^(?P<date_and_time>{date}(?:T{time})?)(?:/{precision})?)'.format(date=lax_date_pat,
+                                                                                                         time=time_pat,
+                                                                                                         precision=precision_pat)
     lax_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=lax_date_and_times_pat))
                                                                         
     def is_date_and_times(self, validate: bool=False)->bool:
@@ -1146,6 +1155,10 @@ class KgtkValue(KgtkFormat):
         m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
         if m is None:
             return False
+
+        date: typing.Optional[str] = m.group("date")
+        time: typing.Optional[str] = m.group("time")
+        date_and_time: typing.Optional[str] = m.group("date_and_time")
 
         yearstr: typing.Optional[str] = m.group("year")
         monthstr: typing.Optional[str] = m.group("month")
@@ -1233,7 +1246,7 @@ class KgtkValue(KgtkFormat):
 
         minutes: typing.Optional[int]
         if minutesstr is None:
-            mminutes = None
+            minutes = None
         else:
             try:
                 minutes = int(minutesstr)
@@ -1267,6 +1280,9 @@ class KgtkValue(KgtkFormat):
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.DATE_AND_TIMES,
                                           valid=self.valid,
+                                          date=date,
+                                          time=time,
+                                          date_and_time=date_and_time,
                                           yearstr=yearstr,
                                           monthstr=monthstr,
                                           daystr=daystr,
