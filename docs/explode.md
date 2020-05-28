@@ -8,7 +8,7 @@ copied-as is.
 
 ```bash
 usage: kgtk explode [-h] [-o OUTPUT_KGTK_FILE] [--column COLUMN_NAME]
-                    [--fields {list_len,data_type,valid,contents,lang,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,contents,lang,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]
+                    [--fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]
                     [--prefix PREFIX] [--overwrite [OVERWRITE_COLUMNS]] [--expand [EXPAND_LIST]] [-v]
                     [input_kgtk_file]
 
@@ -25,8 +25,8 @@ optional arguments:
   -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
                         The KGTK file to write (default=-).
   --column COLUMN_NAME  The name of the column to explode. (default=node2).
-  --fields {list_len,data_type,valid,contents,lang,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,contents,lang,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]
-                        The names of the fields to extract. (default=['data_type', 'valid', 'list_len', 'contents', 'lang', 'suffix', 'number', 'low_tolerance',
+  --fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]
+                        The names of the fields to extract. (default=['data_type', 'valid', 'list_len', 'text', 'language', 'suffix', 'number', 'low_tolerance',
                         'high_tolerance', 'si_units', 'wikidata_node', 'lat', 'lon', 'year', 'month', 'day', 'hour', 'minutes', 'seconds', 'zonestr', 'precision',
                         'iso8601extended', 'truth', 'symbol']).
   --prefix PREFIX       The prefix for exploded column names. (default=node2;).
@@ -46,12 +46,12 @@ optional arguments:
 | date_and_times            | valid yearstr year monthstr month daystr day hourstr hour minutesstr minutes secondsstr seconds zonestr precisionstr precision iso8601extended |
 | empty                     | valid                       |
 | extension                 |                             |
-| language_qualified_string | valid contents lang suffix  |
-| list                      | valid  list_len             |
-| location_coordinates      | valid latstr lat nonstr lon |
+| language_qualified_string | valid text language suffix  |
+| list                      | valid list_len              |
+| location_coordinates      | valid latitudestr latitude longitudestr longitude |
 | number                    | valid numberstr number      |
 | quantity                  | valid numberstr number low_tolerancestr low_tolerance high_tolerancestr high_tolerance si_units wikidata_node |
-| string                    | valid contents              |
+| string                    | valid text                  |
 | symbol                    | valid symbol                |
 
 ## Examples
@@ -82,7 +82,7 @@ kgtk explode file1.tsv
 
 The output will be the following table in KGTK format:
 
-| node1 | label | node2 | node2;data_type | node2;valid | node2;list_len | node2;contents | node2;lang | node2;suffix | node2;number | node2;low_tolerance | node2;high_tolerance | node2;si_units | node2;wikidata_node | node2;lat | node2;lon | node2;year | node2;month | node2;day | node2;hour | node2;minutes | node2;seconds | node2;zonestr | node2;precision | node2;iso8601extended | node2;truth | node2;symbol |
+| node1 | label | node2 | node2;data_type | node2;valid | node2;list_len | node2;text | node2;language | node2;suffix | node2;number | node2;low_tolerance | node2;high_tolerance | node2;si_units | node2;wikidata_node | node2;lat | node2;lon | node2;year | node2;month | node2;day | node2;hour | node2;minutes | node2;seconds | node2;zonestr | node2;precision | node2;iso8601extended | node2;truth | node2;symbol |
 | ===== | ===== | ===== | =============== | =========== | ============== | ============== | =========== | =========== | ============ | =================== | ==================== | ============== | =================== | ========= | ========= | ========== | =========== | ========= | ========== | ============= | ============= | ============= | =============== | ===================== | =========== | ============ |
 | john | string | "John" | string | True | 0 | "John" |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | john | lqstring | 'John'@en | language_qualified_string | True | 0 | "John" | en |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
