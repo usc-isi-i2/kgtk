@@ -8,11 +8,11 @@ copied-as is.
 
 ```bash
 usage: kgtk explode [-h] [-o OUTPUT_KGTK_FILE] [--column COLUMN_NAME]
-                    [--fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,lattitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,lattitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]
+                    [--fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]
                     [--prefix PREFIX] [--overwrite [OVERWRITE_COLUMNS]] [--expand [EXPAND_LIST]] [-v]
                     [input_kgtk_file]
 
-Copy a KGTK file, exploding one column (normally node2) into seperate columns for each subfield. If a cell in the column being exploded contains a list, that record is optionally expanded into multiple records before explosion, with all other columns copied-as is.
+Copy a KGTK file, exploding one column (usually node2) into seperate columns for each subfield. If a cell in the column being exploded contains a list, that record is optionally expanded into multiple records before explosion, with all other columns copied-as is.
 
 Additional options are shown in expert help.
 kgtk --expert expand --help
@@ -25,7 +25,7 @@ optional arguments:
   -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
                         The KGTK file to write (default=-).
   --column COLUMN_NAME  The name of the column to explode. (default=node2).
-  --fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,lattitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,lattitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]
+  --fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]
                         The names of the fields to extract. (default=['data_type', 'valid', 'list_len', 'text', 'language', 'suffix', 'number', 'low_tolerance',
                         'high_tolerance', 'si_units', 'wikidata_node', 'latitude', 'longitude', 'date_and_time', 'precision', 'truth', 'symbol']).
   --prefix PREFIX       The prefix for exploded column names. (default=node2;).
