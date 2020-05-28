@@ -17,8 +17,10 @@ parser.add_argument(prefix1 + "gzip-in-parallel",
 """
 
 import typing
+from kgtk.exceptions import KGTKArgumentParseException
 
-def optional_bool(value)->typing.Optional[bool]:
+
+def optional_bool(value) -> typing.Optional[bool]:
     if value is None:
         return None
     if isinstance(value, bool):
@@ -27,4 +29,4 @@ def optional_bool(value)->typing.Optional[bool]:
         return False
     elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
         return True
-    raise ValueError(f'{value} is not a valid boolean value')
+    raise KGTKArgumentParseException(f'{value} is not a valid boolean value')
