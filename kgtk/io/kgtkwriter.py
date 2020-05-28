@@ -304,7 +304,7 @@ class KgtkWriter(KgtkBase):
         return line
 
     def json_map(self, values: typing.List[str], compact: bool = False)->typing.Mapping[str, str]:
-        result: typing.Mapping[str, str] = { }
+        result: typing.MutableMapping[str, str] = { }
         idx: int
         value: str
         for idx, value in enumerate(values):
