@@ -125,7 +125,7 @@ class KgtkWriter(KgtkBase):
                 gzip_file = lz4.frame.open(file_or_path, mode="wt") # type: ignore
             else:
                 # TODO: throw a better exception.
-                raise ValueError("Unexpected file_patn.suffiz = '%s'" % file_path.suffix)
+                raise ValueError("Unexpected file_path.suffiz = '%s'" % file_path.suffix)
 
             return cls._setup(column_names=column_names,
                               file_path=file_path,
