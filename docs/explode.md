@@ -8,7 +8,7 @@ copied-as is.
 
 ```bash
 usage: kgtk explode [-h] [-o OUTPUT_KGTK_FILE] [--column COLUMN_NAME]
-                    [--fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]
+                    [--fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,lattitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,lattitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]
                     [--prefix PREFIX] [--overwrite [OVERWRITE_COLUMNS]] [--expand [EXPAND_LIST]] [-v]
                     [input_kgtk_file]
 
@@ -25,10 +25,9 @@ optional arguments:
   -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
                         The KGTK file to write (default=-).
   --column COLUMN_NAME  The name of the column to explode. (default=node2).
-  --fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latstr,lat,lonstr,lon,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]
+  --fields {list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,lattitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,wikidata_node,latitudestr,lattitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]
                         The names of the fields to extract. (default=['data_type', 'valid', 'list_len', 'text', 'language', 'suffix', 'number', 'low_tolerance',
-                        'high_tolerance', 'si_units', 'wikidata_node', 'lat', 'lon', 'year', 'month', 'day', 'hour', 'minutes', 'seconds', 'zonestr', 'precision',
-                        'iso8601extended', 'truth', 'symbol']).
+                        'high_tolerance', 'si_units', 'wikidata_node', 'latitude', 'longitude', 'date_and_time', 'precision', 'truth', 'symbol']).
   --prefix PREFIX       The prefix for exploded column names. (default=node2;).
   --overwrite [OVERWRITE_COLUMNS]
                         Indicate that it is OK to overwrite existing columns. (default=False).
@@ -81,6 +80,7 @@ kgtk explode file1.tsv
 ```
 
 The output will be the following table in KGTK format:
+(This is obsolete, no that date_and_time is the default instead of individual subfields.)
 
 | node1 | label | node2 | node2;data_type | node2;valid | node2;list_len | node2;text | node2;language | node2;suffix | node2;number | node2;low_tolerance | node2;high_tolerance | node2;si_units | node2;wikidata_node | node2;lat | node2;lon | node2;year | node2;month | node2;day | node2;hour | node2;minutes | node2;seconds | node2;zonestr | node2;precision | node2;iso8601extended | node2;truth | node2;symbol |
 | ===== | ===== | ===== | =============== | =========== | ============== | ============== | =========== | =========== | ============ | =================== | ==================== | ============== | =================== | ========= | ========= | ========== | =========== | ========= | ========== | ============= | ============= | ============= | =============== | ===================== | =========== | ============ |
