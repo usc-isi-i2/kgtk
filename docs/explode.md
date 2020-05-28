@@ -40,7 +40,7 @@ optional arguments:
 ## KGTK Data Types and Fields
 
 | Data Type                 | Fields                      |
-| ========================= | =========================== |
+| ------------------------- | --------------------------- |
 | boolean                   | valid truth                 |
 | date_and_times            | valid yearstr year monthstr month daystr day hourstr hour minutesstr minutes secondsstr seconds zonestr precisionstr precision iso8601extended |
 | empty                     | valid                       |
@@ -58,7 +58,7 @@ optional arguments:
 Suppose that `file1.tsv` contains the following table in KGTK format:
 
 | node1 | label         | node2         |
-| ===== | ============= | ============= |
+| ----- | ------------- | ------------- |
 | john  | string        | "John"        |
 | john  | lqstring      | "John"@en     |
 | john  | integer       | 12345         |
@@ -83,7 +83,7 @@ The output will be the following table in KGTK format:
 (This is obsolete, no that date_and_time is the default instead of individual subfields.)
 
 | node1 | label | node2 | node2;data_type | node2;valid | node2;list_len | node2;text | node2;language | node2;suffix | node2;number | node2;low_tolerance | node2;high_tolerance | node2;si_units | node2;wikidata_node | node2;lat | node2;lon | node2;year | node2;month | node2;day | node2;hour | node2;minutes | node2;seconds | node2;zonestr | node2;precision | node2;iso8601extended | node2;truth | node2;symbol |
-| ===== | ===== | ===== | =============== | =========== | ============== | ============== | =========== | =========== | ============ | =================== | ==================== | ============== | =================== | ========= | ========= | ========== | =========== | ========= | ========== | ============= | ============= | ============= | =============== | ===================== | =========== | ============ |
+| ----- | ----- | ----- | --------------- | ----------- | -------------- | -------------- | ----------- | ----------- | ------------ | ------------------- | -------------------- | -------------- | ------------------- | --------- | --------- | ---------- | ----------- | --------- | ---------- | ------------- | ------------- | ------------- | --------------- | --------------------- | ----------- | ------------ |
 | john | string | "John" | string | True | 0 | "John" |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | john | lqstring | 'John'@en | language_qualified_string | True | 0 | "John" | en |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | john | integer | 12345 | number | True | 0 |  |  |  | 12345 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
