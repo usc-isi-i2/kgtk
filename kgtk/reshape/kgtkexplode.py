@@ -179,6 +179,8 @@ class KgtkExplode(KgtkFormat):
                     # Convert everything else to a KGTK number or symbol
                     newvalue = str(field_map[field_name])
                 newrow[idx] = newvalue
+            else:
+                newrow[idx] = "" # In case we are overwriting an existing column.
         return newrow
             
 
