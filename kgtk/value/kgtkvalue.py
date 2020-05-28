@@ -120,7 +120,7 @@ class KgtkValueFields():
         "si_units",
         "wikidata_node",
         "latitudestr",
-        "lattitude",
+        "latitude",
         "longitudestr",
         "longitude",
         "date",
@@ -182,7 +182,7 @@ class KgtkValueFields():
         "si_units": "sym",
         "wikidata_node": "sym",
         "latitudestr": "str",
-        "latitide": "num",
+        "latitude": "num",
         "longitudestr": "str",
         "longitude": "num",
         "date": "str",
@@ -889,7 +889,7 @@ class KgtkValue(KgtkFormat):
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING,
                                           valid=self.valid,
                                           text=m.group("text"),
-                                          language=m.group("language"),
+                                          language=m.group("lang"),
                                           suffix=m.group("suffix"))
         return True
 
