@@ -47,7 +47,7 @@ optional arguments:
 | empty                     | valid                       |
 | extension                 |                             |
 | language_qualified_string | valid contents lang suffix  |
-| list                      | valid  list_len             |
+| list                      | valid list_len              |
 | location_coordinates      | valid latstr lat nonstr lon |
 | number                    | valid numberstr number      |
 | quantity                  | valid numberstr number low_tolerancestr low_tolerance high_tolerancestr high_tolerance si_units wikidata_node |
