@@ -37,10 +37,10 @@ class KgtkValueFields():
 
     # Offer the components of a string or language-qualified string, after validating the item.
     # String contents without the enclosing quotes
-    contents: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    text: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # 2- or 3-character language code code without suffix.
-    lang: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    language: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # The language code suffix, including the leading dash.
     suffix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
@@ -50,21 +50,27 @@ class KgtkValueFields():
     number: typing.Optional[typing.Union[int, float]] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of((int, float))), default=None)
 
     low_tolerancestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    low_tolerance: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
 
     high_tolerancestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    high_tolerance: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
 
     si_units: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     wikidata_node: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # Offer the components of a location coordinates, after validaating the item:
-    latstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
-    lat: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
+    latitudestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    latitude: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
 
-    lonstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
-    lon: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
+    longitudestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    longitude: typing.Optional[float] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(float)), default=None)
 
     # Offer the components of a date and times, after validating the item:
+    date: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    time: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # includes timezone
+    date_and_time: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # includes timezone
+    
     yearstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     year: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
 
@@ -83,10 +89,11 @@ class KgtkValueFields():
     secondsstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     seconds: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
     
-    # Z or [-+]HH or [-+]HHSS or [-+]HH:SS
+    # Z or [-+]HH or [-+]HHMM or [-+]HH:MM
     zonestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     
     precisionstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    precision: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
     
     # True when hyphens/colons are present.
     iso8601extended: typing.Optional[bool] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)), default=None)
@@ -94,17 +101,124 @@ class KgtkValueFields():
     # Offer the contents of a boolean, after validating the item:
     truth: typing.Optional[bool] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(bool)), default=None)
 
+    # Everything else must be a symbol.
+    symbol: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    FIELD_NAMES: typing.List[str] = [
+        "list_len",
+        "data_type",
+        "valid",
+        "text",
+        "language",
+        "suffix",
+        "numberstr",
+        "number",
+        "low_tolerancestr",
+        "low_tolerance",
+        "high_tolerancestr",
+        "high_tolerance",
+        "si_units",
+        "wikidata_node",
+        "latitudestr",
+        "latitude",
+        "longitudestr",
+        "longitude",
+        "date",
+        "time",
+        "date_and_time",
+        "yearstr",
+        "year",
+        "monthstr",
+        "month",
+        "daystr",
+        "day",
+        "hourstr",
+        "hour",
+        "minutesstr",
+        "minutes",
+        "secondsstr",
+        "seconds",
+        "zonestr",
+        "precisionstr",
+        "precision",
+        "iso8601extended",
+        "truth",
+        "symbol"
+        ]
+
+    DEFAULT_FIELD_NAMES: typing.List[str] = [
+        "data_type",
+        "valid",
+        "list_len",
+        "text",
+        "language",
+        "suffix",
+        "number",
+        "low_tolerance",
+        "high_tolerance",
+        "si_units",
+        "wikidata_node",
+        "latitude",
+        "longitude",
+        "date_and_time",
+        "precision",
+        "truth",
+        "symbol"
+        ]
+
+    FIELD_NAME_FORMATS: typing.Mapping[str, str] = {
+        "list_len": "int",
+        "data_type": "sym",
+        "valid": "bool",
+        "text": "str",
+        "language": "sym",
+        "suffix": "sym",
+        "numberstr": "str",
+        "number": "num",
+        "low_tolerancestr": "str",
+        "low_tolerance": "num",
+        "high_tolerancestr": "str",
+        "high_tolerance": "num",
+        "si_units": "sym",
+        "wikidata_node": "sym",
+        "latitudestr": "str",
+        "latitude": "num",
+        "longitudestr": "str",
+        "longitude": "num",
+        "date": "str",
+        "time": "str",
+        "date_and_time": "str",
+        "yearstr": "str",
+        "year": "int",
+        "monthstr": "str",
+        "month": "int",
+        "daystr": "str",
+        "day": "int",
+        "hourstr": "str",
+        "hour": "int",
+        "minutesstr": "str",
+        "minutes": "int",
+        "secondsstr": "str",
+        "seconds": "int",
+        "zonestr": "str",
+        "precisionstr": "str",
+        "precision": "int",
+        "iso8601extended": "bool",
+        "truth": "bool",
+        "symbol": "sym",
+    }
+
     def to_map(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
         results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
         results["list_len"] = self.list_len
         if self.data_type is not None:
-            results["data_type"] = self.data_type.name
+            results["data_type"] = self.data_type.name.lower()
         if self.valid is not None:
             results["valid"] = self.valid
-        if self.contents is not None:
-            results["contents"] = self.contents
-        if self.lang is not None:
-            results["lang"] = self.lang
+        if self.text is not None:
+            results["text"] = self.text
+        if self.language is not None:
+            results["language"] = self.language
         if self.suffix is not None:
             results["suffix"] = self.suffix
         if self.numberstr is not None:
@@ -113,20 +227,30 @@ class KgtkValueFields():
             results["number"] = self.number
         if self.low_tolerancestr is not None:
             results["low_tolerancestr"] = self.low_tolerancestr
+        if self.low_tolerance is not None:
+            results["low_tolerance"] = self.low_tolerance
         if self.high_tolerancestr is not None:
             results["high_tolerancestr"] = self.high_tolerancestr
+        if self.high_tolerance is not None:
+            results["high_tolerance"] = self.high_tolerance
         if self.si_units is not None:
             results["si_units"] = self.si_units
         if self.wikidata_node is not None:
             results["wikidata_node"] = self.wikidata_node
-        if self.latstr is not None:
-            results["latstr"] = self.latstr
-        if self.lat is not None:
-            results["lat"] = self.lat
-        if self.lonstr is not None:
-            results["lonstr"] = self.lonstr
-        if self.lon is not None:
-            results["lon"] = self.lon
+        if self.latitudestr is not None:
+            results["latitudestr"] = self.latitudestr
+        if self.latitude is not None:
+            results["latitude"] = self.latitude
+        if self.longitudestr is not None:
+            results["longitudestr"] = self.longitudestr
+        if self.longitude is not None:
+            results["longitude"] = self.longitude
+        if self.date is not None:
+            results["date"] = self.date
+        if self.time is not None:
+            results["time"] = self.time
+        if self.date_and_time is not None:
+            results["date_and_time"] = self.date_and_time
         if self.yearstr is not None:
             results["yearstr"] = self.yearstr
         if self.year is not None:
@@ -155,10 +279,14 @@ class KgtkValueFields():
             results["zonestr"] = self.zonestr
         if self.precisionstr is not None:
             results["precisionstr"] = self.precisionstr
+        if self.precision is not None:
+            results["precision"] = self.precision
         if self.iso8601extended is not None:
             results["iso8601extended"] = self.iso8601extended
         if self.truth is not None:
             results["truth"] = self.truth
+        if self.symbol is not None:
+            results["symbol"] = self.symbol
         return results
     
 @attr.s(slots=True, frozen=False)
@@ -234,7 +362,7 @@ class KgtkValue(KgtkFormat):
             # Populate list_items with a KgtkValue for each item in the list:
             item_value: str
             for item_value in values:
-                self.list_items.append(KgtkValue(item_value, options=self.options, parent=self))
+                self.list_items.append(KgtkValue(item_value, options=self.options, parse_fields=self.parse_fields, parent=self))
         return self.list_items
 
     def is_list(self, validate: bool = False)->bool:
@@ -408,11 +536,29 @@ class KgtkValue(KgtkFormat):
             return False
 
         # Extract the number or quantity components:
-        numberstr: str = m.group("number")
-        low_tolerancestr: str = m.group("low_tolerance")
-        high_tolerancestr: str = m.group("high_tolerance")
-        si_units: str = m.group("si_units")
-        wikidata_node: str = m.group("wikidata_node")
+        numberstr: typing.Optional[str] = m.group("number")
+        low_tolerancestr: typing.Optional[str] = m.group("low_tolerance")
+        high_tolerancestr: typing.Optional[str] = m.group("high_tolerance")
+        si_units: typing.Optional[str] = m.group("si_units")
+        wikidata_node: typing.Optional[str] = m.group("wikidata_node")
+
+        low_tolerance: typing.Optional[float]
+        if low_tolerancestr is None:
+            low_tolerance = None
+        else:
+            try:
+                low_tolerance = float(low_tolerancestr)
+            except ValueError:
+                return False                
+
+        high_tolerance: typing.Optional[float]
+        if high_tolerancestr is None:
+            high_tolerance = None
+        else:
+            try:
+                high_tolerance = float(high_tolerancestr)
+            except ValueError:
+                return False                
 
         # For convenience, convert the numeric part to int or float:
         #
@@ -440,7 +586,9 @@ class KgtkValue(KgtkFormat):
                                           numberstr=numberstr,
                                           number=number,
                                           low_tolerancestr=low_tolerancestr,
+                                          low_tolerance=low_tolerance,
                                           high_tolerancestr=high_tolerancestr,
+                                          high_tolerance=high_tolerance,
                                           si_units=si_units,
                                           wikidata_node=wikidata_node)
         return True
@@ -541,6 +689,24 @@ class KgtkValue(KgtkFormat):
         si_units:str = m.group("si_units")
         wikidata_node:str = m.group("wikidata_node")
 
+        low_tolerance: typing.Optional[float]
+        if low_tolerancestr is None:
+            low_tolerance = None
+        else:
+            try:
+                low_tolerance = float(low_tolerancestr)
+            except ValueError:
+                return False                
+
+        high_tolerance: typing.Optional[float]
+        if high_tolerancestr is None:
+            high_tolerance = None
+        else:
+            try:
+                high_tolerance = float(high_tolerancestr)
+            except ValueError:
+                return False                
+
         # For convenience, convert the numeric part to int or float:
         #
         # TODO: go to this extra work only when requested?
@@ -573,13 +739,15 @@ class KgtkValue(KgtkFormat):
                                           numberstr=numberstr,
                                           number=number,
                                           low_tolerancestr=low_tolerancestr,
+                                          low_tolerance=low_tolerance,
                                           high_tolerancestr=high_tolerancestr,
+                                          high_tolerance=high_tolerance,
                                           si_units=si_units,
                                           wikidata_node=wikidata_node)
         return True
     
-    lax_string_re: typing.Pattern = re.compile(r'^"(?P<contents>.*)"$')
-    strict_string_re: typing.Pattern = re.compile(r'^"(?P<contents>(?:[^"\\]|\\.)*)"$')
+    lax_string_re: typing.Pattern = re.compile(r'^"(?P<text>.*)"$')
+    strict_string_re: typing.Pattern = re.compile(r'^"(?P<text>(?:[^"\\]|\\.)*)"$')
 
     def is_string(self, validate: bool = False)->bool:
         """
@@ -618,7 +786,7 @@ class KgtkValue(KgtkFormat):
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.STRING,
                                           valid=self.valid,
-                                          contents=m.group("contents"))
+                                          text=m.group("text"))
         return True
 
     def is_structured_literal(self)->bool:
@@ -645,7 +813,9 @@ class KgtkValue(KgtkFormat):
         self.valid = True
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=self.data_type,
-                                          valid=self.valid)
+                                          valid=self.valid,
+                                          symbol=self.value,
+            )
         return True
 
     def is_boolean(self, validate: bool = False)->bool:
@@ -672,8 +842,8 @@ class KgtkValue(KgtkFormat):
 
     # Support two or three character language codes.  Suports hyphenated codes
     # with a country code or dialect namesuffix after the language code.
-    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<contents>.*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
-    strict_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<contents>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
+    lax_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>.*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
+    strict_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
 
     def is_language_qualified_string(self, validate: bool=False)->bool:
         """
@@ -718,8 +888,8 @@ class KgtkValue(KgtkFormat):
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING,
                                           valid=self.valid,
-                                          contents=m.group("contents"),
-                                          lang=m.group("lang"),
+                                          text=m.group("text"),
+                                          language=m.group("lang"),
                                           suffix=m.group("suffix"))
         return True
 
@@ -840,10 +1010,10 @@ class KgtkValue(KgtkFormat):
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LOCATION_COORDINATES,
                                           valid=self.valid,
-                                          latstr=latstr,
-                                          lat=lat,
-                                          lonstr=lonstr,
-                                          lon=lon)
+                                          latitudestr=latstr,
+                                          latitude=lat,
+                                          longitudestr=lonstr,
+                                          longitude=lon)
         return True
 
     def update_location_coordinates(self, latstr: str, lonstr: str):
@@ -887,9 +1057,9 @@ class KgtkValue(KgtkFormat):
     lax_year_pat: str = r'(?P<year>[-+]?[0-9]{4}(?:[0-9]+(?=-))?)' # Extra digits must by followed by hyphen.
     lax_month_pat: str = r'(?P<month>1[0-2]|0[0-9])'
     lax_day_pat: str = r'(?P<day>3[01]|0[0-9]|[12][0-9])'
-    lax_date_pat: str = r'(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?)'.format(year=lax_year_pat,
-                                                                                              month=lax_month_pat,
-                                                                                              day=lax_day_pat)
+    lax_date_pat: str = r'(?P<date>(?:{year}(?:(?P<hyphen>-)?{month}?(?:(?(hyphen)-){day})?)?))'.format(year=lax_year_pat,
+                                                                                                        month=lax_month_pat,
+                                                                                                        day=lax_day_pat)
     # hour-minutes-seconds
     hour_pat: str = r'(?P<hour>2[0-3]|[01][0-9])'
     minutes_pat: str = r'(?P<minutes>[0-5][0-9])'
@@ -904,16 +1074,16 @@ class KgtkValue(KgtkFormat):
     # TODO: consult the actual standard about the colon.
     zone_pat: str = r'(?P<zone>Z|[-+][01][0-9](?::?[0-5][0-9])?)'
 
-    time_pat: str = r'(?:{hour}(?:(?(hyphen):){minutes}(?:(?(hyphen):){seconds})?)?{zone}?)'.format(hour=hour_pat,
-                                                                                                   minutes=minutes_pat,
-                                                                                                   seconds=seconds_pat,
-                                                                                                   zone=zone_pat)
+    time_pat: str = r'(?P<time>(?:{hour}(?:(?(hyphen):){minutes}(?:(?(hyphen):){seconds})?)?{zone}?))'.format(hour=hour_pat,
+                                                                                                              minutes=minutes_pat,
+                                                                                                              seconds=seconds_pat,
+                                                                                                              zone=zone_pat)
 
     precision_pat: str = r'(?P<precision>[0-1]?[0-9])'
 
-    lax_date_and_times_pat: str = r'(?:\^{date}(?:T{time})?(?:/{precision})?)'.format(date=lax_date_pat,
-                                                                                      time=time_pat,
-                                                                                      precision=precision_pat)
+    lax_date_and_times_pat: str = r'(?:\^(?P<date_and_time>{date}(?:T{time})?)(?:/{precision})?)'.format(date=lax_date_pat,
+                                                                                                         time=time_pat,
+                                                                                                         precision=precision_pat)
     lax_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=lax_date_and_times_pat))
                                                                         
     def is_date_and_times(self, validate: bool=False)->bool:
@@ -986,6 +1156,10 @@ class KgtkValue(KgtkFormat):
         if m is None:
             return False
 
+        date: typing.Optional[str] = m.group("date")
+        time: typing.Optional[str] = m.group("time")
+        date_and_time: typing.Optional[str] = m.group("date_and_time")
+
         yearstr: typing.Optional[str] = m.group("year")
         monthstr: typing.Optional[str] = m.group("month")
         daystr: typing.Optional[str] = m.group("day")
@@ -1028,9 +1202,12 @@ class KgtkValue(KgtkFormat):
             else:
                 return False
 
-        if monthstr is not None:
+        month: typing.Optional[int]
+        if monthstr is None:
+            month = None
+        else:
             try:
-                month: int = int(monthstr)
+                month = int(monthstr)
             except ValueError:
                 return False # shouldn't happen
             if month == 0:
@@ -1041,9 +1218,12 @@ class KgtkValue(KgtkFormat):
                 elif not self.options.allow_month_or_day_zero:
                     return False # month 0 was disallowed.
 
-        if daystr is not None:
+        day: typing.Optional[int]
+        if daystr is None:
+            day = None
+        else:
             try:
-                day: int = int(daystr)
+                day = int(daystr)
             except ValueError:
                 return False # shouldn't happen
             if day == 0:
@@ -1055,21 +1235,39 @@ class KgtkValue(KgtkFormat):
                     return False # day 0 was disallowed.
 
         # Convert the time fields to ints:
-        if hourstr is not None:
+        hour: typing.Optional[int]
+        if hourstr is None:
+            hour = None
+        else:
             try:
-                hour: int = int(hourstr)
+                hour = int(hourstr)
             except ValueError:
                 return False # shouldn't happen
 
-        if minutesstr is not None:
+        minutes: typing.Optional[int]
+        if minutesstr is None:
+            minutes = None
+        else:
             try:
-                minutes: int = int(minutesstr)
+                minutes = int(minutesstr)
             except ValueError:
                 return False # shouldn't happen
 
-        if secondsstr is not None:
+        seconds: typing.Optional[int]
+        if secondsstr is None:
+            seconds = None
+        else:
             try:
-                seconds: int = int(secondsstr)
+                seconds = int(secondsstr)
+            except ValueError:
+                return False # shouldn't happen
+
+        precision: typing.Optional[int]
+        if precisionstr is None:
+            precision = None
+        else:
+            try:
+                precision = int(precisionstr)
             except ValueError:
                 return False # shouldn't happen
 
@@ -1082,6 +1280,9 @@ class KgtkValue(KgtkFormat):
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.DATE_AND_TIMES,
                                           valid=self.valid,
+                                          date=date,
+                                          time=time,
+                                          date_and_time=date_and_time,
                                           yearstr=yearstr,
                                           monthstr=monthstr,
                                           daystr=daystr,
@@ -1096,6 +1297,7 @@ class KgtkValue(KgtkFormat):
                                           seconds=seconds,
                                           zonestr=zonestr,
                                           precisionstr=precisionstr,
+                                          precision=precision,
                                           iso8601extended=iso8601extended,
             )
         return True
