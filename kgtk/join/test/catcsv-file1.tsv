@@ -1,0 +1,5 @@
+node1	label	node2
+john	title	"Programmer"
+john	workplace	home,work
+john	uses	home|work
+john	empty	
