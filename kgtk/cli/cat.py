@@ -45,6 +45,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "input_file_paths", help="The KGTK files to concatenate.", type=Path, nargs='+', default=[Path("-")])
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -52,6 +53,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_file_paths: typing.List[Path],
         output_file_path: Path,
+        output_format: typing.Optional[str],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -76,8 +78,10 @@ def run(input_file_paths: typing.List[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file)
-        print("--output-file=%s" % str(output_file_path), file=error_file)
+        print("input: %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file, flush=True)
+        print("--output-file=%s" % str(output_file_path), file=error_file, flush=True)
+        if output_format is not None:
+            print("--output-format=%s" % output_format, file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -85,6 +89,7 @@ def run(input_file_paths: typing.List[Path],
     try:
         kc: KgtkCat = KgtkCat(input_file_paths=input_file_paths,
                               output_path=output_file_path,
+                              output_format=output_format,
                               reader_options=reader_options,
                               value_options=value_options,
                               error_file=error_file,
