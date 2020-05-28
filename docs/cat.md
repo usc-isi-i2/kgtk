@@ -14,19 +14,44 @@ columns will be combined as the "node1" column in the output file.
 Normally, the files being combined must be either all KGTK edge files or all
 KGTK node files, but that constraint can be overridded with --mode=NONE.
 
+Optionally, the output can be written in a selection of other formats.
+
 ## Usage
 
 ```bash
-kgtk cat [-h] [-o OUTPUT_FILE_PATH] [-v] input_file_paths [input_file_paths ...]
-```
-- `input_file_paths` are the input file names.  At most one input file may be "-" for data piped from another command.
-- `OUTPUT_FILE_PATH` can be a filename or "-" to pipe data to another command (default is "-").
-- `-v` gives verbose feedback.
+usage: kgtk cat [-h] [-o OUTPUT_FILE_PATH] [--output-format OUTPUT_FORMAT] [-v] input_file_paths [input_file_paths ...]
 
-Additional options are described in expert help:
-```bash
+Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
+
+Additional options are shown in expert help.
 kgtk --expert cat --help
+
+positional arguments:
+  input_file_paths      The KGTK files to concatenate.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTPUT_FILE_PATH, --output-file OUTPUT_FILE_PATH
+                        The KGTK file to write (default=-).
+  --output-format OUTPUT_FORMAT
+                        The file format (default=kgtk)
+
+  -v, --verbose         Print additional progress messages (default=False).
 ```
+
+## Output Formats
+
+| Format | Extension | Description |
+| ------ | --------- | ----------- |
+| kgtk   | (default) | KGTK tab separated values file. |
+| csv    | .csv      | A simple comma separated value file with doubled quoting and column headers. |
+| md	 | .md       | GitHub markdown tables. |
+| json   | .json     | JSON list of lists of strings with column header line. |
+| json-map | (none)  | JSON list of maps from column names to string values. |
+| json-map-compact | (none)  | JSON list of maps from column names to string values with empty values suppressed. |
+| jsonl  | .jsonl    | JSON lines of lists of strings  with column header line. |
+| jsonl-map | (none)  | JSON lines of maps from column names to string values. |
+| jsonl-map-compact | (none)  | JSON lines of maps from column names to string values with empty values suppressed. |
 
 ## Examples
 
