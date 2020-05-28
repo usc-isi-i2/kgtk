@@ -109,16 +109,20 @@ class KgtkWriter(KgtkBase):
             gzip_file: typing.TextIO
             if file_path.suffix == ".gz":
                 if verbose:
-                    print("KgtkWriter: writing gzip %s" % str(file_path), file=sys.stderr)
+                    print("KgtkWriter: writing gzip %s" % str(file_path), file=error_file, flush=True)
                 gzip_file = gzip.open(file_path, mode="wt") # type: ignore
             elif file_path.suffix == ".bz2":
                 if verbose:
-                    print("KgtkWriter: writing bz2 %s" % str(file_path), file=sys.stderr)
+                    print("KgtkWriter: writing bz2 %s" % str(file_path), file=error_file, flush=True)
                 gzip_file = bz2.open(file_path, mode="wt") # type: ignore
             elif file_path.suffix == ".xz":
                 if verbose:
-                    print("KgtkWriter: writing lzma %s" % str(file_path), file=sys.stderr)
+                    print("KgtkWriter: writing lzma %s" % str(file_path), file=error_file, flush=True)
                 gzip_file = lzma.open(file_path, mode="wt") # type: ignore
+            elif file_path.suffix ==".lz4":
+                if verbose:
+                    print("KgtkWriter: writing lz4 %s" % str(file_path), file=error_file, flush=True)
+                gzip_file = lz4.frame.open(file_or_path, mode="wt") # type: ignore
             else:
                 # TODO: throw a better exception.
                 raise ValueError("Unexpected file_patn.suffiz = '%s'" % file_path.suffix)
