@@ -303,6 +303,15 @@ class KgtkWriter(KgtkBase):
             line += " " + value + " |"
         return line
 
+    def json_map(self, values: typing.List[str], compact: bool = False)->typing.Mapping[str, str]:
+        result: typing.Mapping[str, str] = { }
+        idx: int
+        value: str
+        for idx, value in enumerate(values):
+            if len(value) > 0 or not compact:
+                result[self.column_names[idx]] = value
+        return result
+
     def write_header(self):
         header: str
         header2: typing.Optional[str] = None
@@ -310,6 +319,12 @@ class KgtkWriter(KgtkBase):
         if self.output_format == "json":
             self.writeline("[")
             header = json.dumps(self.column_names, indent=None, separators=(',', ':')) + ","
+        elif self.output_format == "json-map":
+            self.writeline("[")
+            return
+        elif self.output_format == "json-map-compact":
+            self.writeline("[")
+            return
         elif self.output_format == "jsonl":
             header = json.dumps(self.column_names, indent=None, separators=(',', ':'))
         elif self.output_format == "md":
@@ -381,6 +396,10 @@ class KgtkWriter(KgtkBase):
             self.writeline(self.join_md(values))
         elif self.output_format == "json":
             self.writeline(json.dumps(values, indent=None, separators=(',', ':')) + ",")
+        elif self.output_format == "json-map":
+            self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')) + ",")
+        elif self.output_format == "json-map-compact":
+            self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')) + ",")
         elif self.output_format == "jsonl":
             self.writeline(json.dumps(values, indent=None, separators=(',', ':')))
         else:
