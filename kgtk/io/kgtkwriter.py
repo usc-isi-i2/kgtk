@@ -327,6 +327,10 @@ class KgtkWriter(KgtkBase):
             return
         elif self.output_format == "jsonl":
             header = json.dumps(self.column_names, indent=None, separators=(',', ':'))
+        elif self.output_format == "jsonl-map":
+            return
+        elif self.output_format == "jsonl-map-compact":
+            return
         elif self.output_format == "md":
             header = "|"
             header2 = "|"
@@ -402,6 +406,10 @@ class KgtkWriter(KgtkBase):
             self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')) + ",")
         elif self.output_format == "jsonl":
             self.writeline(json.dumps(values, indent=None, separators=(',', ':')))
+        elif self.output_format == "jsonl-map":
+            self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')))
+        elif self.output_format == "jsonl-map-compact":
+            self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
         else:
             raise ValueError("Unrecognized output format '%s'." % self.output_format)
 
