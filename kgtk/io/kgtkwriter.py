@@ -8,6 +8,7 @@ import attr
 import bz2
 from enum import Enum
 import gzip
+import json
 import lz4 # type: ignore
 import lzma
 from pathlib import Path
@@ -25,6 +26,7 @@ from kgtk.utils.validationaction import ValidationAction
 @attr.s(slots=True, frozen=False)
 class KgtkWriter(KgtkBase):
     GZIP_QUEUE_SIZE_DEFAULT: int = GzipProcess.GZIP_QUEUE_SIZE_DEFAULT
+    OUTPUT_FORMAT_DEFAULT: str = "kgtk" # TODO: Need an enum
 
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     file_out: typing.TextIO = attr.ib() # Todo: validate TextIO
@@ -50,6 +52,8 @@ class KgtkWriter(KgtkBase):
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_thread: typing.Optional[GzipProcess] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(GzipProcess)), default=None)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
+
+    output_format: str = attr.ib(validator=attr.validators.instance_of(str), default=OUTPUT_FORMAT_DEFAULT) # TODO: use an enum
 
     line_count: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
@@ -79,11 +83,13 @@ class KgtkWriter(KgtkBase):
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
              mode: Mode = Mode.AUTO,
+             output_format: typing.Optional[str] = None,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
         if file_path is None or str(file_path) == "-":
             if verbose:
-                print("KgtkWriter: writing stdout", file=sys.stderr)
+                print("KgtkWriter: writing stdout", file=error_file, flush=True)
+
             return cls._setup(column_names=column_names,
                               file_path=None,
                               who=who,
@@ -97,14 +103,15 @@ class KgtkWriter(KgtkBase):
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
                               mode=mode,
+                              output_format=output_format,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
         
         if verbose:
-            print("File_path.suffix: %s" % file_path.suffix, file=sys.stderr)
+            print("File_path.suffix: %s" % file_path.suffix, file=error_file, flush=True)
 
-        if file_path.suffix in [".gz", ".bz2", ".xz"]:
+        if file_path.suffix in [".gz", ".bz2", ".xz", ".lz4"]:
             # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
             gzip_file: typing.TextIO
             if file_path.suffix == ".gz":
@@ -140,13 +147,27 @@ class KgtkWriter(KgtkBase):
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
                               mode=mode,
+                              output_format=output_format,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
             
         else:
+            if output_format is None:
+                # TODO: optionally stack these on top of compression
+                if file_path.suffix == ".md":
+                    output_format = "md"
+                elif file_path.suffix == ".csv":
+                    output_format = "csv"
+                elif file_path.suffix == ".json":
+                    output_format = "json"
+                elif file_path.suffix == ".jsonl":
+                    output_format = "jsonl"
+                else:
+                    output_format = "kgtk"
+
             if verbose:
-                print("KgtkWriter: writing file %s" % str(file_path), file=sys.stderr)
+                print("KgtkWriter: writing file %s" % str(file_path), file=error_file, flush=True)
             return cls._setup(column_names=column_names,
                               file_path=file_path,
                               who=who,
@@ -160,6 +181,7 @@ class KgtkWriter(KgtkBase):
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
                               mode=mode,
+                              output_format=output_format,
                               verbose=verbose,
                               very_verbose=very_verbose,
 )
@@ -179,10 +201,19 @@ class KgtkWriter(KgtkBase):
                gzip_queue_size: int,
                column_separator: str,
                mode: Mode = Mode.AUTO,
+               output_format: typing.Optional[str] = None,
                verbose: bool = False,
                very_verbose: bool = False,
     )->"KgtkWriter":
 
+        if output_format is None:
+            output_format = "kgtk"
+            if verbose:
+                print("Defaulting the output format to %s" % output_format, file=error_file, flush=True)
+
+        if output_format == "csv":
+            column_separator = "," # What a cheat!
+                
         # Build a header line for error feedback:
         header: str = column_separator.join(column_names)
 
@@ -223,35 +254,90 @@ class KgtkWriter(KgtkBase):
                                 is_edge_file=is_edge_file,
                                 is_node_file=is_node_file)
 
-        # Write the column names to the first line.
-        if verbose:
-            print("header: %s" % header, file=sys.stderr)
-        file_out.write(header + "\n") # Todo: use system end-of-line sequence?
-
         gzip_thread: typing.Optional[GzipProcess] = None
         if gzip_in_parallel:
+            if verbose:
+                print("Starting the gzip process.", file=error_file, flush=True)
             gzip_thread = GzipProcess(file_out, Queue(gzip_queue_size))
             gzip_thread.start()
 
-        return cls(file_path=file_path,
-                   file_out=file_out,
-                   column_separator=column_separator,
-                   column_names=column_names,
-                   column_name_map=column_name_map,
-                   column_count=len(column_names),
-                   require_all_columns=require_all_columns,
-                   prohibit_extra_columns=prohibit_extra_columns,
-                   fill_missing_columns=fill_missing_columns,
-                   error_file=error_file,
-                   header_error_action=header_error_action,
-                   gzip_in_parallel=gzip_in_parallel,
-                   gzip_thread=gzip_thread,
-                   gzip_queue_size=gzip_queue_size,
-                   line_count=1,
-                   verbose=verbose,
-                   very_verbose=very_verbose,
+        kw: KgtkWriter = cls(file_path=file_path,
+                             file_out=file_out,
+                             column_separator=column_separator,
+                             column_names=column_names,
+                             column_name_map=column_name_map,
+                             column_count=len(column_names),
+                             require_all_columns=require_all_columns,
+                             prohibit_extra_columns=prohibit_extra_columns,
+                             fill_missing_columns=fill_missing_columns,
+                             error_file=error_file,
+                             header_error_action=header_error_action,
+                             gzip_in_parallel=gzip_in_parallel,
+                             gzip_thread=gzip_thread,
+                             gzip_queue_size=gzip_queue_size,
+                             output_format=output_format,
+                             line_count=1,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
         )
+        kw.write_header()
+        return kw
 
+
+    def join_csv(self, values: typing.List[str])->str:
+        line: str = ""
+        value: str
+        for value in values:
+            if '"' in value or ',' in value:
+                value = '"' + '""'.join(value.split('"')) + '"'
+            if len(line) > 0:
+                line += ","
+            line += value
+        return line
+
+    def join_md(self, values: typing.List[str])->str:
+        line: str = "|"
+        value: str
+        for value in values:
+            value = "\\|".join(value.split("|"))
+            line += " " + value + " |"
+        return line
+
+    def write_header(self):
+        header: str
+        header2: typing.Optional[str] = None
+
+        if self.output_format == "json":
+            self.writeline("[")
+            header = json.dumps(self.column_names, indent=None, separators=(',', ':')) + ","
+        elif self.output_format == "jsonl":
+            header = json.dumps(self.column_names, indent=None, separators=(',', ':'))
+        elif self.output_format == "md":
+            header = "|"
+            header2 = "|"
+            col: str
+            for col in self.column_names:
+                col = "\\|".join(col.split("|"))
+                header += " " + col + " |"
+                header2 += " -- |"
+            
+        elif self.output_format in ["kgtk", "csv"]:
+            header = self.column_separator.join(self.column_names)
+        else:
+            raise ValueError("KgtkWriter: header: Unrecognized output format '%s'." % self.output_format)
+
+        # Write the column names to the first line.
+        if self.verbose:
+            print("header: %s" % header, file=self.error_file, flush=True)
+        self.writeline(header)
+        if header2 is not None:
+            self.writeline(header2)
+
+    def writeline(self, line: str):
+        if self.gzip_thread is not None:
+            self.gzip_thread.write(line + "\n") # Todo: use system end-of-line sequence?
+        else:
+            self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
 
     # Write the next list of edge values as a list of strings.
     # TODO: Convert integers, coordinates, etc. from Python types
@@ -276,21 +362,29 @@ class KgtkWriter(KgtkBase):
             while len(values) < self.column_count:
                 values.append("")
 
-        line: str = self.column_separator.join(values)
-
         # Optionally validate that the line contained the right number of columns:
         #
         # When we report line numbers in error messages, line 1 is the first line after the header line.
+        line: str
         if self.require_all_columns and len(values) < self.column_count:
+            line = self.column_separator.join(values)
             raise ValueError("Required %d columns in input line %d, saw %d: '%s'" % (self.column_count, self.line_count, len(values), line))
         if self.prohibit_extra_columns and len(values) > self.column_count:
+            line = self.column_separator.join(values)
             raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count, len(values),
                                                                                                 len(values) - self.column_count, line))
-
-        if self.gzip_thread is not None:
-            self.gzip_thread.write(line + "\n")
+        if self.output_format == "kgtk":
+            self.writeline(self.column_separator.join(values))
+        elif self.output_format == "csv":
+            self.writeline(self.join_csv(values))
+        elif self.output_format == "md":
+            self.writeline(self.join_md(values))
+        elif self.output_format == "json":
+            self.writeline(json.dumps(values, indent=None, separators=(',', ':')) + ",")
+        elif self.output_format == "jsonl":
+            self.writeline(json.dumps(values, indent=None, separators=(',', ':')))
         else:
-            self.file_out.write(line + "\n")
+            raise ValueError("Unrecognized output format '%s'." % self.output_format)
 
         self.line_count += 1
         if self.very_verbose:
@@ -302,6 +396,11 @@ class KgtkWriter(KgtkBase):
             self.file_out.flush()
 
     def close(self):
+        if self.output_format == "json":
+            if self.verbose:
+                print("Closing the JSON list.", file=self.error_file, flush=True)
+            self.writeline("]")
+
         if self.gzip_thread is not None:
             self.gzip_thread.close()
         else:
@@ -390,7 +489,7 @@ def main():
         line_count += 1
     kw.close()
     if args.verbose:
-        print("Copied %d lines" % line_count, file=sys.stderr)
+        print("Copied %d lines" % line_count, file=error_file, flush=True)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ class KgtkCat():
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
+    output_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an enum
+
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -118,6 +120,7 @@ class KgtkCat():
                                          fill_missing_columns=True,
                                          gzip_in_parallel=False,
                                          mode=output_mode,
+                                         output_format=self.output_format,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
@@ -161,6 +164,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="input_file_paths", help="The KGTK files to concatenate", type=Path, nargs='+')
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s)", type=Path, default="-")
+    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str)
 
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=True)
@@ -175,12 +179,17 @@ def main():
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
    # Show the final option structures for debugging and documentation.                                                                                             
-    if show_options:
+    if args.show_options:
+        print("input: %s" % " ".join(args.input_file_paths), file=error_file, flush=True)
+        print("--output-file=%s" % args.output_file_path, file=error_file, flush=True)
+        if args.output_format is not None:
+            print("--output-format=%s" % args.output_format, file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
     kc: KgtkCat = KgtkCat(input_file_paths=args.input_file_paths,
                           output_path=args.output_file_path,
+                          output_format=args.output_format,
                           reader_options=reader_options,
                           value_options=value_options,
                           error_file=error_file,
