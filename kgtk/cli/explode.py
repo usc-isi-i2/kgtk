@@ -19,8 +19,9 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Copy a KGTK file, exploding one column (normally node2) into seperate columns for each subfield.',
-        'description': 'Copy a KGTK file, exploding one column (normally node2) into seperate columns for each subfield. ' +
+        'aliases': ['denormalize_node2'],
+        'help': 'Copy a KGTK file, exploding one column (usualy node2) into seperate columns for each subfield.',
+        'description': 'Copy a KGTK file, exploding one column (usually node2) into seperate columns for each subfield. ' +
         'If a cell in the column being exploded contains a list, that record is optionally expanded into multiple records ' +
         'before explosion, with all other columns copied-as is.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert expand --help'
