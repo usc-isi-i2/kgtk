@@ -38,26 +38,42 @@ optional arguments:
   -v, --verbose         Print additional progress messages (default=False).
 ```
 
+## KGTK Data Types and Fields
+
+| Data Type                 | Fields                      |
+| ========================= | =========================== |
+| boolean                   | valid truth                 |
+| date_and_times            | valid yearstr year monthstr month daystr day hourstr hour minutesstr minutes secondsstr seconds zonestr precisionstr precision iso8601extended |
+| empty                     | valid                       |
+| extension                 |                             |
+| language_qualified_string | valid contents lang suffix  |
+| list                      | valid  list_len             |
+| location_coordinates      | valid latstr lat nonstr lon |
+| number                    | valid numberstr number      |
+| quantity                  | valid numberstr number low_tolerancestr low_tolerance high_tolerancestr high_tolerance si_units wikidata_node |
+| string                    | valid contents              |
+| symbol                    | valid symbol                |
+
 ## Examples
 
 Suppose that `file1.tsv` contains the following table in KGTK format:
 
-| node1 | label   | node2 |
-| ----- | ------- | ----- |
-| john  | string  | "John" |
-| john  | lqstring  | "John"@en |
-| john  | integer  | 12345 |
-| john  | number  | 186.2 |
-| john  | number  | 186.2e04 |
-| john  | number  | -186.2 |
-| john  | number  | +186.2e-6 |
-| john  | quantity  | 84.3[84,85]kg |
-| john | date_and_time | ^1960-11-05T00:00 |
-| john | date_and_time | ^1960-11-05T00:00Z/6 |
-| john | location | @60.2/134.3 |
-| john | boolean | True |
-| john | symbol | quadrature |
-| john | list | home|work |
+| node1 | label         | node2         |
+| ===== | ============= | ============= |
+| john  | string        | "John"        |
+| john  | lqstring      | "John"@en     |
+| john  | integer       | 12345         |
+| john  | number        | 186.2         |
+| john  | number        | 186.2e04      |
+| john  | number        | -186.2        |
+| john  | number        | +186.2e-6     |
+| john  | quantity      | 84.3[84,85]kg |
+| john  | date_and_time | ^1960-11-05T00:00 |
+| john  | date_and_time | ^1960-11-05T00:00Z/6 |
+| john  | location      | @60.2/134.3   |
+| john  | boolean       | True          |
+| john  | symbol        | quadrature    |
+| john  | list          | home\|work    |
 
 
 ```bash
