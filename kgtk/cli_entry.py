@@ -66,17 +66,17 @@ def cli_entry(*args):
         metavar='command',
         dest='cmd'
     )
-    subparser_lookup = { }
+    subparser_lookup = {}
     sub_parsers.required = True
     for h in handlers:
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         subp = mod.parser()
+        # only create sub-parser with sub-command name and defer full build
         sub_parser = sub_parsers.add_parser(h, **subp)
-        add_default_arguments(sub_parser)  # call this before adding other arguments
-        subparser_lookup[h] = [mod, sub_parser]
-        if "aliases" in subp:
-            for alias in subp["aliases"]:
-                subparser_lookup[alias] = [mod, sub_parser]
+        subparser_lookup[h] = (mod, sub_parser)
+        if 'aliases' in subp:
+            for alias in subp['aliases']:
+                subparser_lookup[alias] = (mod, sub_parser)
 
     # add root level usage after sub-parsers are created
     # this won't pollute help info in sub-parsers
@@ -91,25 +91,24 @@ def cli_entry(*args):
         cmd_args = pipe[0]
 
         cmd_name = cmd_args[0]
-        if cmd_name not in subparser_lookup:
-            parser.parse_args(cmd_args) # This will generate the right error message
-            sys.exit(1)
-        mod, sub_parser = subparser_lookup[cmd_name]
-        if hasattr(mod, "add_arguments_extended"):
-            mod.add_arguments_extended(sub_parser, parsed_shared_args)
-        else:
-            mod.add_arguments(sub_parser)
-                
-        kwargs = {}
+        # build sub-parser
+        if cmd_name in subparser_lookup:
+            mod, sub_parser = subparser_lookup[cmd_name]
+            add_default_arguments(sub_parser)  # call this before adding other arguments
+            if hasattr(mod, 'add_arguments_extended'):
+                mod.add_arguments_extended(sub_parser, parsed_shared_args)
+            else:
+                mod.add_arguments(sub_parser)
         parsed_args = parser.parse_args(cmd_args)
 
         # load module
+        kwargs = {}
         func = None
         if parsed_args.cmd:
             h = parsed_args.cmd
             func = mod.run
 
-            # remove sub-command
+            # remove sub-command name
             kwargs = vars(parsed_args)
             del kwargs['cmd']
 
