@@ -3,7 +3,7 @@ Constants and helpers for the KGTK file format.
 
 """
 
-from enum import Enum
+from enum import Enum, unique
 import sys
 import typing
 
@@ -20,6 +20,7 @@ class KgtkFormat:
     # There is only one required column in a node file:
     ID_COLUMN_NAMES: typing.List[str] = ["id", "ID"]
 
+    @unique
     class DataType(Enum):
         EMPTY = 0
         LIST = 1
@@ -32,6 +33,9 @@ class KgtkFormat:
         EXTENSION = 8
         BOOLEAN = 9
         SYMBOL = 10
+
+        def lower(self)->str:
+            return self.name.lower()
 
     TRUE_SYMBOL: str = "True"
     FALSE_SYMBOL: str = "False"
