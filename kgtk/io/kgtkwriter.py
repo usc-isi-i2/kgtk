@@ -36,6 +36,12 @@ class KgtkWriter(KgtkBase):
     column_name_map: typing.Mapping[str, int] = attr.ib(validator=attr.validators.deep_mapping(key_validator=attr.validators.instance_of(str),
                                                                                                value_validator=attr.validators.instance_of(int)))
 
+    # Use these names in the output file, but continue to use
+    # column_names for shuffle lists.
+    output_column_names: typing.List[str] = \
+        attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                        iterable_validator=attr.validators.instance_of(list)))
+
     # For convenience, the count of columns. This is the same as len(column_names).
     column_count: int = attr.ib(validator=attr.validators.instance_of(int))
 
@@ -84,6 +90,9 @@ class KgtkWriter(KgtkBase):
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
              mode: Mode = Mode.AUTO,
              output_format: typing.Optional[str] = None,
+             output_column_names: typing.Optional[typing.List[str]] = None,
+             old_column_names: typing.Optional[typing.List[str]] = None,
+             new_column_names: typing.Optional[typing.List[str]] = None,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
         if file_path is None or str(file_path) == "-":
@@ -104,6 +113,9 @@ class KgtkWriter(KgtkBase):
                               column_separator=column_separator,
                               mode=mode,
                               output_format=output_format,
+                              output_column_names=output_column_names,
+                              old_column_names=old_column_names,
+                              new_column_names=new_column_names,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
@@ -148,6 +160,9 @@ class KgtkWriter(KgtkBase):
                               column_separator=column_separator,
                               mode=mode,
                               output_format=output_format,
+                              output_column_names=output_column_names,
+                              old_column_names=old_column_names,
+                              new_column_names=new_column_names,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
@@ -182,6 +197,9 @@ class KgtkWriter(KgtkBase):
                               column_separator=column_separator,
                               mode=mode,
                               output_format=output_format,
+                              output_column_names=output_column_names,
+                              old_column_names=old_column_names,
+                              new_column_names=new_column_names,
                               verbose=verbose,
                               very_verbose=very_verbose,
 )
@@ -202,6 +220,9 @@ class KgtkWriter(KgtkBase):
                column_separator: str,
                mode: Mode = Mode.AUTO,
                output_format: typing.Optional[str] = None,
+               output_column_names: typing.Optional[typing.List[str]] = None,
+               old_column_names: typing.Optional[typing.List[str]] = None,
+               new_column_names: typing.Optional[typing.List[str]] = None,
                verbose: bool = False,
                very_verbose: bool = False,
     )->"KgtkWriter":
@@ -214,22 +235,52 @@ class KgtkWriter(KgtkBase):
         if output_format == "csv":
             column_separator = "," # What a cheat!
                 
-        # Build a header line for error feedback:
-        header: str = column_separator.join(column_names)
+        if output_column_names is None:
+            output_column_names = column_names.copy()
+        else:
+            # Rename all output columns.
+            if len(output_column_names) != len(column_names):
+                raise ValueError("%s: %d column namess but %d output column namess" % (who, len(column_names), len(output_column_names)))
 
-        # Build a map from column name to column index.
+        if old_column_names is not None or new_column_names is not None:
+            # Rename selected output columns:
+            if old_column_names is None or new_column_names is None:
+                raise ValueError("%s: old/new column name mismatch" % who)
+            if len(old_column_names) != len(new_column_names):
+                raise ValueError("%s: old/new column name length mismatch: %d != %d" % (who, len(old_column_names), len(new_column_names)))
+
+            column_name: str
+            idx: int
+            for idx, column_name in enumerate(old_column_names):
+                if column_name not in output_column_names:
+                    raise ValueError("%s: old column names %s not in the output column names." % (who, column_name))
+                output_column_names[output_column_names.index(column_name)] = new_column_names[idx]
+                
+
+        # Build a map from column name to column index.  This is used for
+        # self.writemap(...)  and self.build_shuffle_list(...)
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
-                                                                              header_line=header,
+                                                                              header_line=column_separator.join(column_names),
                                                                               who=who,
                                                                               error_action=header_error_action,
                                                                               error_file=error_file)
+
+        # Build a header line for error feedback:
+        header: str = column_separator.join(output_column_names)
+
+        # Build a map from output column name to column index.
+        output_column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(output_column_names,
+                                                                                     header_line=header,
+                                                                                     who=who,
+                                                                                     error_action=header_error_action,
+                                                                                     error_file=error_file)
 
         # Should we automatically determine if this is an edge file or a node file?
         is_edge_file: bool = False
         is_node_file: bool = False
         if mode is KgtkWriter.Mode.AUTO:
             # If we have a node1 (or alias) column, then this must be an edge file. Otherwise, assume it is a node file.
-            node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, column_name_map,
+            node1_idx: int = cls.get_column_idx(cls.NODE1_COLUMN_NAMES, output_column_name_map,
                                                 header_line=header,
                                                 who=who,
                                                 error_action=header_error_action,
@@ -246,7 +297,7 @@ class KgtkWriter(KgtkBase):
         
         # Validate that we have the proper columns for an edge or node file,
         # ignoring the result.
-        cls.get_special_columns(column_name_map,
+        cls.get_special_columns(output_column_name_map,
                                 header_line=header,
                                 who=who,
                                 error_action=header_error_action,
@@ -276,6 +327,7 @@ class KgtkWriter(KgtkBase):
                              gzip_thread=gzip_thread,
                              gzip_queue_size=gzip_queue_size,
                              output_format=output_format,
+                             output_column_names=output_column_names,
                              line_count=1,
                              verbose=verbose,
                              very_verbose=very_verbose,
@@ -309,16 +361,23 @@ class KgtkWriter(KgtkBase):
         value: str
         for idx, value in enumerate(values):
             if len(value) > 0 or not compact:
-                result[self.column_names[idx]] = value
+                result[self.output_column_names[idx]] = value
         return result
 
     def write_header(self):
         header: str
         header2: typing.Optional[str] = None
 
+        # Contemplate a last-second rename of the columns
+        column_names: typing.List[str]
+        if self.output_column_names is not None:
+            column_names = self.output_column_names
+        else:
+            column_names = self.column_names
+
         if self.output_format == "json":
             self.writeline("[")
-            header = json.dumps(self.column_names, indent=None, separators=(',', ':')) + ","
+            header = json.dumps(column_names, indent=None, separators=(',', ':')) + ","
         elif self.output_format == "json-map":
             self.writeline("[")
             return
@@ -326,7 +385,7 @@ class KgtkWriter(KgtkBase):
             self.writeline("[")
             return
         elif self.output_format == "jsonl":
-            header = json.dumps(self.column_names, indent=None, separators=(',', ':'))
+            header = json.dumps(column_names, indent=None, separators=(',', ':'))
         elif self.output_format == "jsonl-map":
             return
         elif self.output_format == "jsonl-map-compact":
@@ -335,13 +394,13 @@ class KgtkWriter(KgtkBase):
             header = "|"
             header2 = "|"
             col: str
-            for col in self.column_names:
+            for col in column_names:
                 col = "\\|".join(col.split("|"))
                 header += " " + col + " |"
                 header2 += " -- |"
             
         elif self.output_format in ["kgtk", "csv"]:
-            header = self.column_separator.join(self.column_names)
+            header = self.column_separator.join(column_names)
         else:
             raise ValueError("KgtkWriter: header: Unrecognized output format '%s'." % self.output_format)
 
@@ -476,6 +535,10 @@ class KgtkWriter(KgtkBase):
 def main():
     """
     Test the KGTK edge file writer.
+
+    TODO: full reader options.
+
+    TODO:  --show-options
     """
     parser = ArgumentParser()
     parser.add_argument(dest="input_kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
@@ -488,6 +551,10 @@ def main():
                               help="Determine the input KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
     parser.add_argument(      "--output-mode", dest="output_mode",
                               help="Determine the output KGTK file mode.", type=KgtkWriter.Mode, action=EnumNameAction, default=KgtkWriter.Mode.AUTO)
+    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str)
+    parser.add_argument(      "--output-columns", dest="output_column_names", help="Rename all output columns. (default=%(default)s)", type=str, nargs='+')
+    parser.add_argument(      "--old-columns", dest="old_column_names", help="Rename seleted output columns: old names. (default=%(default)s)", type=str, nargs='+')
+    parser.add_argument(      "--new-columns", dest="new_column_names", help="Rename seleted output columns: new names. (default=%(default)s)", type=str, nargs='+')
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     args = parser.parse_args()
@@ -507,6 +574,10 @@ def main():
                                      gzip_in_parallel=args.gzip_in_parallel,
                                      header_error_action=args.header_error_action,
                                      mode=args.output_mode,
+                                     output_format=args.output_format,
+                                     output_column_names=args.output_column_names,
+                                     old_column_names=args.old_column_names,
+                                     new_column_names=args.new_column_names,
                                      verbose=args.verbose, very_verbose=args.very_verbose)
 
     line_count: int = 0
