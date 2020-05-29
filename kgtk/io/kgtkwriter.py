@@ -236,7 +236,7 @@ class KgtkWriter(KgtkBase):
             column_separator = "," # What a cheat!
                 
         if output_column_names is None:
-            output_column_names = column_names.copy()
+            output_column_names = column_names
         else:
             # Rename all output columns.
             if len(output_column_names) != len(column_names):
@@ -249,6 +249,9 @@ class KgtkWriter(KgtkBase):
             if len(old_column_names) != len(new_column_names):
                 raise ValueError("%s: old/new column name length mismatch: %d != %d" % (who, len(old_column_names), len(new_column_names)))
 
+            # Rename columns in place.  Start by copyin the output column name
+            # list so the changes don't inadvertantly propogate.
+            output_column_names = output_column_names.copy()
             column_name: str
             idx: int
             for idx, column_name in enumerate(old_column_names):
