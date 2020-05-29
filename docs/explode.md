@@ -11,7 +11,8 @@ data types (e.g., string and language qualified string).
 
 In expert help mode, the --fields option is presented.  It may be used to
 specify a list of fields to extract, including finer grained fields, such
-as individual fields for the year, month, and day of dates.
+as individual fields for the year, month, and day of dates.  Either --types
+or --fields may be used, but not both.
 
 ## Usage
 
