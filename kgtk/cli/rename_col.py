@@ -21,7 +21,7 @@ def parser():
         'description': 'Rename KGT file columns while concatenating KGTK files. ' +
         'All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). ' +
         'Rename all columns or selected columns. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert cat --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_col --help'
     }
 
 
