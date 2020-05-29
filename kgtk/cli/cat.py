@@ -45,7 +45,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "input_file_paths", help="The KGTK files to concatenate.", type=Path, nargs='+', default=[Path("-")])
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
-    parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
+    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str)
     parser.add_argument(      "--output-columns", dest="output_column_names",
                               help=h("Rename all output columns. (default=%(default)s)"),
                               type=str, nargs='+')
