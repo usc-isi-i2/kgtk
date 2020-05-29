@@ -120,7 +120,7 @@ class KgtkReaderOptions():
         # This helper function decices whether or not to include defaults
         # in argument declarations. If we plan to make arguments with
         # prefixes and fallbacks, the fallbacks (the ones without prefixes)
-        # should get defaults value, while the prefixed arguments should
+        # should get default values, while the prefixed arguments should
         # not get defaults.
         #
         # Note: In obscure circumstances (EnumNameAction, I'm looking at you),
