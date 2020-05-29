@@ -3,7 +3,7 @@ The rename_col command renames file columns while copying one
 command for more details on how KGTK files are concatenated and merged.
 ## Usage
 
-```bash
+```
 usage: kgtk rename_col [-h] [-o OUTPUT_FILE_PATH] [--output-columns OUTPUT_COLUMN_NAMES [OUTPUT_COLUMN_NAMES ...]]
                        [--old-columns OLD_COLUMN_NAMES [OLD_COLUMN_NAMES ...]] [--new-columns NEW_COLUMN_NAMES [NEW_COLUMN_NAMES ...]] [-v]
                        input_file_paths [input_file_paths ...]
