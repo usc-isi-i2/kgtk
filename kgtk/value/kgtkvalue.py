@@ -104,6 +104,8 @@ class KgtkValueFields():
     # Everything else must be a symbol.
     symbol: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
+    # TODO: Reorganize these lists and dicts into a structure.
+
     FIELD_NAMES: typing.List[str] = [
         "list_len",
         "data_type",
@@ -235,6 +237,40 @@ class KgtkValueFields():
                                                       "secondsstr", "seconds",
                                                       "zonestr",
                                                       "precisionstr", "precision",
+                                                      "iso8601extended",
+        ],
+        KgtkFormat.DataType.EXTENSION.lower(): [ ],
+        KgtkFormat.DataType.BOOLEAN.lower(): [ "valid", "truth" ],
+        KgtkFormat.DataType.SYMBOL.lower(): [ "valid", "symbol" ],
+    }
+
+    DEFAULT_DATA_TYPE_FIELDS: typing.Mapping[str, typing.List[str]] = {
+        KgtkFormat.DataType.EMPTY.lower(): [ "valid" ],
+        KgtkFormat.DataType.LIST.lower(): [ "valid", "list_len" ],
+        KgtkFormat.DataType.NUMBER.lower(): [ "valid", "number" ],
+        KgtkFormat.DataType.QUANTITY.lower(): [ "valid",
+                                                "number",
+                                                "low_tolerance",
+                                                "high_tolerance",
+                                                "si_units", "wikidata_node",
+        ],
+        KgtkFormat.DataType.STRING.lower(): [ "valid", "text" ],
+        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "valid", "text", "language", "suffix" ],
+        KgtkFormat.DataType.LOCATION_COORDINATES.lower(): [ "valid",
+                                                            "latitude",
+                                                            "longitude",
+        ],
+        KgtkFormat.DataType.DATE_AND_TIMES.lower(): [ "valid",
+                                                      "date_and_time",
+                                                      "date", "time",
+                                                      "year",
+                                                      "month",
+                                                      "day",
+                                                      "hour",
+                                                      "minutes",
+                                                      "seconds",
+                                                      "zonestr",
+                                                      "precision",
                                                       "iso8601extended",
         ],
         KgtkFormat.DataType.EXTENSION.lower(): [ ],
