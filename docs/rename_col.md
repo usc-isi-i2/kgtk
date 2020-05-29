@@ -46,8 +46,9 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 Copy `file1.tsv`, sending the output to standard output, renaming
 the `location` column to `where`
 
-```bash
+```
 kgtk rename_col file1.tsv --old-columns location --new-columns where
+```
 
 The result will be the following table in KGTK format:
 | node1 | label   | node2 | where |
@@ -62,8 +63,9 @@ The result will be the following table in KGTK format:
 Copy `file1.tsv`, sending the output to standard output, naming
 all columns in the output file:
 
-```bash
+```
 kgtk rename_col file1.tsv --output-columns node1 label node2 where
+```
 
 The result will be the following table in KGTK format:
 | node1 | label   | node2 | where |
