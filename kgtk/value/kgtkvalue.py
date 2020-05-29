@@ -208,6 +208,40 @@ class KgtkValueFields():
         "symbol": "sym",
     }
 
+    DATA_TYPE_FIELDS: typing.Mapping[str, typing.List[str]] = {
+        KgtkFormat.DataType.EMPTY.lower(): [ "valid" ],
+        KgtkFormat.DataType.LIST.lower(): [ "valid", "list_len" ],
+        KgtkFormat.DataType.NUMBER.lower(): [ "valid", "numberstr", "number" ],
+        KgtkFormat.DataType.QUANTITY.lower(): [ "valid",
+                                                "numberstr", "number",
+                                                "low_tolerancestr", "low_tolerance",
+                                                "high_tolerancestr", "high_tolerance",
+                                                "si_units", "wikidata_node",
+        ],
+        KgtkFormat.DataType.STRING.lower(): [ "valid", "text" ],
+        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "valid", "text", "language", "suffix" ],
+        KgtkFormat.DataType.LOCATION_COORDINATES.lower(): [ "valid",
+                                                            "latitudestr", "latitude",
+                                                            "longitudestr", "longitude",
+        ],
+        KgtkFormat.DataType.DATE_AND_TIMES.lower(): [ "valid",
+                                                      "date_and_time",
+                                                      "date", "time",
+                                                      "yearstr", "year",
+                                                      "monthstr", "month",
+                                                      "daystr", "day",
+                                                      "hourstr", "hour",
+                                                      "minutesstr", "minutes",
+                                                      "secondsstr", "seconds",
+                                                      "zonestr",
+                                                      "precisionstr", "precision",
+                                                      "iso8601extended",
+        ],
+        KgtkFormat.DataType.EXTENSION.lower(): [ ],
+        KgtkFormat.DataType.BOOLEAN.lower(): [ "valid", "truth" ],
+        KgtkFormat.DataType.SYMBOL.lower(): [ "valid", "symbol" ],
+    }
+
     def to_map(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
         results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
         results["list_len"] = self.list_len
