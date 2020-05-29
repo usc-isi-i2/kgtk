@@ -44,8 +44,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--column", dest="column_name", help="The name of the column to explode. (default=%(default)s).", default="node2")
 
-    parser.add_argument(      "--fields", dest="field_names", help="The names of the fields to extract. (default=%(default)s).", nargs='+',
-                              default=KgtkValueFields.DEFAULT_FIELD_NAMES, choices=KgtkValueFields.FIELD_NAMES)
+    if _expert:
+        parser.add_argument(      "--fields", dest="field_names", help="The names of the fields to extract. (default=%(default)s).", nargs='+',
+                                  default=KgtkValueFields.DEFAULT_FIELD_NAMES, choices=KgtkValueFields.FIELD_NAMES)
+    else:
+        parser.add_argument(      "--fields", dest="field_names", help="The names of the fields to extract. (default=%(default)s).", nargs='+',
+                                  default=KgtkValueFields.DEFAULT_FIELD_NAMES, choices=KgtkValueFields.DEFAULT_FIELD_NAMES)
     
     parser.add_argument(      "--prefix", dest="prefix", help="The prefix for exploded column names. (default=%(default)s).", default="node2;")
 
