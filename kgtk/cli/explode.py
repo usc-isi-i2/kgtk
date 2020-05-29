@@ -4,7 +4,7 @@ expanding | lists.
 TODO: Need KgtkWriterOptions
 """
 
-from argparse import Namespace, SUPPRESS
+from argparse import _MutuallyExclusiveGroup, Namespace, SUPPRESS
 from pathlib import Path
 import sys
 import typing
@@ -54,7 +54,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--column", dest="column_name", help="The name of the column to explode. (default=%(default)s).", default="node2")
 
-    fgroup: ArgumentParser = parser.add_mutually_exclusive_group()
+    fgroup: _MutuallyExclusiveGroup = parser.add_mutually_exclusive_group()
     fgroup.add_argument(      "--types", dest="type_names", nargs='*',
                               help="The KGTK data types for which fields should be exploded. (default=%(default)s).",
                               choices=KgtkFormat.DataType.choices(),
