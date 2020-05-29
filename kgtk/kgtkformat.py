@@ -37,5 +37,13 @@ class KgtkFormat:
         def lower(self)->str:
             return self.name.lower()
 
+        @classmethod
+        def choices(cls)->typing.List[str]:
+            results: typing.List[str] = [ ]
+            name: str
+            for name in cls.__members__.keys():
+                results.append(name.lower())
+            return results
+
     TRUE_SYMBOL: str = "True"
     FALSE_SYMBOL: str = "False"
