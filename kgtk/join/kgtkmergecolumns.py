@@ -84,6 +84,3 @@ class KgtkMergeColumns:
 
         self.new_column_name_lists.append(new_column_names)
         return new_column_names
-                    
-
-

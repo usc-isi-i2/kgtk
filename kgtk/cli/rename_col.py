@@ -1,5 +1,5 @@
 """
-Concatenate KGTK files.
+Rename KGTK file columns (while copying)
 
 TODO: Need KgtkWriterOptions
 """
@@ -17,9 +17,10 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Concatenate KGTK files.',
-        'description': 'Concatenate two or more KGTK files, merging the columns appropriately. ' +
+        'help': 'Rename KGTK file columns.',
+        'description': 'Rename KGT file columns while concatenating KGTK files. ' +
         'All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). ' +
+        'Rename all columns or selected columns. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert cat --help'
     }
 
@@ -42,18 +43,21 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_file_paths", help="The KGTK files to concatenate.", type=Path, nargs='+', default=[Path("-")])
+    parser.add_argument(      "input_file_paths",
+                              help="The KGTK files to concatenate while renaming columns.",
+                              type=Path, nargs='+', default=[Path("-")])
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
+
     parser.add_argument(      "--output-columns", dest="output_column_names",
-                              help=h("Rename all output columns. (default=%(default)s)"),
+                              help="Rename all output columns. (default=%(default)s)",
                               type=str, nargs='+')
     parser.add_argument(      "--old-columns", dest="old_column_names",
-                              help=h("Rename seleted output columns: old names. (default=%(default)s)"),
+                              help="Rename seleted output columns: old names. (default=%(default)s)",
                               type=str, nargs='+')
     parser.add_argument(      "--new-columns", dest="new_column_names",
-                              help=h("Rename seleted output columns: new names. (default=%(default)s)"),
+                              help="Rename seleted output columns: new names. (default=%(default)s)",
                               type=str, nargs='+')
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
