@@ -264,6 +264,7 @@ class TripleGenerator(Generator):
             object = WDItem(TripleGenerator.replace_illegal_string(node2))
         elif edge_type == WDProperty:
             object = WDProperty(TripleGenerator.replace_illegal_string(node2),self.prop_types[node2])
+        
         elif edge_type == TimeValue:
             if self.yyyy_mm_dd_pattern.match(node2):
                 try:
@@ -289,15 +290,11 @@ class TripleGenerator(Generator):
                     return False
             else:
                 try:
+                    # TODO, in future, the two cases above will be dropped in principle to comply with the iso format
+                    # now it is iso format
                     assert(node2[0] == "^")
                     dateTimeString, precision = node2[1:].split("/")
-                    dateTimeString = dateTimeString[:-1]  # remove "Z"
-                    if "-00-00" in dateTimeString:
-                        dateTimeString = "-01-01".join(
-                            dateTimeString.split("-00-00"))
-                    elif dateTimeString[8:10] == "00":
-                        dateTimeString = dateTimeString[:8] + \
-                                         "01" + dateTimeString[10:]
+                    dateTimeString = dateTimeString[:-1]
                     object = TimeValue(
                         value=dateTimeString,
                         calendar=Item("Q1985727"),
@@ -306,8 +303,6 @@ class TripleGenerator(Generator):
                     )
                 except:
                     return False
-
-            # TODO other than that, not supported. Creation of normal triple fails
 
         elif edge_type == GlobeCoordinate:
             latitude, longitude = node2[1:].split("/")
