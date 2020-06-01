@@ -49,6 +49,7 @@ class Generator:
             self.warn_log = open(log_path,"w")
         self.to_append_statement_id = None
         self.corrupted_statement_id = None
+        self.to_append_statement = None # for Json generator
     def serialize(self):
         raise NotImplemented
     def finalize(self):
@@ -288,6 +289,7 @@ class TripleGenerator(Generator):
                     return False
             else:
                 try:
+                    assert(node2[0] == "^")
                     dateTimeString, precision = node2[1:].split("/")
                     dateTimeString = dateTimeString[:-1]  # remove "Z"
                     if "-00-00" in dateTimeString:
@@ -427,16 +429,14 @@ class TripleGenerator(Generator):
                     "property [{}]'s type is unknown at line [{}].\n".format(
                         prop, line_number)
                 )
-        if (not success):
+        if (not success) and self.warning:
             if not is_qualifier_edge: 
-                if self.warning:
-                    self.warn_log.write(
+                self.warn_log.write(
                         "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
                             line_number, e_id))
                 self.corrupted_statement_id = e_id
             else:
-                if self.warning:
-                    self.warn_log.write(
+                self.warn_log.write(
                         "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
                             line_number, e_id))                    
             
@@ -456,7 +456,6 @@ class JsonGenerator(Generator):
         super().__init__(**kwargs)
         prop_file = kwargs.pop("prop_file")
         self.output_prefix = kwargs.pop("output_prefix")
-        self.e_ids = set()
         self.file_num = 0
         self.set_properties(prop_file)
         # curret dictionaries
@@ -473,38 +472,73 @@ class JsonGenerator(Generator):
         node2 = edge_list[self.order_map["node2"]].strip()
         prop = edge_list[self.order_map["prop"]].strip()
         e_id = edge_list[self.order_map["id"]].strip()
-        self.e_ids.add(e_id)
-        if node1 in self.e_ids:
-            return #TODO not handling qualifiers        
+
+        # add qualifier logic
+        if line_number == 2:
+            is_qualifier_edge = False
+        else:
+            if node1 != self.to_append_statement_id and node1 != self.corrupted_statement_id:
+                is_qualifier_edge = False
+            else:
+                is_qualifier_edge = True
+                if node1 == self.corrupted_statement_id:
+                    if self.warning:
+                        self.warn_log.write("QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n".format(line_number, self.corrupted_statement_id)
+                        )
 
         # update info_json_dict
         if node1 in self.prop_types:
-            self.update_misc_json_dict_info(node1, self.prop_types[node1])
+            success = self.update_misc_json_dict_info(node1, self.prop_types[node1])
         else:
-            self.update_misc_json_dict_info(node1, None)
+            success = self.update_misc_json_dict_info(node1, None)
+        
+        assert(success)
         
         if prop in self.prop_types:
-            self.update_misc_json_dict_info(prop,self.prop_types[prop])
+            success = self.update_misc_json_dict_info(prop,self.prop_types[prop])
+            assert(success)
             if self.prop_types[prop] == "wikibase-item":
-                self.update_misc_json_dict_info(node2)
+                success = self.update_misc_json_dict_info(node2)
+                assert(success)
         
         # update label_json_dict
         if prop in self.label_set:
-            self.update_misc_json_dict_label(node1, prop, node2)
+            success = self.update_misc_json_dict_label(node1, prop, node2)
+            assert(success)
             return
         
         # update alias and descriptions
         if prop in self.description_set:
-            self.update_misc_json_dict(node1, prop, node2, line_number,"description")
+            success = self.update_misc_json_dict(node1, prop, node2, line_number,"description")
+            assert(success)
             return
 
         if prop in self.alias_set:
-            self.update_misc_json_dict(node1, prop, node2, line_number,"alias")
+            success = self.update_misc_json_dict(node1, prop, node2, line_number,"alias")
+            assert(success)
             return
         
-        # normal update for claims
-        self.update_misc_json_dict(node1,prop,node2,line_number,None)
-        return
+        # normal update for claims & qualifiers
+        if is_qualifier_edge:
+            success = self.update_misc_json_dict(node1,prop,node2,line_number,"qualifier")
+        else:
+            success = self.update_misc_json_dict(node1,prop,node2,line_number,"statement")
+        
+        if (not success) and self.warning:
+            if not is_qualifier_edge:
+                self.warn_log.write(
+                    "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
+                        line_number, e_id))
+                self.corrupted_statement_id = e_id
+            else:
+                self.warn_log.write(
+                        "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))      
+        else:
+            # success
+            if not is_qualifier_edge:
+                self.to_append_statement_id = e_id
+                self.to_append_statement = [node1, prop]# path for adding future qualifiers
 
     def init_entity_in_json(self,node:str):
         self.misc_json_dict[node] = {}
@@ -531,8 +565,10 @@ class JsonGenerator(Generator):
         if node2 != None:
             text_string, lang = JsonGenerator.process_text_string(node2)
             temp_dict["labels"][lang] = {"language":lang, "value": text_string}
-        self.misc_json_dict[node1].update(temp_dict)
-    
+        self.misc_json_dict[node1].update(temp_dict)  
+
+        return True
+
     def update_misc_json_dict_info(self, node:str,data_type = None):
         if node not in self.misc_json_dict:
             self.init_entity_in_json(node)
@@ -560,6 +596,7 @@ class JsonGenerator(Generator):
                 )
         else:
             raise KGTKException("node {} is neither an entity nor a property.".format(node)) 
+        return True
     def update_misc_json_dict(self, node1:str, prop:str, node2:str, line_number:int, field:str):
         if node1 not in self.misc_json_dict:
             self.init_entity_in_json(node1)
@@ -568,7 +605,7 @@ class JsonGenerator(Generator):
             description_text, lang = JsonGenerator.process_text_string(node2)
             temp_des_dict = {lang:{"languange":lang,"value":description_text}}
             self.misc_json_dict[node1]["descriptions"].update(temp_des_dict)
-            return 
+            return True
         
         if field == "alias":
             alias_text, lang = JsonGenerator.process_text_string(node2)
@@ -577,58 +614,104 @@ class JsonGenerator(Generator):
                 self.misc_json_dict[node1]["aliases"][lang].append(temp_alias_dict)
             else:
                 self.misc_json_dict[node1]["aliases"][lang] = [temp_alias_dict]
-            return
+            return True
 
-        assert(field==None) #TODO better handling
-
+        if field == "statement":
+            is_qualifier_edge = False
+        elif field == "qualifier":
+            is_qualifier_edge = True
+        
         if prop not in self.prop_types:
             raise KGTKException("property {} at line {} is not defined.".format(prop,line_number))
         
         if prop not in self.misc_json_dict[node1]["claims"]:
                 self.misc_json_dict[node1]["claims"][prop] = []
+        
         try:
             if self.prop_types[prop] == "wikibase-item":
-                self.update_misc_json_dict_item(node1,prop,node2)
+                object = self.update_misc_json_dict_item(node1, prop, node2, is_qualifier_edge)
             elif self.prop_types[prop] == "time":
-                self.update_misc_json_dict_time(node1,prop,node2)
+                object = self.update_misc_json_dict_time(node1,prop,node2,is_qualifier_edge)
             elif self.prop_types[prop] == "globe-coordinate":
-                self.update_misc_json_dict_coordinate(node1,prop,node2)
+                object = self.update_misc_json_dict_coordinate(node1,prop,node2,is_qualifier_edge)
             elif self.prop_types[prop] == "quantity":
-                self.update_misc_json_dict_quantity(node1,prop,node2)
+                object = self.update_misc_json_dict_quantity(node1,prop,node2,is_qualifier_edge)
             elif self.prop_types[prop] == "monolingualtext":
-                self.update_misc_json_dict_monolingualtext(node1,prop,node2)
+                object = self.update_misc_json_dict_monolingualtext(node1,prop,node2,is_qualifier_edge)
             elif self.prop_types[prop] == "string":
-                self.update_misc_json_dict_string(node1,prop,node2)
+                object = self.update_misc_json_dict_string(node1,prop,node2,is_qualifier_edge)
             elif self.prop_types[prop] == "external-id":
-                self.update_misc_json_dict_external_id(node1,prop,node2)
+                object = self.update_misc_json_dict_external_id(node1,prop,node2,is_qualifier_edge)
             elif self.prop_types[prop] == "url":
-                self.update_misc_json_dict_url(node1,prop,node2)
+                object = self.update_misc_json_dict_url(node1,prop,node2,is_qualifier_edge)
             else:
-                raise KGTKException("property tyepe {} of property {} at line {} is not defined.".format(self.prop_types[prop],prop,line_number))
+                raise KGTKException("property tyepe {} of property {} at line {} is not defined.".format(self.prop_types[prop],prop,line_number)) 
+            
+            if not object:
+                if self.warning:
+                    self.warn_log.write("edge creation error at line [{}].\n".format(line_number))
+                return False
+
+            print(line_number, self.to_append_statement, is_qualifier_edge, field, object)
+            # process object
+            if is_qualifier_edge:
+                # update qualifier edge
+                if prop in self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers"]:
+                    self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers"][prop].append(object)
+                else:
+                    self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers"][prop] = [object]
+                
+                # update qualifier order
+                if prop not in (self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers-order"]):
+
+                    self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers-order"].append(prop)
+            else:
+                self.misc_json_dict[node1]["claims"][prop].append(object)
+            
+            return True
+
         except:
             raise KGTKException("illegal edge at line {}.".format(line_number))
-    def update_misc_json_dict_item(self,node1:str,prop:str,node2:str):
-        temp_item_dict = {
-                "mainsnak":{
-                    "snaktype":"value",
-                    "property":prop,
-                    "hash":"hashplaceholder",
-                    "datavalue":{
-                        "value":{
-                            "entity-type":"item","numeric-id":0,"id":node2 # place holder for numeric id
+    
+    def update_misc_json_dict_item(self,node1:str,prop:str,node2:str, is_qualifier_edge:bool):
+        if not is_qualifier_edge:
+            temp_item_dict = {
+                    "mainsnak":{
+                        "snaktype":"value",
+                        "property":prop,
+                        "hash":"hashplaceholder",
+                        "datavalue":{
+                            "value":{
+                                "entity-type":"item","numeric-id":0,"id":node2 # place holder for numeric id
+                            },
+                            "type":"wikibase-entityid"
                         },
-                        "type":"wikibase-entityid"
+                        "datatype":"wikibase-item"
                     },
-                    "datatype":"wikibase-item"
-                },
-                "type":"statement",
-                "id":"id-place-holder",
-                "rank":"normal", #TODO
-                "references":[],
-                "qualifiers":{}
-            }
-        self.misc_json_dict[node1]["claims"][prop].append(temp_item_dict)
-    def update_misc_json_dict_time(self,node1,prop,node2):
+                    "type":"statement",
+                    "id":"id-place-holder",
+                    "rank":"normal", #TODO
+                    "references":[],
+                    "qualifiers":{},
+                    "qualifiers-order":[]
+                }       
+        else:
+            temp_item_dict = {
+                        "snaktype":"value",
+                        "property":prop,
+                        "hash":"hashplaceholder",
+                        "datavalue":{
+                            "value":{
+                                "entity-type":"item","numeric-id":0,"id":node2 # place holder for numeric id
+                            },
+                            "type":"wikibase-entityid"
+                        },
+                        "datatype":"wikibase-item"
+                    }
+        return temp_item_dict
+
+
+    def update_misc_json_dict_time(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
         if self.yyyy_pattern.match(node2):
             time_string = node2 + "-01-01"
             precision = 9
@@ -639,167 +722,284 @@ class JsonGenerator(Generator):
             time_string, precision = node2.split("/")
             precision = int(precision)
         except:
-            return
-        temp_time_dict = {
-            "mainsnak":{
-                "snaktype":"value",
-                "property":prop,
-                "hash":"hashplaceholder",
-                "datavalue":{
-                    "value":{
-                        "time":time_string,
-                        "timezone": 0,
-                        "before": 0,
-                        "after": 0,
-                        "precision": precision,
-                        "calendarmodel": "http://www.wikidata.org/entity/Q1985727"    
-                    },
-                    "type":"time"
-                },
-                "datatype":"time"
-            },
-            "type":"statement",
-            "id":"id-place-holder",
-            "rank":"normal", #TODO
-            "references":[],
-            "qualifiers":{}
-            }
-        self.misc_json_dict[node1]["claims"][prop].append(temp_time_dict)
-    def update_misc_json_dict_coordinate(self,node1,prop,node2):
-        latitude, longitude = node2[1:].split("/")
-        latitude = float(latitude)
-        longitude = float(longitude)
-        temp_coordinate_dict = {
-            "mainsnak":{
-                "snaktype":"value",
-                "property":prop,
-                "hash":"hashplaceholder",
-                "datavalue":{
-                    "value":{
-                        "latitude":latitude,
-                        "longitude": longitude,
-                        "altitude": None,
-                        "precision": 0.00027777777777778, # TODO
-                        "globe": "http://www.wikidata.org/entity/Q2"    
-                    },
-                    "type":"globecoordinate"
-                },
-                "datatype":"globecoordinate"
-            },
-            "type":"statement",
-            "id":"id-place-holder",
-            "rank":"normal", #TODO
-            "references":[],
-            "qualifiers":{}
-            }
-        self.misc_json_dict[node1]["claims"][prop].append(temp_coordinate_dict)  
-    def update_misc_json_dict_quantity(self,node1,prop,node2):
-        res = self.quantity_pattern.match(node2).groups()
-        amount, lower_bound, upper_bound, unit = res
-        amount = JsonGenerator.clean_number_string(amount)
-        lower_bound = JsonGenerator.clean_number_string(lower_bound)
-        upper_bound = JsonGenerator.clean_number_string(upper_bound)
-        unit = "http://www.wikidata.org/entity/" + unit if unit != None else None
-        temp_quantity_dict = {
-            "mainsnak":{
-                "snaktype":"value",
-                "property":prop,
-                "hash":"hashplaceholder",
-                "datavalue":{
-                    "value":{
-                        "amount":amount,
-                        "unit": unit,  
-                        "lowerBound":lower_bound,
-                        "UpperBound":upper_bound 
-                    },
-                    "type":"quantity"
-                },
-                "datatype":"quantity"
-            },
-            "type":"statement",
-            "id":"id-place-holder",
-            "rank":"normal", #TODO
-            "references":[],
-            "qualifiers":{}
-            }
-        self.misc_json_dict[node1]["claims"][prop].append(temp_quantity_dict)  
-    def update_misc_json_dict_monolingualtext(self,node1,prop,node2):
-        text_string, lang = JsonGenerator.process_text_string(node2)
-        temp_mono_dict ={
+            return None
+        if not is_qualifier_edge:
+            temp_time_dict = {
                 "mainsnak":{
                     "snaktype":"value",
                     "property":prop,
                     "hash":"hashplaceholder",
                     "datavalue":{
                         "value":{
-                            "text":text_string,
-                            "language":lang
+                            "time":time_string,
+                            "timezone": 0,
+                            "before": 0,
+                            "after": 0,
+                            "precision": precision,
+                            "calendarmodel": "http://www.wikidata.org/entity/Q1985727"    
                         },
-                        "type":"monolingualtext"
+                        "type":"time"
                     },
-                    "datatype":"monolingualtext"
+                    "datatype":"time"
                 },
                 "type":"statement",
                 "id":"id-place-holder",
                 "rank":"normal", #TODO
                 "references":[],
-                "qualifiers":{}
+                "qualifiers":{},
+                "qualifiers-order":[]
                 }
-        self.misc_json_dict[node1]["claims"][prop].append(temp_mono_dict)  
-        return
-    def update_misc_json_dict_string(self,node1,prop,node2):
+        else:
+            temp_time_dict = {
+                    "snaktype":"value",
+                    "property":prop,
+                    "hash":"hashplaceholder",
+                    "datavalue":{
+                        "value":{
+                            "time":time_string,
+                            "timezone": 0,
+                            "before": 0,
+                            "after": 0,
+                            "precision": precision,
+                            "calendarmodel": "http://www.wikidata.org/entity/Q1985727"    
+                        },
+                        "type":"time"
+                    },
+                    "datatype":"time"
+                }
+        return temp_time_dict
+
+    def update_misc_json_dict_coordinate(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+        try:
+            latitude, longitude = node2[1:].split("/")
+            latitude = float(latitude)
+            longitude = float(longitude)
+        except:
+            return None
+        if not is_qualifier_edge:
+            temp_coordinate_dict = {
+                "mainsnak":{
+                    "snaktype":"value",
+                    "property":prop,
+                    "hash":"hashplaceholder",
+                    "datavalue":{
+                        "value":{
+                            "latitude":latitude,
+                            "longitude": longitude,
+                            "altitude": None,
+                            "precision": 0.00027777777777778, # TODO
+                            "globe": "http://www.wikidata.org/entity/Q2"    
+                        },
+                        "type":"globecoordinate"
+                    },
+                    "datatype":"globecoordinate"
+                },
+                "type":"statement",
+                "id":"id-place-holder",
+                "rank":"normal", #TODO
+                "references":[],
+                "qualifiers":{},
+                "qualifiers-order":[]
+                }
+        else:
+            temp_coordinate_dict = {
+                    "snaktype":"value",
+                    "property":prop,
+                    "hash":"hashplaceholder",
+                    "datavalue":{
+                        "value":{
+                            "latitude":latitude,
+                            "longitude": longitude,
+                            "altitude": None,
+                            "precision": 0.00027777777777778, # TODO
+                            "globe": "http://www.wikidata.org/entity/Q2"    
+                        },
+                        "type":"globecoordinate"
+                    },
+                    "datatype":"globecoordinate"
+            }
+        return temp_coordinate_dict
+
+    def update_misc_json_dict_quantity(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+        try:
+            res = self.quantity_pattern.match(node2).groups()
+            amount, lower_bound, upper_bound, unit = res
+            amount = JsonGenerator.clean_number_string(amount)
+            lower_bound = JsonGenerator.clean_number_string(lower_bound)
+            upper_bound = JsonGenerator.clean_number_string(upper_bound)
+            unit = "http://www.wikidata.org/entity/" + unit if unit != None else None
+        except:
+            return None
+        if not is_qualifier_edge:
+            temp_quantity_dict = {
+                "mainsnak":{
+                    "snaktype":"value",
+                    "property":prop,
+                    "hash":"hashplaceholder",
+                    "datavalue":{
+                        "value":{
+                            "amount":amount,
+                            "unit": unit,  
+                            "lowerBound":lower_bound,
+                            "UpperBound":upper_bound 
+                        },
+                        "type":"quantity"
+                    },
+                    "datatype":"quantity"
+                },
+                "type":"statement",
+                "id":"id-place-holder",
+                "rank":"normal", #TODO
+                "references":[],
+                "qualifiers":{},
+                "qualifiers-order":[]
+                }
+        else:
+            temp_quantity_dict = {
+                    "snaktype":"value",
+                    "property":prop,
+                    "hash":"hashplaceholder",
+                    "datavalue":{
+                        "value":{
+                            "amount":amount,
+                            "unit": unit,  
+                            "lowerBound":lower_bound,
+                            "UpperBound":upper_bound 
+                        },
+                        "type":"quantity"
+                    },
+                    "datatype":"quantity"
+                }
+        return temp_quantity_dict
+  
+    def update_misc_json_dict_monolingualtext(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+        text_string, lang = JsonGenerator.process_text_string(node2)
+        if not is_qualifier_edge:
+            temp_mono_dict ={
+                    "mainsnak":{
+                        "snaktype":"value",
+                        "property":prop,
+                        "hash":"hashplaceholder",
+                        "datavalue":{
+                            "value":{
+                                "text":text_string,
+                                "language":lang
+                            },
+                            "type":"monolingualtext"
+                        },
+                        "datatype":"monolingualtext"
+                    },
+                    "type":"statement",
+                    "id":"id-place-holder",
+                    "rank":"normal", #TODO
+                    "references":[],
+                    "qualifiers":{},
+                    "qualifiers-order":[]
+                    }
+        else:
+            temp_mono_dict = {
+                        "snaktype":"value",
+                        "property":prop,
+                        "hash":"hashplaceholder",
+                        "datavalue":{
+                            "value":{
+                                "text":text_string,
+                                "language":lang
+                            },
+                            "type":"monolingualtext"
+                        },
+                        "datatype":"monolingualtext"
+                    }
+        return temp_mono_dict
+ 
+    def update_misc_json_dict_string(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
         string, lang = JsonGenerator.process_text_string(node2)
-        temp_string_dict = {
-            "mainsnak": {
-              "snaktype": "value",
-              "property": prop,
-              "hash": "hashplaceholder",
-              "datavalue": { "value": string, "type": "string" },
-              "datatype": "string"
+        if not is_qualifier_edge:
+            temp_string_dict = {
+                "mainsnak": {
+                "snaktype": "value",
+                "property": prop,
+                "hash": "hashplaceholder",
+                "datavalue": { "value": string, "type": "string" },
+                "datatype": "string"
+                },
+                "type": "statement",
+                "id": "id-place-holder",
+                "rank": "normal",
+                "references":[],
+                "qualifiers":{},
+                "qualifiers-order":[]
+                }
+        else:
+            temp_string_dict = {
+                "snaktype": "value",
+                "property": prop,
+                "hash": "hashplaceholder",
+                "datavalue": { "value": string, "type": "string" },
+                "datatype": "string"
+                }
+        return temp_string_dict
+
+    def update_misc_json_dict_external_id(self,node1:str, prop:str ,node2:str, is_qualifier_edge: bool):
+
+        if not is_qualifier_edge: 
+            temp_e_id_dict = {"mainsnak": {
+                "snaktype": "value",
+                "property": prop,
+                "hash": "hashplaceholder",
+                "datavalue": { "value": node2, "type": "string" },
+                "datatype": "external-id"
             },
             "type": "statement",
             "id": "id-place-holder",
-            "rank": "normal",
+            "rank": "normal",            
             "references":[],
-            "qualifiers":{}
+            "qualifiers":{},
+            "qualifiers-order":[]
             }
-        self.misc_json_dict[node1]["claims"][prop].append(temp_string_dict)  
-        return
-    def update_misc_json_dict_external_id(self,node1,prop,node2):
-        temp_e_id_dict = {"mainsnak": {
-            "snaktype": "value",
-            "property": prop,
-            "hash": "hashplaceholder",
-            "datavalue": { "value": node2, "type": "string" },
-            "datatype": "external-id"
-        },
-        "type": "statement",
-        "id": "id-place-holder",
-        "rank": "normal",            
-        "references":[],
-        "qualifiers":{}}
-        self.misc_json_dict[node1]["claims"][prop].append(temp_e_id_dict) 
-        return
-    def update_misc_json_dict_url(self,node1,prop,node2):
-        temp_url_dict ={
-        "mainsnak": {
-            "snaktype": "value",
-            "property": prop,
-            "hash": "hashplaceholder",
-            "datavalue": {
-            "value": node2,
-            "type": "string"
+        else:
+            temp_e_id_dict = {
+                "snaktype": "value",
+                "property": prop,
+                "hash": "hashplaceholder",
+                "datavalue": { "value": node2, "type": "string" },
+                "datatype": "external-id"
+            }
+        return temp_e_id_dict
+
+    def update_misc_json_dict_url(self,node1:str ,prop:str ,node2: str, is_qualifier_edge: bool):
+        if not is_qualifier_edge:
+            temp_url_dict ={
+            "mainsnak": {
+                "snaktype": "value",
+                "property": prop,
+                "hash": "hashplaceholder",
+                "datavalue": {
+                "value": node2,
+                "type": "string"
+                },
+                "datatype": "url"
             },
-            "datatype": "url"
-        },
-        "type": "statement",
-        "id": "id-place-holder",
-        "rank": "normal",            
-        "references":[],
-        "qualifiers":{}
-        }
-        self.misc_json_dict[node1]["claims"][prop].append(temp_url_dict) 
-        return
+            "type": "statement",
+            "id": "id-place-holder",
+            "rank": "normal",            
+            "references":[],
+            "qualifiers":{},
+            "qualifiers-order":[]
+            }
+        else:
+            temp_url_dict ={
+                "snaktype": "value",
+                "property": prop,
+                "hash": "hashplaceholder",
+                "datavalue": {
+                "value": node2,
+                "type": "string"
+                },
+                "datatype": "url"
+            }
+        return temp_url_dict
+
     def set_properties(self, prop_file:str):
         datatype_mapping = {
             "item": "wikibase-item",
