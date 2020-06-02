@@ -43,7 +43,7 @@ class Generator:
             "[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
         self.yyyy_pattern = re.compile("[12]\d{3}")
         self.quantity_pattern = re.compile(
-            "([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:[0-9]+))?")
+            "([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:.*))?")
         self.warning = warning
         if self.warning:
             self.warn_log = open(log_path,"w")
@@ -62,7 +62,7 @@ class Generator:
     def initialize_order_map(self, edge_list:list):
         node1_index = edge_list.index("node1")
         node2_index = edge_list.index("node2")
-        prop_index = edge_list.index("property")
+        prop_index = edge_list.index("label")
         id_index = edge_list.index("id")
         if not all([node1_index > -1, node2_index > -1, prop_index > -1, id_index > -1]):
             raise KGTKException(
@@ -70,7 +70,7 @@ class Generator:
         else:
             self.order_map["node1"] = node1_index
             self.order_map["node2"] = node2_index
-            self.order_map["prop"] = prop_index
+            self.order_map["label"] = prop_index
             self.order_map["id"] = id_index
 
     @staticmethod
