@@ -1,5 +1,13 @@
 """Add label columns for values in the node1, label, and node2 fields.
 
+The input rows are saved in memory, as well as the value-to-label mapping.
+This will impost a limit on the size of the input files that can be processed.
+
+TODO: Optionally save the input rows in an external disk file?
+
+TODO: Optionally reread the input stream insted of saving the input rows?
+      With special provision for copying standard input to an external disk file.
+
 TODO: Need KgtkWriterOptions
 """
 
