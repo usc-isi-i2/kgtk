@@ -402,6 +402,34 @@ class KgtkValue(KgtkFormat):
 
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
+    @classmethod
+    def split_list(cls, value: str)->typing.List[str]:
+        return KgtkValue.split_list_re.split(value)
+
+    @classmethod
+    def join_list(cls, values: typing.List[str])->str:
+        return KgtkFormat.LIST_SEPARATOR.join(values)
+
+    @classmethod
+    def join_sorted_list(cls, values: typing.List[str])->str:
+        return KgtkFormat.LIST_SEPARATOR.join(sorted(values))
+
+    @classmethod
+    def join_unique_list(cls, values: typing.List[str])->str:
+        if len(values) == 0:
+            return ""
+        elif len(values) == 1:
+            return values[0]
+
+        # There are alternatives to the following.
+        #
+        # TODO: Perform  timing study using typical KGTK lists.
+        return KgtkFormat.LIST_SEPARATOR.join(sorted(list(set(values))))
+
+    @classmethod
+    def escape_list_separators(cls, values: typing.List[str])->str:
+        return ("\\" + KgtkFormat.LIST_SEPARATOR).join(values)
+
     def get_list_items(self)->typing.List['KgtkValue']:
         # If this is a KGTK List, return a list of KGTK values representing
         # the items in the list.  If this is not a KGTK List, return an empty list.
@@ -411,11 +439,11 @@ class KgtkValue(KgtkFormat):
             return self.list_items
 
         # Split the KGTK list.
-        values: typing.List[str] = KgtkValue.split_list_re.split(self.value)
+        values: typing.List[str] = self.split_list(self.value)
 
         # Perhaps we'd like to escape the list separators instead of splitting on them?
         if self.options.escape_list_separators:
-            self.value = ("\\" + KgtkFormat.LIST_SEPARATOR).join(values)
+            self.value = self.escape_list_separators(values)
             return [ ] # Return an empty list.
 
         # Return an empty Python list if this is not a KGTK list.

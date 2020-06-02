@@ -74,6 +74,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("If true, remove label records from the output. (default=%(default)s)."),
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--sort-lifted-labels", dest="sort_lifted_labels",
+                              help=h("If true, sort lifted labels with lists. (default=%(default)s)."),
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--suppress-duplicate-labels", dest="suppress_duplicate_labels",
+                              help=h("If true, suppress duplicate values in lists in lifted labels (implies sorting). (default=%(default)s)."),
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -91,6 +99,8 @@ def run(input_kgtk_file: Path,
         lifted_column_suffix: str,
         lift_column_names: typing.List[str],
         remove_label_records: bool = False,
+        sort_lifted_labels: bool = True,
+        suppress_duplicate_labels: bool = True,
         suppress_empty_columns: bool = False,
 
         errors_to_stdout: bool = False,
@@ -126,6 +136,8 @@ def run(input_kgtk_file: Path,
             print("--columns-to-lift %s" % " ".join(lift_column_names), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
         print("--remove-label-records=%s" % str(remove_label_records))
+        print("--sort-lifted-labels=%s" % str(sort_lifted_labels))
+        print("--suppress-duplicate-labels=%s" % str(suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(suppress_empty_columns))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -142,6 +154,8 @@ def run(input_kgtk_file: Path,
             lift_column_names=lift_column_names,
             output_file_path=output_kgtk_file,
             remove_label_records=remove_label_records,
+            sort_lifted_labels=sort_lifted_labels,
+            suppress_duplicate_labels=suppress_duplicate_labels,
             suppress_empty_columns=suppress_empty_columns,
             reader_options=reader_options,
             value_options=value_options,

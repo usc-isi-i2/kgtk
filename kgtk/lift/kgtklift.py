@@ -22,6 +22,7 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
+from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
@@ -41,6 +42,8 @@ class KgtkLift(KgtkFormat):
     lifted_column_suffix: str = attr.ib(validator=attr.validators.instance_of(str), default=";label")
 
     remove_label_records: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    suppress_duplicate_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    sort_lifted_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     suppress_empty_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # TODO: find working validators
@@ -121,15 +124,18 @@ class KgtkLift(KgtkFormat):
 
         if self.verbose:
             print("Reading records from %s" % self.input_file_path, file=self.error_file, flush=True)
+        key: str
+        list_seen: bool = False
         row: typing.list[str]
         for row in kr:
             if row[label_column_idx] == self.label_column_value:
                 # This is a label definition row.
                 label_line_count += 1
-                key: str = row[node1_column_idx]
+                key = row[node1_column_idx]
                 if key in labels:
                     # This label already exists in the table, build a list.
                     labels[key] += "|" + row[node2_column_idx]
+                    list_seen = True
                 else:
                     # This is the first instance of this label definition.
                     labels[key] = row[node2_column_idx]
@@ -137,7 +143,22 @@ class KgtkLift(KgtkFormat):
                     input_rows.append(row)
             else:
                 input_rows.append(row)
-                           
+                
+        if list_seen:
+            label: str
+            if self.suppress_duplicate_labels:
+                if self.verbose:
+                    print("Suppressing duplicate values in lists", file=self.error_file, flush=True)
+                for key, label in labels.items():
+                    if "|" in label:
+                        labels[key] = KgtkValue.join_unique_list(KgtkValue.split_list(label))
+            elif self.sort_lifted_labels:
+                if self.verbose:
+                    print("Sorting values in lists", file=self.error_file, flush=True)
+                for key, label in labels.items():
+                    if "|" in label:
+                        labels[key] = KgtkValue.join_sorted_list(KgtkValue.split_list(label))
+
         lifted_column_idxs: typing.List[int] = [ ]
         if self.suppress_empty_columns:
             if self.verbose:
@@ -264,6 +285,14 @@ def main():
                               help="If true, remove label records from the output. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--sort-lifted-labels", dest="sort_lifted_labels",
+                              help="If true, sort lifted labels with lists. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--suppress-duplicate-labels", dest="suppress_duplicate_labels",
+                              help="If true, suppress duplicate values in lifted labels with lists (implies sorting). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -296,6 +325,8 @@ def main():
             print("--columns-to-lift %s" % " ".join(args.lift_column_names), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
         print("--remove-label-records=%s" % str(args.remove_label_records))
+        print("--sort-lifted-labels-labels=%s" % str(args.sort_lifted_labels))
+        print("--suppress-duplicate-labels=%s" % str(args.suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(args.suppress_empty_columns))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -310,6 +341,8 @@ def main():
         lift_column_names=args.lift_column_names,
         output_file_path=args.output_file_path,
         remove_label_records=args.remove_label_records,
+        sort_lifted_labels=args.sort_lifted_labels,
+        suppress_duplicate_labels=args.suppress_duplicate_labels,
         suppress_empty_columns=args.suppress_empty_columns,
         reader_options=reader_options,
         value_options=value_options,
