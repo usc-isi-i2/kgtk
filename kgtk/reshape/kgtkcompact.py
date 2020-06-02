@@ -18,6 +18,7 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
+from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=False)
@@ -75,7 +76,7 @@ class KgtkCompact(KgtkFormat):
         idx: int
         item_list: typing.list[str]
         for idx, item_list in enumerate(self.current_row_lists):
-            self.current_row[idx] = KgtkFormat.LIST_SEPARATOR.join(sorted(item_list))
+            self.current_row[idx] = KgtkValue.join_sorted_list(item_list)
         self.current_row_lists = None
 
     def expand_row(self):

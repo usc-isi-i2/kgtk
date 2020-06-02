@@ -1,5 +1,5 @@
 """
-Concatenate KGTK files.
+Convert a KGTK file to a GitHub markdown table.
 
 TODO: Need KgtkWriterOptions
 """
@@ -17,9 +17,12 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Concatenate KGTK files.',
-        'description': 'Concatenate two or more KGTK files, merging the columns appropriately. ' +
-        'All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). ' +
+        'help': 'Convert a KGTK file to a GitHub Markdown Table.',
+        'description': 'Convert a KGTK input file to a GitHub markdown table on output. ' +
+        '\n\nUse this command to filter the output of any KGTK command: ' +
+        '\n\nkgtk md ' +
+        '\n\nUse it to convert a KGTK file to a GitHub Markdown table in a file: ' +
+        '\n\nkgtk md file.tsv ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert cat --help'
     }
 
@@ -42,31 +45,19 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_file_paths", help="The KGTK files to concatenate.", type=Path, nargs='+', default=[Path("-")])
+    parser.add_argument(      "input_file_path", help="The KGTK file to convert to a GitHub markdown table.", type=Path, nargs='?', default=Path("-"))
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
-    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str)
-    parser.add_argument(      "--output-columns", dest="output_column_names",
-                              help=h("Rename all output columns. (default=%(default)s)"),
-                              type=str, nargs='+')
-    parser.add_argument(      "--old-columns", dest="old_column_names",
-                              help=h("Rename seleted output columns: old names. (default=%(default)s)"),
-                              type=str, nargs='+')
-    parser.add_argument(      "--new-columns", dest="new_column_names",
-                              help=h("Rename seleted output columns: new names. (default=%(default)s)"),
-                              type=str, nargs='+')
+
+    parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=%(default)s)"), type=str, default="md")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_file_paths: typing.List[Path],
+def run(input_file_path: Path,
         output_file_path: Path,
-        output_format: typing.Optional[str],
-
-        output_column_names: typing.Optional[typing.List[str]],
-        old_column_names: typing.Optional[typing.List[str]],
-        new_column_names: typing.Optional[typing.List[str]],
+        output_format: str,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -91,27 +82,16 @@ def run(input_file_paths: typing.List[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file, flush=True)
+        print("input: %s" % str(input_file_path), file=error_file, flush=True)
         print("--output-file=%s" % str(output_file_path), file=error_file, flush=True)
-        if output_format is not None:
-            print("--output-format=%s" % output_format, file=error_file, flush=True)
-        if output_column_names is not None:
-            print("--output-coloumns %s" % " ".join(output_column_names), file=error_file, flush=True)
-        if old_column_names is not None:
-            print("--old-columns %s" % " ".join(old_column_names), file=error_file, flush=True)
-        if new_column_names is not None:
-            print("--new-columns %s" % " ".join(new_column_names), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:
-        kc: KgtkCat = KgtkCat(input_file_paths=input_file_paths,
+        kc: KgtkCat = KgtkCat(input_file_paths=[input_file_path],
                               output_path=output_file_path,
                               output_format=output_format,
-                              output_column_names=output_column_names,
-                              old_column_names=old_column_names,
-                              new_column_names=new_column_names,
                               reader_options=reader_options,
                               value_options=value_options,
                               error_file=error_file,
