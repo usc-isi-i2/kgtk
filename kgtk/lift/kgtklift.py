@@ -23,7 +23,11 @@ class KgtkLift(KgtkFormat):
                                                                                  iterable_validator=attr.validators.instance_of(list))))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
  
-    label_column_value: str = attr.ib(validator=attr.validators.instance_of(str), default="label")
+    node1_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    label_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    node2_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    label_column_value: typing.Optional[str] = attr.ib(validator=attr.validators.instance_of(str), default="label")
     lifted_column_suffix: str = attr.ib(validator=attr.validators.instance_of(str), default=";label")
     suppress_empty_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -52,14 +56,35 @@ class KgtkLift(KgtkFormat):
                                           very_verbose=self.very_verbose,
         )
 
-        if kr.node1_column_idx < 0:
-            raise ValueError("No node1 column index.")
+        node1_column_idx: int
+        if self.node1_column_name is None:
+            if kr.node1_column_idx < 0:
+                raise ValueError("No node1 column index.")
+            node1_column_idx = kr.node1_column_idx
+        else:
+            if self.node1_column_name not in kr.column_name_map:
+                raise ValueError("Node1 column `%s` not found." % self.node1_column_name)
+            node1_column_idx = kr.column_name_map[self.node1_column_name]
 
-        if kr.label_column_idx < 0:
-            raise ValueError("No label column index.")
+        label_column_idx: int
+        if self.label_column_name is None:
+            if kr.label_column_idx < 0:
+                raise ValueError("No label column index.")
+            label_column_idx = kr.label_column_idx
+        else:
+            if self.label_column_name not in kr.column_name_map:
+                raise ValueError("Label column `%s` not found." % self.label_column_name)
+            label_column_idx = kr.column_name_map[self.label_column_name]
 
-        if kr.node2_column_idx < 0:
-            raise ValueError("No node2 column index.")
+        node2_column_idx: int
+        if self.node2_column_name is None:
+            if kr.node2_column_idx < 0:
+                raise ValueError("No node2 column index.")
+            node2_column_idx = kr.node2_column_idx
+        else:
+            if self.node2_column_name not in kr.column_name_map:
+                raise ValueError("Node2 column `%s` not found." % self.node2_column_name)
+            node2_column_idx = kr.column_name_map[self.node2_column_name]
 
         lift_column_idxs: typing.List[int] = [ ]
         if self.lift_column_names is not None and len(self.lift_column_names) > 0:
@@ -70,10 +95,10 @@ class KgtkLift(KgtkFormat):
                     raise ValueError("Unknown lift column %s." % lift_column_name)
                 lift_column_idxs.append(kr.column_name_map[lift_column_name])
         else:
-            # Use the standard list of KGTK edge file key columns.
-            lift_column_idxs.append(kr.node1_column_idx)
-            lift_column_idxs.append(kr.label_column_idx)
-            lift_column_idxs.append(kr.node2_column_idx)
+            # Use the edge file key columns with any overrides.
+            lift_column_idxs.append(node1_column_idx)
+            lift_column_idxs.append(label_column_idx)
+            lift_column_idxs.append(node2_column_idx)
 
         input_line_count: int = 0
         label_line_count: int = 0
@@ -86,16 +111,16 @@ class KgtkLift(KgtkFormat):
             print("Reading records from %s" % self.input_file_path, file=self.error_file, flush=True)
         row: typing.list[str]
         for row in kr:
-            if row[kr.label_column_idx] == self.label_column_value:
+            if row[label_column_idx] == self.label_column_value:
                 # This is a label definition row.
                 label_line_count += 1
-                key: str = row[kr.node1_column_idx]
+                key: str = row[node1_column_idx]
                 if key in labels:
                     # This label already exists in the table, build a list.
-                    labels[key] += "|" + row[kr.node2_column_idx]
+                    labels[key] += "|" + row[node2_column_idx]
                 else:
                     # This is the first instance of this label definition.
-                    labels[key] = row[kr.node2_column_idx]
+                    labels[key] = row[node2_column_idx]
             else:
                 input_rows.append(row)
                            
@@ -199,6 +224,15 @@ def main():
 
     parser.add_argument(dest="input_file_path", help="The KGTK file with the input data", type=Path, default="-")
 
+    parser.add_argument(      "--node1-name", dest="node1_column_name",
+                              help="The name of the node1 column. (default=node1 or alias).", default=None)
+
+    parser.add_argument(      "--label-name", dest="label_column_name",
+                              help="The name of the label column. (default=label).", default=None)
+
+    parser.add_argument(      "--node2-name", dest="node2_column_name",
+                              help="The name of the node2 column. (default=node1 or alias).", default=None)
+
     parser.add_argument(      "--label-value", dest="label_column_value", help="The value in the label column. (default=%(default)s).", default="label")
     parser.add_argument(      "--lift-suffix", dest="lifted_column_suffix", help="The value in the label column. (default=%(default)s).", default=";label")
 
@@ -225,6 +259,12 @@ def main():
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
+        if args.node1_column_name is not None:
+            print("--node1-name=%s" % args.node1_column_name, file=error_file, flush=True)
+        if args.label_column_name is not None:
+            print("--label-name=%s" % args.label_column_name, file=error_file, flush=True)
+        if args.node2_column_name is not None:
+            print("--node2-name=%s" % args.node2_column_name, file=error_file, flush=True)
         print("--label-value=%s" % args.label_column_value, file=error_file, flush=True)
         print("--lift-suffix=%s" % args.lifted_column_suffix, file=error_file, flush=True)
         if args.lift_column_names is not None and len(args.lift_column_names) > 0:
@@ -236,6 +276,9 @@ def main():
 
     kl: KgtkLift = KgtkLift(
         input_file_path=args.input_file_path,
+        node1_column_name=args.node1_column_name,
+        label_column_name=args.label_column_name,
+        node2_column_name=args.node2_column_name,
         label_column_value=args.label_column_value,
         lifted_column_suffix=args.lifted_column_suffix,
         lift_column_names=args.lift_column_names,
