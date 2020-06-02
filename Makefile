@@ -7,3 +7,11 @@ lint:
 
 requirements:
 	pip install -r requirements.txt
+	pip install -r requirements-dev.txt
+
+mkdocs:
+	mkdocs build --clean
+	mkdocs serve -a localhost:8080
+
+precommit:
+	tox
