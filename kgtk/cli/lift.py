@@ -1,4 +1,4 @@
-"""Lift
+"""Add label columns for values in the node1, label, and node2 fields.
 
 TODO: Need KgtkWriterOptions
 """
@@ -62,6 +62,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
+    parser.add_argument(      "--remove-label-records", dest="remove_label_records",
+                              help=h("If true, remove label records from the output. (default=%(default)s)."),
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -78,6 +82,7 @@ def run(input_kgtk_file: Path,
         label_column_value: str,
         lifted_column_suffix: str,
         lift_column_names: typing.List[str],
+        remove_label_records: bool = False,
         suppress_empty_columns: bool = False,
 
         errors_to_stdout: bool = False,
@@ -112,6 +117,7 @@ def run(input_kgtk_file: Path,
         if lift_column_names is not None and len(lift_column_names) > 0:
             print("--columns-to-lift %s" % " ".join(lift_column_names), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
+        print("--remove-label-records=%s" % str(remove_label_records))
         print("--suppress-empty-columns=%s" % str(suppress_empty_columns))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -127,6 +133,7 @@ def run(input_kgtk_file: Path,
             lifted_column_suffix=lifted_column_suffix,
             lift_column_names=lift_column_names,
             output_file_path=output_kgtk_file,
+            remove_label_records=remove_label_records,
             suppress_empty_columns=suppress_empty_columns,
             reader_options=reader_options,
             value_options=value_options,
