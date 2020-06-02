@@ -63,12 +63,14 @@ class KgtkLift(KgtkFormat):
 
         lift_column_idxs: typing.List[int] = [ ]
         if self.lift_column_names is not None and len(self.lift_column_names) > 0:
+            # Process a custom list of columns to be lifted.
             lift_column_name: str
             for lift_column_name in self.lift_column_names:
                 if lift_column_name not in kr.column_name_map:
                     raise ValueError("Unknown lift column %s." % lift_column_name)
                 lift_column_idxs.append(kr.column_name_map[lift_column_name])
         else:
+            # Use the standard list of KGTK edge file key columns.
             lift_column_idxs.append(kr.node1_column_idx)
             lift_column_idxs.append(kr.label_column_idx)
             lift_column_idxs.append(kr.node2_column_idx)
@@ -85,11 +87,14 @@ class KgtkLift(KgtkFormat):
         row: typing.list[str]
         for row in kr:
             if row[kr.label_column_idx] == self.label_column_value:
+                # This is a label definition row.
                 label_line_count += 1
                 key: str = row[kr.node1_column_idx]
                 if key in labels:
+                    # This label already exists in the table, build a list.
                     labels[key] += "|" + row[kr.node2_column_idx]
                 else:
+                    # This is the first instance of this label definition.
                     labels[key] = row[kr.node2_column_idx]
             else:
                 input_rows.append(row)
@@ -100,13 +105,21 @@ class KgtkLift(KgtkFormat):
                 print("Checking for empty columns", file=self.error_file, flush=True)
             lift_column_idxs_empties: typing.List[int] = lift_column_idxs.copy()
             lift_column_idx: int
+            # Scan the input file, checking for empty output columns.
             for row in input_rows:
                 idx: int
-                for idx, lift_column_idx in enumerate(lift_column_idxs_empties):
-                    item: str = row[lift_column_idx]
-                    if item in labels:
-                        lift_column_idxs_empties.pop(idx)
-                        break
+                restart: bool = True
+                while restart:
+                    # The restart mechanism compensates for modifying
+                    # lift_column_idxs_empties inside the for loop, at the
+                    # expense of potentially double testing some items.
+                    restart = False
+                    for idx, lift_column_idx in enumerate(lift_column_idxs_empties):
+                        item: str = row[lift_column_idx]
+                        if item in labels:
+                            lift_column_idxs_empties.pop(idx)
+                            restart = True
+                            break
                 if len(lift_column_idxs_empties) == 0:
                     break
             if self.verbose:
@@ -121,15 +134,21 @@ class KgtkLift(KgtkFormat):
                 if lift_column_idx not in lift_column_idxs_empties:
                     lifted_column_idxs.append(lift_column_idx)            
         else:
+            # Lift all the candidate columns.
             lifted_column_idxs = lift_column_idxs.copy()
 
+        # Build the output column names.
         lifted_output_column_idxs: typing.List[int] = [ ]
         output_column_names: typing.list[str] = kr.column_names.copy()
         for idx in lifted_column_idxs:
             lifted_column_name: str = kr.column_names[idx] + self.lifted_column_suffix
             if lifted_column_name in kr.column_name_map:
+                # Overwrite an existing lifted output column.
+                #
+                # TODO: DO we want to control whether or not we overwrite existing columns?
                 lifted_output_column_idxs.append(kr.column_name_map[lifted_column_name])
             else:
+                # Append a new lifted output column.
                 lifted_output_column_idxs.append(len(output_column_names))
                 output_column_names.append(lifted_column_name)
         new_columns: int = len(output_column_names) - len(kr.column_names)
