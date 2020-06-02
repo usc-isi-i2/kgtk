@@ -1,4 +1,4 @@
-"""lift
+"""Add label columns for values in the node1, label, and node2 fields.
 
 """
 
@@ -29,6 +29,8 @@ class KgtkLift(KgtkFormat):
 
     label_column_value: typing.Optional[str] = attr.ib(validator=attr.validators.instance_of(str), default="label")
     lifted_column_suffix: str = attr.ib(validator=attr.validators.instance_of(str), default=";label")
+
+    remove_label_records: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     suppress_empty_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # TODO: find working validators
@@ -121,6 +123,8 @@ class KgtkLift(KgtkFormat):
                 else:
                     # This is the first instance of this label definition.
                     labels[key] = row[node2_column_idx]
+                if not self.remove_label_records:
+                    input_rows.append(row)
             else:
                 input_rows.append(row)
                            
@@ -132,6 +136,9 @@ class KgtkLift(KgtkFormat):
             lift_column_idx: int
             # Scan the input file, checking for empty output columns.
             for row in input_rows:
+                if row[label_column_idx] == self.label_column_value:
+                    # Skip label records if they have been saved.
+                    continue
                 idx: int
                 restart: bool = True
                 while restart:
@@ -198,11 +205,13 @@ class KgtkLift(KgtkFormat):
             if new_columns > 0:
                 output_row.extend([""] * new_columns)
                 
-            lifted_column_idx: int
-            for idx, lifted_column_idx in enumerate(lifted_column_idxs):
-                lifted_value: str = row[lifted_column_idx]
-                if lifted_value in labels:
-                    output_row[lifted_output_column_idxs[idx]] = labels[row[lifted_column_idx]]
+            if row[label_column_idx] != self.label_column_value:
+                # Don't lift label columns, if we have stored them.
+                lifted_column_idx: int
+                for idx, lifted_column_idx in enumerate(lifted_column_idxs):
+                    lifted_value: str = row[lifted_column_idx]
+                    if lifted_value in labels:
+                        output_row[lifted_output_column_idxs[idx]] = labels[row[lifted_column_idx]]
 
             ew.write(output_row)
             output_line_count += 1
@@ -241,7 +250,12 @@ def main():
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
-    parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns", help="If trye, suppress empty columns (default=%(default)s).",
+    parser.add_argument(      "--remove-label-records", dest="remove_label_records",
+                              help="If true, remove label records from the output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
+                              help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
 
@@ -271,6 +285,7 @@ def main():
         if args.lift_column_names is not None and len(args.lift_column_names) > 0:
             print("--columns-to-lift %s" % " ".join(args.lift_column_names), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
+        print("--remove-label-records=%s" % str(args.remove_label_records))
         print("--suppress-empty-columns=%s" % str(args.suppress_empty_columns))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -284,6 +299,7 @@ def main():
         lifted_column_suffix=args.lifted_column_suffix,
         lift_column_names=args.lift_column_names,
         output_file_path=args.output_file_path,
+        remove_label_records=args.remove_label_records,
         suppress_empty_columns=args.suppress_empty_columns,
         reader_options=reader_options,
         value_options=value_options,
