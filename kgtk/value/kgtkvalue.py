@@ -578,6 +578,10 @@ class KgtkValue(KgtkFormat):
                                                                                            si_combiner=si_combiner_pat,
                                                                                            si_power=si_power_pat)
     # Wikidata nodes (for units):
+    #
+    # https://www.wikidata.org/wiki/Wikidata:Identifiers
+    #
+    #    "Each Wikidata entity is identified by an entity ID, which is a number prefixed by a letter."
     nonzero_digit_pat: str = r'[1-9]'
     wikidata_node_pat: str = r'(?P<wikidata_node>Q{nonzero_digit}{digit}*)'.format(nonzero_digit=nonzero_digit_pat,
                                                                     digit=digit_pat)
