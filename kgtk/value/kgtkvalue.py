@@ -584,10 +584,15 @@ class KgtkValue(KgtkFormat):
     #    "Each Wikidata entity is identified by an entity ID, which is a number prefixed by a letter."
     nonzero_digit_pat: str = r'[1-9]'
     wikidata_node_pat: str = r'(?P<wikidata_node>Q{nonzero_digit}{digit}*)'.format(nonzero_digit=nonzero_digit_pat,
-                                                                    digit=digit_pat)
+                                                                                   digit=digit_pat)
+    lax_wikidata_node_pat: str = r'(?P<wikidata_node>Q[0-9A-Z][-0-9A-Z]*)'
+    
 
     units_pat: str = r'(?:{si}|{wikidata_node})'.format(si=si_pat,
                                                         wikidata_node=wikidata_node_pat)
+
+    lax_units_pat: str = r'(?:{si}|{wikidata_node})'.format(si=si_pat,
+                                                            wikidata_node=lax_wikidata_node_pat)
     
 
     # This definition matches numbers or quantities.
@@ -595,8 +600,14 @@ class KgtkValue(KgtkFormat):
                                                                           tolerance=tolerance_pat,
                                                                           units=units_pat)
 
+    lax_number_or_quantity_pat: str = r'{numeric}{tolerance}?{units}?'.format(numeric=number_pat,
+                                                                              tolerance=tolerance_pat,
+                                                                              units=lax_units_pat)
+
     # This matches numbers or quantities.
     number_or_quantity_re: typing.Pattern = re.compile(r'^' + number_or_quantity_pat + r'$')
+
+    lax_number_or_quantity_re: typing.Pattern = re.compile(r'^' + lax_number_or_quantity_pat + r'$')
 
     # This matches numbers but not quantities.
     number_re: typing.Pattern = re.compile(r'^' + number_pat + r'$')
@@ -625,7 +636,12 @@ class KgtkValue(KgtkFormat):
         # We cannot cache the result of this test because it would interfere
         # if we later determined the exact data type.  We could work around
         # this problem with more thought.
-        m: typing.Optional[typing.Match] = KgtkValue.number_or_quantity_re.match(self.value)
+        m: typing.Optional[typing.Match]
+        if self.options.allow_lax_qnodes:
+            m = KgtkValue.lax_number_or_quantity_re.match(self.value)
+        else:
+            m = KgtkValue.number_or_quantity_re.match(self.value)
+            
         if m is None:
             return False
 
@@ -772,7 +788,11 @@ class KgtkValue(KgtkFormat):
             return False
         # We don't know yet if this is a quantity.  It could be a number.
 
-        m: typing.Optional[typing.Match] = KgtkValue.number_or_quantity_re.match(self.value)
+        m: typing.Optional[typing.Match]
+        if self.options.allow_lax_qnodes:
+            m = KgtkValue.lax_number_or_quantity_re.match(self.value)
+        else:
+            m = KgtkValue.number_or_quantity_re.match(self.value)
         if m is None:
             return False
 
