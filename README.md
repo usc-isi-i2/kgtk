@@ -1,4 +1,6 @@
-# KGTK: Knowledge Graph Toolkit [![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)
+# KGTK: Knowledge Graph Toolkit 
+
+[![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)
 
 KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs. 
 
@@ -47,6 +49,7 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
   * `sudo yum install miller` (linux)
   
 More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
+
 If you can't install miller with `yum install` on centOS, please follow this [link](https://centos.pkgs.org/7/openfusion-x86_64/miller-5.3.0-1.of.el7.x86_64.rpm.html).
 
 
