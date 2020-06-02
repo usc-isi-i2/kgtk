@@ -34,6 +34,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to lift. May be omitted or '-' for stdin.", type=Path, default="-")
 
+    parser.add_argument(      "--node1-name", dest="node1_column_name",
+                              help="The name of the node1 column. (default=node1 or alias).", default=None)
+
+    parser.add_argument(      "--label-name", dest="label_column_name",
+                              help="The name of the label column. (default=label).", default=None)
+
+    parser.add_argument(      "--node2-name", dest="node2_column_name",
+                              help="The name of the node2 column. (default=node1 or alias).", default=None)
+
     parser.add_argument(      "--label-value", dest="label_column_value", help="The value in the label column. (default=%(default)s).", default="label")
     parser.add_argument(      "--lift-suffix", dest="lifted_column_suffix", help="The value in the label column. (default=%(default)s).", default=";label")
 
@@ -50,6 +59,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_kgtk_file: Path,
         output_kgtk_file: Path,
+        node1_column_name: typing.Optional[str],
+        label_column_name: typing.Optional[str],
+        node2_column_name: typing.Optional[str],
         label_column_value: str,
         lifted_column_suffix: str,
         lift_column_names: typing.List[str],
@@ -76,6 +88,12 @@ def run(input_kgtk_file: Path,
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("input: %s" % str(input_kgtk_file), file=error_file, flush=True)
+        if node1_column_name is not None:
+            print("--node1-name=%s" % node1_column_name, file=error_file, flush=True)
+        if label_column_name is not None:
+            print("--label-name=%s" % label_column_name, file=error_file, flush=True)
+        if node2_column_name is not None:
+            print("--node2-name=%s" % node2_column_name, file=error_file, flush=True)
         print("--label-value=%s" % label_column_value, file=error_file, flush=True)
         print("--lift-suffix=%s" % lifted_column_suffix, file=error_file, flush=True)
         if lift_column_names is not None and len(lift_column_names) > 0:
@@ -89,6 +107,9 @@ def run(input_kgtk_file: Path,
     try:
         kl: KgtkLift = KgtkLift(
             input_file_path=input_kgtk_file,
+            node1_column_name=node1_column_name,
+            label_column_name=label_column_name,
+            node2_column_name=node2_column_name,
             label_column_value=label_column_value,
             lifted_column_suffix=lifted_column_suffix,
             lift_column_names=lift_column_names,
