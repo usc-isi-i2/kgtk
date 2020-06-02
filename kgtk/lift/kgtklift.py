@@ -1,6 +1,4 @@
-"""Copy records from the first KGTK file to the output file, if one or more
-columns are (any/all) (not) empty.  If --only-count is True, report the count
-of qualifying records but do not write the output file.
+"""lift
 
 """
 
@@ -96,7 +94,7 @@ class KgtkLift(KgtkFormat):
             else:
                 input_rows.append(row)
                            
-        lifted_column_idxs: typing.List[int]
+        lifted_column_idxs: typing.List[int] = [ ]
         if self.suppress_empty_columns:
             if self.verbose:
                 print("Checking for empty columns", file=self.error_file, flush=True)
@@ -104,12 +102,12 @@ class KgtkLift(KgtkFormat):
             lift_column_idx: int
             for row in input_rows:
                 idx: int
-                for idx, lift_column_idx in enumerate(lift_column_idxs_left):
+                for idx, lift_column_idx in enumerate(lift_column_idxs_empties):
                     item: str = row[lift_column_idx]
                     if item in labels:
-                        lift_column_idxs_left.pop(idx)
+                        lift_column_idxs_empties.pop(idx)
                         break
-                if len(lift_column_idxs_left) == 0:
+                if len(lift_column_idxs_empties) == 0:
                     break
             if self.verbose:
                 if len(lift_column_idxs_empties) == 0:
