@@ -231,10 +231,11 @@ def main():
                               help="The name of the label column. (default=label).", default=None)
 
     parser.add_argument(      "--node2-name", dest="node2_column_name",
-                              help="The name of the node2 column. (default=node1 or alias).", default=None)
+                              help="The name of the node2 column. (default=node2 or alias).", default=None)
 
     parser.add_argument(      "--label-value", dest="label_column_value", help="The value in the label column. (default=%(default)s).", default="label")
-    parser.add_argument(      "--lift-suffix", dest="lifted_column_suffix", help="The value in the label column. (default=%(default)s).", default=";label")
+    parser.add_argument(      "--lift-suffix", dest="lifted_column_suffix",
+                              help="The suffix used for newly created columns. (default=%(default)s).", default=";label")
 
     parser.add_argument(      "--columns-to-lift", dest="lift_column_names", help="The columns to lift. (default=[node1, label, node2]).", nargs='*')
 

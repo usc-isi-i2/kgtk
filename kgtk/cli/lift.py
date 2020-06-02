@@ -18,7 +18,9 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 def parser():
     return {
         'help': 'Lift labels from a KGTK file.',
-        'description': 'Lift labels for a KGTK file. ' +
+        'description': 'Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. ' +
+        'If found, lift the label values into additional columns in the current record. ' +
+        'Label records are reoved from the output. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert ifempty --help'
     }
 
@@ -32,25 +34,36 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
 
+    # This helper function makes it easy to suppress options from
+    # The help message.  The options are still there, and initialize
+    # what they need to initialize.
+    def h(msg: str)->str:
+        if _expert:
+            return msg
+        else:
+            return SUPPRESS
+
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to lift. May be omitted or '-' for stdin.", type=Path, default="-")
 
     parser.add_argument(      "--node1-name", dest="node1_column_name",
-                              help="The name of the node1 column. (default=node1 or alias).", default=None)
+                              help=h("The name of the node1 column. (default=node1 or alias)."), default=None)
 
     parser.add_argument(      "--label-name", dest="label_column_name",
-                              help="The name of the label column. (default=label).", default=None)
+                              help=h("The name of the label column. (default=label)."), default=None)
 
     parser.add_argument(      "--node2-name", dest="node2_column_name",
-                              help="The name of the node2 column. (default=node1 or alias).", default=None)
+                              help=h("The name of the node2 column. (default=node2 or alias)."), default=None)
 
-    parser.add_argument(      "--label-value", dest="label_column_value", help="The value in the label column. (default=%(default)s).", default="label")
-    parser.add_argument(      "--lift-suffix", dest="lifted_column_suffix", help="The value in the label column. (default=%(default)s).", default=";label")
+    parser.add_argument(      "--label-value", dest="label_column_value", help=h("The value in the label column. (default=%(default)s)."), default="label")
+    parser.add_argument(      "--lift-suffix", dest="lifted_column_suffix",
+                              help=h("The suffix used for newly created columns. (default=%(default)s)."), default=";label")
 
-    parser.add_argument(      "--columns-to-lift", dest="lift_column_names", help="The columns to lift. (default=[node1, label, node2]).", nargs='*')
+    parser.add_argument(      "--columns-to-lift", dest="lift_column_names", help=h("The columns to lift. (default=[node1, label, node2])."), nargs='*')
 
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
-    parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns", help="If trye, suppress empty columns (default=%(default)s).",
+    parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
+                              help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
