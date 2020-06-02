@@ -47,6 +47,8 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
   * `sudo yum install miller` (linux)
   
 More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
+If you can't install miller with `yum install` on centOS, please follow this [link](https://centos.pkgs.org/7/openfusion-x86_64/miller-5.3.0-1.of.el7.x86_64.rpm.html).
+
 
 ## Running KGTK commands
 

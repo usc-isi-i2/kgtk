@@ -17,3 +17,4 @@ pycountry
 iso-639
 redis
 rfc3986
+thinc==7.4.0
