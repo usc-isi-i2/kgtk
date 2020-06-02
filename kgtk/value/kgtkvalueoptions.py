@@ -20,6 +20,9 @@ class KgtkValueOptions:
 
     """
     
+    # Allow a laxer definition of the Qnode suffix in quantities.
+    allow_lax_qnodes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # Allow month 00 or day 00 in dates?  This isn't really allowed by ISO
     # 8601, but appears in wikidata.
     allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -136,10 +139,13 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "Additional language codes. (default=None)."),
                                   nargs="*", default=None)
 
+        vgroup.add_argument(      prefix1 + "allow-lax-qnodes", dest=prefix2 + "allow_lax_qnodes",
+                                  help=h(prefix3 + "Allow qnode suffixes in quantities to include alphas and dash as well as digits. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "allow-language-suffixes", dest=prefix2 + "allow_language_suffixes",
                                    help=h(prefix3 + "Allow language identifier suffixes starting with a dash. (default=%(default)s)."),
                                    type=optional_bool, nargs='?', const=True, **d(default=False))
-
 
         vgroup.add_argument(      prefix1 + "allow-lax-strings", dest=prefix2 + "allow_lax_strings",
                                   help=h(prefix3 + "Do not check if double quotes are backslashed inside strings. (default=%(default)s)."),
@@ -228,7 +234,8 @@ class KgtkValueOptions:
         if len(who) > 0:
             prefix = who + "_"
 
-        return cls(allow_month_or_day_zero=d.get(prefix + "allow_month_or_day_zero", False),
+        return cls(allow_lax_qnodes=d.get(prefix + "allow_lax_qnodes", False),
+                   allow_month_or_day_zero=d.get(prefix + "allow_month_or_day_zero", False),
                    repair_month_or_day_zero=d.get(prefix + "repair_month_or_day_zero", False),
                    allow_language_suffixes=d.get(prefix + "allow_language_suffixes", True),
                    allow_lax_strings=d.get(prefix + "allow_lax_strings", False),
@@ -262,6 +269,7 @@ class KgtkValueOptions:
 
     def show(self, who: str="", out: typing.TextIO=sys.stderr):
         prefix: str = "--" if len(who) == 0 else "--" + who + "-"
+        print("%sallow-lax-qnodes=%s" % (prefix, str(self.allow_lax_qnodes)), file=out)
         print("%sallow-month-or-day-zero=%s" % (prefix, str(self.allow_month_or_day_zero)), file=out)
         print("%srepair-month-or-day-zero=%s" % (prefix, str(self.repair_month_or_day_zero)), file=out)
         print("%sallow-language-suffixes=%s" % (prefix, str(self.allow_language_suffixes)), file=out)
