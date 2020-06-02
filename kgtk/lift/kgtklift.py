@@ -1,7 +1,7 @@
 """Add label columns for values in the node1, label, and node2 fields.
 
 The input rows are saved in memory, as well as the value-to-label mapping.
-This will impost a limit on the size of the input files that can be processed.
+This will impose a limit on the size of the input files that can be processed.
 
 TODO: Optionally save the input rows in an external disk file?
 
