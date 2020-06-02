@@ -139,7 +139,7 @@ def main(**kwargs):
         black_list_files = kwargs.get("black_list_files", [])
         all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
         input_format = kwargs.get("input_format", "kgtk_format")
-        input_uris = kwargs.get("input_uris", [])
+        input_file = kwargs.get("input_file", None)
         output_format = kwargs.get("output_format", "kgtk_format")
         property_labels_files = kwargs.get("property_labels_file_uri", [])
         query_server = kwargs.get("query_server")
@@ -166,11 +166,11 @@ def main(**kwargs):
 
         if isinstance(all_models_names, str):
             all_models_names = [all_models_names]
-        if isinstance(input_uris, str):
-            input_uris = [input_uris]
+        # if isinstance(input_uris, str):
+        #     input_uris = [input_uris]
         if len(all_models_names) == 0:
             raise KGTKException("No embedding vector model name given!")
-        if len(input_uris) == 0:
+        if not input_file:
             raise KGTKException("No input file path given!")
 
         if output_uri == "":
@@ -188,21 +188,25 @@ def main(**kwargs):
         dimensional_reduction = kwargs.get("dimensional_reduction", "none")
         dimension_val = kwargs.get("dimension_val", 2)
 
+        try:
+            input_file_name = input_file.name
+        except AttributeError:
+            input_file_name = "input from memory"
+
         for each_model_name in all_models_names:
-            for each_input_file in input_uris:
-                _logger.info("Running {} model on {}".format(each_model_name, each_input_file))
-                process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
-                                          parallel_count=parallel_count)
-                process.read_input(file_path=each_input_file, skip_nodes_set=black_list_set,
-                                   input_format=input_format, target_properties=sentence_properties,
-                                   property_labels_dict=property_labels_dict)
-                process.get_vectors()
-                process.plot_result(output_properties=output_properties,
-                                    input_format=input_format, output_uri=output_uri,
-                                    dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
-                                    output_format=output_format, save_embedding_sentence=save_embedding_sentence)
-                # process.evaluate_result()
-                _logger.info("*" * 20 + "finished" + "*" * 20)
+            _logger.info("Running {} model on {}".format(each_model_name, input_file_name))
+            process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
+                                      parallel_count=parallel_count)
+            process.read_input(input_file=input_file, skip_nodes_set=black_list_set,
+                               input_format=input_format, target_properties=sentence_properties,
+                               property_labels_dict=property_labels_dict)
+            process.get_vectors()
+            process.plot_result(output_properties=output_properties,
+                                input_format=input_format, output_uri=output_uri,
+                                dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
+                                output_format=output_format, save_embedding_sentence=save_embedding_sentence)
+            # process.evaluate_result()
+            _logger.info("*" * 20 + "finished" + "*" * 20)
     except Exception as e:
         _logger.debug(e, exc_info=True)
         raise KGTKException(str(e))
@@ -216,6 +220,8 @@ def parser():
 
 def add_arguments(parser):
     from kgtk.utils.argparsehelpers import optional_bool
+    import sys
+    import argparse
     parser.accept_shared_argument('_debug')
 
     # model name
@@ -224,8 +230,9 @@ def add_arguments(parser):
                         default="bert-base-wikipedia-sections-mean-tokens", choices=all_models_names,
                         help="the model to used for embedding")
     # input file
-    parser.add_argument('-i', '--input', action='store', nargs='+', dest='input_uris',
-                        help="input path", )
+    parser.add_argument('input_file', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
+    # parser.add_argument('-i', '--input', action='store', nargs='+', dest='input_uris',
+    #                     help="input path", )
     parser.add_argument('-f', '--input-format', action='store', dest='input_format',
                         choices=("test_format", "kgtk_format"), default="kgtk_format",
                         help="the input file format, could either be `test_format` or `kgtk_format`, default is `kgtk_format`", )

@@ -22,15 +22,22 @@ class KgtkExplode(KgtkFormat):
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
-    column_name: str = attr.ib(validator=attr.validators.instance_of(str))
+    column_name: str = attr.ib(validator=attr.validators.instance_of(str), default="node2")
 
-    prefix: str = attr.ib(validator=attr.validators.instance_of(str))
+    prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="")
                                
-    field_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                    iterable_validator=attr.validators.instance_of(list)))
+    field_names: typing.Optional[typing.List[str]] = \
+        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                 iterable_validator=attr.validators.instance_of(list))),
+                default=None)
 
-    overwrite_columns: bool = attr.ib(validator=attr.validators.instance_of(bool))
-    expand_list: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    type_names: typing.Optional[typing.List[str]] = \
+        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                 iterable_validator=attr.validators.instance_of(list))),
+                default=None)
+
+    overwrite_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    expand_list: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
                                
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -45,14 +52,35 @@ class KgtkExplode(KgtkFormat):
         if len(self.column_name) == 0:
             raise ValueError("The name of the column to explode is empty.")
 
-        if self.verbose:
-            print("Validate the names of the fields to extract.", file=self.error_file, flush=True)
-        if len(self.field_names) == 0:
-            raise ValueError("The list of fields to explode is empty.")
+        selected_field_names: typing.List[str] = [ ]
         field_name: str
-        for field_name in self.field_names:
-            if field_name not in KgtkValueFields.FIELD_NAMES:
-                raise ValueError("Unknown field name '%s'." % field_name)
+
+        if self.type_names is not None:
+            if self.verbose:
+                print("Validate the names of the data types to extract.", file=self.error_file, flush=True)
+            type_name: str
+            for type_name in self.type_names:
+                if type_name not in KgtkValueFields.DEFAULT_DATA_TYPE_FIELDS:
+                    raise ValueError("Unknown data type name '%s'." % type_name)
+                # Merge this KGTK data type's fields into the list of selected fields:
+                for field_name in KgtkValueFields.DEFAULT_DATA_TYPE_FIELDS[type_name]:
+                    if field_name not in selected_field_names:
+                        selected_field_names.append(field_name)
+
+        if self.field_names is not None:
+            # Forget the fields selected above, choose these instead:
+            selected_field_names = [ ]
+            if self.verbose:
+                print("Validate the names of the fields to extract.", file=self.error_file, flush=True)
+            for field_name in self.field_names:
+                if field_name not in KgtkValueFields.FIELD_NAMES:
+                    raise ValueError("Unknown field name '%s'." % field_name)
+                # Merge this field into the list of selected fields:
+                if field_name not in selected_field_names:
+                    selected_field_names.append(field_name)
+
+        if len(selected_field_names) == 0:
+            raise ValueError("The list of fields to explode is empty.")
 
         # Open the input file.
         if self.verbose:
@@ -79,7 +107,7 @@ class KgtkExplode(KgtkFormat):
             print("Build the map of exploded columns and list of new column names", file=self.error_file, flush=True)
         explosion: typing.MutableMapping[str, idx] = { }
         column_names: typing.List[str] = kr.column_names.copy()
-        for field_name in self.field_names:
+        for field_name in selected_field_names:
             exploded_name: str = self.prefix + field_name
             if self.verbose:
                 print("Field '%s' becomes '%s'" % (field_name, exploded_name), file=self.error_file, flush=True)
@@ -194,8 +222,16 @@ def main():
 
     parser.add_argument(      "--column", dest="column_name", help="The name of the column to explode. (default=%(default)s).", default="node2")
 
-    parser.add_argument(      "--fields", dest="field_names", help="The names of the fields to extract. (default=%(default)s).", nargs='+',
-                              default=KgtkValueFields.DEFAULT_FIELD_NAMES, choices=KgtkValueFields.FIELD_NAMES)
+    fgroup: ArgumentParser = parser.add_mutually_exclusive_group()
+
+    fgroup.add_argument(      "--types", dest="type_names", nargs='*',
+                               help="The KGTK data types for which fields should be exploded. (default=%(default)s).",
+                               choices=KgtkFormat.DataType.choices(),
+                               default=KgtkFormat.DataType.choices())
+
+    fgroup.add_argument(      "--fields", dest="field_names",  nargs='*',
+                              help="The names of the fields to extract (overrides --types). (default=%(default)s).",
+                              choices=KgtkValueFields.FIELD_NAMES)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
@@ -231,6 +267,8 @@ def main():
         print("--expand %s" % str(args.expand_list), file=error_file, flush=True)
         if args.field_names is not None:
             print("--fields %s" % " ".join(args.field_names), file=error_file, flush=True)
+        if args.type_names is not None:
+            print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -240,6 +278,7 @@ def main():
         column_name=args.column_name,
         prefix=args.prefix,
         field_names=args.field_names,
+        type_names=args.type_names,
         overwrite_columns=args.overwrite_columns,
         expand_list=args.expand_list,
         output_file_path=args.output_file_path,
