@@ -93,19 +93,19 @@ kgtk explode file1.tsv
 
 The output will be the following table in KGTK format:
 
-| node1 | label | node2 | node2;valid | node2;list_len | node2;number | node2;low_tolerance | node2;high_tolerance | node2;si_units | node2;wikidata_node | node2;text | node2;language | node2;suffix | node2;latitude | node2;longitude | node2;date_and_time | node2;precision | node2;truth | node2;symbol |
-| -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
-| john | string | "John" | True | 0 |  |  |  |  |  | "John" |  |  |  |  |  |  |  |  |
-| john | lqstring | 'John'@en | True | 0 |  |  |  |  |  | "John" | en |  |  |  |  |  |  |  |
-| john | integer | 12345 | True | 0 | 12345 |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| john | number | 186.2 | True | 0 | 186.2 |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| john | number | 186.2e04 | True | 0 | 1862000.0 |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| john | number | -186.2 | True | 0 | -186.2 |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| john | number | +186.2e-6 | True | 0 | 0.0001862 |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| john | quantity | 84.3[84,85]kg | True | 0 | 84.3 | 84.0 | 85.0 | kg |  |  |  |  |  |  |  |  |  |  |
-| john | date_and_time | ^1960-11-05T00:00 | True | 0 |  |  |  |  |  |  |  |  |  |  | "1960-11-05T00:00" |  |  |  |
-| john | date_and_time | ^1980-11-05T00:00Z/6 | True | 0 |  |  |  |  |  |  |  |  |  |  | "1980-11-05T00:00Z" | 6 |  |  |
-| john | location | @60.2/134.3 | True | 0 |  |  |  |  |  |  |  |  | 60.2 | 134.3 |  |  |  |  |
-| john | boolean | True | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  | True |  |
-| john | symbol | quadrature | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadrature |
-| john | list | home\|work | True | 2 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| node1 | label | node2 | node2;data_type | node2;valid | node2;list_len | node2;number | node2;low_tolerance | node2;high_tolerance | node2;si_units | node2;wikidata_node | node2;text | node2;language | node2;suffix | node2;latitude | node2;longitude | node2;date_and_time | node2;precision | node2;truth | node2;symbol |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| john | string | "John" | string | True | 0 |  |  |  |  |  | "John" |  |  |  |  |  |  |  |  |
+| john | lqstring | 'John'@en | language_qualified_string | True | 0 |  |  |  |  |  | "John" | en |  |  |  |  |  |  |  |
+| john | integer | 12345 | number | True | 0 | 12345 |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| john | number | 186.2 | number | True | 0 | 186.2 |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| john | number | 186.2e04 | number | True | 0 | 1862000.0 |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| john | number | -186.2 | number | True | 0 | -186.2 |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| john | number | +186.2e-6 | number | True | 0 | 0.0001862 |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| john | quantity | 84.3[84,85]kg | quantity | True | 0 | 84.3 | 84.0 | 85.0 | kg |  |  |  |  |  |  |  |  |  |  |
+| john | date_and_time | ^1960-11-05T00:00 | date_and_times | True | 0 |  |  |  |  |  |  |  |  |  |  | "1960-11-05T00:00" |  |  |  |
+| john | date_and_time | ^1980-11-05T00:00Z/6 | date_and_times | True | 0 |  |  |  |  |  |  |  |  |  |  | "1980-11-05T00:00Z" | 6 |  |  |
+| john | location | @60.2/134.3 | location_coordinates | True | 0 |  |  |  |  |  |  |  |  | 60.2 | 134.3 |  |  |  |  |
+| john | boolean | True | boolean | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  | True |  |
+| john | symbol | quadrature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadrature |
+| john | list | home\|work | list | True | 2 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
