@@ -23,25 +23,25 @@ def add_arguments(parser):
                         help="Whether or not to compute PageRank centraility.")
     parser.add_argument('--hits', action='store_true', dest='compute_hits',
                         help="Whether or not to compute HITS centraility.")
-    parser.add_argument('--log', action='store', type=str, dest='log_file',
-                        help='Log file for summarized statistics of the graph.', default="./log.txt")
-    parser.add_argument('--output-stats', action='store_true', dest='output_stats',
-                        help='do not output the graph but statistics only')
+    parser.add_argument('--summary', action='store', type=str, dest='log_file',
+                        help='Summary file for the global statistics of the graph.', default="./summary.txt")
+    parser.add_argument('--statistics-only', action='store_true', dest='output_stats',
+                        help='If this flag is set, output only the statistics edges. Else, append the statistics to the original graph.')
     parser.add_argument('--vertex-in-degree-property', action='store', dest='vertex_in_degree',
                         default='vertex_in_degree',
-                        help='label for edge: vertex in degree property')
+                        help='Label for edge: vertex in degree property')
     parser.add_argument('--vertex-out-degree-property', action='store', dest='vertex_out_degree',
                         default='vertex_out_degree',
-                        help='label for edge: vertex out degree property')
+                        help='Label for edge: vertex out degree property')
     parser.add_argument('--page-rank-property', action='store', dest='vertex_pagerank',
                         default='vertex_pagerank',
-                        help='label for pank rank property')
+                        help='Label for pank rank property')
     parser.add_argument('--vertex-hits-authority-property', action='store', dest='vertex_auth',
                         default='vertex_auth',
-                        help='label for edge: vertext hits authority')
+                        help='Label for edge: vertext hits authority')
     parser.add_argument('--vertex-hits-hubs-property', action='store', dest='vertex_hubs',
                         default='vertex_hubs',
-                        help='label for edge: vertex hits hubs')
+                        help='Label for edge: vertex hits hubs')
 
 
 def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output_stats,
