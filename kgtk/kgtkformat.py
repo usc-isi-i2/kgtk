@@ -20,6 +20,14 @@ class KgtkFormat:
     # There is only one required column in a node file:
     ID_COLUMN_NAMES: typing.List[str] = ["id", "ID"]
 
+    # These are the canonical names:
+    NODE1: str = "node1"
+    LABEL: str = "label"
+    NODE2: str = "node2"
+    ID: str = "id"
+
+    KGTK_NAMESPACE: str = "kgtk:"
+
     @unique
     class DataType(Enum):
         EMPTY = 0

@@ -22,9 +22,9 @@ class KgtkExplode(KgtkFormat):
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
-    column_name: str = attr.ib(validator=attr.validators.instance_of(str), default="node2")
+    column_name: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.NODE2)
 
-    prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="node2;kgtk:")
+    prefix: str = attr.ib(validator=attr.validators.instance_of(str), default= KgtkFormat.NODE2 + ";" + KgtkFormat.KGTK_NAMESPACE)
                                
     field_names: typing.Optional[typing.List[str]] = \
         attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
