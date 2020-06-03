@@ -67,7 +67,7 @@ id1 P3  Q4  id4
 - `-gz --use-gz {bool}`: if set to yes, read from compressed gz file. Default to **no**.
 - `-sid --use-id {bool}`: if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement. Default to **no**
 - `-log --log-path {str}`: set the path of the log file. Default to **warning.log**
-- `-pd --property-declaration-in-file {str}`: wehther read properties in the kgtk file. If set to yes, use `cat input.tsv input.tsv` to pipe the input file twice. Default to **no**
+- `-pd --property-declaration-in-file {bool}`: wehther read properties in the kgtk file. If set to yes, use `cat input.tsv input.tsv` to pipe the input file twice. Default to **no**
 
 ### Shared Options
 
