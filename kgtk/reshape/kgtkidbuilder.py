@@ -9,6 +9,7 @@ from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+from kgtk.value.kgtkvalue import KgtkValue
 
 @attr.s(slots=True, frozen=True)
 class KgtkIdBuilderOptions(KgtkFormat):
@@ -52,8 +53,8 @@ class KgtkIdBuilderOptions(KgtkFormat):
                                   type=optional_bool, nargs='?', const=True, default=False)
 
         parser.add_argument(      "--verify-id-unique", dest="verify_id_unique",
-                                  help=h("Verify ID uniqueness.  Uses an in-memory set of IDs. (default=%(default)s)."),
-                                  type=optional_bool, nargs='?', const=True, default=False)
+                                  help="Verify ID uniqueness.  Uses an in-memory set of IDs. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=True)
 
         parser.add_argument(      "--id-style", dest="id_style", default=cls.PREFIXED_STYLE, choices=cls.STYLES,
                                   help=h("The id style. (default=%(default)s)."))
@@ -164,13 +165,25 @@ class KgtkIdBuilder(KgtkFormat):
                    current_id=options.initial_id
         )
 
-    def verify_uniqueness(self, id_value: str, row: typing.List[str], line_number):
-        if id_value in self.id_set:
-            # TODO: Probably want more error handling options, such as
-            # printing the offending row and choosing to continue.
-            raise ValueError("Line %d: existing ID '%s' duplicates a previous ID." % (line_number, id_value))
+    def verify_uniqueness(self, id_value: str, row: typing.List[str], line_number, who: str):
+        if KgtkFormat.LIST_SEPARATOR in id_value:
+            # The ID value might be a list.
+            id_v: str
+            for id_v in KgtkValue.split_list(id_value):
+                if id_v in self.id_set:
+                    # TODO: Probably want more error handling options, such as
+                    # printing the offending row and choosing to continue.
+                    raise ValueError("Line %d: %s ID '%s' duplicates a previous ID '%s'." % (line_number, who, id_value, id_v))
+                else:
+                    self.id_set.add(id_v)
         else:
-            self.id_set.add(id_value)
+            # Not a list, we can process this faster.
+            if id_value in self.id_set:
+                # TODO: Probably want more error handling options, such as
+                # printing the offending row and choosing to continue.
+                raise ValueError("Line %d: %s ID '%s' duplicates a previous ID '%s'." % (line_number, who, id_value, id_value))
+            else:
+                self.id_set.add(id_value)
         
 
     def build(self, row: typing.List[str], line_number: int)->typing.List[str]:
@@ -183,7 +196,7 @@ class KgtkIdBuilder(KgtkFormat):
         else:            
             if row[self.id_column_idx] != "" and not self.options.overwrite_id:
                 if self.options.verify_id_unique:
-                    self.verify_uniqueness(row[self.id_column_idx], row, line_number)
+                    self.verify_uniqueness(row[self.id_column_idx], row, line_number, "existing")
 
                 return row
             row = row.copy() # as a precaution
@@ -198,7 +211,7 @@ class KgtkIdBuilder(KgtkFormat):
 
         row[self.id_column_idx] = new_id
         if self.options.verify_id_unique:
-            self.verify_uniqueness(new_id, row, line_number)
+            self.verify_uniqueness(new_id, row, line_number, "noew")
         return row
 
     def build_concat(self, row: typing.List[str])->str:
