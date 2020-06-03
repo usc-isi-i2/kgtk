@@ -585,7 +585,7 @@ class KgtkValue(KgtkFormat):
     nonzero_digit_pat: str = r'[1-9]'
     units_node_pat: str = r'(?P<units_node>Q{nonzero_digit}{digit}*)'.format(nonzero_digit=nonzero_digit_pat,
                                                                              digit=digit_pat)
-    lax_units_node_pat: str = r'(?P<units_node>Q[0-9A-Z][-0-9A-Z]*)'
+    lax_units_node_pat: str = r'(?P<units_node>Q[0-9A-Za-z][-0-9A-Za-z]*)'
     
 
     units_pat: str = r'(?:{si}|{units_node})'.format(si=si_pat,
