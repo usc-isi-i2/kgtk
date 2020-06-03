@@ -34,6 +34,7 @@ class KgtkCompact(KgtkFormat):
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
 
     sorted_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    verify_sort: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -125,7 +126,7 @@ class KgtkCompact(KgtkFormat):
 
         # Are we starting a new key?
         if self.current_key is None:
-            # Save the new row as the current row.  If the nexy row
+            # Save the new row as the current row.  If the next row
             # doesn't have the same input key, we'll write this
             # row out with a minimum of handling.
             self.current_key = input_key
@@ -195,12 +196,42 @@ class KgtkCompact(KgtkFormat):
         input_line_count: int = 0
         row: typing.List[str]
         input_key: str
+        prev_input_key: typing.Optional[str] = None
+        going_up: typing.Optional[bool] = None
         if self.sorted_input:
             if self.verbose:
                 print("Reading the input data from %s" % self.input_file_path, file=self.error_file, flush=True)
             for row in kr:
                 input_line_count += 1
                 input_key = self.build_key(row, key_idx_list)
+                if self.verify_sort:
+                    if prev_input_key is None:
+                        prev_input_key = input_key
+                    else:
+                        if going_up is None:
+                            if prev_input_key < input_key:
+                                going_up = True
+                                prev_input_key = input_key
+                            elif prev_input_key > input_key:
+                                going_up = False
+                                prev_input_key = input_key
+                            else:
+                                pass # No change in input key
+                        elif going_up:
+                            if prev_input_key < input_key:
+                                prev_input_key = input_key
+                            elif prev_input_key > input_key:
+                                raise ValueError("Line %d sort violation going up: prev='%s' curr='%s'" % (input_line_count, prev_input_key, input_key))
+                            else:
+                                pass # No change in input_key
+                        else:
+                            if prev_input_key > input_key:
+                                prev_input_key = input_key
+                            elif prev_input_key < input_key:
+                                raise ValueError("Line %d sort violation going down: prev='%s' curr='%s'" % (input_line_count, prev_input_key, input_key))
+                            else:
+                                pass # No change in input_key
+                            
                 self.process_row(input_key, row, ew)
             
         else:
@@ -246,8 +277,12 @@ def main():
                               "(default=id for node files, (node1, label, node2) for edge files).", nargs='+', default=[ ])
 
     parser.add_argument(      "--presorted", dest="sorted_input",
-                              help="Indicate that the input has been presorted (or at least pregrouped) (default=%(default)s).",
+                              help="Indicate that the input has been presorted (or at least pregrouped). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--verify-sort", dest="verify_sort",
+                              help="If the input has been presorted, verify its consistency (disable if only pregrouped). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
@@ -270,6 +305,7 @@ def main():
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
         print("--columns %s" % " ".join(args.key_column_names), file=error_file, flush=True)
         print("--presorted=%s" % str(args.sorted_input))
+        print("--verify-sort=%s" % str(args.verify_sort))
         print("--output-file=%s" % str(args.output_file_path))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -278,6 +314,7 @@ def main():
         input_file_path=args.input_file_path,
         key_column_names=args.key_column_names,
         sorted_input=args.sorted_input,
+        verify_sort=args.verify_sort,
         output_file_path=args.output_file_path,
         reader_options=reader_options,
         value_options=value_options,

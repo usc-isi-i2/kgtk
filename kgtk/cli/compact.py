@@ -38,6 +38,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
 
+    # This helper function makes it easy to suppress options from
+    # The help message.  The options are still there, and initialize
+    # what they need to initialize.
+    def h(msg: str)->str:
+        if _expert:
+            return msg
+        else:
+            return SUPPRESS
+
     parser.add_argument(      "input_kgtk_file", nargs="?", type=Path, default="-",
                               help="The KGTK file to filter. May be omitted or '-' for stdin (default=%(default)s).")
 
@@ -49,6 +58,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Indicate that the input has been presorted (or at least pregrouped) (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--verify-sort", dest="verify_sort",
+                              help="If the input has been presorted, verify its consistency (disable if only pregrouped). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -59,6 +72,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         output_kgtk_file: typing.Optional[Path],
         key_column_names: typing.List[str],
         sorted_input: bool,
+        verify_sort: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -93,6 +107,7 @@ def run(input_kgtk_file: typing.Optional[Path],
             input_file_path=input_kgtk_file,
             key_column_names=key_column_names,
             sorted_input = sorted_input,
+            verify_sort = verify_sort,
             output_file_path=output_kgtk_file,
             reader_options=reader_options,
             value_options=value_options,
