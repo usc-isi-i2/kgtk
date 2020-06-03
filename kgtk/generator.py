@@ -40,10 +40,10 @@ class Generator:
         self.order_map = {}
         self.n = n
         self.yyyy_mm_dd_pattern = re.compile(
-            "[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
-        self.yyyy_pattern = re.compile("[12]\d{3}")
+            r"[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
+        self.yyyy_pattern = re.compile(r"[12]\d{3}")
         self.quantity_pattern = re.compile(
-            "([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:.*))?")
+            r"([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:.*))?")
         self.warning = warning
         if self.warning:
             self.warn_log = open(log_path,"w")
@@ -59,7 +59,8 @@ class Generator:
     def set_sets(self,label_set:str,description_set:str,alias_set:str):
         self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(alias_set.split(",")), set(description_set.split(","))
     
-    def initialize_order_map(self, edge_list:list):
+    def initialize_order_map(self, edge:str):
+        edge_list = edge.strip("\n").split("\t")
         node1_index = edge_list.index("node1")
         node2_index = edge_list.index("node2")
         prop_index = edge_list.index("label")
@@ -141,13 +142,6 @@ class TripleGenerator(Generator):
         dest_fp = kwargs.pop("dest_fp")
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
-        self.set_properties(prop_file)
-        self.fp = dest_fp
-        self.read_num_of_lines = 0
-        self.truthy = truthy
-        self.reset_etk_doc()
-        self.serialize_prefix()
-        self.use_id = use_id
         self.datatype_mapping = {
             "item": Item,
             "time": TimeValue,
@@ -159,14 +153,27 @@ class TripleGenerator(Generator):
             "url": StringValue,
             "property":WDProperty,
         }
+        self.prop_declaration = prop_declaration
+        self.set_properties(prop_file)
+        self.fp = dest_fp
+        self.read_num_of_lines = 0
+        self.truthy = truthy
+        self.reset_etk_doc()
+        self.serialize_prefix()
+        self.use_id = use_id
+
     
-    def read_prop_declaration(self,line_number:int, edge:str):
-        edge_list = edge.strip("\n").split("\t")
+    def parse_edges(self,edge:str):
         # use the order_map to map the node
+        edge_list = edge.strip("\n").split("\t")
         node1 = edge_list[self.order_map["node1"]].strip()
         node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["prop"]].strip()
-        e_id = edge_list[self.order_map["id"]].strip()    
+        prop = edge_list[self.order_map["label"]].strip()
+        e_id = edge_list[self.order_map["id"]].strip()  
+        return node1, node2, prop, e_id
+    
+    def read_prop_declaration(self,line_number:int, edge:str):
+        node1, node2, prop, e_id = self.parse_edges(edge)
         if prop == "data_type":
             self.prop_types[node1] = self.datatype_mapping[node2.strip()]
         return
@@ -264,8 +271,11 @@ class TripleGenerator(Generator):
     def generate_prop_declaration_triple(self, node1: str, node2: str) -> bool:
         # update the known prop_types
         if node1 in self.prop_types:
-            raise KGTKException("Duplicated property definition of {} found!".format(node1))
-        self.prop_types[node1] = node2
+            if not self.prop_declaration:
+                raise KGTKException("Duplicated property definition of {} found!".format(node1))
+        else:
+            self.prop_types[node1] = node2
+        
         prop = WDProperty(node1, self.datatype_mapping[node2])
         self.doc.kg.add_subject(prop)
         return True
@@ -309,8 +319,11 @@ class TripleGenerator(Generator):
                     # TODO, in future, the two cases above will be dropped in principle to comply with the iso format
                     # now it is iso format
                     assert(node2[0] == "^")
-                    dateTimeString, precision = node2[1:].split("/")
-                    dateTimeString = dateTimeString[:-1]
+                    node2 = node2[1:] # remove ^
+                    if node2.startswith("+"):
+                        node2 = node2[1:]
+                    dateTimeString, precision = node2.split("/")
+                    dateTimeString = dateTimeString[:-1] # remove Z
                     object = TimeValue(
                         value=dateTimeString,
                         calendar=Item("Q1985727"),
@@ -391,17 +404,13 @@ class TripleGenerator(Generator):
         the second element is a bool indicating whether this is a valid property edge or qualifier edge.
         Call corresponding downstream functions
         """
-        edge_list = edge.strip("\n").split("\t")
         if line_number == 1:
             # initialize the order_map
-            self.initialize_order_map(edge_list)
+            self.initialize_order_map(edge)
             return
 
         # use the order_map to map the node
-        node1 = edge_list[self.order_map["node1"]].strip()
-        node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["prop"]].strip()
-        e_id = edge_list[self.order_map["id"]].strip()
+        node1, node2, prop, e_id = self.parse_edges(edge)
         if line_number == 2:
             # by default a statement edge
             is_qualifier_edge = False
@@ -663,7 +672,6 @@ class JsonGenerator(Generator):
                     self.warn_log.write("edge creation error at line [{}].\n".format(line_number))
                 return False
 
-            print(line_number, self.to_append_statement, is_qualifier_edge, field, object)
             # process object
             if is_qualifier_edge:
                 # update qualifier edge
