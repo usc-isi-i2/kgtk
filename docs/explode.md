@@ -38,7 +38,7 @@ optional arguments:
   --types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]
                         The KGTK data types for which fields should be exploded. (default=['empty', 'list', 'number', 'quantity', 'string',
                         'language_qualified_string', 'location_coordinates', 'date_and_times', 'extension', 'boolean', 'symbol']).
-  --prefix PREFIX       The prefix for exploded column names. (default=node2;).
+  --prefix PREFIX       The prefix for exploded column names. (default=node2;kgtk:).
   --overwrite [OVERWRITE_COLUMNS]
                         Indicate that it is OK to overwrite existing columns. (default=False).
   --expand [EXPAND_LIST]
@@ -93,7 +93,7 @@ kgtk explode file1.tsv
 
 The output will be the following table in KGTK format:
 
-| node1 | label | node2 | node2;data_type | node2;valid | node2;list_len | node2;number | node2;low_tolerance | node2;high_tolerance | node2;si_units | node2;wikidata_node | node2;text | node2;language | node2;suffix | node2;latitude | node2;longitude | node2;date_and_time | node2;precision | node2;truth | node2;symbol |
+| node1 | label | node2 | node2;kgtk:data_type | node2;kgtk:valid | node2;kgtk:list_len | node2;kgtk:number | node2;kgtk:low_tolerance | node2;kgtk:high_tolerance | node2;kgtk:si_units | node2;kgtk:units_node | node2;kgtk:text | node2;kgtk:language | node2;kgtk:language_suffix | node2;kgtk:latitude | node2;kgtk:longitude | node2;kgtk:date_and_time | node2;kgtk:precision | node2;kgtk:truth | node2;kgtk:symbol |
 | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
 | john | string | "John" | string | True | 0 |  |  |  |  |  | "John" |  |  |  |  |  |  |  |  |
 | john | lqstring | 'John'@en | language_qualified_string | True | 0 |  |  |  |  |  | "John" | en |  |  |  |  |  |  |  |
