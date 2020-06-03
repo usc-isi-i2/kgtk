@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, SUPPRESS
 import attr
 from pathlib import Path
 import sys
@@ -29,30 +29,40 @@ class KgtkIdBuilderOptions(KgtkFormat):
     initial_id: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_INITIAL_ID)
 
     @classmethod
-    def add_arguments(cls, parser: ArgumentParser):
+    def add_arguments(cls, parser: ArgumentParser, expert: bool = False):
+
+        # This helper function makes it easy to suppress options from
+        # The help message.  The options are still there, and initialize
+        # what they need to initialize.
+        def h(msg: str)->str:
+            if expert:
+                return msg
+            else:
+                return SUPPRESS
+
 
         # This one is likely to cause conflicts in the future.
         #
         # The default value is indirect.
         parser.add_argument(      "--id-column-name", dest="id_column_name",
-                                  help="The name of the id column. (default=id).")
+                                  help=h("The name of the id column. (default=id)."))
             
         parser.add_argument(      "--overwrite-id", dest="overwrite_id",
-                                  help="Replace existing id value (per-row). (default=%(default)s).",
+                                  help=h("Replace existing id value (per-row). (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, default=False)
 
         parser.add_argument(      "--verify-id-unique", dest="verify_id_unique",
-                                  help="Verify ID uniqueness.  Uses an in-memory set of IDs. (default=%(default)s).",
+                                  help=h("Verify ID uniqueness.  Uses an in-memory set of IDs. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, default=False)
 
         parser.add_argument(      "--id-style", dest="id_style", default=cls.PREFIXED_STYLE, choices=cls.STYLES,
-                                  help="The id style. (default=%(default)s).")
+                                  help=h("The id style. (default=%(default)s)."))
 
         parser.add_argument(      "--id-prefix", dest="id_prefix", default=cls.DEFAULT_PREFIX,
-                                  help="The prefix for a prefix/number id. (default=%(default)s).")
+                                  help=h("The prefix for a prefix/number id. (default=%(default)s)."))
 
         parser.add_argument(      "--initial-id", dest="initial_id", type=int, default=cls.DEFAULT_INITIAL_ID,
-                                  help="The initial value for a prefix/number id. (default=%(default)s).")
+                                  help=h("The initial value for a prefix/number id. (default=%(default)s)."))
 
     @classmethod
     def from_dict(cls, d: dict)->'KgtkIdBuilderOptions':
