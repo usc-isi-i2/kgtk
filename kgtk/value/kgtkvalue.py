@@ -57,7 +57,7 @@ class KgtkValueFields():
 
     si_units: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
-    wikidata_node: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    units_node: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # Offer the components of a location coordinates, after validaating the item:
     latitudestr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
@@ -120,7 +120,7 @@ class KgtkValueFields():
         "high_tolerancestr",
         "high_tolerance",
         "si_units",
-        "wikidata_node",
+        "units_node",
         "latitudestr",
         "latitude",
         "longitudestr",
@@ -159,7 +159,7 @@ class KgtkValueFields():
         "low_tolerance",
         "high_tolerance",
         "si_units",
-        "wikidata_node",
+        "units_node",
         "latitude",
         "longitude",
         "date_and_time",
@@ -182,7 +182,7 @@ class KgtkValueFields():
         "high_tolerancestr": "str",
         "high_tolerance": "num",
         "si_units": "sym",
-        "wikidata_node": "sym",
+        "units_node": "sym",
         "latitudestr": "str",
         "latitude": "num",
         "longitudestr": "str",
@@ -218,7 +218,7 @@ class KgtkValueFields():
                                                 "numberstr", "number",
                                                 "low_tolerancestr", "low_tolerance",
                                                 "high_tolerancestr", "high_tolerance",
-                                                "si_units", "wikidata_node",
+                                                "si_units", "units_node",
         ],
         KgtkFormat.DataType.STRING.lower(): [ "data_type", "valid", "text" ],
         KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "data_type", "valid", "text", "language", "language_suffix" ],
@@ -253,7 +253,7 @@ class KgtkValueFields():
                                                 "low_tolerance",
                                                 "high_tolerance",
                                                 "si_units",
-                                                "wikidata_node",
+                                                "units_node",
         ],
         KgtkFormat.DataType.STRING.lower(): [ "data_type", "valid", "text" ],
         KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "data_type", "valid", "text", "language", "language_suffix" ],
@@ -297,8 +297,8 @@ class KgtkValueFields():
             results["high_tolerance"] = self.high_tolerance
         if self.si_units is not None:
             results["si_units"] = self.si_units
-        if self.wikidata_node is not None:
-            results["wikidata_node"] = self.wikidata_node
+        if self.units_node is not None:
+            results["units_node"] = self.units_node
         if self.latitudestr is not None:
             results["latitudestr"] = self.latitudestr
         if self.latitude is not None:
@@ -583,16 +583,16 @@ class KgtkValue(KgtkFormat):
     #
     #    "Each Wikidata entity is identified by an entity ID, which is a number prefixed by a letter."
     nonzero_digit_pat: str = r'[1-9]'
-    wikidata_node_pat: str = r'(?P<wikidata_node>Q{nonzero_digit}{digit}*)'.format(nonzero_digit=nonzero_digit_pat,
-                                                                                   digit=digit_pat)
-    lax_wikidata_node_pat: str = r'(?P<wikidata_node>Q[0-9A-Z][-0-9A-Z]*)'
+    units_node_pat: str = r'(?P<units_node>Q{nonzero_digit}{digit}*)'.format(nonzero_digit=nonzero_digit_pat,
+                                                                             digit=digit_pat)
+    lax_units_node_pat: str = r'(?P<units_node>Q[0-9A-Z][-0-9A-Z]*)'
     
 
-    units_pat: str = r'(?:{si}|{wikidata_node})'.format(si=si_pat,
-                                                        wikidata_node=wikidata_node_pat)
+    units_pat: str = r'(?:{si}|{units_node})'.format(si=si_pat,
+                                                     units_node=units_node_pat)
 
-    lax_units_pat: str = r'(?:{si}|{wikidata_node})'.format(si=si_pat,
-                                                            wikidata_node=lax_wikidata_node_pat)
+    lax_units_pat: str = r'(?:{si}|{units_node})'.format(si=si_pat,
+                                                         units_node=lax_units_node_pat)
     
 
     # This definition matches numbers or quantities.
@@ -650,7 +650,7 @@ class KgtkValue(KgtkFormat):
         low_tolerancestr: typing.Optional[str] = m.group("low_tolerance")
         high_tolerancestr: typing.Optional[str] = m.group("high_tolerance")
         si_units: typing.Optional[str] = m.group("si_units")
-        wikidata_node: typing.Optional[str] = m.group("wikidata_node")
+        units_node: typing.Optional[str] = m.group("units_node")
 
         low_tolerance: typing.Optional[float]
         if low_tolerancestr is None:
@@ -682,7 +682,7 @@ class KgtkValue(KgtkFormat):
         else:
             number = int(n)
 
-        if low_tolerancestr is not None or high_tolerancestr is not None or si_units is not None or wikidata_node is not None:
+        if low_tolerancestr is not None or high_tolerancestr is not None or si_units is not None or units_node is not None:
             # We can be certain that this is a quantity.
             self.data_type = KgtkFormat.DataType.QUANTITY
         else:
@@ -700,7 +700,7 @@ class KgtkValue(KgtkFormat):
                                           high_tolerancestr=high_tolerancestr,
                                           high_tolerance=high_tolerance,
                                           si_units=si_units,
-                                          wikidata_node=wikidata_node)
+                                          units_node=units_node)
         return True
     
     def is_number(self, validate: bool=False)->bool:
@@ -801,7 +801,7 @@ class KgtkValue(KgtkFormat):
         low_tolerancestr:str = m.group("low_tolerance")
         high_tolerancestr:str = m.group("high_tolerance")
         si_units:str = m.group("si_units")
-        wikidata_node:str = m.group("wikidata_node")
+        units_node:str = m.group("units_node")
 
         low_tolerance: typing.Optional[float]
         if low_tolerancestr is None:
@@ -833,7 +833,7 @@ class KgtkValue(KgtkFormat):
         else:
             number = int(n)
 
-        if low_tolerancestr is None and high_tolerancestr is None and si_units is None and wikidata_node is None:
+        if low_tolerancestr is None and high_tolerancestr is None and si_units is None and units_node is None:
             # This is a number, not a quantity
             self.data_type = KgtkFormat.DataType.NUMBER
             self.valid = True
@@ -857,7 +857,7 @@ class KgtkValue(KgtkFormat):
                                           high_tolerancestr=high_tolerancestr,
                                           high_tolerance=high_tolerance,
                                           si_units=si_units,
-                                          wikidata_node=wikidata_node)
+                                          units_node=units_node)
         return True
     
     lax_string_re: typing.Pattern = re.compile(r'^"(?P<text>.*)"$')
