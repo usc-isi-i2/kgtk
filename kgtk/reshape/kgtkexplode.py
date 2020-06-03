@@ -24,7 +24,7 @@ class KgtkExplode(KgtkFormat):
 
     column_name: str = attr.ib(validator=attr.validators.instance_of(str), default="node2")
 
-    prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="")
+    prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="node2;kgtk:")
                                
     field_names: typing.Optional[typing.List[str]] = \
         attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
@@ -235,7 +235,7 @@ def main():
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
-    parser.add_argument(      "--prefix", dest="prefix", help="The prefix for exploded column names. (default=%(default)s).", default="node2;")
+    parser.add_argument(      "--prefix", dest="prefix", help="The prefix for exploded column names. (default=%(default)s).", default="node2;kgtk:")
 
     parser.add_argument(      "--overwrite", dest="overwrite_columns",
                               help="Indicate that it is OK to overwrite existing columns. (default=%(default)s).",
