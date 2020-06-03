@@ -305,8 +305,8 @@ class KgtkReaderOptions():
             whitespace_line_action=lookup("whitespace_line_action", ValidationAction.EXCLUDE),
         )
 
-    @classmethod
     # Build the value parsing option structure.
+    @classmethod
     def from_args(cls,
                   args: Namespace,
                   who: str = "",

@@ -17,6 +17,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -35,6 +36,9 @@ class KgtkCompact(KgtkFormat):
 
     sorted_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     verify_sort: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
+    build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    idbuilder_options: typing.Optional[KgtkIdBuilder] = attr.ib(default=None)
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -107,21 +111,29 @@ class KgtkCompact(KgtkFormat):
                 continue # Ignore duplicate items
             self.current_row_lists[idx].append(item)
 
-    def process_row(self, input_key: str, row: typing.List[str], ew: KgtkWriter):
+    def process_row(self,
+                    input_key: str,
+                    row: typing.List[str],
+                    line_number: int,
+                    idb: typing.Optional[KgtkIdBuilder],
+                    ew: KgtkWriter,
+                    flush: bool = False):
         # Note:  This code makes the assumption that row lengths do not vary!
         if self.current_key is not None:
             # We have a record being built.  Write it?
-            if len(row) == 0 or self.current_key != input_key:
-                # len(row) == 0 implies a flush request.
+            if flush or self.current_key != input_key:
                 # self.current_key != input_key means that the key is changing.
                 self.compact_row()
                 if self.current_row is not None:
-                    ew.write(self.current_row)
+                    if idb is None:
+                        ew.write(self.current_row)
+                    else:
+                        ew.write(idb.build(self.current_row, line_number))
                 self.current_key = None
                 self.current_row = None
 
-        if len(row) == 0:
-            # This was a flush request.  We're done
+        if flush:
+            # This was a flush request.  We're done.
             return
 
         # Are we starting a new key?
@@ -138,6 +150,7 @@ class KgtkCompact(KgtkFormat):
         self.merge_row(row)
 
     def process(self):
+
         # Open the input file.
         if self.verbose:
             if self.input_file_path is not None:
@@ -152,6 +165,18 @@ class KgtkCompact(KgtkFormat):
                                           verbose=self.verbose,
                                           very_verbose=self.very_verbose,
         )
+
+        # If requested, creat the ID column builder.
+        # Assemble the list of output column names.
+        output_column_names: typing.List[str]
+        idb: typing.Optional[KgtkIdBuilder] = None
+        if self.build_id:
+            if self.idbuilder_options is None:
+                raise ValueError("ID build requested but ID builder options are missing")
+            idb = KgtkIdBuilder.new(kr, self.idbuilder_options)
+            output_column_names = idb.column_names
+        else:
+            output_column_names = kr.column_names
 
         # Build the list of key column edges:
         key_idx_list: typing.List[int] = [ ]
@@ -184,7 +209,7 @@ class KgtkCompact(KgtkFormat):
             print("key indexes: %s" % " ".join(key_idx_list_str))
             
         # Open the output file.
-        ew: KgtkWriter = KgtkWriter.open(kr.column_names,
+        ew: KgtkWriter = KgtkWriter.open(output_column_names,
                                          self.output_file_path,
                                          mode=kr.mode,
                                          require_all_columns=False,
@@ -194,7 +219,7 @@ class KgtkCompact(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
         input_line_count: int = 0
-        row: typing.List[str]
+        row: typing.List[str] = [ ]
         input_key: str
         prev_input_key: typing.Optional[str] = None
         going_up: typing.Optional[bool] = None
@@ -232,7 +257,7 @@ class KgtkCompact(KgtkFormat):
                             else:
                                 pass # No change in input_key
                             
-                self.process_row(input_key, row, ew)
+                self.process_row(input_key, row, input_line_count, idb, ew)
             
         else:
             if self.verbose:
@@ -255,9 +280,11 @@ class KgtkCompact(KgtkFormat):
             
             for input_key in sorted(input_map.keys()):
                 for row in input_map[input_key]:
-                    self.process_row(input_key, row, ew)
+                    self.process_row(input_key, row, input_line_count, idb, ew)
 
-        self.process_row("", [ ], ew) # Flush the final row, if any.
+        # Flush the final row, if any.  We pass the last row read for
+        # feedback, such as an ID uniqueness violation.
+        self.process_row("", row, input_line_count, idb, ew, flush=True)
         
         if self.verbose:
             print("Read %d records, wrote %d records." % (input_line_count, self.output_line_count), file=self.error_file, flush=True)
@@ -266,7 +293,7 @@ class KgtkCompact(KgtkFormat):
 
 def main():
     """
-    Test the KGTK ifempty processor.
+    Test the KGTK compact processor.
     """
     parser: ArgumentParser = ArgumentParser()
 
@@ -286,7 +313,11 @@ def main():
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
+    parser.add_argument(      "--build-id", dest="build_id",
+                              help="Build id values in an id column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
+    KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
     KgtkValueOptions.add_arguments(parser)
@@ -296,17 +327,19 @@ def main():
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the option structures.                                                                                                                          
+    idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_args(args)    
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
-        # TODO: show ifempty-specific options.
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
         print("--columns %s" % " ".join(args.key_column_names), file=error_file, flush=True)
-        print("--presorted=%s" % str(args.sorted_input))
-        print("--verify-sort=%s" % str(args.verify_sort))
-        print("--output-file=%s" % str(args.output_file_path))
+        print("--presorted=%s" % str(args.sorted_input), file=error_file, flush=True)
+        print("--verify-sort=%s" % str(args.verify_sort), file=error_file, flush=True)
+        print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
+        print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
+        idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -316,6 +349,8 @@ def main():
         sorted_input=args.sorted_input,
         verify_sort=args.verify_sort,
         output_file_path=args.output_file_path,
+        build_id=args.build_id,
+        idbuilder_options=idbuilder_options,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
