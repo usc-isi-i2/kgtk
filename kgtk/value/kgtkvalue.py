@@ -43,7 +43,7 @@ class KgtkValueFields():
     language: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # The language code suffix, including the leading dash.
-    suffix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    language_suffix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # Offer the components of a number or quantity, after validating the item.
     numberstr: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
@@ -112,7 +112,7 @@ class KgtkValueFields():
         "valid",
         "text",
         "language",
-        "suffix",
+        "language_suffix",
         "numberstr",
         "number",
         "low_tolerancestr",
@@ -154,7 +154,7 @@ class KgtkValueFields():
         "list_len",
         "text",
         "language",
-        "suffix",
+        "language_suffix",
         "number",
         "low_tolerance",
         "high_tolerance",
@@ -174,7 +174,7 @@ class KgtkValueFields():
         "valid": "bool",
         "text": "str",
         "language": "sym",
-        "suffix": "sym",
+        "language_suffix": "sym",
         "numberstr": "str",
         "number": "num",
         "low_tolerancestr": "str",
@@ -221,7 +221,7 @@ class KgtkValueFields():
                                                 "si_units", "wikidata_node",
         ],
         KgtkFormat.DataType.STRING.lower(): [ "data_type", "valid", "text" ],
-        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "data_type", "valid", "text", "language", "suffix" ],
+        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "data_type", "valid", "text", "language", "language_suffix" ],
         KgtkFormat.DataType.LOCATION_COORDINATES.lower(): [ "data_type", "valid",
                                                             "latitudestr", "latitude",
                                                             "longitudestr", "longitude",
@@ -256,7 +256,7 @@ class KgtkValueFields():
                                                 "wikidata_node",
         ],
         KgtkFormat.DataType.STRING.lower(): [ "data_type", "valid", "text" ],
-        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "data_type", "valid", "text", "language", "suffix" ],
+        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "data_type", "valid", "text", "language", "language_suffix" ],
         KgtkFormat.DataType.LOCATION_COORDINATES.lower(): [ "data_type", "valid",
                                                             "latitude",
                                                             "longitude",
@@ -281,8 +281,8 @@ class KgtkValueFields():
             results["text"] = self.text
         if self.language is not None:
             results["language"] = self.language
-        if self.suffix is not None:
-            results["suffix"] = self.suffix
+        if self.language_suffix is not None:
+            results["language_suffix"] = self.language_suffix
         if self.numberstr is not None:
             results["numberstr"] = self.numberstr
         if self.number is not None:
@@ -955,7 +955,7 @@ class KgtkValue(KgtkFormat):
         return True
 
     # Support two or three character language codes.  Suports hyphenated codes
-    # with a country code or dialect namesuffix after the language code.
+    # with a country code or dialect name suffix after the language code.
     lax_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>.*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
     strict_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z]+)?)$")
 
@@ -1004,7 +1004,7 @@ class KgtkValue(KgtkFormat):
                                           valid=self.valid,
                                           text=m.group("text"),
                                           language=m.group("lang"),
-                                          suffix=m.group("suffix"))
+                                          language_suffix=m.group("suffix"))
         return True
 
     #location_coordinates_re: typing.Pattern = re.compile(r"^@(?P<lat>[-+]?\d{3}\.\d{5})/(?P<lon>[-+]?\d{3}\.\d{5})$")
