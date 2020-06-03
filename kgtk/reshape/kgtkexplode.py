@@ -155,7 +155,7 @@ class KgtkExplode(KgtkFormat):
 
             # Parse the value for the colummn being exploded:
             item_to_explode: str = row[column_idx]
-            value: KgtkValue = KgtkValue(item_to_explode, parse_fields=True)
+            value: KgtkValue = KgtkValue(item_to_explode, options=self.value_options, parse_fields=True)
             value.validate()
             if not value.is_valid():
                 if self.verbose:
