@@ -63,12 +63,23 @@ def add_arguments(parser):
     )
     parser.add_argument(
         "-pf",
-        "--property-types",
+        "--property-file",
         action="store",
         type=str,
-        required = True,
+        required = False,
+        default="NONE",
         help="path to the file which contains the property datatype mapping in kgtk format.",
         dest="prop_file",
+    )
+    parser.add_argument(
+        "-pd",
+        "--property-declaration-in-file",
+        action="store",
+        type=str2bool,
+        required = False,
+        default=False,
+        help="wehther read properties in the kgtk file. If set to yes, use `cat input.tsv input.tsv` to pipe the input file twice",
+        dest="prop_declaration",
     )
     parser.add_argument(
         "-n",
@@ -143,12 +154,14 @@ def run(
     use_gz: bool,
     use_id:bool,
     log_path:str,
+    prop_declaration:bool,
 ):
     # import modules locally
     import gzip
     # from kgtk.triple_generator import TripleGenerator
     from kgtk.generator import TripleGenerator
     import sys
+
     generator = TripleGenerator(
         prop_file=prop_file,
         label_set=labels,
@@ -159,17 +172,47 @@ def run(
         truthy=truthy,
         use_id=use_id,
         dest_fp=sys.stdout,
-        log_path = log_path
+        log_path = log_path,
+        prop_declaration= prop_declaration,
     )
-    # process stdin
+
+    # loop first round
     if use_gz:
         fp = gzip.open(sys.stdin.buffer, 'rt')
     else:
         fp = sys.stdin
         # not line by line
-    for line_num, edge in enumerate(fp):
-        if edge.startswith("#") or len(edge.strip("\n")) == 0:
-            continue
-        else:
-            generator.entry_point(line_num+1,edge)
-    generator.finalize()
+    
+    if prop_declaration:
+        file_lines = 0
+        begining_edge = None
+        start_generation = False
+        for line_num, edge in enumerate(fp):
+            if line_num == 0:
+                begining_edge = edge
+                generator.entry_point(line_num+1,edge)
+                file_lines += 1
+            else:
+                if start_generation:
+                    # start triple generation because reached the starting position of the second `cat`
+                    line_num -= file_lines
+                    # print("creating triples at line {} {} with total number of lines: {}".format(line_num+1, edge, file_lines))
+                    generator.entry_point(line_num+1,edge) # file generator
+                    # print("# {}".format(generator.read_num_of_lines))
+                else:
+                    if edge == begining_edge:
+                        start_generation = True
+                    else:
+                        file_lines += 1
+                        # print("creating property declarations at line {} {}".format(line_num, edge))
+                        generator.read_prop_declaration(line_num+1,edge)
+                    
+        generator.finalize()
+    else:
+        for line_num, edge in enumerate(fp):
+            if edge.startswith("#") or len(edge.strip("\n")) == 0:
+                continue
+            else:
+                generator.entry_point(line_num+1,edge)
+    
+        generator.finalize()

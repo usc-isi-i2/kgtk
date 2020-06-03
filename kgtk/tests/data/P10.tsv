@@ -1,4 +1,4 @@
-node1	property	node2	id
+node1	label	node2	id
 P10	P1628	http://schema.org/video	P10-P1628-1
 P10	P1628	http://www.w3.org/2006/vcard/ns#Video	P10-P1628-2
 P10	P1629	Q34508	P10-P1629-1

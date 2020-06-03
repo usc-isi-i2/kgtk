@@ -57,21 +57,17 @@ id1 P3  Q4  id4
 
 ## Options
 
-### Required Option
-
-- `--pf --property-types {path}`: path to the **property file** which contains the property datatype mapping in kgtk format.
-
-### Optional Options
-
+- `--pf --property-types {str}`: path to the **property file** which contains the property datatype mapping in kgtk format. Default to **NONE**
 - `-lp --label-property {str}`: property identifiers which will create labels, separated by comma','. Default to **label**.
-- `-ap --alias-property {str}`: alias identifiers which will create labels, separated by comma','. Default to **aliases**.
-- `-dp --description-property {str}`: description identifiers which will create labels, separated by comma','. Default to **descriptions**.
-- `-gt --generate-truthy {bool}`: the default is to not generate truthy triples. Specify this option to generate truthy triples. Default to **Yes**.
-- `-w --warning {bool}`: if set to yes, warn various kinds of exceptions and mistakes and log them to a log file with line number in input file. Default to **False**.
+- `-ap --alias-property {str}`: alias identifiers which will create labels, separated by comma','. Default to **aliase**.
+- `-dp --description-property {str}`: description identifiers which will create labels, separated by comma','. Default to **description**.
+- `-gt --generate-truthy {bool}`: the default is to not generate truthy triples. Specify this option to generate truthy triples. Default to **yes**.
+- `-w --warning {bool}`: if set to yes, warn various kinds of exceptions and mistakes and log them to a log file with line number in input file. Default to **no**.
 - `-n --output-n-lines {number}`: output triples approximately every {n} lines of reading stdin. Default to **1000**.
-- `-gz --use-gz {number}`: if set to yes, read from compressed gz file. Default to **False**.
-- `-sid --use-id {bool}`: if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement. Default to **False**
+- `-gz --use-gz {bool}`: if set to yes, read from compressed gz file. Default to **no**.
+- `-sid --use-id {bool}`: if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement. Default to **no**
 - `-log --log-path {str}`: set the path of the log file. Default to **warning.log**
+- `-pd --property-declaration-in-file {str}`: wehther read properties in the kgtk file. If set to yes, use `cat input.tsv input.tsv` to pipe the input file twice. Default to **no**
 
 ### Shared Options
 
@@ -79,7 +75,9 @@ id1 P3  Q4  id4
 
 ## Explanation of Options
 
-**--property-types** is the most important input file. It is also a kgtk file. Here is an example file `example_prop.tsv`
+### **--property-types** 
+
+If set to true, read proprty data_type information from the property file following the format below. It is also a kgtk file. Here is an example file `example_prop.tsv`
 
 ```
 node1	label	node2
@@ -116,7 +114,7 @@ If `-gt --generate-truthy` set to `True`, the statement will be truthy. Truthy s
 
 ### warning
 
-ignore allows you to ignore various kind of errors written to the `ignore.log` file.
+If set to yes, triple generation errors according to specific line will be written to the `warning.log` file or specified path by `-log`.
 
 ### n
 
@@ -133,6 +131,11 @@ If `--use-id` is set to true, the `id` column of the kgtk file will be used as t
 ### log-path
 
 If using `-log`, the warning `-w` must be set to true.
+
+### property-declaration-in-file
+
+If set to yes, besides reading properties from property file, the generator will read from the input stream to find new properties. The user MUST use `cat input.tsv input.tsv | kgtk generate_wikidata_triples`.  
+
 
 ## How Triple Generator handles Different Types of Edges
 
@@ -180,11 +183,27 @@ Regular edges will be generated according to the data type of the property defin
 
 ### Standard Usage
 
+1. If properties are **only** defined in `example_prop.tsv`
+
 ```bash
 
-kgtk generate_wikidata_triples -pf example_prop.tsv < input_file.tsv > output_file.ttl
+kgtk generate_wikidata_triples -pf example_prop.tsv -w yes < input_file.tsv > output_file.ttl
 
 ```
+
+2. If properties are **only** defined in `input_file.tsv`
+
+```bash
+
+cat input_file.tsv input_file.tsv | kgtk generate_wikidata_triples -w yes -pd yes > output_file.ttl
+
+```
+1. If properties are defined in both files.
+
+```bash
+cat input_file.tsv input_file.tsv | kgtk generate_wikidata_triples -pf example_prop.tsv -w yes -pd yes > output_file.ttl
+```
+
 
 ### Parallel Usage
 
@@ -193,7 +212,7 @@ You can split the input files into several smaller pieces and run the command si
 Let's say you are in a directory which contains the `tsv` files. The following command will generate the `ttl` files with the same file name. 
 
 ```bash
-ls *tsv | parallel -j+0 --eta 'kgtk generate_wikidata_triples -pf example_props.tsv -n 1000 -ig no --debug -gt yes < {} > {.}.ttl'
+ls *tsv | parallel -j+0 --eta 'kgtk generate_wikidata_triples -pf example_props.tsv -n 1000 --debug -gt yes < {} > {.}.ttl'
 ```
 
 Splitting a large tsv file into small tsv files directly may make qualifier edges statementless and cause serious mistake. **Do** make sure the splited files start with an statement edge rather than qualifier edge. The header `node1 property  node2 id` needs to be inserted back at the beginning of splited files as well.
