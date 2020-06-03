@@ -64,7 +64,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The names of the fields to extract (overrides --types). (default=%(default)s)."),
                               choices=KgtkValueFields.FIELD_NAMES)
 
-    parser.add_argument(      "--prefix", dest="prefix", help="The prefix for exploded column names. (default=%(default)s).", default="node2;")
+    parser.add_argument(      "--prefix", dest="prefix", help="The prefix for exploded column names. (default=%(default)s).", default="node2;kgtk:")
 
     parser.add_argument(      "--overwrite", dest="overwrite_columns",
                               help="Indicate that it is OK to overwrite existing columns. (default=%(default)s).",
