@@ -13,6 +13,7 @@ from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.reshape.kgtkcompact import KgtkCompact
+from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -64,6 +65,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
+    parser.add_argument(      "--build-id", dest="build_id",
+                              help="Build id values in an id column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+    
+    KgtkIdBuilderOptions.add_arguments(parser, expert=_expert)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -73,6 +79,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         key_column_names: typing.List[str],
         sorted_input: bool,
         verify_sort: bool,
+        build_id: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -89,6 +96,7 @@ def run(input_kgtk_file: typing.Optional[Path],
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
+    idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_dict(kwargs)
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
@@ -97,7 +105,10 @@ def run(input_kgtk_file: typing.Optional[Path],
         print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
         print("--columns=%s" % " ".join(key_column_names), file=error_file)
         print("--presorted=%s" % str(sorted_input))
+        print("--verify-sort=%s" % str(verify_sort), file=error_file, flush=True)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
+        print("--build-id=%s" % str(build_id), file=error_file, flush=True)
+        idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -109,6 +120,8 @@ def run(input_kgtk_file: typing.Optional[Path],
             sorted_input = sorted_input,
             verify_sort = verify_sort,
             output_file_path=output_kgtk_file,
+            build_id=build_id,
+            idbuilder_options=idbuilder_options,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,

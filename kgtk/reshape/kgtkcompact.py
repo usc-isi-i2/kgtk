@@ -38,7 +38,7 @@ class KgtkCompact(KgtkFormat):
     verify_sort: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    idbuilder_options: typing.Optional[KgtkIdBuilder] = attr.ib(default=None)
+    idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
