@@ -137,6 +137,7 @@ class TripleGenerator(Generator):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         prop_file = kwargs.pop("prop_file")
+        prop_declaration = kwargs.pop("prop_declaration")
         dest_fp = kwargs.pop("dest_fp")
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
@@ -147,8 +148,6 @@ class TripleGenerator(Generator):
         self.reset_etk_doc()
         self.serialize_prefix()
         self.use_id = use_id
-    
-    def set_properties(self,prop_file:str):
         self.datatype_mapping = {
             "item": Item,
             "time": TimeValue,
@@ -160,9 +159,25 @@ class TripleGenerator(Generator):
             "url": StringValue,
             "property":WDProperty,
         }
+    
+    def read_prop_declaration(self,line_number:int, edge:str):
+        edge_list = edge.strip("\n").split("\t")
+        # use the order_map to map the node
+        node1 = edge_list[self.order_map["node1"]].strip()
+        node2 = edge_list[self.order_map["node2"]].strip()
+        prop = edge_list[self.order_map["prop"]].strip()
+        e_id = edge_list[self.order_map["id"]].strip()    
+        if prop == "data_type":
+            self.prop_types[node1] = self.datatype_mapping[node2.strip()]
+        return
+    
+    def set_properties(self,prop_file:str):
+        self.prop_types = {}
+        if prop_file == "NONE":
+            return
+        
         with open(prop_file, "r") as fp:
             props = fp.readlines()
-        self.prop_types = {}
         for line in props[1:]:
             node1, _, node2 = line.split("\t")
             try:
@@ -192,6 +207,7 @@ class TripleGenerator(Generator):
         kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
         self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
         self.doc = self.etk.create_document({}, doc_id=doc_id)
+        # TODO support customized namespace binding
         for k, v in wiki_namespaces.items():
             self.doc.kg.bind(k, v)
 
