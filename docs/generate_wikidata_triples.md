@@ -216,3 +216,27 @@ ls *tsv | parallel -j+0 --eta 'kgtk generate_wikidata_triples -pf example_props.
 ```
 
 Splitting a large tsv file into small tsv files directly may make qualifier edges statementless and cause serious mistake. **Do** make sure the splited files start with an statement edge rather than qualifier edge. The header `node1 property  node2 id` needs to be inserted back at the beginning of splited files as well.
+
+
+## Branch specific features not yet in dev
+
+
+#### enhancement/triple_uri
+
+Additional options enable the customization of uri prefix.
+
+- `-prefix --prefix-file {path}` a path to the prefix kgtk file that contains the mapping information.
+
+Below is a sample `prefix.tsv` file.
+```
+node1	bound	node
+p	bound_to	https://w3id.org/datamart/
+pr	bound_to	https://w3id.org/datamart/
+wd	bound_to	https://w3id.org/datamart/
+```
+
+To use it:
+
+```bash
+cat input.tsv | kgtk generate_wikidata_triples -prefix prefix.tsv -pf prop_file.tsv -w yes --debug -n 1000
+```
