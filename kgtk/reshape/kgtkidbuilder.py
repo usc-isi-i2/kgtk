@@ -49,7 +49,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
                                   help=h("The name of the id column. (default=id)."))
             
         parser.add_argument(      "--overwrite-id", dest="overwrite_id",
-                                  help=h("Replace existing id value (per-row). (default=%(default)s)."),
+                                  help="Replace existing id values. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=False)
 
         parser.add_argument(      "--verify-id-unique", dest="verify_id_unique",
