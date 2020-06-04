@@ -15,9 +15,10 @@ from kgtk.value.kgtkvalue import KgtkValue
 class KgtkIdBuilderOptions(KgtkFormat):
     # TODO: use an enum
     CONCAT_STYLE: str = "concat" # node1-label-node2
+    CONCAT_NLNUM_STYLE: str = "concat-nlnum" # node1-label-#
     CONCAT_WITH_ID_STYLE: str = "concat-with-id" # Tag on any existing ID value
     PREFIXED_STYLE: str = "prefixed" # XXX###
-    STYLES: typing.List[str] = [ CONCAT_STYLE, CONCAT_WITH_ID_STYLE, PREFIXED_STYLE ]
+    STYLES: typing.List[str] = [ CONCAT_STYLE, CONCAT_NLNUM_STYLE, CONCAT_WITH_ID_STYLE, PREFIXED_STYLE ]
     DEFAULT_STYLE: str = PREFIXED_STYLE
 
     # Defaults for prefixed style IDs.
@@ -108,6 +109,8 @@ class KgtkIdBuilder(KgtkFormat):
     current_id: int = attr.ib(validator=attr.validators.instance_of(int))
 
     id_set: typing.Set[str] =attr.ib(validator=attr.validators.instance_of(set), factory=set)
+
+    nl_keys: typing.MutableMapping[str, int] = attr.ib(validator=attr.validators.instance_of(dict), factory=dict)
 
     @classmethod
     def new(cls,
@@ -222,7 +225,9 @@ class KgtkIdBuilder(KgtkFormat):
         new_id: str
         if self.options.id_style == KgtkIdBuilderOptions.CONCAT_STYLE:
             new_id = self.build_concat(row)
-        if self.options.id_style == KgtkIdBuilderOptions.CONCAT_WITH_ID_STYLE:
+        elif self.options.id_style == KgtkIdBuilderOptions.CONCAT_NLNUM_STYLE:
+            new_id = self.build_concat_nlnum(row)
+        elif self.options.id_style == KgtkIdBuilderOptions.CONCAT_WITH_ID_STYLE:
             new_id = self.build_concat_with_id(row)
         elif self.options.id_style == KgtkIdBuilderOptions.PREFIXED_STYLE:
             new_id = self.build_prefixed(row)
@@ -237,11 +242,21 @@ class KgtkIdBuilder(KgtkFormat):
     def build_concat(self, row: typing.List[str])->str:
         return row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx]
 
-    def build_concat_with_id(self, row: typing.List[str])->str:
-        if row[self.id_column_idx] == "":
-            return row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx]
+    def build_concat_nlnum(self, row: typing.List[str])->str:
+        # Returns node1-label-### where ### starts at 0.
+        # Assumes that records are compact on (node2) or (node2, id), as needed.
+        key: str = row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx]
+        if key in self.nl_keys:
+            self.nl_keys[key] += 1
         else:
-            return row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx] + "-" + row[self.id_column_idx]
+            self.nl_keys[key] = 0
+        return key + "-" + str(self.nl_keys[key])
+
+    def build_concat_with_id(self, row: typing.List[str])->str:
+        key: str = row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx]
+        if row[self.id_column_idx] != "":
+            key += "-" + row[self.id_column_idx]
+        return key
 
     def build_prefixed(self, row: typing.List[str])->str:
         new_id: str =  self.options.id_prefix + str(self.current_id)
