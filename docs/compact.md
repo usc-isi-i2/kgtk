@@ -259,3 +259,16 @@ The output will be the following table in KGTK format:
 | peter | zipcode | 12040 | peter-zipcode-12040 | cabin\|home\|work | 5\|6 |
 | steve | zipcode | 45601 | steve-zipcode-45601 | cabin\|home\|work | 1\|2\|3\|4\|5 |
 
+If you want to generate new ID value without compacting existing IDs,
+use the expert option --id-wtyle=concat-with-id.
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | john-zipcode-12345-1 | home | 10 |
+| john | zipcode | 12346 | john-zipcode-12346-2 |  |  |
+| peter | zipcode | 12040 | peter-zipcode-12040-3 | home |  |
+| peter | zipcode | 12040 | peter-zipcode-12040-4 | cabin\|work | 5\|6 |
+| steve | zipcode | 45601 | steve-zipcode-45601-5 |  | 3\|4\|5 |
+| steve | zipcode | 45601 | steve-zipcode-45601-6 | cabin\|home\|work | 1\|2 |
