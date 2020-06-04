@@ -229,7 +229,7 @@ Additional options enable the customization of uri prefix.
 
 Below is a sample `prefix.tsv` file.
 ```
-node1	bound	node
+node1	bound	node2
 p	bound_to	https://w3id.org/datamart/
 pr	bound_to	https://w3id.org/datamart/
 wd	bound_to	https://w3id.org/datamart/
