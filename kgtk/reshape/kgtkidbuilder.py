@@ -207,6 +207,9 @@ class KgtkIdBuilder(KgtkFormat):
                 return row
             row = row.copy() # as a precaution
 
+        # Perhaps we also want to lookup (node1, label, node2), and if an ID
+        # has already been assigned, reuse it.
+
         new_id: str
         if self.options.id_style == KgtkIdBuilderOptions.CONCAT_STYLE:
             new_id = self.build_concat(row)
@@ -217,7 +220,7 @@ class KgtkIdBuilder(KgtkFormat):
 
         row[self.id_column_idx] = new_id
         if self.options.verify_id_unique:
-            self.verify_uniqueness(new_id, row, line_number, "noew")
+            self.verify_uniqueness(new_id, row, line_number, "new")
         return row
 
     def build_concat(self, row: typing.List[str])->str:
