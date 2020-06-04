@@ -53,7 +53,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--columns", dest="key_column_names",
                               help="The key columns to identify records for compaction. " +
-                              "(default=id for node files, (node1, label, node2) for edge files).", nargs='+', default=[ ])
+                              "(default=id for node files, (node1, label, node2, id) for edge files).", nargs='+', default=[ ])
+
+    parser.add_argument(      "--compact-id", dest="compact_id",
+                              help="Indicate that the ID column in KGTK edge files should be compacted. " +
+                              "Normally, if the ID column exists, it is not compacted, " +
+                              "as there are use cases that need to maintain distinct lists of secondary edges for each ID value. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--presorted", dest="sorted_input",
                               help="Indicate that the input has been presorted (or at least pregrouped) (default=%(default)s).",
@@ -77,6 +83,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 def run(input_kgtk_file: typing.Optional[Path],
         output_kgtk_file: typing.Optional[Path],
         key_column_names: typing.List[str],
+        compact_id: bool,
         sorted_input: bool,
         verify_sort: bool,
         build_id: bool,
@@ -104,6 +111,7 @@ def run(input_kgtk_file: typing.Optional[Path],
     if show_options:
         print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
         print("--columns=%s" % " ".join(key_column_names), file=error_file)
+        print("--compact-id=%s" % str(compact_id), file=error_file, flush=True)
         print("--presorted=%s" % str(sorted_input))
         print("--verify-sort=%s" % str(verify_sort), file=error_file, flush=True)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
@@ -117,8 +125,9 @@ def run(input_kgtk_file: typing.Optional[Path],
         ex: KgtkCompact = KgtkCompact(
             input_file_path=input_kgtk_file,
             key_column_names=key_column_names,
-            sorted_input = sorted_input,
-            verify_sort = verify_sort,
+            compact_id=compact_id,
+            sorted_input=sorted_input,
+            verify_sort=verify_sort,
             output_file_path=output_kgtk_file,
             build_id=build_id,
             idbuilder_options=idbuilder_options,
