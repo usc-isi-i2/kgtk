@@ -6,13 +6,45 @@ from pathlib import Path
 
 class TestTripleGeneration(unittest.TestCase):
 
+
+    def test_truthy_dates_generation(self):
+        # to reproduce standard file
+        # kgtk generate_wikidata_triples -pf wikidata_properties.tsv -w yes --log-path date_warning.log -n 100 --use-id yes < dates.tsv > dates_truthy.ttl
+        dates_tsv_file = 'data/dates.tsv'
+        wikidata_property_file = 'data/wikidata_properties.tsv'
+        o = open('data/dates_truthy_tmp.ttl', 'w')
+        generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
+                                    description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
+                                    dest_fp=o,log_path="data/date_warning.log",prop_declaration=False, prefix_path="NONE")
+        fp = open(dates_tsv_file)
+        for line_num, edge in enumerate(fp):
+            if edge.startswith("#"):
+                continue
+            else:
+                generator.entry_point(line_num + 1, edge)
+        generator.finalize()
+        o.close()
+        fp.close()
+
+        f1 = open('data/dates_truthy.ttl')
+        f2 = open('data/dates_truthy_tmp.ttl')
+        self.assertEqual(f1.readlines(), f2.readlines())
+        f1.close()
+        f2.close()
+        self.assertEqual(os.stat("data/date_warning.log").st_size, 0)
+        p = Path("data/date_warning.log")
+        p.unlink()
+        p = Path('data/dates_truthy_tmp.ttl')
+        p.unlink()
+
+
     def test_truthy_property_triple_generation(self):
         property_tsv_file = 'data/P10.tsv'
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/P10_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
-                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False)
+                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False,prefix_path="NONE")
         fp = open(property_tsv_file)
         for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
@@ -39,7 +71,7 @@ class TestTripleGeneration(unittest.TestCase):
         o = open('data/P10_not_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=False, use_id=True,
-                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False)
+                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False,prefix_path="NONE")
         fp = open(property_tsv_file)
         for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
@@ -66,7 +98,7 @@ class TestTripleGeneration(unittest.TestCase):
         o = open('data/Q57160439_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
-                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False)
+                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False,prefix_path="NONE")
         fp = open(qnode_tsv_file)
         for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
@@ -93,7 +125,7 @@ class TestTripleGeneration(unittest.TestCase):
         o = open('data/Q57160439_not_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=False, use_id=True,
-                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False)
+                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False,prefix_path="NONE")
         fp = open(qnode_tsv_file)
         for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
@@ -120,7 +152,7 @@ class TestTripleGeneration(unittest.TestCase):
         o = open('data/small_values_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
-                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False)
+                                    dest_fp=o,log_path="data/warning.log",prop_declaration=False,prefix_path="NONE")
         fp = open(small_values_file)
         for line_num, edge in enumerate(fp):
             if edge.startswith("#"):
@@ -148,7 +180,7 @@ class TestTripleGeneration(unittest.TestCase):
         o = open('data/corrupted_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
-                                    dest_fp=o,log_path="data/corrupted_warning_tmp.log",prop_declaration=False)
+                                    dest_fp=o,log_path="data/corrupted_warning_tmp.log",prop_declaration=False,prefix_path="NONE")
         fp = open(corrupted_kgtk_file)
         for line_num, edge in enumerate(fp):
             if edge.startswith("#") or len(edge.strip("\n")) == 0:
