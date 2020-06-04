@@ -75,6 +75,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Expand the source column if it contains a list, else fail. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--show-data-types", dest="show_data_types",
+                              help="Print the list of data types and exit. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -87,6 +91,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         prefix: str,
         overwrite_columns: bool,
         expand_list: bool,
+        show_data_types: bool,
         
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -118,9 +123,15 @@ def run(input_kgtk_file: typing.Optional[Path],
         if field_names is not None:
             print("--fields %s" % " ".join(field_names), file=error_file, flush=True)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
+        print("--show-data-types %s" % str(show_data_types), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+    if show_data_types:
+        data_type: str
+        for data_type in KgtkFormat.DataType.choices():
+            print("%s" % data_type, file=error_file, flush=True)
+        return
 
     try:
         ex: KgtkExplode = KgtkExplode(
