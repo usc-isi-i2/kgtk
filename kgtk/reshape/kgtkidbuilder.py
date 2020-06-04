@@ -30,7 +30,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
     initial_id: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_INITIAL_ID)
 
     @classmethod
-    def add_arguments(cls, parser: ArgumentParser, expert: bool = False):
+    def add_arguments(cls, parser: ArgumentParser, expert: bool = False, overwrite: bool = False):
 
         # This helper function makes it easy to suppress options from
         # The help message.  The options are still there, and initialize
@@ -50,7 +50,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
             
         parser.add_argument(      "--overwrite-id", dest="overwrite_id",
                                   help="Replace existing id values. (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=False)
+                                  type=optional_bool, nargs='?', const=True, default=overwrite)
 
         parser.add_argument(      "--verify-id-unique", dest="verify_id_unique",
                                   help="Verify ID uniqueness.  Uses an in-memory set of IDs. (default=%(default)s).",
