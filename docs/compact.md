@@ -211,3 +211,18 @@ The output will be the following table in KGTK format:
 | peter | zipcode | 12040 | E3  | cabin\|home\|work | 5\|6          |
 | steve | zipcode | 45601 | E4  | cabin\|home\|work | 1\|2\|3\|4\|5 |
 
+Using the expert option --id-style=concat, you can generate IDs
+that concatenate (node1, label, node2).
+
+```bash
+kgtk compact file3.tsv --build-id --overwrite-id --id-style=concat
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | john-zipcode-12345 | home | 10 |
+| john | zipcode | 12346 | john-zipcode-12346 |  |  |
+| peter | zipcode | 12040 | peter-zipcode-12040 | cabin\|home\|work | 5\|6 |
+| steve | zipcode | 45601 | steve-zipcode-45601 | cabin\|home\|work | 1\|2\|3\|4\|5 |
