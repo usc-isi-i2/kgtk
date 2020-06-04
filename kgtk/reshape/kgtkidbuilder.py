@@ -14,9 +14,11 @@ from kgtk.value.kgtkvalue import KgtkValue
 @attr.s(slots=True, frozen=True)
 class KgtkIdBuilderOptions(KgtkFormat):
     # TODO: use an enum
-    CONCAT_STYLE: str = "concat"
-    PREFIXED_STYLE: str = "prefixed"
-    STYLES: typing.List[str] = [ CONCAT_STYLE, PREFIXED_STYLE ]
+    CONCAT_STYLE: str = "concat" # node1-label-node2
+    CONCAT_WITH_ID_STYLE: str = "concat-with-id" # Tag on any existing ID value
+    PREFIXED_STYLE: str = "prefixed" # XXX###
+    STYLES: typing.List[str] = [ CONCAT_STYLE, CONCAT_WITH_ID_STYLE, PREFIXED_STYLE ]
+    DEFAULT_STYLE: str = PREFIXED_STYLE
 
     # Defaults for prefixed style IDs.
     DEFAULT_PREFIX: str = "E"
@@ -25,7 +27,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
     id_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     overwrite_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     verify_id_unique: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    id_style: str = attr.ib(validator=attr.validators.instance_of(str), default=PREFIXED_STYLE)
+    id_style: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_STYLE)
     id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX)
     initial_id: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_INITIAL_ID)
 
@@ -56,7 +58,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
                                   help="Verify ID uniqueness.  Uses an in-memory set of IDs. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=True)
 
-        parser.add_argument(      "--id-style", dest="id_style", default=cls.PREFIXED_STYLE, choices=cls.STYLES,
+        parser.add_argument(      "--id-style", dest="id_style", default=cls.DEFAULT_STYLE, choices=cls.STYLES,
                                   help=h("The id style. (default=%(default)s)."))
 
         parser.add_argument(      "--id-prefix", dest="id_prefix", default=cls.DEFAULT_PREFIX,
@@ -148,7 +150,14 @@ class KgtkIdBuilder(KgtkFormat):
                 add_id_column = True
 
         # Any prerequisites?
-        if options.id_style == KgtkIdBuilderOptions.PREFIXED_STYLE:
+        if options.id_style == KgtkIdBuilderOptions.CONCAT_STYLE:
+            if kr.node1_column_idx < 0:
+                raise ValueError("No node1 column index")
+            if kr.label_column_idx < 0:
+                raise ValueError("No label column index")
+            if kr.node2_column_idx < 0:
+                raise ValueError("No node2 column index")
+        elif options.id_style == KgtkIdBuilderOptions.CONCAT_WITH_ID_STYLE:
             if kr.node1_column_idx < 0:
                 raise ValueError("No node1 column index")
             if kr.label_column_idx < 0:
@@ -213,6 +222,8 @@ class KgtkIdBuilder(KgtkFormat):
         new_id: str
         if self.options.id_style == KgtkIdBuilderOptions.CONCAT_STYLE:
             new_id = self.build_concat(row)
+        if self.options.id_style == KgtkIdBuilderOptions.CONCAT_WITH_ID_STYLE:
+            new_id = self.build_concat_with_id(row)
         elif self.options.id_style == KgtkIdBuilderOptions.PREFIXED_STYLE:
             new_id = self.build_prefixed(row)
         else:
@@ -225,6 +236,12 @@ class KgtkIdBuilder(KgtkFormat):
 
     def build_concat(self, row: typing.List[str])->str:
         return row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx]
+
+    def build_concat_with_id(self, row: typing.List[str])->str:
+        if row[self.id_column_idx] == "":
+            return row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx]
+        else:
+            return row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx] + "-" + row[self.id_column_idx]
 
     def build_prefixed(self, row: typing.List[str])->str:
         new_id: str =  self.options.id_prefix + str(self.current_id)
