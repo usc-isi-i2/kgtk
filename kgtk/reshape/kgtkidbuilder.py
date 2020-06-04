@@ -166,6 +166,12 @@ class KgtkIdBuilder(KgtkFormat):
         )
 
     def verify_uniqueness(self, id_value: str, row: typing.List[str], line_number, who: str):
+        """
+        Verify that ID values are not repeated.  This is OK for the output
+        of `kgtk compact`, but is a little too strong for general use.
+        The weaker constraint should be that the ID values don't repeat
+        with different (node1, label, node2) tuples in an edge file.
+        """
         if KgtkFormat.LIST_SEPARATOR in id_value:
             # The ID value might be a list.
             id_v: str
