@@ -88,6 +88,7 @@ class KgtkReaderOptions():
 
     # Validate data cell values?
     invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
+    prohibited_list_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
 
     # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -238,6 +239,11 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "The action to take when a long line is detected (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
+        lgroup.add_argument(prefix1 + "prohibited-list-action",
+                            dest=prefix2 + "prohibited list_action",
+                            help=h(prefix3 + "The action to take when a data cell contains a prohibited list (default=%(default)s)."),
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
+
         lgroup.add_argument(prefix1 + "short-line-action",
                             dest=prefix2 + "short_line_action",
                             help=h(prefix3 + "The action to take when a short line is detected (default=%(default)s)."),
@@ -296,6 +302,7 @@ class KgtkReaderOptions():
             invalid_value_action=lookup("invalid_value_action", ValidationAction.REPORT),
             long_line_action=lookup("long_line_action", ValidationAction.EXCLUDE),
             mode=reader_mode,
+            prohibited_list_action=lookup("prohibited_list_action", ValidationAction.REPORT),
             repair_and_validate_lines=lookup("repair_and_validate_lines", False),
             repair_and_validate_values=lookup("repair_and_validate_values", False),
             short_line_action=lookup("short_line_action", ValidationAction.EXCLUDE),
@@ -334,6 +341,7 @@ class KgtkReaderOptions():
         print("%sheader-error-action=%s" % (prefix, self.header_error_action.name), file=out)
         print("%sunsafe-column-name-action=%s" % (prefix, self.unsafe_column_name_action.name), file=out)
         print("%sinvalid-value-action=%s" % (prefix, self.invalid_value_action.name), file=out)
+        print("%sprohibited-list-action=%s" % (prefix, self.prohibited_list_action.name), file=out)
         print("%sfill-short-lines=%s" % (prefix, str(self.fill_short_lines)), file=out)
         print("%struncate-long-lines=%s" % (prefix, str(self.truncate_long_lines)), file=out)
         if self.compression_type is not None:
@@ -751,18 +759,23 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 if self._ignore_if_blank_fields(row, line):
                     continue
 
-            if repair_and_validate_values and self.options.invalid_value_action != ValidationAction.PASS:
-                # TODO: find a way to optionally cache the KgtkValue objects
-                # so we don't have to create them a second time in the conversion
-                # and iterator methods below.
-                if self._ignore_invalid_values(row, line):
-                    continue
+            if repair_and_validate_values:
+                if self.options.invalid_value_action != ValidationAction.PASS:
+                    # TODO: find a way to optionally cache the KgtkValue objects
+                    # so we don't have to create them a second time in the conversion
+                    # and iterator methods below.
+                    if self._ignore_invalid_values(row, line):
+                        continue
 
-                self.data_lines_passed += 1
-                # TODO: User a seperate option to control this.
-                # if self.very_verbose:
-                #     self.error_file.write(".")
-                #    self.error_file.flush()
+                if self.options.prohibited_list_action != ValidationAction.PASS:
+                    if self._ignore_prohibited_lists(row, line):
+                        continue
+
+            self.data_lines_passed += 1
+            # TODO: User a seperate option to control this.
+            # if self.very_verbose:
+            #     self.error_file.write(".")
+            #    self.error_file.flush()
             
             return row
 
@@ -974,6 +987,38 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     #
                     # Warning: We expect this change to be seen by the caller.
                     row[idx] = kv.value
+
+        if len(problems) == 0:
+            return False
+
+        return self.exclude_line(self.options.invalid_value_action,
+                                 "\n".join(problems),
+                                 line)
+
+    def _ignore_prohibited_list(self,
+                                idx: int,
+                                row: typing.List[str],
+                                line: str,
+                                problems: typing.List[str],
+    ):
+        if idx < 0:
+            return
+        item: str = row[idx]
+        if KgtkFormat.LIST_SEPARATOR not in item:
+            return
+        if len(KgtkValue.split_list(item)) == 1:
+            return
+        problems.append("col %d (%s) value '%s'is a prohibited list" % (idx, self.column_names[idx], item))
+
+    def _ignore_prohibited_lists(self, row: typing.List[str], line: str)->bool:
+        """
+        KGTK File Format v2 prohibits "|" lists in the node1, label, and node2 columns.
+        """
+        problems: typing.List[str] = [ ] # Build a list of problems.
+
+        self._ignore_prohibited_list(self.node1_column_idx, row, line, problems)
+        self._ignore_prohibited_list(self.label_column_idx, row, line, problems)
+        self._ignore_prohibited_list(self.node2_column_idx, row, line, problems)
 
         if len(problems) == 0:
             return False
