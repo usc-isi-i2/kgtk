@@ -30,6 +30,7 @@ class KgtkCompact(KgtkFormat):
 
     key_column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                          iterable_validator=attr.validators.instance_of(list)))
+    compact_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
@@ -185,12 +186,14 @@ class KgtkCompact(KgtkFormat):
             key_idx_list.append(kr.node1_column_idx)
             key_idx_list.append(kr.label_column_idx)
             key_idx_list.append(kr.node2_column_idx)
+            if not self.compact_id and kr.id_column_idx >= 0:
+                key_idx_list.append(kr.id_column_idx)
 
         elif kr.is_node_file:
             # Add the KGTK node file required column:
             key_idx_list.append(kr.id_column_idx)
 
-        # Append the key columns to the list of key column indixes,
+        # Append additinal columns to the list of key column indixes,
         # silently removing duplicates, but complaining about unknown names.
         #
         # TODO: warn about duplicates?
@@ -301,7 +304,13 @@ def main():
 
     parser.add_argument(      "--columns", dest="key_column_names",
                               help="The key columns to identify records for compaction. " +
-                              "(default=id for node files, (node1, label, node2) for edge files).", nargs='+', default=[ ])
+                              "(default=id for node files, (node1, label, node2, id) for edge files).", nargs='+', default=[ ])
+
+    parser.add_argument(      "--compact-id", dest="compact_id",
+                              help="Indicate that the ID column in KGTK edge files should be compacted. " +
+                              "Normally, if the ID column exists, it is not compacted, " +
+                              "as there are use cases that need to maintain distinct lists of secondary edges for each ID value. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--presorted", dest="sorted_input",
                               help="Indicate that the input has been presorted (or at least pregrouped). (default=%(default)s).",
@@ -335,6 +344,7 @@ def main():
     if args.show_options:
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
         print("--columns %s" % " ".join(args.key_column_names), file=error_file, flush=True)
+        print("--compact-id=%s" % str(args.compact_id), file=error_file, flush=True)
         print("--presorted=%s" % str(args.sorted_input), file=error_file, flush=True)
         print("--verify-sort=%s" % str(args.verify_sort), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
@@ -346,6 +356,7 @@ def main():
     kc: KgtkCompact = KgtkCompact(
         input_file_path=args.input_file_path,
         key_column_names=args.key_column_names,
+        compact_id=args.compact_id,
         sorted_input=args.sorted_input,
         verify_sort=args.verify_sort,
         output_file_path=args.output_file_path,
