@@ -142,6 +142,7 @@ class TripleGenerator(Generator):
         dest_fp = kwargs.pop("dest_fp")
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
+        prefix_path = kwargs.pop("prefix_path")
         self.datatype_mapping = {
             "item": Item,
             "time": TimeValue,
@@ -153,6 +154,7 @@ class TripleGenerator(Generator):
             "url": StringValue,
             "property":WDProperty,
         }
+        self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
         self.set_properties(prop_file)
         self.fp = dest_fp
@@ -162,6 +164,17 @@ class TripleGenerator(Generator):
         self.serialize_prefix()
         self.use_id = use_id
 
+    def set_prefix(self,prefix_path:str):
+        self.prefix_dict = {}
+        if prefix_path != "NONE":
+            with open(prefix_path,"r") as fp:
+                for line_num, edge in enumerate(fp):
+                    edge_list = edge.strip("\n").split("\t")
+                    if line_num == 0:
+                        node1_index, node2_index = edge_list.index("node1"), edge_list.index("node2")
+                    else:
+                        prefix, expand = edge_list[node1_index], edge_list[node2_index]
+                        self.prefix_dict[prefix] = expand
     
     def parse_edges(self,edge:str):
         # use the order_map to map the node
@@ -214,9 +227,11 @@ class TripleGenerator(Generator):
         kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
         self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
         self.doc = self.etk.create_document({}, doc_id=doc_id)
-        # TODO support customized namespace binding
         for k, v in wiki_namespaces.items():
-            self.doc.kg.bind(k, v)
+            if k in self.prefix_dict:
+                self.doc.kg.bind(k, self.prefix_dict[k])
+            else:
+                self.doc.kg.bind(k, v)
 
     def serialize(self):
         """
@@ -235,7 +250,10 @@ class TripleGenerator(Generator):
         Relevent issue: https://github.com/RDFLib/rdflib/issues/965
         """
         for k, v in wiki_namespaces.items():
-            line = "@prefix " + k + ": <" + v + "> .\n"
+            if k in self.prefix_dict:
+                line = "@prefix " + k + ": <" + self.prefix_dict[k] + "> .\n"
+            else:
+                line = "@prefix " + k + ": <" + v + "> .\n"
             self.fp.write(line)
         self.fp.write("\n")
         self.fp.flush()
