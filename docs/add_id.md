@@ -111,22 +111,22 @@ The output will be the following table in KGTK format:
 Add an ID column using the node1-label-num ID style:
 
 ```bash
-kgtk add_id file1.tsv --id-prefix node1-label-num
+kgtk add_id file1.tsv --id-style node1-label-num
 ```
 
 The output will be the following table in KGTK format:
 
- node1 | label | node2 | location | years | id |
+| node1 | label | node2 | location | years | id |
 | -- | -- | -- | -- | -- | -- |
-| john | zipcode | 12345 | home | 10 | node1-label-num1 |
-| john | zipcode | 12346 |  |  | node1-label-num2 |
-| peter | zipcode | 12040 | home |  | node1-label-num3 |
-| peter | zipcode | 12040 | cabin |  | node1-label-num4 |
-| peter | zipcode | 12040 | work | 5 | node1-label-num5 |
-| peter | zipcode | 12040 |  | 6 | node1-label-num6 |
-| steve | zipcode | 45601 |  | 3 | node1-label-num7 |
-| steve | zipcode | 45601 |  | 4 | node1-label-num8 |
-| steve | zipcode | 45601 |  | 5 | node1-label-num9 |
-| steve | zipcode | 45601 | home | 1 | node1-label-num10 |
-| steve | zipcode | 45601 | work | 2 | node1-label-num11 |
-| steve | zipcode | 45601 | cabin |  | node1-label-num12 |
+| john | zipcode | 12345 | home | 10 | john-zipcode-0 |
+| john | zipcode | 12346 |  |  | john-zipcode-1 |
+| peter | zipcode | 12040 | home |  | peter-zipcode-0 |
+| peter | zipcode | 12040 | cabin |  | peter-zipcode-1 |
+| peter | zipcode | 12040 | work | 5 | peter-zipcode-2 |
+| peter | zipcode | 12040 |  | 6 | peter-zipcode-3 |
+| steve | zipcode | 45601 |  | 3 | steve-zipcode-0 |
+| steve | zipcode | 45601 |  | 4 | steve-zipcode-1 |
+| steve | zipcode | 45601 |  | 5 | steve-zipcode-2 |
+| steve | zipcode | 45601 | home | 1 | steve-zipcode-3 |
+| steve | zipcode | 45601 | work | 2 | steve-zipcode-4 |
+| steve | zipcode | 45601 | cabin |  | steve-zipcode-5 |
