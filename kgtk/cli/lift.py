@@ -29,7 +29,7 @@ def parser():
         'description': 'Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. ' +
         'If found, lift the label values into additional columns in the current record. ' +
         'Label records are reoved from the output. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert ifempty --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert lift --help'
     }
 
 
