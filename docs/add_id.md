@@ -21,9 +21,9 @@ The --verify-id-unique=false optin may be used to disable this check.
 
 ```
 usage: kgtk add_id [-h] [-o OUTPUT_KGTK_FILE] [--id-column-name ID_COLUMN_NAME]
-                   [--overwrite-id [OVERWRITE_ID]]
-                   [--verify-id-unique [VERIFY_ID_UNIQUE]]
-                   [--id-style {concat,concat-nlnum,concat-with-id,prefixed}]
+                   [--overwrite-id [optional True|False]]
+                   [--verify-id-unique [optional True|False]]
+                   [--id-style {node1-label-num,node1-label-node2,node1-label-node2-id,prefix###}]
                    [--id-prefix ID_PREFIX] [--initial-id INITIAL_ID] [-v]
                    [input_kgtk_file]
 
@@ -46,17 +46,21 @@ optional arguments:
                         The KGTK file to write (default=-).
   --id-column-name ID_COLUMN_NAME
                         The name of the id column. (default=id).
-  --overwrite-id [OVERWRITE_ID]
-                        Replace existing id values. (default=False).
-  --verify-id-unique [VERIFY_ID_UNIQUE]
-                        Verify ID uniqueness. Uses an in-memory set of IDs.
-                        (default=True).
-  --id-style {concat,concat-nlnum,concat-with-id,prefixed}
-                        The id style. (default=prefixed).
+  --overwrite-id [optional True|False]
+                        When True, replace existing id values. When --overwrite-id is
+                        omitted, it defaults to False. When --overwrite-id is supplied
+                        without an argument, it is True.
+  --verify-id-unique [optional True|False]
+                        Verify ID uniqueness using an in-memory set of IDs. When --verify-
+                        id-unique is omitted, it defaults to True. When --verify-id-unique
+                        is supplied without an argument, it is True. To disable the ID
+                        uniqueness check, specify --verify-id-unique=False
+  --id-style {node1-label-num,node1-label-node2,node1-label-node2-id,prefix###}
+                        The id generation style. (default=prefix###).
   --id-prefix ID_PREFIX
-                        The prefix for a prefix/number id. (default=E).
+                        The prefix for a prefix### id. (default=E).
   --initial-id INITIAL_ID
-                        The initial value for a prefix/number id. (default=1).
+                        The initial value for a prefix### id. (default=1).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
@@ -81,7 +85,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | steve | zipcode | 45601 | work      | 2     |
 | steve | zipcode | 45601 | cabin     |       |
 
-Add an ID column using the default ID style (prefixed)
+Add an ID column using the default ID style (prefixed):
 
 ```bash
 kgtk add_id file1.tsv
@@ -103,3 +107,26 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | home | 1 | E10 |
 | steve | zipcode | 45601 | work | 2 | E11 |
 | steve | zipcode | 45601 | cabin |  | E12 |
+
+Add an ID column using the node1-label-num ID style:
+
+```bash
+kgtk add_id file1.tsv --id-prefix node1-label-num
+```
+
+The output will be the following table in KGTK format:
+
+ node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | node1-label-num1 |
+| john | zipcode | 12346 |  |  | node1-label-num2 |
+| peter | zipcode | 12040 | home |  | node1-label-num3 |
+| peter | zipcode | 12040 | cabin |  | node1-label-num4 |
+| peter | zipcode | 12040 | work | 5 | node1-label-num5 |
+| peter | zipcode | 12040 |  | 6 | node1-label-num6 |
+| steve | zipcode | 45601 |  | 3 | node1-label-num7 |
+| steve | zipcode | 45601 |  | 4 | node1-label-num8 |
+| steve | zipcode | 45601 |  | 5 | node1-label-num9 |
+| steve | zipcode | 45601 | home | 1 | node1-label-num10 |
+| steve | zipcode | 45601 | work | 2 | node1-label-num11 |
+| steve | zipcode | 45601 | cabin |  | node1-label-num12 |
