@@ -20,11 +20,9 @@ The --verify-id-unique=false optin may be used to disable this check.
 ## Usage
 
 ```
-usage: kgtk add_id [-h] [-o OUTPUT_KGTK_FILE] [--id-column-name ID_COLUMN_NAME]
-                   [--overwrite-id [optional True|False]]
-                   [--verify-id-unique [optional True|False]]
-                   [--id-style {node1-label-num,node1-label-node2,node1-label-node2-id,prefix###}]
-                   [--id-prefix ID_PREFIX] [--initial-id INITIAL_ID] [-v]
+usage: kgtk add_id [-h] [-o OUTPUT_KGTK_FILE] [--old-id-column-name COLUMN_NAME] [--new-id-column-name COLUMN_NAME] [--overwrite-id [optional true|false]]
+                   [--verify-id-unique [optional true|false]] [--id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,prefix###}]
+                   [--id-prefix PREFIX] [--initial-id INTEGER] [--id-prefix-num-width INTEGER] [--id-concat-num-width INTEGER] [-v]
                    [input_kgtk_file]
 
 Copy a KGTK file, adding ID values.
@@ -37,30 +35,30 @@ Additional options are shown in expert help.
 kgtk --expert compact --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin
-                        (default=-).
+  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin (default=-).
 
 optional arguments:
   -h, --help            show this help message and exit
   -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
                         The KGTK file to write (default=-).
-  --id-column-name ID_COLUMN_NAME
-                        The name of the id column. (default=id).
-  --overwrite-id [optional True|False]
-                        When True, replace existing id values. When --overwrite-id is
-                        omitted, it defaults to False. When --overwrite-id is supplied
-                        without an argument, it is True.
-  --verify-id-unique [optional True|False]
-                        Verify ID uniqueness using an in-memory set of IDs. When --verify-
-                        id-unique is omitted, it defaults to True. When --verify-id-unique
-                        is supplied without an argument, it is True. To disable the ID
-                        uniqueness check, specify --verify-id-unique=False
-  --id-style {node1-label-num,node1-label-node2,node1-label-node2-id,prefix###}
-                        The id generation style. (default=prefix###).
-  --id-prefix ID_PREFIX
-                        The prefix for a prefix### id. (default=E).
-  --initial-id INITIAL_ID
-                        The initial value for a prefix### id. (default=1).
+  --old-id-column-name COLUMN_NAME
+                        The name of the old ID column. (default=id).
+  --new-id-column-name COLUMN_NAME
+                        The name of the new ID column. (default=id).
+  --overwrite-id [optional true|false]
+                        When true, replace existing ID values. When false, copy existing ID values. When --overwrite-id is omitted, it defaults to False. When
+                        --overwrite-id is supplied without an argument, it is True.
+  --verify-id-unique [optional true|false]
+                        When true, verify ID uniqueness using an in-memory set of IDs. When --verify-id-unique is omitted, it defaults to False. When --verify-id-
+                        unique is supplied without an argument, it is True.
+  --id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,prefix###}
+                        The ID generation style. (default=prefix###).
+  --id-prefix PREFIX    The prefix for a prefix### ID. (default=E).
+  --initial-id INTEGER  The initial numeric value for a prefix### ID. (default=1).
+  --id-prefix-num-width INTEGER
+                        The width of the numeric value for a prefix### ID. (default=1).
+  --id-concat-num-width INTEGER
+                        The width of the numeric value for a concatenated ID. (default=4).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
@@ -118,15 +116,15 @@ The output will be the following table in KGTK format:
 
 | node1 | label | node2 | location | years | id |
 | -- | -- | -- | -- | -- | -- |
-| john | zipcode | 12345 | home | 10 | john-zipcode-0 |
-| john | zipcode | 12346 |  |  | john-zipcode-1 |
-| peter | zipcode | 12040 | home |  | peter-zipcode-0 |
-| peter | zipcode | 12040 | cabin |  | peter-zipcode-1 |
-| peter | zipcode | 12040 | work | 5 | peter-zipcode-2 |
-| peter | zipcode | 12040 |  | 6 | peter-zipcode-3 |
-| steve | zipcode | 45601 |  | 3 | steve-zipcode-0 |
-| steve | zipcode | 45601 |  | 4 | steve-zipcode-1 |
-| steve | zipcode | 45601 |  | 5 | steve-zipcode-2 |
-| steve | zipcode | 45601 | home | 1 | steve-zipcode-3 |
-| steve | zipcode | 45601 | work | 2 | steve-zipcode-4 |
-| steve | zipcode | 45601 | cabin |  | steve-zipcode-5 |
+| john | zipcode | 12345 | home | 10 | john-zipcode-0000 |
+| john | zipcode | 12346 |  |  | john-zipcode-0001 |
+| peter | zipcode | 12040 | home |  | peter-zipcode-0000 |
+| peter | zipcode | 12040 | cabin |  | peter-zipcode-0001 |
+| peter | zipcode | 12040 | work | 5 | peter-zipcode-0002 |
+| peter | zipcode | 12040 |  | 6 | peter-zipcode-0003 |
+| steve | zipcode | 45601 |  | 3 | steve-zipcode-0000 |
+| steve | zipcode | 45601 |  | 4 | steve-zipcode-0001 |
+| steve | zipcode | 45601 |  | 5 | steve-zipcode-0002 |
+| steve | zipcode | 45601 | home | 1 | steve-zipcode-0003 |
+| steve | zipcode | 45601 | work | 2 | steve-zipcode-0004 |
+| steve | zipcode | 45601 | cabin |  | steve-zipcode-0005 |
