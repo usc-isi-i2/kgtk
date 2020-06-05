@@ -2,15 +2,23 @@
 
 How to build this docker image:
 
+```
 docker build -t uscisii2/kgtk:0.2.0 .
+```
 
+How to run this docker image (from DockerHub):
 
-How to run this docker image:
-
+```
 docker run -it uscisii2/kgtk:0.2.0 /bin/bash
+```
 
-This will log you into the image and let you operate with KGTK.
+This will log you into the image and let you operate with KGTK. Once you executed the step above, just type:
 
+```
+kgtk -h
+```
+
+to see the KGTK help command.
 
 ## Next updates:
 
