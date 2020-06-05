@@ -1,4 +1,4 @@
-The expand command copies its input file to its output file,
+The lift command copies its input file to its output file,
 adding label columns for values in the node1, label, and node2 fields.
 
 The input rows are saved in memory, as well as the value-to-label mapping.
@@ -12,7 +12,7 @@ usage: kgtk lift [-h] [-o OUTPUT_KGTK_FILE] [--suppress-empty-columns [SUPPRESS_
 Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
 
 Additional options are shown in expert help.
-kgtk --expert ifempty --help
+kgtk --expert lift --help
 
 positional arguments:
   input_kgtk_file       The KGTK file to lift. May be omitted or '-' for stdin.

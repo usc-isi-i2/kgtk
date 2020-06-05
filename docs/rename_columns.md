@@ -1,31 +1,40 @@
-The rename_col command renames file columns while copying one
-(or more) KGTK files from input to output. See the `kgtk cat`
-command for more details on how KGTK files are concatenated and merged.
+The rename_col command renames file columns while copying a KGTK file from input to output.
 ## Usage
 
 ```
-usage: kgtk rename_col [-h] [-o OUTPUT_FILE_PATH] [--output-columns OUTPUT_COLUMN_NAMES [OUTPUT_COLUMN_NAMES ...]]
-                       [--old-columns OLD_COLUMN_NAMES [OLD_COLUMN_NAMES ...]] [--new-columns NEW_COLUMN_NAMES [NEW_COLUMN_NAMES ...]] [-v]
-                       input_file_paths [input_file_paths ...]
+usage: kgtk rename_columns [-h] [-o OUTPUT_FILE_PATH]
+                           [--output-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]]
+                           [--old-columns OLD_COLUMNS_NAME [OLD_COLUMNS_NAME ...]]
+                           [--new-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]] [-v]
+                           input_file_path
 
-Rename KGT file columns while concatenating KGTK files. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). Rename all columns or selected columns. 
+This command renames one or more columns in a KGTK file. 
+
+Rename all columns using --output-columns newname1 newname2 ... 
+Rename selected columns using --old-columns and --new-columns 
+
+The column names are listed seperately for each option, do not quote them as a group, e.g. 
+kgtk rename_columns --old-columns oldname1 oldname2 --new-columns newname1 nsewname2
+
+The input filename must come before --output-columns, --old-columns, or --new-columns. 
+If no input filename is provided, the default is to read standard input. 
 
 Additional options are shown in expert help.
-kgtk --expert rename_col --help
+kgtk --expert rename_columns --help
 
 positional arguments:
-  input_file_paths      The KGTK files to concatenate while renaming columns.
+  input_file_path       The KGTK input file. (default=-).
 
 optional arguments:
   -h, --help            show this help message and exit
   -o OUTPUT_FILE_PATH, --output-file OUTPUT_FILE_PATH
                         The KGTK file to write (default=-).
-  --output-columns OUTPUT_COLUMN_NAMES [OUTPUT_COLUMN_NAMES ...]
-                        Rename all output columns. (default=None)
-  --old-columns OLD_COLUMN_NAMES [OLD_COLUMN_NAMES ...]
-                        Rename seleted output columns: old names. (default=None)
-  --new-columns NEW_COLUMN_NAMES [NEW_COLUMN_NAMES ...]
-                        Rename seleted output columns: new names. (default=None)
+  --output-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]
+                        The list of new column names when renaming all columns.
+  --old-columns OLD_COLUMN_NAME [OLD_COLUMN_NAME ...]
+                        The list of old column names for selective renaming.
+  --new-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]
+                        The list of new column names for selective renaming.
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
