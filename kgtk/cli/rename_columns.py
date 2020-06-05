@@ -18,10 +18,14 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 def parser():
     return {
         'help': 'Rename KGTK file columns.',
-        'description': 'Rename KGT file columns while concatenating KGTK files. ' +
-        'All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). ' +
-        'Rename all columns or selected columns. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_col --help'
+        'description': 'This command renames one or more columns in a KGTK file. ' +
+        '\n\nRename all columns using --output-columns newname1 newname2 ... ' +
+        '\nRename selected columns using --old-columns and --new-columns ' +
+        '\n\nThe column names are listed seperately for each option, do not quote them as a group, e.g. ' +
+        '\nkgtk rename_columns --old-columns oldname1 oldname2 --new-columns newname1 nsewname2' +
+        '\n\nThe input filename must come before --output-columns, --old-columns, or --new-columns. ' +
+        '\nIf no input filename is provided, the default is to read standard input. ' +
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
     }
 
 
@@ -43,28 +47,31 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_file_paths",
-                              help="The KGTK files to concatenate while renaming columns.",
-                              type=Path, nargs='+', default=[Path("-")])
+    parser.add_argument(      "input_file_path",
+                              help="The KGTK input file. (default=%(default)s).",
+                              type=Path, default="-")
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
 
     parser.add_argument(      "--output-columns", dest="output_column_names",
-                              help="Rename all output columns. (default=%(default)s)",
+                              metavar="NEW_COLUMN_NAME",
+                              help="The list of new column names when renaming all columns.",
                               type=str, nargs='+')
     parser.add_argument(      "--old-columns", dest="old_column_names",
-                              help="Rename seleted output columns: old names. (default=%(default)s)",
+                              metavar="OLD_COLUMN_NAME",
+                              help="The list of old column names for selective renaming.",
                               type=str, nargs='+')
     parser.add_argument(      "--new-columns", dest="new_column_names",
-                              help="Rename seleted output columns: new names. (default=%(default)s)",
+                              metavar="NEW_COLUMN_NAME",
+                              help="The list of new column names for selective renaming.",
                               type=str, nargs='+')
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_file_paths: typing.List[Path],
+def run(input_file_path: Path,
         output_file_path: Path,
         output_format: typing.Optional[str],
 
@@ -83,11 +90,8 @@ def run(input_file_paths: typing.List[Path],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
-
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
-
-    # TODO: check that at most one input file is stdin?
 
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
@@ -95,12 +99,12 @@ def run(input_file_paths: typing.List[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file, flush=True)
+        print("input: %s" % str(input_file_path), file=error_file, flush=True)
         print("--output-file=%s" % str(output_file_path), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         if output_column_names is not None:
-            print("--output-coloumns %s" % " ".join(output_column_names), file=error_file, flush=True)
+            print("--output-columns %s" % " ".join(output_column_names), file=error_file, flush=True)
         if old_column_names is not None:
             print("--old-columns %s" % " ".join(old_column_names), file=error_file, flush=True)
         if new_column_names is not None:
@@ -109,8 +113,24 @@ def run(input_file_paths: typing.List[Path],
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+    # Check for consistent options.  argparse doesn't support this yet.
+    if output_column_names is not None and len(output_column_names) > 0:
+        if (old_column_names is not None and len(old_column_names) > 0) or \
+           (new_column_names is not None and len(new_column_names) > 0):
+            raise KGTKException("When --output-columns is used, --old-columns and --new-columns may not be used.")
+    elif old_column_names is not None and len(old_column_names) > 0:
+        if new_column_names is None or len(new_column_names) == 0:
+            raise KGTKException("Both --old-columns and --new-columns must be used when either is used.")
+        if len(old_column_names) != len(new_column_names):
+            raise KGTKException("Both --old-columns and --new-columns must have the same number of columns.")
+    elif new_column_names is not None and len(new_column_names) > 0:
+        if old_column_names is None or len(old_column_names) == 0:
+            raise KGTKException("Both --old-columns and --new-columns must be used when either is used.")
+    else:
+        raise KGTKException("You must specify --output-columns or both of --old-columns and --new-columns.")
+
     try:
-        kc: KgtkCat = KgtkCat(input_file_paths=input_file_paths,
+        kc: KgtkCat = KgtkCat(input_file_paths=[input_file_path],
                               output_path=output_file_path,
                               output_format=output_format,
                               output_column_names=output_column_names,
