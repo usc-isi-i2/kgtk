@@ -20,7 +20,7 @@ The input filename must come before --output-columns, --old-columns, or --new-co
 If no input filename is provided, the default is to read standard input. 
 
 Additional options are shown in expert help.
-kgtk --expert rename_col --help
+kgtk --expert rename_columns --help
 
 positional arguments:
   input_file_path       The KGTK input file. (default=-).
