@@ -20,9 +20,10 @@ kgtk -h
 
 to see the KGTK help command.
 
-## Next updates:
+## Next features:
+We will include the following features in the next releases of KGTK:
 
-- How to load volumes with your data.
+- Examples on how to load volumes with your data.
 
 - How to launch a Jupyter notebook to operate with KGTK in your browser.
 
