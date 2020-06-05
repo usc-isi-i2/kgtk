@@ -26,7 +26,30 @@ from kgtk.utils.validationaction import ValidationAction
 @attr.s(slots=True, frozen=False)
 class KgtkWriter(KgtkBase):
     GZIP_QUEUE_SIZE_DEFAULT: int = GzipProcess.GZIP_QUEUE_SIZE_DEFAULT
-    OUTPUT_FORMAT_DEFAULT: str = "kgtk" # TODO: Need an enum
+
+    # TODO: use an enum
+    OUTPUT_FORMAT_CSV: str = "csv"
+    OUTPUT_FORMAT_JSON: str = "json"
+    OUTPUT_FORMAT_JSON_MAP: str = "json-map"
+    OUTPUT_FORMAT_JSON_MAP_COMPACT: str = "json-map-compact"
+    OUTPUT_FORMAT_JSONL: str = "jsonl"
+    OUTPUT_FORMAT_JSONL_MAP: str = "jsonl-map"
+    OUTPUT_FORMAT_JSONL_MAP_COMPACT: str = "jsonl-map-compact"
+    OUTPUT_FORMAT_KGTK: str = "kgtk"
+    OUTPUT_FORMAT_MD: str = "md"
+
+    OUTPUT_FORMAT_CHOICES: typing.List[str] = [
+        OUTPUT_FORMAT_CSV,
+        OUTPUT_FORMAT_JSON,
+        OUTPUT_FORMAT_JSON_MAP,
+        OUTPUT_FORMAT_JSON_MAP_COMPACT,
+        OUTPUT_FORMAT_JSONL,
+        OUTPUT_FORMAT_JSONL_MAP,
+        OUTPUT_FORMAT_JSONL_MAP_COMPACT,
+        OUTPUT_FORMAT_KGTK,
+        OUTPUT_FORMAT_MD,
+    ]
+    OUTPUT_FORMAT_DEFAULT: str = OUTPUT_FORMAT_KGTK
 
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     file_out: typing.TextIO = attr.ib() # Todo: validate TextIO
@@ -228,11 +251,11 @@ class KgtkWriter(KgtkBase):
     )->"KgtkWriter":
 
         if output_format is None:
-            output_format = "kgtk"
+            output_format = cls.OUTPUT_FORMAT_DEFAULT
             if verbose:
                 print("Defaulting the output format to %s" % output_format, file=error_file, flush=True)
 
-        if output_format == "csv":
+        if output_format == cls.OUTPUT_FORMAT_CSV:
             column_separator = "," # What a cheat!
                 
         if output_column_names is None:
@@ -240,7 +263,7 @@ class KgtkWriter(KgtkBase):
         else:
             # Rename all output columns.
             if len(output_column_names) != len(column_names):
-                raise ValueError("%s: %d column namess but %d output column namess" % (who, len(column_names), len(output_column_names)))
+                raise ValueError("%s: %d column names but %d output column names" % (who, len(column_names), len(output_column_names)))
 
         if old_column_names is not None or new_column_names is not None:
             # Rename selected output columns:
@@ -378,22 +401,22 @@ class KgtkWriter(KgtkBase):
         else:
             column_names = self.column_names
 
-        if self.output_format == "json":
+        if self.output_format == self.OUTPUT_FORMAT_JSON:
             self.writeline("[")
             header = json.dumps(column_names, indent=None, separators=(',', ':')) + ","
-        elif self.output_format == "json-map":
+        elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
             self.writeline("[")
             return
-        elif self.output_format == "json-map-compact":
+        elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
             self.writeline("[")
             return
-        elif self.output_format == "jsonl":
+        elif self.output_format == self.OUTPUT_FORMAT_JSONL:
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
-        elif self.output_format == "jsonl-map":
+        elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP:
             return
-        elif self.output_format == "jsonl-map-compact":
+        elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP_COMPACT:
             return
-        elif self.output_format == "md":
+        elif self.output_format == self.OUTPUT_FORMAT_MD:
             header = "|"
             header2 = "|"
             col: str
@@ -402,7 +425,7 @@ class KgtkWriter(KgtkBase):
                 header += " " + col + " |"
                 header2 += " -- |"
             
-        elif self.output_format in ["kgtk", "csv"]:
+        elif self.output_format in [self.OUTPUT_FORMAT_KGTK, self.OUTPUT_FORMAT_CSV]:
             header = self.column_separator.join(column_names)
         else:
             raise ValueError("KgtkWriter: header: Unrecognized output format '%s'." % self.output_format)
@@ -454,23 +477,23 @@ class KgtkWriter(KgtkBase):
             line = self.column_separator.join(values)
             raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count, len(values),
                                                                                                 len(values) - self.column_count, line))
-        if self.output_format == "kgtk":
+        if self.output_format == self.OUTPUT_FORMAT_KGTK:
             self.writeline(self.column_separator.join(values))
-        elif self.output_format == "csv":
+        elif self.output_format == self.OUTPUT_FORMAT_CSV:
             self.writeline(self.join_csv(values))
-        elif self.output_format == "md":
+        elif self.output_format == self.OUTPUT_FORMAT_MD:
             self.writeline(self.join_md(values))
-        elif self.output_format == "json":
+        elif self.output_format == self.OUTPUT_FORMAT_JSON:
             self.writeline(json.dumps(values, indent=None, separators=(',', ':')) + ",")
-        elif self.output_format == "json-map":
+        elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
             self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')) + ",")
-        elif self.output_format == "json-map-compact":
+        elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
             self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')) + ",")
-        elif self.output_format == "jsonl":
+        elif self.output_format == self.OUTPUT_FORMAT_JSONL:
             self.writeline(json.dumps(values, indent=None, separators=(',', ':')))
-        elif self.output_format == "jsonl-map":
+        elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP:
             self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')))
-        elif self.output_format == "jsonl-map-compact":
+        elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP_COMPACT:
             self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
         else:
             raise ValueError("Unrecognized output format '%s'." % self.output_format)
