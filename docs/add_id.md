@@ -81,6 +81,8 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | steve | zipcode | 45601 | work      | 2     |
 | steve | zipcode | 45601 | cabin     |       |
 
+Add an ID column using the default ID style (prefixed)
+
 ```bash
 kgtk add_id file1.tsv
 ```
