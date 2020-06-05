@@ -25,7 +25,7 @@ def parser():
         '\nkgtk rename_columns --old-columns oldname1 oldname2 --new-columns newname1 nsewname2' +
         '\n\nThe input filename must come before --output-columns, --old-columns, or --new-columns. ' +
         '\nIf no input filename is provided, the default is to read standard input. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_col --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
     }
 
 
