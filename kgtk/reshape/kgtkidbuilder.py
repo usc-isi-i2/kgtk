@@ -14,11 +14,16 @@ from kgtk.value.kgtkvalue import KgtkValue
 @attr.s(slots=True, frozen=True)
 class KgtkIdBuilderOptions(KgtkFormat):
     # TODO: use an enum
-    CONCAT_STYLE: str = "concat" # node1-label-node2
-    CONCAT_NLNUM_STYLE: str = "concat-nlnum" # node1-label-#
-    CONCAT_WITH_ID_STYLE: str = "concat-with-id" # Tag on any existing ID value
-    PREFIXED_STYLE: str = "prefixed" # XXX###
-    STYLES: typing.List[str] = [ CONCAT_STYLE, CONCAT_NLNUM_STYLE, CONCAT_WITH_ID_STYLE, PREFIXED_STYLE ]
+    CONCAT_STYLE: str = "node1-label-node2" # node1-label-node2
+    CONCAT_NLNUM_STYLE: str = "node1-label-num" # node1-label-#
+    CONCAT_WITH_ID_STYLE: str = "node1-label-node2-id" # Tag on any existing ID value
+    PREFIXED_STYLE: str = "prefix###" # XXX###
+    STYLES: typing.List[str] = [
+        CONCAT_NLNUM_STYLE,
+        CONCAT_STYLE,
+        CONCAT_WITH_ID_STYLE,
+        PREFIXED_STYLE,
+    ]
     DEFAULT_STYLE: str = PREFIXED_STYLE
 
     # Defaults for prefixed style IDs.
@@ -52,21 +57,28 @@ class KgtkIdBuilderOptions(KgtkFormat):
                                   help=h("The name of the id column. (default=id)."))
             
         parser.add_argument(      "--overwrite-id", dest="overwrite_id",
-                                  help="Replace existing id values. (default=%(default)s).",
+                                  metavar="optional True|False",
+                                  help="When True, replace existing id values. " +
+                                  "When --overwrite-id is omitted, it defaults to %(default)s. " +
+                                  "When --overwrite-id is supplied without an argument, it is %(const)s.",
                                   type=optional_bool, nargs='?', const=True, default=overwrite)
 
         parser.add_argument(      "--verify-id-unique", dest="verify_id_unique",
-                                  help="Verify ID uniqueness.  Uses an in-memory set of IDs. (default=%(default)s).",
+                                  metavar="optional True|False",
+                                  help="Verify ID uniqueness using an in-memory set of IDs. " +
+                                  "When --verify-id-unique is omitted, it defaults to %(default)s. " +
+                                  "When --verify-id-unique is supplied without an argument, it is %(const)s. " +
+                                  "To disable the ID uniqueness check, specify --verify-id-unique=False",
                                   type=optional_bool, nargs='?', const=True, default=True)
 
         parser.add_argument(      "--id-style", dest="id_style", default=cls.DEFAULT_STYLE, choices=cls.STYLES,
-                                  help=h("The id style. (default=%(default)s)."))
+                                  help=h("The id generation style. (default=%(default)s)."))
 
         parser.add_argument(      "--id-prefix", dest="id_prefix", default=cls.DEFAULT_PREFIX,
-                                  help=h("The prefix for a prefix/number id. (default=%(default)s)."))
+                                  help=h("The prefix for a prefix### id. (default=%(default)s)."))
 
         parser.add_argument(      "--initial-id", dest="initial_id", type=int, default=cls.DEFAULT_INITIAL_ID,
-                                  help=h("The initial value for a prefix/number id. (default=%(default)s)."))
+                                  help=h("The initial value for a prefix### id. (default=%(default)s)."))
 
     @classmethod
     def from_dict(cls, d: dict)->'KgtkIdBuilderOptions':
