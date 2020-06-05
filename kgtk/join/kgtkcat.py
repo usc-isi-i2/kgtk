@@ -191,7 +191,10 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="input_file_paths", help="The KGTK files to concatenate", type=Path, nargs='+')
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s)", type=Path, default="-")
-    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str)
+
+    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
+                              choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
+
     parser.add_argument(      "--output-columns", dest="output_column_names", help="Rename all output columns. (default=%(default)s)", type=str, nargs='+')
     parser.add_argument(      "--old-columns", dest="old_column_names", help="Rename seleted output columns: old names. (default=%(default)s)", type=str, nargs='+')
     parser.add_argument(      "--new-columns", dest="new_column_names", help="Rename seleted output columns: new names. (default=%(default)s)", type=str, nargs='+')
