@@ -1,7 +1,20 @@
 ## KGTK as a Docker image
 
-In this repository there are two dockerfiles:
+How to build this docker image:
 
-Dockerfile-gt-kgtk is an archlinux image with Graph-tool and KGTK installed. At the moment miller is not available (produces an error in installation)
+docker build -t uscisii2/kgtk:0.2.0 .
 
-Dockerfile-mlr-kgtk is a miniconda image with miller and KGTK installed. Currently graph-tool is producing an error.
+
+How to run this docker image:
+
+docker run -it uscisii2/kgtk:0.2.0 /bin/bash
+
+This will log you into the image and let you operate with KGTK.
+
+
+## Next updates:
+
+- How to load volumes with your data.
+
+- How to launch a Jupyter notebook to operate with KGTK in your browser.
+
