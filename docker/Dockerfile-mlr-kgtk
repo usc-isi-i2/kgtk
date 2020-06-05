@@ -1,0 +1,13 @@
+FROM continuumio/miniconda3
+
+RUN apt-get update && apt-get install -y \
+        gcc \
+        miller
+
+RUN pip install thinc==7.4.0
+
+RUN pip install kgtk
+
+
+# The line below fails.
+# RUN conda install -c conda-forge graph-tool
