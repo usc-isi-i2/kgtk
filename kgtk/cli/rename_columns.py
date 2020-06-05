@@ -113,7 +113,7 @@ def run(input_file_path: Path,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
-    # Check for comsistent options.  argparse doesn't support this yet.
+    # Check for consistent options.  argparse doesn't support this yet.
     if output_column_names is not None and len(output_column_names) > 0:
         if (old_column_names is not None and len(old_column_names) > 0) or \
            (new_column_names is not None and len(new_column_names) > 0):
@@ -121,6 +121,8 @@ def run(input_file_path: Path,
     elif old_column_names is not None and len(old_column_names) > 0:
         if new_column_names is None or len(new_column_names) == 0:
             raise KGTKException("Both --old-columns and --new-columns must be used when either is used.")
+        if len(old_column_names) != len(new_column_names):
+            raise KGTKException("Both --old-columns and --new-columns must have the same number of columns.")
     elif new_column_names is not None and len(new_column_names) > 0:
         if old_column_names is None or len(old_column_names) == 0:
             raise KGTKException("Both --old-columns and --new-columns must be used when either is used.")

@@ -118,6 +118,10 @@ def run(input_file_paths: typing.List[Path],
          (new_column_names is not None and len(new_column_names) > 0):
         raise KGTKException("Both --old-columns and --new-columns must be used when either is used.")
 
+    elif (old_column_names is not None and len(old_column_names) > 0) and \
+         (new_column_names is not None and len(new_column_names) > 0):
+        if len(old_column_names) != len(new_column_names):
+            raise KGTKException("Both --old-columns and --new-columns must have the same number of columns.")
     try:
         kc: KgtkCat = KgtkCat(input_file_paths=input_file_paths,
                               output_path=output_file_path,
