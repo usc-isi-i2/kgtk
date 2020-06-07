@@ -1,4 +1,20 @@
-## Steps for installing KGTK
+## Using KGTK with Docker
+
+If you have Docker installed, we have prepared a Docker image with KGTK:
+
+```
+docker pull uscisii2/kgtk
+```
+
+Once downloaded, just run :
+```
+docker run -it uscisii2/kgtk /bin/bash
+```
+to start using the toolkit. Just type  `kgtk -h` to see the options in the toolkit.
+
+More information about versions and tags is available here: [https://hub.docker.com/repository/docker/uscisii2/kgtk](https://hub.docker.com/repository/docker/uscisii2/kgtk)
+
+## Installing KGTK from pip
 
 **Before you start**:  Our installation will use a conda environment. If you don't have a conda installed, follow this [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it.
 
@@ -9,7 +25,7 @@ conda activate kgtk-env
 ```
  **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
 
-2. Install (the dev branch at this point): `pip install kgtk`
+1. Install: `pip install kgtk`
 
 You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
