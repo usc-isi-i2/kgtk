@@ -1,5 +1,5 @@
 The explode command copies its input file to its output file, exploding one
-column (normally node2) into seperate columns for esch structured subfield. If
+column (normally node2) into separate columns for each structured subfield. If
 a cell in the column being exploded contains a list, that record is optionally
 expanded into multiple records before explosion, with all other columns
 copied-as is.
