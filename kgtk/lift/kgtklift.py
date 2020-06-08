@@ -255,48 +255,51 @@ class KgtkLift(KgtkFormat):
                 lifted_column_idxs.append(lift_column_idx)            
         return lifted_column_idxs
 
-    def process(self):
-        # Open the input file.
-        if self.verbose:
-            if self.input_file_path is not None:
-                print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
-            else:
-                print("Reading the input data from stdin", file=self.error_file, flush=True)
+    def write_output_row(self,
+                         ew: KgtkWriter,
+                         row: typing.List[str],
+                         new_columns: int,
+                         label_column_idx: int,
+                         labels: typing.Mapping[str, str],
+                         lifted_column_idxs: typing.List[int],
+                         lifted_output_column_idxs: typing.List[int]):
+        output_row: typing.List[str] = row.copy()
+        if new_columns > 0:
+            output_row.extend([""] * new_columns)
+                
+        if label_column_idx >= 0 and row[label_column_idx] == self.label_column_value:
+            # Don't lift label columns, if we have stored them.
+            pass
+        else:
+            lifted_column_idx: int
+            for idx, lifted_column_idx in enumerate(lifted_column_idxs):
+                lifted_value: str = row[lifted_column_idx]
+                if lifted_value in labels:
+                    output_row[lifted_output_column_idxs[idx]] = labels[row[lifted_column_idx]]
 
-        ikr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                          error_file=self.error_file,
-                                          options=self.reader_options,
-                                          value_options = self.value_options,
-                                          verbose=self.verbose,
-                                          very_verbose=self.very_verbose,
-        )
+        ew.write(output_row)
+        return
 
+    def process_in_memory(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader]):
+        """
+        Process the lift using in-memory buffering.  The labels will added to a
+        dict in memory, and depending upon the options selected, the input
+        rows may be kept on a list in memory.
+
+        """
         lift_column_idxs: typing.List[int] = self.build_lift_column_idxs(ikr)
 
-        # If supplied, open the label file.
-        lkr: typing.Optional[KgtkReader] = None
-        if self.label_file_path is not None:
-            if self.verbose:
-                if self.input_file_path is not None:
-                    print("Opening the label file: %s" % self.label_file_path, file=self.error_file, flush=True)
-                else:
-                    print("Reading the label data from stdin", file=self.error_file, flush=True)
-
-            lkr =  KgtkReader.open(self.label_file_path,
-                                   error_file=self.error_file,
-                                   options=self.reader_options,
-                                   value_options = self.value_options,
-                                   verbose=self.verbose,
-                                   very_verbose=self.very_verbose,
-            )
-
-        labels: typing.MutableMapping[str, str] = { }
-        input_rows: typing.List[typing.List[str]] = [ ]
+        labels: typing.Mapping[str, str] = { }
+        input_rows: typing.Optional[typing.List[typing.List[str]]] = None
         label_column_idx: int
-        lifted_column_idxs: typing.List[int]
 
         # Extract the labels, and maybe store the input rows.
-        if lkr is None:
+        if lkr is not None and self.label_file_path is not None:
+            # Read the label file.
+            labels, _ = self.load_labels(lkr, self.label_file_path)
+            # We don't need to worry about label records in the input file.
+            label_column_idx = -1
+        else:
             # Read the input file, extracting the labels. The label
             # records may or may not be saved in the input rows, depending
             # upin whether we plan to pass them throuhg to the output.
@@ -304,11 +307,6 @@ class KgtkLift(KgtkFormat):
             # Save the label column index in the input file.  We will use
             # this if we pass store label records through to output.
             label_column_idx = self.lookup_label_column_idx(ikr)
-        else:
-            # Read the label file.
-            labels, input_rows = self.load_labels(lkr, self.label_file_path)
-            # We don't need to worry about label records in the input file.
-            label_column_idx = -1
 
         label_count: int = len(labels)
         if label_count == 0 and not self.ok_if_no_labels:
@@ -327,7 +325,7 @@ class KgtkLift(KgtkFormat):
 
         # Build the output column names.
         lifted_output_column_idxs: typing.List[int] = [ ]
-        output_column_names: typing.list[str] = ikr.column_names.copy()
+        output_column_names: typing.List[str] = ikr.column_names.copy()
         for idx in lifted_column_idxs:
             lifted_column_name: str = ikr.column_names[idx] + self.lifted_column_suffix
             if lifted_column_name in ikr.column_name_map:
@@ -347,7 +345,7 @@ class KgtkLift(KgtkFormat):
         output_line_count: int = 0
         ew: KgtkWriter = KgtkWriter.open(output_column_names,
                                          self.output_file_path,
-                                         mode=ikr.mode,
+                                         mode=KgtkWriter.Mode[ikr.mode.name],
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
@@ -365,19 +363,19 @@ class KgtkLift(KgtkFormat):
                 for row in ikr:
                     if row[label_column_idx] != self.label_column_value:
                         input_line_count += 1
-                        self.write_output_row(row, new_columns, label_column_idx, labels, lifted_output_column_idxs)
+                        self.write_output_row(ew, row, new_columns, label_column_idx, labels, lifted_column_idxs, lifted_output_column_idxs)
                         output_line_count += 1
             else:
                 # Store the label records.  Don't lift them, but write them in the output.
                 for row in ikr:
                     input_line_count += 1
-                    self.write_output_row(row, new_columns, label_column_idx, labels, lifted_output_column_idxs)
+                    self.write_output_row(ew, row, new_columns, label_column_idx, labels, lifted_column_idxs, lifted_output_column_idxs)
                     output_line_count += 1
         else:
             # Use the stored input records.
             input_line_count = len(input_rows)
             for row in input_rows:
-                self.write_output_row(row, new_columns, label_column_idx, labels, lifted_output_column_idxs)
+                self.write_output_row(ew, row, new_columns, label_column_idx, labels, lifted_column_idxs, lifted_output_column_idxs)
                 output_line_count += 1
 
         if self.verbose:
@@ -386,30 +384,41 @@ class KgtkLift(KgtkFormat):
             print("Wrote %d records." % (output_line_count), file=self.error_file, flush=True)
         
         ew.close()
-
     
-    def write_outout_row(self,
-                         row: typing.List[str],
-                         new_columns: int,
-                         label_column_idx: int,
-                         labels: typing.Mapping[str, str],
-                         lifted_output_column_idxs: typing.List[int]):
-        output_row: typing.List[int] = row.copy()
-        if new_columns > 0:
-            output_row.extend([""] * new_columns)
-                
-        if label_column_idx >= 0 and row[label_column_idx] == self.label_column_value:
-            # Don't lift label columns, if we have stored them.
-            pass
-        else:
-            lifted_column_idx: int
-            for idx, lifted_column_idx in enumerate(lifted_column_idxs):
-                lifted_value: str = row[lifted_column_idx]
-                if lifted_value in labels:
-                    output_row[lifted_output_column_idxs[idx]] = labels[row[lifted_column_idx]]
+    def process(self):
+        # Open the input file.
+        if self.verbose:
+            if self.input_file_path is not None:
+                print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
+            else:
+                print("Reading the input data from stdin", file=self.error_file, flush=True)
 
-        ew.write(output_row)
-        return
+        ikr: KgtkReader =  KgtkReader.open(self.input_file_path,
+                                          error_file=self.error_file,
+                                          options=self.reader_options,
+                                          value_options = self.value_options,
+                                          verbose=self.verbose,
+                                          very_verbose=self.very_verbose,
+        )
+
+        # If supplied, open the label file.
+        lkr: typing.Optional[KgtkReader] = None
+        if self.label_file_path is not None:
+            if self.verbose:
+                if self.input_file_path is not None:
+                    print("Opening the label file: %s" % self.label_file_path, file=self.error_file, flush=True)
+                else:
+                    print("Reading the label data from stdin", file=self.error_file, flush=True)
+
+            lkr =  KgtkReader.open(self.label_file_path,
+                                   error_file=self.error_file,
+                                   options=self.reader_options,
+                                   value_options = self.value_options,
+                                   verbose=self.verbose,
+                                   very_verbose=self.very_verbose,
+            )
+
+        self.process_in_memory(ikr, lkr)
 
 def main():
     """
