@@ -209,10 +209,11 @@ class KgtkLift(KgtkFormat):
                                  labels: typing.Mapping[str, str],
                                  label_column_idx: int,
     )->typing.List[int]:
-        if not self.suppress_empty_columns:
-            # Lift all the candidate columns.
-            return lift_column_idxs.copy()
-
+        """
+        Build the lifted column indexes, suppressing those columns
+        for which there are are no label values.  This requires a
+        pass through the input data.
+        """
         if self.verbose:
             print("Checking for empty columns", file=self.error_file, flush=True)
         lift_column_idxs_empties: typing.List[int] = lift_column_idxs.copy()
@@ -272,11 +273,6 @@ class KgtkLift(KgtkFormat):
 
         lift_column_idxs: typing.List[int] = self.build_lift_column_idxs(ikr)
 
-        labels: typing.MutableMapping[str, str] = { }
-        input_rows: typing.List[typing.List[str]] = [ ]
-        label_column_idx: int
-        lifted_column_idxs: typing.List[int]
-
         # If supplied, open the label file.
         lkr: typing.Optional[KgtkReader] = None
         if self.label_file_path is not None:
@@ -293,23 +289,41 @@ class KgtkLift(KgtkFormat):
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose,
             )
-            labels, input_rows = self.load_labels(lkr, self.label_file_path)
-            input_rows = self.load_input(ikr, self.input_file_path)
-            label_column_idx = -1
-        else:
-            labels, input_rows = self.load_labels(ikr, self.input_file_path)
-            label_column_idx = self.lookup_label_column_idx(ikr)
 
-        input_line_count: int = len(input_rows)
-        if input_line_count == 0:
-            raise ValueError("No input lines were found.")
+        labels: typing.MutableMapping[str, str] = { }
+        input_rows: typing.List[typing.List[str]] = [ ]
+        label_column_idx: int
+        lifted_column_idxs: typing.List[int]
+
+        # Extract the labels, and maybe store the input rows.
+        if lkr is None:
+            # Read the input file, extracting the labels. The label
+            # records may or may not be saved in the input rows, depending
+            # upin whether we plan to pass them throuhg to the output.
+            labels, input_rows = self.load_labels(ikr, self.input_file_path)
+            # Save the label column index in the input file.  We will use
+            # this if we pass store label records through to output.
+            label_column_idx = self.lookup_label_column_idx(ikr)
+        else:
+            # Read the label file.
+            labels, input_rows = self.load_labels(lkr, self.label_file_path)
+            # We don't need to worry about label records in the input file.
+            label_column_idx = -1
 
         label_count: int = len(labels)
         if label_count == 0 and not self.ok_if_no_labels:
             raise ValueError("No labels were found.")
 
-        lifted_column_idxs: typing.List[int] =self.build_lifted_column_idxs(ikr, lift_column_idxs, input_rows, labels, label_column_idx)
-
+        lifted_column_idxs: typing.List[int]
+        if self.suppress_empty_columns:
+            if input_rows is None:
+                # We need to read the input records now in order to determine
+                # which lifted columns must be suppressed.
+                input_rows = self.load_input(ikr, self.input_file_path)
+            lifted_column_idxs = self.build_lifted_column_idxs(ikr, lift_column_idxs, input_rows, labels, label_column_idx)
+        else:
+            # Lift all the candidate columns.
+            lifted_column_idxs = lift_column_idxs.copy()
 
         # Build the output column names.
         lifted_output_column_idxs: typing.List[int] = [ ]
@@ -329,6 +343,7 @@ class KgtkLift(KgtkFormat):
 
         if self.verbose:
             print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+        input_line_count: int = 0
         output_line_count: int = 0
         ew: KgtkWriter = KgtkWriter.open(output_column_names,
                                          self.output_file_path,
@@ -343,23 +358,27 @@ class KgtkLift(KgtkFormat):
         if self.verbose:
             print("Writing output records", file=self.error_file, flush=True)
 
-        for row in input_rows:
-            output_row: typing.List[int] = row.copy()
-            if new_columns > 0:
-                output_row.extend([""] * new_columns)
-                
-            if row[label_column_idx] == self.label_column_value:
-                # Don't lift label columns, if we have stored them.
-                continue
-            lifted_column_idx: int
-            for idx, lifted_column_idx in enumerate(lifted_column_idxs):
-                lifted_value: str = row[lifted_column_idx]
-                if lifted_value in labels:
-                    output_row[lifted_output_column_idxs[idx]] = labels[row[lifted_column_idx]]
-
-            ew.write(output_row)
-            output_line_count += 1
-
+        if input_rows is None:
+            # We will make a single pass through the input file.
+            if self.remove_label_records and label_column_idx >= 0:
+                # Don't store the label records.
+                for row in ikr:
+                    if row[label_column_idx] != self.label_column_value:
+                        input_line_count += 1
+                        self.write_output_row(row, new_columns, label_column_idx, labels, lifted_output_column_idxs)
+                        output_line_count += 1
+            else:
+                # Store the label records.  Don't lift them, but write them in the output.
+                for row in ikr:
+                    input_line_count += 1
+                    self.write_output_row(row, new_columns, label_column_idx, labels, lifted_output_column_idxs)
+                    output_line_count += 1
+        else:
+            # Use the stored input records.
+            input_line_count = len(input_rows)
+            for row in input_rows:
+                self.write_output_row(row, new_columns, label_column_idx, labels, lifted_output_column_idxs)
+                output_line_count += 1
 
         if self.verbose:
             print("Read %d non-label input records." % (input_line_count), file=self.error_file, flush=True)
@@ -367,6 +386,30 @@ class KgtkLift(KgtkFormat):
             print("Wrote %d records." % (output_line_count), file=self.error_file, flush=True)
         
         ew.close()
+
+    
+    def write_outout_row(self,
+                         row: typing.List[str],
+                         new_columns: int,
+                         label_column_idx: int,
+                         labels: typing.Mapping[str, str],
+                         lifted_output_column_idxs: typing.List[int]):
+        output_row: typing.List[int] = row.copy()
+        if new_columns > 0:
+            output_row.extend([""] * new_columns)
+                
+        if label_column_idx >= 0 and row[label_column_idx] == self.label_column_value:
+            # Don't lift label columns, if we have stored them.
+            pass
+        else:
+            lifted_column_idx: int
+            for idx, lifted_column_idx in enumerate(lifted_column_idxs):
+                lifted_value: str = row[lifted_column_idx]
+                if lifted_value in labels:
+                    output_row[lifted_output_column_idxs[idx]] = labels[row[lifted_column_idx]]
+
+        ew.write(output_row)
+        return
 
 def main():
     """
