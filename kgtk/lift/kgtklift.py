@@ -48,6 +48,7 @@ class KgtkLift(KgtkFormat):
     suppress_duplicate_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     sort_lifted_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     suppress_empty_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    ok_if_no_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # TODO: add ok_if_no_labels
 
@@ -306,7 +307,7 @@ class KgtkLift(KgtkFormat):
             raise ValueError("No input lines were found.")
 
         label_count: int = len(labels)
-        if label_count == 0:
+        if label_count == 0 and not self.ok_if_no_labels:
             raise ValueError("No labels were found.")
 
         lifted_column_idxs: typing.List[int] =self.build_lifted_column_idxs(ikr, lift_column_idxs, input_rows, labels, label_column_idx)
@@ -412,6 +413,10 @@ def main():
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--ok-if-no-labels", dest="ok_if_no_labels",
+                              help="If true, do not abort if no labels were found. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
 
     KgtkReader.add_debug_arguments(parser)
     # TODO: seperate reader options for the label file.
@@ -446,6 +451,7 @@ def main():
         print("--sort-lifted-labels-labels=%s" % str(args.sort_lifted_labels))
         print("--suppress-duplicate-labels=%s" % str(args.suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(args.suppress_empty_columns))
+        print("--ok-if-no-labels=%s" % str(args.ok_if_no_labels))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -463,6 +469,7 @@ def main():
         sort_lifted_labels=args.sort_lifted_labels,
         suppress_duplicate_labels=args.suppress_duplicate_labels,
         suppress_empty_columns=args.suppress_empty_columns,
+        ok_if_no_labels=args.ok_if_no_labels,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,

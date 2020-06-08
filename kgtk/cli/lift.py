@@ -88,6 +88,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--ok-if-no-labels", dest="ok_if_no_labels",
+                              help="If true, do not abort if no labels were found. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -106,6 +110,7 @@ def run(input_kgtk_file: Path,
         sort_lifted_labels: bool = True,
         suppress_duplicate_labels: bool = True,
         suppress_empty_columns: bool = False,
+        ok_if_no_labels: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -145,6 +150,7 @@ def run(input_kgtk_file: Path,
         print("--sort-lifted-labels=%s" % str(sort_lifted_labels))
         print("--suppress-duplicate-labels=%s" % str(suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(suppress_empty_columns))
+        print("--ok-if-no-labels=%s" % str(ok_if_no_labels))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -164,6 +170,7 @@ def run(input_kgtk_file: Path,
             sort_lifted_labels=sort_lifted_labels,
             suppress_duplicate_labels=suppress_duplicate_labels,
             suppress_empty_columns=suppress_empty_columns,
+            ok_if_no_labels=ok_if_no_labels,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,
