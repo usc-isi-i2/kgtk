@@ -53,6 +53,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to lift. May be omitted or '-' for stdin.", type=Path, default="-")
 
+    parser.add_argument(      "--label-file", dest="label_kgtk_file", help="A KGTK file with label records (default=%(default)s).", type=Path, default=None)
+
     parser.add_argument(      "--node1-name", dest="node1_column_name",
                               help=h("The name of the node1 column. (default=node1 or alias)."), default=None)
 
@@ -87,10 +89,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
+    # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_kgtk_file: Path,
+        label_kgtk_file: typing.Optional[Path],
         output_kgtk_file: Path,
         node1_column_name: typing.Optional[str],
         label_column_name: typing.Optional[str],
@@ -124,6 +128,8 @@ def run(input_kgtk_file: Path,
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("input: %s" % str(input_kgtk_file), file=error_file, flush=True)
+        if label_kgtk_file is not None:
+            print("-label-file=%s" % label_kgtk_file, file=error_file, flush=True)
         if node1_column_name is not None:
             print("--node1-name=%s" % node1_column_name, file=error_file, flush=True)
         if label_column_name is not None:
@@ -146,6 +152,7 @@ def run(input_kgtk_file: Path,
     try:
         kl: KgtkLift = KgtkLift(
             input_file_path=input_kgtk_file,
+            label_file_path=label_kgtk_file,
             node1_column_name=node1_column_name,
             label_column_name=label_column_name,
             node2_column_name=node2_column_name,
