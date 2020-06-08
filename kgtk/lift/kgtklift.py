@@ -50,8 +50,6 @@ class KgtkLift(KgtkFormat):
     suppress_empty_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     ok_if_no_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # TODO: add ok_if_no_labels
-
     # TODO: add rewind logic here and KgtkReader
 
     # TODO: find working validators
