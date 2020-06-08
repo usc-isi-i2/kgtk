@@ -50,6 +50,9 @@ class KgtkLift(KgtkFormat):
     suppress_empty_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     ok_if_no_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    input_is_presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    labels_are_presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # TODO: add rewind logic here and KgtkReader
 
     # TODO: find working validators
@@ -281,7 +284,7 @@ class KgtkLift(KgtkFormat):
         ew.write(output_row)
         return
 
-    def process_in_memory(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader]):
+    def process_in_memory(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader], ew: KgtkWriter):
         """
         Process the lift using in-memory buffering.  The labels will added to a
         dict in memory, and depending upon the options selected, the input
@@ -340,22 +343,10 @@ class KgtkLift(KgtkFormat):
         new_columns: int = len(output_column_names) - len(ikr.column_names)
 
         if self.verbose:
-            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
-        input_line_count: int = 0
-        output_line_count: int = 0
-        ew: KgtkWriter = KgtkWriter.open(output_column_names,
-                                         self.output_file_path,
-                                         mode=KgtkWriter.Mode[ikr.mode.name],
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)        
-
-        if self.verbose:
             print("Writing output records", file=self.error_file, flush=True)
 
+        input_line_count: int = 0
+        output_line_count: int = 0
         if input_rows is None:
             # We will make a single pass through the input file.
             if self.remove_label_records and label_column_idx >= 0:
@@ -384,6 +375,13 @@ class KgtkLift(KgtkFormat):
             print("Wrote %d records." % (output_line_count), file=self.error_file, flush=True)
         
         ew.close()
+    
+    def process_as_merge(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader]):
+        """
+vv        Process the lift as a merge between two sorted files.
+
+        """
+        pass
     
     def process(self):
         # Open the input file.
@@ -418,7 +416,26 @@ class KgtkLift(KgtkFormat):
                                    very_verbose=self.very_verbose,
             )
 
-        self.process_in_memory(ikr, lkr)
+        if self.verbose:
+            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+        ew: KgtkWriter = KgtkWriter.open(output_column_names,
+                                         self.output_file_path,
+                                         mode=KgtkWriter.Mode[ikr.mode.name],
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         gzip_in_parallel=False,
+                                         verbose=self.verbose,
+                                         very_verbose=self.very_verbose)        
+
+        if self.lift_column_names is not None and len(self.lift_column_names) == 1 and \
+           not self.suppress_empty_columns and \
+           self.input_is_presorted and \
+           self.labels_are_presorted and \
+           lkr is not None:
+           self.process_as_merge(ikr, lkr, ew)
+        else:
+            self.process_in_memory(ikr, lkr, ew)
 
 def main():
     """
@@ -467,6 +484,14 @@ def main():
                               help="If true, do not abort if no labels were found. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--input-file-is-presorted", dest="input_is_presorted",
+                              help="If true, the input file is presorted on the column for which values are to be lifted. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--label-file-is-presorted", dest="labels_are_presorted",
+                              help="If true, the label file is presorted on the node1 column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
 
     KgtkReader.add_debug_arguments(parser)
     # TODO: seperate reader options for the label file.
@@ -502,6 +527,8 @@ def main():
         print("--suppress-duplicate-labels=%s" % str(args.suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(args.suppress_empty_columns))
         print("--ok-if-no-labels=%s" % str(args.ok_if_no_labels))
+        print("--input-file-is-presorted=%s" % str(args.input_is_presorted))
+        print("--label-file-is-presorted=%s" % str(args.labels_are_presorted))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -520,6 +547,8 @@ def main():
         suppress_duplicate_labels=args.suppress_duplicate_labels,
         suppress_empty_columns=args.suppress_empty_columns,
         ok_if_no_labels=args.ok_if_no_labels,
+        input_is_presorted=args.input_is_presorted,
+        labes_are_presorted=args.labels_are_presorted,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
