@@ -268,9 +268,10 @@ class KgtkLift(KgtkFormat):
             output_row.extend([""] * new_columns)
                 
         if label_column_idx >= 0 and row[label_column_idx] == self.label_column_value:
-            # Don't lift label columns, if we have stored them.
+            # Don't lift label columns, if we have stored labels in the input records.
             pass
         else:
+            # Lift the specified columns in this row.
             lifted_column_idx: int
             for idx, lifted_column_idx in enumerate(lifted_column_idxs):
                 lifted_value: str = row[lifted_column_idx]
@@ -291,14 +292,13 @@ class KgtkLift(KgtkFormat):
 
         labels: typing.Mapping[str, str] = { }
         input_rows: typing.Optional[typing.List[typing.List[str]]] = None
-        label_column_idx: int
+        label_column_idx: int = -1
 
         # Extract the labels, and maybe store the input rows.
         if lkr is not None and self.label_file_path is not None:
             # Read the label file.
-            labels, _ = self.load_labels(lkr, self.label_file_path)
             # We don't need to worry about label records in the input file.
-            label_column_idx = -1
+            labels, _ = self.load_labels(lkr, self.label_file_path)
         else:
             # Read the input file, extracting the labels. The label
             # records may or may not be saved in the input rows, depending
