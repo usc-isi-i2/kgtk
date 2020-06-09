@@ -81,7 +81,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-duplicate-labels", dest="suppress_duplicate_labels",
-                              help=h("If true, suppress duplicate values in lists in lifted labels (implies sorting) (not implemented while merging). (default=%(default)s)."),
+                              help=h("If true, suppress duplicate values in lists in lifted labels (implies sorting). (default=%(default)s)."),
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
