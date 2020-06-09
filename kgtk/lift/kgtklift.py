@@ -41,7 +41,7 @@ class KgtkLift(KgtkFormat):
     label_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     node2_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
-    label_column_value: typing.Optional[str] = attr.ib(validator=attr.validators.instance_of(str), default="label")
+    label_column_value: str = attr.ib(validator=attr.validators.instance_of(str), default="label")
     lifted_column_suffix: str = attr.ib(validator=attr.validators.instance_of(str), default=";label")
 
     remove_label_records: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -82,7 +82,7 @@ class KgtkLift(KgtkFormat):
             if kr.node2_column_idx >= 0:
                 lift_column_idxs.append(kr.node2_column_idx)
 
-        # Verify that we gond some columns to lift:
+        # Verify that we found some columns to lift:
         if len(lift_column_idxs) == 0:
             raise ValueError("No lift columns found.")
 
@@ -147,19 +147,19 @@ class KgtkLift(KgtkFormat):
         if self.verbose:
             print("Loading labels from %s" % path, file=self.error_file, flush=True)
         key: str
-        list_seen: bool = False
         row: typing.List[str]
         for row in kr:
             if row[label_column_idx] == self.label_column_value:
                 # This is a label definition row.
                 key = row[node1_column_idx]
+                key_value: str = row[node2_column_idx]
                 if key in labels:
-                    # This label already exists in the table, build a list.
-                    labels[key] += "|" + row[node2_column_idx]
-                    list_seen = True
+                    # This label already exists in the table, build a list
+                    # eliminating duplicate elements.
+                    labels[key] = KgtkValue.merge_values(key_value, labels[key])
                 else:
                     # This is the first instance of this label definition.
-                    labels[key] = row[node2_column_idx]
+                    labels[key] = key_value
                 if not self.remove_label_records:
                     input_rows.append(row)
             else:
@@ -284,7 +284,47 @@ class KgtkLift(KgtkFormat):
         ew.write(output_row)
         return
 
-    def process_in_memory(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader], ew: KgtkWriter):
+    def build_output_column_names(self, ikr: KgtkReader, lifted_column_idxs: typing.List[int])->typing.Tuple[typing.List[str], typing.List[int]]:
+        # Build the output column names.
+        output_column_names: typing.List[str] = ikr.column_names.copy()
+        lifted_output_column_idxs: typing.List[int] = [ ]
+        for idx in lifted_column_idxs:
+            lifted_column_name: str = ikr.column_names[idx] + self.lifted_column_suffix
+            if lifted_column_name in ikr.column_name_map:
+                # Overwrite an existing lifted output column.
+                #
+                # TODO: DO we want to control whether or not we overwrite existing columns?
+                lifted_output_column_idxs.append(ikr.column_name_map[lifted_column_name])
+            else:
+                # Append a new lifted output column.
+                lifted_output_column_idxs.append(len(output_column_names))
+                output_column_names.append(lifted_column_name)
+        return output_column_names, lifted_output_column_idxs
+
+    def open_output_writer(self,
+                           ikr: KgtkReader,
+                           lifted_column_idxs: typing.List[int]
+    )->typing.Tuple[KgtkWriter, typing.List[int]]:
+        # Build the output column names.
+        output_column_names: typing.List[str]
+        lifted_output_column_idxs: typing.List[int]
+        output_column_names, lifted_output_column_idxs = self.build_output_column_names(ikr, lifted_column_idxs)
+
+        if self.verbose:
+            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+        ew: KgtkWriter = KgtkWriter.open(output_column_names,
+                                         self.output_file_path,
+                                         mode=KgtkWriter.Mode[ikr.mode.name],
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         gzip_in_parallel=False,
+                                         verbose=self.verbose,
+                                         very_verbose=self.very_verbose)        
+
+        return ew, lifted_output_column_idxs
+
+    def process_in_memory(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader]):
         """
         Process the lift using in-memory buffering.  The labels will added to a
         dict in memory, and depending upon the options selected, the input
@@ -326,25 +366,14 @@ class KgtkLift(KgtkFormat):
             # Lift all the candidate columns.
             lifted_column_idxs = lift_column_idxs.copy()
 
-        # Build the output column names.
-        lifted_output_column_idxs: typing.List[int] = [ ]
-        output_column_names: typing.List[str] = ikr.column_names.copy()
-        for idx in lifted_column_idxs:
-            lifted_column_name: str = ikr.column_names[idx] + self.lifted_column_suffix
-            if lifted_column_name in ikr.column_name_map:
-                # Overwrite an existing lifted output column.
-                #
-                # TODO: DO we want to control whether or not we overwrite existing columns?
-                lifted_output_column_idxs.append(ikr.column_name_map[lifted_column_name])
-            else:
-                # Append a new lifted output column.
-                lifted_output_column_idxs.append(len(output_column_names))
-                output_column_names.append(lifted_column_name)
-        new_columns: int = len(output_column_names) - len(ikr.column_names)
+        ew: KgtkWriter
+        lifted_output_column_idxs: typing.List[int]
+        ew, lifted_output_column_idxs = self.open_output_writer(ikr, lifted_column_idxs)
 
         if self.verbose:
             print("Writing output records", file=self.error_file, flush=True)
 
+        new_columns: int = len(ew.column_names) - len(ikr.column_names)
         input_line_count: int = 0
         output_line_count: int = 0
         if input_rows is None:
@@ -376,12 +405,88 @@ class KgtkLift(KgtkFormat):
         
         ew.close()
     
-    def process_as_merge(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader]):
+    def process_as_merge(self, ikr: KgtkReader, lkr: KgtkReader):
         """
-vv        Process the lift as a merge between two sorted files.
+        Process the lift as a merge between two sorted files.
 
         """
-        pass
+        lift_column_idxs: typing.List[int] = self.build_lift_column_idxs(ikr)
+        if len(lift_column_idxs) != 1:
+            raise ValueError("Expecting exactly one lift_column_idxs, got %d" % len(lift_column_idxs))
+
+        ew: KgtkWriter
+        lifted_output_column_idxs: typing.List[int]
+        ew, lifted_output_column_idxs = self.open_output_writer(ikr, lift_column_idxs)
+
+        new_columns: int = len(ew.column_names) - len(ikr.column_names)
+        if new_columns not in (0, 1):
+            raise ValueError("Expecing zero or one new columns, got %d" % new_columns)
+
+        lift_column_idx: int = lift_column_idxs[0] # For convenience
+        lifted_output_column_idx: int = lifted_output_column_idxs[0] # For convenience
+
+        node1_column_idx: int
+        label_column_idx: int
+        node2_column_idx: int
+        node1_column_idx, label_column_idx, node2_column_idx = self.lookup_label_table_idxs(lkr)
+  
+        current_label_row: typing.Optional[typing.List[str]] = None
+        more_labels: bool = True
+        # Read the first label record.
+        try:
+            current_label_row = lkr.nextrow()
+        except StopIteration:
+            more_labels = False
+
+        input_line_count: int = 0
+
+        # We carry last_value_to_lift and lifted_label_value over
+        # iterations in case the input file has multiple records with
+        # the same value to lift.
+        last_value_to_lift: typing.Optional[str] = None
+        lifted_label_value: str = ""
+
+        row: typing.List[str]
+        for row in ikr:
+            input_line_count += 1
+            value_to_lift: str = row[lift_column_idx]
+            if last_value_to_lift is None or value_to_lift != last_value_to_lift:
+                last_value_to_lift = value_to_lift
+                lifted_label_value = ""
+
+                # Read label records until we come to the first record that
+                # has a node1 value equal to or greater than the value we we want to lift.
+                while more_labels and current_label_row is not None and current_label_row[node1_column_idx] < value_to_lift:
+                    try:
+                        current_label_row = lkr.nextrow()
+                    except StopIteration:
+                        more_labels = False
+                        break
+
+                # While the label records have node1 values equal to the value we are trying to lift,
+                # look for label values from the label file.
+                while more_labels and current_label_row is not None and current_label_row[node1_column_idx] == value_to_lift:
+                    if current_label_row[label_column_idx] == self.label_column_value:
+                        lifted_label_value = KgtkValue.merge_values(lifted_label_value, current_label_row[node2_column_idx])
+
+                    try:
+                        current_label_row = lkr.nextrow()
+                    except StopIteration:
+                        more_labels = False
+                        break
+
+            output_row: typing.List[str] = row.copy()
+            if new_columns > 0:
+                output_row.append("")
+            output_row[lifted_output_column_idx] = lifted_label_value
+            ew.write(output_row)
+
+        if more_labels:
+            lkr.close()
+
+        if self.verbose:
+            print("Read %d input records." % (input_line_count), file=self.error_file, flush=True)
+             
     
     def process(self):
         # Open the input file.
@@ -416,26 +521,14 @@ vv        Process the lift as a merge between two sorted files.
                                    very_verbose=self.very_verbose,
             )
 
-        if self.verbose:
-            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
-        ew: KgtkWriter = KgtkWriter.open(output_column_names,
-                                         self.output_file_path,
-                                         mode=KgtkWriter.Mode[ikr.mode.name],
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)        
-
         if self.lift_column_names is not None and len(self.lift_column_names) == 1 and \
            not self.suppress_empty_columns and \
            self.input_is_presorted and \
            self.labels_are_presorted and \
            lkr is not None:
-           self.process_as_merge(ikr, lkr, ew)
+           self.process_as_merge(ikr, lkr)
         else:
-            self.process_in_memory(ikr, lkr, ew)
+            self.process_in_memory(ikr, lkr)
 
 def main():
     """
