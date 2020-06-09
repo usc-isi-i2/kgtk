@@ -1,4 +1,6 @@
-This command loads a TSV edge file into Graph-tool, and can compute centrality metrics and connectivity statistics. The set of metrics to compute are specified by the user. The statistics for individual nodes are printed as edges to stdout. The summary statistics over the entire graph can be written to a summary file.
+Given a KGTK edge file, this command can compute centrality metrics and connectivity statistics. The set of metrics to compute are specified by the user. 
+
+The statistics for individual nodes are printed as edges to stdout. The summary statistics over the entire graph can be written to a summary file.
 
 ## Usage
 ```
@@ -41,9 +43,7 @@ optional arguments:
 
 ## Examples
 
-Import a TSV file into Graph-tool, and compute degrees, pagerank and hits. We store the global statistics to log.txt. 
-
-Given this input file `input.tsv`:
+Given this file `input.tsv`:
 
 | node1 | label | node2 |
 | -- | -- | -- |
