@@ -151,23 +151,20 @@ class KgtkLift(KgtkFormat):
         for row in kr:
             if row[label_column_idx] == self.label_column_value:
                 # This is a label definition row.
-                key = row[node1_column_idx]
-                key_value: str = row[node2_column_idx]
-                if key in labels:
-                    # This label already exists in the table.
-                    if self.suppress_duplicate_labels:
-                        # Build a list eliminating duplicate elements.
-                        # print("Merge '%s' and '%s'" % (key_value, labels[key]), file=self.error_file, flush=True)
-                        labels[key] = KgtkValue.merge_values(labels[key], key_value)
+                label_key = row[node1_column_idx]
+                label_value: str = row[node2_column_idx]
+                if len(label_value) > 0:
+                    if label_key in labels:
+                        # This label already exists in the table.
+                        if self.suppress_duplicate_labels:
+                            # Build a list eliminating duplicate elements.
+                            # print("Merge '%s' and '%s'" % (key_value, labels[key]), file=self.error_file, flush=True)
+                            labels[label_key] = KgtkValue.merge_values(labels[label_key], label_value)
+                        else:
+                            labels[label_key] = KgtkFormat.LIST_SEPARATOR.join((labels[label_key], label_value))
                     else:
-                        if len(key_value) > 0:
-                            if len(labels[key]) > 0:
-                                labels[key] = KgtkFormat.LIST_SEPARATOR.join((labels[key], key_value))
-                            else:
-                                labels[key] = key_value
-                else:
-                    # This is the first instance of this label definition.
-                    labels[key] = key_value
+                        # This is the first instance of this label definition.
+                        labels[label_key] = label_value
                 if not self.remove_label_records:
                     input_rows.append(row)
             else:
@@ -488,7 +485,15 @@ class KgtkLift(KgtkFormat):
                 # look for label values from the label file.
                 while more_labels and current_label_row is not None and current_label_row[node1_column_idx] == value_to_lift:
                     if current_label_row[label_column_idx] == self.label_column_value:
-                        lifted_label_value = KgtkValue.merge_values(lifted_label_value, current_label_row[node2_column_idx])
+                        label_value: str = current_label_row[node2_column_idx]
+                        if len(label_value) > 0:
+                            if len(lifted_label_value) > 0:
+                                if self.suppress_duplicate_labels:
+                                    lifted_label_value = KgtkValue.merge_values(lifted_label_value, label_value)
+                                else:
+                                    lifted_label_value = KgtkFormat.LIST_SEPARATOR.join((lifted_label_value, label_value))
+                            else:
+                                lifted_label_value = label_value
 
                     try:
                         current_label_row = lkr.nextrow()
@@ -587,7 +592,7 @@ def main():
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-duplicate-labels", dest="suppress_duplicate_labels",
-                              help="If true, suppress duplicate values in lifted labels with lists (implies sorting) (Not implemented in merge mode). (default=%(default)s).",
+                              help="If true, suppress duplicate values in lifted labels with lists (implies sorting). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
