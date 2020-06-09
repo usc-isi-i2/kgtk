@@ -117,7 +117,7 @@ class KgtkValueFields():
     LOW_TOLERANCE_FIELD_NAME: str = "low_tolerance"
     NUMBER_FIELD_NAME: str = "number"
     PRECISION_FIELD_NAME: str = "precision"
-    SI_UNITS_FEIDL_NAME: str = "si_units"
+    SI_UNITS_FIELD_NAME: str = "si_units"
     SYMBOL_FIELD_NAME: str = "symbol"
     TEXT_FIELD_NAME: str = "text"
     TRUTH_FIELD_NAME: str = "truth"
