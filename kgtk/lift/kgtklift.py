@@ -154,9 +154,17 @@ class KgtkLift(KgtkFormat):
                 key = row[node1_column_idx]
                 key_value: str = row[node2_column_idx]
                 if key in labels:
-                    # This label already exists in the table, build a list
-                    # eliminating duplicate elements.
-                    labels[key] = KgtkValue.merge_values(key_value, labels[key])
+                    # This label already exists in the table.
+                    if self.suppress_duplicate_labels:
+                        # Build a list eliminating duplicate elements.
+                        # print("Merge '%s' and '%s'" % (key_value, labels[key]), file=self.error_file, flush=True)
+                        labels[key] = KgtkValue.merge_values(labels[key], key_value)
+                    else:
+                        if len(key_value) > 0:
+                            if len(labels[key]) > 0:
+                                labels[key] = KgtkFormat.LIST_SEPARATOR.join((labels[key], key_value))
+                            else:
+                                labels[key] = key_value
                 else:
                     # This is the first instance of this label definition.
                     labels[key] = key_value
@@ -331,6 +339,8 @@ class KgtkLift(KgtkFormat):
         rows may be kept on a list in memory.
 
         """
+        if self.verbose:
+            print("Lifting with in-memory buffering.", file=self.error_file, flush=True)
         lift_column_idxs: typing.List[int] = self.build_lift_column_idxs(ikr)
 
         labels: typing.Mapping[str, str] = { }
@@ -340,12 +350,16 @@ class KgtkLift(KgtkFormat):
         # Extract the labels, and maybe store the input rows.
         if lkr is not None and self.label_file_path is not None:
             # Read the label file.
+            if self.verbose:
+                print("Loading labels from the label file.", file=self.error_file, flush=True)
             # We don't need to worry about label records in the input file.
             labels, _ = self.load_labels(lkr, self.label_file_path)
         else:
+            if self.verbose:
+                print("Loading labels and reading data from the input file.", file=self.error_file, flush=True)
             # Read the input file, extracting the labels. The label
             # records may or may not be saved in the input rows, depending
-            # upin whether we plan to pass them throuhg to the output.
+            # upon whether we plan to pass them throuhg to the output.
             labels, input_rows = self.load_labels(ikr, self.input_file_path)
             # Save the label column index in the input file.  We will use
             # this if we pass store label records through to output.
@@ -360,6 +374,8 @@ class KgtkLift(KgtkFormat):
             if input_rows is None:
                 # We need to read the input records now in order to determine
                 # which lifted columns must be suppressed.
+                if self.verbose:
+                    print("Reading input data to suppress empty columns.", file=self.error_file, flush=True)
                 input_rows = self.load_input(ikr, self.input_file_path)
             lifted_column_idxs = self.build_lifted_column_idxs(ikr, lift_column_idxs, input_rows, labels, label_column_idx)
         else:
@@ -410,6 +426,8 @@ class KgtkLift(KgtkFormat):
         Process the lift as a merge between two sorted files.
 
         """
+        if self.verbose:
+            print("Merging sorted input and label files.", file=self.error_file, flush=True)
         lift_column_idxs: typing.List[int] = self.build_lift_column_idxs(ikr)
         if len(lift_column_idxs) != 1:
             raise ValueError("Expecting exactly one lift_column_idxs, got %d" % len(lift_column_idxs))
@@ -445,6 +463,9 @@ class KgtkLift(KgtkFormat):
         # the same value to lift.
         last_value_to_lift: typing.Optional[str] = None
         lifted_label_value: str = ""
+
+        if self.verbose:
+            print("Processing the input records.", file=self.error_file, flush=True)
 
         row: typing.List[str]
         for row in ikr:
@@ -641,7 +662,7 @@ def main():
         suppress_empty_columns=args.suppress_empty_columns,
         ok_if_no_labels=args.ok_if_no_labels,
         input_is_presorted=args.input_is_presorted,
-        labes_are_presorted=args.labels_are_presorted,
+        labels_are_presorted=args.labels_are_presorted,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,

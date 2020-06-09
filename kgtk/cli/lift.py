@@ -92,6 +92,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="If true, do not abort if no labels were found. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--input-file-is-presorted", dest="input_is_presorted",
+                              help="If true, the input file is presorted on the column for which values are to be lifted. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--label-file-is-presorted", dest="labels_are_presorted",
+                              help="If true, the label file is presorted on the node1 column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -111,6 +119,8 @@ def run(input_kgtk_file: Path,
         suppress_duplicate_labels: bool = True,
         suppress_empty_columns: bool = False,
         ok_if_no_labels: bool = False,
+        input_is_presorted: bool = False,
+        labels_are_presorted: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -151,6 +161,8 @@ def run(input_kgtk_file: Path,
         print("--suppress-duplicate-labels=%s" % str(suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(suppress_empty_columns))
         print("--ok-if-no-labels=%s" % str(ok_if_no_labels))
+        print("--input-file-is-presorted=%s" % str(input_is_presorted))
+        print("--label-file-is-presorted=%s" % str(labels_are_presorted))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -171,6 +183,8 @@ def run(input_kgtk_file: Path,
             suppress_duplicate_labels=suppress_duplicate_labels,
             suppress_empty_columns=suppress_empty_columns,
             ok_if_no_labels=ok_if_no_labels,
+            input_is_presorted=input_is_presorted,
+            labels_are_presorted=labels_are_presorted,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,
