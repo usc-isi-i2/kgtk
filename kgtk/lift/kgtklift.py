@@ -587,7 +587,7 @@ def main():
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-duplicate-labels", dest="suppress_duplicate_labels",
-                              help="If true, suppress duplicate values in lifted labels with lists (implies sorting). (default=%(default)s).",
+                              help="If true, suppress duplicate values in lifted labels with lists (implies sorting) (Not implemented in merge mode). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
