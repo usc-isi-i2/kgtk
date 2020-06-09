@@ -25,7 +25,15 @@ https://kgtk.readthedocs.io/en/latest/
 
 * [Source code](https://github.com/usc-isi-i2/kgtk/releases)
 
-## Installation
+## Installation through Docker
+
+```
+docker pull uscisii2/kgtk
+```
+
+More information about versions and tags here: https://hub.docker.com/repository/docker/uscisii2/kgtk
+
+## Local installation
 
 0. Our installations will be in a conda environment. If you don't have a conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it.
 1. Set up your own conda environment:
