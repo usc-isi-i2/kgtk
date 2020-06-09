@@ -445,10 +445,14 @@ class KgtkValue(KgtkFormat):
                 return cls.join_unique_list(cls.split_list(value1).extend(cls.split_list(value2)))
             else:
                 # This is rather expensive, but will work correctly:
-                return cls.join_unique_list(cls.split_list(value1).append(value2))
+                lv: typing.List[str] = cls.split_list(value1)
+                lv.append(value2)
+                return cls.join_unique_list(lv)
         if KgtkFormat.LIST_SEPARATOR in value2:
             # This is rather expensive, but will work correctly:
-            return cls.join_unique_list(cls.split_list(value2).append(value1))
+            lv2: typing.List[str] = cls.split_list(value2)
+            lv2.append(value1)
+            return cls.join_unique_list(lv2)
         if value1 < value2:
             return KgtkFormat.LIST_SEPARATOR.join((value1, value2))
         else:
