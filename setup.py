@@ -1,15 +1,13 @@
 from distutils.core import setup
-from setuptools import find_packages # type: ignore
+from setuptools import find_packages  # type: ignore
 from setuptools.command.build_py import build_py
 from kgtk import __version__
 import sys
-
 
 lite_build = False
 if '--lite' in sys.argv:
     lite_build = True
     sys.argv.remove('--lite')
-
 
 with open('requirements.txt', 'r') as f:
     install_requires = list()
@@ -22,9 +20,9 @@ with open('requirements.txt', 'r') as f:
             else:
                 install_requires.append(re)
 
-
 lite_excluded_modules = {
-    'kgtk.cli': {'filter', 'export_gt', 'export_neo4j'}
+    'kgtk.cli': {'filter', 'export_gt', 'export_neo4j', 'connected_components', 'graph_statistics', 'gt_loader',
+                 'reachable_nodes'}
 }
 
 
