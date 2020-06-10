@@ -1,6 +1,8 @@
 """Copy records from the first KGTK file to the output file,
 imploding data type-specific columns into a single column./
 
+TODO: Add a reject file.
+
 """
 
 from argparse import ArgumentParser, Namespace
