@@ -418,6 +418,11 @@ class KgtkValue(KgtkFormat):
             self.fields = KgtkValueFields(data_type=self.data_type, valid=self.valid)
         return True
 
+    # Split on a "|" that is not preceeded by "\".  This is not completely
+    # correct:  we want to split on any "|" that is not preceeded by an odd
+    # number of "\".
+    #
+    # TODO: Find a better splitting pattern.
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
     @classmethod
