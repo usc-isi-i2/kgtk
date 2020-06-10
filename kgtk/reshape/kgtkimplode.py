@@ -627,14 +627,12 @@ def main():
 
     parser.add_argument(      "--column", dest="column_name", help="The name of the column to explode. (default=%(default)s).", default="node2")
 
-    fgroup: ArgumentParser = parser.add_mutually_exclusive_group()
-
-    fgroup.add_argument(      "--types", dest="type_names", nargs='*',
+    parser.add_argument(      "--types", dest="type_names", nargs='*',
                                help="The KGTK data types for which fields should be imploded. (default=%(default)s).",
                                choices=KgtkFormat.DataType.choices(),
                                default=KgtkFormat.DataType.choices())
 
-    fgroup.add_argument(      "--without", dest="without_fields", nargs='*',
+    parser.add_argument(      "--without", dest="without_fields", nargs='*',
                                help="The KGTK fields to do without. (default=%(default)s).",
                                choices=KgtkValueFields.OPTIONAL_DEFAULT_FIELD_NAMES,
                                default=None)
@@ -693,9 +691,9 @@ def main():
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         if args.without_fields is not None:
             print("--without %s" % " ".join(args.without_fields), file=error_file, flush=True)
-        print("--output-file=%s" % str(args.output_file_path))
+        print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
         if args.reject_file_path is not None:
-            print("--output-file=%s" % str(args.output_file_path))
+            print("--reject-file=%s" % str(args.reject_file_path), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -722,5 +720,6 @@ def main():
 
     ex.process()
 
+    
 if __name__ == "__main__":
     main()
