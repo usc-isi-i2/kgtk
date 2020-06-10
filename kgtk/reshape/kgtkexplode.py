@@ -40,7 +40,9 @@ class KgtkExplode(KgtkFormat):
     expand_list: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
                                
     # TODO: find working validators
-    # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
+    # value_options: KgtkValueOptions = attr.ib(default=None,
+    #                                           converter=attr.converters.default_if_none(factory=KgtkValueOptions.default),
+    #                                           validator=attr.validators.instance_of(KgtkValueOptions))
     reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 

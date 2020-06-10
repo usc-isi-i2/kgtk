@@ -299,6 +299,10 @@ class KgtkValueOptions:
 
         print("%sescape-list-separators=%s" % (prefix, str(self.escape_list_separators)), file=out)
 
+    @classmethod
+    def default(cls)->'KgtkValueOptions':
+        return DEFAULT_KGTK_VALUE_OPTIONS
+
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
 def main():
