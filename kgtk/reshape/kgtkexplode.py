@@ -1,5 +1,5 @@
 """Copy records from the first KGTK file to the output file,
-expanding lists.
+exploding a column into several data type-specific columns.
 
 """
 
