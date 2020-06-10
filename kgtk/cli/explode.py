@@ -1,5 +1,5 @@
 """Copy records from the first KGTK file to the output file,
-expanding | lists.
+expanding one column (usualy node2) into seperate columns for each subfield.
 
 TODO: Need KgtkWriterOptions
 """
