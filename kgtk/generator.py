@@ -493,23 +493,46 @@ class JsonGenerator(Generator):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
         prop_file = kwargs.pop("prop_file")
+        self.prop_declaration = kwargs.pop("prop_declaration")
         self.output_prefix = kwargs.pop("output_prefix")
         self.file_num = 0
+        # this data_type mapping is to comply with the SQID UI parsing requirements
+        self.datatype_mapping = {
+            "item": "wikibase-item",
+            "time": "time",
+            "globe-coordinate": "globe-coordinate",
+            "quantity": "quantity",
+            "monolingualtext": "monolingualtext",
+            "string": "string",
+            "external-identifier": "external-id",
+            "url": "url"
+        }
         self.set_properties(prop_file)
         # curret dictionaries
         self.set_json_dict()
 
     def entry_point(self,line_number, edge):
-        edge_list = edge.strip("\n").split("\t")
-        l = len(edge_list)
         if line_number == 1:
             # initialize the order_map
-            self.initialize_order_map(edge_list)
+            self.initialize_order_map(edge)
             return
+        edge_list = edge.strip("\n").split("\t")
         node1 = edge_list[self.order_map["node1"]].strip()
         node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["prop"]].strip()
+        prop = edge_list[self.order_map["label"]].strip()
         e_id = edge_list[self.order_map["id"]].strip()
+
+        # property declaration
+        if prop == "data_type":
+            if self.prop_declaration:
+                self.prop_types[node1] = self.datatype_mapping[node2.strip()]
+                return
+            else:
+                if self.warning:
+                    self.warn_log.write(
+                    "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
+                        line_number, e_id))
+
 
         # add qualifier logic
         if line_number == 2:
@@ -526,17 +549,17 @@ class JsonGenerator(Generator):
 
         # update info_json_dict
         if node1 in self.prop_types:
-            success = self.update_misc_json_dict_info(node1, self.prop_types[node1])
+            success = self.update_misc_json_dict_info(node1,line_number, self.prop_types[node1])
         else:
-            success = self.update_misc_json_dict_info(node1, None)
+            success = self.update_misc_json_dict_info(node1, line_number, None)
         
         assert(success)
         
         if prop in self.prop_types:
-            success = self.update_misc_json_dict_info(prop,self.prop_types[prop])
+            success = self.update_misc_json_dict_info(prop, line_number, self.prop_types[prop])
             assert(success)
             if self.prop_types[prop] == "wikibase-item":
-                success = self.update_misc_json_dict_info(node2)
+                success = self.update_misc_json_dict_info(node2, line_number, None)
                 assert(success)
         
         # update label_json_dict
@@ -607,7 +630,7 @@ class JsonGenerator(Generator):
 
         return True
 
-    def update_misc_json_dict_info(self, node:str,data_type = None):
+    def update_misc_json_dict_info(self, node:str, line_number: int, data_type = None):
         if node not in self.misc_json_dict:
             self.init_entity_in_json(node)
 
@@ -633,7 +656,8 @@ class JsonGenerator(Generator):
                 "id":node}
                 )
         else:
-            raise KGTKException("node {} is neither an entity nor a property.".format(node)) 
+            if self.warning:
+                self.warn_log.write("node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number)) 
         return True
     def update_misc_json_dict(self, node1:str, prop:str, node2:str, line_number:int, field:str):
         if node1 not in self.misc_json_dict:
@@ -669,6 +693,7 @@ class JsonGenerator(Generator):
             if self.prop_types[prop] == "wikibase-item":
                 object = self.update_misc_json_dict_item(node1, prop, node2, is_qualifier_edge)
             elif self.prop_types[prop] == "time":
+                # print("matched date format yyyy-mm-dd",node1,prop,node2,is_qualifier_edge)
                 object = self.update_misc_json_dict_time(node1,prop,node2,is_qualifier_edge)
             elif self.prop_types[prop] == "globe-coordinate":
                 object = self.update_misc_json_dict_coordinate(node1,prop,node2,is_qualifier_edge)
@@ -749,17 +774,19 @@ class JsonGenerator(Generator):
 
 
     def update_misc_json_dict_time(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+        # print("MATCHED case 2",self.yyyy_mm_dd_pattern.match(node2))
         if self.yyyy_pattern.match(node2):
             time_string = node2 + "-01-01"
             precision = 9
         elif self.yyyy_mm_dd_pattern.match(node2):
             time_string = node2
             precision = 11
-        try:
-            time_string, precision = node2.split("/")
-            precision = int(precision)
-        except:
-            return None
+        else:
+            try:
+                time_string, precision = node2.split("/")
+                precision = int(precision)
+            except:
+                return None
         if not is_qualifier_edge:
             temp_time_dict = {
                 "mainsnak":{
@@ -1038,23 +1065,15 @@ class JsonGenerator(Generator):
         return temp_url_dict
 
     def set_properties(self, prop_file:str):
-        datatype_mapping = {
-            "item": "wikibase-item",
-            "time": "time",
-            "globe-coordinate": "globe-coordinate",
-            "quantity": "quantity",
-            "monolingualtext": "monolingualtext",
-            "string": "string",
-            "external-identifier": "external-id",
-            "url": "url"
-        }
+        self.prop_types = {}
+        if prop_file == "NONE":
+            return
         with open(prop_file, "r") as fp:
             props = fp.readlines()
-        self.prop_types = {}
         for line in props[1:]:
-            node1, _, node2 = line.split("\t")
+            node1, _, node2, = line.split("\t")
             try:
-                self.prop_types[node1] = datatype_mapping[node2.strip()]
+                self.prop_types[node1] = self.datatype_mapping[node2.strip()]
             except:
                 raise KGTKException(
                     "DataType {} of node {} is not supported.\n".format(
