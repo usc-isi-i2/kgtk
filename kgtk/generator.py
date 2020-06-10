@@ -1084,11 +1084,9 @@ class JsonGenerator(Generator):
         return temp_url_dict
 
     def set_properties(self, prop_file:str):
-<<<<<<< HEAD
         self.prop_types = {}
         if prop_file == "NONE":
             return
-=======
         datatype_mapping = {
             "item": "wikibase-item",
             "WikibaseItem": "wikibase-item",
@@ -1114,7 +1112,6 @@ class JsonGenerator(Generator):
             "url": "url",
             "Url": "url"
         }
->>>>>>> dev
         with open(prop_file, "r") as fp:
             props = fp.readlines()
         for line in props[1:]:
