@@ -68,9 +68,20 @@ def add_arguments(parser):
         "--property-file",
         action="store",
         type=str,
-        required = True,
+        required = False,
+        default="NONE",
         help="path to the file which contains the property datatype mapping in kgtk format.",
         dest="prop_file",
+    )
+    parser.add_argument(
+        "-pd",
+        "--property-declaration-in-file",
+        action="store",
+        type=str2bool,
+        required = False,
+        default=False,
+        help="wehther read properties in the kgtk file. If set to yes, make sure the property declaration happens before its usage",
+        dest="prop_declaration",
     )
     parser.add_argument(
         "-gz",
@@ -129,6 +140,7 @@ def run(
     aliases: str,
     descriptions: str,
     prop_file: str,
+    prop_declaration:bool,
     use_gz: bool,
     output_prefix: str,
     n: int,
@@ -148,7 +160,8 @@ def run(
         output_prefix = output_prefix,
         n = n,
         log_path = log_path,
-        warning = warning
+        warning = warning,
+        prop_declaration = prop_declaration,
     )
     # process stdin
     if use_gz:
