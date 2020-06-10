@@ -42,6 +42,8 @@ class KgtkImplode(KgtkFormat):
                                
     validate: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    escape_pipes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     # attr.converters.default_if_none(...) does not seem to work.
     # value_options: KgtkValueOptions = attr.ib(default=None,
     #                                           converter=attr.converters.default_if_none(DEFAULT_KGTK_VALUE_OPTIONS),
@@ -85,7 +87,7 @@ class KgtkImplode(KgtkFormat):
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.NUMBER_FIELD_NAME),
                       file=self.error_file, flush=True)
-        value = num_val
+        value: str = num_val
 
         if valid and self.validate:
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
@@ -119,7 +121,7 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
         si: str = row[implosion[KgtkValueFields.SI_UNITS_FIELD_NAME]]
         un: str = row[implosion[KgtkValueFields.UNITS_NODE_FIELD_NAME]]
-        value = num_val2
+        value: str = num_val2
         if len(lt) > 0 or len(ht) > 0:
             value += "[" + lt + "," + ht + "]"
         value += si + un
@@ -147,7 +149,31 @@ class KgtkImplode(KgtkFormat):
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                       file=self.error_file, flush=True)
-        value = text_val
+        elif len(text_val) == 1:
+            valid = False
+            if self.verbose:
+                print("Input line %d: data type '%s': %s field is too short" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
+                      file=self.error_file, flush=True)
+        else:
+            if not text_val.startswith('"'):
+                valid = False
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field does not start with a double quote" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
+                          file=self.error_file, flush=True)
+            if not text_val.endswith('"'):
+                valid = False
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field does not end with a double quote" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
+                          file=self.error_file, flush=True)
+
+        value: str = ""
+        if valid:
+            # This subterfuge uses Python's literal parser to parse the string.
+            if not self.escape_pipes:
+                # ast.literal_eval(...) doesn't treat backslash pipe (\|) as an escaped pipe (|).
+                # (this is documented behavior) so we will remove escaped pipes manually.
+                text_val = text_val.replace('\\|', '|')
+            value = KgtkFormat.stringify(ast.literal_eval(text_val))
 
         if valid and self.validate:
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
@@ -165,26 +191,30 @@ class KgtkImplode(KgtkFormat):
                                           type_name: str,                      
     )->typing.Tuple[str, bool]:
         valid: bool = True
-        text_idx2: int = implosion[KgtkValueFields.TEXT_FIELD_NAME]
-        text_val2: str = row[text_idx2]
-        if len(text_val2) == 0:
+        text_idx: int = implosion[KgtkValueFields.TEXT_FIELD_NAME]
+        text_val: str = row[text_idx]
+        if len(text_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                       file=self.error_file, flush=True)
 
-        if text_val2.startswith('"'):
-            # Need to replace the double quotes with single quotes.
-            if len(text_val2) < 2:
-                text_val2 = "''"
-            else:
-                # TODO: Need to catch exceptions from ast.literal_eval(...)
-                text_val2 = repr(ast.literal_eval(text_val2)).replace('|', '\\|')
-        else:
+        elif len(text_val) == 1:
             valid = False
             if self.verbose:
-                print("Input line %d: data type '%s': field '%s': text does not begin with a double quote." % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
+                print("Input line %d: data type '%s': %s field is too short" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                       file=self.error_file, flush=True)
+        else:
+            if not text_val.startswith('"'):
+                valid = False
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field does not start with a double quote" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
+                          file=self.error_file, flush=True)
+            if not text_val.endswith('"'):
+                valid = False
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field does not end with a double quote" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
+                          file=self.error_file, flush=True)
 
         language_idx: int = implosion[KgtkValueFields.LANGUAGE_FIELD_NAME]
         language_val: str = row[language_idx]
@@ -196,9 +226,14 @@ class KgtkImplode(KgtkFormat):
 
         suf: str = row[implosion[KgtkValueFields.LANGUAGE_SUFFIX_FIELD_NAME]]
 
-        value = text_val2 + "@" + language_val
-        if len(suf) > 0:
-            value += suf            
+        value: str = ""
+        if valid:
+            # This subterfuge uses Python's literal parser to parse the string.
+            if not self.escape_pipes:
+                # ast.literal_eval(...) doesn't treat backslash pipe (\|) as an escaped pipe (|).
+                # (this is documented behavior) so we will remove escaped pipes manually.
+                text_val = text_val.replace('\\|', '|')
+            value = KgtkFormat.stringify(ast.literal_eval(text_val), language=language_val, language_suffix=suf)
 
         if valid and self.validate:
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
@@ -231,7 +266,7 @@ class KgtkImplode(KgtkFormat):
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.LONGITUDE_FIELD_NAME),
                       file=self.error_file, flush=True)
-        value = "@" + latitude_val + "/" + longitude_val
+        value: str = "@" + latitude_val + "/" + longitude_val
 
         if valid and self.validate:
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
@@ -257,11 +292,30 @@ class KgtkImplode(KgtkFormat):
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
                       file=self.error_file, flush=True)
+        else:
+            if not date_and_times_val.startswith('"'):
+                valid = False
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field does not start with a double quote" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
+                          file=self.error_file, flush=True)
+            if not date_and_times_val.endswith('"'):
+                valid = False
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field does not end with a double quote" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
+                          file=self.error_file, flush=True)
+            if len(date_and_times_val) == 1:
+                valid = False
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field is too short" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
+                          file=self.error_file, flush=True)
+        if valid:
+            # Remove the enclosing double quotes:
+            date_and_times_val = date_and_times_val[1:-1]
 
         precision_idx: int = implosion[KgtkValueFields.PRECISION_FIELD_NAME]
         precision_val: str = row[precision_idx]
 
-        value = "^" + date_and_times_val
+        value: str = "^" + date_and_times_val
         if len(precision_val) > 0:
             value += "/" + precision_val
 
@@ -299,7 +353,7 @@ class KgtkImplode(KgtkFormat):
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.TRUTH_FIELD_NAME),
                       file=self.error_file, flush=True)
 
-        value = truth_val
+        value: str = truth_val
 
         if valid and self.validate:
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
@@ -326,7 +380,15 @@ class KgtkImplode(KgtkFormat):
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.SYMBOL_FIELD_NAME),
                       file=self.error_file, flush=True)
 
-        value = symbol_val
+        elif symbol_val.startswith('"') and symbol_val.endswith('"') and len(symbol_val) > 2:
+            # As a special favor, we'll accept symbols as string.  We'll
+            # strip the unwanted outer quotes.
+            symbol_val = symbol_val[1:-1]
+
+        if self.escape_pipes:
+            symbol_val = symbol_val.replace("|", "\\|")
+
+        value: str = symbol_val
 
         if valid and self.validate:
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
@@ -556,6 +618,10 @@ def main():
                               help="Validate imploded values. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--escape-pipes", dest="escape_pipes",
+                              help="When true, pipe characters (|) need to be escaped (\\|) per KGTK file format. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
                               type=Path, default=None)
     
@@ -578,10 +644,12 @@ def main():
         print("--column %s" % args.column_name, file=error_file, flush=True)
         print("--prefix %s" % args.prefix, file=error_file, flush=True)
         print("--overwrite %s" % str(args.overwrite_column), file=error_file, flush=True)
+        print("--validate %s" % str(args.validate), file=error_file, flush=True)
+        print("--escape-pipes %s" % str(args.escape_pipes), file=error_file, flush=True)
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path))
-        if args.reject_file_patn is not None:
+        if args.reject_file_path is not None:
             print("--output-file=%s" % str(args.output_file_path))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -592,6 +660,8 @@ def main():
         prefix=args.prefix,
         type_names=args.type_names,
         overwrite_column=args.overwrite_column,
+        validate=args.validate,
+        escape_pipes=args.escape_pipes,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
         reader_options=reader_options,
