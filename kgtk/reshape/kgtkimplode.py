@@ -301,24 +301,10 @@ class KgtkImplode(KgtkFormat):
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
                       file=self.error_file, flush=True)
-        else:
-            if not date_and_times_val.startswith('"'):
-                valid = False
-                if self.verbose:
-                    print("Input line %d: data type '%s': %s field does not start with a double quote" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
-                          file=self.error_file, flush=True)
-            if not date_and_times_val.endswith('"'):
-                valid = False
-                if self.verbose:
-                    print("Input line %d: data type '%s': %s field does not end with a double quote" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
-                          file=self.error_file, flush=True)
-            if len(date_and_times_val) == 1:
-                valid = False
-                if self.verbose:
-                    print("Input line %d: data type '%s': %s field is too short" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
-                          file=self.error_file, flush=True)
-        if valid:
-            # Remove the enclosing double quotes:
+
+        elif date_and_times_val.startswith('"') and date_and_times_val.endswith('"') and len(date_and_times_val) > 2:
+            # As a special favor, we'll accept date_and_times as a string.  We'll
+            # strip the unwanted outer quotes.
             date_and_times_val = date_and_times_val[1:-1]
 
         precision_idx: int = implosion[KgtkValueFields.PRECISION_FIELD_NAME]
