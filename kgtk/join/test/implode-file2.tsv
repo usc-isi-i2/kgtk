@@ -12,4 +12,19 @@ john	date_and_time	^1980-11-05T00:00Z/6	date_and_times	True	0											"1980-11
 john	location	@60.2/134.3	location_coordinates	True	0									60.2	134.3				
 john	boolean	True	boolean	True	0													True	
 john	symbol	quadrature	symbol	True	0														quadrature
+john	symbol-string	quadrature	symbol	True	0														"quadrature"
+john	symbol-with-raw-pipe	quadr\|ature	symbol	True	0														quadr|ature
+john	symbol-with-escaped-pipe	quadr\|ature	symbol	True	0														quadr\|ature
 john	list	home|work	list	True	2														
+john	string-with-tab	"Jo\thn"	string	True	0						"Jo\thn"								
+john	string-with-raw-pipe	"Jo\|hn"	string	True	0						"Jo|hn"								
+john	string-with-escaped-pipe	"Jo\|hn"	string	True	0						"Jo\|hn"								
+john	string-with-escaped-quote	"Jo\"hn"	string	True	0						"Jo\"hn"								
+john	string-with-escaped-prime	"Jo\'hn"	string	True	0						"Jo\'hn"								
+john	lqstring-with-tab	'Joh\tn'@en	language_qualified_string	True	0						"Joh\tn"	en							
+john	lqstring-with-raw-pipe	'Joh\|n'@en	language_qualified_string	True	0						"Joh|n"	en							
+john	lqstring-with-escaped-pipe	'Joh\|n'@en	language_qualified_string	True	0						"Joh\|n"	en							
+john	lqstring-with-escaped-quote	'Joh\"n'@en	language_qualified_string	True	0						"Joh\"n"	en							
+john	lqstring-with-escaped-prime	'Joh\'n'@en	language_qualified_string	True	0						"Joh\'n"	en							
+john	lqstring-with-escaped-prime-and-quote	'Joh\'\"n'@en	language_qualified_string	True	0						"Joh\'\"n"	en							
+john	lqstring-with-triple-double-quotes	'John'@en	language_qualified_string	True	0						"""John"""	en							
