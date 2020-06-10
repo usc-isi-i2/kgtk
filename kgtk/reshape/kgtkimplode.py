@@ -340,7 +340,7 @@ class KgtkImplode(KgtkFormat):
 
     # The imploder dispatch table:
     imploders: typing.Mapping[KgtkFormat.DataType,
-                              typing.Callable[[KgtkImplode,
+                              typing.Callable[['KgtkImplode',
                                                int,
                                                typing.List[str],
                                                typing.Mapping[str, int],
@@ -382,7 +382,7 @@ class KgtkImplode(KgtkFormat):
 
     def process(self):
         if len(self.column_name) == 0:
-            raise ValueError("The name of the column to explode is empty.")
+            raise ValueError("The name of the column to implode is empty.")
 
         selected_field_names: typing.List[str] = [ ]
         field_name: str
@@ -459,7 +459,7 @@ class KgtkImplode(KgtkFormat):
                 
         data_type_idx = implosion[KgtkValueFields.DATA_TYPE_FIELD_NAME]
 
-        ew: typing.Optional[KgtkWriter]
+        ew: typing.Optional[KgtkWriter] = None
         if self.output_file_path is not None:
             if self.verbose:
                 print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
@@ -473,7 +473,7 @@ class KgtkImplode(KgtkFormat):
                                              gzip_in_parallel=False,
                                              verbose=self.verbose,
                                              very_verbose=self.very_verbose)        
-        rw: typing.Optional[KgtkWriter]
+        rw: typing.Optional[KgtkWriter] = None
         if self.reject_file_path is not None:
             if self.verbose:
                 print("Opening reject file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
@@ -518,7 +518,7 @@ class KgtkImplode(KgtkFormat):
                 ew.write(output_row)
                 
         if self.verbose:
-            print("Processed %d records, imploded %d values, %d invalid values." % (input_line_count, imploded_value_count. invalid_value_count),
+            print("Processed %d records, imploded %d values, %d invalid values." % (input_line_count, imploded_value_count, invalid_value_count),
                   file=self.error_file, flush=True)
         
         if ew is not None:
@@ -586,7 +586,7 @@ def main():
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
-    ex: KgtkExplode = KgtkExplode(
+    ex: KgtkImplode = KgtkImplode(
         input_file_path=args.input_file_path,
         column_name=args.column_name,
         prefix=args.prefix,

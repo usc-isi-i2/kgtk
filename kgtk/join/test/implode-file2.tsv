@@ -1,4 +1,4 @@
-node1	label	node2	node2;kgtk:data_type	node2;kgtk:valid	node2;kgtk:list_len	node2;kgtk:number	node2;kgtk:low_tolerance	node2;kgtk:high_tolerance	node2;kgtk:si_units	node2;kgtk:units_node	node2;kgtk:text	node2;kgtk:language	node2;kgtk:language_suffix	node2;kgtk:latitude	node2;kgtk:longitude	node2;kgtk:date_and_time	node2;kgtk:precision	node2;kgtk:truth	node2;kgtk:symbol
+node1	label	old_node2	node2;kgtk:data_type	node2;kgtk:valid	node2;kgtk:list_len	node2;kgtk:number	node2;kgtk:low_tolerance	node2;kgtk:high_tolerance	node2;kgtk:si_units	node2;kgtk:units_node	node2;kgtk:text	node2;kgtk:language	node2;kgtk:language_suffix	node2;kgtk:latitude	node2;kgtk:longitude	node2;kgtk:date_and_time	node2;kgtk:precision	node2;kgtk:truth	node2;kgtk:symbol
 john	string	"John"	string	True	0						"John"								
 john	lqstring	'John'@en	language_qualified_string	True	0						"John"	en							
 john	integer	12345	number	True	0	12345													
