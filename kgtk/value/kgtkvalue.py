@@ -187,8 +187,6 @@ class KgtkValueFields():
         ]
 
     OPTIONAL_DEFAULT_FIELD_NAMES: typing.List[str] = [
-        VALID_FIELD_NAME,
-        LIST_LEN_FIELD_NAME,
         LANGUAGE_SUFFIX_FIELD_NAME,
         LOW_TOLERANCE_FIELD_NAME,
         HIGH_TOLERANCE_FIELD_NAME,
