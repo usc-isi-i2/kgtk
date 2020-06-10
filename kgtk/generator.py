@@ -144,15 +144,34 @@ class TripleGenerator(Generator):
         use_id = kwargs.pop("use_id")
         prefix_path = kwargs.pop("prefix_path")
         self.datatype_mapping = {
+            # nomenclature from https://w.wiki/Tfn
             "item": Item,
+            "WikibaseItem":Item,
+
             "time": TimeValue,
+            "Time":TimeValue,
+
             "globe-coordinate": GlobeCoordinate,
+            "GlobeCoordinate":GlobeCoordinate,
+
             "quantity": QuantityValue,
+            "Quantity": QuantityValue,
+
             "monolingualtext": MonolingualText,
+            "Monolingualtext": MonolingualText,
+
             "string": StringValue,
+            "String": StringValue,
+
             "external-identifier": ExternalIdentifier,
-            "url": StringValue,
+            "ExternalId":ExternalIdentifier,
+
+            "url": StringValue, #TODO bug potentially in rdflib
+            "Url": StringValue,
+
+
             "property":WDProperty,
+            "WikibaseProperty": WDProperty
         }
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
@@ -1065,9 +1084,37 @@ class JsonGenerator(Generator):
         return temp_url_dict
 
     def set_properties(self, prop_file:str):
+<<<<<<< HEAD
         self.prop_types = {}
         if prop_file == "NONE":
             return
+=======
+        datatype_mapping = {
+            "item": "wikibase-item",
+            "WikibaseItem": "wikibase-item",
+
+            "time": "time",
+            "Time": "time",
+
+            "globe-coordinate": "globe-coordinate",
+            "GlobeCoordinate": "globe-coordinate",
+
+            "quantity": "quantity",
+            "Quantity": "quantity",
+
+            "monolingualtext": "monolingualtext",
+            "Monolingualtext": "monolingualtext",
+
+            "string": "string",
+            "String": "string",
+
+            "external-identifier": "external-id",
+            "ExternalId": "external-id",
+
+            "url": "url",
+            "Url": "url"
+        }
+>>>>>>> dev
         with open(prop_file, "r") as fp:
             props = fp.readlines()
         for line in props[1:]:
