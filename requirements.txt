@@ -9,7 +9,7 @@ sklearn
 SPARQLWrapper
 tqdm
 rdflib
-etk
+etk==2.2.3a0
 simplejson
 pyrallel.lib
 attrs
@@ -17,4 +17,4 @@ pycountry
 iso-639
 redis
 rfc3986
-thinc==7.4.0
+# thinc==7.4.0
