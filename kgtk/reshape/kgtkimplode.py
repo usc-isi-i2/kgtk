@@ -6,6 +6,7 @@ TODO: Add a reject file.
 """
 
 from argparse import ArgumentParser, Namespace
+import ast
 import attr
 from pathlib import Path
 import sys
@@ -259,6 +260,18 @@ class KgtkImplode(KgtkFormat):
                 if self.verbose:
                     print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, text_field2), file=self.error_file, flush=True)
 
+            if text_val2.startswith('"'):
+                # Need to replace the double quotes with single quotes.
+                if len(text_val2) < 2:
+                    text_val2 = "''"
+                else:
+                    # TODO: Need to catch exceptions from ast.literal_eval(...)
+                    text_val2 = repr(ast.literal_eval(text_val2)).replace('|', '\\|')
+            else:
+                if self.verbose:
+                    print("Input line %d: data type '%s': text does not begin with a double quote." % (input_line_count, type_name, text_field2),
+                          file=self.error_file, flush=True)
+
             language_field: str = implosion[KgtkValue.LANGUAGE_FIELD_NAME]
             language_val: str = row[language_field]
             if len(langauge_val) == 0:
@@ -267,29 +280,98 @@ class KgtkImplode(KgtkFormat):
 
             suf: str = row[implosion[KgtkValue.LANGUAGE_SUFFIX_FIELD_NAME]]
 
-            # TODO: We may need to change the string quotes from " to ',
-            # including backslash quoteing internal ' characters.
             value = text_val2 + "@" + language_val
             if len(suf) > 0:
                 value += suf            
 
             if self.validate:
                 kv = kgtkValue(value, options=self.value_options)
-                if not kv.is_string(validate=True)
+                if not kv.is_language_qualified_string(validate=True)
                     if self.verbose:
-                        print("Input line %d: data type '%s': imploded value '%s' is not a valid string." % (input_line_count, type_name, value),
+                        print("Input line %d: data type '%s': imploded value '%s' is not a valid language qualified string." % (input_line_count, type_name, value),
                               file=self.error_file, flush=True)
 
         elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
-            pass
+            latitude_field: str = implosion[KgtkValue.LATITUDE_FIELD_NAME]
+            latitude_val: str = row[latitude_field]
+            if len(latitude_val) == 0:
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, latitude_field), file=self.error_file, flush=True)
+
+            longitude_field: str = implosion[KgtkValue.LONGITUDE_FIELD_NAME]
+            longitude_val: str = row[longitude_field]
+            if len(longitude_val) == 0:
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, longitude_field), file=self.error_file, flush=True)
+            value = "@" + latitude + "/" + longitude
+
+            if self.validate:
+                kv = kgtkValue(value, options=self.value_options)
+                if not kv.is_location_coordinates(validate=True)
+                    if self.verbose:
+                        print("Input line %d: data type '%s': imploded value '%s' is not a valid location coordinates." % (input_line_count, type_name, value),
+                              file=self.error_file, flush=True)
+
         elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
-            pass
+            date_and_times_field: str = implosion[KgtkValue.DATE_AND_TIMES_FIELD_NAME]
+            date_and_times_val: str = row[date_and_times_field]
+            if len(date_and_times_val) == 0:
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, date_and_times_field), file=self.error_file, flush=True)
+
+            precision_field: str = implosion[KgtkValue.PRECISION_FIELD_NAME]
+            precision_val: str = row[precision_field]
+            if len(precision_val) == 0:
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, precision_field), file=self.error_file, flush=True)
+            value = "^" + date_and_times + "/" + precision
+
+            if self.validate:
+                kv = kgtkValue(value, options=self.value_options)
+                if not kv.is_date_and_times(validate=True)
+                    if self.verbose:
+                        print("Input line %d: data type '%s': imploded value '%s' is not a valid date and time." % (input_line_count, type_name, value),
+                              file=self.error_file, flush=True)
+
         elif dt == KgtkFormat.DataType.EXTENSION:
-            pass
+            if self.verbose:
+                print("Input line %d: data type '%s': extensions are not supported." % (input_line_count, type_name))
+            value = ""
+            
         elif dt == KgtkFormat.DataType.BOOLEAN:
-            pass
+            truth_field: str = implosion[KgtkValue.TRUTH_FIELD_NAME]
+            truth_val: str = row[truth_field]
+            if len(truth_val) == 0:
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, truth_field), file=self.error_file, flush=True)
+            
+            value = truth_val
+
+            if self.validate:
+                kv = kgtkValue(value, options=self.value_options)
+                if not kv.is_boolean(validate=True)
+                    if self.verbose:
+                        print("Input line %d: data type '%s': imploded value '%s' is not a valid boolean." % (input_line_count, type_name, value),
+                              file=self.error_file, flush=True)
+
+
         elif dt == KgtkFormat.DataType.SYMBOL:
-            pass
+            symbol_field: str = implosion[KgtkValue.SYMBOL_FIELD_NAME]
+            symbol_val: str = row[symbol_field]
+            if len(symbol_val) == 0:
+                if self.verbose:
+                    print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, symbol_field), file=self.error_file, flush=True)
+            
+            value = symbol_val
+
+            if self.validate:
+                kv = kgtkValue(value, options=self.value_options)
+                if not kv.is_symbol(validate=True)
+                    if self.verbose:
+                        print("Input line %d: data type '%s': imploded value '%s' is not a valid symbol." % (input_line_count, type_name, value),
+                              file=self.error_file, flush=True)
+
+
         else:
             raise ValueError("Unknown data type %s" % repr(dt))
         
