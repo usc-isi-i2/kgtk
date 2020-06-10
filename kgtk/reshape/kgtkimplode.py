@@ -50,6 +50,8 @@ class KgtkImplode(KgtkFormat):
 
     quantities_include_numbers: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    general_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     # attr.converters.default_if_none(...) does not seem to work.
     # value_options: KgtkValueOptions = attr.ib(default=None,
     #                                           converter=attr.converters.default_if_none(DEFAULT_KGTK_VALUE_OPTIONS),
@@ -159,6 +161,19 @@ class KgtkImplode(KgtkFormat):
                        type_name: str,                      
     )->typing.Tuple[str, bool]:
         valid: bool = True
+        if KgtkValueFields.LANGUAGE_FIELD_NAME in implosion:
+            language_idx: int = implosion[KgtkValueFields.LANGUAGE_FIELD_NAME]
+            if language_idx >= 0:
+                language_val: str = row[language_idx]
+                if len(language_val) > 0:
+                    if self.general_strings:
+                        return self.implode_language_qualified_string(input_line_count, row, implosion, type_name)
+                    else:
+                        valid = False
+                        if self.verbose:
+                            print("Input line %d: data type '%s': %s field is not empty" % (input_line_count, type_name, KgtkValueFields.LANGUAGE_FIELD_NAME),
+                                  file=self.error_file, flush=True)
+        
         text_idx: int = implosion[KgtkValueFields.TEXT_FIELD_NAME]
         text_val: str = row[text_idx]
         if len(text_val) == 0:
@@ -644,6 +659,10 @@ def main():
                               help="When true, numbers are acceptable quantities. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--general-strings", dest="general_strings",
+                              help="When true, strings may include language qualified strings. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
                               type=Path, default=None)
     
@@ -669,6 +688,7 @@ def main():
         print("--validate %s" % str(args.validate), file=error_file, flush=True)
         print("--escape-pipes %s" % str(args.escape_pipes), file=error_file, flush=True)
         print("--quantities-include-numbers %s" % str(args.quantities_include_numbers), file=error_file, flush=True)
+        print("--general-strings %s" % str(args.general_strings), file=error_file, flush=True)
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         if args.without_fields is not None:
@@ -691,6 +711,7 @@ def main():
         validate=args.validate,
         escape_pipes=args.escape_pipes,
         quantities_include_numbers=args.quantities_include_numbers,
+        general_strings=args.general_strings,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
         reader_options=reader_options,
