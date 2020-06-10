@@ -31,6 +31,10 @@ class KgtkImplode(KgtkFormat):
         attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                         iterable_validator=attr.validators.instance_of(list)))
 
+    without_fields: typing.List[str] = \
+        attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                        iterable_validator=attr.validators.instance_of(list)))
+
     # attr.converters.default_if_none(...) does not seem to work.
     reader_options: KgtkReaderOptions = attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
     value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions))
@@ -105,23 +109,27 @@ class KgtkImplode(KgtkFormat):
                          type_name: str,                      
     )->typing.Tuple[str, bool]:
         valid: bool = True
-        num_idx2: int = implosion[KgtkValueFields.NUMBER_FIELD_NAME]
-        num_val2: str = row[num_idx2]
-        if len(num_val2) == 0:
+        num_idx: int = implosion[KgtkValueFields.NUMBER_FIELD_NAME]
+        num_val: str = row[num_idx]
+        if len(num_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.NUMBER_FIELD_NAME),
                       file=self.error_file, flush=True)
-        lt: str = row[implosion[KgtkValueFields.LOW_TOLERANCE_FIELD_NAME]]
-        ht: str = row[implosion[KgtkValueFields.HIGH_TOLERANCE_FIELD_NAME]]
+        lt_idx: int = implosion[KgtkValueFields.LOW_TOLERANCE_FIELD_NAME]
+        lt: str = row[lt_idx] if lt_idx >= 0 else ""
+        ht_idx: int = implosion[KgtkValueFields.HIGH_TOLERANCE_FIELD_NAME]
+        ht: str = row[ht_idx] if ht_idx >= 0 else ""
         if len(lt) > 0 ^ len(ht) > 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': low and high tolerance must both be present or absent." % (input_line_count, type_name),
                       file=self.error_file, flush=True)
-        si: str = row[implosion[KgtkValueFields.SI_UNITS_FIELD_NAME]]
-        un: str = row[implosion[KgtkValueFields.UNITS_NODE_FIELD_NAME]]
-        value: str = num_val2
+        si_idx: int = implosion[KgtkValueFields.SI_UNITS_FIELD_NAME]
+        si: str = row[si_idx] if si_idx >= 0 else ""
+        un_idx: int = implosion[KgtkValueFields.UNITS_NODE_FIELD_NAME]
+        un: str = row[un_idx] if un_idx >= 0 else ""
+        value: str = num_val
         if len(lt) > 0 or len(ht) > 0:
             value += "[" + lt + "," + ht + "]"
         value += si + un
@@ -224,7 +232,8 @@ class KgtkImplode(KgtkFormat):
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.LANGUAGE_FIELD_NAME),
                       file=self.error_file, flush=True)
 
-        suf: str = row[implosion[KgtkValueFields.LANGUAGE_SUFFIX_FIELD_NAME]]
+        suf_idx: int = implosion[KgtkValueFields.LANGUAGE_SUFFIX_FIELD_NAME]
+        suf: str = row[suf_idx] if suf_idx >= 0 else ""
 
         value: str = ""
         if valid:
@@ -313,7 +322,7 @@ class KgtkImplode(KgtkFormat):
             date_and_times_val = date_and_times_val[1:-1]
 
         precision_idx: int = implosion[KgtkValueFields.PRECISION_FIELD_NAME]
-        precision_val: str = row[precision_idx]
+        precision_val: str = row[precision_idx] if precision_idx >= 0 else ""
 
         value: str = "^" + date_and_times_val
         if len(precision_val) > 0:
@@ -458,6 +467,10 @@ class KgtkImplode(KgtkFormat):
                     raise ValueError("Unknown data type name '%s'." % type_name)
                 # Merge this KGTK data type's fields into the list of selected fields:
                 for field_name in KgtkValueFields.DEFAULT_DATA_TYPE_FIELDS[type_name]:
+                    if field_name == KgtkValueFields.VALID_FIELD_NAME:
+                        continue # We don't need the valid field.
+                    if field_name == KgtkValueFields.LIST_LEN_FIELD_NAME:
+                        continue # We don't need the list length field.
                     if field_name not in selected_field_names:
                         selected_field_names.append(field_name)
 
@@ -501,6 +514,11 @@ class KgtkImplode(KgtkFormat):
         implosion: typing.MutableMapping[str, int] = { }
         missing_columns: typing.List[str] = [ ]
         for field_name in selected_field_names:
+            if field_name in self.without_fields:
+                if self.verbose:
+                    print("We can do without field '%s'." % field_name, file=self.error_file, flush=True)
+                implosion[field_name] = -1
+                continue
             exploded_name: str = self.prefix + field_name
             if self.verbose:
                 print("Field '%s' becomes '%s'" % (field_name, exploded_name), file=self.error_file, flush=True)
@@ -606,6 +624,11 @@ def main():
                                choices=KgtkFormat.DataType.choices(),
                                default=KgtkFormat.DataType.choices())
 
+    fgroup.add_argument(      "--without", dest="without_fields", nargs='*',
+                               help="The KGTK fields to do without. (default=%(default)s).",
+                               choices=KgtkValueFields.OPTIONAL_DEFAULT_FIELD_NAMES,
+                               default=None)
+
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
     parser.add_argument(      "--prefix", dest="prefix", help="The prefix for exploded column names. (default=%(default)s).", default="node2;kgtk:")
@@ -648,17 +671,22 @@ def main():
         print("--escape-pipes %s" % str(args.escape_pipes), file=error_file, flush=True)
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
+        if args.without_fields is not None:
+            print("--without %s" % " ".join(args.without_fields), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path))
         if args.reject_file_path is not None:
             print("--output-file=%s" % str(args.output_file_path))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
+    without_fields: typing.List[str] = args.without_fields if args.without_fields is not None else list()
+
     ex: KgtkImplode = KgtkImplode(
         input_file_path=args.input_file_path,
         column_name=args.column_name,
         prefix=args.prefix,
         type_names=args.type_names,
+        without_fields=without_fields,
         overwrite_column=args.overwrite_column,
         validate=args.validate,
         escape_pipes=args.escape_pipes,

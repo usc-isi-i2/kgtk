@@ -186,6 +186,17 @@ class KgtkValueFields():
         SYMBOL_FIELD_NAME
         ]
 
+    OPTIONAL_DEFAULT_FIELD_NAMES: typing.List[str] = [
+        VALID_FIELD_NAME,
+        LIST_LEN_FIELD_NAME,
+        LANGUAGE_SUFFIX_FIELD_NAME,
+        LOW_TOLERANCE_FIELD_NAME,
+        HIGH_TOLERANCE_FIELD_NAME,
+        SI_UNITS_FIELD_NAME,
+        UNITS_NODE_FIELD_NAME,
+        PRECISION_FIELD_NAME,
+        ]
+
     FIELD_NAME_FORMATS: typing.Mapping[str, str] = {
         LIST_LEN_FIELD_NAME: "int",
         DATA_TYPE_FIELD_NAME: "sym",
