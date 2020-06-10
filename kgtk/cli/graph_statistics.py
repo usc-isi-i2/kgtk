@@ -81,7 +81,7 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
             header=[h.strip() for h in header]
             subj_index = infer_index(header, options=['node1', 'subject'])
             obj_index = infer_index(header, options=['node2', 'object', 'value'])
-            predicate = infer_predicate(header, options=['property', 'predicate', 'label'])
+            predicate = infer_predicate(header, options=['label', 'predicate', 'relation', 'relationship'])
             p = []
             for i, header_col in enumerate(header):
                 if i in [subj_index, obj_index]: continue
@@ -133,7 +133,7 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
                 for n_id, n_label, authority in main_auth:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 
-            sys.stdout.write('node1\tproperty\tnode2\tid\n')
+            sys.stdout.write('node1\tlabel\tnode2\tid\n')
             id_count = 0
             if not output_stats:
                 for e in G2.edges():

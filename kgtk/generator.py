@@ -143,15 +143,34 @@ class TripleGenerator(Generator):
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
         self.datatype_mapping = {
+            # nomenclature from https://w.wiki/Tfn
             "item": Item,
+            "WikibaseItem":Item,
+
             "time": TimeValue,
+            "Time":TimeValue,
+
             "globe-coordinate": GlobeCoordinate,
+            "GlobeCoordinate":GlobeCoordinate,
+
             "quantity": QuantityValue,
+            "Quantity": QuantityValue,
+
             "monolingualtext": MonolingualText,
+            "Monolingualtext": MonolingualText,
+
             "string": StringValue,
+            "String": StringValue,
+
             "external-identifier": ExternalIdentifier,
-            "url": StringValue,
+            "ExternalId":ExternalIdentifier,
+
+            "url": StringValue, #TODO bug potentially in rdflib
+            "Url": StringValue,
+
+
             "property":WDProperty,
+            "WikibaseProperty": WDProperty
         }
         self.prop_declaration = prop_declaration
         self.set_properties(prop_file)
@@ -1022,13 +1041,28 @@ class JsonGenerator(Generator):
     def set_properties(self, prop_file:str):
         datatype_mapping = {
             "item": "wikibase-item",
+            "WikibaseItem": "wikibase-item",
+
             "time": "time",
+            "Time": "time",
+
             "globe-coordinate": "globe-coordinate",
+            "GlobeCoordinate": "globe-coordinate",
+
             "quantity": "quantity",
+            "Quantity": "quantity",
+
             "monolingualtext": "monolingualtext",
+            "Monolingualtext": "monolingualtext",
+
             "string": "string",
+            "String": "string",
+
             "external-identifier": "external-id",
-            "url": "url"
+            "ExternalId": "external-id",
+
+            "url": "url",
+            "Url": "url"
         }
         with open(prop_file, "r") as fp:
             props = fp.readlines()
