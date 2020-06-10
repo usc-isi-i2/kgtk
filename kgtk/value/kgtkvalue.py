@@ -427,6 +427,38 @@ class KgtkValue(KgtkFormat):
         return KgtkFormat.LIST_SEPARATOR.join(sorted(list(set(values))))
 
     @classmethod
+    def merge_values(cls, value1: str, value2: str)->str:
+        # Merge two KGTK values eliminating duplicates.  Each value might be a list.
+        #
+        # This routine is potentially expensive.  Callers might be optimized
+        # to minimize its use by building a local list, then calling
+        # join_unique_list().
+        if len(value1) == 0:
+            return value2
+        if len(value2) == 0:
+            return value1
+        if value1 == value2:
+            return value1
+        if KgtkFormat.LIST_SEPARATOR in value1:
+            if KgtkFormat.LIST_SEPARATOR in value2:
+                # This is rather expensive, but will work correctly:
+                return cls.join_unique_list(cls.split_list(value1).extend(cls.split_list(value2)))
+            else:
+                # This is rather expensive, but will work correctly:
+                lv: typing.List[str] = cls.split_list(value1)
+                lv.append(value2)
+                return cls.join_unique_list(lv)
+        if KgtkFormat.LIST_SEPARATOR in value2:
+            # This is rather expensive, but will work correctly:
+            lv2: typing.List[str] = cls.split_list(value2)
+            lv2.append(value1)
+            return cls.join_unique_list(lv2)
+        if value1 < value2:
+            return KgtkFormat.LIST_SEPARATOR.join((value1, value2))
+        else:
+            return KgtkFormat.LIST_SEPARATOR.join((value2, value1))
+                                                                      
+    @classmethod
     def escape_list_separators(cls, values: typing.List[str])->str:
         return ("\\" + KgtkFormat.LIST_SEPARATOR).join(values)
 
