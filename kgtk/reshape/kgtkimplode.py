@@ -48,6 +48,8 @@ class KgtkImplode(KgtkFormat):
 
     escape_pipes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    quantities_include_numbers: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     # attr.converters.default_if_none(...) does not seem to work.
     # value_options: KgtkValueOptions = attr.ib(default=None,
     #                                           converter=attr.converters.default_if_none(DEFAULT_KGTK_VALUE_OPTIONS),
@@ -136,11 +138,18 @@ class KgtkImplode(KgtkFormat):
 
         if valid and self.validate:
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
-            valid = kv.is_quantity(validate=True)
-            if not valid:
-                if self.verbose:
-                    print("Input line %d: data type '%s': imploded value '%s' is not a valid quantity." % (input_line_count, type_name, value),
-                          file=self.error_file, flush=True)
+            if self.quantities_include_numbers:
+                valid = kv.is_number_or_quantity(validate=True)
+                if not valid:
+                    if self.verbose:
+                        print("Input line %d: data type '%s': imploded value '%s' is not a valid quantity or number." % (input_line_count, type_name, value),
+                              file=self.error_file, flush=True)
+            else:
+                valid = kv.is_quantity(validate=True)
+                if not valid:
+                    if self.verbose:
+                        print("Input line %d: data type '%s': imploded value '%s' is not a valid quantity." % (input_line_count, type_name, value),
+                              file=self.error_file, flush=True)
         return value, valid
 
     def implode_string(self,
@@ -631,6 +640,10 @@ def main():
                               help="When true, pipe characters (|) need to be escaped (\\|) per KGTK file format. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--quantities-include-numbers", dest="quantities_include_numbers",
+                              help="When true, numbers are acceptable quantities. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
                               type=Path, default=None)
     
@@ -655,6 +668,7 @@ def main():
         print("--overwrite %s" % str(args.overwrite_column), file=error_file, flush=True)
         print("--validate %s" % str(args.validate), file=error_file, flush=True)
         print("--escape-pipes %s" % str(args.escape_pipes), file=error_file, flush=True)
+        print("--quantities-include-numbers %s" % str(args.quantities_include_numbers), file=error_file, flush=True)
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         if args.without_fields is not None:
@@ -676,6 +690,7 @@ def main():
         overwrite_column=args.overwrite_column,
         validate=args.validate,
         escape_pipes=args.escape_pipes,
+        quantities_include_numbers=args.quantities_include_numbers,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
         reader_options=reader_options,
