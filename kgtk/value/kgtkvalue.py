@@ -107,7 +107,7 @@ class KgtkValueFields():
     # TODO: Reorganize these lists and dicts into a structure.
 
     DATA_TYPE_FIELD_NAME: str = "data_type"
-    DATE_AND_TIMES_FIELD_NAME: str = "date_and_times"
+    DATE_AND_TIMES_FIELD_NAME: str = "date_and_time"
     HIGH_TOLERANCE_FIELD_NAME: str = "high_tolerance"
     LANGUAGE_FIELD_NAME: str = "language"
     LANGUAGE_SUFFIX_FIELD_NAME: str = "language_suffix"
@@ -423,6 +423,11 @@ class KgtkValue(KgtkFormat):
     # number of "\".
     #
     # TODO: Find a better splitting pattern.
+    #
+    # Consider: re.findall, or regex.split
+    #
+    # On the other hand: if "\" were disallowed form symbol, then the current
+    # pattern will be OK.
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
     @classmethod
@@ -1006,8 +1011,7 @@ class KgtkValue(KgtkFormat):
         self.data_type = KgtkFormat.DataType.BOOLEAN
         self.valid = True
         if self.parse_fields:
-            self.fields = KgtkValueFields(data_type=self.data_type,
-                                          valid=self.valid,
+            self.fields = KgtkValueFields(data_type=self.data_type,                                          valid=self.valid,
                                           truth=self.value == KgtkFormat.TRUE_SYMBOL)
         return True
 
