@@ -437,6 +437,21 @@ class KgtkImplode(KgtkFormat):
 
         return value
 
+    # The imploder dispatch table:
+    imploders: typing.Mapping[KgtkFormat.DataType, typing.Callable[[KgtkImplode, int, typing.List[str], typing.Mapping[str, int], str], str]] = {
+        KgtkFormat.DataType.EMPTY: implode_empty,
+        KgtkFormat.DataType.LIST: implode_list,
+        KgtkFormat.DataType.NUMBER: implode_number,
+        KgtkFormat.DataType.QUANTITY: implode_quantity,
+        KgtkFormat.DataType.STRING: implode_string,
+        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING: implode_language_qualified_string,
+        KgtkFormat.DataType.LOCATION_COORDINATES: implode_location_coordinates,
+        KgtkFormat.DataType.DATE_AND_TIMES: implode_date_and_times,
+        KgtkFormat.DataType.EXTENSION: implode_extension,
+        KgtkFormat.DataType.BOOLEAN: implode_boolean,
+        KgtkFormat.DataType.SYMBOL: implode_symbol,
+    }
+
     def implode(self,
                 input_line_count: int,
                 row: typing.List[str],
@@ -444,53 +459,19 @@ class KgtkImplode(KgtkFormat):
                 data_type_idx: int,
     )->str:
         type_name: str = row[data_type_idx]
+        if type_name.lower() not in self.type_names:
+            if self.verbose:
+                print("Input line %d: unselected data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
+            return ""
+
         if type_name.upper() not in KgtkFormat.DataType.__members__:
             # TODO:  Need warnings.
             if self.verbose:
                 print("Input line %d: unrecognized data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
             return ""
 
-        if type_name.lower() not in self.type_names:
-            if self.verbose:
-                print("Input line %d: unselected data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
-            return ""
-
         dt: KgtkFormat.DataType = KgtkFormat.DataType[type_name.upper()]
-        if dt == KgtkFormat.DataType.EMPTY:
-            return self.implode_empty(input_line_count, row, implosion, type_name)
-
-        elif dt == KgtkFormat.DataType.LIST:
-            return self.implode_list(input_line_count, row, implosion, type_name)
-
-        elif dt == KgtkFormat.DataType.NUMBER:
-            return self.implode_number(input_line_count, row, implosion, type_name)
-
-        elif dt == KgtkFormat.DataType.QUANTITY:
-            return self.implode_quantity(input_line_count, row, implosion, type_name)
-
-        elif dt == KgtkFormat.DataType.STRING:
-            return self.implode_string(input_line_count, row, implosion, type_name)
-           
-        elif dt == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
-            return self.implode_language_qualified_string(input_line_count, row, implosion, type_name)
-
-        elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
-            return self.implode_location_coordinates(input_line_count, row, implosion, type_name)
-
-        elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
-            return self.implode_date_and_times(input_line_count, row, implosion, type_name)
-
-        elif dt == KgtkFormat.DataType.EXTENSION:
-            return self.implode_extension(input_line_count, row, implosion, type_name)
-            
-        elif dt == KgtkFormat.DataType.BOOLEAN:
-            return self.implode_boolean(input_line_count, row, implosion, type_name)
-
-        elif dt == KgtkFormat.DataType.SYMBOL:
-            return self.implode_symbol(input_line_count, row, implosion, type_name)
-
-        else:
-            raise ValueError("Unknown data type %s." % repr(dt))
+        return self.imploders[dt](self, input_line_count, row, implosion, type_name)
 
 def main():
     """
