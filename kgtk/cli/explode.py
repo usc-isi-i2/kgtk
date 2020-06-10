@@ -131,7 +131,7 @@ def run(input_kgtk_file: typing.Optional[Path],
         data_type: str
         for data_type in KgtkFormat.DataType.choices():
             print("%s" % data_type, file=error_file, flush=True)
-        return
+        return 0
 
     try:
         ex: KgtkExplode = KgtkExplode(

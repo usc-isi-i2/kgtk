@@ -29,7 +29,7 @@ def parser():
         'description': 'Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. ' +
         'If found, lift the label values into additional columns in the current record. ' +
         'Label records are reoved from the output. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert ifempty --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert lift --help'
     }
 
 
@@ -52,6 +52,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
             return SUPPRESS
 
     parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to lift. May be omitted or '-' for stdin.", type=Path, default="-")
+
+    parser.add_argument(      "--label-file", dest="label_kgtk_file", help="A KGTK file with label records (default=%(default)s).", type=Path, default=None)
 
     parser.add_argument(      "--node1-name", dest="node1_column_name",
                               help=h("The name of the node1 column. (default=node1 or alias)."), default=None)
@@ -86,11 +88,25 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--ok-if-no-labels", dest="ok_if_no_labels",
+                              help="If true, do not abort if no labels were found. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--input-file-is-presorted", dest="input_is_presorted",
+                              help="If true, the input file is presorted on the column for which values are to be lifted. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--label-file-is-presorted", dest="labels_are_presorted",
+                              help="If true, the label file is presorted on the node1 column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
+    # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_kgtk_file: Path,
+        label_kgtk_file: typing.Optional[Path],
         output_kgtk_file: Path,
         node1_column_name: typing.Optional[str],
         label_column_name: typing.Optional[str],
@@ -102,6 +118,9 @@ def run(input_kgtk_file: Path,
         sort_lifted_labels: bool = True,
         suppress_duplicate_labels: bool = True,
         suppress_empty_columns: bool = False,
+        ok_if_no_labels: bool = False,
+        input_is_presorted: bool = False,
+        labels_are_presorted: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -124,6 +143,8 @@ def run(input_kgtk_file: Path,
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("input: %s" % str(input_kgtk_file), file=error_file, flush=True)
+        if label_kgtk_file is not None:
+            print("-label-file=%s" % label_kgtk_file, file=error_file, flush=True)
         if node1_column_name is not None:
             print("--node1-name=%s" % node1_column_name, file=error_file, flush=True)
         if label_column_name is not None:
@@ -139,6 +160,9 @@ def run(input_kgtk_file: Path,
         print("--sort-lifted-labels=%s" % str(sort_lifted_labels))
         print("--suppress-duplicate-labels=%s" % str(suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(suppress_empty_columns))
+        print("--ok-if-no-labels=%s" % str(ok_if_no_labels))
+        print("--input-file-is-presorted=%s" % str(input_is_presorted))
+        print("--label-file-is-presorted=%s" % str(labels_are_presorted))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -146,6 +170,7 @@ def run(input_kgtk_file: Path,
     try:
         kl: KgtkLift = KgtkLift(
             input_file_path=input_kgtk_file,
+            label_file_path=label_kgtk_file,
             node1_column_name=node1_column_name,
             label_column_name=label_column_name,
             node2_column_name=node2_column_name,
@@ -157,6 +182,9 @@ def run(input_kgtk_file: Path,
             sort_lifted_labels=sort_lifted_labels,
             suppress_duplicate_labels=suppress_duplicate_labels,
             suppress_empty_columns=suppress_empty_columns,
+            ok_if_no_labels=ok_if_no_labels,
+            input_is_presorted=input_is_presorted,
+            labels_are_presorted=labels_are_presorted,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,
