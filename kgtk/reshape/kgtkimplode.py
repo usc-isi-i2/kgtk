@@ -25,6 +25,8 @@ class KgtkImplode(KgtkFormat):
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
+    reject_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+
     type_names: typing.List[str] = \
         attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                         iterable_validator=attr.validators.instance_of(list)))
@@ -471,6 +473,20 @@ class KgtkImplode(KgtkFormat):
                                              gzip_in_parallel=False,
                                              verbose=self.verbose,
                                              very_verbose=self.very_verbose)        
+        rw: typing.Optional[KgtkWriter]
+        if self.reject_file_path is not None:
+            if self.verbose:
+                print("Opening reject file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
+            # Open the reject file.
+            rw: KgtkWriter = KgtkWriter.open(kr.column_names,
+                                             self.reject_file_path,
+                                             mode=kr.mode,
+                                             require_all_columns=False,
+                                             prohibit_extra_columns=True,
+                                             fill_missing_columns=False,
+                                             gzip_in_parallel=False,
+                                             verbose=self.verbose,
+                                             very_verbose=self.very_verbose)        
         
         if self.verbose:
             print("Imploding records from %s" % self.input_file_path, file=self.error_file, flush=True)
@@ -490,7 +506,10 @@ class KgtkImplode(KgtkFormat):
             else:
                 invalid_value_count += 1
                 
-            if ew is not None:
+            if rw is not None and not valid:
+                # Reject the row before implosion.
+                rw.write(row)
+            elif ew is not None:
                 output_row: typing.List[str] = row.copy()
                 if new_column:
                     output_row.append(value)
@@ -504,6 +523,9 @@ class KgtkImplode(KgtkFormat):
         
         if ew is not None:
             ew.close()
+            
+        if rw is not None:
+            rw.close()
             
 def main():
     """
@@ -534,6 +556,9 @@ def main():
                               help="Validate imploded values. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
+                              type=Path, default=None)
+    
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
     KgtkValueOptions.add_arguments(parser)
@@ -556,6 +581,8 @@ def main():
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path))
+        if args.reject_file_patn is not None:
+            print("--output-file=%s" % str(args.output_file_path))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -566,6 +593,7 @@ def main():
         type_names=args.type_names,
         overwrite_column=args.overwrite_column,
         output_file_path=args.output_file_path,
+        reject_file_path=args.reject_file_path,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
