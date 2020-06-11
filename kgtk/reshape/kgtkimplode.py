@@ -51,7 +51,7 @@ class KgtkImplode(KgtkFormat):
 
     general_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
-    remove_prefixed_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    remove_prefixed_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # attr.converters.default_if_none(...) does not seem to work.
     # value_options: KgtkValueOptions = attr.ib(default=None,
