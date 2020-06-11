@@ -66,6 +66,25 @@ class KgtkImplode(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    def unwrap(self, val: str)->str:
+        """
+        Remove optional outer string wrappers from a number or symbol.
+        We do *not* attempt to remove escape characters from the body
+        of the value:  they should not appear in numbers, and are
+        discouraged in symbols.
+        """
+        if len(val) >= 6:
+            if val.startswith('"""') and val.endswith('"""'):
+                return val[3:-3]
+            elif val.startswith("'''") and val.endswith("'''"):
+                return val[3:-3]
+        if len(val) >= 2:
+            if val.startswith('"') and val.endswith('"'):
+                return val[3:-3]
+            elif val.startswith("'") and val.endswith("'"):
+                return val[3:-3]
+        return val        
+
     def implode_empty(self,
                       input_line_count: int,
                       row: typing.List[str],
@@ -94,13 +113,7 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         num_idx: int = implosion[KgtkValueFields.NUMBER_FIELD_NAME]
-        num_val: str = row[num_idx]
-
-        if len(num_val) >= 2 and num_val.startswith('"') and num_val.endswith('"'):
-            # As a special favor, we'll accept numbers as strings.  We'll
-            # strip the unwanted outer quotes.
-            num_val = num_val[1:-1]
-
+        num_val: str = self.unwrap(row[num_idx])
         if len(num_val) == 0:
             valid = False
             if self.verbose:
@@ -125,13 +138,7 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         num_idx: int = implosion[KgtkValueFields.NUMBER_FIELD_NAME]
-        num_val: str = row[num_idx]
-
-        if len(num_val) >= 2 and num_val.startswith('"') and num_val.endswith('"'):
-            # As a special favor, we'll accept numbers as strings.  We'll
-            # strip the unwanted outer quotes.
-            num_val = num_val[1:-1]
-
+        num_val: str = self.unwrap(row[num_idx])
         if len(num_val) == 0:
             valid = False
             if self.verbose:
@@ -139,18 +146,10 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
 
         lt_idx: int = implosion[KgtkValueFields.LOW_TOLERANCE_FIELD_NAME]
-        lt: str = row[lt_idx] if lt_idx >= 0 else ""
-        if lt.startswith('"') and lt.endswith('"') and len(lt) >= 2:
-            # As a special favor, we'll accept low tolerances as strings.  We'll
-            # strip the unwanted outer quotes.
-           lt = lt[1:-1]
+        lt: str = self.unwrap(row[lt_idx]) if lt_idx >= 0 else ""
 
         ht_idx: int = implosion[KgtkValueFields.HIGH_TOLERANCE_FIELD_NAME]
-        ht: str = row[ht_idx] if ht_idx >= 0 else ""
-        if ht.startswith('"') and ht.endswith('"') and len(ht) >= 2:
-            # As a special favor, we'll accept high tolerances as strings.  We'll
-            # strip the unwanted outer quotes.
-           ht = ht[1:-1]
+        ht: str = self.unwrap(row[ht_idx]) if ht_idx >= 0 else ""
 
         if len(lt) > 0 ^ len(ht) > 0:
             valid = False
@@ -159,18 +158,10 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
 
         si_idx: int = implosion[KgtkValueFields.SI_UNITS_FIELD_NAME]
-        si: str = row[si_idx] if si_idx >= 0 else ""
-        if si.startswith('"') and si.endswith('"') and len(si) >= 2:
-            # As a special favor, we'll accept SI units as strings.  We'll
-            # strip the unwanted outer quotes.
-           si = si[1:-1]
+        si: str = self.unwrap(row[si_idx]) if si_idx >= 0 else ""
 
         un_idx: int = implosion[KgtkValueFields.UNITS_NODE_FIELD_NAME]
-        un: str = row[un_idx] if un_idx >= 0 else ""
-        if un.startswith('"') and un.endswith('"') and len(un) >= 2:
-            # As a special favor, we'll accept unit nodes as strings.  We'll
-            # strip the unwanted outer quotes.
-           un = un[1:-1]
+        un: str = self.unwrap(row[un_idx]) if un_idx >= 0 else ""
 
         value: str = num_val
         if len(lt) > 0 or len(ht) > 0:
@@ -203,7 +194,7 @@ class KgtkImplode(KgtkFormat):
         if KgtkValueFields.LANGUAGE_FIELD_NAME in implosion:
             language_idx: int = implosion[KgtkValueFields.LANGUAGE_FIELD_NAME]
             if language_idx >= 0:
-                language_val: str = row[language_idx]
+                language_val: str = self.unwrap(row[language_idx])
                 if len(language_val) > 0:
                     if self.general_strings:
                         return self.implode_language_qualified_string(input_line_count, row, implosion, type_name)
@@ -288,13 +279,7 @@ class KgtkImplode(KgtkFormat):
                           file=self.error_file, flush=True)
 
         language_idx: int = implosion[KgtkValueFields.LANGUAGE_FIELD_NAME]
-        language_val: str = row[language_idx]
-
-        if len(language_val) >= 2 and language_val.startswith('"') and language_val.endswith('"'):
-            # As a special favor, we'll accept language values as strings.  We'll
-            # strip the unwanted outer quotes.
-           language_val = language_val[1:-1]
-
+        language_val: str = self.unwrap(row[language_idx])
         if len(language_val) == 0:
             valid = False
             if self.verbose:
@@ -302,13 +287,7 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
 
         suf_idx: int = implosion[KgtkValueFields.LANGUAGE_SUFFIX_FIELD_NAME]
-        suf: str = row[suf_idx] if suf_idx >= 0 else ""
-
-        if len(suf) >= 2 and suf.startswith('"') and suf.endswith('"'):
-            # As a special favor, we'll accept language suffixes as strings.  We'll
-            # strip the unwanted outer quotes.
-            suf = suf[1:-1]
-
+        suf: str = self.unwrap(row[suf_idx]) if suf_idx >= 0 else ""
         if len(suf) > 0 and not suf.startswith("-"):
             # As a siecial favor, we'll accept language suffixes that do not
             # start with a dash.  We'll prepend the dash.
@@ -340,13 +319,7 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         latitude_idx: int = implosion[KgtkValueFields.LATITUDE_FIELD_NAME]
-        latitude_val: str = row[latitude_idx]
-
-        if latitude_val.startswith('"') and latitude_val.endswith('"') and len(latitude_val) >= 2:
-            # As a special favor, we'll accept latitudes as strings.  We'll
-            # strip the unwanted outer quotes.
-            latitude_val = latitude_val[1:-1]
-
+        latitude_val: str = self.unwrap(row[latitude_idx])
         if len(latitude_val) == 0:
             valid = False
             if self.verbose:
@@ -354,13 +327,7 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
 
         longitude_idx: int = implosion[KgtkValueFields.LONGITUDE_FIELD_NAME]
-        longitude_val: str = row[longitude_idx]
-
-        if longitude_val.startswith('"') and longitude_val.endswith('"') and len(longitude_val) >= 2:
-            # As a special favor, we'll accept longitudes as strings.  We'll
-            # strip the unwanted outer quotes.
-            longitude_val = longitude_val[1:-1]
-
+        longitude_val: str = self.unwrap(row[longitude_idx])
         if len(longitude_val) == 0:
             valid = False
             if self.verbose:
@@ -387,13 +354,7 @@ class KgtkImplode(KgtkFormat):
         valid: bool = True
 
         date_and_times_idx: int = implosion[KgtkValueFields.DATE_AND_TIMES_FIELD_NAME]
-        date_and_times_val: str = row[date_and_times_idx]
-
-        if date_and_times_val.startswith('"') and date_and_times_val.endswith('"') and len(date_and_times_val) >= 2:
-            # As a special favor, we'll accept date_and_times as a string.  We'll
-            # strip the unwanted outer quotes.
-            date_and_times_val = date_and_times_val[1:-1]
-
+        date_and_times_val: str = self.unwrap(row[date_and_times_idx])
         if len(date_and_times_val) == 0:
             valid = False
             if self.verbose:
@@ -401,12 +362,7 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
 
         precision_idx: int = implosion[KgtkValueFields.PRECISION_FIELD_NAME]
-        precision_val: str = row[precision_idx] if precision_idx >= 0 else ""
-
-        if precision_val.startswith('"') and precision_val.endswith('"') and len(precision_val) >= 2:
-            # As a special favor, we'll accept precision as a string.  We'll
-            # strip the unwanted outer quotes.
-            precision_val = precision_val[1:-1]
+        precision_val: str = self.unwrap(row[precision_idx]) if precision_idx >= 0 else ""
 
         value: str = "^" + date_and_times_val
         if len(precision_val) > 0:
@@ -439,13 +395,7 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         truth_idx: int = implosion[KgtkValueFields.TRUTH_FIELD_NAME]
-        truth_val: str = row[truth_idx]
-
-        if truth_val.startswith('"') and truth_val.endswith('"') and len(truth_val) >= 2:
-            # As a special favor, we'll accept booleans as strings.  We'll
-            # strip the unwanted outer quotes.
-            truth_val = truth_val[1:-1]
-
+        truth_val: str = self.unwrap(row[truth_idx])
         if len(truth_val) == 0:
             valid = False
             if self.verbose:
@@ -472,17 +422,12 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         symbol_idx: int = implosion[KgtkValueFields.SYMBOL_FIELD_NAME]
-        symbol_val: str = row[symbol_idx]
+        symbol_val: str = self.unwrap(row[symbol_idx])
         if len(symbol_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.SYMBOL_FIELD_NAME),
                       file=self.error_file, flush=True)
-
-        elif symbol_val.startswith('"') and symbol_val.endswith('"') and len(symbol_val) > 2:
-            # As a special favor, we'll accept symbols as strings.  We'll
-            # strip the unwanted outer quotes.
-            symbol_val = symbol_val[1:-1]
 
         if self.escape_pipes:
             symbol_val = symbol_val.replace(KgtkFormat.LIST_SEPARATOR, "\\" + KgtkFormat.LIST_SEPARATOR)
