@@ -192,9 +192,9 @@ they are built.  Skipping the validation step will lead to faster execution,
 but will allow potentially invalid values to appear in the output KGTK file.
 
 
-## KGTK Data Types and Columns
+## KGTK Data Types and Exploded Columns
 
-This table shows the columns (without the prefix value, normally `node2;`) that are used for each KGTK data type.
+This table shows the exploded columns (without the prefix value, normally `node2;kgtk:`) that are used for each KGTK data type.
 
 | Data Type                 | Required Columns | Optional Columns |
 | ------------------------- | --------------- | --------------- |
@@ -216,6 +216,24 @@ will not be used to to build KGTK values and need not be present in the KGTK
 file.
 
 The `extension` and `list` KGTK data types cannot be built by `kgtk implode`.
+
+## String Wrappers in Exploded Columns
+
+Except for the `text` column, all of values in the the exploded columns may be
+optionally wrapped as quoted strings in one of the following formats:
+
+ * triple double quotes
+ * triple single quotes
+ * double quotes
+ * single quotes
+
+We do *not* attempt to remove backslash escape characters (\) from the body of
+the value when unwrapping the string: backslash escape characters should not
+appear in numbers or date-and-times, and are discouraged in symbols.
+
+We do *not* attempt to undouble internal quotes from the body of the value
+whtn unwrapping the string: internal single or double quotes should not appear
+in numbers or date-and-times, and are discouraged in symbols.
 
 ## Examples
 
