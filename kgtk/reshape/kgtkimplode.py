@@ -14,6 +14,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue, KgtkValueFields
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
@@ -61,6 +62,9 @@ class KgtkImplode(KgtkFormat):
     # value_options: KgtkValueOptions = attr.ib(default=None,
     #                                           converter=attr.converters.default_if_none(DEFAULT_KGTK_VALUE_OPTIONS),
     #                                           validator=attr.validators.instance_of(KgtkValueOptions))
+
+    build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -545,9 +549,9 @@ class KgtkImplode(KgtkFormat):
                                           very_verbose=self.very_verbose,
         )
 
+        output_column_names = kr.column_names.copy()
         new_column: bool # True ==> adding the imploded column, False ==> using an existing column
         column_idx: int # The index of the imploded column (new or old).
-        output_column_names: typing.List[str] = kr.column_names.copy()
         if self.column_name in kr.column_name_map:
             column_idx = kr.column_name_map[self.column_name]
             new_column = False
@@ -592,20 +596,31 @@ class KgtkImplode(KgtkFormat):
                 
         data_type_idx = implosion[KgtkValueFields.DATA_TYPE_FIELD_NAME]
 
+        # If requested, create the ID column builder.
+        # Assemble the list of output column names.
+        idb: typing.Optional[KgtkIdBuilder] = None
+        if self.build_id:
+            if self.idbuilder_options is None:
+                raise ValueError("ID build requested but ID builder options are missing")
+            idb = KgtkIdBuilder.from_column_names(output_column_names, self.idbuilder_options)
+            id_output_column_names = idb.column_names.copy()
+        else:
+            id_output_column_names = output_column_names.copy()
+
         trimmed_output_column_names: typing.List[str]
         if self.remove_prefixed_columns and len(self.prefix) > 0:
             trimmed_output_column_names = [ ]
             if self.verbose:
                 print("Removing columns with names that start with '%s'." % self.prefix, file=self.error_file, flush=True)
             column_name: str
-            for column_name in output_column_names:
+            for column_name in id_output_column_names:
                 if column_name.startswith(self.prefix):
                     if self.verbose:
                         print("Removing column '%s." % column_name, file=self.error_file, flush=True)
                 else:
                     trimmed_output_column_names.append(column_name)
         else:
-            trimmed_output_column_names = output_column_names
+            trimmed_output_column_names = id_output_column_names
 
         shuffle_list: typing.List[int] = [ ] # Easier to init than deal with typing.Optional.
         ew: typing.Optional[KgtkWriter] = None
@@ -622,7 +637,7 @@ class KgtkImplode(KgtkFormat):
                                              gzip_in_parallel=False,
                                              verbose=self.verbose,
                                              very_verbose=self.very_verbose)
-            shuffle_list = ew.build_shuffle_list(output_column_names)
+            shuffle_list = ew.build_shuffle_list(id_output_column_names)
 
 
         rw: typing.Optional[KgtkWriter] = None
@@ -669,6 +684,8 @@ class KgtkImplode(KgtkFormat):
                     output_row.append(value)
                 else:
                     output_row[column_idx] = value
+                if idb is not None:
+                    output_row = idb.build(output_row, input_line_count)
                 ew.write(output_row, shuffle_list=shuffle_list)
                 
         if self.verbose:
@@ -737,9 +754,14 @@ def main():
                               help="When true, input records with valid but unselected data types will be retain existing data on output. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--build-id", dest="build_id",
+                              help="Build id values in an id column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
                               type=Path, default=None)
     
+    KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
     KgtkValueOptions.add_arguments(parser)
@@ -749,6 +771,7 @@ def main():
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the option structures.                                                                                                                          
+    idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_args(args)    
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
@@ -773,6 +796,8 @@ def main():
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
         if args.reject_file_path is not None:
             print("--reject-file=%s" % str(args.reject_file_path), file=error_file, flush=True)
+        print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
+        idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -794,6 +819,8 @@ def main():
         retain_unselected_types=args.retain_unselected_types,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
+        build_id=args.build_id,
+        idbuilder_options=idbuilder_options,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
