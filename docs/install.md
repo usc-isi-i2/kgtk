@@ -3,12 +3,12 @@
 If you have Docker installed, we have prepared a Docker image with KGTK:
 
 ```
-docker pull uscisii2/kgtk
+docker pull uscisii2/kgtk:0.2.0
 ```
 
 Once downloaded, just run :
 ```
-docker run -it uscisii2/kgtk /bin/bash
+docker run -it uscisii2/kgtk:0.2.0 /bin/bash
 ```
 to start using the toolkit. Just type  `kgtk -h` to see the options in the toolkit.
 
