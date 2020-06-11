@@ -170,9 +170,9 @@ The output will be the following table in KGTK format:
 | john | lqstring-with-escaped-prime-and-quote | 'Joh\'\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\'\"n" | en |  |  |  |  |  |  |  | 'Joh\'\"n'@en |
 | john | lqstring-with-triple-double-quotes | 'John'@en | language_qualified_string | True | 0 |  |  |  |  |  | """John""" | en |  |  |  |  |  |  |  | 'John'@en |
 
-A new `node` column has been created with the imploded data.  the
+A new `node2` column has been created with the imploded data.  The
 `--mode=NONE` option was required because the input file did not have a
-`node2` column.
+`node2` column, and thus was not a valid KGTK edge file.
 
 Suppose that `file1.tsv` contains the following table in KGTK format.
 
@@ -196,7 +196,7 @@ The existing `node2` column, which is empty, will be overwritten with the
 imploded data.
 
 ```bash
-kgtk implode kgtk/join/test/implode-file1.tsv -v --without si_units language_suffix
+kgtk implode file1.tsv -v --without si_units language_suffix
 ```
 
 The output will be the following table in KGTK format:
@@ -213,3 +213,25 @@ The output will be the following table in KGTK format:
 | oecd;OECD-Latvia g2g9e7f8-en...csv;D8;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P585 | ^2011-01-01T00:00:00/9 | date_and_times |  |  |  |  | 2011-01-01T00:00:00 | 9 | Q1985727 |  |  |  |  |  |  |
 | oecd;OECD-Latvia g2g9e7f8-en...csv;D8; | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P248 | Q41550 | symbol |  |  |  |  |  |  |  |  | Q41550 |  |  |  |  |
 | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | Q211 | P1082 | 6.4Q10000000040002 | quantity | 6.4 |  |  | Q10000000040002 |  |  |  |  |  |  |  |  |  |
+
+
+Suppose you now wish to remove the exploded columns from the final output file.
+
+```bash
+kgtk implode file1.tsv -v --without si_units language_suffix --remove-prefixed-columns
+```
+
+The output will be the following table in KGTK format:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| oecd;OECD-Latvia g2g9e7f8-en..csv;D6 | Q211 | P1082 | 19782Q10000000040001 |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D6;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D6 | P585 | ^2011-01-01T00:00:00/9 |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D6; | oecd;OECD-Latvia g2g9e7f8-en..csv;D6 | P248 | Q41550 |
+| oecd;OECD-Latvia g2g9e7f8-en..csv;D7 | Q211 | P1082 | 19776Q10000000040001 |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D7;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D7 | P585 | ^2011-01-01T00:00:00/9 |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D7; | oecd;OECD-Latvia g2g9e7f8-en..csv;D7 | P248 | Q41550 |
+| oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | Q211 | P1082 | -7.5Q10000000040002 |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D8;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P585 | ^2011-01-01T00:00:00/9 |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D8; | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P248 | Q41550 |
+| oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | Q211 | P1082 | 6.4Q10000000040002 |
