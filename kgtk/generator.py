@@ -194,7 +194,7 @@ class TripleGenerator(Generator):
 
     def set_prefix(self,prefix_path:str):
         self.prefix_dict = {}
-        if prefix_path != "NONE":
+        if prefix_path != "":
             with open(prefix_path,"r") as fp:
                 for line_num, edge in enumerate(fp):
                     edge_list = edge.strip("\n").split("\t")
@@ -781,17 +781,17 @@ class JsonGenerator(Generator):
                     "mainsnak":{
                         "snaktype":"value",
                         "property":prop,
-                        "hash":"None",
+                        "hash":"",
                         "datavalue":{
                             "value":{
-                                "entity-type":"item","numeric-id":0,"id":"None" # place holder for numeric id
+                                "entity-type":"item","numeric-id":0,"id":node1 + node2 # place holder for numeric id
                             },
                             "type":"wikibase-entityid"
                         },
                         "datatype":"wikibase-item"
                     },
                     "type":"statement",
-                    "id":"None",
+                    "id":"",
                     "rank":"normal", #TODO
                     "references":[],
                     "qualifiers":{},
@@ -801,10 +801,10 @@ class JsonGenerator(Generator):
             temp_item_dict = {
                         "snaktype":"value",
                         "property":prop,
-                        "hash":"None",
+                        "hash":"",
                         "datavalue":{
                             "value":{
-                                "entity-type":"item","numeric-id":0,"id":"None" # place holder for numeric id
+                                "entity-type":"item","numeric-id":0,"id":node1 + node2 # place holder for numeric id
                             },
                             "type":"wikibase-entityid"
                         },
@@ -831,7 +831,7 @@ class JsonGenerator(Generator):
                 "mainsnak":{
                     "snaktype":"value",
                     "property":prop,
-                    "hash":"None",
+                    "hash":"",
                     "datavalue":{
                         "value":{
                             "time":time_string,
@@ -846,7 +846,7 @@ class JsonGenerator(Generator):
                     "datatype":"time"
                 },
                 "type":"statement",
-                "id":"None",
+                "id":"",
                 "rank":"normal", #TODO
                 "references":[],
                 "qualifiers":{},
@@ -856,7 +856,7 @@ class JsonGenerator(Generator):
             temp_time_dict = {
                     "snaktype":"value",
                     "property":prop,
-                    "hash":"None",
+                    "hash":"",
                     "datavalue":{
                         "value":{
                             "time":time_string,
@@ -884,7 +884,7 @@ class JsonGenerator(Generator):
                 "mainsnak":{
                     "snaktype":"value",
                     "property":prop,
-                    "hash":"None",
+                    "hash":"",
                     "datavalue":{
                         "value":{
                             "latitude":latitude,
@@ -898,7 +898,7 @@ class JsonGenerator(Generator):
                     "datatype":"globecoordinate"
                 },
                 "type":"statement",
-                "id":"None",
+                "id":"",
                 "rank":"normal", #TODO
                 "references":[],
                 "qualifiers":{},
@@ -908,7 +908,7 @@ class JsonGenerator(Generator):
             temp_coordinate_dict = {
                     "snaktype":"value",
                     "property":prop,
-                    "hash":"None",
+                    "hash":"",
                     "datavalue":{
                         "value":{
                             "latitude":latitude,
@@ -938,7 +938,7 @@ class JsonGenerator(Generator):
                 "mainsnak":{
                     "snaktype":"value",
                     "property":prop,
-                    "hash":"None",
+                    "hash":"",
                     "datavalue":{
                         "value":{
                             "amount":amount,
@@ -951,7 +951,7 @@ class JsonGenerator(Generator):
                     "datatype":"quantity"
                 },
                 "type":"statement",
-                "id":"None",
+                "id":"",
                 "rank":"normal", #TODO
                 "references":[],
                 "qualifiers":{},
@@ -961,7 +961,7 @@ class JsonGenerator(Generator):
             temp_quantity_dict = {
                     "snaktype":"value",
                     "property":prop,
-                    "hash":"None",
+                    "hash":"",
                     "datavalue":{
                         "value":{
                             "amount":amount,
@@ -982,7 +982,7 @@ class JsonGenerator(Generator):
                     "mainsnak":{
                         "snaktype":"value",
                         "property":prop,
-                        "hash":"None",
+                        "hash":"",
                         "datavalue":{
                             "value":{
                                 "text":text_string,
@@ -993,7 +993,7 @@ class JsonGenerator(Generator):
                         "datatype":"monolingualtext"
                     },
                     "type":"statement",
-                    "id":"None",
+                    "id":"",
                     "rank":"normal", #TODO
                     "references":[],
                     "qualifiers":{},
@@ -1003,7 +1003,7 @@ class JsonGenerator(Generator):
             temp_mono_dict = {
                         "snaktype":"value",
                         "property":prop,
-                        "hash":"None",
+                        "hash":"",
                         "datavalue":{
                             "value":{
                                 "text":text_string,
@@ -1022,12 +1022,12 @@ class JsonGenerator(Generator):
                 "mainsnak": {
                 "snaktype": "value",
                 "property": prop,
-                "hash": "None",
+                "hash": "",
                 "datavalue": { "value": string, "type": "string" },
                 "datatype": "string"
                 },
                 "type": "statement",
-                "id": "None",
+                "id": "",
                 "rank": "normal",
                 "references":[],
                 "qualifiers":{},
@@ -1037,7 +1037,7 @@ class JsonGenerator(Generator):
             temp_string_dict = {
                 "snaktype": "value",
                 "property": prop,
-                "hash": "None",
+                "hash": "",
                 "datavalue": { "value": string, "type": "string" },
                 "datatype": "string"
                 }
@@ -1049,12 +1049,12 @@ class JsonGenerator(Generator):
             temp_e_id_dict = {"mainsnak": {
                 "snaktype": "value",
                 "property": prop,
-                "hash": "None",
+                "hash": "",
                 "datavalue": { "value": node2, "type": "string" },
                 "datatype": "external-id"
             },
             "type": "statement",
-            "id": "None",
+            "id": "",
             "rank": "normal",            
             "references":[],
             "qualifiers":{},
@@ -1064,7 +1064,7 @@ class JsonGenerator(Generator):
             temp_e_id_dict = {
                 "snaktype": "value",
                 "property": prop,
-                "hash": "None",
+                "hash": "",
                 "datavalue": { "value": node2, "type": "string" },
                 "datatype": "external-id"
             }
@@ -1076,7 +1076,7 @@ class JsonGenerator(Generator):
             "mainsnak": {
                 "snaktype": "value",
                 "property": prop,
-                "hash": "None",
+                "hash": "",
                 "datavalue": {
                 "value": node2,
                 "type": "string"
@@ -1084,7 +1084,7 @@ class JsonGenerator(Generator):
                 "datatype": "url"
             },
             "type": "statement",
-            "id": "None",
+            "id": "",
             "rank": "normal",            
             "references":[],
             "qualifiers":{},
@@ -1094,7 +1094,7 @@ class JsonGenerator(Generator):
             temp_url_dict ={
                 "snaktype": "value",
                 "property": prop,
-                "hash": "None",
+                "hash": "",
                 "datavalue": {
                 "value": node2,
                 "type": "string"
