@@ -15,11 +15,14 @@ KGTK language qualified strings.
 usage: kgtk implode [-h] [-o OUTPUT_KGTK_FILE] [--reject-file REJECT_KGTK_FILE]
                     [--column COLUMN_NAME] [--prefix PREFIX]
                     [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]]
-                    [--without [{valid,list_len,language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{valid,list_len,language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]]
+                    [--without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]]
                     [--overwrite [OVERWRITE_COLUMN]] [--validate [VALIDATE]]
                     [--escape-pipes [ESCAPE_PIPES]]
                     [--quantities-include-numbers [QUANTITIES_INCLUDE_NUMBERS]]
                     [--general-strings [GENERAL_STRINGS]]
+                    [--remove-prefixed-columns [REMOVE_PREFIXED_COLUMNS]]
+                    [--ignore-unselected-types [IGNORE_UNSELECTED_TYPES]]
+                    [--retain-unselected-types [RETAIN_UNSELECTED_TYPES]]
                     [--show-data-types [SHOW_DATA_TYPES]] [-v]
                     [input_kgtk_file]
 
@@ -50,7 +53,7 @@ optional arguments:
                         (default=['empty', 'list', 'number', 'quantity', 'string',
                         'language_qualified_string', 'location_coordinates',
                         'date_and_times', 'extension', 'boolean', 'symbol']).
-  --without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{valid,list_len,language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]
+  --without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]
                         The KGTK fields to do without. (default=None).
   --overwrite [OVERWRITE_COLUMN]
                         Indicate that it is OK to overwrite an existing imploded
@@ -58,44 +61,161 @@ optional arguments:
   --validate [VALIDATE]
                         Validate imploded values. (default=True).
   --escape-pipes [ESCAPE_PIPES]
-                        When true, pipe characters (|) need to be escaped (\|) per KGTK
-                        file format. (default=False).
+                        When true, pipe characters (|) need to be escaped (\|) per
+                        KGTK file format. (default=False).
   --quantities-include-numbers [QUANTITIES_INCLUDE_NUMBERS]
                         When true, numbers are acceptable quantities. (default=True).
   --general-strings [GENERAL_STRINGS]
                         When true, strings may include language qualified strings.
                         (default=True).
+  --remove-prefixed-columns [REMOVE_PREFIXED_COLUMNS]
+                        When true, remove all columns beginning with the prefix from
+                        the output file. (default=False).
+  --ignore-unselected-types [IGNORE_UNSELECTED_TYPES]
+                        When true, input records with valid but unselected data types
+                        will be passed through to output. (default=True).
+  --retain-unselected-types [RETAIN_UNSELECTED_TYPES]
+                        When true, input records with valid but unselected data types
+                        will be retain existing data on output. (default=True).
   --show-data-types [SHOW_DATA_TYPES]
                         Print the list of data types and exit. (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
 
-## KGTK Data Types and Fields
+## Additional usage notes
 
-This table shows the fields (without the prefix value, normally `node2;`) that are used for each KGTK data type.
+### `--reject-file REJECT_KGTK_FILE`
 
-| Data Type                 | Fields                      |
-| ------------------------- | --------------------------- |
-| boolean                   | truth                 |
-| date_and_times            | date_and_time precision* |
-| empty                     |                       |
-| extension**              |                             |
-| language_qualified_string | text language* language_suffix*  |
-| list**                   |              |
-| location_coordinates      | latitude longitude    |
-| number                    | number                |
-| quantity                  | number low_tolerance* high_tolerance* si_units* units_node* |
-| string                    | text                  |
-| symbol                    | symbol                |
+When a reject file is provided, input records with invalid data will be
+copied to the reject file instead of the output file.
 
-Data types may have required fields and optional fields (marked `*` in the
-table above).  If an optional field is listed in the `--without` list, then it
-will not be used to to build KGTk values and need not be present as a column.
+Records can be rejected for the following general reasons:
 
-The `extension` and `list` data types (marked `**` in the table above) cannot
-be build by `kgtk implode`.
+ * missing or unrecognized value in the `data_type` column
+ * missing data in a column that is required for the data type
+ * missing data in a column that is optional for the data type, when at least one optional value must be supplied
+ * poorly formatted data in a column that is used to build the data type
 
+### `--types [TYPE_LIST]`
+
+Normally, `kgtk implode` will process all KGTK data types, and will expect all
+of the required exploded columns to be present in the KGTK file.
+
+By specifying `--types TYPE_LIST`, which TYPE_LIST is a space-separated list
+of KGTK type names, the user can tell `kgtk implode` to expect only the listed
+data types when processing the input file.  Only the required columns for the
+selected data types must appear in the input KGTK file; optional columns may
+be excluded with the `--without COLUMN_LIST` option.
+
+See the table of KGTK Data Types and Columns for more details.
+
+### `--without [COLUMN_LIST]`
+
+The KGTK data types proessed by `kgtk implode` may have optional columns of
+exploded data.  These columns may be excluded by wpecifying them in the
+`--without [COLUMN_LIST]` option, e.g. if the input file does not contain
+the `precision` column used to build quantities:
+
+```
+kgtk implode --without precision
+```
+See the table of KGTK Data Types and Columns for more details.
+
+### `--escape-pipes`
+
+KGTK File Format allows lists of values in all columns except `node1`, `label`, and
+`node2` in a KGTK edge file.  Lists are valid KGTK values separated by thevertical
+bar (pipe) character(|).  Any vertical bar (pipe) characters inside a KGTK value
+myse be escaped by backslash (\), i.e. "\|".  These may appear in the following
+KGTK data types:
+
+ * strings
+ * language qualified strings
+ * symbols
+
+Note: in C/C++, "\|" in a string literal is equivalent to "|".  In Python,
+it is process unchanged ("\|").
+
+`kgtk implode` is intended to assist with importing data to KGTK format.  It
+does not import list values from exploded columns.  If you specify
+`--escape-pipes` (`--escape-pipes True, not the default value), then it `kgtk
+implode` will escape any vertical bar (pipe) characters it finds inside
+strings, language qualified strings, or symbols.
+
+### `--ignore-unselected-types` and `--retain-unselected-types`
+
+Unrecognized data type names will generate an error.  The input record will be
+rejected if a reject file is available.
+
+When a data type that is recognized but unselected appears in the input record,
+the following will happen:
+
+ * When `--retain-unselected-types` (`--retain-unselected-types True, the default
+   value) is specified and the destination column exists in
+   the input file, then the record will be passed through to the output
+   file with its exisiting value in the destination column.
+
+ * Else, when `--ignore-unselected-types` (`--ignore-unselected-types True`, the
+   default value) is specified, then the record will be passed through to
+   the output file with an empty value in the destination column.
+
+ * Else, an error has taken place. The input record will be sent to the reject
+   file if a reject file is available, otherwise the input record will be passed
+   through to the output file with an empty value in the destination column.
+
+### `--quantities-include-numbers`
+
+When `--quantities-include-numbers` (`--quantities-include-numbers True`, the
+default setting) is specified, if `quantity` is specified in the `data_type`
+column (normally `node2;kgtk:data_type`) but none of the optional fields for
+quantity are present, a KGTK number will be built in the destination column
+(normally `node2`).  When `--quantities-include-numbers False` is specified, a
+`quantity` will be built and at least one of the optional fields must be
+present for the quantity to be considered valid.
+
+### `--general-strings`
+
+When `--general-strings` (`--general-strings True`, the default setting) is
+specified, if `string` is specified in the `data_type` column and a `language`
+value appears, then a language_qualified-string will be built in the
+destination column.  When `--general-strings False` is specified and `string`
+is specified in the `data_type` column, then the `language` column will be
+ignored and only a `string` value will be built.
+
+### `--validate`
+
+When `--validate` (`--validate True`, the default setting) is specified,
+then values built for the destination column (normally `node2`) will be validated.
+When `--validate False` is specified, then values will not be validated after
+they are built.  Skipping the validation step will lead to faster execution,
+but will allow potentially invalid values to appear in the output KGTK file.
+
+
+## KGTK Data Types and Columns
+
+This table shows the columns (without the prefix value, normally `node2;`) that are used for each KGTK data type.
+
+| Data Type                 | Required Columns | Optional Columns |
+| ------------------------- | --------------- | --------------- |
+| boolean                   | truth           |                 |
+| date_and_times            | date_and_time   | precision       |
+| empty                     |                 |                 |
+| extension                 |                 |                 |
+| language_qualified_string | text language   | language_suffix |
+| list                      |                 |                 |
+| location_coordinates      | latitude longitude |              |
+| number                    | number          |                 |
+| quantity                  | number          | low_tolerance* high_tolerance* si_units* units_node* |
+| string                    | text            |                 |
+| symbol                    | symbol          |                 |
+
+Data types may have required columns and optional columns.  If an optional
+column is listed in the `--without` list (which by default is empty), then it
+will not be used to to build KGTK values and need not be present in the KGTK
+file.
+
+The `extension` and `list` KGTK data types cannot be built by `kgtk implode`.
 
 ## Examples
 
