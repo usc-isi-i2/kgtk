@@ -576,7 +576,7 @@ class JsonGenerator(Generator):
             if node1 != self.to_append_statement_id and node1 != self.corrupted_statement_id:
                 is_qualifier_edge = False
                 # partial serialization
-                if self.read_num_of_lines > self.n:
+                if self.read_num_of_lines >= self.n:
                     self.serialize()
             else:
                 is_qualifier_edge = True
@@ -586,12 +586,13 @@ class JsonGenerator(Generator):
                         )
         
         # update info_json_dict
-        if node1 in self.prop_types:
-            success = self.update_misc_json_dict_info(node1,line_number, self.prop_types[node1])
-        else:
-            success = self.update_misc_json_dict_info(node1, line_number, None)
-        
-        assert(success)
+        if not is_qualifier_edge:
+            if node1 in self.prop_types:
+                success = self.update_misc_json_dict_info(node1,line_number, self.prop_types[node1])
+            else:
+                success = self.update_misc_json_dict_info(node1, line_number, None)
+            
+            assert(success)
         
         if prop in self.prop_types:
             success = self.update_misc_json_dict_info(prop, line_number, self.prop_types[prop])
@@ -698,7 +699,7 @@ class JsonGenerator(Generator):
                 self.warn_log.write("node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number)) 
         return True
     def update_misc_json_dict(self, node1:str, prop:str, node2:str, line_number:int, field:str):
-        if node1 not in self.misc_json_dict:
+        if node1 not in self.misc_json_dict and field != "qualifier":
             self.init_entity_in_json(node1)
         
         if field == "description":
@@ -724,8 +725,9 @@ class JsonGenerator(Generator):
         if prop not in self.prop_types:
             raise KGTKException("property {} at line {} is not defined.".format(prop,line_number))
         
-        if prop not in self.misc_json_dict[node1]["claims"]:
-                self.misc_json_dict[node1]["claims"][prop] = []
+        if not is_qualifier_edge:
+            if prop not in self.misc_json_dict[node1]["claims"]:
+                    self.misc_json_dict[node1]["claims"][prop] = []
         
         try:
             if self.prop_types[prop] == "wikibase-item":
