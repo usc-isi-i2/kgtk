@@ -68,10 +68,22 @@ class KgtkImplode(KgtkFormat):
 
     def unwrap(self, val: str)->str:
         """
-        Remove optional outer string wrappers from a number or symbol.
-        We do *not* attempt to remove escape characters from the body
+        Remove optional outer string wrappers from a number or symbol
+        extracted from an exploded column.
+
+        We do *not* attempt to remove escape characters (\) from the body
         of the value:  they should not appear in numbers, and are
         discouraged in symbols.
+
+        We do *not* attempt to undouble internal quotes (("") or ('')) from the
+        body of the value: they should not appear in numbers, and are
+        discouraged in symbols.
+
+        We accept the following wrappers:
+        triple double quotes
+        triple single quotes
+        double quotes
+        single quotes
         """
         if len(val) >= 6:
             if val.startswith('"""') and val.endswith('"""'):
