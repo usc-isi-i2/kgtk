@@ -194,7 +194,7 @@ class TripleGenerator(Generator):
 
     def set_prefix(self,prefix_path:str):
         self.prefix_dict = {}
-        if prefix_path != "":
+        if prefix_path != "NONE":
             with open(prefix_path,"r") as fp:
                 for line_num, edge in enumerate(fp):
                     edge_list = edge.strip("\n").split("\t")
