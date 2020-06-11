@@ -92,9 +92,9 @@ class KgtkImplode(KgtkFormat):
                 return val[3:-3]
         if len(val) >= 2:
             if val.startswith('"') and val.endswith('"'):
-                return val[3:-3]
+                return val[1:-1]
             elif val.startswith("'") and val.endswith("'"):
-                return val[3:-3]
+                return val[1:-1]
         return val        
 
     def implode_empty(self,
