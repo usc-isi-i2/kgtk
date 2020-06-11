@@ -53,6 +53,10 @@ class KgtkImplode(KgtkFormat):
 
     remove_prefixed_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    ignore_unselected_types: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    retain_unselected_types: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # attr.converters.default_if_none(...) does not seem to work.
     # value_options: KgtkValueOptions = attr.ib(default=None,
     #                                           converter=attr.converters.default_if_none(DEFAULT_KGTK_VALUE_OPTIONS),
@@ -91,6 +95,12 @@ class KgtkImplode(KgtkFormat):
         valid: bool = True
         num_idx: int = implosion[KgtkValueFields.NUMBER_FIELD_NAME]
         num_val: str = row[num_idx]
+
+        if len(num_val) >= 2 and num_val.startswith('"') and num_val.endswith('"'):
+            # As a special favor, we'll accept numbers as strings.  We'll
+            # strip the unwanted outer quotes.
+            num_val = num_val[1:-1]
+
         if len(num_val) == 0:
             valid = False
             if self.verbose:
@@ -116,24 +126,52 @@ class KgtkImplode(KgtkFormat):
         valid: bool = True
         num_idx: int = implosion[KgtkValueFields.NUMBER_FIELD_NAME]
         num_val: str = row[num_idx]
+
+        if len(num_val) >= 2 and num_val.startswith('"') and num_val.endswith('"'):
+            # As a special favor, we'll accept numbers as strings.  We'll
+            # strip the unwanted outer quotes.
+            num_val = num_val[1:-1]
+
         if len(num_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.NUMBER_FIELD_NAME),
                       file=self.error_file, flush=True)
+
         lt_idx: int = implosion[KgtkValueFields.LOW_TOLERANCE_FIELD_NAME]
         lt: str = row[lt_idx] if lt_idx >= 0 else ""
+        if lt.startswith('"') and lt.endswith('"') and len(lt) >= 2:
+            # As a special favor, we'll accept low tolerances as strings.  We'll
+            # strip the unwanted outer quotes.
+           lt = lt[1:-1]
+
         ht_idx: int = implosion[KgtkValueFields.HIGH_TOLERANCE_FIELD_NAME]
         ht: str = row[ht_idx] if ht_idx >= 0 else ""
+        if ht.startswith('"') and ht.endswith('"') and len(ht) >= 2:
+            # As a special favor, we'll accept high tolerances as strings.  We'll
+            # strip the unwanted outer quotes.
+           ht = ht[1:-1]
+
         if len(lt) > 0 ^ len(ht) > 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': low and high tolerance must both be present or absent." % (input_line_count, type_name),
                       file=self.error_file, flush=True)
+
         si_idx: int = implosion[KgtkValueFields.SI_UNITS_FIELD_NAME]
         si: str = row[si_idx] if si_idx >= 0 else ""
+        if si.startswith('"') and si.endswith('"') and len(si) >= 2:
+            # As a special favor, we'll accept SI units as strings.  We'll
+            # strip the unwanted outer quotes.
+           si = si[1:-1]
+
         un_idx: int = implosion[KgtkValueFields.UNITS_NODE_FIELD_NAME]
         un: str = row[un_idx] if un_idx >= 0 else ""
+        if un.startswith('"') and un.endswith('"') and len(un) >= 2:
+            # As a special favor, we'll accept unit nodes as strings.  We'll
+            # strip the unwanted outer quotes.
+           un = un[1:-1]
+
         value: str = num_val
         if len(lt) > 0 or len(ht) > 0:
             value += "[" + lt + "," + ht + "]"
@@ -251,6 +289,12 @@ class KgtkImplode(KgtkFormat):
 
         language_idx: int = implosion[KgtkValueFields.LANGUAGE_FIELD_NAME]
         language_val: str = row[language_idx]
+
+        if len(language_val) >= 2 and language_val.startswith('"') and language_val.endswith('"'):
+            # As a special favor, we'll accept language values as strings.  We'll
+            # strip the unwanted outer quotes.
+           language_val = language_val[1:-1]
+
         if len(language_val) == 0:
             valid = False
             if self.verbose:
@@ -259,6 +303,16 @@ class KgtkImplode(KgtkFormat):
 
         suf_idx: int = implosion[KgtkValueFields.LANGUAGE_SUFFIX_FIELD_NAME]
         suf: str = row[suf_idx] if suf_idx >= 0 else ""
+
+        if len(suf) >= 2 and suf.startswith('"') and suf.endswith('"'):
+            # As a special favor, we'll accept language suffixes as strings.  We'll
+            # strip the unwanted outer quotes.
+            suf = suf[1:-1]
+
+        if len(suf) > 0 and not suf.startswith("-"):
+            # As a siecial favor, we'll accept language suffixes that do not
+            # start with a dash.  We'll prepend the dash.
+            suf = "-" + suf
 
         value: str = ""
         if valid:
@@ -287,6 +341,12 @@ class KgtkImplode(KgtkFormat):
         valid: bool = True
         latitude_idx: int = implosion[KgtkValueFields.LATITUDE_FIELD_NAME]
         latitude_val: str = row[latitude_idx]
+
+        if latitude_val.startswith('"') and latitude_val.endswith('"') and len(latitude_val) >= 2:
+            # As a special favor, we'll accept latitudes as strings.  We'll
+            # strip the unwanted outer quotes.
+            latitude_val = latitude_val[1:-1]
+
         if len(latitude_val) == 0:
             valid = False
             if self.verbose:
@@ -295,11 +355,18 @@ class KgtkImplode(KgtkFormat):
 
         longitude_idx: int = implosion[KgtkValueFields.LONGITUDE_FIELD_NAME]
         longitude_val: str = row[longitude_idx]
+
+        if longitude_val.startswith('"') and longitude_val.endswith('"') and len(longitude_val) >= 2:
+            # As a special favor, we'll accept longitudes as strings.  We'll
+            # strip the unwanted outer quotes.
+            longitude_val = longitude_val[1:-1]
+
         if len(longitude_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.LONGITUDE_FIELD_NAME),
                       file=self.error_file, flush=True)
+
         value: str = "@" + latitude_val + "/" + longitude_val
 
         if valid and self.validate:
@@ -321,19 +388,25 @@ class KgtkImplode(KgtkFormat):
 
         date_and_times_idx: int = implosion[KgtkValueFields.DATE_AND_TIMES_FIELD_NAME]
         date_and_times_val: str = row[date_and_times_idx]
+
+        if date_and_times_val.startswith('"') and date_and_times_val.endswith('"') and len(date_and_times_val) >= 2:
+            # As a special favor, we'll accept date_and_times as a string.  We'll
+            # strip the unwanted outer quotes.
+            date_and_times_val = date_and_times_val[1:-1]
+
         if len(date_and_times_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
                       file=self.error_file, flush=True)
 
-        elif date_and_times_val.startswith('"') and date_and_times_val.endswith('"') and len(date_and_times_val) > 2:
-            # As a special favor, we'll accept date_and_times as a string.  We'll
-            # strip the unwanted outer quotes.
-            date_and_times_val = date_and_times_val[1:-1]
-
         precision_idx: int = implosion[KgtkValueFields.PRECISION_FIELD_NAME]
         precision_val: str = row[precision_idx] if precision_idx >= 0 else ""
+
+        if precision_val.startswith('"') and precision_val.endswith('"') and len(precision_val) >= 2:
+            # As a special favor, we'll accept precision as a string.  We'll
+            # strip the unwanted outer quotes.
+            precision_val = precision_val[1:-1]
 
         value: str = "^" + date_and_times_val
         if len(precision_val) > 0:
@@ -367,6 +440,12 @@ class KgtkImplode(KgtkFormat):
         valid: bool = True
         truth_idx: int = implosion[KgtkValueFields.TRUTH_FIELD_NAME]
         truth_val: str = row[truth_idx]
+
+        if truth_val.startswith('"') and truth_val.endswith('"') and len(truth_val) >= 2:
+            # As a special favor, we'll accept booleans as strings.  We'll
+            # strip the unwanted outer quotes.
+            truth_val = truth_val[1:-1]
+
         if len(truth_val) == 0:
             valid = False
             if self.verbose:
@@ -401,12 +480,12 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
 
         elif symbol_val.startswith('"') and symbol_val.endswith('"') and len(symbol_val) > 2:
-            # As a special favor, we'll accept symbols as string.  We'll
+            # As a special favor, we'll accept symbols as strings.  We'll
             # strip the unwanted outer quotes.
             symbol_val = symbol_val[1:-1]
 
         if self.escape_pipes:
-            symbol_val = symbol_val.replace("|", "\\|")
+            symbol_val = symbol_val.replace(KgtkFormat.LIST_SEPARATOR, "\\" + KgtkFormat.LIST_SEPARATOR)
 
         value: str = symbol_val
 
@@ -446,18 +525,24 @@ class KgtkImplode(KgtkFormat):
                 row: typing.List[str],
                 implosion: typing.Mapping[str, int],
                 data_type_idx: int,
+                existing_column_idx: int,
     )->typing.Tuple[str, bool]:
         type_name: str = row[data_type_idx]
-        if type_name.lower() not in self.type_names:
-            if self.verbose:
-                print("Input line %d: unselected data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
-            return "", False
-
         if type_name.upper() not in KgtkFormat.DataType.__members__:
             # TODO:  Need warnings.
             if self.verbose:
                 print("Input line %d: unrecognized data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
             return "", False
+
+        if type_name.lower() not in self.type_names:
+            if self.retain_unselected_types and existing_column_idx >= 0:
+                return row[existing_column_idx], True
+            elif self.ignore_unselected_types:
+                return "", True
+            else:
+                if self.verbose:
+                    print("Input line %d: unselected data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
+                return "", False
 
         dt: KgtkFormat.DataType = KgtkFormat.DataType[type_name.upper()]
         return self.imploders[dt](self, input_line_count, row, implosion, type_name)
@@ -604,13 +689,15 @@ class KgtkImplode(KgtkFormat):
         imploded_value_count: int = 0
         invalid_value_count: int = 0
         
+        existing_column_idx: int = -1 if new_column else column_idx
+
         row: typing.List[str]
         for row in kr:
             input_line_count += 1
 
             value: str
             valid: bool
-            value, valid = self.implode(input_line_count, row, implosion, data_type_idx)
+            value, valid = self.implode(input_line_count, row, implosion, data_type_idx, existing_column_idx)
             if valid:
                 imploded_value_count += 1
             else:
@@ -682,8 +769,16 @@ def main():
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--remove-prefixed-columns", dest="remove_prefixed_columns",
-                              help="When true, remove all columns beginning witht he prefix from the output file. (default=%(default)s).",
+                              help="When true, remove all columns beginning with the prefix from the output file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--ignore-unselected-types", dest="ignore_unselected_types",
+                              help="When true, input records with valid but unselected data types will be passed through to output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--retain-unselected-types", dest="retain_unselected_types",
+                              help="When true, input records with valid but unselected data types will be retain existing data on output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
                               type=Path, default=None)
@@ -712,6 +807,8 @@ def main():
         print("--quantities-include-numbers %s" % str(args.quantities_include_numbers), file=error_file, flush=True)
         print("--general-strings %s" % str(args.general_strings), file=error_file, flush=True)
         print("--remove-prefixed-columns %s" % str(args.remove_prefixed_columns), file=error_file, flush=True)
+        print("--ignore-unselected-types %s" % str(args.ignore_unselected_types), file=error_file, flush=True)
+        print("--retain-unselected-types %s" % str(args.retain_unselected_types), file=error_file, flush=True)
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         if args.without_fields is not None:
@@ -736,6 +833,8 @@ def main():
         quantities_include_numbers=args.quantities_include_numbers,
         general_strings=args.general_strings,
         remove_prefixed_columns=args.remove_prefixed_columns,
+        ignore_unselected_types=args.ignore_unselected_types,
+        retain_unselected_types=args.retain_unselected_types,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
         reader_options=reader_options,
