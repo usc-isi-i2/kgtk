@@ -89,6 +89,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="When true, strings may include language qualified strings. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--remove-prefixed-columns", dest="remove_prefixed_columns",
+                              help="When true, remove all columns beginning witht he prefix from the output file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--show-data-types", dest="show_data_types",
                               help="Print the list of data types and exit. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -109,6 +113,7 @@ def run(input_kgtk_file: Path,
         escape_pipes: bool,
         quantities_include_numbers: bool,
         general_strings: bool,
+        remove_prefixed_columns: bool,
         show_data_types: bool,
         
         errors_to_stdout: bool = False,
@@ -139,6 +144,7 @@ def run(input_kgtk_file: Path,
         print("--escape-pipes %s" % str(escape_pipes), file=error_file, flush=True)
         print("--quantities-include-numbers %s" % str(quantities_include_numbers), file=error_file, flush=True)
         print("--general-strings %s" % str(general_strings), file=error_file, flush=True)
+        print("--remove-prefixed-columns %s" % str(remove_prefixed_columns), file=error_file, flush=True)
         if type_names is not None:
             print("--types %s" % " ".join(type_names), file=error_file, flush=True)
         if without_fields is not None:
@@ -172,6 +178,7 @@ def run(input_kgtk_file: Path,
             escape_pipes=escape_pipes,
             quantities_include_numbers=quantities_include_numbers,
             general_strings=general_strings,
+            remove_prefixed_columns=remove_prefixed_columns,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,
