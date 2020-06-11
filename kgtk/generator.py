@@ -784,7 +784,7 @@ class JsonGenerator(Generator):
                         "hash":"",
                         "datavalue":{
                             "value":{
-                                "entity-type":"item","numeric-id":0,"id":node1 + node2 # place holder for numeric id
+                                "entity-type":"item","numeric-id":0,"id":node2 # place holder for numeric id
                             },
                             "type":"wikibase-entityid"
                         },
@@ -804,7 +804,7 @@ class JsonGenerator(Generator):
                         "hash":"",
                         "datavalue":{
                             "value":{
-                                "entity-type":"item","numeric-id":0,"id":node1 + node2 # place holder for numeric id
+                                "entity-type":"item","numeric-id":0,"id": node2 # place holder for numeric id
                             },
                             "type":"wikibase-entityid"
                         },
