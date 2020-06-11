@@ -652,7 +652,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, error_file, verbose)
         else:
             if verbose:
-                print("%s: reading file %s" % (who, str(file_path)))
+                print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
             return ClosableIterTextIOWrapper(open(file_path, "r"))
 
         if options.gzip_in_parallel:
