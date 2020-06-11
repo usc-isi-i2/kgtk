@@ -34,6 +34,8 @@ class Generator:
         n = int(kwargs.pop("n"))
         warning = kwargs.pop("warning")
         log_path = kwargs.pop("log_path")
+        self.prop_file = kwargs.pop("prop_file")
+        self.read_num_of_lines = 0
         # set sets
         self.set_sets(label_set,description_set,alias_set)
         # column name order_map
@@ -73,6 +75,15 @@ class Generator:
             self.order_map["node2"] = node2_index
             self.order_map["label"] = prop_index
             self.order_map["id"] = id_index
+    
+    def parse_edges(self,edge:str):
+        # use the order_map to map the node
+        edge_list = edge.strip("\n").split("\t")
+        node1 = edge_list[self.order_map["node1"]].strip()
+        node2 = edge_list[self.order_map["node2"]].strip()
+        prop = edge_list[self.order_map["label"]].strip()
+        e_id = edge_list[self.order_map["id"]].strip()  
+        return node1, node2, prop, e_id
 
     @staticmethod
     def process_text_string(string: str) -> [str, str]:
@@ -137,7 +148,6 @@ class Generator:
 class TripleGenerator(Generator):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        prop_file = kwargs.pop("prop_file")
         prop_declaration = kwargs.pop("prop_declaration")
         dest_fp = kwargs.pop("dest_fp")
         truthy = kwargs.pop("truthy")
@@ -175,9 +185,8 @@ class TripleGenerator(Generator):
         }
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
-        self.set_properties(prop_file)
+        self.set_properties(self.prop_file)
         self.fp = dest_fp
-        self.read_num_of_lines = 0
         self.truthy = truthy
         self.reset_etk_doc()
         self.serialize_prefix()
@@ -195,14 +204,6 @@ class TripleGenerator(Generator):
                         prefix, expand = edge_list[node1_index], edge_list[node2_index]
                         self.prefix_dict[prefix] = expand
     
-    def parse_edges(self,edge:str):
-        # use the order_map to map the node
-        edge_list = edge.strip("\n").split("\t")
-        node1 = edge_list[self.order_map["node1"]].strip()
-        node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["label"]].strip()
-        e_id = edge_list[self.order_map["id"]].strip()  
-        return node1, node2, prop, e_id
     
     def read_prop_declaration(self,line_number:int, edge:str):
         node1, node2, prop, e_id = self.parse_edges(edge)
@@ -511,8 +512,6 @@ class TripleGenerator(Generator):
 class JsonGenerator(Generator):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
-        prop_file = kwargs.pop("prop_file")
-        self.read_num_of_lines = 0
         self.prop_declaration = kwargs.pop("prop_declaration")
         self.output_prefix = kwargs.pop("output_prefix")
         self.file_num = 0
@@ -542,7 +541,7 @@ class JsonGenerator(Generator):
             "url": "url",
             "Url": "url"
         }
-        self.set_properties(prop_file)
+        self.set_properties(self.prop_file)
         # curret dictionaries
         self.set_json_dict()
 
@@ -1146,15 +1145,14 @@ class JsonGenerator(Generator):
         self.read_num_of_lines = 0
         self.to_append_statement_id = None
         self.to_append_statement = None
-
     
-    @staticmethod
-    def merge_dict(source:dict, target: dict):
-        for key, value in source.items():
-            if isinstance(value, dict):
-                # get node or create one
-                node = target.setdefault(key, {})
-                JsonGenerator.merge_dict(value, node)
-            else:
-                target[key] = value
-        return target
+    # @staticmethod
+    # def merge_dict(source:dict, target: dict):
+    #     for key, value in source.items():
+    #         if isinstance(value, dict):
+    #             # get node or create one
+    #             node = target.setdefault(key, {})
+    #             JsonGenerator.merge_dict(value, node)
+    #         else:
+    #             target[key] = value
+    #     return target
