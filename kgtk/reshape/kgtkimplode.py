@@ -51,6 +51,8 @@ class KgtkImplode(KgtkFormat):
 
     general_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    remove_prefixed_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     # attr.converters.default_if_none(...) does not seem to work.
     # value_options: KgtkValueOptions = attr.ib(default=None,
     #                                           converter=attr.converters.default_if_none(DEFAULT_KGTK_VALUE_OPTIONS),
@@ -541,19 +543,35 @@ class KgtkImplode(KgtkFormat):
                               file=self.error_file, flush=True)
             else:
                 if self.verbose:
-                    print("Field '%s' eploded column '%s' not found." % (field_name, exploded_name), file=self.error_file, flush=True)
+                    print("Field '%s' exploded column '%s' not found." % (field_name, exploded_name), file=self.error_file, flush=True)
                 missing_columns.append(exploded_name)
         if len(missing_columns) > 0:
             raise ValueError("Missing columns: %s" % " ".join(missing_columns))
                 
         data_type_idx = implosion[KgtkValueFields.DATA_TYPE_FIELD_NAME]
 
+        trimmed_output_column_names: typing.List[str]
+        if self.remove_prefixed_columns and len(self.prefix) > 0:
+            trimmed_output_column_names = [ ]
+            if self.verbose:
+                print("Removing columns with names that start with '%s'." % self.prefix, file=self.error_file, flush=True)
+            column_name: str
+            for column_name in output_column_names:
+                if column_name.startswith(self.prefix):
+                    if self.verbose:
+                        print("Removing column '%s." % column_name, file=self.error_file, flush=True)
+                else:
+                    trimmed_output_column_names.append(column_name)
+        else:
+            trimmed_output_column_names = output_column_names
+
+        shuffle_list: typing.List[int] = [ ] # Easier to init than deal with typing.Optional.
         ew: typing.Optional[KgtkWriter] = None
         if self.output_file_path is not None:
             if self.verbose:
                 print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
             # Open the output file.
-            ew: KgtkWriter = KgtkWriter.open(output_column_names,
+            ew: KgtkWriter = KgtkWriter.open(trimmed_output_column_names,
                                              self.output_file_path,
                                              mode=kr.mode,
                                              require_all_columns=False,
@@ -561,7 +579,10 @@ class KgtkImplode(KgtkFormat):
                                              fill_missing_columns=False,
                                              gzip_in_parallel=False,
                                              verbose=self.verbose,
-                                             very_verbose=self.very_verbose)        
+                                             very_verbose=self.very_verbose)
+            shuffle_list = ew.build_shuffle_list(output_column_names)
+
+
         rw: typing.Optional[KgtkWriter] = None
         if self.reject_file_path is not None:
             if self.verbose:
@@ -604,7 +625,7 @@ class KgtkImplode(KgtkFormat):
                     output_row.append(value)
                 else:
                     output_row[column_idx] = value
-                ew.write(output_row)
+                ew.write(output_row, shuffle_list=shuffle_list)
                 
         if self.verbose:
             print("Processed %d records, imploded %d values, %d invalid values." % (input_line_count, imploded_value_count, invalid_value_count),
@@ -660,6 +681,10 @@ def main():
                               help="When true, strings may include language qualified strings. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--remove-prefixed-columns", dest="remove_prefixed_columns",
+                              help="When true, remove all columns beginning witht he prefix from the output file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
                               type=Path, default=None)
     
@@ -686,6 +711,7 @@ def main():
         print("--escape-pipes %s" % str(args.escape_pipes), file=error_file, flush=True)
         print("--quantities-include-numbers %s" % str(args.quantities_include_numbers), file=error_file, flush=True)
         print("--general-strings %s" % str(args.general_strings), file=error_file, flush=True)
+        print("--remove-prefixed-columns %s" % str(args.remove_prefixed_columns), file=error_file, flush=True)
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         if args.without_fields is not None:
@@ -709,6 +735,7 @@ def main():
         escape_pipes=args.escape_pipes,
         quantities_include_numbers=args.quantities_include_numbers,
         general_strings=args.general_strings,
+        remove_prefixed_columns=args.remove_prefixed_columns,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
         reader_options=reader_options,
