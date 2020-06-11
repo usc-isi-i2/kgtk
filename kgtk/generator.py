@@ -34,6 +34,8 @@ class Generator:
         n = int(kwargs.pop("n"))
         warning = kwargs.pop("warning")
         log_path = kwargs.pop("log_path")
+        self.prop_file = kwargs.pop("prop_file")
+        self.read_num_of_lines = 0
         # set sets
         self.set_sets(label_set,description_set,alias_set)
         # column name order_map
@@ -73,6 +75,15 @@ class Generator:
             self.order_map["node2"] = node2_index
             self.order_map["label"] = prop_index
             self.order_map["id"] = id_index
+    
+    def parse_edges(self,edge:str):
+        # use the order_map to map the node
+        edge_list = edge.strip("\n").split("\t")
+        node1 = edge_list[self.order_map["node1"]].strip()
+        node2 = edge_list[self.order_map["node2"]].strip()
+        prop = edge_list[self.order_map["label"]].strip()
+        e_id = edge_list[self.order_map["id"]].strip()  
+        return node1, node2, prop, e_id
 
     @staticmethod
     def process_text_string(string: str) -> [str, str]:
@@ -137,11 +148,11 @@ class Generator:
 class TripleGenerator(Generator):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        prop_file = kwargs.pop("prop_file")
         prop_declaration = kwargs.pop("prop_declaration")
         dest_fp = kwargs.pop("dest_fp")
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
+        prefix_path = kwargs.pop("prefix_path")
         self.datatype_mapping = {
             # nomenclature from https://w.wiki/Tfn
             "item": Item,
@@ -172,24 +183,27 @@ class TripleGenerator(Generator):
             "property":WDProperty,
             "WikibaseProperty": WDProperty
         }
+        self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
-        self.set_properties(prop_file)
+        self.set_properties(self.prop_file)
         self.fp = dest_fp
-        self.read_num_of_lines = 0
         self.truthy = truthy
         self.reset_etk_doc()
         self.serialize_prefix()
         self.use_id = use_id
 
+    def set_prefix(self,prefix_path:str):
+        self.prefix_dict = {}
+        if prefix_path != "NONE":
+            with open(prefix_path,"r") as fp:
+                for line_num, edge in enumerate(fp):
+                    edge_list = edge.strip("\n").split("\t")
+                    if line_num == 0:
+                        node1_index, node2_index = edge_list.index("node1"), edge_list.index("node2")
+                    else:
+                        prefix, expand = edge_list[node1_index], edge_list[node2_index]
+                        self.prefix_dict[prefix] = expand
     
-    def parse_edges(self,edge:str):
-        # use the order_map to map the node
-        edge_list = edge.strip("\n").split("\t")
-        node1 = edge_list[self.order_map["node1"]].strip()
-        node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["label"]].strip()
-        e_id = edge_list[self.order_map["id"]].strip()  
-        return node1, node2, prop, e_id
     
     def read_prop_declaration(self,line_number:int, edge:str):
         node1, node2, prop, e_id = self.parse_edges(edge)
@@ -233,9 +247,11 @@ class TripleGenerator(Generator):
         kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
         self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
         self.doc = self.etk.create_document({}, doc_id=doc_id)
-        # TODO support customized namespace binding
         for k, v in wiki_namespaces.items():
-            self.doc.kg.bind(k, v)
+            if k in self.prefix_dict:
+                self.doc.kg.bind(k, self.prefix_dict[k])
+            else:
+                self.doc.kg.bind(k, v)
 
     def serialize(self):
         """
@@ -254,7 +270,10 @@ class TripleGenerator(Generator):
         Relevent issue: https://github.com/RDFLib/rdflib/issues/965
         """
         for k, v in wiki_namespaces.items():
-            line = "@prefix " + k + ": <" + v + "> .\n"
+            if k in self.prefix_dict:
+                line = "@prefix " + k + ": <" + self.prefix_dict[k] + "> .\n"
+            else:
+                line = "@prefix " + k + ": <" + v + "> .\n"
             self.fp.write(line)
         self.fp.write("\n")
         self.fp.flush()
@@ -493,24 +512,62 @@ class TripleGenerator(Generator):
 class JsonGenerator(Generator):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
-        prop_file = kwargs.pop("prop_file")
+        self.prop_declaration = kwargs.pop("prop_declaration")
         self.output_prefix = kwargs.pop("output_prefix")
         self.file_num = 0
-        self.set_properties(prop_file)
+        # this data_type mapping is to comply with the SQID UI parsing requirements
+        self.datatype_mapping = {
+            "item": "wikibase-item",
+            "WikibaseItem": "wikibase-item",
+
+            "time": "time",
+            "Time": "time",
+
+            "globe-coordinate": "globe-coordinate",
+            "GlobeCoordinate": "globe-coordinate",
+
+            "quantity": "quantity",
+            "Quantity": "quantity",
+
+            "monolingualtext": "monolingualtext",
+            "Monolingualtext": "monolingualtext",
+
+            "string": "string",
+            "String": "string",
+
+            "external-identifier": "external-id",
+            "ExternalId": "external-id",
+
+            "url": "url",
+            "Url": "url"
+        }
+        self.set_properties(self.prop_file)
         # curret dictionaries
         self.set_json_dict()
 
     def entry_point(self,line_number, edge):
-        edge_list = edge.strip("\n").split("\t")
-        l = len(edge_list)
+        self.read_num_of_lines += 1
         if line_number == 1:
             # initialize the order_map
-            self.initialize_order_map(edge_list)
+            self.initialize_order_map(edge)
             return
+        edge_list = edge.strip("\n").split("\t")
         node1 = edge_list[self.order_map["node1"]].strip()
         node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["prop"]].strip()
+        prop = edge_list[self.order_map["label"]].strip()
         e_id = edge_list[self.order_map["id"]].strip()
+
+        # property declaration
+        if prop == "data_type":
+            if self.prop_declaration:
+                self.prop_types[node1] = self.datatype_mapping[node2.strip()]
+                return
+            else:
+                if self.warning:
+                    self.warn_log.write(
+                    "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
+                        line_number, e_id))
+
 
         # add qualifier logic
         if line_number == 2:
@@ -518,26 +575,29 @@ class JsonGenerator(Generator):
         else:
             if node1 != self.to_append_statement_id and node1 != self.corrupted_statement_id:
                 is_qualifier_edge = False
+                # partial serialization
+                if self.read_num_of_lines > self.n:
+                    self.serialize()
             else:
                 is_qualifier_edge = True
                 if node1 == self.corrupted_statement_id:
                     if self.warning:
                         self.warn_log.write("QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n".format(line_number, self.corrupted_statement_id)
                         )
-
+        
         # update info_json_dict
         if node1 in self.prop_types:
-            success = self.update_misc_json_dict_info(node1, self.prop_types[node1])
+            success = self.update_misc_json_dict_info(node1,line_number, self.prop_types[node1])
         else:
-            success = self.update_misc_json_dict_info(node1, None)
+            success = self.update_misc_json_dict_info(node1, line_number, None)
         
         assert(success)
         
         if prop in self.prop_types:
-            success = self.update_misc_json_dict_info(prop,self.prop_types[prop])
+            success = self.update_misc_json_dict_info(prop, line_number, self.prop_types[prop])
             assert(success)
             if self.prop_types[prop] == "wikibase-item":
-                success = self.update_misc_json_dict_info(node2)
+                success = self.update_misc_json_dict_info(node2, line_number, None)
                 assert(success)
         
         # update label_json_dict
@@ -577,7 +637,7 @@ class JsonGenerator(Generator):
             # success
             if not is_qualifier_edge:
                 self.to_append_statement_id = e_id
-                self.to_append_statement = [node1, prop]# path for adding future qualifiers
+                self.to_append_statement = [node1, prop]# path in dictionary for adding future qualifiers
 
     def init_entity_in_json(self,node:str):
         self.misc_json_dict[node] = {}
@@ -608,7 +668,7 @@ class JsonGenerator(Generator):
 
         return True
 
-    def update_misc_json_dict_info(self, node:str,data_type = None):
+    def update_misc_json_dict_info(self, node:str, line_number: int, data_type = None):
         if node not in self.misc_json_dict:
             self.init_entity_in_json(node)
 
@@ -634,7 +694,8 @@ class JsonGenerator(Generator):
                 "id":node}
                 )
         else:
-            raise KGTKException("node {} is neither an entity nor a property.".format(node)) 
+            if self.warning:
+                self.warn_log.write("node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number)) 
         return True
     def update_misc_json_dict(self, node1:str, prop:str, node2:str, line_number:int, field:str):
         if node1 not in self.misc_json_dict:
@@ -670,6 +731,7 @@ class JsonGenerator(Generator):
             if self.prop_types[prop] == "wikibase-item":
                 object = self.update_misc_json_dict_item(node1, prop, node2, is_qualifier_edge)
             elif self.prop_types[prop] == "time":
+                # print("matched date format yyyy-mm-dd",node1,prop,node2,is_qualifier_edge)
                 object = self.update_misc_json_dict_time(node1,prop,node2,is_qualifier_edge)
             elif self.prop_types[prop] == "globe-coordinate":
                 object = self.update_misc_json_dict_coordinate(node1,prop,node2,is_qualifier_edge)
@@ -748,19 +810,20 @@ class JsonGenerator(Generator):
                     }
         return temp_item_dict
 
-
     def update_misc_json_dict_time(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+        # print("MATCHED case 2",self.yyyy_mm_dd_pattern.match(node2))
         if self.yyyy_pattern.match(node2):
             time_string = node2 + "-01-01"
             precision = 9
         elif self.yyyy_mm_dd_pattern.match(node2):
             time_string = node2
             precision = 11
-        try:
-            time_string, precision = node2.split("/")
-            precision = int(precision)
-        except:
-            return None
+        else:
+            try:
+                time_string, precision = node2.split("/")
+                precision = int(precision)
+            except:
+                return None
         if not is_qualifier_edge:
             temp_time_dict = {
                 "mainsnak":{
@@ -1037,40 +1100,23 @@ class JsonGenerator(Generator):
                 "datatype": "url"
             }
         return temp_url_dict
+    
+    def read_prop_declaration(self, line_number:int, edge:str):
+        node1, node2, prop, e_id = self.parse_edges(edge)
+        if prop == "data_type":
+            self.prop_types[node1] = self.datatype_mapping[node2.strip()]
+        return
 
     def set_properties(self, prop_file:str):
-        datatype_mapping = {
-            "item": "wikibase-item",
-            "WikibaseItem": "wikibase-item",
-
-            "time": "time",
-            "Time": "time",
-
-            "globe-coordinate": "globe-coordinate",
-            "GlobeCoordinate": "globe-coordinate",
-
-            "quantity": "quantity",
-            "Quantity": "quantity",
-
-            "monolingualtext": "monolingualtext",
-            "Monolingualtext": "monolingualtext",
-
-            "string": "string",
-            "String": "string",
-
-            "external-identifier": "external-id",
-            "ExternalId": "external-id",
-
-            "url": "url",
-            "Url": "url"
-        }
+        self.prop_types = {}
+        if prop_file == "NONE":
+            return
         with open(prop_file, "r") as fp:
             props = fp.readlines()
-        self.prop_types = {}
         for line in props[1:]:
-            node1, _, node2 = line.split("\t")
+            node1, _, node2, = line.split("\t")
             try:
-                self.prop_types[node1] = datatype_mapping[node2.strip()]
+                self.prop_types[node1] = self.datatype_mapping[node2.strip()]
             except:
                 raise KGTKException(
                     "DataType {} of node {} is not supported.\n".format(
@@ -1078,27 +1124,35 @@ class JsonGenerator(Generator):
                     )
                 )
     def set_json_dict(self):
-        self.label_json_dict = {}
         self.misc_json_dict = {}
-        self.info_json_dict = {}
+        # self.label_json_dict = {}
+        # self.info_json_dict = {}
     def serialize(self):
         '''
         serialize the dictionaries. 
         '''
         # data are aggregated into one file
-        JsonGenerator.merge_dict(self.label_json_dict, self.misc_json_dict)
-        JsonGenerator.merge_dict(self.info_json_dict, self.misc_json_dict)
+        # JsonGenerator.merge_dict(self.label_json_dict, self.misc_json_dict)
+        # JsonGenerator.merge_dict(self.info_json_dict, self.misc_json_dict)
         # update dict and files
-        with open(self.output_prefix + ".json","w") as fp:
+        with open("{}{}.json".format(self.output_prefix, self.file_num),"w") as fp:
             json.dump(self.misc_json_dict,fp)
+        self.file_num += 1
+        self.reset()
+
+    def reset(self):
         self.set_json_dict()
-    @staticmethod
-    def merge_dict(source:dict, target: dict):
-        for key, value in source.items():
-            if isinstance(value, dict):
-                # get node or create one
-                node = target.setdefault(key, {})
-                JsonGenerator.merge_dict(value, node)
-            else:
-                target[key] = value
-        return target
+        self.read_num_of_lines = 0
+        self.to_append_statement_id = None
+        self.to_append_statement = None
+    
+    # @staticmethod
+    # def merge_dict(source:dict, target: dict):
+    #     for key, value in source.items():
+    #         if isinstance(value, dict):
+    #             # get node or create one
+    #             node = target.setdefault(key, {})
+    #             JsonGenerator.merge_dict(value, node)
+    #         else:
+    #             target[key] = value
+    #     return target
