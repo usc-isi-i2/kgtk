@@ -27,11 +27,11 @@
 }
 
 .md-search__input {
-	background-color: rgba(0,0,0,.12);
+	background-color: rgba(0,0,0,.26);
 }
 
 .md-search__input:hover {
-	background-color: rgba(0,0,0,.26);
+	background-color: rgba(0,0,0,.52);
 }
 
 .md-header-nav__button {
