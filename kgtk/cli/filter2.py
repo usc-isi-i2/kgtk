@@ -63,7 +63,7 @@ def run(input_kgtk_file: Path,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
-    from kgtk.exceptions import kgtk_exception_auto_handler
+    from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -104,6 +104,22 @@ def run(input_kgtk_file: Path,
         return filt
 
     try:
+
+        patterns: typing.List[str] = pattern.split(";")
+        if len(patterns) != 3:
+            print("Error: The pattern must have three sections separated by semicolons (two semicolons total).", file=error_file, flush=True)
+            raise KGTKException("Bad pattern")
+            
+        subj_filter: typing.Set[str] = prepare_filter(patterns[0])
+        pred_filter: typing.Set[str] = prepare_filter(patterns[1])
+        obj_filter: typing.Set[str] = prepare_filter(patterns[2])
+        apply_subj_filter: bool = len(subj_filter) > 0
+        apply_pred_filter: bool = len(pred_filter) > 0
+        apply_obj_filter: bool = len(obj_filter) > 0
+
+        if verbose and not (apply_subj_filter or apply_pred_filter or apply_obj_filter):
+            print("Warning: the filter is empty.", file=error_file, flush=True)
+
         if verbose:
             print("Opening the input file: %s" % str(input_kgtk_file), file=error_file, flush=True)
         kr: KgtkReader = KgtkReader.open(input_kgtk_file,
@@ -114,36 +130,22 @@ def run(input_kgtk_file: Path,
                                          very_verbose=very_verbose,
         )
 
-        patterns: typing.List[str] = pattern.split(";")
-        if len(patterns) != 3:
-            print("The pattern must have three sections separated by semicolons.", file=error_file, flush=True)
-            return 1
-
-        subj_filter: typing.Set[str] = prepare_filter(patterns[0])
-        pred_filter: typing.Set[str] = prepare_filter(patterns[1])
-        obj_filter: typing.Set[str] = prepare_filter(patterns[2])
-        apply_subj_filter: bool = len(subj_filter) > 0
-        apply_pred_filter: bool = len(pred_filter) > 0
-        apply_obj_filter: bool = len(obj_filter) > 0
         subj_idx: int = kr.get_node1_column_index(subj_col)
         pred_idx: int = kr.get_label_column_index(pred_col)
         obj_idx: int = kr.get_node2_column_index(obj_col)
 
-        if verbose and not (apply_subj_filter or apply_pred_filter or apply_obj_filter):
-            print("Warning: the filter is empty.", file=error_file, flush=True)
-
         trouble: bool = False
         if subj_idx < 0 and len(subj_filter) > 0:
             trouble = True
-            print("Cannot find the subject column '%s'." % kr.get_node1_canonical_name(subj_col))
+            print("Error: Cannot find the subject column '%s'." % kr.get_node1_canonical_name(subj_col), file=error_file, flush=True)
         if pred_idx < 0 and len(pred_filter) > 0:
             trouble = True
-            print("Cannot find the predicate column '%s'." % kr.get_label_canonical_name(pred_col))
+            print("Error: Cannot find the predicate column '%s'." % kr.get_label_canonical_name(pred_col), file=error_file, flush=True)
         if obj_idx < 0 and len(obj_filter) > 0:
             trouble = True
-            print("Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col))
+            print("Error: Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col), file=error_file, flush=True)
         if trouble:
-            return 1
+            raise KGTKException("Missing columns.")
 
         if verbose:
             print("Opening the output file: %s" % str(output_kgtk_file), file=error_file, flush=True)
