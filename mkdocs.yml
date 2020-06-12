@@ -37,6 +37,9 @@ nav:
      
 theme:
   name: material
+  logo: images/kgtk_logo_200x200.png
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition
