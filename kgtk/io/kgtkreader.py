@@ -114,6 +114,7 @@ class KgtkReaderOptions():
     def add_arguments(cls,
                       parser: ArgumentParser,
                       mode_options: bool = False,
+                      default_mode: KgtkReaderMode = KgtkReaderMode.AUTO,
                       validate_by_default: bool = False,
                       expert: bool = False,
                       defaults: bool = True,
@@ -183,7 +184,7 @@ class KgtkReaderOptions():
             fgroup.add_argument(prefix1 + "mode",
                                 dest=prefix2 + "mode",
                                 help=h(prefix3 + "Determine the KGTK file mode (default=%(default)s)."),
-                                type=KgtkReaderMode, action=EnumNameAction, **d(KgtkReaderMode.AUTO))
+                                type=KgtkReaderMode, action=EnumNameAction, **d(default_mode))
             
         hgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Header parsing"),
                                                            h("Options affecting " + prefix4 + "header parsing."))
