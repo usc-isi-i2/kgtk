@@ -28,7 +28,7 @@ https://kgtk.readthedocs.io/en/latest/
 ## Installation through Docker
 
 ```
-docker pull uscisii2/kgtk
+docker pull uscisii2/kgtk:0.2.0
 ```
 
 More information about versions and tags here: https://hub.docker.com/repository/docker/uscisii2/kgtk
