@@ -1,4 +1,4 @@
-The ifexists command reads a KGTK file, constructing a second KGTK file
+The unique command reads a KGTK file, constructing a second KGTK file
 containing the unique values and counts for a column in the first file.
 
 This implementation, in Python, builds an im-memory dictionary of the unique

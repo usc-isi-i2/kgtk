@@ -1,16 +1,41 @@
 # KGTK Text Embedding Utilities
+
 ## Install
 The program requires Python vesion >= `3` and `kgtk` package installed.
 The corresponding packages requirement are stored at `text_embedding_requirement.txt`
 
+## Assumptions
+The input is an edge file sorted by subject.
+
 ## Usage
+```
+kgtk text_embedding OPTIONS
+```
+Computes embeddings of nodes using properties of nodes. The values are concatenated into sentences defined by a template, and embedded using a pre-trained language model.
+
+The output is an edge file where each node appears once; a user defined property is used to store the embedding, and the value is a string containing the embedding. For example:
+
+To generate the embeddings, the command first generates a sentence for each node using the properties listed in the label-properties, description-properties, isa-properties and has-properties options. Each sentence is generated using the following template:
+
+```
+{label-properties}, {description-properties} is a {isa-properties}, and has {has-properties}
+```
+
+An example sentence is “Saint David, patron saint of Wales is a human, Catholic priest, Catholic bishop, and has date of death, religion and canonization status”
+
+```
+subject        predicate        object
+Q1        text_embedding    “0.222, 0.333, ..”
+Q2        text_embedding    “0.444, 0.555, ..”
+```
+
 ### Run
 You can call the functions directly with given args as 
 ```
 kgtk text_embedding \ 
-    --input/ -i <string> \ # * required, path to the file
-    --format/ -f <string> \ # optional, default is `kgtk_format`
-    --model/ -m <list_of_string> \  # optional, default is `bert-base-wikipedia-sections-mean-tokens`
+    <string> \ # * required, path to the file
+    --format / -f <string> \ # optional, default is `kgtk_format`
+    --model / -m <list_of_string> \  # optional, default is `bert-base-wikipedia-sections-mean-tokens`
     --label-properties <list_of_string> \ # optional, default is ["label"]
     --description-properties <list_of_string> \ # optional, default is ["description"]
     --isa-properties <list_of_string> \ # optional, default is ["P31"]
@@ -20,21 +45,21 @@ kgtk text_embedding \
     --output-property <string> \ # optional, default is "text_embedding"
     --embedding-projector-metatada <list_of_string> \ # optional
     --embedding-projector-path/ -o <string> # optional, default is the home directory of current user
-    --black-list/ -b <string> # optional,default is None
-    --logging-level/ -l <string> \ # optional, default is `info`
+    --black-list / -b <string> # optional,default is None
+    --logging-level / -l <string> \ # optional, default is `info`
     --dimensional-reduction pca \ # optional, default is none
     --dimension 5 \ #optional, default is 2
     --parallel 4 # optional, default is 1
     --save-embedding-sentence # optional
 ```
 ##### Example 1:
-For easiest running, just give the input file as 
-`kgtk text_embedding -i input_file.csv`
+For easiest running, just give the input file and let it write output to `output_embeddings.csv` at current folder
+`kgtk text_embedding < input_file.csv > output_embeddings.csv`
 ##### Example 2:
 Running with more specific parameters and then run TSNE to reduce output dimension:
 ```
 kgtk text_embedding --debug \ 
-    --input test_edges_file.tsv \
+    test_edges_file.tsv \
     --model bert-base-wikipedia-sections-mean-tokens bert-base-nli-cls-token \
     --label-properties P1449 P1559 \
     --description-properties P94 \
@@ -44,16 +69,14 @@ kgtk text_embedding --debug \
 Running with test format input and tsv output(for visulization at google embedding projector)
 ```
 kgtk text_embedding \ 
-    --countries_candidates.csv \
+    countries_candidates.csv \
     --model bert-base-wikipedia-sections-mean-tokens bert-base-nli-cls-token \
     --black-list all_instances_of_Q732577.tsv.zip \
     --output-format tsv_format
 ```
 
-#### --input / -i (input files)
-The path to the input file(s). If multiple file given, please separate each with a white space ` `.
-
-For example: `input_file1.csv input_file2.csv`
+#### (input files)
+The path to the input file. For example: `input_file1.csv`, it also support to send like `< input_file1.csv`
 
 #### --format/ -f (input format)
 The input file should be a CSV file, it support 2 different type of input for different purposes.
@@ -159,6 +182,7 @@ User can specify where to store the metadata file for the vectors. If not given,
 
 ##### Embedding Vectors
 This will have all the embedded vectors values for each Q nodes. This will be print on stddout and can be redirected to a file.
+Note: There will only texet embedding related things outputed, please run other commands 
 
 If output as `kgtk_format`, the output file will looks like:
 ```
@@ -187,7 +211,7 @@ This will have embedded vectors values after running dimensional reduction algor
 
 #### Query / cache related
 ##### --query-server
-You can change the query wikidata server address when the input format is `test_format`. The default is to use wikidata official query server, but it has limit on query time and frequency. Alternatively, you can choose to use dsbox02's one as `https://dsbox02.isi.edu:8888/bigdata/namespace/wdq/sparql` (vpn needed).
+You can change the query wikidata server address when the input format is `test_format`. The default is to use wikidata official query server, but it has limit on query time and frequency. Alternatively, you can choose to use dsbox02's one as `https://dsbox02.isi.edu:8888/bigdata/namespace/wdq/sparql` (vpn needed, only for ISI users).
 
 ##### --use-cache
 If set to be true, the system will try to get the cached results for embedding computations. The default value is False, not to use cache. Basically the cache service is a Redis server.

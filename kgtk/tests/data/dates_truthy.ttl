@@ -1,0 +1,262 @@
+@prefix wikibase: <http://wikiba.se/ontology#> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix wdt: <http://www.wikidata.org/prop/direct/> .
+@prefix wdtn: <http://www.wikidata.org/prop/direct-normalized/> .
+@prefix wdno: <http://www.wikidata.org/prop/novalue/> .
+@prefix wds: <http://www.wikidata.org/entity/statement/> .
+@prefix wdv: <http://www.wikidata.org/value/> .
+@prefix wdref: <http://www.wikidata.org/reference/> .
+@prefix p: <http://www.wikidata.org/prop/> .
+@prefix pr: <http://www.wikidata.org/prop/reference/> .
+@prefix prv: <http://www.wikidata.org/prop/reference/value/> .
+@prefix prn: <http://www.wikidata.org/prop/reference/value-normalized/> .
+@prefix ps: <http://www.wikidata.org/prop/statement/> .
+@prefix psv: <http://www.wikidata.org/prop/statement/value/> .
+@prefix psn: <http://www.wikidata.org/prop/statement/value-normalized/> .
+@prefix pq: <http://www.wikidata.org/prop/qualifier/> .
+@prefix pqv: <http://www.wikidata.org/prop/qualifier/value/> .
+@prefix pqn: <http://www.wikidata.org/prop/qualifier/value-normalized/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+
+wd:Q1 a wikibase:Item ;
+    p:P569 wds:Q1-fakeid1,
+        wds:Q1-fakeid10,
+        wds:Q1-fakeid11,
+        wds:Q1-fakeid12,
+        wds:Q1-fakeid13,
+        wds:Q1-fakeid14,
+        wds:Q1-fakeid15,
+        wds:Q1-fakeid16,
+        wds:Q1-fakeid17,
+        wds:Q1-fakeid18,
+        wds:Q1-fakeid19,
+        wds:Q1-fakeid2,
+        wds:Q1-fakeid3,
+        wds:Q1-fakeid31,
+        wds:Q1-fakeid4,
+        wds:Q1-fakeid5,
+        wds:Q1-fakeid6,
+        wds:Q1-fakeid7,
+        wds:Q1-fakeid8,
+        wds:Q1-fakeid9 ;
+    wdt:P569 "-13798000000-01-01T00:00:00"^^xsd:dateTime,
+        "-2500000-01-01T00:00:00"^^xsd:dateTime,
+        "-5000000000-00-00T00:00:00"^^xsd:dateTime,
+        "13798000000-01-01T00:00:00"^^xsd:dateTime,
+        "1500-00-00T00:00:00"^^xsd:dateTime,
+        "1801-00-00T00:00:00"^^xsd:dateTime,
+        "1989-06-04"^^xsd:dateTime,
+        "2010-00-00T00:00:00"^^xsd:dateTime,
+        "2010-01-01"^^xsd:dateTime,
+        "2020-00-00T00:00:00"^^xsd:dateTime,
+        "2020-06-00T00:00:00"^^xsd:dateTime,
+        "2020-06-04T00:00:00"^^xsd:dateTime,
+        "2499-12-31T00:00:00"^^xsd:dateTime,
+        "5000000000-00-00T00:00:00"^^xsd:dateTime .
+
+wds:Q1-fakeid1 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2020-06-04T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2020-06-04T000000cQc11c0 .
+
+wds:Q1-fakeid10 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2010-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2010-00-00T000000cQc8c0 .
+
+wds:Q1-fakeid11 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "1801-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec1801-00-00T000000cQc7c0 .
+
+wds:Q1-fakeid12 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "1500-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec1500-00-00T000000cQc6c0 .
+
+wds:Q1-fakeid13 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "-2500000-01-01T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec-2500000-01-01T000000cQc4c0 .
+
+wds:Q1-fakeid14 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "-13798000000-01-01T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec-13798000000-01-01T000000cQc3c0 .
+
+wds:Q1-fakeid15 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "-5000000000-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec-5000000000-00-00T000000cQc0c0 .
+
+wds:Q1-fakeid16 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2499-12-31T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2500000-01-01T000000cQc4c0 .
+
+wds:Q1-fakeid17 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "13798000000-01-01T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec13798000000-01-01T000000cQc3c0 .
+
+wds:Q1-fakeid18 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "5000000000-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec5000000000-00-00T000000cQc0c0 .
+
+wds:Q1-fakeid19 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2010-01-01"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2010-01-01cQc9c0 .
+
+wds:Q1-fakeid2 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2020-06-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2020-06-00T000000cQc10c0 .
+
+wds:Q1-fakeid3 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2020-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2020-00-00T000000cQc9c0 .
+
+wds:Q1-fakeid31 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "1989-06-04"^^xsd:dateTime ;
+    psv:P569 wdv:Timec1989-06-04cQc9c0 .
+
+wds:Q1-fakeid4 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2020-06-04T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2020-06-04T000000cQc11c0 .
+
+wds:Q1-fakeid5 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2020-06-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2020-06-00T000000cQc10c0 .
+
+wds:Q1-fakeid6 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2020-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2020-00-00T000000cQc9c0 .
+
+wds:Q1-fakeid7 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "2010-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec2010-00-00T000000cQc8c0 .
+
+wds:Q1-fakeid8 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "1801-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec1801-00-00T000000cQc7c0 .
+
+wds:Q1-fakeid9 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P569 "1500-00-00T00:00:00"^^xsd:dateTime ;
+    psv:P569 wdv:Timec1500-00-00T000000cQc6c0 .
+
+wdv:Timec-13798000000-01-01T000000cQc3c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 3 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "-13798000000-01-01T00:00:00"^^xsd:dateTime .
+
+wdv:Timec-2500000-01-01T000000cQc4c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 4 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "-2500000-01-01T00:00:00"^^xsd:dateTime .
+
+wdv:Timec-5000000000-00-00T000000cQc0c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 0 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "-5000000000-00-00T00:00:00"^^xsd:dateTime .
+
+wdv:Timec13798000000-01-01T000000cQc3c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 3 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "13798000000-01-01T00:00:00"^^xsd:dateTime .
+
+wdv:Timec1989-06-04cQc9c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 9 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "1989-06-04"^^xsd:dateTime .
+
+wdv:Timec2010-01-01cQc9c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 9 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "2010-01-01"^^xsd:dateTime .
+
+wdv:Timec2500000-01-01T000000cQc4c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 4 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "2499-12-31T00:00:00"^^xsd:dateTime .
+
+wdv:Timec5000000000-00-00T000000cQc0c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 0 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "5000000000-00-00T00:00:00"^^xsd:dateTime .
+
+wdv:Timec1500-00-00T000000cQc6c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 6 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "1500-00-00T00:00:00"^^xsd:dateTime .
+
+wdv:Timec1801-00-00T000000cQc7c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 7 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "1801-00-00T00:00:00"^^xsd:dateTime .
+
+wdv:Timec2010-00-00T000000cQc8c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 8 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "2010-00-00T00:00:00"^^xsd:dateTime .
+
+wdv:Timec2020-00-00T000000cQc9c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 9 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "2020-00-00T00:00:00"^^xsd:dateTime .
+
+wdv:Timec2020-06-00T000000cQc10c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 10 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "2020-06-00T00:00:00"^^xsd:dateTime .
+
+wdv:Timec2020-06-04T000000cQc11c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 11 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "2020-06-04T00:00:00"^^xsd:dateTime .
+

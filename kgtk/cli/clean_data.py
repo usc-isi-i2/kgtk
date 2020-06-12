@@ -8,6 +8,8 @@ TODO: Need to plumn the infrastructure so we can report at least
 a count of how many repair actions took place (per action type).
 Ideally, we'ld like the optino to log individual repair actions.
 
+TODO: Add a reject file.
+
 """
 
 from argparse import Namespace, SUPPRESS

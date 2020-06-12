@@ -61,3 +61,13 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | home      | 1     |
 | steve | zipcode | 45601 | work      | 2     |
 | steve | zipcode | 45601 | cabin     |       |
+
+Suppose you are importing an edge file (`file.tsv`)into KGTK format, with
+columns `node1`, `label`, and `node2`, but `node2` contains `|` lists.  KGTK
+File Format v2 prohibits `|` lists in the `node1`, `label`, or `node2` columns
+of an edge file.  The following command will expand the `node2` values, resulting
+in a valid (all else being valid) KGTK edge file:
+
+```bash
+kgtk expand file.tsv --mode=NONE --columns node1 label
+```
