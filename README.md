@@ -30,10 +30,25 @@ https://kgtk.readthedocs.io/en/latest/
 ## Installation through Docker
 
 ```
-docker pull uscisii2/kgtk:0.2.0
+docker pull uscisii2/kgtk
 ```
 
-More information about versions and tags here: https://hub.docker.com/repository/docker/uscisii2/kgtk
+To run KGTK in the command line just type:
+
+```
+docker run -it uscisii2/kgtk /bin/bash
+```
+
+If you want to run KGTK in a Jupyter notebook, then you will have to type:
+```
+docker run -it -p 8888:8888 uscisii2/kgtk /bin/bash -c "jupyter notebook --ip='*' --port=8888 --allow-root --no-browser"
+```
+
+Note: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
+
+More information about versions and tags is available here: https://hub.docker.com/repository/docker/uscisii2/kgtk
+
+See additional examples in [the documentation](https://kgtk.readthedocs.io/en/latest/install/).
 
 ## Local installation
 
@@ -67,15 +82,21 @@ If you can't install miller with `yum install` on centOS, please follow this [li
 
 To list all the available KGTK commands, run:
 
-`kgtk -h`
+```
+kgtk -h
+```
 
 To see the arguments of a particular commands, run:
 
-`kgtk <command> -h`
+```
+kgtk <command> -h
+```
 
 An example command that computes instances of the subclasses of two classes:
 
-`kgtk instances --transitive --class Q13442814,Q12345678`
+```
+kgtk instances --transitive --class Q13442814,Q12345678
+```
 
 ## Additional information
 
@@ -93,24 +114,3 @@ https://www.mankier.com/1/mlr
 ```
 4. You may need to install the miller command (mlr) on your system.
    * OpenSUSE Tumbleweed Linux: install package `miller` from Main Repository (OSS)
-
-### List of supported tools
-* `instances`
-* `reachable_nodes`
-* `filter`
-* `text_embedding`
-* `remove_columns`
-* `sort`
-* `gt_loader`
-* `merge_identical_nodes`
-* `zconcat`
-* `export_neo4j`
-
-To get an information on how to use each of them, run:
-`kgtk [TOOL] -h`
-
-More detailed description of the arguments will be added here promptly.
-
-### Developer Instructions
-
-Please refer to [this](README_dev.md)
