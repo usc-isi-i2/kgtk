@@ -134,6 +134,7 @@ def run(input_kgtk_file: Path,
         pred_idx: int = kr.get_label_column_index(pred_col)
         obj_idx: int = kr.get_node2_column_index(obj_col)
 
+        # Complain about a missing column only when it is needed by the pattern.
         trouble: bool = False
         if subj_idx < 0 and len(subj_filter) > 0:
             trouble = True
