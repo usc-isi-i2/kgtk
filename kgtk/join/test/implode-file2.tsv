@@ -1,0 +1,30 @@
+node1	label	old_node2	node2;kgtk:data_type	node2;kgtk:valid	node2;kgtk:list_len	node2;kgtk:number	node2;kgtk:low_tolerance	node2;kgtk:high_tolerance	node2;kgtk:si_units	node2;kgtk:units_node	node2;kgtk:text	node2;kgtk:language	node2;kgtk:language_suffix	node2;kgtk:latitude	node2;kgtk:longitude	node2;kgtk:date_and_time	node2;kgtk:precision	node2;kgtk:truth	node2;kgtk:symbol
+john	string	"John"	string	True	0						"John"								
+john	lqstring	'John'@en	language_qualified_string	True	0						"John"	en							
+john	integer	12345	number	True	0	12345													
+john	number	186.2	number	True	0	186.2													
+john	number	186.2e04	number	True	0	1862000.0													
+john	number	-186.2	number	True	0	-186.2													
+john	number	+186.2e-6	number	True	0	0.0001862													
+john	quantity	84.3[84,85]kg	quantity	True	0	84.3	84.0	85.0	kg										
+john	date_and_time	^1960-11-05T00:00	date_and_times	True	0											"1960-11-05T00:00"			
+john	date_and_time	^1980-11-05T00:00Z/6	date_and_times	True	0											"1980-11-05T00:00Z"	6		
+john	location	@60.2/134.3	location_coordinates	True	0									60.2	134.3				
+john	boolean	True	boolean	True	0													True	
+john	symbol	quadrature	symbol	True	0														quadrature
+john	symbol-string	quadrature	symbol	True	0														"quadrature"
+john	symbol-with-raw-pipe	quadr\|ature	symbol	True	0														quadr|ature
+john	symbol-with-escaped-pipe	quadr\|ature	symbol	True	0														quadr\|ature
+john	list	home|work	list	True	2														
+john	string-with-tab	"Jo\thn"	string	True	0						"Jo\thn"								
+john	string-with-raw-pipe	"Jo\|hn"	string	True	0						"Jo|hn"								
+john	string-with-escaped-pipe	"Jo\|hn"	string	True	0						"Jo\|hn"								
+john	string-with-escaped-quote	"Jo\"hn"	string	True	0						"Jo\"hn"								
+john	string-with-escaped-prime	"Jo\'hn"	string	True	0						"Jo\'hn"								
+john	lqstring-with-tab	'Joh\tn'@en	language_qualified_string	True	0						"Joh\tn"	en							
+john	lqstring-with-raw-pipe	'Joh\|n'@en	language_qualified_string	True	0						"Joh|n"	en							
+john	lqstring-with-escaped-pipe	'Joh\|n'@en	language_qualified_string	True	0						"Joh\|n"	en							
+john	lqstring-with-escaped-quote	'Joh\"n'@en	language_qualified_string	True	0						"Joh\"n"	en							
+john	lqstring-with-escaped-prime	'Joh\'n'@en	language_qualified_string	True	0						"Joh\'n"	en							
+john	lqstring-with-escaped-prime-and-quote	'Joh\'\"n'@en	language_qualified_string	True	0						"Joh\'\"n"	en							
+john	lqstring-with-triple-double-quotes	'John'@en	language_qualified_string	True	0						"""John"""	en							

@@ -8,7 +8,7 @@ At the present time, validation looks at such things as:
 
 Certain constraints can be overlooked or repaired.
 
-This program does not validate individual fields.
+TODO: Add a reject file.
 """
 
 from argparse import Namespace

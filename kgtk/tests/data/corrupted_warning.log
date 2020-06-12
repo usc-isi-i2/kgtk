@@ -1,0 +1,4 @@
+CORRUPTED_STATEMENT edge at line: [2] with edge id [corrupted_id1].
+QUALIFIER edge at line [3] associated of corrupted statement edge of id [corrupted_id1] dropped.
+QUALIFIER edge at line [4] associated of corrupted statement edge of id [corrupted_id1] dropped.
+CORRUPTED_QUALIFIER edge at line: [7] with edge id [legal_id_illegal2].

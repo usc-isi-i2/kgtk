@@ -5,11 +5,11 @@ import typing
 import hashlib
 import pandas as pd  # type: ignore
 import numpy as np
+import io
 import math
 import pickle
 import os
 import time
-import argparse
 
 from pyrallel import ParallelProcessor
 from collections import defaultdict, OrderedDict
@@ -311,7 +311,7 @@ class EmbeddingVector:
                 k = k.replace("c_", "")
                 self.candidates[k] = v
 
-    def read_input(self, file_path: str, target_properties: dict, property_labels_dict: dict,
+    def read_input(self, input_file: io.TextIOWrapper, target_properties: dict, property_labels_dict: dict,
                    skip_nodes_set: set = None, input_format: str = "kgtk_format",
                    black_list_set: typing.Optional[set] = None
                    ):
@@ -327,7 +327,7 @@ class EmbeddingVector:
 
         if input_format == "test_format":
             self.input_format = input_format
-            input_df = pd.read_csv(file_path)
+            input_df = pd.read_csv(input_file, dtype=object)
             gt = {}
             count = 0
             if "GT_kg_id" in input_df.columns:
@@ -377,108 +377,108 @@ class EmbeddingVector:
                 add_all_properties = False
 
             self.input_format = input_format
-            with open(file_path, "r") as f:
-                # get header
-                headers = f.readline().replace("\n", "").split("\t")
-                if len(headers) < 3:
-                    raise KGTKException(
-                        "No enough columns found on given input file. Only {} columns given but at least 3 needed.".format(
-                            len(headers)))
-                elif "node" in headers and "property" in headers and "value" in headers:
-                    column_references = {"node": headers.index("node"),
-                                         "property": headers.index("property"),
-                                         "value": headers.index("value")}
 
-                elif "node1" in headers and "label" in headers and "node2" in headers:
-                    column_references = {"node": headers.index("node1"),
-                                         "property": headers.index("label"),
-                                         "value": headers.index("node2")}
+            # get header
+            headers = input_file.readline().replace("\n", "").split("\t")
+            if len(headers) < 3:
+                raise KGTKException(
+                    "No enough columns found on given input file. Only {} columns given but at least 3 needed.".format(
+                        len(headers)))
+            elif "node" in headers and "property" in headers and "value" in headers:
+                column_references = {"node": headers.index("node"),
+                                     "property": headers.index("property"),
+                                     "value": headers.index("value")}
 
-                elif len(headers) == 3:
-                    column_references = {"node": 0,
-                                         "property": 1,
-                                         "value": 2}
-                else:
-                    missing_column1 = {"node", "property", "value"} - set(headers)
-                    missing_column2 = {"node1", "label", "node2"} - set(headers)
-                    missing_column = missing_column1 if len(missing_column1) < len(missing_column2) else missing_column2
-                    raise KGTKException("Missing column: {}".format(missing_column))
+            elif "node1" in headers and "label" in headers and "node2" in headers:
+                column_references = {"node": headers.index("node1"),
+                                     "property": headers.index("label"),
+                                     "value": headers.index("node2")}
 
-                self._logger.debug("column index information: ")
-                self._logger.debug(str(column_references))
-                # read contents
-                each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
-                                        "description_properties": [], "has_properties_values": []}
-                current_process_node_id = None
+            elif len(headers) == 3:
+                column_references = {"node": 0,
+                                     "property": 1,
+                                     "value": 2}
+            else:
+                missing_column1 = {"node", "property", "value"} - set(headers)
+                missing_column2 = {"node1", "label", "node2"} - set(headers)
+                missing_column = missing_column1 if len(missing_column1) < len(missing_column2) else missing_column2
+                raise KGTKException("Missing column: {}".format(missing_column))
 
-                if self._parallel_count > 1:
-                    # need to set with spawn mode to initialize with multiple cuda in multiprocess
-                    from multiprocessing import set_start_method
-                    set_start_method('spawn')
-                    pp = ParallelProcessor(self._parallel_count, self._process_one, collector=self._multiprocess_collector)
-                    pp.start()
+            self._logger.debug("column index information: ")
+            self._logger.debug(str(column_references))
+            # read contents
+            each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
+                                    "description_properties": [], "has_properties_values": []}
+            current_process_node_id = None
 
-                for each_line in f:
-                    each_line = each_line.replace("\n", "").split("\t")
-                    node_id = each_line[column_references["node"]]
-                    # skip nodes id in black list
-                    if black_list_set and node_id in black_list_set:
-                        continue
+            if self._parallel_count > 1:
+                # need to set with spawn mode to initialize with multiple cuda in multiprocess
+                from multiprocessing import set_start_method
+                set_start_method('spawn')
+                pp = ParallelProcessor(self._parallel_count, self._process_one, collector=self._multiprocess_collector)
+                pp.start()
 
-                    node_property = each_line[column_references["property"]]
-                    node_value = each_line[column_references["value"]]
-                    # remove @ mark
-                    if "@" in node_value and node_value[0] != "@":
-                        node_value = node_value[:node_value.index("@")]
+            for each_line in input_file:
+                each_line = each_line.replace("\n", "").split("\t")
+                node_id = each_line[column_references["node"]]
+                # skip nodes id in black list
+                if black_list_set and node_id in black_list_set:
+                    continue
 
-                    # in case we meet an empty value, skip it
-                    if node_value == "":
-                        self._logger.warning("""Skip line "{}" because of empty value.""".format(each_line))
-                        continue
+                node_property = each_line[column_references["property"]]
+                node_value = each_line[column_references["value"]]
+                # remove @ mark
+                if "@" in node_value and node_value[0] != "@":
+                    node_value = node_value[:node_value.index("@")]
 
-                    # remove extra double quote " and single quote '
-                    while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
-                        node_value = node_value[1:-1]
-                    while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
-                        node_value = node_value[1:-1]
+                # in case we meet an empty value, skip it
+                if node_value == "":
+                    self._logger.warning("""Skip line "{}" because of empty value.""".format(each_line))
+                    continue
 
-                    if current_process_node_id != node_id:
-                        if current_process_node_id is None:
-                            current_process_node_id = node_id
+                # remove extra double quote " and single quote '
+                while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
+                    node_value = node_value[1:-1]
+                while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
+                    node_value = node_value[1:-1]
+
+                if current_process_node_id != node_id:
+                    if current_process_node_id is None:
+                        current_process_node_id = node_id
+                    else:
+                        # if we get to next id, concat all properties into one sentence to represent the Q node
+
+                        # for multi process
+                        if self._parallel_count > 1:
+                            each_arg = {"node_id": current_process_node_id, "attribute": each_node_attributes}
+                            pp.add_task(each_arg)
+                        # for single process
                         else:
-                            # if we get to next id, concat all properties into one sentence to represent the Q node
+                            concat_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
+                            each_node_attributes["sentence"] = concat_sentence
+                            self.candidates[current_process_node_id] = each_node_attributes
 
-                            # for multi process
-                            if self._parallel_count > 1:
-                                each_arg = {"node_id": current_process_node_id, "attribute": each_node_attributes}
-                                pp.add_task(each_arg)
-                            # for single process
-                            else:
-                                concat_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
-                                each_node_attributes["sentence"] = concat_sentence
-                                self.candidates[current_process_node_id] = each_node_attributes
+                        # after write down finish, we can clear and start parsing next one
+                        each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
+                                                "description_properties": [], "has_properties_values": []}
+                        # update to new id
+                        current_process_node_id = node_id
 
-                            # after write down finish, we can clear and start parsing next one
-                            each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
-                                                    "description_properties": [], "has_properties_values": []}
-                            # update to new id
-                            current_process_node_id = node_id
-
-                    if node_property in properties_reversed:
-                        roles = properties_reversed[node_property].copy()
-                        node_value = self.get_real_label_name(node_value)
-                        # if we get property_values, it should be saved to isa-properties part
-                        if "property_values" in roles:
-                            # for property values part, changed to be "{property} {value}"
-                            node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
-                            each_node_attributes["has_properties_values"].append(node_value_combine)
-                            # remove those 2 roles in case we have duplicate using of this node later
-                            roles.discard("property_values")
-                            roles.discard("has_properties")
-                        for each_role in roles:
-                            each_node_attributes[each_role].append(node_value)
-                    elif add_all_properties:  # add remained properties if need all properties
-                        each_node_attributes["has_properties"].append(self.get_real_label_name(node_property))
+                if node_property in properties_reversed:
+                    roles = properties_reversed[node_property].copy()
+                    node_value = self.get_real_label_name(node_value)
+                    # if we get property_values, it should be saved to isa-properties part
+                    if "property_values" in roles:
+                        # for property values part, changed to be "{property} {value}"
+                        node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
+                        each_node_attributes["has_properties_values"].append(node_value_combine)
+                        # remove those 2 roles in case we have duplicate using of this node later
+                        roles.discard("property_values")
+                        roles.discard("has_properties")
+                    for each_role in roles:
+                        each_node_attributes[each_role].append(node_value)
+                elif add_all_properties:  # add remained properties if need all properties
+                    each_node_attributes["has_properties"].append(self.get_real_label_name(node_property))
 
                 # close multiprocess pool
                 if self._parallel_count > 1:
@@ -488,7 +488,12 @@ class EmbeddingVector:
             raise KGTKException("Unknown input format {}".format(input_format))
 
         self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
-        self.vector_dump_file = "dump_vectors_{}_{}.pkl".format(file_path[:file_path.rfind(".")], self.model_name)
+        try:
+            file_path = input_file.name
+            file_name = file_path[:file_path.rfind(".")]
+        except AttributeError:
+            file_name = "input_from_memory"
+        self.vector_dump_file = "dump_vectors_{}_{}.pkl".format(file_name, self.model_name)
         # self._logger.debug("The cache file name will be {}".format(self.vector_dump_file))
 
     def get_real_label_name(self, node):
@@ -731,17 +736,6 @@ class EmbeddingVector:
             dist += (v1 - v2) ** 2
         dist = dist ** 0.5
         return dist
-
-
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def connect_to_redis(host, port):

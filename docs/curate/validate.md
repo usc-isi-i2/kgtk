@@ -54,17 +54,27 @@ usage: kgtk validate [-h] [--header-only [HEADER_ONLY]]
                      [--truncate-long-lines [TRUNCATE_LONG_LINES]]
                      [--whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]]
+                     [--allow-lax-qnodes [ALLOW_LAX_QNODES]]
                      [--allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]]
                      [--allow-lax-strings [ALLOW_LAX_STRINGS]]
                      [--allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]]
                      [--allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]]
                      [--repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]]
                      [--minimum-valid-year MINIMUM_VALID_YEAR]
+                     [--clamp-minimum-year [CLAMP_MINIMUM_YEAR]]
                      [--maximum-valid-year MAXIMUM_VALID_YEAR]
+                     [--clamp-maximum-year [CLAMP_MAXIMUM_YEAR]]
+                     [--allow-lax-coordinates [ALLOW_LAX_COORDINATES]]
+                     [--repair-lax-coordinates [REPAIR_LAX_COORDINATES]]
                      [--minimum-valid-lat MINIMUM_VALID_LAT]
+                     [--clamp-minimum-lat [CLAMP_MINIMUM_LAT]]
                      [--maximum-valid-lat MAXIMUM_VALID_LAT]
+                     [--clamp-maximum-lat [CLAMP_MAXIMUM_LAT]]
                      [--minimum-valid-lon MINIMUM_VALID_LON]
+                     [--clamp-minimum-lon [CLAMP_MINIMUM_LON]]
                      [--maximum-valid-lon MAXIMUM_VALID_LON]
+                     [--clamp-maximum-lon [CLAMP_MAXIMUM_LON]]
+                     [--modulo-repair-lon [MODULO_REPAIR_LON]]
                      [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
                      [kgtk_files [kgtk_files ...]]
 
@@ -100,7 +110,8 @@ File options:
   --compression-type COMPRESSION_TYPE
                         Specify the compression type (default=None).
   --error-limit ERROR_LIMIT
-                        The maximum number of errors to report before failing (default=1000)
+                        The maximum number of errors to report before failing
+                        (default=1000)
   --gzip-in-parallel [GZIP_IN_PARALLEL]
                         Execute gzip in parallel (default=False).
   --gzip-queue-size GZIP_QUEUE_SIZE
@@ -114,8 +125,8 @@ Header parsing:
   --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
                         Force the column names (default=None).
   --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a header error is detected. Only ERROR or EXIT
-                        are supported (default=ValidationAction.EXIT).
+                        The action to take when a header error is detected. Only ERROR or
+                        EXIT are supported (default=ValidationAction.EXIT).
   --skip-first-record [SKIP_FIRST_RECORD]
                         Skip the first record when forcing column names (default=False).
   --unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
@@ -130,8 +141,8 @@ Line parsing:
   --repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]
                         Repair and validate values (default=True).
   --blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
-                        The action to take when a line with a blank node1, node2, or id field
-                        (per mode) is detected (default=ValidationAction.EXCLUDE).
+                        The action to take when a line with a blank node1, node2, or id
+                        field (per mode) is detected (default=ValidationAction.EXCLUDE).
   --comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a comment line is detected
                         (default=ValidationAction.EXCLUDE).
@@ -160,34 +171,55 @@ Data value parsing:
   Options controlling the parsing and processing of KGTK data values.
 
   --additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]
-                        Additional language codes (default=None).
+                        Additional language codes. (default=None).
+  --allow-lax-qnodes [ALLOW_LAX_QNODES]
+                        Allow qnode suffixes in quantities to include alphas and dash as
+                        well as digits. (default=False).
   --allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]
-                        Allow language identifier suffixes starting with a dash
+                        Allow language identifier suffixes starting with a dash.
                         (default=False).
   --allow-lax-strings [ALLOW_LAX_STRINGS]
-                        Do not check if double quotes are backslashed inside strings
+                        Do not check if double quotes are backslashed inside strings.
                         (default=False).
   --allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]
-                        Do not check if single quotes are backslashed inside language qualified
-                        strings (default=False).
+                        Do not check if single quotes are backslashed inside language
+                        qualified strings. (default=False).
   --allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]
-                        Allow month or day zero in dates (default=False).
+                        Allow month or day zero in dates. (default=False).
   --repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]
-                        Repair month or day zero in dates (default=False).
+                        Repair month or day zero in dates. (default=False).
   --minimum-valid-year MINIMUM_VALID_YEAR
-                        The minimum valid year in dates (default=1583).
+                        The minimum valid year in dates. (default=1583).
+  --clamp-minimum-year [CLAMP_MINIMUM_YEAR]
+                        Clamp years at the minimum value. (default=False).
   --maximum-valid-year MAXIMUM_VALID_YEAR
-                        The maximum valid year in dates (default=2100).
+                        The maximum valid year in dates. (default=2100).
+  --clamp-maximum-year [CLAMP_MAXIMUM_YEAR]
+                        Clamp years at the maximum value. (default=False).
+  --allow-lax-coordinates [ALLOW_LAX_COORDINATES]
+                        Allow coordinates using scientific notation. (default=False).
+  --repair-lax-coordinates [REPAIR_LAX_COORDINATES]
+                        Allow coordinates using scientific notation. (default=False).
   --minimum-valid-lat MINIMUM_VALID_LAT
-                        The minimum valid latitude (default=-90.000000).
+                        The minimum valid latitude. (default=-90.000000).
+  --clamp-minimum-lat [CLAMP_MINIMUM_LAT]
+                        Clamp latitudes at the minimum value. (default=False).
   --maximum-valid-lat MAXIMUM_VALID_LAT
-                        The maximum valid latitude (default=90.000000).
+                        The maximum valid latitude. (default=90.000000).
+  --clamp-maximum-lat [CLAMP_MAXIMUM_LAT]
+                        Clamp latitudes at the maximum value. (default=False).
   --minimum-valid-lon MINIMUM_VALID_LON
-                        The minimum valid longitude (default=-180.000000).
+                        The minimum valid longitude. (default=-180.000000).
+  --clamp-minimum-lon [CLAMP_MINIMUM_LON]
+                        Clamp longitudes at the minimum value. (default=False).
   --maximum-valid-lon MAXIMUM_VALID_LON
-                        The maximum valid longitude (default=180.000000).
+                        The maximum valid longitude. (default=180.000000).
+  --clamp-maximum-lon [CLAMP_MAXIMUM_LON]
+                        Clamp longitudes at the maximum value. (default=False).
+  --modulo-repair-lon [MODULO_REPAIR_LON]
+                        Wrap longitude to (-180.0,180.0]. (default=False).
   --escape-list-separators [ESCAPE_LIST_SEPARATORS]
-                        Escape all list separators instead of splitting on them
+                        Escape all list separators instead of splitting on them.
                         (default=False).
 ```
 

@@ -27,5 +27,5 @@ optional arguments:
 Import a TSV file into Graph-tool, and store the result to disk. We store the statistics to log.txt. 
 
 ```
-kgtk graph_statistics --directed --log log.txt --out graph.gt ./data/conceptnet_first10.tsv
+kgtk export_gt --directed --log log.txt --out graph.gt ./data/conceptnet_first10.tsv
 ```

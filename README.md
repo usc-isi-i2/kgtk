@@ -1,4 +1,6 @@
-# KGTK: Knowledge Graph Toolkit [![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)
+# KGTK: Knowledge Graph Toolkit 
+
+[![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)
 
 KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs. 
 
@@ -23,7 +25,15 @@ https://kgtk.readthedocs.io/en/latest/
 
 * [Source code](https://github.com/usc-isi-i2/kgtk/releases)
 
-## Installation
+## Installation through Docker
+
+```
+docker pull uscisii2/kgtk:0.2.0
+```
+
+More information about versions and tags here: https://hub.docker.com/repository/docker/uscisii2/kgtk
+
+## Local installation
 
 0. Our installations will be in a conda environment. If you don't have a conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it.
 1. Set up your own conda environment:
@@ -47,6 +57,9 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
   * `sudo yum install miller` (linux)
   
 More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
+
+If you can't install miller with `yum install` on centOS, please follow this [link](https://centos.pkgs.org/7/openfusion-x86_64/miller-5.3.0-1.of.el7.x86_64.rpm.html).
+
 
 ## Running KGTK commands
 
