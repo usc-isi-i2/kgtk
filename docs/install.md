@@ -12,23 +12,6 @@ To run KGTK in the command line just type:
 docker run -it uscisii2/kgtk /bin/bash
 ```
 
-To test KGTK, you can simply type:
-```bash
-kgtk --help
-```
-And you should see a long message which starts with:
-
-```bash
-usage: kgtk [options] command [ / command]*
-
-kgtk --- Knowledge Graph Toolkit
-
-positional arguments:
-  command
-    add_id              Copy a KGTK file, adding ID values.
-...
-```
-
 If you want to run KGTK in a Jupyter notebook, then you will have to type:
 ```
 docker run -it -p 8888:8888 uscisii2/kgtk /bin/bash -c "jupyter notebook --ip='*' --port=8888 --allow-root --no-browser"
@@ -59,7 +42,7 @@ If everuthing goes well, you should be able to see a similar message to the one 
 
 **Note**: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
 
-More information about versions and tags is available here: https://hub.docker.com/repository/docker/uscisii2/kgtk
+More information about versions and tags is available here: [https://hub.docker.com/repository/docker/uscisii2/kgtk](https://hub.docker.com/repository/docker/uscisii2/kgtk)
 
 ## Installing KGTK from pip
 
