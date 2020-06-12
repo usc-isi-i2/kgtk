@@ -7,7 +7,7 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -33,25 +33,29 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write records that pass the filter (default=%(default)s).",
                         type=Path, default="-")
 
-    parser.add_argument('-c', "--columns", action="store", type=str, dest="columns", nargs='+',
+    parser.add_argument('-c', "--columns", action="store", type=str, dest="columns", nargs='+', required=True,
                         help="Columns to remove as a comma- or space-separated strings, e.g., id,docid or id docid")
 
     parser.add_argument(      "--split-on-commas", dest="split_on_commas", help="Parse the list of columns, splitting on commas. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--split-on-spaces", dest="split_on_spaces", help="Parse the list of columns, splitting on spaces. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--strip-spaces", dest="strip_spaces", help="Parse the list of columns, stripping whitespace. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NONE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_kgtk_file: Path,
         output_kgtk_file: Path,
 
-        columns: typing.List[str],
+        columns: typing.Optional[typing.List[str]],
 
         split_on_commas: bool,
+        split_on_spaces: bool,
         strip_spaces: bool,
 
         errors_to_stdout: bool = False,
@@ -76,8 +80,10 @@ def run(input_kgtk_file: Path,
     if show_options:
         print("input: %s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
-        print("--columns=%s" % " ".join(columns), file=error_file)
+        if columns is not None:
+            print("--columns=%s" % " ".join(columns), file=error_file)
         print("--split-on-commas=%s" % str(split_on_commas), file=error_file)
+        print("--split-on-spaces=%s" % str(split_on_spaces), file=error_file)
         print("--sprip-spaces=%s" % str(strip_spaces), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -85,10 +91,14 @@ def run(input_kgtk_file: Path,
 
     try:
 
-        remove_columns: typing.List[str]
+        if columns is None:
+            columns = [ ] # This simplifies matters.
+        if split_on_spaces:
+            columns = " ".join(columns).split()
+        remove_columns: typing.List[str] = [ ]
         arg: str
         column_name: str
-        for arg in remove_columns.split():
+        for arg in columns:
             if split_on_commas:
                 for column_name in arg.split(","):
                     if strip_spaces:
@@ -124,12 +134,12 @@ def run(input_kgtk_file: Path,
             else:
                 print("Error: cannot remove unknown column '%s'." % column_name, file=error_file, flush=True)
                 trouble_column_names.append(column_name)
-        if trouble:
+        if len(trouble_column_names) > 0:
             raise KGTKException("Unknown columns %s" % " ".join(trouble_column_names))
 
         if verbose:
             print("Opening the output file: %s" % str(output_kgtk_file), file=error_file, flush=True)
-        kw: KgtkWriter = KgtkWriter.open(output_column_names
+        kw: KgtkWriter = KgtkWriter.open(output_column_names,
                                          output_kgtk_file,
                                          mode=KgtkWriter.Mode[kr.mode.name],
                                          verbose=verbose,
