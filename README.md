@@ -1,3 +1,5 @@
+<img src="/docs/images/kgtk_logo_200x200.png" width="150"/>
+
 # KGTK: Knowledge Graph Toolkit 
 
 [![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)
