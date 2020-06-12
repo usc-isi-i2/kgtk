@@ -9,6 +9,7 @@ import typing
 from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
@@ -41,6 +42,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--pred', action="store", type=str, dest='pred_col', help="Predicate column, default is label")
     parser.add_argument('--obj', action="store", type=str, dest='obj_col', help="Object column, default is node2")
 
+    parser.add_argument(      "--or", dest="or_pattern", help="'Or' the clauses of the pattern. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--invert", dest="invert", help="Invert the result of applying the pattern. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -53,6 +60,9 @@ def run(input_kgtk_file: Path,
         subj_col: typing.Optional[str],
         pred_col: typing.Optional[str],
         obj_col: typing.Optional[str],
+
+        or_pattern: bool,
+        invert: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -80,11 +90,13 @@ def run(input_kgtk_file: Path,
             print("--reject-file=%s" % str(reject_kgtk_file), file=error_file)
         print("--pattern=%s" % str(pattern), file=error_file)
         if subj_col is not None:
-            print("--subj_col=%s" % str(subj_col), file=error_file)
+            print("--subj=%s" % str(subj_col), file=error_file)
         if pred_col is not None:
-            print("--pred_col=%s" % str(pred_col), file=error_file)
+            print("--pred=%s" % str(pred_col), file=error_file)
         if obj_col is not None:
-            print("--obj_col=%s" % str(obj_col), file=error_file)
+            print("--obj=%s" % str(obj_col), file=error_file)
+        print("--or=%s" % str(or_pattern), file=error_file)
+        print("--invert=%s" % str(invert), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -169,6 +181,9 @@ def run(input_kgtk_file: Path,
         input_line_count: int = 0
         reject_line_count: int = 0
         output_line_count: int = 0
+        subj_filter_pass_count: int = 0
+        pred_filter_pass_count: int = 0
+        obj_filter_pass_count: int = 0
         subj_filter_reject_count: int = 0
         pred_filter_reject_count: int = 0
         obj_filter_reject_count: int = 0
@@ -177,17 +192,33 @@ def run(input_kgtk_file: Path,
         for row in kr:
             input_line_count += 1
 
-            reject: bool = False
-            if apply_subj_filter and row[subj_idx] not in subj_filter:
-                subj_filter_reject_count += 1
-                reject = True
-            if apply_pred_filter and row[pred_idx] not in pred_filter:
-                pred_filter_reject_count += 1
-                reject = True
-            if apply_obj_filter and row[obj_idx] not in obj_filter:
-                obj_filter_reject_count += 1
-                reject = True
-            if reject:
+            or_result: bool = False
+            reject: bool = False 
+            if apply_subj_filter:
+                if row[subj_idx] in subj_filter:
+                    or_result = True
+                    subj_filter_pass_count += 1
+                else:
+                    reject = True
+                    subj_filter_reject_count += 1
+
+            if apply_pred_filter:
+                if row[pred_idx] in pred_filter:
+                    or_result = True
+                    pred_filter_pass_count += 1
+                else:
+                    reject = True
+                    pred_filter_reject_count += 1
+
+            if apply_obj_filter:
+                if row[obj_idx] in obj_filter:
+                    or_result = True
+                    obj_filter_pass_count += 1
+                else:
+                    reject = True
+                    obj_filter_reject_count += 1
+
+            if (not or_result ^ invert) if or_pattern else (reject ^ invert):
                 if rw is not None:
                     rw.write(row)
                 reject_line_count += 1
@@ -197,6 +228,7 @@ def run(input_kgtk_file: Path,
 
         if verbose:
             print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Pass counts: subject=%d, predicate=%d, object=%d." % (subj_filter_pass_count, pred_filter_pass_count, obj_filter_pass_count))
             print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count))
 
         kw.close()
