@@ -1137,8 +1137,10 @@ class JsonGenerator(Generator):
         # JsonGenerator.merge_dict(self.label_json_dict, self.misc_json_dict)
         # JsonGenerator.merge_dict(self.info_json_dict, self.misc_json_dict)
         # update dict and files
-        with open("{}{}.json".format(self.output_prefix, self.file_num),"w") as fp:
-            json.dump(self.misc_json_dict,fp)
+        with open("{}{}.jsonl".format(self.output_prefix, self.file_num),"w") as fp:
+            for key,value in self.misc_json_dict.items():
+                json.dump({key: value},fp)
+                fp.write("\n")
         self.file_num += 1
         self.reset()
 
