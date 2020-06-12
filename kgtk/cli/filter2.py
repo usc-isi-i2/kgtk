@@ -181,9 +181,9 @@ def run(input_kgtk_file: Path,
         input_line_count: int = 0
         reject_line_count: int = 0
         output_line_count: int = 0
-        subj_filter_pass_count: int = 0
-        pred_filter_pass_count: int = 0
-        obj_filter_pass_count: int = 0
+        subj_filter_keep_count: int = 0
+        pred_filter_keep_count: int = 0
+        obj_filter_keep_count: int = 0
         subj_filter_reject_count: int = 0
         pred_filter_reject_count: int = 0
         obj_filter_reject_count: int = 0
@@ -192,33 +192,33 @@ def run(input_kgtk_file: Path,
         for row in kr:
             input_line_count += 1
 
-            or_result: bool = False
+            keep: bool = False
             reject: bool = False 
             if apply_subj_filter:
                 if row[subj_idx] in subj_filter:
-                    or_result = True
-                    subj_filter_pass_count += 1
+                    keep = True
+                    subj_filter_keep_count += 1
                 else:
                     reject = True
                     subj_filter_reject_count += 1
 
             if apply_pred_filter:
                 if row[pred_idx] in pred_filter:
-                    or_result = True
-                    pred_filter_pass_count += 1
+                    keep = True
+                    pred_filter_keep_count += 1
                 else:
                     reject = True
                     pred_filter_reject_count += 1
 
             if apply_obj_filter:
                 if row[obj_idx] in obj_filter:
-                    or_result = True
-                    obj_filter_pass_count += 1
+                    keep = True
+                    obj_filter_keep_count += 1
                 else:
                     reject = True
                     obj_filter_reject_count += 1
 
-            if (not or_result ^ invert) if or_pattern else (reject ^ invert):
+            if (not keep ^ invert) if or_pattern else (reject ^ invert):
                 if rw is not None:
                     rw.write(row)
                 reject_line_count += 1
@@ -228,7 +228,7 @@ def run(input_kgtk_file: Path,
 
         if verbose:
             print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
-            print("Pass counts: subject=%d, predicate=%d, object=%d." % (subj_filter_pass_count, pred_filter_pass_count, obj_filter_pass_count))
+            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count))
             print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count))
 
         kw.close()
