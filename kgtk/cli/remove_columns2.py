@@ -40,7 +40,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--split-on-spaces", dest="split_on_spaces", help="Parse the list of columns, splitting on spaces. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=True)
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--strip-spaces", dest="strip_spaces", help="Parse the list of columns, stripping whitespace. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
@@ -93,7 +93,15 @@ def run(input_kgtk_file: Path,
 
         if columns is None:
             columns = [ ] # This simplifies matters.
+
         if split_on_spaces:
+            # We will be very lenient, and allow space-seperated arguments
+            # *inside* shell quoting, e.g.
+            #
+            # kgtk remove_columns -c 'name name2 name3'
+            #
+            # Do not enable this option if spaces are legal inside your
+            # column names.
             columns = " ".join(columns).split()
         remove_columns: typing.List[str] = [ ]
         arg: str
