@@ -40,6 +40,7 @@ theme:
   logo: images/kgtk_logo_200x200.png
 extra_css:
   - stylesheets/extra.css
+repo_url: https://github.com/usc-isi-i2/kgtk
 
 markdown_extensions:
   - admonition
