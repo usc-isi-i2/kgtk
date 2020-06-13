@@ -1,6 +1,6 @@
 ## Using KGTK with Docker
 
-If you have Docker installed, we have prepared a Docker image with KGTK (current version: 0.2.1):
+If you have Docker installed, we have prepared a Docker image with KGTK (latest version corresponds to 0.2.1):
 
 ```bash
 docker pull uscisii2/kgtk
@@ -36,13 +36,13 @@ Copy the localhost URL (in the case above `http://127.0.0.1:8888/?token=83945df9
 kgtk --help
 ```
 
-If everuthing goes well, you should be able to see a similar message to the one depicted below:
+As a result, now you should be able to see a help message similar to the one depicted below:
 
 ![Diagram](images/nb.png)
 
-**Note**: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
+**Note**: if you want to load data from your local machine or save the results obtained with KGTK, you will need to [mount a volume](https://docs.docker.com/storage/volumes/). Notebooks stored inside the container will be erased after the container finishes its execution.
 
-More information about versions and tags is available here: [https://hub.docker.com/repository/docker/uscisii2/kgtk](https://hub.docker.com/repository/docker/uscisii2/kgtk)
+More information about all available versions and tags is available here: [https://hub.docker.com/repository/docker/uscisii2/kgtk](https://hub.docker.com/repository/docker/uscisii2/kgtk)
 
 ## Installing KGTK from pip
 
