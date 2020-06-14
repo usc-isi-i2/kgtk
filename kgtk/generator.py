@@ -544,6 +544,7 @@ class JsonGenerator(Generator):
         self.set_properties(self.prop_file)
         # curret dictionaries
         self.set_json_dict()
+        self.previous_qnode = None
 
     def entry_point(self,line_number, edge):
         self.read_num_of_lines += 1
@@ -571,13 +572,16 @@ class JsonGenerator(Generator):
 
         # add qualifier logic
         if line_number == 2:
+            self.previous_qnode = node1
             is_qualifier_edge = False
         else:
             if node1 != self.to_append_statement_id and node1 != self.corrupted_statement_id:
                 is_qualifier_edge = False
                 # partial serialization
-                if self.read_num_of_lines >= self.n:
+                if self.read_num_of_lines >= self.n and self.previous_qnode != node1:
                     self.serialize()
+                    # update previous qnode to avoid breaking continuous same-qnode statements into two jsonl files
+                    self.previous_qnode = node1
             else:
                 is_qualifier_edge = True
                 if node1 == self.corrupted_statement_id:
@@ -591,7 +595,6 @@ class JsonGenerator(Generator):
                 success = self.update_misc_json_dict_info(node1,line_number, self.prop_types[node1])
             else:
                 success = self.update_misc_json_dict_info(node1, line_number, None)
-            
             assert(success)
         
         if prop in self.prop_types:
@@ -603,7 +606,7 @@ class JsonGenerator(Generator):
         
         # update label_json_dict
         if prop in self.label_set:
-            success = self.update_misc_json_dict_label(node1, prop, node2)
+            success = self.update_misc_json_dict(node1, prop, node2, line_number, "label")
             assert(success)
             return
         
@@ -611,12 +614,12 @@ class JsonGenerator(Generator):
         if prop in self.description_set:
             success = self.update_misc_json_dict(node1, prop, node2, line_number,"description")
             assert(success)
-            return
+            return 
 
         if prop in self.alias_set:
             success = self.update_misc_json_dict(node1, prop, node2, line_number,"alias")
             assert(success)
-            return
+            return 
         
         # normal update for claims & qualifiers
         if is_qualifier_edge:
@@ -647,27 +650,35 @@ class JsonGenerator(Generator):
         self.misc_json_dict[node]["aliases"] = {}
         self.misc_json_dict[node]["claims"] = {}
         self.misc_json_dict[node]["sitelinks"] = {}
-
-    def update_misc_json_dict_label(self,node1:str, prop:str, node2:str):
-        if node1 not in self.misc_json_dict:
-            self.init_entity_in_json(node1)
-        temp_dict = {}
-        if node1 not in self.prop_types:
+        if node not in self.prop_types:
             label_type = "item"
         else:
             label_type = "property"
-            label_datatype = self.prop_types[node1]
-            temp_dict["datatype"] = label_datatype
-        temp_dict["type"] = label_type
+            label_datatype = self.prop_types[node]
+            self.misc_json_dict[node]["datatype"] = label_datatype
+        self.misc_json_dict[node]["type"] = label_type
+        self.misc_json_dict[node]["id"] = node
 
-        temp_dict["id"] = node1
-        temp_dict["labels"] = {}
-        if node2 != None:
-            text_string, lang = JsonGenerator.process_text_string(node2)
-            temp_dict["labels"][lang] = {"language":lang, "value": text_string}
-        self.misc_json_dict[node1].update(temp_dict)  
+    # def update_misc_json_dict_label(self,node1:str, prop:str, node2:str):
+    #     if node1 not in self.misc_json_dict:
+    #         self.init_entity_in_json(node1)
+    #     temp_dict = {}
+    #     if node1 not in self.prop_types:
+    #         label_type = "item"
+    #     else:
+    #         label_type = "property"
+    #         label_datatype = self.prop_types[node1]
+    #         temp_dict["datatype"] = label_datatype
+    #     temp_dict["type"] = label_type
 
-        return True
+    #     temp_dict["id"] = node1
+    #     temp_dict["labels"] = {}
+    #     if node2 != None:
+    #         text_string, lang = JsonGenerator.process_text_string(node2)
+    #         temp_dict["labels"][lang] = {"language":lang, "value": text_string}
+    #     self.misc_json_dict[node1].update(temp_dict)  
+
+    #     return True
 
     def update_misc_json_dict_info(self, node:str, line_number: int, data_type = None):
         if node not in self.misc_json_dict:
@@ -701,6 +712,12 @@ class JsonGenerator(Generator):
     def update_misc_json_dict(self, node1:str, prop:str, node2:str, line_number:int, field:str):
         if node1 not in self.misc_json_dict and field != "qualifier":
             self.init_entity_in_json(node1)
+        
+        if field == "label":
+            label_text, lang = JsonGenerator.process_text_string(node2)
+            temp_des_dict = {lang:{"languange":lang,"value":label_text}}
+            self.misc_json_dict[node1]["labels"].update(temp_des_dict)
+            return True            
         
         if field == "description":
             description_text, lang = JsonGenerator.process_text_string(node2)
@@ -1133,10 +1150,6 @@ class JsonGenerator(Generator):
         '''
         serialize the dictionaries. 
         '''
-        # data are aggregated into one file
-        # JsonGenerator.merge_dict(self.label_json_dict, self.misc_json_dict)
-        # JsonGenerator.merge_dict(self.info_json_dict, self.misc_json_dict)
-        # update dict and files
         with open("{}{}.jsonl".format(self.output_prefix, self.file_num),"w") as fp:
             for key,value in self.misc_json_dict.items():
                 json.dump({key: value},fp)
@@ -1149,14 +1162,3 @@ class JsonGenerator(Generator):
         self.read_num_of_lines = 0
         self.to_append_statement_id = None
         self.to_append_statement = None
-    
-    # @staticmethod
-    # def merge_dict(source:dict, target: dict):
-    #     for key, value in source.items():
-    #         if isinstance(value, dict):
-    #             # get node or create one
-    #             node = target.setdefault(key, {})
-    #             JsonGenerator.merge_dict(value, node)
-    #         else:
-    #             target[key] = value
-    #     return target
