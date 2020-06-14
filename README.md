@@ -120,7 +120,7 @@ https://www.mankier.com/1/mlr
 ```
 @article{ilievski2020kgtk,
   title={KGTK: A Toolkit for Large Knowledge Graph Manipulation and Analysis},
-  author={Ilievski, Filip and Garijo, Daniel and Chalupsky, Hans and Divvala, Naren Teja and Yao, Yixiang and Rogers, Craig and Li, Ronpeng and Liu, Jun and Singh, Amandeep and Schwabe, Daniel and others},
+  author={Ilievski, Filip and Garijo, Daniel and Chalupsky, Hans and Divvala, Naren Teja and Yao, Yixiang and Rogers, Craig and Li, Ronpeng and Liu, Jun and Singh, Amandeep and Schwabe, Daniel and Szekely, Pedro},
   journal={arXiv preprint arXiv:2006.00088},
   year={2020}
 }
