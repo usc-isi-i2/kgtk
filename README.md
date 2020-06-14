@@ -114,3 +114,14 @@ https://www.mankier.com/1/mlr
 ```
 4. You may need to install the miller command (mlr) on your system.
    * OpenSUSE Tumbleweed Linux: install package `miller` from Main Repository (OSS)
+   
+## How to cite
+
+```
+@article{ilievski2020kgtk,
+  title={KGTK: A Toolkit for Large Knowledge Graph Manipulation and Analysis},
+  author={Ilievski, Filip and Garijo, Daniel and Chalupsky, Hans and Divvala, Naren Teja and Yao, Yixiang and Rogers, Craig and Li, Ronpeng and Liu, Jun and Singh, Amandeep and Schwabe, Daniel and others},
+  journal={arXiv preprint arXiv:2006.00088},
+  year={2020}
+}
+```
