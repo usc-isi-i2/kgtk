@@ -1,3 +1,5 @@
+<img src="/docs/images/kgtk_logo_200x200.png" width="150"/>
+
 # KGTK: Knowledge Graph Toolkit 
 
 [![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)
@@ -112,3 +114,14 @@ https://www.mankier.com/1/mlr
 ```
 4. You may need to install the miller command (mlr) on your system.
    * OpenSUSE Tumbleweed Linux: install package `miller` from Main Repository (OSS)
+
+## How to cite
+
+```
+@article{ilievski2020kgtk,
+  title={KGTK: A Toolkit for Large Knowledge Graph Manipulation and Analysis},
+  author={Ilievski, Filip and Garijo, Daniel and Chalupsky, Hans and Divvala, Naren Teja and Yao, Yixiang and Rogers, Craig and Li, Ronpeng and Liu, Jun and Singh, Amandeep and Schwabe, Daniel and others},
+  journal={arXiv preprint arXiv:2006.00088},
+  year={2020}
+}
+```
