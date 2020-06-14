@@ -33,7 +33,7 @@ nav:
       - 'instances': 'analysis/instances.md'  
       - 'graph_statistics': 'analysis/stats.md'
       - 'reachable_nodes': 'analysis/reachable_nodes.md'
-      - 'text_embeddings': 'analysis/embedding.md'      
+      - 'text_embeddings': 'analysis/text_embedding.md'      
      
 theme:
   name: material
