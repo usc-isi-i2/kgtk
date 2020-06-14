@@ -578,10 +578,11 @@ class JsonGenerator(Generator):
             if node1 != self.to_append_statement_id and node1 != self.corrupted_statement_id:
                 is_qualifier_edge = False
                 # partial serialization
-                if self.read_num_of_lines >= self.n and self.previous_qnode != node1:
-                    self.serialize()
+                if self.read_num_of_lines >= self.n:
+                    if self.previous_qnode != node1:
+                        self.serialize()
                     # update previous qnode to avoid breaking continuous same-qnode statements into two jsonl files
-                    self.previous_qnode = node1
+                self.previous_qnode = node1
             else:
                 is_qualifier_edge = True
                 if node1 == self.corrupted_statement_id:
