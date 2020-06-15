@@ -66,18 +66,6 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
 
-4. Install `mlr`. Depending on your environment, you can run one of the following:
-  * `brew update && brew install miller` (on mac)
-  * `sudo port selfupdate && sudo port install miller` (on mac)
-  * `sudo apt-get install miller` (linux)
-  * `sudo apt install miller` (linux)
-  * `sudo yum install miller` (linux)
-  
-More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
-
-If you can't install miller with `yum install` on centOS, please follow this [link](https://centos.pkgs.org/7/openfusion-x86_64/miller-5.3.0-1.of.el7.x86_64.rpm.html).
-
-
 ## Running KGTK commands
 
 To list all the available KGTK commands, run:
