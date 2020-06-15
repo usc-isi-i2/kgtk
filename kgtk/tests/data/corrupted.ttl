@@ -1,0 +1,50 @@
+@prefix wikibase: <http://wikiba.se/ontology#> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix wdt: <http://www.wikidata.org/prop/direct/> .
+@prefix wdtn: <http://www.wikidata.org/prop/direct-normalized/> .
+@prefix wdno: <http://www.wikidata.org/prop/novalue/> .
+@prefix wds: <http://www.wikidata.org/entity/statement/> .
+@prefix wdv: <http://www.wikidata.org/value/> .
+@prefix wdref: <http://www.wikidata.org/reference/> .
+@prefix p: <http://www.wikidata.org/prop/> .
+@prefix pr: <http://www.wikidata.org/prop/reference/> .
+@prefix prv: <http://www.wikidata.org/prop/reference/value/> .
+@prefix prn: <http://www.wikidata.org/prop/reference/value-normalized/> .
+@prefix ps: <http://www.wikidata.org/prop/statement/> .
+@prefix psv: <http://www.wikidata.org/prop/statement/value/> .
+@prefix psn: <http://www.wikidata.org/prop/statement/value-normalized/> .
+@prefix pq: <http://www.wikidata.org/prop/qualifier/> .
+@prefix pqv: <http://www.wikidata.org/prop/qualifier/value/> .
+@prefix pqn: <http://www.wikidata.org/prop/qualifier/value-normalized/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+
+wd:Q2 a wikibase:Item ;
+    p:P577 wds:Q2-legal_id1 ;
+    wdt:P577 "2020-01-01"^^xsd:dateTime .
+
+wd:Q3 a wikibase:Item ;
+    p:P577 wds:Q3-legal_id3 ;
+    wdt:P577 "2020-01-01"^^xsd:dateTime .
+
+wds:Q2-legal_id1 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    pq:P577 "2020-01-01"^^xsd:dateTime ;
+    pqv:P577 wdv:Timec2020-01-01cQc9c0 ;
+    ps:P577 "2020-01-01"^^xsd:dateTime ;
+    psv:P577 wdv:Timec2020-01-01cQc9c0 .
+
+wds:Q3-legal_id3 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P577 "2020-01-01"^^xsd:dateTime ;
+    psv:P577 wdv:Timec2020-01-01cQc9c0 .
+
+wdv:Timec2020-01-01cQc9c0 a wikibase:Time ;
+    wikibase:timeCalendarModel wd:Q1985727 ;
+    wikibase:timePrecision 9 ;
+    wikibase:timeTimezone 0 ;
+    wikibase:timeValue "2020-01-01"^^xsd:dateTime .
+

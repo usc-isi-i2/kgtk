@@ -21,6 +21,11 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class KgtkJoiner(KgtkFormat):
+    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
+
+    LEFT: str = "left"
+    RIGHT: str = "right"
+
     left_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     right_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
@@ -45,7 +50,7 @@ class KgtkJoiner(KgtkFormat):
 
     # The field separator used in multifield joins.  The KGTK list character should be safe.
     # TODO: USE THE COLUMN SEPARATOR !!!!!
-    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
+    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=FIELD_SEPARATOR_DEFAULT)
 
     # TODO: find working validators:
     left_reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
@@ -56,11 +61,6 @@ class KgtkJoiner(KgtkFormat):
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-
-    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
-
-    LEFT: str = "left"
-    RIGHT: str = "right"
 
     def node1_column_idx(self, kr: KgtkReader, who: str)->int:
         idx: int = kr.node1_column_idx
@@ -397,8 +397,8 @@ def main():
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
-        left_reader_options.show(out=error_file, who="left")
-        right_reader_options.show(out=error_file, who="right")
+        left_reader_options.show(out=error_file, who=KgtkJoiner.LEFT)
+        right_reader_options.show(out=error_file, who=KgtkJoiner.RIGHT)
         value_options.show(out=error_file)
 
     ej: KgtkJoiner = KgtkJoiner(left_file_path=args.left_file_path,

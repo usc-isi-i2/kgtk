@@ -10,9 +10,9 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.iff.kgtkifempty import KgtkIfEmpty
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.join.ifempty import IfEmpty
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -81,14 +81,14 @@ def run(input_kgtk_file: typing.Optional[Path],
         print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
         print("--columns=%s" % " ".join(filter_column_names), file=error_file)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
-        print("--count=%s" % str(only_count))
-        print("--all=%s" % str(all_are))
+        print("--count=%s" % str(only_count), file=error_file)
+        print("--all=%s" % str(all_are), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:
-        ie: IfEmpty = IfEmpty(
+        ie: KgtkIfEmpty = KgtkIfEmpty(
             input_file_path=input_kgtk_file,
             filter_column_names=filter_column_names,
             output_file_path=output_kgtk_file,
