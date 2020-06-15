@@ -2,17 +2,26 @@
 
 KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs.
 
+
+![Diagram](images/ops.png)
+**Figure 1**: Overview of the usage workflow and features included in KGTK.
+
+
 ## Features
 
-* Computation of class instances
-* Computation of reachable nodes
-* Filtering based on property values
-* Removal of columns
-* Sorting
-* Computation of various embeddings
-* Cleaning and validation
-* Computation of graph metrics
-* Joining and concatenation of graphs
-* Manipulation of Wikidata data
+* Import/output files in commonly used data formats (TSV, N-Triples, Neo4J, etc.)
+* Curators and transformers to validate, join, filter, sort and concatenate KGTK files
+* Graph querying and analytics over knoweldge graphs: reachable objects, centrality, text embeddings, page rank, etc.
+* A framework for composing multiple KG operations, based on Unix pipes. The framework uses the KGTK file format on the standard input and output to combine tools written in different programming languages
 
+## How to cite
 
+```
+@article{ilievski2020kgtk,
+  title={KGTK: A Toolkit for Large Knowledge Graph Manipulation and Analysis},
+  author={Ilievski, Filip and Garijo, Daniel and Chalupsky, Hans and Divvala, Naren Teja and Yao, Yixiang and Rogers, Craig and Li, Ronpeng and Liu, Jun and Singh, Amandeep and Schwabe, Daniel and Szekely, Pedro},
+  journal={arXiv preprint arXiv:2006.00088},
+  year={2020},
+  url={https://arxiv.org/abs/2006.00088}
+}
+```

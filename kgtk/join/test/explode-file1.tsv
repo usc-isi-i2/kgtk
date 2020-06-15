@@ -1,0 +1,15 @@
+node1	label	node2
+john	string	"John"
+john	lqstring	'John'@en
+john	integer	12345
+john	number	186.2
+john	number	186.2e04
+john	number	-186.2
+john	number	+186.2e-6
+john	quantity	84.3[84,85]kg
+john	date_and_time	^1960-11-05T00:00
+john	date_and_time	^1980-11-05T00:00Z/6
+john	location	@60.2/134.3
+john	boolean	True
+john	symbol	quadrature
+john	list	home|work

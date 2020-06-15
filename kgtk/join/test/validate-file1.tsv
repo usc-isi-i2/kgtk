@@ -1,0 +1,7 @@
+node1	label	node2	id
+John	name	John	E1
+Steve|Paul	name	Steven	E2
+Fred	name|handle	Freddie	E3
+Ed	name	Ed|Edward	E4
+Sue	name	Susan	E5|E6
+MJ	name	"Mary\|Jane"	E7

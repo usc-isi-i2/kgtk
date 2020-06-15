@@ -61,7 +61,18 @@ class KgtkReaderOptions():
     force_column_names: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                                                                      iterable_validator=attr.validators.instance_of(list))),
                                                                     default=None)
-    skip_first_record: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    skip_header_record: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Data record sampling, pre-validation.
+    #
+    # 1) Optionally read and skip a specific number of initial records, or record_limit - tail_count,
+    #    whichever is greater.
+    # 2) Optionally pass through every nth record relative to the number of records read.
+    # 3) Optionally limit the total number of records read.
+    initial_skip_count: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    every_nth_record: int = attr.ib(validator=attr.validators.instance_of(int), default=1)
+    record_limit: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
+    tail_count: typing.Optional[int] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
 
     # How do we handle errors?
     error_limit: int = attr.ib(validator=attr.validators.instance_of(int), default=ERROR_LIMIT_DEFAULT) # >0 ==> limit error reports
@@ -88,6 +99,7 @@ class KgtkReaderOptions():
 
     # Validate data cell values?
     invalid_value_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
+    prohibited_list_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.COMPLAIN)
 
     # Repair records with too many or too few fields?
     fill_short_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -102,6 +114,7 @@ class KgtkReaderOptions():
     def add_arguments(cls,
                       parser: ArgumentParser,
                       mode_options: bool = False,
+                      default_mode: KgtkReaderMode = KgtkReaderMode.AUTO,
                       validate_by_default: bool = False,
                       expert: bool = False,
                       defaults: bool = True,
@@ -120,7 +133,7 @@ class KgtkReaderOptions():
         # This helper function decices whether or not to include defaults
         # in argument declarations. If we plan to make arguments with
         # prefixes and fallbacks, the fallbacks (the ones without prefixes)
-        # should get defaults value, while the prefixed arguments should
+        # should get default values, while the prefixed arguments should
         # not get defaults.
         #
         # Note: In obscure circumstances (EnumNameAction, I'm looking at you),
@@ -140,7 +153,7 @@ class KgtkReaderOptions():
         prefix4: str = "" if len(who) == 0 else who + " file "
 
         fgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "File options"),
-                                                           h("Options affecting " + prefix4 + "processing"))
+                                                           h("Options affecting " + prefix4 + "processing."))
         fgroup.add_argument(prefix1 + "column-separator",
                             dest=prefix2 + "column_separator",
                             help=h(prefix3 + "Column separator (default=<TAB>)."), # TODO: provide the default with escapes, e.g. \t
@@ -158,6 +171,7 @@ class KgtkReaderOptions():
 
         fgroup.add_argument(prefix1 + "gzip-in-parallel",
                             dest=prefix2 + "gzip_in_parallel",
+                            metavar="optional True|False",
                             help=h(prefix3 + "Execute gzip in parallel (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=False))
 
@@ -170,10 +184,10 @@ class KgtkReaderOptions():
             fgroup.add_argument(prefix1 + "mode",
                                 dest=prefix2 + "mode",
                                 help=h(prefix3 + "Determine the KGTK file mode (default=%(default)s)."),
-                                type=KgtkReaderMode, action=EnumNameAction, **d(KgtkReaderMode.AUTO))
+                                type=KgtkReaderMode, action=EnumNameAction, **d(default_mode))
             
         hgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Header parsing"),
-                                                           h("Options affecting " + prefix4 + "header parsing"))
+                                                           h("Options affecting " + prefix4 + "header parsing."))
 
         hgroup.add_argument(prefix1 + "force-column-names",
                             dest=prefix2 + "force_column_names",
@@ -185,8 +199,9 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXIT))
 
-        hgroup.add_argument(prefix1 + "skip-first-record",
-                            dest=prefix2 + "skip_first_record",
+        hgroup.add_argument(prefix1 + "skip-header-record",
+                            dest=prefix2 + "skip_header_record",
+                            metavar="optional True|False",
                             help=h(prefix3 + "Skip the first record when forcing column names (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=False))
 
@@ -195,16 +210,41 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "The action to take when a column name is unsafe (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.REPORT))
 
+        sgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Pre-validation sampling"),
+                                                           h("Options affecting " + prefix4 + "pre-validation data line sampling."))
+        
+        sgroup.add_argument(prefix1 + "initial-skip-count",
+                            dest=prefix2 + "initial_skip_count",
+                            help=h(prefix3 + "The number of data records to skip initially (default=do not skip)."),
+                            type=int, **d(default=0))
+
+        sgroup.add_argument(prefix1 + "every-nth-record",
+                            dest=prefix2 + "every_nth_record",
+                            help=h(prefix3 + "Pass every nth record (default=pass all records)."),
+                            type=int, **d(default=1))
+
+        sgroup.add_argument(prefix1 + "record-limit",
+                            dest=prefix2 + "record_limit",
+                            help=h(prefix3 + "Limit the number of records read (default=no limit)."),
+                            type=int, **d(default=None))
+
+        sgroup.add_argument(prefix1 + "tail-count",
+                            dest=prefix2 + "tail_count",
+                            help=h(prefix3 + "Pass this number of records (default=no tail processing)."),
+                            type=int, **d(default=None))
+
         lgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Line parsing"),
-                                                           h("Options affecting " + prefix4 + "data line parsing"))
+                                                           h("Options affecting " + prefix4 + "data line parsing."))
 
         lgroup.add_argument(prefix1 + "repair-and-validate-lines",
                             dest=prefix2 + "repair_and_validate_lines",
+                            metavar="optional True|False",
                             help=h(prefix3 + "Repair and validate lines (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=validate_by_default))
 
         lgroup.add_argument(prefix1 + "repair-and-validate-values",
                             dest=prefix2 + "repair_and_validate_values",
+                            metavar="optional True|False",
                             help=h(prefix3 + "Repair and validate values (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=validate_by_default))
 
@@ -225,6 +265,7 @@ class KgtkReaderOptions():
 
         lgroup.add_argument(prefix1 + "fill-short-lines",
                             dest=prefix2 + "fill_short_lines",
+                            metavar="optional True|False",
                             help=h(prefix3 + "Fill missing trailing columns in short lines with empty values (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=False))
 
@@ -236,6 +277,11 @@ class KgtkReaderOptions():
         lgroup.add_argument(prefix1 + "long-line-action",
                             dest=prefix2 + "long_line_action",
                             help=h(prefix3 + "The action to take when a long line is detected (default=%(default)s)."),
+                            type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
+
+        lgroup.add_argument(prefix1 + "prohibited-list-action",
+                            dest=prefix2 + "prohibited list_action",
+                            help=h(prefix3 + "The action to take when a data cell contains a prohibited list (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "short-line-action",
@@ -288,25 +334,30 @@ class KgtkReaderOptions():
             compression_type=lookup("compression_type", None),
             empty_line_action=lookup("empty_line_action", ValidationAction.EXCLUDE),
             error_limit=lookup("error_limit", cls.ERROR_LIMIT_DEFAULT),
+            every_nth_record=lookup("every_nth_record", 1),
             fill_short_lines=lookup("fill_short_lines", False),
             force_column_names=lookup("force_column_names", None),
             gzip_in_parallel=lookup("gzip_in_parallel", False),
             gzip_queue_size=lookup("gzip_queue_size", KgtkReaderOptions.GZIP_QUEUE_SIZE_DEFAULT),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
+            initial_skip_count=lookup("initial_skip_count", 0),
             invalid_value_action=lookup("invalid_value_action", ValidationAction.REPORT),
             long_line_action=lookup("long_line_action", ValidationAction.EXCLUDE),
             mode=reader_mode,
+            prohibited_list_action=lookup("prohibited_list_action", ValidationAction.REPORT),
+            record_limit=lookup("record_limit", None),
             repair_and_validate_lines=lookup("repair_and_validate_lines", False),
             repair_and_validate_values=lookup("repair_and_validate_values", False),
             short_line_action=lookup("short_line_action", ValidationAction.EXCLUDE),
-            skip_first_record=lookup("skip_first_recordb", False),
+            skip_header_record=lookup("skip_header_recordb", False),
+            tail_count=lookup("tail_count", None),
             truncate_long_lines=lookup("truncate_long_lines", False),
             unsafe_column_name_action=lookup("unsafe_column_name_action", ValidationAction.REPORT),
             whitespace_line_action=lookup("whitespace_line_action", ValidationAction.EXCLUDE),
         )
 
-    @classmethod
     # Build the value parsing option structure.
+    @classmethod
     def from_args(cls,
                   args: Namespace,
                   who: str = "",
@@ -320,8 +371,8 @@ class KgtkReaderOptions():
         print("%smode=%s" % (prefix, self.mode.name), file=out)
         print("%scolumn-separator=%s" % (prefix, repr(self.column_separator)), file=out)
         if self.force_column_names is not None:
-            print("%sforce_column_names=%s" % (prefix, " ".join(self.force_column_names)), file=out)
-        print("%sskip_first_record=%s" % (prefix, str(self.skip_first_record)), file=out)
+            print("%sforce-column-names=%s" % (prefix, " ".join(self.force_column_names)), file=out)
+        print("%sskip-header-record=%s" % (prefix, str(self.skip_header_record)), file=out)
         print("%serror-limit=%s" % (prefix, str(self.error_limit)), file=out)
         print("%srepair-and-validate-lines=%s" % (prefix, str(self.repair_and_validate_lines)), file=out)
         print("%srepair-and-validate-values=%s" % (prefix, str(self.repair_and_validate_values)), file=out)
@@ -334,6 +385,14 @@ class KgtkReaderOptions():
         print("%sheader-error-action=%s" % (prefix, self.header_error_action.name), file=out)
         print("%sunsafe-column-name-action=%s" % (prefix, self.unsafe_column_name_action.name), file=out)
         print("%sinvalid-value-action=%s" % (prefix, self.invalid_value_action.name), file=out)
+        print("%sinitial-skip-count=%s" % (prefix, str(self.initial_skip_count)), file=out)
+        print("%severy-nth-record=%s" % (prefix, str(self.every_nth_record)), file=out)
+        if self.record_limit is not None:
+            print("%srecord-limit=%s" % (prefix, str(self.record_limit)), file=out)
+        if self.tail_count is not None:
+            print("%stail-count=%s" % (prefix, str(self.tail_count)), file=out)
+        print("%sinitial-skip-count=%s" % (prefix, str(self.initial_skip_count)), file=out)
+        print("%sprohibited-list-action=%s" % (prefix, self.prohibited_list_action.name), file=out)
         print("%sfill-short-lines=%s" % (prefix, str(self.fill_short_lines)), file=out)
         print("%struncate-long-lines=%s" % (prefix, str(self.truncate_long_lines)), file=out)
         if self.compression_type is not None:
@@ -378,6 +437,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int), default=-1) # node file
 
     data_lines_read: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_skipped: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_lines_passed: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_lines_ignored: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_errors_reported: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
@@ -593,7 +653,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, error_file, verbose)
         else:
             if verbose:
-                print("%s: reading file %s" % (who, str(file_path)))
+                print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
             return ClosableIterTextIOWrapper(open(file_path, "r"))
 
         if options.gzip_in_parallel:
@@ -631,7 +691,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             # Skip the first record to override the column names in the file.
             # Do not skip the first record if the file does not hae a header record.
-            if options.skip_first_record:
+            if options.skip_header_record:
                 try:
                     next(source)
                 except StopIteration:
@@ -677,8 +737,24 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         repair_and_validate_lines: bool = self.options.repair_and_validate_lines
         repair_and_validate_values: bool = self.options.repair_and_validate_values
 
+        # Compute the initial skip count
+        skip_count: int = self.options.initial_skip_count
+        if self.options.record_limit is not None and self.options.tail_count is not None:
+            # Compute the tail count.
+            tail_skip_count: int = self.options.record_limit - self.options.tail_count
+            if tail_skip_count > skip_count:
+                skip_count = tail_skip_count # Take the larger skip count.
+
         # This loop accomodates lines that are ignored.
         while (True):
+            # Has a record limit been specified and have we reached it?
+            if self.options.record_limit is not None:
+                if self.data_lines_read >= self.options.record_limit:
+                    # Close the source and stop the iteration.
+                    self.source.close() # Do we need to guard against repeating this call?
+                    raise StopIteration
+
+            # Read a line from the source
             line: str
             try:
                 
@@ -692,6 +768,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
             # Count the data line read.
             self.data_lines_read += 1
+
+            # Data sampling:
+            if self.data_lines_read <= skip_count:
+                self.data_lines_skipped += 1
+                continue
+            if self.options.every_nth_record > 1:
+                if self.data_lines_read % self.options.every_nth_record != 0:
+                    self.data_lines_skipped += 1
+                    continue
 
             # Strip the end-of-line characters:
             line = line.rstrip("\r\n")
@@ -751,18 +836,23 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 if self._ignore_if_blank_fields(row, line):
                     continue
 
-            if repair_and_validate_values and self.options.invalid_value_action != ValidationAction.PASS:
-                # TODO: find a way to optionally cache the KgtkValue objects
-                # so we don't have to create them a second time in the conversion
-                # and iterator methods below.
-                if self._ignore_invalid_values(row, line):
-                    continue
+            if repair_and_validate_values:
+                if self.options.invalid_value_action != ValidationAction.PASS:
+                    # TODO: find a way to optionally cache the KgtkValue objects
+                    # so we don't have to create them a second time in the conversion
+                    # and iterator methods below.
+                    if self._ignore_invalid_values(row, line):
+                        continue
 
-                self.data_lines_passed += 1
-                # TODO: User a seperate option to control this.
-                # if self.very_verbose:
-                #     self.error_file.write(".")
-                #    self.error_file.flush()
+                if self.options.prohibited_list_action != ValidationAction.PASS:
+                    if self._ignore_prohibited_lists(row, line):
+                        continue
+
+            self.data_lines_passed += 1
+            # TODO: User a seperate option to control this.
+            # if self.very_verbose:
+            #     self.error_file.write(".")
+            #    self.error_file.flush()
             
             return row
 
@@ -798,7 +888,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             yield results
                     
 
-    def to_kgtk_values(self, row: typing.List[str], validate: bool = False)->typing.List[KgtkValue]:
+    def to_kgtk_values(self, row: typing.List[str],
+                       validate: bool = False,
+                       parse_fields: bool = False)->typing.List[KgtkValue]:
         """
         Convert an input row into a list of KgtkValue instances.
 
@@ -807,13 +899,16 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         results: typing.List[KgtkValue] = [ ]
         field: str
         for field in row:
-            kv = KgtkValue(field, options=self.value_options)
+            kv = KgtkValue(field, options=self.value_options, parse_fields=parse_fields)
             if validate:
                 kv.validate()
             results.append(kv)
         return results
 
-    def kgtk_values(self, validate: bool = False)->typing.Iterator[typing.List[KgtkValue]]:
+    def kgtk_values(self,
+                    validate: bool = False,
+                    parse_fields: bool = False
+    )->typing.Iterator[typing.List[KgtkValue]]:
         """
         Using a generator function, create an iterator that returns rows of fields
         as KgtkValue objects.
@@ -822,11 +917,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         """
         while True:
             try:
-                yield self.to_kgtk_values(self.nextrow(), validate=validate)
+                yield self.to_kgtk_values(self.nextrow(), validate=validate, parse_fields=parse_fields)
             except StopIteration:
                 return
 
-    def to_concise_kgtk_values(self, row: typing.List[str], validate: bool = False)->typing.List[typing.Optional[KgtkValue]]:
+    def to_concise_kgtk_values(self,
+                               row: typing.List[str],
+                               validate: bool = False,
+                               parse_fields: bool = False
+    )->typing.List[typing.Optional[KgtkValue]]:
         """
         Convert an input row into a list of KgtkValue instances.  Empty fields will be returned as None.
 
@@ -838,13 +937,16 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if len(field) == 0:
                 results.append(None)
             else:
-                kv = KgtkValue(field, options=self.value_options)
+                kv = KgtkValue(field, options=self.value_options, parse_fields=parse_fields)
                 if validate:
                     kv.validate()
                 results.append(kv)
         return results
 
-    def concise_kgtk_values(self, validate: bool = False)->typing.Iterator[typing.List[typing.Optional[KgtkValue]]]:
+    def concise_kgtk_values(self,
+                            validate: bool = False,
+                            parse_fields: bool = False
+    )->typing.Iterator[typing.List[typing.Optional[KgtkValue]]]:
         """
         Using a generator function, create an iterator that returns rows of fields
         as KgtkValue objects, with empty fields returned as None.
@@ -857,7 +959,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             except StopIteration:
                 return
 
-    def to_dict(self, row: typing.List[str], concise: bool=False)->typing.Mapping[str, str]:
+    def to_dict(self, row: typing.List[str], concise: bool=False
+    )->typing.Mapping[str, str]:
         """
         Convert an input row into a dict of named fields.
 
@@ -880,7 +983,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 idx += 1
         return results
 
-    def dicts(self, concise: bool=False)->typing.Iterator[typing.Mapping[str, str]]:
+    def dicts(self, concise: bool=False
+    )->typing.Iterator[typing.Mapping[str, str]]:
         """
         Using a generator function, create an iterator that returns each row as a dict of named fields.
 
@@ -893,7 +997,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             except StopIteration:
                 return
 
-    def to_kgtk_value_dict(self, row: typing.List[str], validate: bool=False, concise: bool=False)->typing.Mapping[str, KgtkValue]:
+    def to_kgtk_value_dict(self,
+                           row: typing.List[str],
+                           validate: bool=False,
+                           parse_fields: bool=False,
+                           concise: bool=False
+    )->typing.Mapping[str, KgtkValue]:
         """
         Convert an input row into a dict of named fields.
 
@@ -908,14 +1017,18 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if concise and len(field) == 0:
                 pass # Skip the empty field.
             else:
-                kv = KgtkValue(field, options=self.value_options)
+                kv = KgtkValue(field, options=self.value_options, parse_fields=parse_fields)
                 if validate:
                     kv.validate()
                 results[self.column_names[idx]] = kv
             idx += 1
         return results
 
-    def kgtk_value_dicts(self, validate: bool=False, concise: bool=False)->typing.Iterator[typing.Mapping[str, KgtkValue]]:
+    def kgtk_value_dicts(self,
+                         validate: bool=False,
+                         parse_fields: bool=False,
+                         concise: bool=False
+    )->typing.Iterator[typing.Mapping[str, KgtkValue]]:
         """
         Using a generator function, create an iterator that returns each row as a
         dict of named KgtkValue objects.
@@ -926,7 +1039,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         """
         while True:
             try:
-                yield self.to_kgtk_value_dict(self.nextrow(), validate=validate, concise=concise)
+                yield self.to_kgtk_value_dict(self.nextrow(), validate=validate, parse_fields=parse_fields, concise=concise)
             except StopIteration:
                 return
 
@@ -951,6 +1064,38 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     #
                     # Warning: We expect this change to be seen by the caller.
                     row[idx] = kv.value
+
+        if len(problems) == 0:
+            return False
+
+        return self.exclude_line(self.options.invalid_value_action,
+                                 "\n".join(problems),
+                                 line)
+
+    def _ignore_prohibited_list(self,
+                                idx: int,
+                                row: typing.List[str],
+                                line: str,
+                                problems: typing.List[str],
+    ):
+        if idx < 0:
+            return
+        item: str = row[idx]
+        if KgtkFormat.LIST_SEPARATOR not in item:
+            return
+        if len(KgtkValue.split_list(item)) == 1:
+            return
+        problems.append("col %d (%s) value '%s'is a prohibited list" % (idx, self.column_names[idx], item))
+
+    def _ignore_prohibited_lists(self, row: typing.List[str], line: str)->bool:
+        """
+        KGTK File Format v2 prohibits "|" lists in the node1, label, and node2 columns.
+        """
+        problems: typing.List[str] = [ ] # Build a list of problems.
+
+        self._ignore_prohibited_list(self.node1_column_idx, row, line, problems)
+        self._ignore_prohibited_list(self.label_column_idx, row, line, problems)
+        self._ignore_prohibited_list(self.node2_column_idx, row, line, problems)
 
         if len(problems) == 0:
             return False
@@ -992,6 +1137,131 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         return merged_columns
 
+    def get_node1_column_index(self, column_name: typing.Optional[str] = None)->int:
+        """
+        Get the node1 column index, unless an overriding column
+        name is provided.  Returns -1 if no column found.
+        """
+        if column_name is None or len(column_name) == 0:
+            return self.node1_column_idx
+        else:
+            return self.column_name_map.get(column_name, -1)
+
+    def get_node1_canonical_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the canonical name for the node1 column, unless an
+        overriding name is provided.
+        """
+        if column_name is not None and len(column_name) > 0:
+            return column_name
+        else:
+            return KgtkFormat.NODE1
+
+    def get_node1_column_actual_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the actual name for the node1 column or its overriding column.
+        Return an empty string if the column was not found.
+        """
+        idx: int = self.get_node1_column_index(column_name)
+        if idx >= 0:
+            return self.column_names[idx]
+        else:
+            return ""
+            
+    def get_label_column_index(self, column_name: typing.Optional[str] = None)->int:
+        """
+        Get the label column index, unless an overriding column
+        name is provided.  Returns -1 if no column found.
+        """
+        if column_name is None or len(column_name) == 0:
+            return self.label_column_idx
+        else:
+            return self.column_name_map.get(column_name, -1)
+            
+    def get_label_canonical_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the canonical name for the label column, unless an
+        overriding name is provided.
+        """
+        if column_name is not None and len(column_name) > 0:
+            return column_name
+        else:
+            return KgtkFormat.LABEL
+            
+    def get_label_column_actual_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the actual name for the label column or its overriding column.
+        Return an empty string if the column was not found.
+        """
+        idx: int = self.get_label_column_index(column_name)
+        if idx >= 0:
+            return self.column_names[idx]
+        else:
+            return ""
+
+    def get_node2_column_index(self, column_name: typing.Optional[str] = None)->int:
+        """
+        Get the node2 column index, unless an overriding column
+        name is provided.  Returns -1 if no column found.
+        """
+        if column_name is None or len(column_name) == 0:
+            return self.node2_column_idx
+        else:
+            return self.column_name_map.get(column_name, -1)
+            
+
+    def get_node2_canonical_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the canonical name for the node2 column, unless an
+        overriding name is provided.
+        """
+        if column_name is not None and len(column_name) > 0:
+            return column_name
+        else:
+            return KgtkFormat.NODE2
+            
+    def get_node2_column_actual_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the actual name for the node2 column or its overriding column.
+        Return an empty string if the column was not found.
+        """
+        idx: int = self.get_node2_column_index(column_name)
+        if idx >= 0:
+            return self.column_names[idx]
+        else:
+            return ""
+            
+    def get_id_column_index(self, column_name: typing.Optional[str] = None)->int:
+        """
+        Get the id column index, unless an overriding column
+        name is provided.  Returns -1 if no column found.
+        """
+        if column_name is None or len(column_name) == 0:
+            return self.id_column_idx
+        else:
+            return self.column_name_map.get(column_name, -1)
+            
+    def get_id_canonical_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the canonical name for the id column, unless an
+        overriding name is provided.
+        """
+        if column_name is not None and len(column_name) > 0:
+            return column_name
+        else:
+            return KgtkFormat.ID
+            
+    def get_id_column_actual_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the actual name for the id column or its overriding column.
+        Return an empty string if the column was not found.
+        """
+        idx: int = self.get_id_column_index(column_name)
+        if idx >= 0:
+            return self.column_names[idx]
+        else:
+            return ""
+            
     @classmethod
     def add_debug_arguments(cls, parser: ArgumentParser, expert: bool = False):
         # This helper function makes it easy to suppress options from
