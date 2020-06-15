@@ -98,23 +98,6 @@ An example command that computes instances of the subclasses of two classes:
 kgtk instances --transitive --class Q13442814,Q12345678
 ```
 
-## Additional information
-
-### The Miller Package
-
-1. Our code uses the "miller" package to manipulate formatted data.
-
-2. TheGitHub repository for miller is:
-```
-https://github.com/johnkerl/miller
-```
-3. The documentaton is:
-```
-https://www.mankier.com/1/mlr
-```
-4. You may need to install the miller command (mlr) on your system.
-   * OpenSUSE Tumbleweed Linux: install package `miller` from Main Repository (OSS)
-   
 ## How to cite
 
 ```
