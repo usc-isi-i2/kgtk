@@ -1,0 +1,4 @@
+node1	label	node2
+gaia	prefix_expansion	"http://www.isi.edu/gaia/"
+rdf	prefix_expansion	"http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+ont	prefix_expansion	"https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#"
