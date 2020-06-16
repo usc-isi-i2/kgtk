@@ -97,8 +97,22 @@ class KgtkNtriples(KgtkFormat):
             else:
                 if self.verbose:
                     print("Ignoring initial namespace label '%s'" % namespace_row[kr.label_column_idx])
+
         return namespace_line_count
         
+    def write_namespaces(self, ew: KgtkWriter)->int:
+        # Append the namespaces to the output file.
+        output_line_count: int = 0
+        n_id: str
+        for n_id in sorted(self.namespace_ids.keys()):
+            o_row: typing.List[str] = ["", "", "", "" ]
+            o_row[0] = n_id
+            o_row[1] = self.prefix_expansion_label
+            o_row[3] = self.namespace_ids[n_id]
+            # TODO: assign an ID.
+            ew.write(o_row)
+            output_line_count += 1
+        return output_line_count
 
     def process(self):
 
@@ -174,15 +188,7 @@ class KgtkNtriples(KgtkFormat):
                 output_line_count += 1
 
         # Append the namespaces to the output file:
-        n_id: str
-        for n_id in sorted(self.namespace_ids.keys()):
-            o_row: typing.List[str] = ["", "", "", "" ]
-            o_row[0] = n_id
-            o_row[1] = self.prefix_expansion_label
-            o_row[3] = self.namespace_ids[n_id]
-            # TODO: assign an ID.
-            ew.write(o_row)
-            output_line_count += 1
+        output_line_count += self.write_namespaces(ew)
 
         if self.verbose:
             print("Processed %d known namespaces." % (namespace_line_count), file=self.error_file, flush=True)
