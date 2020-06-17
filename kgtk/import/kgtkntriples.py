@@ -26,6 +26,8 @@ class KgtkNtriples(KgtkFormat):
 
     namespace_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
+    allow_lax_uri: bool = attr.ib(validator=attr.validators.instance_of(bool))
+
     local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str))
     local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
@@ -49,7 +51,7 @@ class KgtkNtriples(KgtkFormat):
     namespace_ids: typing.MutableMapping[str, str] = { }
 
     def convert_blank_node(self, item: str)->typing.Tuple[str, bool]:
-        body: str = item[1:] # Stip the leading underscore, keep the colon.
+        body: str = item[1:] # Strip the leading underscore, keep the colon.
         if self.local_namespace_use_uuid:
             return self.local_namespace_prefix + self.local_namespace_uuid + body, True
         else:
@@ -62,9 +64,10 @@ class KgtkNtriples(KgtkFormat):
 
         slashslash: int =  body.rfind("://")
         if slashslash < 1:
-            if self.verbose:
-                print("Line %d: invalid URI: '%s'" % (line_number, item))
-            return item, False
+            if not self.allow_lax_uri:
+                if self.verbose:
+                    print("Line %d: invalid URI: '%s'" % (line_number, item))
+                return item, False
 
         end_of_namespace_prefix: int = -1
         last_hash: int = body.rfind("#", slashslash+1)
@@ -293,6 +296,10 @@ def main():
     parser.add_argument(      "--namespace-id-counter", dest="namespace_id_counter", help="The counter used to generate new namespaces. (default=%(default)s).",
                               type=int, default=1)
     
+    parser.add_argument(      "--allow-lax-uri", dest="allow_lax_uri",
+                              help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
                               help="The namespace prefix for blank nodes. (default=%(default)s).",
                               default="X")
@@ -326,6 +333,7 @@ def main():
             print("--namespace-file=%s" % str(args.namespace_file_path), file=error_file, flush=True)
         print("--namespace-id-prefix %s" % args.namespace_id_prefix, file=error_file, flush=True)
         print("--namespace-id-counter %s" % args.namespace_id_counter, file=error_file, flush=True)
+        print("--allow-lax-uri %s" % args.allow_lax_uri, file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % args.local_namespace_use_uuid, file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
@@ -339,6 +347,7 @@ def main():
         namespace_file_path=args.namespace_file_path,
         namespace_id_prefix=args.namespace_id_prefix,
         namespace_id_counter=args.namespace_id_counter,
+        allow_lax_uri=args.allow_lax_uri,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
         build_id=args.build_id,
