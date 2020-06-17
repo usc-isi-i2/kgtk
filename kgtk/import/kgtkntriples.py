@@ -32,6 +32,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_LOCAL_NAMESPACE_USE_UUID: bool = True
     DEFAULT_ALLOW_LAX_URI: bool = True
     DEFAULT_BUILD_ID: bool = False
+    DEFAULT_ESCAPE_PIPES: bool = True
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -98,6 +99,8 @@ class KgtkNtriples(KgtkFormat):
     namespace_prefixes: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
 
+    escape_pipes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ESCAPE_PIPES)
+
     output_line_count: int = attr.ib(default=0)
 
     def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str):
@@ -162,8 +165,11 @@ class KgtkNtriples(KgtkFormat):
         return namespace_id + ":" + suffix, True
 
     def escape_pipe(self, item: str)->str:
-        # TODO: ensure that vertical bars (pipes) are escaped.
-        return item
+        # ensure that vertical bars (pipes) are escaped.
+        if self.escape_pipes:
+            return item.replace('|', '\\|')
+        else:
+            return item
 
     def convert_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         # Convert this to a KGTK string.
@@ -452,13 +458,18 @@ class KgtkNtriples(KgtkFormat):
                                   help="Build id values in an id column. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_ID)
 
+        parser.add_argument(      "--escape-pipes", dest="escape_pipes",
+                                  help="When true, input pipe characters (|) need to be escaped (\\|) per KGTK file format. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ESCAPE_PIPES)
+
 def main():
     """
-    Test the KGTK implode processor.
+    Test the KGTK ntriples importer.
     """
     parser: ArgumentParser = ArgumentParser()
 
-    parser.add_argument(dest="input_file_path", help="The KGTK file with the input data. (default=%(default)s)", type=Path, nargs="?", default="-")
+    parser.add_argument("-i", "--input-file", dest="input_file_path",
+                        help="The KGTK file with the input data. (default=%(default)s)", type=Path, default="-")
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
@@ -502,6 +513,7 @@ def main():
         print("--newnode-counter %s" % args.newnode_counter, file=error_file, flush=True)
         print("--newnode-zfill %s" % args.newnode_zfill, file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
+        print("--escape-pipes=%s" % str(args.escape_pipes), file=error_file, flush=True)
 
         idbuilder_options.show(out=error_file)
 
@@ -523,6 +535,7 @@ def main():
         structured_value_label=args.structured_value_label,
         structured_uri_label=args.structured_uri_label,
         build_id=args.build_id,
+        escape_pipes=args.escape_pipes,
         idbuilder_options=idbuilder_options,
         error_file=error_file,
         verbose=args.verbose,
