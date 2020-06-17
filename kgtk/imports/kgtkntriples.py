@@ -53,7 +53,7 @@ class KgtkNtriples(KgtkFormat):
     # Double quoted strings with backslash escapes.
     STRING_PAT: str = r'"(?:[^\\]|(?:\\.))*"'
 
-    STRUCTURED_VALUE_PAT: str = r'(?:{string}(?:\^\^{uri}))'.format(string=STRING_PAT, uri=URI_PAT)
+    STRUCTURED_VALUE_PAT: str = r'(?:{string}(?:\^\^{uri})?)'.format(string=STRING_PAT, uri=URI_PAT)
     FIELD_PAT: str = r'(?:{uri}|{blank_node}|{structured_value})'.format(uri=URI_PAT, blank_node=BLANK_NODE_PAT, structured_value=STRUCTURED_VALUE_PAT)
     ROW_PAT: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=FIELD_PAT)
     ROW_RE: typing.Pattern = re.compile(r'^' + ROW_PAT + r'$')
@@ -186,6 +186,17 @@ class KgtkNtriples(KgtkFormat):
         self.newnode_counter += 1
         return new_node_symbol
     
+    def convert_boolean(self, item: str, value: str, line_number: int)->typing.Tuple[str, bool]:
+        if value == 'true' or value == '1':
+            return KgtkFormat.TRUE_SYMBOL, True
+        elif value == 'false' or value == '0':
+            return KgtkFormat.FALSE_SYMBOL, True
+        else:
+            if self.verbose:
+                print("Line %d: invalid boolean item '%s'>" % (line_number, item), file=self.error_file, flush=True)
+            return item, False
+        
+
     def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         # This is the subset of strictured literals that fits the
         # pattern "STRING"^^<URI>.
@@ -217,6 +228,9 @@ class KgtkNtriples(KgtkFormat):
         elif uri == '<http://www.w3.org/2001/XMLSchema#decimal>':
             # Convert this to a KGTK number:
             return string[1:-1], True
+        elif uri == '<http://www.w3.org/2001/XMLSchema#boolean>':
+            # Convert this to a KGTK boolean:
+            return self.convert_boolean(item, string[1:-1], line_number)
 
         converted_uri: str
         valid: bool
