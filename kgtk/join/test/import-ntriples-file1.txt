@@ -1,0 +1,5 @@
+_:g31 "boolean" "true"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+_:g32 "boolean" "1"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+_:g33 "boolean" "false"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+_:g34 "boolean" "0"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+_:g35 "boolean" "xxx"^^<http://www.w3.org/2001/XMLSchema#boolean> .
