@@ -263,6 +263,17 @@ class KgtkNtriples(KgtkFormat):
             if namespace_row[kr.label_column_idx] == self.prefix_expansion_label:
                 namespace_id: str = namespace_row[kr.node1_column_idx]
                 namespace_prefix: str = namespace_row[kr.node2_column_idx]
+                if not (namespace_prefix.startswith('"') and namespace_prefix.endswith('"')):
+                    if self.verbose:
+                        print("The namespace prefix must be a KGKT string: '%s'" % namespace_prefix, file=self.error_file, flush=True)
+                    continue
+                
+                # Strip the delimiting double quotes from the KGTk string.
+                # Per RFC 3986, internal double quotes are not allowed in
+                # a URL unless percent-encoded, so we needen't bother looking
+                # for them.
+                namespace_prefix = namespace_prefix[1:-1]
+
                 if namespace_prefix in self.namespace_prefixes:
                     if self.verbose:
                         print("Duplicate initial namespace prefix '%s'" % namespace_prefix, file=self.error_file, flush=True)
@@ -283,7 +294,7 @@ class KgtkNtriples(KgtkFormat):
         # Append the namespaces to the output file.
         n_id: str
         for n_id in sorted(self.namespace_ids.keys()):
-            self.write_row(ew, n_id, self.prefix_expansion_label, self.namespace_ids[n_id])
+            self.write_row(ew, n_id, self.prefix_expansion_label, '"' + self.namespace_ids[n_id] + '"')
 
     def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool]:
         m: typing.Optional[typing.Match] = self.ROW_RE.match(line)
