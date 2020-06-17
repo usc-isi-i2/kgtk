@@ -317,25 +317,18 @@ class KgtkNtriples(KgtkFormat):
                                          mode=KgtkWriter.Mode.EDGE,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
-                                         fill_missing_columns=False,
+                                         fill_missing_columns=True,
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
-        rw: typing.Optional[KgtkWriter] = None
+        rw: typing.Optional[typing.TextIO] = None
         if self.reject_file_path is not None:
             if self.verbose:
                 print("Opening reject file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
-            # Open the reject file.
-            rw: KgtkWriter = KgtkWriter.open(self.COLUMN_NAMES,
-                                             self.reject_file_path,
-                                             mode=KgtkWriter.Mode.NONE,
-                                             require_all_columns=False,
-                                             prohibit_extra_columns=True,
-                                             fill_missing_columns=False,
-                                             gzip_in_parallel=False,
-                                             verbose=self.verbose,
-                                             very_verbose=self.very_verbose)
+            # Open the reject file. Since the input data is not in KGTK format,
+            # we use an ordinary file here.
+            rw = open(self.reject_file_path, "wt")
 
         input_line_count: int = 0
         reject_line_count: int = 0
@@ -355,7 +348,7 @@ class KgtkNtriples(KgtkFormat):
                 row, valid = self.parse(line, input_line_count)
                 if not valid:
                     if rw is not None:
-                        rw.write(row)
+                        rw.write(line)
                     reject_line_count += 1
                     continue
 
@@ -375,7 +368,7 @@ class KgtkNtriples(KgtkFormat):
                     self.write_row(ew, node1, label, node2)
                 else:
                     if rw is not None:
-                        rw.write(row)
+                        rw.write(line)
                     reject_line_count += 1
 
         # Append the namespaces to the output file:
