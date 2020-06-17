@@ -5,7 +5,7 @@ import attr
 import csv
 from pathlib import Path
 import re
-import shortuuid
+import shortuuid # type: ignore
 import sys
 import typing
 
@@ -18,6 +18,45 @@ from kgtk.utils.argparsehelpers import optional_bool
 
 @attr.s(slots=True, frozen=False)
 class KgtkNtriples(KgtkFormat):
+    # Class attributes:
+    DEFAULT_PREFIX_EXPANSION: str = "prefix_expansion"
+    DEFAULT_STRUCTURED_VALUE: str = "kgtk:structured_value"
+    DEFAULT_STRUCTURED_URI: str = "kgtk:structured_uri"
+    DEFAULT_NAMESPACE_ID_PREFIX: str = "n"
+    DEFAULT_NAMESPACE_ID_COUNTER: int = 1
+    DEFAULT_NEWNODE_PREFIX: str = "kgtk:node"
+    DEFAULT_NEWNODE_COUNTER: int = 1
+    DEFAULT_LOCAL_NAMESPACE_PREFIX: str = "X"
+    DEFAULT_LODAL_NAMESPACE_USE_UUID: bool = True
+    DEFAULT_ALLOW_LAX_URI: bool = True
+    DEFAULT_BUILD_ID: bool = False
+
+    COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2, KgtkFormat.ID]
+    
+    # A URI must begin with a scheme per RFC 3986.
+    #
+    # We don't use this because ISI was inserting some invalid URIs that did
+    # not include a scheme, but kept the definition for reference.
+    SCHEME_PAT: str = r'^(?:[a-zA_Z][-.+0-9a-zA_Z]*://)'
+
+    # The URI is delimited by matching angle brackets.  Angle brackets
+    # cannot appear in a valid URI per RFC 3986.
+    URI_PAT: str = r'(?:<[^>]+>)'
+
+    # This is a guess about what may be in a blank node. It's entirely
+    # possible that other characters, sych as hyphen, might be allowed.
+    BLANK_NODE_PAT: str = r'(?:_:[0-9a-zA-Z]+)'
+
+    # Double quoted strings with backslash escapes.
+    STRING_PAT: str = r'"(?:[^\\]|(?:\\.))*"'
+
+    STRUCTURED_VALUE_PAT: str = r'(?:{string}(?:\^\^{uri}))'.format(string=STRING_PAT, uri=URI_PAT)
+    FIELD_PAT: str = r'(?:{uri}|{blank_node}|{structured_value})'.format(uri=URI_PAT, blank_node=BLANK_NODE_PAT, structured_value=STRUCTURED_VALUE_PAT)
+    ROW_PAT: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=FIELD_PAT)
+    ROW_RE: typing.Pattern = re.compile(r'^' + ROW_PAT + r'$')
+
+    # Instance attributes:
+
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
 
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
@@ -26,51 +65,39 @@ class KgtkNtriples(KgtkFormat):
 
     namespace_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
-    allow_lax_uri: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    allow_lax_uri: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LAX_URI)
 
-    local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str))
-    local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LOCAL_NAMESPACE_PREFIX)
+    local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LODAL_NAMESPACE_USE_UUID)
 
-    namespace_id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="n")
-    namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=1)
+    namespace_id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NAMESPACE_ID_PREFIX)
+    namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_COUNTER)
 
-    prefix_expansion_label: str = attr.ib(validator=attr.validators.instance_of(str), default="prefix_expansion")
+    prefix_expansion_label: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX_EXPANSION)
 
-    build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    structured_value_label: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_STRUCTURED_VALUE)
+    structured_uri_label: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_STRUCTURED_URI)
+
+    newnode_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NEWNODE_PREFIX)
+    newnode_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NEWNODE_COUNTER)
+
+    build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_ID)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    local_namespace_uuid: str = str(shortuuid.uuid())
+    local_namespace_uuid: str = attr.ib(factory=shortuuid.uuid())
 
-    COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2, KgtkFormat.ID]
-    
-    namespace_prefixes: typing.MutableMapping[str, str] = { }
-    namespace_ids: typing.MutableMapping[str, str] = { }
+    namespace_prefixes: typing.MutableMapping[str, str] = attr.ib(factory=dict)
+    namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
 
-    # A URI must begin with a scheme per RFC 3986.
-    #
-    # We don't use this because ISI was inserting some invalid URIs
-    # that did not include a scheme.
-    scheme_pat: str = r'^(?:[a-zA_Z][-.+0-9a-zA_Z]*://)'
+    def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str):
+        # TODO: build an ID
 
-    # The URI is delimited by matching angle brackets.  Angle brackets
-    # cannot appear in a valid URI per RFC 3986.
-    uri_pat: str = r'(?:<[^>]+>)'
-
-    # This is a guess about what may be in a blank node. It's entirely
-    # possible that other characters, sych as hyphen, might be allowed.
-    blank_node_pat: str = r'(?:_:[0-9a-zA-Z]+)'
-
-    # Double quoted strings with backslash escapes.
-    string_pat: str = r'"(?:[^\\]|(?:\\.))*"'
-
-    structured_value_pat: str = r'(?:{string}(?:\^\^{uri}))'.format(string=string_pat, uri=uri_pat)
-    field_pat: str = r'(?:{uri}|{blank_node}|{structured_value})'.format(uri=uri_pat, blank_node=blank_node_pat, structured_value=structured_value_pat)
-    row_pat: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=field_pat)
-    row_re: typing.Pattern = re.compile(r'^' + row_pat + r'$')
+        output_row: typing.List[str] = [ node1, label, node2]
+        ew.write(output_row)
 
     def convert_blank_node(self, item: str)->typing.Tuple[str, bool]:
         body: str = item[1:] # Strip the leading underscore, keep the colon.
@@ -93,7 +120,7 @@ class KgtkNtriples(KgtkFormat):
                 return item, False
             after_slashslash = 0
         else:
-            after_slashslash += len("://")
+            after_slashslash = slashslash + len("://")
 
         end_of_namespace_prefix: int = -1
         last_hash: int = body.rfind("#", after_slashslash)
@@ -135,7 +162,12 @@ class KgtkNtriples(KgtkFormat):
         # ensure that vertical bars (pipes) are escaped.
         return self.escape_pipe(item), True
  
-    def convert_structured_literal(self, item: str, line_number: int)->typing.Tuple[str, bool]:
+    def generate_new_node_symbol(self)->str:
+        new_node_symbol: str = self.newnode_prefix + str(self.newnode_counter)
+        self.newnode_counter += 1
+        return new_node_symbol
+    
+    def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         # This is the subset of strictured literals that fits the
         # pattern "STRING"^^<URI>.
 
@@ -160,12 +192,26 @@ class KgtkNtriples(KgtkFormat):
         elif uri == '<http://www.w3.org/2001/XMLSchema#double>':
             # Convert this to a KGTK number:
             return string[1:-1], True
+        elif uri == '<http://www.w3.org/2001/XMLSchema#float>':
+            # Convert this to a KGTK number:
+            return string[1:-1], True
+        elif uri == '<http://www.w3.org/2001/XMLSchema#decimal>':
+            # Convert this to a KGTK number:
+            return string[1:-1], True
 
-        print("string='%s' uri='%s'" % (string, uri))
+        converted_uri: str
+        valid: bool
+        converted_uri, valid = self.convert_uri(uri, line_number)
+        if not valid:
+            return item, False
 
-        return item, True
+        new_node_symbol: str = self.generate_new_node_symbol()
+        self.write_row(ew, new_node_symbol, self.structured_value_label, string)
+        self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri)
 
-    def convert(self, item: str, ew: KgtkWriter, line_number: int)->typing.Tuple[str, bool]:
+        return new_node_symbol, True
+
+    def convert(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         """
         Convert an ntriples item to KGTK format.
 
@@ -178,7 +224,7 @@ class KgtkNtriples(KgtkFormat):
         elif item.startswith('"') and item.endswith('"'):
             return self.convert_string(item, line_number)
         elif item.startswith('"') and item.endswith(">"):
-            return self.convert_structured_literal(item, line_number)
+            return self.convert_structured_literal(item, line_number, ew)
 
         if self.verbose:
             print("Line %d: unrecognized item '%s'" %(line_number, item), file=self.error_file, flush=True)
@@ -245,7 +291,7 @@ class KgtkNtriples(KgtkFormat):
         return output_line_count
 
     def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool]:
-        m: typing.Optional[typing.Match] = self.row_re.match(line)
+        m: typing.Optional[typing.Match] = self.ROW_RE.match(line)
         if m is None:
             if self.verbose:
                 print("Line %d: not parsed.\n%s" % (line_number, line), file=self.error_file, flush=True)
@@ -304,18 +350,20 @@ class KgtkNtriples(KgtkFormat):
                     reject_line_count += 1
                     continue
 
+                node1: str
                 ok_1: bool
+                node1, ok_1 = self.convert(row[0], input_line_count, ew)
+
+                label: str
                 ok_2: bool
+                label, ok_2 = self.convert(row[1], input_line_count, ew)
+
+                node2: str
                 ok_3: bool
-                output_row: typing.List[str] = ["", "", "", "" ]
-                output_row[0], ok_1 = self.convert(row[0], ew, input_line_count)
-                output_row[1], ok_2 = self.convert(row[1], ew, input_line_count)
-                output_row[2], ok_3 = self.convert(row[2], ew, input_line_count)
+                node2, ok_3 = self.convert(row[2], input_line_count, ew)
 
                 if ok_1 and ok_2 and ok_3:
-                    # TODO: build an ID
-
-                    ew.write(output_row)
+                    self.write_row(ew, node1, label, node2)
                     output_line_count += 1
                 else:
                     if rw is not None:
@@ -354,26 +402,46 @@ def main():
                               type=Path, default=None)
     
     parser.add_argument(      "--namespace-id-prefix", dest="namespace_id_prefix", help="The prefix used to generate new namespaces. (default=%(default)s).",
-                              default="n")
+                              default=self.DEFAULT_NAMESPACE_ID_PREFIX)
     
     parser.add_argument(      "--namespace-id-counter", dest="namespace_id_counter", help="The counter used to generate new namespaces. (default=%(default)s).",
-                              type=int, default=1)
+                              type=int, default=self.DEFAULT_NAMESPACE_ID_COUNTER)
     
     parser.add_argument(      "--allow-lax-uri", dest="allow_lax_uri",
                               help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=True)
+                              type=optional_bool, nargs='?', const=True, default=self.DEFAULT_ALLOW_LAX_URI)
 
     parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
                               help="The namespace prefix for blank nodes. (default=%(default)s).",
-                              default="X")
+                              default=self.DEFAULT_LOCAL_NAMESPACE_PREFIX)
 
     parser.add_argument(      "--local-namespace-use-uuid", dest="local_namespace_use_uuid",
                               help="Generate a UUID for the local namespace. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=True)
+                              type=optional_bool, nargs='?', const=True, default=DEFAULT_LODAL_NAMESPACE_USE_UUID)
 
+    parser.add_argument(      "--prefix-expansion-label", dest="prefix_expansion_label",
+                              help="The label for prefix expansions in the namespace file. (default=%(default)s).",
+                              default=self.DEFAULT_PREFIX_EXPANSION)
+    
+    parser.add_argument(      "--structured-value-label", dest="structured_value_label",
+                              help="The label for value records for ntriple structured literals. (default=%(default)s).",
+                              default=self.DEFAULT_STRUCTURED_VALUE)
+    
+    parser.add_argument(      "--structured-uri-label", dest="structured_uri_label",
+                              help="The label for URI records for ntriple structured literals. (default=%(default)s).",
+                              default=self.DEFAULT_STRUCTURED_URI)
+    
+    parser.add_argument(      "--newnode-prefix", dest="newnode_prefix",
+                              help="The prefix used to generate new nodes for ntriple structured literals. (default=%(default)s).",
+                              default=self.DEFAULT_NEWNODE_PREFIX)
+    
+    parser.add_argument(      "--newnode-counter", dest="newnode_counter",
+                              help="The counter used to generate new nodes for ntriple structured literals. (default=%(default)s).",
+                              type=int, default=self.DEFAULT_NEWNODE_COUNTER)
+    
     parser.add_argument(      "--build-id", dest="build_id",
                               help="Build id values in an id column. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False)
+                              type=optional_bool, nargs='?', const=True, default=self.DEFAULT_BUILD_ID)
 
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
@@ -399,6 +467,11 @@ def main():
         print("--allow-lax-uri %s" % args.allow_lax_uri, file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % args.local_namespace_use_uuid, file=error_file, flush=True)
+        print("--prefix-expansion-label %s" % args.prefix_expansion_label, file=error_file, flush=True)
+        print("--structured-value-label %s" % args.structured_value_label, file=error_file, flush=True)
+        print("--structured-uri-label %s" % args.structured_uri_label, file=error_file, flush=True)
+        print("--newnode-prefix %s" % args.newnode_prefix, file=error_file, flush=True)
+        print("--newnode-counter %s" % args.newnode_counter, file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
 
         idbuilder_options.show(out=error_file)
@@ -410,9 +483,14 @@ def main():
         namespace_file_path=args.namespace_file_path,
         namespace_id_prefix=args.namespace_id_prefix,
         namespace_id_counter=args.namespace_id_counter,
+        newnode_prefix=args.newnode_prefix,
+        newnode_counter=args.newnode_counter,
         allow_lax_uri=args.allow_lax_uri,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
+        prefix_expansion_label=args.prefix_expansion_label,
+        structured_value_label=args.structured_value_label,
+        structured_uri_label=args.structured_uri_label,
         build_id=args.build_id,
         idbuilder_options=idbuilder_options,
         error_file=error_file,
