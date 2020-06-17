@@ -1245,7 +1245,9 @@ class KgtkValue(KgtkFormat):
                                                                                                         month=lax_month_pat,
                                                                                                         day=lax_day_pat)
     # hour-minutes-seconds
-    hour_pat: str = r'(?P<hour>2[0-3]|[01][0-9])'
+    #
+    # NOTE: hour 24 is valid only when minutes and seconds are 00.
+    hour_pat: str = r'(?P<hour>2[0-4]|[01][0-9])'
     minutes_pat: str = r'(?P<minutes>[0-5][0-9])'
     seconds_pat: str = r'(?P<seconds>[0-5][0-9])'
 
@@ -1445,6 +1447,9 @@ class KgtkValue(KgtkFormat):
                 seconds = int(secondsstr)
             except ValueError:
                 return False # shouldn't happen
+
+        if hour == 24 and (minutes > 0 or seconds > 0):
+            return False # An invalid time
 
         precision: typing.Optional[int]
         if precisionstr is None:
