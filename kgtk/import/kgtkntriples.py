@@ -33,7 +33,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_ALLOW_LAX_URI: bool = True
     DEFAULT_BUILD_ID: bool = False
 
-    COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2, KgtkFormat.ID]
+    COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
     # A URI must begin with a scheme per RFC 3986.
     #
@@ -87,6 +87,7 @@ class KgtkNtriples(KgtkFormat):
 
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_ID)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
+    idbuilder: typing.Optional[KgtkIdBuilder] = attr.ib(default=None)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -103,7 +104,10 @@ class KgtkNtriples(KgtkFormat):
         # TODO: build an ID
 
         output_row: typing.List[str] = [ node1, label, node2]
-        ew.write(output_row)
+        if self.idbuilder is None:
+            ew.write(output_row)
+        else:
+            ew.write(self.idbuilder.build(output_row, self.output_line_count))
         self.output_line_count += 1
 
     def convert_blank_node(self, item: str)->typing.Tuple[str, bool]:
@@ -309,10 +313,17 @@ class KgtkNtriples(KgtkFormat):
         return [m.group("node1"), m.group("label"), m.group("node2")], True
 
     def process(self):
+        output_column_names: typing.List[str]
+        if self.build_id and self.idbuilder_options is not None:
+            self.idbuilder = KgtkIdBuilder.from_column_names(self.COLUMN_NAMES, self.idbuilder_options)
+            output_column_names = self.idbuilder.column_names
+        else:
+            output_column_names = self.COLUMN_NAMES
+
         if self.verbose:
             print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
         # Open the output file.
-        ew: KgtkWriter = KgtkWriter.open(self.COLUMN_NAMES,
+        ew: KgtkWriter = KgtkWriter.open(output_column_names,
                                          self.output_file_path,
                                          mode=KgtkWriter.Mode.EDGE,
                                          require_all_columns=False,
