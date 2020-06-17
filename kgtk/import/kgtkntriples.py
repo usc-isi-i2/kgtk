@@ -27,7 +27,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_NEWNODE_PREFIX: str = "kgtk:node"
     DEFAULT_NEWNODE_COUNTER: int = 1
     DEFAULT_LOCAL_NAMESPACE_PREFIX: str = "X"
-    DEFAULT_LODAL_NAMESPACE_USE_UUID: bool = True
+    DEFAULT_LOCAL_NAMESPACE_USE_UUID: bool = True
     DEFAULT_ALLOW_LAX_URI: bool = True
     DEFAULT_BUILD_ID: bool = False
 
@@ -68,7 +68,7 @@ class KgtkNtriples(KgtkFormat):
     allow_lax_uri: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LAX_URI)
 
     local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LOCAL_NAMESPACE_PREFIX)
-    local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LODAL_NAMESPACE_USE_UUID)
+    local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
 
     namespace_id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NAMESPACE_ID_PREFIX)
     namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_COUNTER)
@@ -399,7 +399,7 @@ class KgtkNtriples(KgtkFormat):
 
         parser.add_argument(      "--local-namespace-use-uuid", dest="local_namespace_use_uuid",
                                   help="Generate a UUID for the local namespace. (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_LODAL_NAMESPACE_USE_UUID)
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_LOCAL_NAMESPACE_USE_UUID)
 
         parser.add_argument(      "--prefix-expansion-label", dest="prefix_expansion_label",
                                   help="The label for prefix expansions in the namespace file. (default=%(default)s).",
