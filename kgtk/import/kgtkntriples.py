@@ -338,7 +338,7 @@ class KgtkNtriples(KgtkFormat):
         # Open the input file.
         if self.verbose:
             print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
-        with open(self.input_file_path, newline='') as infile:
+        with open(self.input_file_path, 'rt') as infile:
             line: str
             for line in infile:
                 input_line_count += 1
