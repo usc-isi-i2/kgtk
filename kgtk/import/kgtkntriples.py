@@ -10,7 +10,7 @@ import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.utils.argparsehelpers import optional_bool
@@ -67,6 +67,8 @@ class KgtkNtriples(KgtkFormat):
     reject_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
     namespace_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+
+    reader_options: KgtkReaderOptions = attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
 
     allow_lax_uri: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LAX_URI)
 
@@ -266,6 +268,7 @@ class KgtkNtriples(KgtkFormat):
 
         kr: KgtkReader =  KgtkReader.open(self.namespace_file_path,
                                           mode=KgtkReaderMode.EDGE,
+                                          options=self.reader_options,
                                           error_file=self.error_file,
                                           verbose=self.verbose,
                                           very_verbose=self.very_verbose,
@@ -483,6 +486,7 @@ def main():
     KgtkNtriples.add_arguments(parser)
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=True)
 
     args: Namespace = parser.parse_args()
 
@@ -490,6 +494,7 @@ def main():
 
     # Build the option structures.                                                                                                                          
     idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_args(args)
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
@@ -516,6 +521,7 @@ def main():
         print("--escape-pipes=%s" % str(args.escape_pipes), file=error_file, flush=True)
 
         idbuilder_options.show(out=error_file)
+        reader_options.show(out=error_file)
 
     kn: KgtkNtriples = KgtkNtriples(
         input_file_path=args.input_file_path,
@@ -537,6 +543,7 @@ def main():
         build_id=args.build_id,
         escape_pipes=args.escape_pipes,
         idbuilder_options=idbuilder_options,
+        reader_options=reader_options,
         error_file=error_file,
         verbose=args.verbose,
         very_verbose=args.very_verbose)
