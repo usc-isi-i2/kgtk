@@ -88,16 +88,19 @@ class KgtkNtriples(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    local_namespace_uuid: str = attr.ib(factory=shortuuid.uuid())
+    local_namespace_uuid: str = attr.ib(factory=shortuuid.uuid)
 
     namespace_prefixes: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
+
+    output_line_count: int = attr.ib(default=0)
 
     def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str):
         # TODO: build an ID
 
         output_row: typing.List[str] = [ node1, label, node2]
         ew.write(output_row)
+        self.output_line_count += 1
 
     def convert_blank_node(self, item: str)->typing.Tuple[str, bool]:
         body: str = item[1:] # Strip the leading underscore, keep the colon.
@@ -276,19 +279,11 @@ class KgtkNtriples(KgtkFormat):
 
         return namespace_line_count
         
-    def write_namespaces(self, ew: KgtkWriter)->int:
+    def write_namespaces(self, ew: KgtkWriter):
         # Append the namespaces to the output file.
-        output_line_count: int = 0
         n_id: str
         for n_id in sorted(self.namespace_ids.keys()):
-            o_row: typing.List[str] = ["", "", "", "" ]
-            o_row[0] = n_id
-            o_row[1] = self.prefix_expansion_label
-            o_row[3] = self.namespace_ids[n_id]
-            # TODO: assign an ID.
-            ew.write(o_row)
-            output_line_count += 1
-        return output_line_count
+            self.write_row(ew, n_id, self.prefix_expansion_label, self.namespace_ids[n_id])
 
     def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool]:
         m: typing.Optional[typing.Match] = self.ROW_RE.match(line)
@@ -329,7 +324,6 @@ class KgtkNtriples(KgtkFormat):
 
         input_line_count: int = 0
         reject_line_count: int = 0
-        output_line_count: int = 0
         
         namespace_line_count: int = self.get_initial_namespaces()
             
@@ -364,20 +358,19 @@ class KgtkNtriples(KgtkFormat):
 
                 if ok_1 and ok_2 and ok_3:
                     self.write_row(ew, node1, label, node2)
-                    output_line_count += 1
                 else:
                     if rw is not None:
                         rw.write(row)
                     reject_line_count += 1
 
         # Append the namespaces to the output file:
-        output_line_count += self.write_namespaces(ew)
+        self.write_namespaces(ew)
 
         if self.verbose:
             print("Processed %d known namespaces." % (namespace_line_count), file=self.error_file, flush=True)
             print("Processed %d records." % (input_line_count), file=self.error_file, flush=True)
             print("Rejected %d records." % (reject_line_count), file=self.error_file, flush=True)
-            print("Wrote %d records." % (output_line_count), file=self.error_file, flush=True)
+            print("Wrote %d records." % (self.output_line_count), file=self.error_file, flush=True)
         
         if ew is not None:
             ew.close()
@@ -385,6 +378,53 @@ class KgtkNtriples(KgtkFormat):
         if rw is not None:
             rw.close()
             
+    @classmethod
+    def add_arguments(cls, parser: ArgumentParser):
+
+        parser.add_argument(      "--namespace-id-prefix", dest="namespace_id_prefix",
+                                  help="The prefix used to generate new namespaces. (default=%(default)s).",
+                                  default=cls.DEFAULT_NAMESPACE_ID_PREFIX)
+    
+        parser.add_argument(      "--namespace-id-counter", dest="namespace_id_counter",
+                                  help="The counter used to generate new namespaces. (default=%(default)s).",
+                                  type=int, default=cls.DEFAULT_NAMESPACE_ID_COUNTER)
+    
+        parser.add_argument(      "--allow-lax-uri", dest="allow_lax_uri",
+                                  help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LAX_URI)
+
+        parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
+                                  help="The namespace prefix for blank nodes. (default=%(default)s).",
+                                  default=cls.DEFAULT_LOCAL_NAMESPACE_PREFIX)
+
+        parser.add_argument(      "--local-namespace-use-uuid", dest="local_namespace_use_uuid",
+                                  help="Generate a UUID for the local namespace. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_LODAL_NAMESPACE_USE_UUID)
+
+        parser.add_argument(      "--prefix-expansion-label", dest="prefix_expansion_label",
+                                  help="The label for prefix expansions in the namespace file. (default=%(default)s).",
+                                  default=cls.DEFAULT_PREFIX_EXPANSION)
+    
+        parser.add_argument(      "--structured-value-label", dest="structured_value_label",
+                                  help="The label for value records for ntriple structured literals. (default=%(default)s).",
+                                  default=cls.DEFAULT_STRUCTURED_VALUE)
+    
+        parser.add_argument(      "--structured-uri-label", dest="structured_uri_label",
+                                  help="The label for URI records for ntriple structured literals. (default=%(default)s).",
+                                  default=cls.DEFAULT_STRUCTURED_URI)
+    
+        parser.add_argument(      "--newnode-prefix", dest="newnode_prefix",
+                                  help="The prefix used to generate new nodes for ntriple structured literals. (default=%(default)s).",
+                                  default=cls.DEFAULT_NEWNODE_PREFIX)
+    
+        parser.add_argument(      "--newnode-counter", dest="newnode_counter",
+                                  help="The counter used to generate new nodes for ntriple structured literals. (default=%(default)s).",
+                                  type=int, default=cls.DEFAULT_NEWNODE_COUNTER)
+    
+        parser.add_argument(      "--build-id", dest="build_id",
+                                  help="Build id values in an id column. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_ID)
+
 def main():
     """
     Test the KGTK implode processor.
@@ -401,48 +441,8 @@ def main():
     parser.add_argument(      "--namespace-file", dest="namespace_file_path", help="The KGTK file with known namespaces. (default=%(default)s).",
                               type=Path, default=None)
     
-    parser.add_argument(      "--namespace-id-prefix", dest="namespace_id_prefix", help="The prefix used to generate new namespaces. (default=%(default)s).",
-                              default=self.DEFAULT_NAMESPACE_ID_PREFIX)
-    
-    parser.add_argument(      "--namespace-id-counter", dest="namespace_id_counter", help="The counter used to generate new namespaces. (default=%(default)s).",
-                              type=int, default=self.DEFAULT_NAMESPACE_ID_COUNTER)
-    
-    parser.add_argument(      "--allow-lax-uri", dest="allow_lax_uri",
-                              help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=self.DEFAULT_ALLOW_LAX_URI)
 
-    parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
-                              help="The namespace prefix for blank nodes. (default=%(default)s).",
-                              default=self.DEFAULT_LOCAL_NAMESPACE_PREFIX)
-
-    parser.add_argument(      "--local-namespace-use-uuid", dest="local_namespace_use_uuid",
-                              help="Generate a UUID for the local namespace. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=DEFAULT_LODAL_NAMESPACE_USE_UUID)
-
-    parser.add_argument(      "--prefix-expansion-label", dest="prefix_expansion_label",
-                              help="The label for prefix expansions in the namespace file. (default=%(default)s).",
-                              default=self.DEFAULT_PREFIX_EXPANSION)
-    
-    parser.add_argument(      "--structured-value-label", dest="structured_value_label",
-                              help="The label for value records for ntriple structured literals. (default=%(default)s).",
-                              default=self.DEFAULT_STRUCTURED_VALUE)
-    
-    parser.add_argument(      "--structured-uri-label", dest="structured_uri_label",
-                              help="The label for URI records for ntriple structured literals. (default=%(default)s).",
-                              default=self.DEFAULT_STRUCTURED_URI)
-    
-    parser.add_argument(      "--newnode-prefix", dest="newnode_prefix",
-                              help="The prefix used to generate new nodes for ntriple structured literals. (default=%(default)s).",
-                              default=self.DEFAULT_NEWNODE_PREFIX)
-    
-    parser.add_argument(      "--newnode-counter", dest="newnode_counter",
-                              help="The counter used to generate new nodes for ntriple structured literals. (default=%(default)s).",
-                              type=int, default=self.DEFAULT_NEWNODE_COUNTER)
-    
-    parser.add_argument(      "--build-id", dest="build_id",
-                              help="Build id values in an id column. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=self.DEFAULT_BUILD_ID)
-
+    KgtkNtriples.add_arguments(parser)
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
 
