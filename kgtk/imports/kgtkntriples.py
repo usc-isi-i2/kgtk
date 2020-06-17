@@ -348,7 +348,10 @@ class KgtkNtriples(KgtkFormat):
                 print("Opening reject file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
             # Open the reject file. Since the input data is not in KGTK format,
             # we use an ordinary file here.
-            rw = open(self.reject_file_path, "wt")
+            if str(self.reject_file_path) == "-":
+                rw = sys.stdout
+            else:
+                rw = open(self.reject_file_path, "wt")
 
         input_line_count: int = 0
         reject_line_count: int = 0
@@ -358,38 +361,46 @@ class KgtkNtriples(KgtkFormat):
         # Open the input file.
         if self.verbose:
             print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
-        with open(self.input_file_path, 'rt') as infile:
-            line: str
-            for line in infile:
-                input_line_count += 1
+        infile: typing.TestIO
+        if str(self.input_file_path) == "-":
+            infile = sys.stdin
+        else:
+            infile = open(self.input_file_path, 'rt') 
 
-                row: typing.List[str]
-                valid: bool
-                row, valid = self.parse(line, input_line_count)
-                if not valid:
-                    if rw is not None:
-                        rw.write(line)
-                    reject_line_count += 1
-                    continue
+        line: str
+        for line in infile:
+            input_line_count += 1
 
-                node1: str
-                ok_1: bool
-                node1, ok_1 = self.convert(row[0], input_line_count, ew)
+            row: typing.List[str]
+            valid: bool
+            row, valid = self.parse(line, input_line_count)
+            if not valid:
+                if rw is not None:
+                    rw.write(line)
+                reject_line_count += 1
+                continue
 
-                label: str
-                ok_2: bool
-                label, ok_2 = self.convert(row[1], input_line_count, ew)
+            node1: str
+            ok_1: bool
+            node1, ok_1 = self.convert(row[0], input_line_count, ew)
 
-                node2: str
-                ok_3: bool
-                node2, ok_3 = self.convert(row[2], input_line_count, ew)
+            label: str
+            ok_2: bool
+            label, ok_2 = self.convert(row[1], input_line_count, ew)
 
-                if ok_1 and ok_2 and ok_3:
-                    self.write_row(ew, node1, label, node2)
-                else:
-                    if rw is not None:
-                        rw.write(line)
-                    reject_line_count += 1
+            node2: str
+            ok_3: bool
+            node2, ok_3 = self.convert(row[2], input_line_count, ew)
+
+            if ok_1 and ok_2 and ok_3:
+                self.write_row(ew, node1, label, node2)
+            else:
+                if rw is not None:
+                    rw.write(line)
+                reject_line_count += 1
+
+        if self.input_file_path != "-":
+            infile.close()
 
         # Append the namespaces to the output file:
         self.write_namespaces(ew)
@@ -403,7 +414,7 @@ class KgtkNtriples(KgtkFormat):
         if ew is not None:
             ew.close()
             
-        if rw is not None:
+        if rw is not None and self.reject_file_path is not None and self.reject_file_path != "-":
             rw.close()
             
     @classmethod
