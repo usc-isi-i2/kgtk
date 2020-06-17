@@ -24,8 +24,10 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_STRUCTURED_URI: str = "kgtk:structured_uri"
     DEFAULT_NAMESPACE_ID_PREFIX: str = "n"
     DEFAULT_NAMESPACE_ID_COUNTER: int = 1
+    DEFAULT_NAMESPACE_ID_ZFILL: int = 0
     DEFAULT_NEWNODE_PREFIX: str = "kgtk:node"
     DEFAULT_NEWNODE_COUNTER: int = 1
+    DEFAULT_NEWNODE_ZFILL: int = 0
     DEFAULT_LOCAL_NAMESPACE_PREFIX: str = "X"
     DEFAULT_LOCAL_NAMESPACE_USE_UUID: bool = True
     DEFAULT_ALLOW_LAX_URI: bool = True
@@ -72,6 +74,7 @@ class KgtkNtriples(KgtkFormat):
 
     namespace_id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NAMESPACE_ID_PREFIX)
     namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_COUNTER)
+    namespace_id_zfill: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_ZFILL)
 
     prefix_expansion_label: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX_EXPANSION)
 
@@ -80,6 +83,7 @@ class KgtkNtriples(KgtkFormat):
 
     newnode_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NEWNODE_PREFIX)
     newnode_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NEWNODE_COUNTER)
+    newnode_zfill: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NEWNODE_ZFILL)
 
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_ID)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
@@ -144,7 +148,7 @@ class KgtkNtriples(KgtkFormat):
             namespace_id = self.namespace_prefixes[namespace_prefix]
         else:
             while True:
-                namespace_id = self.namespace_id_prefix + str(self.namespace_id_counter)
+                namespace_id = self.namespace_id_prefix + str(self.namespace_id_counter).zfill(self.namespace_id_zfill)
                 self.namespace_id_counter += 1
                 if namespace_id not in self.namespace_ids:
                     break
@@ -166,7 +170,7 @@ class KgtkNtriples(KgtkFormat):
         return self.escape_pipe(item), True
  
     def generate_new_node_symbol(self)->str:
-        new_node_symbol: str = self.newnode_prefix + str(self.newnode_counter)
+        new_node_symbol: str = self.newnode_prefix + str(self.newnode_counter).zfill(self.newnode_zfill)
         self.newnode_counter += 1
         return new_node_symbol
     
@@ -400,6 +404,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="The counter used to generate new namespaces. (default=%(default)s).",
                                   type=int, default=cls.DEFAULT_NAMESPACE_ID_COUNTER)
     
+        parser.add_argument(      "--namespace-id-zfill", dest="namespace_id_zfill",
+                                  help="The width of the counter used to generate new namespaces. (default=%(default)s).",
+                                  type=int, default=cls.DEFAULT_NAMESPACE_ID_ZFILL)
+    
         parser.add_argument(      "--allow-lax-uri", dest="allow_lax_uri",
                                   help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LAX_URI)
@@ -431,6 +439,10 @@ class KgtkNtriples(KgtkFormat):
         parser.add_argument(      "--newnode-counter", dest="newnode_counter",
                                   help="The counter used to generate new nodes for ntriple structured literals. (default=%(default)s).",
                                   type=int, default=cls.DEFAULT_NEWNODE_COUNTER)
+    
+        parser.add_argument(      "--newnode-zfill", dest="newnode_zfill",
+                                  help="The width of the counter used to generate new nodes for ntriple structured literals. (default=%(default)s).",
+                                  type=int, default=cls.DEFAULT_NEWNODE_ZFILL)
     
         parser.add_argument(      "--build-id", dest="build_id",
                                   help="Build id values in an id column. (default=%(default)s).",
@@ -475,6 +487,7 @@ def main():
             print("--namespace-file=%s" % str(args.namespace_file_path), file=error_file, flush=True)
         print("--namespace-id-prefix %s" % args.namespace_id_prefix, file=error_file, flush=True)
         print("--namespace-id-counter %s" % args.namespace_id_counter, file=error_file, flush=True)
+        print("--namespace-id-zfill %s" % args.namespace_id_zfill, file=error_file, flush=True)
         print("--allow-lax-uri %s" % args.allow_lax_uri, file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % args.local_namespace_use_uuid, file=error_file, flush=True)
@@ -483,6 +496,7 @@ def main():
         print("--structured-uri-label %s" % args.structured_uri_label, file=error_file, flush=True)
         print("--newnode-prefix %s" % args.newnode_prefix, file=error_file, flush=True)
         print("--newnode-counter %s" % args.newnode_counter, file=error_file, flush=True)
+        print("--newnode-zfill %s" % args.newnode_zfill, file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
 
         idbuilder_options.show(out=error_file)
@@ -494,8 +508,10 @@ def main():
         namespace_file_path=args.namespace_file_path,
         namespace_id_prefix=args.namespace_id_prefix,
         namespace_id_counter=args.namespace_id_counter,
+        namespace_id_zfill=args.namespace_id_zfill,
         newnode_prefix=args.newnode_prefix,
         newnode_counter=args.newnode_counter,
+        newnode_zfill=args.newnode_zfill,
         allow_lax_uri=args.allow_lax_uri,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
