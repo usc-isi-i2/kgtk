@@ -5,9 +5,9 @@ import attr
 import csv
 from pathlib import Path
 import re
+import shortuuid
 import sys
 import typing
-import uuid
 
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode
@@ -43,12 +43,34 @@ class KgtkNtriples(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    local_namespace_uuid: str = str(uuid.uuid4())
+    local_namespace_uuid: str = str(shortuuid.uuid())
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2, KgtkFormat.ID]
     
     namespace_prefixes: typing.MutableMapping[str, str] = { }
     namespace_ids: typing.MutableMapping[str, str] = { }
+
+    # A URI must begin with a scheme per RFC 3986.
+    #
+    # We don't use this because ISI was inserting some invalid URIs
+    # that did not include a scheme.
+    scheme_pat: str = r'^(?:[a-zA_Z][-.+0-9a-zA_Z]*://)'
+
+    # The URI is delimited by matching angle brackets.  Angle brackets
+    # cannot appear in a valid URI per RFC 3986.
+    uri_pat: str = r'(?:<[^>]+>)'
+
+    # This is a guess about what may be in a blank node. It's entirely
+    # possible that other characters, sych as hyphen, might be allowed.
+    blank_node_pat: str = r'(?:_:[0-9a-zA-Z]+)'
+
+    # Double quoted strings with backslash escapes.
+    string_pat: str = r'"(?:[^\\]|(?:\\.))*"'
+
+    structured_value_pat: str = r'(?:{string}(?:\^\^{uri}))'.format(string=string_pat, uri=uri_pat)
+    field_pat: str = r'(?:{uri}|{blank_node}|{structured_value})'.format(uri=uri_pat, blank_node=blank_node_pat, structured_value=structured_value_pat)
+    row_pat: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=field_pat)
+    row_re: typing.Pattern = re.compile(r'^' + row_pat + r'$')
 
     def convert_blank_node(self, item: str)->typing.Tuple[str, bool]:
         body: str = item[1:] # Strip the leading underscore, keep the colon.
@@ -62,16 +84,20 @@ class KgtkNtriples(KgtkFormat):
         namespace_prefix: str
         suffix: str
 
+        after_slashslash: int
         slashslash: int =  body.rfind("://")
         if slashslash < 1:
             if not self.allow_lax_uri:
                 if self.verbose:
-                    print("Line %d: invalid URI: '%s'" % (line_number, item))
+                    print("Line %d: invalid URI: '%s'" % (line_number, item), file=self.error_file, flush=True)
                 return item, False
+            after_slashslash = 0
+        else:
+            after_slashslash += len("://")
 
         end_of_namespace_prefix: int = -1
-        last_hash: int = body.rfind("#", slashslash+1)
-        last_slash: int = body.rfind("/", slashslash+1)
+        last_hash: int = body.rfind("#", after_slashslash)
+        last_slash: int = body.rfind("/", after_slashslash)
         if last_hash >= 0:
             namespace_prefix = body[:last_hash+1]
             suffix = body[last_hash+1:]
@@ -97,9 +123,47 @@ class KgtkNtriples(KgtkFormat):
 
         return namespace_id + ":" + suffix, True
 
-    def convert_structured_literal(self, item: str, line_number: int)->typing.Tuple[str, bool]:
-        return item, True # TODO: implement
+    def escape_pipe(self, item: str)->str:
+        # TODO: ensure that vertical bars (pipes) are escaped.
+        return item
 
+    def convert_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
+        # Convert this to a KGTK string.
+        #
+        # Our parser guarantees that double quoted strings use proper
+        # escapes... except for vertical bars (pipes).  We have extra work to do to
+        # ensure that vertical bars (pipes) are escaped.
+        return self.escape_pipe(item), True
+ 
+    def convert_structured_literal(self, item: str, line_number: int)->typing.Tuple[str, bool]:
+        # This is the subset of strictured literals that fits the
+        # pattern "STRING"^^<URI>.
+
+        # Start by splitting on '^^'. We are certain it exists, and that the rightmost
+        # instance is the one we want.
+        uparrows: int = item.rfind("^^")
+        if uparrows < 0:
+            # This shouldn't happen!
+            if self.verbose:
+                print("Line %d: no uparrows in '%s'." % (line_number, item), file=self.error_file, flush=True)
+            return item, False
+
+        string: str = item[:uparrows]
+        uri: str = item[uparrows+2:]
+
+        if uri == '<http://www.w3.org/2001/XMLSchema#string>':
+            # Convert this to a KGTK string.
+            return self.escape_pipe(string), True
+        elif uri == '<http://www.w3.org/2001/XMLSchema#int>':
+            # Convert this to a KGTK number:
+            return string[1:-1], True
+        elif uri == '<http://www.w3.org/2001/XMLSchema#double>':
+            # Convert this to a KGTK number:
+            return string[1:-1], True
+
+        print("string='%s' uri='%s'" % (string, uri))
+
+        return item, True
 
     def convert(self, item: str, ew: KgtkWriter, line_number: int)->typing.Tuple[str, bool]:
         """
@@ -112,19 +176,27 @@ class KgtkNtriples(KgtkFormat):
         elif item.startswith("<") and item.endswith(">"):
             return self.convert_uri(item, line_number)
         elif item.startswith('"') and item.endswith('"'):
-            return item, True # Double quoted strings are simple, if we assume they use proper escapes.
-        elif item.startswith('"') and item.rfind('"^^') >= 0:
+            return self.convert_string(item, line_number)
+        elif item.startswith('"') and item.endswith(">"):
             return self.convert_structured_literal(item, line_number)
 
         if self.verbose:
-            print("Line %d: unrecognized item '%s'" %(line_number, item))
+            print("Line %d: unrecognized item '%s'" %(line_number, item), file=self.error_file, flush=True)
 
         return item, False
     
-    def read_initial_namespaces(self)->int:
-        # Read the namespaces:
+    def get_default_namespaces(self)->int:
+        namespace_id: str = "xml-schema-type"
+        namespace_prefix: str = "http://www.w3.org/2001/XMLSchema#"
+        self.namespace_ids[namespace_id] = namespace_prefix
+        self.namespace_prefixes[namespace_prefix] = namespace_id
+        return 1
+    
+    def get_initial_namespaces(self)->int:
+        # Read the namespaces.  If no file, use a limited internal
+        # default.
         if self.namespace_file_path is None:
-            return 0
+            return self.get_default_namespaces()
 
         if self.verbose:
             print("Processing namespace file file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
@@ -144,17 +216,17 @@ class KgtkNtriples(KgtkFormat):
                 namespace_prefix: str = namespace_row[kr.node2_column_idx]
                 if namespace_prefix in self.namespace_prefixes:
                     if self.verbose:
-                        print("Duplicate initial namespace prefix '%s'" % namespace_prefix)
+                        print("Duplicate initial namespace prefix '%s'" % namespace_prefix, file=self.error_file, flush=True)
                 else:
                     self.namespace_prefixes[namespace_prefix] = namespace_id
                 if namespace_id in self.namespace_ids:
                     if self.verbose:
-                        print("Duplicate initial namespace id '%s'" % namespace_id)
+                        print("Duplicate initial namespace id '%s'" % namespace_id, file=self.error_file, flush=True)
                 else:
                     self.namespace_ids[namespace_id] = namespace_prefix
             else:
                 if self.verbose:
-                    print("Ignoring initial namespace label '%s'" % namespace_row[kr.label_column_idx])
+                    print("Ignoring initial namespace label '%s'" % namespace_row[kr.label_column_idx], file=self.error_file, flush=True)
 
         return namespace_line_count
         
@@ -172,19 +244,11 @@ class KgtkNtriples(KgtkFormat):
             output_line_count += 1
         return output_line_count
 
-    uri_pat: str = r'(?:<[^>]+>)'
-    blank_node_pat: str = r'(?:_:[0-9a-zA-Z]+)'
-    string_pat: str = r'"(?:[^\\]|(?:\\.))*"'
-    structured_value_pat: str = r'(?:{string}(?:\^\^{uri}))'.format(string=string_pat, uri=uri_pat)
-    field_pat: str = r'(?:{uri}|{blank_node}|{structured_value})'.format(uri=uri_pat, blank_node=blank_node_pat, structured_value=structured_value_pat)
-    row_pat: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=field_pat)
-    row_re: typing.Pattern = re.compile(r'^' + row_pat + r'$')
-
     def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool]:
         m: typing.Optional[typing.Match] = self.row_re.match(line)
         if m is None:
             if self.verbose:
-                print("Line %d: not parsed.\n%s" % (line_number, line))
+                print("Line %d: not parsed.\n%s" % (line_number, line), file=self.error_file, flush=True)
             return [ ], False
         return [m.group("node1"), m.group("label"), m.group("node2")], True
 
@@ -221,8 +285,7 @@ class KgtkNtriples(KgtkFormat):
         reject_line_count: int = 0
         output_line_count: int = 0
         
-        # Read the namespaces:
-        namespace_line_count: int =  self.read_initial_namespaces()
+        namespace_line_count: int = self.get_initial_namespaces()
             
         # Open the input file.
         if self.verbose:
