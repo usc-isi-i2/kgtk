@@ -232,6 +232,10 @@ class KgtkNtriples(KgtkFormat):
             # Convert this to a KGTK boolean:
             return self.convert_boolean(item, string[1:-1], line_number)
 
+        elif uri == '<http://www.w3.org/2001/XMLSchema#dateTime>':
+            # Convert this to a KGTK date-and-time:
+            return '^' + string[1:-1], True
+
         converted_uri: str
         valid: bool
         converted_uri, valid = self.convert_uri(uri, line_number)
