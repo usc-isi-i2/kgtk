@@ -210,6 +210,12 @@ class KgtkNtriples(KgtkFormat):
             print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
         with open(self.input_file_path, newline='') as infile:
             # Use the CSV reader with suitable delimiters.
+            #
+            # This doesn't work.  We need the CSV reader to process escaped quotes,
+            # but then we lose the boundary between a string and the ^^ for the suffix.
+            #
+            # TODO: Write our own parser.  We want to track string boundaries, including
+            # escaped quotes, without removing the quotes.
             reader = csv.reader(infile, delimiter=" ", doublequote=False, escapechar="\\")
             row: typing.List[str]
             for row in reader:
