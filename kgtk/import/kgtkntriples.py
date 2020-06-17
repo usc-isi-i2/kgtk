@@ -4,6 +4,7 @@ from argparse import ArgumentParser, Namespace
 import attr
 import csv
 from pathlib import Path
+import re
 import sys
 import typing
 import uuid
@@ -108,7 +109,7 @@ class KgtkNtriples(KgtkFormat):
         elif item.startswith("<") and item.endswith(">"):
             return self.convert_uri(item, line_number)
         elif item.startswith('"') and item.endswith('"'):
-            return item # Double quoted strings are simple, if we assume they use proper escapes.
+            return item, True # Double quoted strings are simple, if we assume they use proper escapes.
         elif item.startswith('"') and item.rfind('"^^') >= 0:
             return self.convert_structured_literal(item, line_number)
 
@@ -168,8 +169,23 @@ class KgtkNtriples(KgtkFormat):
             output_line_count += 1
         return output_line_count
 
-    def process(self):
+    uri_pat: str = r'(?:<[^>]+>)'
+    blank_node_pat: str = r'(?:_:[0-9a-zA-Z]+)'
+    string_pat: str = r'"(?:[^\\]|(?:\\.))*"'
+    structured_value_pat: str = r'(?:{string}(?:\^\^{uri}))'.format(string=string_pat, uri=uri_pat)
+    field_pat: str = r'(?:{uri}|{blank_node}|{structured_value})'.format(uri=uri_pat, blank_node=blank_node_pat, structured_value=structured_value_pat)
+    row_pat: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=field_pat)
+    row_re: typing.Pattern = re.compile(r'^' + row_pat + r'$')
 
+    def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool]:
+        m: typing.Optional[typing.Match] = self.row_re.match(line)
+        if m is None:
+            if self.verbose:
+                print("Line %d: not parsed.\n%s" % (line_number, line))
+            return [ ], False
+        return [m.group("node1"), m.group("label"), m.group("node2")], True
+
+    def process(self):
         if self.verbose:
             print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
         # Open the output file.
@@ -209,29 +225,14 @@ class KgtkNtriples(KgtkFormat):
         if self.verbose:
             print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
         with open(self.input_file_path, newline='') as infile:
-            # Use the CSV reader with suitable delimiters.
-            #
-            # This doesn't work.  We need the CSV reader to process escaped quotes,
-            # but then we lose the boundary between a string and the ^^ for the suffix.
-            #
-            # TODO: Write our own parser.  We want to track string boundaries, including
-            # escaped quotes, without removing the quotes.
-            reader = csv.reader(infile, delimiter=" ", doublequote=False, escapechar="\\")
-            row: typing.List[str]
-            for row in reader:
+            line: str
+            for line in infile:
                 input_line_count += 1
 
-                if len(row) != 4:
-                    if self.verbose:
-                        print("Line %d: expected 4 fields, got %d." % (input_line_count, len(row)))
-                    if rw is not None:
-                        rw.write(row)
-                    reject_line_count += 1
-                    continue
-
-                if row[3] != ".":
-                    if self.verbose:
-                        print("Line %d: missing trailing dot." % input_line_count)
+                row: typing.List[str]
+                valid: bool
+                row, valid = self.parse(line, input_line_count)
+                if not valid:
                     if rw is not None:
                         rw.write(row)
                     reject_line_count += 1
