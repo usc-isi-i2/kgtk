@@ -93,6 +93,9 @@ class KgtkNtriples(KgtkFormat):
 
         return namespace_id + ":" + suffix, True
 
+    def convert_structured_literal(self, item: str, line_number: int)->typing.Tuple[str, bool]:
+        return item, True # TODO: implement
+
 
     def convert(self, item: str, ew: KgtkWriter, line_number: int)->typing.Tuple[str, bool]:
         """
@@ -104,8 +107,15 @@ class KgtkNtriples(KgtkFormat):
             return self.convert_blank_node(item)
         elif item.startswith("<") and item.endswith(">"):
             return self.convert_uri(item, line_number)
+        elif item.startswith('"') and item.endswith('"'):
+            return item # Double quoted strings are simple, if we assume they use proper escapes.
+        elif item.startswith('"') and item.rfind('"^^') >= 0:
+            return self.convert_structured_literal(item, line_number)
 
-        return item, True
+        if self.verbose:
+            print("Line %d: unrecognized item '%s'" %(line_number, item))
+
+        return item, False
     
     def read_initial_namespaces(self)->int:
         # Read the namespaces:
@@ -207,7 +217,7 @@ class KgtkNtriples(KgtkFormat):
 
                 if len(row) != 4:
                     if self.verbose:
-                        print("Line %d: expected 4 fields, got %d." % len(row))
+                        print("Line %d: expected 4 fields, got %d." % (input_line_count, len(row)))
                     if rw is not None:
                         rw.write(row)
                     reject_line_count += 1
