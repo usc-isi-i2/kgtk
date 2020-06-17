@@ -15,7 +15,7 @@ from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.utils.argparsehelpers import optional_bool
 
 
-@attr.s(slots=True, frozen=True)
+@attr.s(slots=True, frozen=False)
 class KgtkNtriples(KgtkFormat):
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
 
@@ -25,9 +25,11 @@ class KgtkNtriples(KgtkFormat):
 
     namespace_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
-    # attr.converters.default_if_none(...) does not seem to work.                                                                                                   
     local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str))
     local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool))
+
+    namespace_id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="n")
+    namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=1)
 
     prefix_expansion_label: str = attr.ib(validator=attr.validators.instance_of(str), default="prefix_expansion")
 
@@ -45,14 +47,54 @@ class KgtkNtriples(KgtkFormat):
     namespace_prefixes: typing.MutableMapping[str, str] = { }
     namespace_ids: typing.MutableMapping[str, str] = { }
 
-    def convert_blank_node(self, item: str)->str:
+    def convert_blank_node(self, item: str)->typing.Tuple[str, bool]:
         body: str = item[1:] # Stip the leading underscore, keep the colon.
         if self.local_namespace_use_uuid:
-            return self.local_namespace_prefix + self.local_namespace_uuid + body
+            return self.local_namespace_prefix + self.local_namespace_uuid + body, True
         else:
-            return self.local_namespace_prefix + body
+            return self.local_namespace_prefix + body, True
 
-    def convert(self, item: str, ew: KgtkWriter)->str:
+    def convert_uri(self, item: str, line_number: int)->typing.Tuple[str, bool]:
+        body: str = item[1:-1] # Strip off the enclosing brackets.
+        namespace_prefix: str
+        suffix: str
+
+        slashslash: int =  body.rfind("://")
+        if slashslash < 1:
+            if self.verbose:
+                print("Line %d: invalid URI: '%s'" % (line_number, item))
+            return item, False
+
+        end_of_namespace_prefix: int = -1
+        last_hash: int = body.rfind("#", slashslash+1)
+        last_slash: int = body.rfind("/", slashslash+1)
+        if last_hash >= 0:
+            namespace_prefix = body[:last_hash+1]
+            suffix = body[last_hash+1:]
+
+        elif last_slash >= 0:
+            namespace_prefix = body[:last_slash+1]
+            suffix = body[last_slash+1:]
+        else:
+            namespace_prefix = body
+            suffix = ""
+
+        namespace_id: str
+        if namespace_prefix in self.namespace_prefixes:
+            namespace_id = self.namespace_prefixes[namespace_prefix]
+        else:
+            while True:
+                namespace_id = self.namespace_id_prefix + str(self.namespace_id_counter)
+                self.namespace_id_counter += 1
+                if namespace_id not in self.namespace_ids:
+                    break
+            self.namespace_ids[namespace_id] = namespace_prefix
+            self.namespace_prefixes[namespace_prefix] = namespace_id
+
+        return namespace_id + ":" + suffix, True
+
+
+    def convert(self, item: str, ew: KgtkWriter, line_number: int)->typing.Tuple[str, bool]:
         """
         Convert an ntriples item to KGTK format.
 
@@ -60,8 +102,10 @@ class KgtkNtriples(KgtkFormat):
         """
         if item.startswith("_:"):
             return self.convert_blank_node(item)
+        elif item.startswith("<") and item.endswith(">"):
+            return self.convert_uri(item, line_number)
 
-        return item            
+        return item, True
     
     def read_initial_namespaces(self)->int:
         # Read the namespaces:
@@ -177,15 +221,23 @@ class KgtkNtriples(KgtkFormat):
                     reject_line_count += 1
                     continue
 
+                ok_1: bool
+                ok_2: bool
+                ok_3: bool
                 output_row: typing.List[str] = ["", "", "", "" ]
-                output_row[0] = self.convert(row[0], ew)
-                output_row[1] = self.convert(row[1], ew)
-                output_row[2] = self.convert(row[2], ew)
+                output_row[0], ok_1 = self.convert(row[0], ew, input_line_count)
+                output_row[1], ok_2 = self.convert(row[1], ew, input_line_count)
+                output_row[2], ok_3 = self.convert(row[2], ew, input_line_count)
 
-                # TODO: build an ID
+                if ok_1 and ok_2 and ok_3:
+                    # TODO: build an ID
 
-                ew.write(output_row)
-                output_line_count += 1
+                    ew.write(output_row)
+                    output_line_count += 1
+                else:
+                    if rw is not None:
+                        rw.write(row)
+                    reject_line_count += 1
 
         # Append the namespaces to the output file:
         output_line_count += self.write_namespaces(ew)
@@ -218,6 +270,12 @@ def main():
     parser.add_argument(      "--namespace-file", dest="namespace_file_path", help="The KGTK file with known namespaces. (default=%(default)s).",
                               type=Path, default=None)
     
+    parser.add_argument(      "--namespace-id-prefix", dest="namespace_id_prefix", help="The prefix used to generate new namespaces. (default=%(default)s).",
+                              default="n")
+    
+    parser.add_argument(      "--namespace-id-counter", dest="namespace_id_counter", help="The counter used to generate new namespaces. (default=%(default)s).",
+                              type=int, default=1)
+    
     parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
                               help="The namespace prefix for blank nodes. (default=%(default)s).",
                               default="X")
@@ -249,6 +307,8 @@ def main():
             print("--reject-file=%s" % str(args.reject_file_path), file=error_file, flush=True)
         if args.namespace_file_path is not None:
             print("--namespace-file=%s" % str(args.namespace_file_path), file=error_file, flush=True)
+        print("--namespace-id-prefix %s" % args.namespace_id_prefix, file=error_file, flush=True)
+        print("--namespace-id-counter %s" % args.namespace_id_counter, file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % args.local_namespace_use_uuid, file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
@@ -260,6 +320,8 @@ def main():
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
         namespace_file_path=args.namespace_file_path,
+        namespace_id_prefix=args.namespace_id_prefix,
+        namespace_id_counter=args.namespace_id_counter,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
         build_id=args.build_id,
