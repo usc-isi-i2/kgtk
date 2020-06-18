@@ -25,6 +25,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_NAMESPACE_ID_PREFIX: str = "n"
     DEFAULT_NAMESPACE_ID_COUNTER: int = 1
     DEFAULT_NAMESPACE_ID_ZFILL: int = 0
+    DEFAULT_OUTPUT_ONLY_USED_NAMESPACES: bool = True
     DEFAULT_NEWNODE_PREFIX: str = "kgtk:node"
     DEFAULT_NEWNODE_COUNTER: int = 1
     DEFAULT_NEWNODE_ZFILL: int = 0
@@ -58,6 +59,9 @@ class KgtkNtriples(KgtkFormat):
     ROW_PAT: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=FIELD_PAT)
     ROW_RE: typing.Pattern = re.compile(r'^' + ROW_PAT + r'$')
 
+    SLASH_HASH_PAT: str = r'/|#'
+    SLASH_HASH_RE: typing.Pattern = re.compile(SLASH_HASH_PAT)
+
     # Instance attributes:
 
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
@@ -67,6 +71,8 @@ class KgtkNtriples(KgtkFormat):
     reject_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
     namespace_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+
+    updated_namespace_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
     reader_options: KgtkReaderOptions = attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
 
@@ -78,6 +84,7 @@ class KgtkNtriples(KgtkFormat):
     namespace_id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NAMESPACE_ID_PREFIX)
     namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_COUNTER)
     namespace_id_zfill: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_ZFILL)
+    output_only_used_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
 
     prefix_expansion_label: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX_EXPANSION)
 
@@ -100,14 +107,13 @@ class KgtkNtriples(KgtkFormat):
 
     namespace_prefixes: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
+    used_namespaces: typing.Set[str] = attr.ib(factory=set)
 
     escape_pipes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ESCAPE_PIPES)
 
     output_line_count: int = attr.ib(default=0)
 
     def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str):
-        # TODO: build an ID
-
         output_row: typing.List[str] = [ node1, label, node2]
         if self.idbuilder is None:
             ew.write(output_row)
@@ -122,9 +128,6 @@ class KgtkNtriples(KgtkFormat):
         else:
             return self.local_namespace_prefix + body, True
 
-    SLASH_HASH_PAT: str = r'/|#'
-    SLASH_HASH_RE: typing.Pattern = re.compile(SLASH_HASH_PAT)
-
     def convert_uri(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         body: str = item[1:-1] # Strip off the enclosing brackets.
 
@@ -133,6 +136,9 @@ class KgtkNtriples(KgtkFormat):
         if body in self.namespace_prefixes:
             # Yes, this prefix exactly matches the body.
             namespace_id = self.namespace_prefixes[body]
+
+            if self.output_only_used_namespaces:
+                self.used_namespaces.add(namespace_id)
 
             # Return the namespace-prefixed URI:
             return namespace_id + ":", True
@@ -167,6 +173,9 @@ class KgtkNtriples(KgtkFormat):
                 # We have a winner.
                 namespace_id = self.namespace_prefixes[namespace_prefix]
 
+                if self.output_only_used_namespaces:
+                    self.used_namespaces.add(namespace_id)
+
                 # Return the namespace-prefixed URI:
                 return namespace_id + ":" + suffix, True
 
@@ -188,6 +197,9 @@ class KgtkNtriples(KgtkFormat):
                 # Save the namespace ID for later reuse:
                 self.namespace_ids[namespace_id] = namespace_prefix
                 self.namespace_prefixes[namespace_prefix] = namespace_id
+
+                if self.output_only_used_namespaces:
+                    self.used_namespaces.add(namespace_id)
 
                 # Return the namespace-prefixed URI:
                 return namespace_id + ":" + suffix, True
@@ -351,11 +363,42 @@ class KgtkNtriples(KgtkFormat):
 
         return namespace_line_count
         
-    def write_namespaces(self, ew: KgtkWriter):
+    def write_namespaces_to_output(self, ew: KgtkWriter, count_records: bool = True):
         # Append the namespaces to the output file.
-        n_id: str
-        for n_id in sorted(self.namespace_ids.keys()):
-            self.write_row(ew, n_id, self.prefix_expansion_label, '"' + self.namespace_ids[n_id] + '"')
+        namespace_id: str
+        for namespace_id in sorted(self.namespace_ids.keys()):
+            if self.output_only_used_namespaces:
+                if namespace_id in self.used_namespaces:
+                    self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"')
+            else:
+                self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"')
+
+    def write_updated_namespace_file(self):
+        # Is there an updated namespaces file?
+        if self.updated_namespace_file_path is None:
+            return
+
+        if self.verbose:
+            print("Opening updated namespaces file %s" % str(self.updated_namespace_file_path), file=self.error_file, flush=True)
+        # Open the updated namespaces file.
+        un: KgtkWriter = KgtkWriter.open(self.COLUMN_NAMES,
+                                         self.updated_namespace_file_path,
+                                         mode=KgtkWriter.Mode.EDGE,
+                                         require_all_columns=True,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=False,
+                                         gzip_in_parallel=False,
+                                         verbose=self.verbose,
+                                         very_verbose=self.very_verbose)
+        namespace_id: str
+        for namespace_id in sorted(self.namespace_ids.keys()):
+            un.write([namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"'])
+        un.close()
+
+
+    def save_namespaces(self, ew: KgtkWriter):
+        self.write_namespaces_to_output(ew)
+        self.write_updated_namespace_file()
 
     def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool]:
         m: typing.Optional[typing.Match] = self.ROW_RE.match(line)
@@ -364,6 +407,7 @@ class KgtkNtriples(KgtkFormat):
                 print("Line %d: not parsed.\n%s" % (line_number, line), file=self.error_file, flush=True)
             return [ ], False
         return [m.group("node1"), m.group("label"), m.group("node2")], True
+
 
     def process(self):
         output_column_names: typing.List[str]
@@ -446,8 +490,7 @@ class KgtkNtriples(KgtkFormat):
         if self.input_file_path != "-":
             infile.close()
 
-        # Append the namespaces to the output file:
-        self.write_namespaces(ew)
+        self.save_namespaces(ew)
 
         if self.verbose:
             print("Processed %d known namespaces." % (namespace_line_count), file=self.error_file, flush=True)
@@ -476,6 +519,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="The width of the counter used to generate new namespaces. (default=%(default)s).",
                                   type=int, default=cls.DEFAULT_NAMESPACE_ID_ZFILL)
     
+        parser.add_argument(      "--output-only-used-namespaces", dest="output_only_used_namespaces",
+                                  help="Write only used namespaces to the output file. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_OUTPUT_ONLY_USED_NAMESPACES)
+
         parser.add_argument(      "--allow-lax-uri", dest="allow_lax_uri",
                                   help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LAX_URI)
@@ -537,6 +584,10 @@ def main():
     parser.add_argument(      "--namespace-file", dest="namespace_file_path", help="The KGTK file with known namespaces. (default=%(default)s).",
                               type=Path, default=None)
     
+    parser.add_argument(      "--updated-namespace-file", dest="updated_namespace_file_path",
+                              help="An updated KGTK file with known namespaces. (default=%(default)s).",
+                              type=Path, default=None)
+    
 
     KgtkNtriples.add_arguments(parser)
     KgtkIdBuilderOptions.add_arguments(parser)
@@ -560,18 +611,21 @@ def main():
             print("--reject-file=%s" % str(args.reject_file_path), file=error_file, flush=True)
         if args.namespace_file_path is not None:
             print("--namespace-file=%s" % str(args.namespace_file_path), file=error_file, flush=True)
+        if args.updated_namespace_file_path is not None:
+            print("--updated-namespace-file=%s" % str(args.updated_namespace_file_path), file=error_file, flush=True)
         print("--namespace-id-prefix %s" % args.namespace_id_prefix, file=error_file, flush=True)
-        print("--namespace-id-counter %s" % args.namespace_id_counter, file=error_file, flush=True)
-        print("--namespace-id-zfill %s" % args.namespace_id_zfill, file=error_file, flush=True)
-        print("--allow-lax-uri %s" % args.allow_lax_uri, file=error_file, flush=True)
+        print("--namespace-id-counter %s" % str(args.namespace_id_counter), file=error_file, flush=True)
+        print("--namespace-id-zfill %s" % str(args.namespace_id_zfill), file=error_file, flush=True)
+        print("--output-only-used-namespaces %s" % str(args.output_only_used_namespaces), file=error_file, flush=True)
+        print("--allow-lax-uri %s" % str(args.allow_lax_uri), file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
-        print("--local-namespace-use-uuid %s" % args.local_namespace_use_uuid, file=error_file, flush=True)
+        print("--local-namespace-use-uuid %s" % str(args.local_namespace_use_uuid), file=error_file, flush=True)
         print("--prefix-expansion-label %s" % args.prefix_expansion_label, file=error_file, flush=True)
         print("--structured-value-label %s" % args.structured_value_label, file=error_file, flush=True)
         print("--structured-uri-label %s" % args.structured_uri_label, file=error_file, flush=True)
         print("--newnode-prefix %s" % args.newnode_prefix, file=error_file, flush=True)
-        print("--newnode-counter %s" % args.newnode_counter, file=error_file, flush=True)
-        print("--newnode-zfill %s" % args.newnode_zfill, file=error_file, flush=True)
+        print("--newnode-counter %s" % str(args.newnode_counter), file=error_file, flush=True)
+        print("--newnode-zfill %s" % str(args.newnode_zfill), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
         print("--escape-pipes=%s" % str(args.escape_pipes), file=error_file, flush=True)
 
@@ -583,9 +637,11 @@ def main():
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
         namespace_file_path=args.namespace_file_path,
+        updated_namespace_file_path=args.updated_namespace_file_path,
         namespace_id_prefix=args.namespace_id_prefix,
         namespace_id_counter=args.namespace_id_counter,
         namespace_id_zfill=args.namespace_id_zfill,
+        output_only_used_namespaces=args.output_only_used_namespaces,
         newnode_prefix=args.newnode_prefix,
         newnode_counter=args.newnode_counter,
         newnode_zfill=args.newnode_zfill,
