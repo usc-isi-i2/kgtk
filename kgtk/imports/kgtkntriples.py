@@ -128,6 +128,16 @@ class KgtkNtriples(KgtkFormat):
     def convert_uri(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         body: str = item[1:-1] # Strip off the enclosing brackets.
 
+        # First, check for an exact match for the body:
+        namespace_id: str
+        if body in self.namespace_prefixes:
+            # Yes, this prefix exactly matches the body.
+            namespace_id = self.namespace_prefixes[body]
+
+            # Return the namespace-prefixed URI:
+            return namespace_id + ":", True
+
+        # Move past "http://" or "https://":
         after_slashslash: int
         slashslash: int =  body.rfind("://")
         if slashslash < 1:
@@ -139,36 +149,48 @@ class KgtkNtriples(KgtkFormat):
         else:
             after_slashslash = slashslash + len("://")
 
-        namespace_prefix: typing.Optional[str] = None
-        suffix: typing.Optional[str] = None
+        # Build a left-to-right list of slash- or hash-terminated sections:
+        matches: typing.List[int] = [ ]
         m: typing.Match
         for m in self.SLASH_HASH_RE.finditer(body, after_slashslash):
-            match_end: int = m.end(0)
+            matches.append(m.end(0))
+
+        # Search right-to-left for the longest match:
+        matches.reverse()
+        namespace_prefix: str
+        suffix: str
+        match_end: int
+        for match_end in matches:
             namespace_prefix = body[:match_end]
             suffix = body[match_end:]
             if namespace_prefix in self.namespace_prefixes:
+                # We have a winner.
                 namespace_id = self.namespace_prefixes[namespace_prefix]
+
+                # Return the namespace-prefixed URI:
                 return namespace_id + ":" + suffix, True
 
-        if namespace_prefix is None:
+        # Take the longest possible section, which is now first in the list:
+        if len(matches) > 0:
+            match_end = matches[0]
+            namespace_prefix = body[:match_end]
+            suffix = body[match_end:]
+        else:
+            # Take the entire body:
             namespace_prefix = body
             suffix = ""
-            if namespace_prefix in self.namespace_prefixes:
-                namespace_id = self.namespace_prefixes[namespace_prefix]
-                return namespace_id + ":" + suffix, True
-            
-        if suffix is None:
-            suffix = "" # Impossible to get here!
 
+        # Build a non-colliding namespace ID.
         while True:
             namespace_id = self.namespace_id_prefix + str(self.namespace_id_counter).zfill(self.namespace_id_zfill)
             self.namespace_id_counter += 1
             if namespace_id not in self.namespace_ids:
-                break
-        self.namespace_ids[namespace_id] = namespace_prefix
-        self.namespace_prefixes[namespace_prefix] = namespace_id
+                # Save the namespace ID for later reuse:
+                self.namespace_ids[namespace_id] = namespace_prefix
+                self.namespace_prefixes[namespace_prefix] = namespace_id
 
-        return namespace_id + ":" + suffix, True
+                # Return the namespace-prefixed URI:
+                return namespace_id + ":" + suffix, True
 
     def escape_pipe(self, item: str)->str:
         # ensure that vertical bars (pipes) are escaped.
