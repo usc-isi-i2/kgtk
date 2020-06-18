@@ -64,7 +64,8 @@ class KgtkNtriples(KgtkFormat):
 
     # Instance attributes:
 
-    input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
+    # TODO: write a validator:
+    input_file_paths: typing.List[Path] = attr.ib()
 
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
 
@@ -103,7 +104,7 @@ class KgtkNtriples(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    local_namespace_uuid: str = attr.ib(factory=shortuuid.uuid)
+    local_namespace_uuid: str = attr.ib(default="")
 
     namespace_prefixes: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
@@ -441,60 +442,70 @@ class KgtkNtriples(KgtkFormat):
             else:
                 rw = open(self.reject_file_path, "wt")
 
-        input_line_count: int = 0
+
+        total_input_line_count: int = 0
         reject_line_count: int = 0
         
         namespace_line_count: int = self.get_initial_namespaces()
             
-        # Open the input file.
-        if self.verbose:
-            print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
-        infile: typing.TestIO
-        if str(self.input_file_path) == "-":
-            infile = sys.stdin
-        else:
-            infile = open(self.input_file_path, 'rt') 
+        input_file_path: str
+        for input_file_path in self.input_file_paths:
+            input_line_count: int = 0
+            
+            if self.local_namespace_use_uuid:
+                # Generate a new local namespace UUID.
+                self.local_namespace_uuid = shortuuid.uuid()
 
-        line: str
-        for line in infile:
-            input_line_count += 1
-
-            row: typing.List[str]
-            valid: bool
-            row, valid = self.parse(line, input_line_count)
-            if not valid:
-                if rw is not None:
-                    rw.write(line)
-                reject_line_count += 1
-                continue
-
-            node1: str
-            ok_1: bool
-            node1, ok_1 = self.convert(row[0], input_line_count, ew)
-
-            label: str
-            ok_2: bool
-            label, ok_2 = self.convert(row[1], input_line_count, ew)
-
-            node2: str
-            ok_3: bool
-            node2, ok_3 = self.convert(row[2], input_line_count, ew)
-
-            if ok_1 and ok_2 and ok_3:
-                self.write_row(ew, node1, label, node2)
+            # Open the input file.
+            if self.verbose:
+                print("Opening the input file: %s" % input_file_path, file=self.error_file, flush=True)
+            infile: typing.TestIO
+            if str(input_file_path) == "-":
+                infile = sys.stdin
             else:
-                if rw is not None:
-                    rw.write(line)
-                reject_line_count += 1
+                infile = open(input_file_path, 'rt') 
 
-        if self.input_file_path != "-":
-            infile.close()
+            line: str
+            for line in infile:
+                input_line_count += 1
+                total_input_line_count += 1
+
+                row: typing.List[str]
+                valid: bool
+                row, valid = self.parse(line, input_line_count)
+                if not valid:
+                    if rw is not None:
+                        rw.write(line)
+                    reject_line_count += 1
+                    continue
+
+                node1: str
+                ok_1: bool
+                node1, ok_1 = self.convert(row[0], input_line_count, ew)
+
+                label: str
+                ok_2: bool
+                label, ok_2 = self.convert(row[1], input_line_count, ew)
+
+                node2: str
+                ok_3: bool
+                node2, ok_3 = self.convert(row[2], input_line_count, ew)
+
+                if ok_1 and ok_2 and ok_3:
+                    self.write_row(ew, node1, label, node2)
+                else:
+                    if rw is not None:
+                        rw.write(line)
+                    reject_line_count += 1
+
+            if input_file_path != "-":
+                infile.close()
 
         self.save_namespaces(ew)
 
         if self.verbose:
             print("Processed %d known namespaces." % (namespace_line_count), file=self.error_file, flush=True)
-            print("Processed %d records." % (input_line_count), file=self.error_file, flush=True)
+            print("Processed %d records." % (total_input_line_count), file=self.error_file, flush=True)
             print("Rejected %d records." % (reject_line_count), file=self.error_file, flush=True)
             print("Wrote %d records." % (self.output_line_count), file=self.error_file, flush=True)
         
@@ -573,8 +584,8 @@ def main():
     """
     parser: ArgumentParser = ArgumentParser()
 
-    parser.add_argument("-i", "--input-file", dest="input_file_path",
-                        help="The KGTK file with the input data. (default=%(default)s)", type=Path, default="-")
+    parser.add_argument("-i", "--input-files", dest="input_file_paths", nargs='*',
+                        help="The file(s) with the input ntriples data. (default=%(default)s)", type=Path, default="-")
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
@@ -604,7 +615,7 @@ def main():
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
-        print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
+        print("--input-files %s" % " ".join([str(path) for  path in input_file_paths]), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
         # TODO: show ifempty-specific options.
         if args.reject_file_path is not None:
@@ -633,7 +644,7 @@ def main():
         reader_options.show(out=error_file)
 
     kn: KgtkNtriples = KgtkNtriples(
-        input_file_path=args.input_file_path,
+        input_file_paths=args.input_file_paths,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
         namespace_file_path=args.namespace_file_path,
