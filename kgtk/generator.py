@@ -437,6 +437,7 @@ class TripleGenerator(Generator):
     
 
     def entry_point(self, line_number: int, edge: str):
+        # print(line_number,edge)
         """
         generates a list of two, the first element is the determination of the edge type using corresponding edge type
         the second element is a bool indicating whether this is a valid property edge or qualifier edge.
@@ -728,7 +729,7 @@ class JsonGenerator(Generator):
         
         if field == "alias":
             alias_text, lang = JsonGenerator.process_text_string(node2)
-            temp_alias_dict = {lang, {"languange": lang, "value":alias_text}}
+            temp_alias_dict = {lang: {"languange": lang, "value":alias_text}}
             if lang in self.misc_json_dict[node1]["aliases"]:
                 self.misc_json_dict[node1]["aliases"][lang].append(temp_alias_dict)
             else:
