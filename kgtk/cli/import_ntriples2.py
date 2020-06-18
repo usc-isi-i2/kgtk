@@ -42,8 +42,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument("-i", "--input-file", dest="input_file_path",
-                        help="The input file with the ntriples data. (default=%(default)s)", type=Path, default="-")
+    parser.add_argument("-i", "--input-files", dest="input_file_paths", nargs='*',
+                        help="The input file(s) with the ntriples data. (default=%(default)s)", type=Path, default="-")
 
     parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
@@ -62,7 +62,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
 
-def run(input_file_path: Path,
+def run(input_file_paths: typing.List[Path],
         output_kgtk_file: Path,
         reject_file_path: typing.Optional[Path],
         namespace_kgtk_file: typing.Optional[Path],
@@ -110,7 +110,7 @@ def run(input_file_path: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("--input-file %s" % str(input_file_path), file=error_file)
+        print("--input-files %s" % " ".join([str(path) for  path in input_file_paths]), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
         if reject_file_path is not None:
             print("--reject-file=%s" % str(reject_file_path), file=error_file, flush=True)
@@ -147,7 +147,7 @@ def run(input_file_path: Path,
 
     try:
         kn: KgtkNtriples = KgtkNtriples(
-            input_file_path=input_file_path,
+            input_file_paths=input_file_paths,
             output_file_path=output_kgtk_file,
             reject_file_path=reject_file_path,
             updated_namespace_file_path=updated_namespace_kgtk_file,
