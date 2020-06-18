@@ -122,10 +122,11 @@ class KgtkNtriples(KgtkFormat):
         else:
             return self.local_namespace_prefix + body, True
 
+    SLASH_HASH_PAT: str = r'/|#'
+    SLASH_HASH_RE: typing.Pattern = re.compile(SLASH_HASH_PAT)
+
     def convert_uri(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         body: str = item[1:-1] # Strip off the enclosing brackets.
-        namespace_prefix: str
-        suffix: str
 
         after_slashslash: int
         slashslash: int =  body.rfind("://")
@@ -138,31 +139,34 @@ class KgtkNtriples(KgtkFormat):
         else:
             after_slashslash = slashslash + len("://")
 
-        end_of_namespace_prefix: int = -1
-        last_hash: int = body.rfind("#", after_slashslash)
-        last_slash: int = body.rfind("/", after_slashslash)
-        if last_hash >= 0:
-            namespace_prefix = body[:last_hash+1]
-            suffix = body[last_hash+1:]
+        namespace_prefix: typing.Optional[str] = None
+        suffix: typing.Optional[str] = None
+        m: typing.Match
+        for m in self.SLASH_HASH_RE.finditer(body, after_slashslash):
+            match_end: int = m.end(0)
+            namespace_prefix = body[:match_end]
+            suffix = body[match_end:]
+            if namespace_prefix in self.namespace_prefixes:
+                namespace_id = self.namespace_prefixes[namespace_prefix]
+                return namespace_id + ":" + suffix, True
 
-        elif last_slash >= 0:
-            namespace_prefix = body[:last_slash+1]
-            suffix = body[last_slash+1:]
-        else:
+        if namespace_prefix is None:
             namespace_prefix = body
             suffix = ""
+            if namespace_prefix in self.namespace_prefixes:
+                namespace_id = self.namespace_prefixes[namespace_prefix]
+                return namespace_id + ":" + suffix, True
+            
+        if suffix is None:
+            suffix = "" # Impossible to get here!
 
-        namespace_id: str
-        if namespace_prefix in self.namespace_prefixes:
-            namespace_id = self.namespace_prefixes[namespace_prefix]
-        else:
-            while True:
-                namespace_id = self.namespace_id_prefix + str(self.namespace_id_counter).zfill(self.namespace_id_zfill)
-                self.namespace_id_counter += 1
-                if namespace_id not in self.namespace_ids:
-                    break
-            self.namespace_ids[namespace_id] = namespace_prefix
-            self.namespace_prefixes[namespace_prefix] = namespace_id
+        while True:
+            namespace_id = self.namespace_id_prefix + str(self.namespace_id_counter).zfill(self.namespace_id_zfill)
+            self.namespace_id_counter += 1
+            if namespace_id not in self.namespace_ids:
+                break
+        self.namespace_ids[namespace_id] = namespace_prefix
+        self.namespace_prefixes[namespace_prefix] = namespace_id
 
         return namespace_id + ":" + suffix, True
 
