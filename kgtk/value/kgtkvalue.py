@@ -1449,8 +1449,8 @@ class KgtkValue(KgtkFormat):
             except ValueError:
                 return False # shouldn't happen
 
-        if hour == 24:
-            if (minutes > 0 or seconds > 0):
+        if hour is not None and hour == 24:
+            if ((minutes is not None and minutes > 0) or (seconds is not None and seconds > 0)):
                 return False # An invalid time
             if not self.options.allow_end_of_day:
                 return False
