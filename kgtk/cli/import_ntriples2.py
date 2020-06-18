@@ -53,6 +53,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--namespace-file", dest="namespace_kgtk_file", help="The KGTK file with known namespaces. (default=%(default)s).",
                               type=Path, default=None)
 
+    parser.add_argument(      "--updated-namespace-file", dest="updated_namespace_kgtk_file",
+                              help="An updated KGTK file with known namespaces. (default=%(default)s).",
+                              type=Path, default=None)
+    
     KgtkNtriples.add_arguments(parser)
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -62,10 +66,12 @@ def run(input_file_path: Path,
         output_kgtk_file: Path,
         reject_file_path: typing.Optional[Path],
         namespace_kgtk_file: typing.Optional[Path],
+        updated_namespace_kgtk_file: typing.Optional[Path],
 
         namespace_id_prefix: str,
         namespace_id_counter: int,
         namespace_id_zfill: int,
+        output_only_used_namespaces: bool,
 
         allow_lax_uri: bool,
 
@@ -110,15 +116,18 @@ def run(input_file_path: Path,
             print("--reject-file=%s" % str(reject_file_path), file=error_file, flush=True)
         if namespace_kgtk_file is not None:
             print("--namespace-file=%s" % str(namespace_kgtk_file), file=error_file, flush=True)
+        if updated_namespace_kgtk_file is not None:
+            print("--updated-namespace-file=%s" % str(updated_namespace_kgtk_file), file=error_file, flush=True)
 
         print("--namespace-id-prefix %s" % namespace_id_prefix, file=error_file, flush=True)
         print("--namespace-id-counter %s" % str(namespace_id_counter), file=error_file, flush=True)
         print("--namespace-id-zfill %s" % str(namespace_id_zfill), file=error_file, flush=True)
+        print("--output-only-used-namespaces %s" % str(output_only_used_namespaces), file=error_file, flush=True)
 
         print("--allow-lax-uri %s" % str(allow_lax_uri), file=error_file, flush=True)
         
         print("--local-namespace-prefix %s" % local_namespace_prefix, file=error_file, flush=True)
-        print("--local-namespace-use-uuid %s" % local_namespace_use_uuid, file=error_file, flush=True)
+        print("--local-namespace-use-uuid %s" % str(local_namespace_use_uuid), file=error_file, flush=True)
 
         print("--prefix-expansion-label %s" % prefix_expansion_label, file=error_file, flush=True)
         print("--structured-value-label %s" % structured_value_label, file=error_file, flush=True)
@@ -141,10 +150,12 @@ def run(input_file_path: Path,
             input_file_path=input_file_path,
             output_file_path=output_kgtk_file,
             reject_file_path=reject_file_path,
+            updated_namespace_file_path=updated_namespace_kgtk_file,
             namespace_file_path=namespace_kgtk_file,
             namespace_id_prefix=namespace_id_prefix,
             namespace_id_counter=namespace_id_counter,
             namespace_id_zfill=namespace_id_zfill,
+            output_only_used_namespaces=output_only_used_namespaces,
             newnode_prefix=newnode_prefix,
             newnode_counter=newnode_counter,
             newnode_zfill=newnode_zfill,
