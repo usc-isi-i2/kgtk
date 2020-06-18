@@ -14,7 +14,8 @@ from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.utils.argparsehelpers import optional_bool
-
+from kgtk.value.kgtkvalue import KgtkValue, KgtkValueFields
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
 
 @attr.s(slots=True, frozen=False)
 class KgtkNtriples(KgtkFormat):
@@ -36,6 +37,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_ALLOW_LAX_URI: bool = True
     DEFAULT_BUILD_ID: bool = False
     DEFAULT_ESCAPE_PIPES: bool = True
+    DEFAULT_VALIDATE: bool = False
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -103,6 +105,9 @@ class KgtkNtriples(KgtkFormat):
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_ID)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
     idbuilder: typing.Optional[KgtkIdBuilder] = attr.ib(default=None)
+
+    validate: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_VALIDATE)
+    value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -323,6 +328,20 @@ class KgtkNtriples(KgtkFormat):
 
         return item, False
     
+    def convert_and_validate(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
+        result: str
+        is_ok: bool
+        result, is_ok = self.convert(item, line_number, ew)
+        if is_ok and self.validate:
+            kv: KgtkValue = KgtkValue(result, options=self.value_options)
+            if not kv.validate():
+                if self.verbose:
+                    print("Input line %d: imported value '%s' (from '%s') is invalid." % (line_number, result, item),
+                          file=self.error_file, flush=True)
+                return result, False
+        return result, True
+            
+
     def get_default_namespaces(self)->int:
         namespace_id: str = "xml-schema-type"
         namespace_prefix: str = "http://www.w3.org/2001/XMLSchema#"
@@ -497,15 +516,15 @@ class KgtkNtriples(KgtkFormat):
 
                 node1: str
                 ok_1: bool
-                node1, ok_1 = self.convert(row[0], input_line_count, ew)
+                node1, ok_1 = self.convert_and_validate(row[0], input_line_count, ew)
 
                 label: str
                 ok_2: bool
-                label, ok_2 = self.convert(row[1], input_line_count, ew)
+                label, ok_2 = self.convert_and_validate(row[1], input_line_count, ew)
 
                 node2: str
                 ok_3: bool
-                node2, ok_3 = self.convert(row[2], input_line_count, ew)
+                node2, ok_3 = self.convert_and_validate(row[2], input_line_count, ew)
 
                 if ok_1 and ok_2 and ok_3:
                     self.write_row(ew, node1, label, node2)
@@ -606,6 +625,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="When true, input pipe characters (|) need to be escaped (\\|) per KGTK file format. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ESCAPE_PIPES)
 
+        parser.add_argument(      "--validate", dest="validate",
+                                  help="When true, validate that the result fields are good KGTK file format. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VALIDATE)
+
 def main():
     """
     Test the KGTK ntriples importer.
@@ -632,6 +655,7 @@ def main():
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=True)
+    KgtkValueOptions.add_arguments(parser)
 
     args: Namespace = parser.parse_args()
 
@@ -640,6 +664,7 @@ def main():
     # Build the option structures.                                                                                                                          
     idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_args(args)
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
@@ -669,9 +694,11 @@ def main():
         print("--newnode-zfill %s" % str(args.newnode_zfill), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
         print("--escape-pipes=%s" % str(args.escape_pipes), file=error_file, flush=True)
+        print("--validate=%s" % str(args.validate), file=error_file, flush=True)
 
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
+        value_options.show(out=error_file)
 
     kn: KgtkNtriples = KgtkNtriples(
         input_file_paths=args.input_file_paths,
@@ -697,7 +724,9 @@ def main():
         build_id=args.build_id,
         escape_pipes=args.escape_pipes,
         idbuilder_options=idbuilder_options,
+        validate=args.validate,
         reader_options=reader_options,
+        value_options=value_options,
         error_file=error_file,
         verbose=args.verbose,
         very_verbose=args.very_verbose)
