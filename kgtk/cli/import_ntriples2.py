@@ -69,6 +69,7 @@ def run(input_file_paths: typing.List[Path],
         updated_namespace_kgtk_file: typing.Optional[Path],
 
         namespace_id_prefix: str,
+        namespace_id_use_uuid: bool,
         namespace_id_counter: int,
         namespace_id_zfill: int,
         output_only_used_namespaces: bool,
@@ -83,6 +84,7 @@ def run(input_file_paths: typing.List[Path],
         structured_uri_label: str,
 
         newnode_prefix: str,
+        newnode_use_uuid: bool,
         newnode_counter: int,
         newnode_zfill: int,
 
@@ -120,6 +122,7 @@ def run(input_file_paths: typing.List[Path],
             print("--updated-namespace-file=%s" % str(updated_namespace_kgtk_file), file=error_file, flush=True)
 
         print("--namespace-id-prefix %s" % namespace_id_prefix, file=error_file, flush=True)
+        print("--namespace-id-use-uuid %s" % str(namespace_id_use_uuid), file=error_file, flush=True)
         print("--namespace-id-counter %s" % str(namespace_id_counter), file=error_file, flush=True)
         print("--namespace-id-zfill %s" % str(namespace_id_zfill), file=error_file, flush=True)
         print("--output-only-used-namespaces %s" % str(output_only_used_namespaces), file=error_file, flush=True)
@@ -134,6 +137,7 @@ def run(input_file_paths: typing.List[Path],
         print("--structured-uri-label %s" % structured_uri_label, file=error_file, flush=True)
         
         print("--newnode-prefix %s" % newnode_prefix, file=error_file, flush=True)
+        print("--newnode-use-uuid %s" % str(newnode_use_uuid), file=error_file, flush=True)
         print("--newnode-counter %s" % str(newnode_counter), file=error_file, flush=True)
         print("--newnode-zfill %s" % str(newnode_zfill), file=error_file, flush=True)
         
@@ -153,10 +157,12 @@ def run(input_file_paths: typing.List[Path],
             updated_namespace_file_path=updated_namespace_kgtk_file,
             namespace_file_path=namespace_kgtk_file,
             namespace_id_prefix=namespace_id_prefix,
+            namespace_id_use_uuid=namespace_id_use_uuid,
             namespace_id_counter=namespace_id_counter,
             namespace_id_zfill=namespace_id_zfill,
             output_only_used_namespaces=output_only_used_namespaces,
             newnode_prefix=newnode_prefix,
+            newnode_use_uuid=newnode_use_uuid,
             newnode_counter=newnode_counter,
             newnode_zfill=newnode_zfill,
             allow_lax_uri=allow_lax_uri,
