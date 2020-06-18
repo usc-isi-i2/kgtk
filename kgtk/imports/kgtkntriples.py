@@ -332,6 +332,17 @@ class KgtkNtriples(KgtkFormat):
         result: str
         is_ok: bool
         result, is_ok = self.convert(item, line_number, ew)
+
+        # Just a little bit of paranoia here regarding tabs and ends-of-lines:
+        #
+        # TODO: perform these checks (and repairs!) in KgtkValue.
+        if "\t" in result:
+            result = result.replace("\t", "\\t")
+        if "\n" in result:
+            result = result.replace("\n", "\\n")
+        if "\r" in result:
+            result = result.replace("\r", "\\r")
+
         if is_ok and self.validate:
             kv: KgtkValue = KgtkValue(result, options=self.value_options)
             if not kv.validate():
