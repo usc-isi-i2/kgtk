@@ -25,10 +25,12 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_NAMESPACE_ID_PREFIX: str = "n"
     DEFAULT_NAMESPACE_ID_COUNTER: int = 1
     DEFAULT_NAMESPACE_ID_ZFILL: int = 0
+    DEFAULT_NAMESPACE_ID_USE_UUID: bool = False
     DEFAULT_OUTPUT_ONLY_USED_NAMESPACES: bool = True
     DEFAULT_NEWNODE_PREFIX: str = "kgtk:node"
     DEFAULT_NEWNODE_COUNTER: int = 1
     DEFAULT_NEWNODE_ZFILL: int = 0
+    DEFAULT_NEWNODE_USE_UUID: bool = False
     DEFAULT_LOCAL_NAMESPACE_PREFIX: str = "X"
     DEFAULT_LOCAL_NAMESPACE_USE_UUID: bool = True
     DEFAULT_ALLOW_LAX_URI: bool = True
@@ -85,6 +87,7 @@ class KgtkNtriples(KgtkFormat):
     namespace_id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NAMESPACE_ID_PREFIX)
     namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_COUNTER)
     namespace_id_zfill: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_ZFILL)
+    namespace_id_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_NAMESPACE_ID_USE_UUID)
     output_only_used_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
 
     prefix_expansion_label: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX_EXPANSION)
@@ -95,6 +98,7 @@ class KgtkNtriples(KgtkFormat):
     newnode_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NEWNODE_PREFIX)
     newnode_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NEWNODE_COUNTER)
     newnode_zfill: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NEWNODE_ZFILL)
+    newnode_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_NEWNODE_USE_UUID)
 
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_ID)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
@@ -192,7 +196,10 @@ class KgtkNtriples(KgtkFormat):
 
         # Build a non-colliding namespace ID.
         while True:
-            namespace_id = self.namespace_id_prefix + str(self.namespace_id_counter).zfill(self.namespace_id_zfill)
+            namespace_id = self.namespace_id_prefix
+            if self.namespace_id_use_uuid:
+                namespace_id += self.local_namespace_uuid + "-"
+            namespace_id += str(self.namespace_id_counter).zfill(self.namespace_id_zfill)
             self.namespace_id_counter += 1
             if namespace_id not in self.namespace_ids:
                 # Save the namespace ID for later reuse:
@@ -221,7 +228,10 @@ class KgtkNtriples(KgtkFormat):
         return self.escape_pipe(item), True
  
     def generate_new_node_symbol(self)->str:
-        new_node_symbol: str = self.newnode_prefix + str(self.newnode_counter).zfill(self.newnode_zfill)
+        new_node_symbol: str = self.newnode_prefix
+        if self.newnode_use_uuid:
+            new_node_symbol += self.local_namespace_uuid + "-"
+        new_node_symbol += str(self.newnode_counter).zfill(self.newnode_zfill)
         self.newnode_counter += 1
         return new_node_symbol
     
@@ -273,7 +283,13 @@ class KgtkNtriples(KgtkFormat):
 
         elif uri == '<http://www.w3.org/2001/XMLSchema#dateTime>':
             # Convert this to a KGTK date-and-time:
+            #
+            # Note: the W3C XML Schema standard allows the now obsolete
+            # end-of-day time "24:00:00".
             return '^' + string[1:-1], True
+
+        # TODO: the "date" schema
+        # Problem:  it allows timezone offsets after dates without times!
 
         converted_uri: str
         valid: bool
@@ -452,7 +468,7 @@ class KgtkNtriples(KgtkFormat):
         for input_file_path in self.input_file_paths:
             input_line_count: int = 0
             
-            if self.local_namespace_use_uuid:
+            if self.local_namespace_use_uuid or self.namespace_id_use_uuid or self.newnode_use_uuid:
                 # Generate a new local namespace UUID.
                 self.local_namespace_uuid = shortuuid.uuid()
 
@@ -501,7 +517,8 @@ class KgtkNtriples(KgtkFormat):
             if input_file_path != "-":
                 infile.close()
 
-        self.save_namespaces(ew)
+
+                self.save_namespaces(ew)
 
         if self.verbose:
             print("Processed %d known namespaces." % (namespace_line_count), file=self.error_file, flush=True)
@@ -522,6 +539,11 @@ class KgtkNtriples(KgtkFormat):
                                   help="The prefix used to generate new namespaces. (default=%(default)s).",
                                   default=cls.DEFAULT_NAMESPACE_ID_PREFIX)
     
+        parser.add_argument(      "--namespace-id-use-uuid", dest="namespace_id_use_uuid",
+                                  help="Use the local namespace UUID when generating namespaces. " +
+                                  "When there are multiple input files, each input file gets its own UUID. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_NAMESPACE_ID_USE_UUID)
+
         parser.add_argument(      "--namespace-id-counter", dest="namespace_id_counter",
                                   help="The counter used to generate new namespaces. (default=%(default)s).",
                                   type=int, default=cls.DEFAULT_NAMESPACE_ID_COUNTER)
@@ -543,7 +565,8 @@ class KgtkNtriples(KgtkFormat):
                                   default=cls.DEFAULT_LOCAL_NAMESPACE_PREFIX)
 
         parser.add_argument(      "--local-namespace-use-uuid", dest="local_namespace_use_uuid",
-                                  help="Generate a UUID for the local namespace. (default=%(default)s).",
+                                  help="Generate a UUID for the local namespace. " +
+                                  "When there are multiple input files, each input file gets its own UUID. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_LOCAL_NAMESPACE_USE_UUID)
 
         parser.add_argument(      "--prefix-expansion-label", dest="prefix_expansion_label",
@@ -562,6 +585,11 @@ class KgtkNtriples(KgtkFormat):
                                   help="The prefix used to generate new nodes for ntriple structured literals. (default=%(default)s).",
                                   default=cls.DEFAULT_NEWNODE_PREFIX)
     
+        parser.add_argument(      "--newnode-use-uuid", dest="newnode_use_uuid",
+                                  help="Use the local namespace UUID when generating new nodes for ntriple structured literals. " +
+                                  "When there are multiple input files, each input file gets its own UUID. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_NEWNODE_USE_UUID)
+
         parser.add_argument(      "--newnode-counter", dest="newnode_counter",
                                   help="The counter used to generate new nodes for ntriple structured literals. (default=%(default)s).",
                                   type=int, default=cls.DEFAULT_NEWNODE_COUNTER)
@@ -625,6 +653,7 @@ def main():
         if args.updated_namespace_file_path is not None:
             print("--updated-namespace-file=%s" % str(args.updated_namespace_file_path), file=error_file, flush=True)
         print("--namespace-id-prefix %s" % args.namespace_id_prefix, file=error_file, flush=True)
+        print("--namespace-id-use-uuid %s" % str(args.namespace_id_use_uuid), file=error_file, flush=True)
         print("--namespace-id-counter %s" % str(args.namespace_id_counter), file=error_file, flush=True)
         print("--namespace-id-zfill %s" % str(args.namespace_id_zfill), file=error_file, flush=True)
         print("--output-only-used-namespaces %s" % str(args.output_only_used_namespaces), file=error_file, flush=True)
@@ -635,6 +664,7 @@ def main():
         print("--structured-value-label %s" % args.structured_value_label, file=error_file, flush=True)
         print("--structured-uri-label %s" % args.structured_uri_label, file=error_file, flush=True)
         print("--newnode-prefix %s" % args.newnode_prefix, file=error_file, flush=True)
+        print("--newnode-use-uuid %s" % str(args.newnode_use_uuid), file=error_file, flush=True)
         print("--newnode-counter %s" % str(args.newnode_counter), file=error_file, flush=True)
         print("--newnode-zfill %s" % str(args.newnode_zfill), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
@@ -650,10 +680,12 @@ def main():
         namespace_file_path=args.namespace_file_path,
         updated_namespace_file_path=args.updated_namespace_file_path,
         namespace_id_prefix=args.namespace_id_prefix,
+        namespace_id_use_uuid=args.namespace_id_use_uuid,
         namespace_id_counter=args.namespace_id_counter,
         namespace_id_zfill=args.namespace_id_zfill,
         output_only_used_namespaces=args.output_only_used_namespaces,
         newnode_prefix=args.newnode_prefix,
+        newnode_use_uuid=args.newnode_use_uuid,
         newnode_counter=args.newnode_counter,
         newnode_zfill=args.newnode_zfill,
         allow_lax_uri=args.allow_lax_uri,
