@@ -27,9 +27,9 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
 
-    reified_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
-    unreified_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
-    uninvolved_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
+    reified_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    unreified_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    uninvolved_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
     trigger_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_LABEL_VALUE)
     trigger_node2_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_NODE2_VALUE)
@@ -96,7 +96,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         reifiedw: typing.Optional[KgtkWriter] = None
         if self.reified_file_path is not None:
             if self.verbose:
-                print("Opening the reified RDF statements output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+                print("Opening the reified RDF statements output file: %s" % str(self.reified_file_path), file=self.error_file, flush=True)
             reifiedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.reified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
@@ -110,7 +110,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         unreifiedw: typing.Optional[KgtkWriter] = None
         if self.unreified_file_path is not None:
             if self.verbose:
-                print("Opening the unreified RDF statements output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+                print("Opening the unreified RDF statements output file: %s" % str(self.unreified_file_path), file=self.error_file, flush=True)
             unreifiedw: KgtkWriter = KgtkWriter.open(output_column_names,
                                                    self.unreified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
@@ -124,7 +124,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         uninvolvedw: typing.Optional[KgtkWriter] = None
         if self.uninvolved_file_path is not None:
             if self.verbose:
-                print("Opening the uninvolved records output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+                print("Opening the uninvolved records output file: %s" % str(self.uninvolved_file_path), file=self.error_file, flush=True)
             uninvolvedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.uninvolved_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
@@ -168,12 +168,28 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                 node2: str = row[node2_column_idx]
 
                 if label == self.trigger_label_value and node2 == self.trigger_node2_value:
+                    if saw_trigger:
+                        # TODO: Shout louder.
+                        if self.verbose:
+                            print("Warning: Duplicate trigger in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                     saw_trigger = True
                 elif label == self.rdf_object_label_value:
+                    if rdf_object_value is not None and rdf_object_value != node2:
+                        # TODO: Shout louder.
+                        if self.verbose:
+                            print("Warning: Multiple rdf objects in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                     rdf_object_value = node2
                 elif label == self.rdf_predicate_label_value:
+                    if rdf_predicate_value is not None and rdf_predicate_value != node2:
+                        # TODO: Shout louder.
+                        if self.verbose:
+                            print("Warning: Multiple rdf predicates in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                     rdf_predicate_value = node2
                 elif label == self.rdf_subject_label_value:
+                    if rdf_subject_value is not None and rdf_subject_value != node2:
+                        # TODO: Shout louder.
+                        if self.verbose:
+                            print("Warning: Multiple rdf subjects in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                     rdf_subject_value = node2
                 else:
                     potential_edge_attributes.append(row)
