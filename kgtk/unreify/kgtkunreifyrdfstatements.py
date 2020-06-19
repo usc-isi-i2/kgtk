@@ -29,6 +29,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
 
     reified_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     unreified_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
+    uninvolved_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
 
     trigger_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_LABEL_VALUE)
     trigger_node2_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_NODE2_VALUE)
@@ -95,7 +96,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         reifiedw: typing.Optional[KgtkWriter] = None
         if self.reified_file_path is not None:
             if self.verbose:
-                print("Opening the reified RDF statements file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+                print("Opening the reified RDF statements output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
             reifiedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.reified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
@@ -109,9 +110,23 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         unreifiedw: typing.Optional[KgtkWriter] = None
         if self.unreified_file_path is not None:
             if self.verbose:
-                print("Opening the unreified RDF statements file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+                print("Opening the unreified RDF statements output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
             unreifiedw: KgtkWriter = KgtkWriter.open(output_column_names,
                                                    self.unreified_file_path,
+                                                   mode=KgtkWriter.Mode[kr.mode.name],
+                                                   require_all_columns=True,
+                                                   prohibit_extra_columns=True,
+                                                   fill_missing_columns=False,
+                                                   gzip_in_parallel=False,
+                                                   verbose=self.verbose,
+                                                   very_verbose=self.very_verbose)
+
+        uninvolvedw: typing.Optional[KgtkWriter] = None
+        if self.uninvolved_file_path is not None:
+            if self.verbose:
+                print("Opening the uninvolved records output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+            uninvolvedw: KgtkWriter = KgtkWriter.open(kr.column_names,
+                                                   self.uninvolved_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
                                                    require_all_columns=True,
                                                    prohibit_extra_columns=True,
@@ -225,12 +240,15 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                         })
                 
             else:
-                # Unreification was not triggered.  Pass this grou of rows
+                # Unreification was not triggered.  Pass this group of rows
                 # through unchanged, except for possibly appending an ID
                 # column.
                 #
                 # TODO: Perhaps we'd like to build an ID value at the same time?
                 for row in node1_group:
+                    if uninvolvedw is not None:
+                        uninvolvedw.write(row)
+
                     if new_id_column:
                         row = row.copy()
                         row.append("")
@@ -249,6 +267,8 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
             reifiedw.close()
         if unreifiedw is not None:
             unreifiedw.close()
+        if uninvolvedw is not None:
+            uninvolvedw.close()
 
             
 def main():
@@ -268,6 +288,9 @@ def main():
     
     parser.add_argument(      "--unreified-file", dest="unreified_file_path",
                               help="A KGTK output file that will contain only the unreified RDF statements. (default=%(default)s).", type=Path, default=None)
+    
+    parser.add_argument(      "--uninvolved-file", dest="uninvolved_file_path",
+                              help="A KGTK output file that will contain only the uninvolved input records. (default=%(default)s).", type=Path, default=None)
     
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=False, expert=True)
@@ -289,6 +312,8 @@ def main():
             print("--reified-file=%s" % str(args.reified_file_path), file=error_file, flush=True)
         if args.unreified_file_path is not None:
             print("--unreified-file=%s" % str(args.unreified_file_path), file=error_file, flush=True)
+        if args.uninvolved_file_path is not None:
+            print("--uninvolved-file=%s" % str(args.uninvolved_file_path), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -298,6 +323,7 @@ def main():
         output_file_path=args.output_file_path,
         reified_file_path=args.reified_file_path,
         unreified_file_path=args.unreified_file_path,
+        uninvolved_file_path=args.uninvolved_file_path,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
