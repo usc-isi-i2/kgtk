@@ -114,6 +114,7 @@ class KgtkReaderOptions():
     def add_arguments(cls,
                       parser: ArgumentParser,
                       mode_options: bool = False,
+                      default_mode: KgtkReaderMode = KgtkReaderMode.AUTO,
                       validate_by_default: bool = False,
                       expert: bool = False,
                       defaults: bool = True,
@@ -183,7 +184,7 @@ class KgtkReaderOptions():
             fgroup.add_argument(prefix1 + "mode",
                                 dest=prefix2 + "mode",
                                 help=h(prefix3 + "Determine the KGTK file mode (default=%(default)s)."),
-                                type=KgtkReaderMode, action=EnumNameAction, **d(KgtkReaderMode.AUTO))
+                                type=KgtkReaderMode, action=EnumNameAction, **d(default_mode))
             
         hgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Header parsing"),
                                                            h("Options affecting " + prefix4 + "header parsing."))
@@ -652,7 +653,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, error_file, verbose)
         else:
             if verbose:
-                print("%s: reading file %s" % (who, str(file_path)))
+                print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
             return ClosableIterTextIOWrapper(open(file_path, "r"))
 
         if options.gzip_in_parallel:
@@ -1136,6 +1137,131 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         return merged_columns
 
+    def get_node1_column_index(self, column_name: typing.Optional[str] = None)->int:
+        """
+        Get the node1 column index, unless an overriding column
+        name is provided.  Returns -1 if no column found.
+        """
+        if column_name is None or len(column_name) == 0:
+            return self.node1_column_idx
+        else:
+            return self.column_name_map.get(column_name, -1)
+
+    def get_node1_canonical_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the canonical name for the node1 column, unless an
+        overriding name is provided.
+        """
+        if column_name is not None and len(column_name) > 0:
+            return column_name
+        else:
+            return KgtkFormat.NODE1
+
+    def get_node1_column_actual_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the actual name for the node1 column or its overriding column.
+        Return an empty string if the column was not found.
+        """
+        idx: int = self.get_node1_column_index(column_name)
+        if idx >= 0:
+            return self.column_names[idx]
+        else:
+            return ""
+            
+    def get_label_column_index(self, column_name: typing.Optional[str] = None)->int:
+        """
+        Get the label column index, unless an overriding column
+        name is provided.  Returns -1 if no column found.
+        """
+        if column_name is None or len(column_name) == 0:
+            return self.label_column_idx
+        else:
+            return self.column_name_map.get(column_name, -1)
+            
+    def get_label_canonical_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the canonical name for the label column, unless an
+        overriding name is provided.
+        """
+        if column_name is not None and len(column_name) > 0:
+            return column_name
+        else:
+            return KgtkFormat.LABEL
+            
+    def get_label_column_actual_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the actual name for the label column or its overriding column.
+        Return an empty string if the column was not found.
+        """
+        idx: int = self.get_label_column_index(column_name)
+        if idx >= 0:
+            return self.column_names[idx]
+        else:
+            return ""
+
+    def get_node2_column_index(self, column_name: typing.Optional[str] = None)->int:
+        """
+        Get the node2 column index, unless an overriding column
+        name is provided.  Returns -1 if no column found.
+        """
+        if column_name is None or len(column_name) == 0:
+            return self.node2_column_idx
+        else:
+            return self.column_name_map.get(column_name, -1)
+            
+
+    def get_node2_canonical_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the canonical name for the node2 column, unless an
+        overriding name is provided.
+        """
+        if column_name is not None and len(column_name) > 0:
+            return column_name
+        else:
+            return KgtkFormat.NODE2
+            
+    def get_node2_column_actual_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the actual name for the node2 column or its overriding column.
+        Return an empty string if the column was not found.
+        """
+        idx: int = self.get_node2_column_index(column_name)
+        if idx >= 0:
+            return self.column_names[idx]
+        else:
+            return ""
+            
+    def get_id_column_index(self, column_name: typing.Optional[str] = None)->int:
+        """
+        Get the id column index, unless an overriding column
+        name is provided.  Returns -1 if no column found.
+        """
+        if column_name is None or len(column_name) == 0:
+            return self.id_column_idx
+        else:
+            return self.column_name_map.get(column_name, -1)
+            
+    def get_id_canonical_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the canonical name for the id column, unless an
+        overriding name is provided.
+        """
+        if column_name is not None and len(column_name) > 0:
+            return column_name
+        else:
+            return KgtkFormat.ID
+            
+    def get_id_column_actual_name(self, column_name: typing.Optional[str]=None)->str:
+        """
+        Get the actual name for the id column or its overriding column.
+        Return an empty string if the column was not found.
+        """
+        idx: int = self.get_id_column_index(column_name)
+        if idx >= 0:
+            return self.column_names[idx]
+        else:
+            return ""
+            
     @classmethod
     def add_debug_arguments(cls, parser: ArgumentParser, expert: bool = False):
         # This helper function makes it easy to suppress options from

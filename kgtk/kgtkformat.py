@@ -67,7 +67,7 @@ class KgtkFormat:
         "\\" : "\\\\", # backslash  - (\)
         "'": "\\'", # single quote - (')
         '"': '\\"', # double quote - (")
-        "|": "\\|", # vertical bar (pipe) - (|)
+        LIST_SEPARATOR: "\\" + LIST_SEPARATOR, # vertical bar (pipe) - (|)
     })
 
     @classmethod

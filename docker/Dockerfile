@@ -14,8 +14,10 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install thinc==7.4.0
 
-RUN pip install kgtk
+RUN pip install kgtk==0.2.1
 
 RUN conda update -n base -c defaults conda
 
 RUN conda install -c conda-forge graph-tool
+
+RUN conda install -c conda-forge jupyterlab

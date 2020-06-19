@@ -33,10 +33,14 @@ nav:
       - 'instances': 'analysis/instances.md'  
       - 'graph_statistics': 'analysis/stats.md'
       - 'reachable_nodes': 'analysis/reachable_nodes.md'
-      - 'text_embeddings': 'analysis/embedding.md'      
+      - 'text_embeddings': 'analysis/text_embedding.md'         
      
 theme:
   name: material
+  logo: images/kgtk_logo_200x200.png
+extra_css:
+  - stylesheets/extra.css
+repo_url: https://github.com/usc-isi-i2/kgtk
 
 markdown_extensions:
   - admonition
