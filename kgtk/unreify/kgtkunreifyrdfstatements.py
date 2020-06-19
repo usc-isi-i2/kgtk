@@ -308,6 +308,26 @@ def main():
     parser.add_argument(      "--uninvolved-file", dest="uninvolved_file_path",
                               help="A KGTK output file that will contain only the uninvolved input records. (default=%(default)s).", type=Path, default=None)
     
+    parser.add_argument(      "--trigger-label", dest="trigger_label_value",
+                              help="A value that identifies the trigger label. (default=%(default)s).",
+                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_TRIGGER_LABEL_VALUE)
+
+    parser.add_argument(      "--trigger-node2", dest="trigger_node2_value",
+                              help="A value that identifies the trigger node2. (default=%(default)s).",
+                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_TRIGGER_NODE2_VALUE)
+    
+    parser.add_argument(      "--node1-role", dest="rdf_subject_label_value",
+                              help="The label that identifies the edge with the node2 value that will serve in the node1 role. (default=%(default)s).",
+                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_SUBJECT_LABEL_VALUE)
+    
+    parser.add_argument(      "--label-role", dest="rdf_predicate_label_value",
+                              help="The label that identifies the edge with the node2 value that will serve in the label role. (default=%(default)s).",
+                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_PREDICATE_LABEL_VALUE)
+    
+    parser.add_argument(      "--node2-role", dest="rdf_object_label_value",
+                              help="The label that identifies the edge with the node2 value that will serve in the node2 role. (default=%(default)s).",
+                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_OBJECT_LABEL_VALUE)
+    
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=False, expert=True)
     KgtkValueOptions.add_arguments(parser)
@@ -330,6 +350,11 @@ def main():
             print("--unreified-file=%s" % str(args.unreified_file_path), file=error_file, flush=True)
         if args.uninvolved_file_path is not None:
             print("--uninvolved-file=%s" % str(args.uninvolved_file_path), file=error_file, flush=True)
+        print("--trigger-label=%s" % args.trigger_label_value, file=error_file, flush=True)
+        print("--trigger-node2=%s" % args.trigger_node2_value, file=error_file, flush=True)
+        print("--node1-role=%s" % args.rdf_subject_label_value, file=error_file, flush=True)
+        print("--label-role=%s" % args.rdf_predicate_label_value, file=error_file, flush=True)
+        print("--node2-role=%s" % args.rdf_object_label_value, file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -340,6 +365,13 @@ def main():
         reified_file_path=args.reified_file_path,
         unreified_file_path=args.unreified_file_path,
         uninvolved_file_path=args.uninvolved_file_path,
+
+        trigger_label_value=args.trigger_label_value,
+        trigger_node2_value=args.trigger_node2_value,
+        rdf_object_label_value=args.rdf_object_label_value,
+        rdf_predicate_label_value=args.rdf_predicate_label_value,
+        rdf_subject_label_value=args.rdf_subject_label_value,
+
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
