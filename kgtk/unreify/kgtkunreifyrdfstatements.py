@@ -151,6 +151,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         for node1_group in ksb.groupiterate():
             input_group_count += 1
 
+            saw_error: bool = False
             saw_trigger: bool = False
             node1_value: typing.Optional[str] = None
             rdf_object_value: typing.Optional[str] = None
@@ -178,18 +179,21 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                         # TODO: Shout louder.
                         if self.verbose:
                             print("Warning: Multiple rdf objects in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
+                        saw_error = True # until we implement the cartesan product
                     rdf_object_value = node2
                 elif label == self.rdf_predicate_label_value:
                     if rdf_predicate_value is not None and rdf_predicate_value != node2:
                         # TODO: Shout louder.
                         if self.verbose:
                             print("Warning: Multiple rdf predicates in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
+                        saw_error = True # until we implement the cartesan product
                     rdf_predicate_value = node2
                 elif label == self.rdf_subject_label_value:
                     if rdf_subject_value is not None and rdf_subject_value != node2:
                         # TODO: Shout louder.
                         if self.verbose:
                             print("Warning: Multiple rdf subjects in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
+                        saw_error = True # until we implement the cartesan product
                     rdf_subject_value = node2
                 else:
                     potential_edge_attributes.append(row)
@@ -198,7 +202,8 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                node1_value is not None and \
                rdf_object_value is not None and \
                rdf_predicate_value is not None and \
-               rdf_subject_value is not None:
+               rdf_subject_value is not None and \
+               not saw_error:
                 # Unreification was triggered.
                 unreification_count += 1
 
@@ -207,11 +212,13 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                         reifiedw.write(row)
 
                 # Generate the new edge:
+                edge_id: str = node1_value
+                
                 kw.writemap({
                     node1_column_name: rdf_subject_value,
                     label_column_name: rdf_predicate_value,
                     node2_column_name: rdf_object_value,
-                    id_column_name: node1_value,
+                    id_column_name: edge_id,
                 })
                 output_line_count += 1
 
@@ -220,7 +227,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                         node1_column_name: rdf_subject_value,
                         label_column_name: rdf_predicate_value,
                         node2_column_name: rdf_object_value,
-                        id_column_name: node1_value,
+                        id_column_name: edge_id,
                     })
 
                 width: int = len(str(len(potential_edge_attributes)).strip())
@@ -234,13 +241,13 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                     #
                     # TODO: Handle these cases.
                     new_id: str
-                    if node1_value.startswith(KgtkFormat.STRING_SIGIL) and node1_value.endsswith(KgtkFormat.STRING_SIGIL):
-                        new_id = node1_value[:-1] + "-" + str(attribute_number).zfill(width) + KgtkFormat.STRING_SIGIL
+                    if edge_id.startswith(KgtkFormat.STRING_SIGIL) and edge_id.endswith(KgtkFormat.STRING_SIGIL):
+                        new_id = edge_id[:-1] + "-" + str(attribute_number).zfill(width) + KgtkFormat.STRING_SIGIL
                     else:
-                        new_id = node1_value + "-" + str(attribute_number).zfill(width)
+                        new_id = edge_id + "-" + str(attribute_number).zfill(width)
 
                     kw.writemap({
-                        node1_column_name: node1_value,
+                        node1_column_name: edge_id,
                         label_column_name: edge_row[label_column_idx],
                         node2_column_name: edge_row[node2_column_idx],
                         id_column_name: new_id
@@ -249,7 +256,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                 
                     if unreifiedw is not None:
                         unreifiedw.writemap({
-                            node1_column_name: node1_value,
+                            node1_column_name: edge_id,
                             label_column_name: edge_row[label_column_idx],
                             node2_column_name: edge_row[node2_column_idx],
                             id_column_name: new_id
