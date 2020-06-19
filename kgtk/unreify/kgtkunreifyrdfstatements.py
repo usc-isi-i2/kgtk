@@ -27,6 +27,9 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
 
+    reified_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
+    unreified_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
+
     trigger_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_LABEL_VALUE)
     trigger_node2_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_NODE2_VALUE)
     rdf_object_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_RDF_OBJECT_LABEL_VALUE)
@@ -56,25 +59,25 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                                           very_verbose=self.very_verbose,
         )
 
-        output_columns: typing.List[str] = kr.column_names.copy()
+        output_column_names: typing.List[str] = kr.column_names.copy()
 
         node1_column_idx: int = kr.node1_column_idx
-        node1_column_name: str = output_columns[node1_column_idx]
+        node1_column_name: str = output_column_names[node1_column_idx]
 
         label_column_idx: int = kr.label_column_idx
-        label_column_name: str = output_columns[label_column_idx]
+        label_column_name: str = output_column_names[label_column_idx]
 
         node2_column_idx: int = kr.node2_column_idx
-        node2_column_name: str = output_columns[node2_column_idx]
+        node2_column_name: str = output_column_names[node2_column_idx]
 
         # Adding an ID column?
         new_id_column: bool = False
         id_column_idx: int = kr.id_column_idx
         if id_column_idx < 0:
             new_id_column = True
-            id_column_idx = len(output_columns)
-            output_columns.append(KgtkFormat.ID)
-        id_column_name: str = output_columns[id_column_idx]
+            id_column_idx = len(output_column_names)
+            output_column_names.append(KgtkFormat.ID)
+        id_column_name: str = output_column_names[id_column_idx]
 
         if self.verbose:
             print("Opening the output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
@@ -89,6 +92,34 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
+        reifiedw: typing.Optional[KgtkWriter] = None
+        if self.reified_file_path is not None:
+            if self.verbose:
+                print("Opening the reified RDF statements file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+            reifiedw: KgtkWriter = KgtkWriter.open(kr.column_names,
+                                                   self.reified_file_path,
+                                                   mode=KgtkWriter.Mode[kr.mode.name],
+                                                   require_all_columns=True,
+                                                   prohibit_extra_columns=True,
+                                                   fill_missing_columns=False,
+                                                   gzip_in_parallel=False,
+                                                   verbose=self.verbose,
+                                                   very_verbose=self.very_verbose)
+
+        unreifiedw: typing.Optional[KgtkWriter] = None
+        if self.unreified_file_path is not None:
+            if self.verbose:
+                print("Opening the unreified RDF statements file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+            unreifiedw: KgtkWriter = KgtkWriter.open(output_column_names,
+                                                   self.unreified_file_path,
+                                                   mode=KgtkWriter.Mode[kr.mode.name],
+                                                   require_all_columns=True,
+                                                   prohibit_extra_columns=True,
+                                                   fill_missing_columns=False,
+                                                   gzip_in_parallel=False,
+                                                   verbose=self.verbose,
+                                                   very_verbose=self.very_verbose)
+
         if self.verbose:
             print("Reading and grouping the input records.", file=self.error_file, flush=True)
         ksb: KgtkSortBuffer = KgtkSortBuffer.readall(kr, grouped=True, keygen=KgtkSortBuffer.node1_keygen)
@@ -102,7 +133,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
             print("Processing the input records.", file=self.error_file, flush=True)
 
         node1_group: typing.List[typing.List[str]]
-        for node1_goup in ksb.groupiterate():
+        for node1_group in ksb.groupiterate():
             input_group_count += 1
 
             saw_trigger: bool = False
@@ -114,7 +145,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
             potential_edge_attributes: typing.List[typing.List[str]] = [ ]
 
             row: typing.List[str]
-            for row in node1_goup:
+            for row in node1_group:
                 input_line_count += 1
                 if node1_value is None:
                     node1_value = row[node1_column_idx]
@@ -140,6 +171,10 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                 # Unreification was triggered.
                 unreification_count += 1
 
+                if reifiedw is not None:
+                    for row in node1_group:
+                        reifiedw.write(row)
+
                 # Generate the new edge:
                 kw.writemap({
                     node1_column_name: rdf_subject_value,
@@ -148,6 +183,14 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                     id_column_name: node1_value,
                 })
                 output_line_count += 1
+
+                if unreifiedw is not None:
+                    unreifiedw.writemap({
+                        node1_column_name: rdf_subject_value,
+                        label_column_name: rdf_predicate_value,
+                        node2_column_name: rdf_object_value,
+                        id_column_name: node1_value,
+                    })
 
                 width: int = len(str(len(potential_edge_attributes)).strip())
                 attribute_number: int = 0
@@ -173,13 +216,21 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                     })
                     output_line_count += 1
                 
+                    if unreifiedw is not None:
+                        unreifiedw.writemap({
+                            node1_column_name: node1_value,
+                            label_column_name: edge_row[label_column_idx],
+                            node2_column_name: edge_row[node2_column_idx],
+                            id_column_name: new_id
+                        })
+                
             else:
                 # Unreification was not triggered.  Pass this grou of rows
                 # through unchanged, except for possibly appending an ID
                 # column.
                 #
                 # TODO: Perhaps we'd like to build an ID value at the same time?
-                for row in node1_goup:
+                for row in node1_group:
                     if new_id_column:
                         row = row.copy()
                         row.append("")
@@ -194,6 +245,10 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
 
         
         kw.close()
+        if reifiedw is not None:
+            reifiedw.close()
+        if unreifiedw is not None:
+            unreifiedw.close()
 
             
 def main():
@@ -207,6 +262,12 @@ def main():
 
     parser.add_argument("-o", "--output-file", dest="output_file_path",
                         help="The KGTK output file. (default=%(default)s).", type=Path, default="-")
+    
+    parser.add_argument(      "--reified-file", dest="reified_file_path",
+                              help="A KGTK output file that will contain only the reified RDF statements. (default=%(default)s).", type=Path, default=None)
+    
+    parser.add_argument(      "--unreified-file", dest="unreified_file_path",
+                              help="A KGTK output file that will contain only the unreified RDF statements. (default=%(default)s).", type=Path, default=None)
     
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=False, expert=True)
@@ -224,6 +285,10 @@ def main():
     if args.show_options:
         print("--input-files %s" % " ".join([str(path) for  path in input_file_paths]), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
+        if args.reified_file_path is not None:
+            print("--reified-file=%s" % str(args.reified_file_path), file=error_file, flush=True)
+        if args.unreified_file_path is not None:
+            print("--unreified-file=%s" % str(args.unreified_file_path), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -231,6 +296,8 @@ def main():
     kct: KgtkUnreifyRdfStatements = KgtkUnreifyRdfStatements(
         input_file_path=args.input_file_path,
         output_file_path=args.output_file_path,
+        reified_file_path=args.reified_file_path,
+        unreified_file_path=args.unreified_file_path,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
