@@ -318,7 +318,7 @@ def main():
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
-    kct: KgtkUnreifyRdfStatements = KgtkUnreifyRdfStatements(
+    kurs: KgtkUnreifyRdfStatements = KgtkUnreifyRdfStatements(
         input_file_path=args.input_file_path,
         output_file_path=args.output_file_path,
         reified_file_path=args.reified_file_path,
@@ -331,7 +331,7 @@ def main():
         very_verbose=args.very_verbose,
     )
 
-    kct.process()
+    kurs.process()
     
 if __name__ == "__main__":
     main()
