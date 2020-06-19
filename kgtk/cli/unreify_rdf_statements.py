@@ -17,7 +17,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Unreify RDF statements.',
+        'help': 'Unreify RDF statements in a KGTK file.',
         'description': 'Read a KGTK file, such as might have been created by importing an ntriples file.  ' +
         'Search for reified RFD statements and transform them into an unreified form.' +
         '\n\nAn ID column will be added to the output file if not present in the input file.  ' +
