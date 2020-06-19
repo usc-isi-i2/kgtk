@@ -1,7 +1,5 @@
 """Copy records from the first KGTK file to the output file,
 imploding data type-specific columns into a single column./
-
-TODO: Add the option (defautl True) to remove the exploded columns from the output file.
 """
 
 from argparse import ArgumentParser, Namespace
@@ -14,6 +12,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue, KgtkValueFields
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions, DEFAULT_KGTK_VALUE_OPTIONS
@@ -51,14 +50,54 @@ class KgtkImplode(KgtkFormat):
 
     general_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    remove_prefixed_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    ignore_unselected_types: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    retain_unselected_types: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # attr.converters.default_if_none(...) does not seem to work.
     # value_options: KgtkValueOptions = attr.ib(default=None,
     #                                           converter=attr.converters.default_if_none(DEFAULT_KGTK_VALUE_OPTIONS),
     #                                           validator=attr.validators.instance_of(KgtkValueOptions))
 
+    build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
+
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    def unwrap(self, val: str)->str:
+        """
+        Remove optional outer string wrappers from a number or symbol
+        extracted from an exploded column.
+
+        We do *not* attempt to remove escape characters (\) from the body
+        of the value:  they should not appear in numbers, and are
+        discouraged in symbols.
+
+        We do *not* attempt to undouble internal quotes (("") or ('')) from the
+        body of the value: they should not appear in numbers, and are
+        discouraged in symbols.
+
+        We accept the following wrappers:
+        triple double quotes
+        triple single quotes
+        double quotes
+        single quotes
+        """
+        if len(val) >= 6:
+            if val.startswith('"""') and val.endswith('"""'):
+                return val[3:-3]
+            elif val.startswith("'''") and val.endswith("'''"):
+                return val[3:-3]
+        if len(val) >= 2:
+            if val.startswith('"') and val.endswith('"'):
+                return val[1:-1]
+            elif val.startswith("'") and val.endswith("'"):
+                return val[1:-1]
+        return val        
 
     def implode_empty(self,
                       input_line_count: int,
@@ -88,7 +127,7 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         num_idx: int = implosion[KgtkValueFields.NUMBER_FIELD_NAME]
-        num_val: str = row[num_idx]
+        num_val: str = self.unwrap(row[num_idx])
         if len(num_val) == 0:
             valid = False
             if self.verbose:
@@ -113,25 +152,31 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         num_idx: int = implosion[KgtkValueFields.NUMBER_FIELD_NAME]
-        num_val: str = row[num_idx]
+        num_val: str = self.unwrap(row[num_idx])
         if len(num_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.NUMBER_FIELD_NAME),
                       file=self.error_file, flush=True)
+
         lt_idx: int = implosion[KgtkValueFields.LOW_TOLERANCE_FIELD_NAME]
-        lt: str = row[lt_idx] if lt_idx >= 0 else ""
+        lt: str = self.unwrap(row[lt_idx]) if lt_idx >= 0 else ""
+
         ht_idx: int = implosion[KgtkValueFields.HIGH_TOLERANCE_FIELD_NAME]
-        ht: str = row[ht_idx] if ht_idx >= 0 else ""
+        ht: str = self.unwrap(row[ht_idx]) if ht_idx >= 0 else ""
+
         if len(lt) > 0 ^ len(ht) > 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': low and high tolerance must both be present or absent." % (input_line_count, type_name),
                       file=self.error_file, flush=True)
+
         si_idx: int = implosion[KgtkValueFields.SI_UNITS_FIELD_NAME]
-        si: str = row[si_idx] if si_idx >= 0 else ""
+        si: str = self.unwrap(row[si_idx]) if si_idx >= 0 else ""
+
         un_idx: int = implosion[KgtkValueFields.UNITS_NODE_FIELD_NAME]
-        un: str = row[un_idx] if un_idx >= 0 else ""
+        un: str = self.unwrap(row[un_idx]) if un_idx >= 0 else ""
+
         value: str = num_val
         if len(lt) > 0 or len(ht) > 0:
             value += "[" + lt + "," + ht + "]"
@@ -163,7 +208,7 @@ class KgtkImplode(KgtkFormat):
         if KgtkValueFields.LANGUAGE_FIELD_NAME in implosion:
             language_idx: int = implosion[KgtkValueFields.LANGUAGE_FIELD_NAME]
             if language_idx >= 0:
-                language_val: str = row[language_idx]
+                language_val: str = self.unwrap(row[language_idx])
                 if len(language_val) > 0:
                     if self.general_strings:
                         return self.implode_language_qualified_string(input_line_count, row, implosion, type_name)
@@ -248,7 +293,7 @@ class KgtkImplode(KgtkFormat):
                           file=self.error_file, flush=True)
 
         language_idx: int = implosion[KgtkValueFields.LANGUAGE_FIELD_NAME]
-        language_val: str = row[language_idx]
+        language_val: str = self.unwrap(row[language_idx])
         if len(language_val) == 0:
             valid = False
             if self.verbose:
@@ -256,7 +301,11 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
 
         suf_idx: int = implosion[KgtkValueFields.LANGUAGE_SUFFIX_FIELD_NAME]
-        suf: str = row[suf_idx] if suf_idx >= 0 else ""
+        suf: str = self.unwrap(row[suf_idx]) if suf_idx >= 0 else ""
+        if len(suf) > 0 and not suf.startswith("-"):
+            # As a siecial favor, we'll accept language suffixes that do not
+            # start with a dash.  We'll prepend the dash.
+            suf = "-" + suf
 
         value: str = ""
         if valid:
@@ -284,7 +333,7 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         latitude_idx: int = implosion[KgtkValueFields.LATITUDE_FIELD_NAME]
-        latitude_val: str = row[latitude_idx]
+        latitude_val: str = self.unwrap(row[latitude_idx])
         if len(latitude_val) == 0:
             valid = False
             if self.verbose:
@@ -292,12 +341,13 @@ class KgtkImplode(KgtkFormat):
                       file=self.error_file, flush=True)
 
         longitude_idx: int = implosion[KgtkValueFields.LONGITUDE_FIELD_NAME]
-        longitude_val: str = row[longitude_idx]
+        longitude_val: str = self.unwrap(row[longitude_idx])
         if len(longitude_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.LONGITUDE_FIELD_NAME),
                       file=self.error_file, flush=True)
+
         value: str = "@" + latitude_val + "/" + longitude_val
 
         if valid and self.validate:
@@ -318,20 +368,15 @@ class KgtkImplode(KgtkFormat):
         valid: bool = True
 
         date_and_times_idx: int = implosion[KgtkValueFields.DATE_AND_TIMES_FIELD_NAME]
-        date_and_times_val: str = row[date_and_times_idx]
+        date_and_times_val: str = self.unwrap(row[date_and_times_idx])
         if len(date_and_times_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
                       file=self.error_file, flush=True)
 
-        elif date_and_times_val.startswith('"') and date_and_times_val.endswith('"') and len(date_and_times_val) > 2:
-            # As a special favor, we'll accept date_and_times as a string.  We'll
-            # strip the unwanted outer quotes.
-            date_and_times_val = date_and_times_val[1:-1]
-
         precision_idx: int = implosion[KgtkValueFields.PRECISION_FIELD_NAME]
-        precision_val: str = row[precision_idx] if precision_idx >= 0 else ""
+        precision_val: str = self.unwrap(row[precision_idx]) if precision_idx >= 0 else ""
 
         value: str = "^" + date_and_times_val
         if len(precision_val) > 0:
@@ -364,7 +409,7 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         truth_idx: int = implosion[KgtkValueFields.TRUTH_FIELD_NAME]
-        truth_val: str = row[truth_idx]
+        truth_val: str = self.unwrap(row[truth_idx])
         if len(truth_val) == 0:
             valid = False
             if self.verbose:
@@ -391,20 +436,15 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         valid: bool = True
         symbol_idx: int = implosion[KgtkValueFields.SYMBOL_FIELD_NAME]
-        symbol_val: str = row[symbol_idx]
+        symbol_val: str = self.unwrap(row[symbol_idx])
         if len(symbol_val) == 0:
             valid = False
             if self.verbose:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.SYMBOL_FIELD_NAME),
                       file=self.error_file, flush=True)
 
-        elif symbol_val.startswith('"') and symbol_val.endswith('"') and len(symbol_val) > 2:
-            # As a special favor, we'll accept symbols as string.  We'll
-            # strip the unwanted outer quotes.
-            symbol_val = symbol_val[1:-1]
-
         if self.escape_pipes:
-            symbol_val = symbol_val.replace("|", "\\|")
+            symbol_val = symbol_val.replace(KgtkFormat.LIST_SEPARATOR, "\\" + KgtkFormat.LIST_SEPARATOR)
 
         value: str = symbol_val
 
@@ -444,18 +484,24 @@ class KgtkImplode(KgtkFormat):
                 row: typing.List[str],
                 implosion: typing.Mapping[str, int],
                 data_type_idx: int,
+                existing_column_idx: int,
     )->typing.Tuple[str, bool]:
         type_name: str = row[data_type_idx]
-        if type_name.lower() not in self.type_names:
-            if self.verbose:
-                print("Input line %d: unselected data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
-            return "", False
-
         if type_name.upper() not in KgtkFormat.DataType.__members__:
             # TODO:  Need warnings.
             if self.verbose:
                 print("Input line %d: unrecognized data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
             return "", False
+
+        if type_name.lower() not in self.type_names:
+            if self.retain_unselected_types and existing_column_idx >= 0:
+                return row[existing_column_idx], True
+            elif self.ignore_unselected_types:
+                return "", True
+            else:
+                if self.verbose:
+                    print("Input line %d: unselected data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
+                return "", False
 
         dt: KgtkFormat.DataType = KgtkFormat.DataType[type_name.upper()]
         return self.imploders[dt](self, input_line_count, row, implosion, type_name)
@@ -501,9 +547,9 @@ class KgtkImplode(KgtkFormat):
                                           very_verbose=self.very_verbose,
         )
 
+        output_column_names = kr.column_names.copy()
         new_column: bool # True ==> adding the imploded column, False ==> using an existing column
         column_idx: int # The index of the imploded column (new or old).
-        output_column_names: typing.List[str] = kr.column_names.copy()
         if self.column_name in kr.column_name_map:
             column_idx = kr.column_name_map[self.column_name]
             new_column = False
@@ -541,19 +587,46 @@ class KgtkImplode(KgtkFormat):
                               file=self.error_file, flush=True)
             else:
                 if self.verbose:
-                    print("Field '%s' eploded column '%s' not found." % (field_name, exploded_name), file=self.error_file, flush=True)
+                    print("Field '%s' exploded column '%s' not found." % (field_name, exploded_name), file=self.error_file, flush=True)
                 missing_columns.append(exploded_name)
         if len(missing_columns) > 0:
             raise ValueError("Missing columns: %s" % " ".join(missing_columns))
                 
         data_type_idx = implosion[KgtkValueFields.DATA_TYPE_FIELD_NAME]
 
+        # If requested, create the ID column builder.
+        # Assemble the list of output column names.
+        idb: typing.Optional[KgtkIdBuilder] = None
+        if self.build_id:
+            if self.idbuilder_options is None:
+                raise ValueError("ID build requested but ID builder options are missing")
+            idb = KgtkIdBuilder.from_column_names(output_column_names, self.idbuilder_options)
+            id_output_column_names = idb.column_names.copy()
+        else:
+            id_output_column_names = output_column_names.copy()
+
+        trimmed_output_column_names: typing.List[str]
+        if self.remove_prefixed_columns and len(self.prefix) > 0:
+            trimmed_output_column_names = [ ]
+            if self.verbose:
+                print("Removing columns with names that start with '%s'." % self.prefix, file=self.error_file, flush=True)
+            column_name: str
+            for column_name in id_output_column_names:
+                if column_name.startswith(self.prefix):
+                    if self.verbose:
+                        print("Removing column '%s." % column_name, file=self.error_file, flush=True)
+                else:
+                    trimmed_output_column_names.append(column_name)
+        else:
+            trimmed_output_column_names = id_output_column_names
+
+        shuffle_list: typing.List[int] = [ ] # Easier to init than deal with typing.Optional.
         ew: typing.Optional[KgtkWriter] = None
         if self.output_file_path is not None:
             if self.verbose:
                 print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
             # Open the output file.
-            ew: KgtkWriter = KgtkWriter.open(output_column_names,
+            ew: KgtkWriter = KgtkWriter.open(trimmed_output_column_names,
                                              self.output_file_path,
                                              mode=kr.mode,
                                              require_all_columns=False,
@@ -561,7 +634,10 @@ class KgtkImplode(KgtkFormat):
                                              fill_missing_columns=False,
                                              gzip_in_parallel=False,
                                              verbose=self.verbose,
-                                             very_verbose=self.very_verbose)        
+                                             very_verbose=self.very_verbose)
+            shuffle_list = ew.build_shuffle_list(id_output_column_names)
+
+
         rw: typing.Optional[KgtkWriter] = None
         if self.reject_file_path is not None:
             if self.verbose:
@@ -583,13 +659,15 @@ class KgtkImplode(KgtkFormat):
         imploded_value_count: int = 0
         invalid_value_count: int = 0
         
+        existing_column_idx: int = -1 if new_column else column_idx
+
         row: typing.List[str]
         for row in kr:
             input_line_count += 1
 
             value: str
             valid: bool
-            value, valid = self.implode(input_line_count, row, implosion, data_type_idx)
+            value, valid = self.implode(input_line_count, row, implosion, data_type_idx, existing_column_idx)
             if valid:
                 imploded_value_count += 1
             else:
@@ -604,7 +682,9 @@ class KgtkImplode(KgtkFormat):
                     output_row.append(value)
                 else:
                     output_row[column_idx] = value
-                ew.write(output_row)
+                if idb is not None:
+                    output_row = idb.build(output_row, input_line_count)
+                ew.write(output_row, shuffle_list=shuffle_list)
                 
         if self.verbose:
             print("Processed %d records, imploded %d values, %d invalid values." % (input_line_count, imploded_value_count, invalid_value_count),
@@ -660,9 +740,26 @@ def main():
                               help="When true, strings may include language qualified strings. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--remove-prefixed-columns", dest="remove_prefixed_columns",
+                              help="When true, remove all columns beginning with the prefix from the output file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--ignore-unselected-types", dest="ignore_unselected_types",
+                              help="When true, input records with valid but unselected data types will be passed through to output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--retain-unselected-types", dest="retain_unselected_types",
+                              help="When true, input records with valid but unselected data types will be retain existing data on output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--build-id", dest="build_id",
+                              help="Build id values in an id column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
                               type=Path, default=None)
     
+    KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
     KgtkValueOptions.add_arguments(parser)
@@ -672,6 +769,7 @@ def main():
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the option structures.                                                                                                                          
+    idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_args(args)    
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
@@ -686,6 +784,9 @@ def main():
         print("--escape-pipes %s" % str(args.escape_pipes), file=error_file, flush=True)
         print("--quantities-include-numbers %s" % str(args.quantities_include_numbers), file=error_file, flush=True)
         print("--general-strings %s" % str(args.general_strings), file=error_file, flush=True)
+        print("--remove-prefixed-columns %s" % str(args.remove_prefixed_columns), file=error_file, flush=True)
+        print("--ignore-unselected-types %s" % str(args.ignore_unselected_types), file=error_file, flush=True)
+        print("--retain-unselected-types %s" % str(args.retain_unselected_types), file=error_file, flush=True)
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         if args.without_fields is not None:
@@ -693,6 +794,8 @@ def main():
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
         if args.reject_file_path is not None:
             print("--reject-file=%s" % str(args.reject_file_path), file=error_file, flush=True)
+        print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
+        idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -709,8 +812,13 @@ def main():
         escape_pipes=args.escape_pipes,
         quantities_include_numbers=args.quantities_include_numbers,
         general_strings=args.general_strings,
+        remove_prefixed_columns=args.remove_prefixed_columns,
+        ignore_unselected_types=args.ignore_unselected_types,
+        retain_unselected_types=args.retain_unselected_types,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
+        build_id=args.build_id,
+        idbuilder_options=idbuilder_options,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,

@@ -13,6 +13,7 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.reshape.kgtkimplode import KgtkImplode
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValueFields
@@ -89,10 +90,27 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="When true, strings may include language qualified strings. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--remove-prefixed-columns", dest="remove_prefixed_columns",
+                              help="When true, remove all columns beginning with the prefix from the output file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--ignore-unselected-types", dest="ignore_unselected_types",
+                              help="When true, input records with valid but unselected data types will be passed through to output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--retain-unselected-types", dest="retain_unselected_types",
+                              help="When true, input records with valid but unselected data types will be retain existing data on output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--build-id", dest="build_id",
+                              help="Build id values in an id column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--show-data-types", dest="show_data_types",
                               help="Print the list of data types and exit. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -109,6 +127,10 @@ def run(input_kgtk_file: Path,
         escape_pipes: bool,
         quantities_include_numbers: bool,
         general_strings: bool,
+        remove_prefixed_columns: bool,
+        ignore_unselected_types: bool,
+        retain_unselected_types: bool,
+        build_id: bool,
         show_data_types: bool,
         
         errors_to_stdout: bool = False,
@@ -126,6 +148,7 @@ def run(input_kgtk_file: Path,
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
+    idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_dict(kwargs)    
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
@@ -139,6 +162,9 @@ def run(input_kgtk_file: Path,
         print("--escape-pipes %s" % str(escape_pipes), file=error_file, flush=True)
         print("--quantities-include-numbers %s" % str(quantities_include_numbers), file=error_file, flush=True)
         print("--general-strings %s" % str(general_strings), file=error_file, flush=True)
+        print("--remove-prefixed-columns %s" % str(remove_prefixed_columns), file=error_file, flush=True)
+        print("--ignore-unselected-types %s" % str(ignore_unselected_types), file=error_file, flush=True)
+        print("--retain-unselected-types %s" % str(retain_unselected_types), file=error_file, flush=True)
         if type_names is not None:
             print("--types %s" % " ".join(type_names), file=error_file, flush=True)
         if without_fields is not None:
@@ -147,6 +173,8 @@ def run(input_kgtk_file: Path,
         if reject_kgtk_file is not None:
             print("--reject-file=%s" % str(reject_kgtk_file), file=error_file, flush=True)
         print("--show-data-types %s" % str(show_data_types), file=error_file, flush=True)
+        print("--build-id=%s" % str(build_id), file=error_file, flush=True)
+        idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -172,6 +200,11 @@ def run(input_kgtk_file: Path,
             escape_pipes=escape_pipes,
             quantities_include_numbers=quantities_include_numbers,
             general_strings=general_strings,
+            remove_prefixed_columns=remove_prefixed_columns,
+            ignore_unselected_types=ignore_unselected_types,
+            retain_unselected_types=retain_unselected_types,
+            build_id=build_id,
+            idbuilder_options=idbuilder_options,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,
