@@ -64,7 +64,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--node2-name", dest="node2_column_name",
                               help=h("The name of the node2 column. (default=node2 or alias)."), default=None)
 
-    parser.add_argument(      "--label-value", dest="label_column_value", help=h("The value in the label column. (default=%(default)s)."), default="label")
+    parser.add_argument(      "--label-value", dest="label_column_value",
+                              help=h("The value in the label column that identifies a label record. (default=%(default)s)."), default="label")
+
+    parser.add_argument(      "--target-label-value", dest="target_label_column_value",
+                              help=h("The value in the label column that identifies a record to receive a lift. (default=%(default)s)."), default=None)
+    
+    parser.add_argument(      "--target-new-label-value", dest="target_new_label_column_value",
+                              help=h("A new value for the label column for records that received a lift. (default=%(default)s)."), default=None)
+    
     parser.add_argument(      "--lift-suffix", dest="lifted_column_suffix",
                               help=h("The suffix used for newly created columns. (default=%(default)s)."), default=";label")
 
@@ -112,6 +120,8 @@ def run(input_kgtk_file: Path,
         label_column_name: typing.Optional[str],
         node2_column_name: typing.Optional[str],
         label_column_value: str,
+        target_label_column_value: str,
+        target_new_label_column_value: str,
         lifted_column_suffix: str,
         lift_column_names: typing.List[str],
         remove_label_records: bool = False,
@@ -152,6 +162,10 @@ def run(input_kgtk_file: Path,
         if node2_column_name is not None:
             print("--node2-name=%s" % node2_column_name, file=error_file, flush=True)
         print("--label-value=%s" % label_column_value, file=error_file, flush=True)
+        if target_label_column_value is not None:
+            print("--target-label-value=%s" % target_label_column_value, file=error_file, flush=True)
+        if target_new_label_column_value is not None:
+            print("--target-new-label-value=%s" % target_new_label_column_value, file=error_file, flush=True)
         print("--lift-suffix=%s" % lifted_column_suffix, file=error_file, flush=True)
         if lift_column_names is not None and len(lift_column_names) > 0:
             print("--columns-to-lift %s" % " ".join(lift_column_names), file=error_file, flush=True)
@@ -175,6 +189,8 @@ def run(input_kgtk_file: Path,
             label_column_name=label_column_name,
             node2_column_name=node2_column_name,
             label_column_value=label_column_value,
+            target_label_column_value=target_label_column_value,
+            target_new_label_column_value=target_new_label_column_value,
             lifted_column_suffix=lifted_column_suffix,
             lift_column_names=lift_column_names,
             output_file_path=output_kgtk_file,
