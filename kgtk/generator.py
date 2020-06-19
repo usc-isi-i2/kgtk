@@ -832,13 +832,12 @@ class JsonGenerator(Generator):
         return temp_item_dict
 
     def update_misc_json_dict_time(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
-        # print("MATCHED case 2",self.yyyy_mm_dd_pattern.match(node2))
-        if self.yyyy_pattern.match(node2):
-            time_string = node2 + "-01-01"
-            precision = 9
-        elif self.yyyy_mm_dd_pattern.match(node2):
-            time_string = node2
+        if self.yyyy_mm_dd_pattern.match(node2):
+            time_string = node2 + "-00-00T00:00:00Z"
             precision = 11
+        elif self.yyyy_pattern.match(node2):
+            time_string = node2 + "-01-01T00:00:00Z"
+            precision = 9
         else:
             try:
                 time_string, precision = node2.split("/")
