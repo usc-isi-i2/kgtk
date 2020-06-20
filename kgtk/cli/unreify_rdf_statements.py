@@ -63,26 +63,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--uninvolved-file", dest="uninvolved_kgtk_file",
                               help="A KGTK output file that will contain only the uninvolved input records. (default=%(default)s).", type=Path, default=None)
     
-    parser.add_argument(      "--trigger-label", dest="trigger_label_value",
-                              help="A value that identifies the trigger label. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_TRIGGER_LABEL_VALUE)
-
-    parser.add_argument(      "--trigger-node2", dest="trigger_node2_value",
-                              help="A value that identifies the trigger node2. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_TRIGGER_NODE2_VALUE)
-    
-    parser.add_argument(      "--node1-role", dest="rdf_subject_label_value",
-                              help="The label that identifies the edge with the node2 value that will serve in the node1 role. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_SUBJECT_LABEL_VALUE)
-    
-    parser.add_argument(      "--label-role", dest="rdf_predicate_label_value",
-                              help="The label that identifies the edge with the node2 value that will serve in the label role. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_PREDICATE_LABEL_VALUE)
-    
-    parser.add_argument(      "--node2-role", dest="rdf_object_label_value",
-                              help="The label that identifies the edge with the node2 value that will serve in the node2 role. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_OBJECT_LABEL_VALUE)
-    
+    KgtkUnreifyRdfStatements.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser)
@@ -98,6 +79,10 @@ def run(input_kgtk_file: Path,
         rdf_subject_label_value: str,
         rdf_predicate_label_value: str,
         rdf_object_label_value: str,
+
+        allow_multiple_subjects: bool,
+        allow_multiple_predicates: bool,
+        allow_multiple_objects: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -134,6 +119,10 @@ def run(input_kgtk_file: Path,
         print("--label-role=%s" % rdf_predicate_label_value, file=error_file, flush=True)
         print("--node2-role=%s" % rdf_object_label_value, file=error_file, flush=True)
 
+        print("--allow-multiple-subjects=%s" % str(allow_multiple_subjects), file=error_file, flush=True)
+        print("--allow-multiple-predicates=%s" % str(allow_multiple_predicates), file=error_file, flush=True)
+        print("--allow-multiple-objects=%s" % str(allow_multiple_objects), file=error_file, flush=True)
+
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -151,6 +140,10 @@ def run(input_kgtk_file: Path,
             rdf_object_label_value=rdf_object_label_value,
             rdf_predicate_label_value=rdf_predicate_label_value,
             rdf_subject_label_value=rdf_subject_label_value,
+
+            allow_multiple_subjects=allow_multiple_subjects,
+            allow_multiple_predicates=allow_multiple_predicates,
+            allow_multiple_objects=allow_multiple_objects,
 
             reader_options=reader_options,
             value_options=value_options,

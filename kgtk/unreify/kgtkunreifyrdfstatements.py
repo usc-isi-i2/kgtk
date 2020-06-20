@@ -23,6 +23,9 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
     DEFAULT_RDF_OBJECT_LABEL_VALUE: str = "rdf:object"
     DEFAULT_RDF_PREDICATE_LABEL_VALUE: str = "rdf:predicate"
     DEFAULT_RDF_SUBJECT_LABEL_VALUE: str = "rdf:subject"
+    DEFAULT_ALLOW_MULTIPLE_SUBJECTS: bool = True
+    DEFAULT_ALLOW_MULTIPLE_PREDICATES: bool = True
+    DEFAULT_ALLOW_MULTIPLE_OBJECTS: bool = True
 
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
@@ -37,6 +40,10 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
     rdf_predicate_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_RDF_PREDICATE_LABEL_VALUE)
     rdf_subject_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_RDF_SUBJECT_LABEL_VALUE)
 
+    allow_multiple_subjects: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_MULTIPLE_SUBJECTS)
+    allow_multiple_predicates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_MULTIPLE_PREDICATES)
+    allow_multiple_objects: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_MULTIPLE_OBJECTS)
+
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
     reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
@@ -45,6 +52,9 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Working variables:
+    output_line_count: int = attr.ib(default=0)
 
     def process(self):
         # Open the input file.
@@ -141,7 +151,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
 
         input_group_count: int = 0
         input_line_count: int = 0
-        output_line_count: int = 0
+        self.output_line_count = 0
         unreification_count: int = 0
 
         if self.verbose:
@@ -154,9 +164,9 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
             saw_error: bool = False
             saw_trigger: bool = False
             node1_value: typing.Optional[str] = None
-            rdf_object_value: typing.Optional[str] = None
-            rdf_predicate_value: typing.Optional[str] = None
-            rdf_subject_value: typing.Optional[str] = None
+            rdf_object_values: typing.Set[str] = set()
+            rdf_predicate_values: typing.Set[str] = set()
+            rdf_subject_values: typing.Set[str] = set()
             
             potential_edge_attributes: typing.List[typing.List[str]] = [ ]
 
@@ -175,114 +185,66 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                             print("Warning: Duplicate trigger in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                     saw_trigger = True
                 elif label == self.rdf_object_label_value:
-                    if rdf_object_value is not None and rdf_object_value != node2:
+                    if len(rdf_object_values) > 0 and node2 not in rdf_object_values and not self.allow_multple_objects:
                         # TODO: Shout louder.
                         if self.verbose:
                             print("Warning: Multiple rdf objects in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                         saw_error = True # until we implement the cartesan product
-                    rdf_object_value = node2
+                    rdf_object_values.add(node2)
                 elif label == self.rdf_predicate_label_value:
-                    if rdf_predicate_value is not None and rdf_predicate_value != node2:
+                    if len(rdf_predicate_values) > 0  and node2 not in rdf_predicate_values and not self.allow_multiple_predicates:
                         # TODO: Shout louder.
                         if self.verbose:
                             print("Warning: Multiple rdf predicates in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                         saw_error = True # until we implement the cartesan product
-                    rdf_predicate_value = node2
+                    rdf_predicate_values.add(node2)
                 elif label == self.rdf_subject_label_value:
-                    if rdf_subject_value is not None and rdf_subject_value != node2:
+                    if len(rdf_subject_values) > 0 and node2 not in rdf_subject_values and not self.allow_multple_subjects:
                         # TODO: Shout louder.
                         if self.verbose:
                             print("Warning: Multiple rdf subjects in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                         saw_error = True # until we implement the cartesan product
-                    rdf_subject_value = node2
+                    rdf_subject_values.add(node2)
                 else:
                     potential_edge_attributes.append(row)
                     
+            rdf_product: int = len(rdf_object_values) * len(rdf_predicate_values) * len(rdf_subject_values)
+
             if saw_trigger and \
                node1_value is not None and \
-               rdf_object_value is not None and \
-               rdf_predicate_value is not None and \
-               rdf_subject_value is not None and \
+               rdf_product > 0 and \
                not saw_error:
                 # Unreification was triggered.
                 unreification_count += 1
 
-                if reifiedw is not None:
-                    for row in node1_group:
-                        reifiedw.write(row)
-
-                # Generate the new edge:
-                edge_id: str = node1_value
-                
-                kw.writemap({
-                    node1_column_name: rdf_subject_value,
-                    label_column_name: rdf_predicate_value,
-                    node2_column_name: rdf_object_value,
-                    id_column_name: edge_id,
-                })
-                output_line_count += 1
-
-                if unreifiedw is not None:
-                    unreifiedw.writemap({
-                        node1_column_name: rdf_subject_value,
-                        label_column_name: rdf_predicate_value,
-                        node2_column_name: rdf_object_value,
-                        id_column_name: edge_id,
-                    })
-
-                width: int = len(str(len(potential_edge_attributes)).strip())
-                attribute_number: int = 0
-                edge_row: typing.List[str]
-                for edge_row in potential_edge_attributes:
-                    attribute_number += 1
-
-                    # Generate a new ID that will sort after the new edge.
-                    # What if the existing ID is not a symbol or a string?
-                    #
-                    # TODO: Handle these cases.
-                    new_id: str
-                    if edge_id.startswith(KgtkFormat.STRING_SIGIL) and edge_id.endswith(KgtkFormat.STRING_SIGIL):
-                        new_id = edge_id[:-1] + "-" + str(attribute_number).zfill(width) + KgtkFormat.STRING_SIGIL
-                    else:
-                        new_id = edge_id + "-" + str(attribute_number).zfill(width)
-
-                    kw.writemap({
-                        node1_column_name: edge_id,
-                        label_column_name: edge_row[label_column_idx],
-                        node2_column_name: edge_row[node2_column_idx],
-                        id_column_name: new_id
-                    })
-                    output_line_count += 1
-                
-                    if unreifiedw is not None:
-                        unreifiedw.writemap({
-                            node1_column_name: edge_id,
-                            label_column_name: edge_row[label_column_idx],
-                            node2_column_name: edge_row[node2_column_idx],
-                            id_column_name: new_id
-                        })
+                self.write_new_edge_or_edges(kw,
+                                             reifiedw,
+                                             unreifiedw,
+                                             potential_edge_attributes,
+                                             node1_group,
+                                             rdf_product,
+                                             list(rdf_subject_values),
+                                             list(rdf_predicate_values),
+                                             list(rdf_object_values),
+                                             node1_value,
+                                             label_column_idx,
+                                             node2_column_idx,
+                                             node1_column_name,
+                                             label_column_name,
+                                             node2_column_name,
+                                             id_column_name,
+                )
                 
             else:
                 # Unreification was not triggered.  Pass this group of rows
                 # through unchanged, except for possibly appending an ID
                 # column.
-                #
-                # TODO: Perhaps we'd like to build an ID value at the same time?
-                for row in node1_group:
-                    if uninvolvedw is not None:
-                        uninvolvedw.write(row)
-
-                    if new_id_column:
-                        row = row.copy()
-                        row.append("")
-
-                    kw.write(row)
-                    output_line_count += 1
+                self.pass_group_through(kw, uninvolvedw, node1_group, new_id_column)
 
         if self.verbose:
             print("Processed %d records in %d groups." % (input_line_count, input_group_count), file=self.error_file, flush=True)
             print("Unreified %d groups." % unreification_count, file=self.error_file, flush=True)
-            print("Wrote %d output records" % output_line_count, file=self.error_file, flush=True)
+            print("Wrote %d output records" % self.output_line_count, file=self.error_file, flush=True)
 
         
         kw.close()
@@ -293,6 +255,222 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         if uninvolvedw is not None:
             uninvolvedw.close()
 
+    def write_new_edge_or_edges(self,
+                                kw: KgtkWriter,
+                                reifiedw: typing.Optional[KgtkWriter],
+                                unreifiedw: typing.Optional[KgtkWriter],
+                                potential_edge_attributes: typing.List[typing.List[str]],
+                                node1_group: typing.List[typing.List[str]],
+                                rdf_product: int,
+                                rdf_subject_values: typing.List[str],
+                                rdf_predicate_values: typing.List[str],
+                                rdf_object_values: typing.List[str],
+                                edge_id: str,
+                                label_column_idx: int,
+                                node2_column_idx: int,
+                                node1_column_name: str,
+                                label_column_name: str,
+                                node2_column_name: str,
+                                id_column_name: str,
+    ):
+        if reifiedw is not None:
+            for row in node1_group:
+                reifiedw.write(row)
+
+        if rdf_product == 1:
+            # Generate the new edge:
+            self.write_new_edge(kw,
+                                unreifiedw,
+                                potential_edge_attributes,
+                                rdf_subject_values[0],
+                                rdf_predicate_values[0],
+                                rdf_object_values[0],
+                                edge_id,
+                                label_column_idx,
+                                node2_column_idx,
+                                node1_column_name,
+                                label_column_name,
+                                node2_column_name,
+                                id_column_name,
+            )
+        else:
+            width: int = self.get_width(rdf_product)
+            edge_number: int = 0
+            rdf_subject_value: str
+            for rdf_subject_value in sorted(rdf_subject_values):
+                rdf_predicate_value: str
+                for rdf_predicate_value in sorted(rdf_predicate_values):
+                    rdf_object_value: str
+                    for rdf_object_value in sorted(rdf_object_values):
+                        edge_number += 1
+                        new_edge_id: str = self.make_new_id(edge_id, edge_number, width)
+                        self.write_new_edge(kw,
+                                            unreifiedw,
+                                            potential_edge_attributes,
+                                            rdf_subject_value,
+                                            rdf_predicate_value,
+                                            rdf_object_value,
+                                            new_edge_id,
+                                            label_column_idx,
+                                            node2_column_idx,
+                                            node1_column_name,
+                                            label_column_name,
+                                            node2_column_name,
+                                            id_column_name,
+            )
+
+
+    def make_new_id(self, edge_id: str, count: int, width: int)->str:
+        # Generate a new ID that will sort after the new edge.
+        # What if the existing ID is not a symbol or a string?
+        #
+        # TODO: Handle these cases.
+        new_id: str
+        if edge_id.startswith(KgtkFormat.STRING_SIGIL) and edge_id.endswith(KgtkFormat.STRING_SIGIL):
+            new_id = edge_id[:-1] + "-" + str(count).zfill(width) + KgtkFormat.STRING_SIGIL
+        else:
+            new_id = edge_id + "-" + str(count).zfill(width)
+        return new_id
+
+    def get_width(self, max_count: int)->int:
+        return len(str(max_count).strip())
+        
+    def write_new_edge(self,
+                       kw: KgtkWriter,
+                       unreifiedw: typing.Optional[KgtkWriter],
+                       potential_edge_attributes: typing.List[typing.List[str]],
+                       edge_id: str,
+                       rdf_subject_value: str,
+                       rdf_predicate_value: str,
+                       rdf_object_value: str,
+                       label_column_idx: int,
+                       node2_column_idx: int,
+                       node1_column_name: str,
+                       label_column_name: str,
+                       node2_column_name: str,
+                       id_column_name: str,
+    ):
+        kw.writemap({
+            node1_column_name: rdf_subject_value,
+            label_column_name: rdf_predicate_value,
+            node2_column_name: rdf_object_value,
+            id_column_name: edge_id,
+        })
+        self.output_line_count += 1
+        
+        if unreifiedw is not None:
+            unreifiedw.writemap({
+                node1_column_name: rdf_subject_value,
+                label_column_name: rdf_predicate_value,
+                node2_column_name: rdf_object_value,
+                id_column_name: edge_id,
+            })
+
+        self.write_edge_attributes(kw,
+                                   unreifiedw,
+                                   potential_edge_attributes,
+                                   edge_id,
+                                   label_column_idx,
+                                   node2_column_idx,
+                                   node1_column_name,
+                                   label_column_name,
+                                   node2_column_name,
+                                   id_column_name,
+)
+
+    def write_edge_attributes(self,
+                              kw: KgtkWriter,
+                              unreifiedw: typing.Optional[KgtkWriter],
+                              potential_edge_attributes: typing.List[typing.List[str]],
+                              edge_id: str,
+                              label_column_idx: int,
+                              node2_column_idx: int,
+                              node1_column_name: str,
+                              label_column_name: str,
+                              node2_column_name: str,
+                              id_column_name: str,
+    ):
+        width: int = self.get_width(len(potential_edge_attributes))
+        attribute_number: int = 0
+        edge_row: typing.List[str]
+        for edge_row in potential_edge_attributes:
+            attribute_number += 1
+
+            attr_edge_id: str = self.make_new_id(edge_id, attribute_number, width)
+
+            kw.writemap({
+                node1_column_name: edge_id,
+                label_column_name: edge_row[label_column_idx],
+                node2_column_name: edge_row[node2_column_idx],
+                id_column_name: attr_edge_id
+            })
+            self.output_line_count += 1
+                
+            if unreifiedw is not None:
+                unreifiedw.writemap({
+                    node1_column_name: edge_id,
+                    label_column_name: edge_row[label_column_idx],
+                    node2_column_name: edge_row[node2_column_idx],
+                    id_column_name: attr_edge_id
+                })
+                
+
+    def pass_group_through(self,
+                           kw: KgtkWriter,
+                           uninvolvedw: typing.Optional[KgtkWriter],
+                           node1_group: typing.List[typing.List[str]],
+                           new_id_column: bool):
+        # Unreification was not triggered.  Pass this group of rows
+        # through unchanged, except for possibly appending an ID
+        # column.
+        #
+        # TODO: Perhaps we'd like to build an ID value at the same time?
+        row: typing.List[str]
+        for row in node1_group:
+            if uninvolvedw is not None:
+                uninvolvedw.write(row)
+                
+            if new_id_column:
+                row = row.copy()
+                row.append("")
+
+            kw.write(row)
+            self.output_line_count += 1
+        
+
+    @classmethod
+    def add_arguments(cls, parser: ArgumentParser):
+        parser.add_argument(      "--trigger-label", dest="trigger_label_value",
+                                  help="A value that identifies the trigger label. (default=%(default)s).",
+                                  type=str, default=KgtkUnreifyRdfStatements.DEFAULT_TRIGGER_LABEL_VALUE)
+
+        parser.add_argument(      "--trigger-node2", dest="trigger_node2_value",
+                                  help="A value that identifies the trigger node2. (default=%(default)s).",
+                                  type=str, default=KgtkUnreifyRdfStatements.DEFAULT_TRIGGER_NODE2_VALUE)
+    
+        parser.add_argument(      "--node1-role", dest="rdf_subject_label_value",
+                                  help="The label that identifies the edge with the node2 value that will serve in the node1 role. (default=%(default)s).",
+                                  type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_SUBJECT_LABEL_VALUE)
+    
+        parser.add_argument(      "--label-role", dest="rdf_predicate_label_value",
+                                  help="The label that identifies the edge with the node2 value that will serve in the label role. (default=%(default)s).",
+                                  type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_PREDICATE_LABEL_VALUE)
+    
+        parser.add_argument(      "--node2-role", dest="rdf_object_label_value",
+                                  help="The label that identifies the edge with the node2 value that will serve in the node2 role. (default=%(default)s).",
+                                  type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_OBJECT_LABEL_VALUE)
+
+        parser.add_argument(      "--allow-multiple-subjects", dest="allow_multiple_subjects",
+                                  help="When true, allow multiple subjects, resulting in a cartesian product. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_SUBJECTS)
+
+        parser.add_argument(      "--allow-multiple-predicates", dest="allow_multiple_predicates",
+                                  help="When true, allow multiple predicates, resulting in a cartesian product. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_PREDICATES)
+
+        parser.add_argument(      "--allow-multiple-objects", dest="allow_multiple_objects",
+                                  help="When true, allow multiple objects, resulting in a cartesian product. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_OBJECTS)
             
 def main():
     """
@@ -315,26 +493,7 @@ def main():
     parser.add_argument(      "--uninvolved-file", dest="uninvolved_file_path",
                               help="A KGTK output file that will contain only the uninvolved input records. (default=%(default)s).", type=Path, default=None)
     
-    parser.add_argument(      "--trigger-label", dest="trigger_label_value",
-                              help="A value that identifies the trigger label. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_TRIGGER_LABEL_VALUE)
-
-    parser.add_argument(      "--trigger-node2", dest="trigger_node2_value",
-                              help="A value that identifies the trigger node2. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_TRIGGER_NODE2_VALUE)
-    
-    parser.add_argument(      "--node1-role", dest="rdf_subject_label_value",
-                              help="The label that identifies the edge with the node2 value that will serve in the node1 role. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_SUBJECT_LABEL_VALUE)
-    
-    parser.add_argument(      "--label-role", dest="rdf_predicate_label_value",
-                              help="The label that identifies the edge with the node2 value that will serve in the label role. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_PREDICATE_LABEL_VALUE)
-    
-    parser.add_argument(      "--node2-role", dest="rdf_object_label_value",
-                              help="The label that identifies the edge with the node2 value that will serve in the node2 role. (default=%(default)s).",
-                              type=str, default=KgtkUnreifyRdfStatements.DEFAULT_RDF_OBJECT_LABEL_VALUE)
-    
+    KgtkUnreifyRdfStatements.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=False, expert=True)
     KgtkValueOptions.add_arguments(parser)
@@ -362,6 +521,9 @@ def main():
         print("--node1-role=%s" % args.rdf_subject_label_value, file=error_file, flush=True)
         print("--label-role=%s" % args.rdf_predicate_label_value, file=error_file, flush=True)
         print("--node2-role=%s" % args.rdf_object_label_value, file=error_file, flush=True)
+        print("--allow-multiple-subjects=%s" % str(args.allow_multiple_subjects), file=error_file, flush=True)
+        print("--allow-multiple-predicates=%s" % str(args.allow_multiple_predicates), file=error_file, flush=True)
+        print("--allow-multiple-objects=%s" % str(args.allow_multiple_objects), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -378,6 +540,10 @@ def main():
         rdf_object_label_value=args.rdf_object_label_value,
         rdf_predicate_label_value=args.rdf_predicate_label_value,
         rdf_subject_label_value=args.rdf_subject_label_value,
+
+        allow_multiple_subjects=args.allow_multiple_subjects,
+        allow_multiple_predicates=args.allow_multiple_predicates,
+        allow_multiple_objects=args.allow_multiple_objects,
 
         reader_options=reader_options,
         value_options=value_options,
