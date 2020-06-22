@@ -118,7 +118,7 @@ class KgtkUnreifyValues(KgtkFormat):
         reifiedw: typing.Optional[KgtkWriter] = None
         if self.reified_file_path is not None:
             if self.verbose:
-                print("Opening the reified RDF statements output file: %s" % str(self.reified_file_path), file=self.error_file, flush=True)
+                print("Opening the reified value output file: %s" % str(self.reified_file_path), file=self.error_file, flush=True)
             reifiedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.reified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
@@ -132,7 +132,7 @@ class KgtkUnreifyValues(KgtkFormat):
         unreifiedw: typing.Optional[KgtkWriter] = None
         if self.unreified_file_path is not None:
             if self.verbose:
-                print("Opening the unreified RDF statements output file: %s" % str(self.unreified_file_path), file=self.error_file, flush=True)
+                print("Opening the unreified value output file: %s" % str(self.unreified_file_path), file=self.error_file, flush=True)
             unreifiedw: KgtkWriter = KgtkWriter.open(output_column_names,
                                                    self.unreified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
