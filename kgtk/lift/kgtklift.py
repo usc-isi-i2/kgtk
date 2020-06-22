@@ -29,23 +29,26 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class KgtkLift(KgtkFormat):
+    DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX: str = ";label"
+    DEFAULT_LABEL_SELECT_COLUMN_VALUE: str = "label"
+
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
-
-    lift_column_names: typing.Optional[typing.List[str]] = \
-        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
-                                                                                 iterable_validator=attr.validators.instance_of(list))))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
  
-    node1_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
-    label_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
-    node2_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    input_select_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    input_select_column_value: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    input_lifting_column_names: typing.Optional[typing.List[str]] = \
+        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                 iterable_validator=attr.validators.instance_of(list))))
 
-    label_column_value: str = attr.ib(validator=attr.validators.instance_of(str), default="label")
-    lifted_column_suffix: str = attr.ib(validator=attr.validators.instance_of(str), default=";label")
+    output_select_column_value: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    ouput_lifted_column_suffix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
 
-    target_label_column_value: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
-    target_new_label_column_value: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    label_select_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    label_select_column_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LABEL_SELECT_COLUMN_VALUE)
+    label_match_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    label_value_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     remove_label_records: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     suppress_duplicate_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -630,33 +633,55 @@ def main():
 
     parser.add_argument(dest="input_file_path", help="The KGTK file with the input data", type=Path, default="-")
 
-    parser.add_argument(      "--label-file", dest="label_file_path", help="A KGTK file with label records (default=%(default)s).", type=Path, default=None)
-
-    parser.add_argument(      "--node1-name", dest="node1_column_name",
-                              help="The name of the node1 column. (default=node1 or alias).", default=None)
-
-    parser.add_argument(      "--label-name", dest="label_column_name",
-                              help="The name of the label column. (default=label).", default=None)
-
-    parser.add_argument(      "--node2-name", dest="node2_column_name",
-                              help="The name of the node2 column. (default=node2 or alias).", default=None)
-
-    parser.add_argument(      "--label-value", dest="label_column_value",
-                              help="The value in the label column that identifies a label record. (default=%(default)s).", default="label")
-    
-    parser.add_argument(      "--target-label-value", dest="target_label_column_value",
-                              help="The value in the label column that identifies a record to receive a lift. (default=%(default)s).", default=None)
-    
-    parser.add_argument(      "--target-new-label-value", dest="target_new_label_column_value",
-                              help="A new value for the label column for records that received a lift. (default=%(default)s).", default=None)
-    
-    parser.add_argument(      "--lift-suffix", dest="lifted_column_suffix",
-                              help="The suffix used for newly created columns. (default=%(default)s).", default=";label")
-
-    parser.add_argument(      "--columns-to-lift", dest="lift_column_names", help="The columns to lift. (default=[node1, label, node2]).", nargs='*')
-
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
+    parser.add_argument(      "--label-file", dest="label_file_path",
+                              help="An optional KGTK file with label records (default=%(default)s).", type=Path, default=None)
+
+
+    parser.add_argument(      "--input-select-column", "--input-label-column", dest="input_select_column_name",
+                              help="If input record selection is enabled by --input-select-value, " +
+                              "the name of a column that determines which records received lifted values. " +
+                              "The default is the 'label' column or its alias.", default=None)
+
+    parser.add_argument(      "--input-select-value", "--input-label-value", "--target-label-value", dest="input_select_column_value",
+                              help="The value in the input select column that identifies a record to receive lifted values. " +
+                              "The default is not to perform input record selection, " +
+                              "and all input records except label records may receive lifted values. ",
+                              default=None)
+    
+    parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
+                              help="The columns for which matching labels are to be lifted. " +
+                              "The default is [node1, label, node2] or their aliases.", nargs='*')
+
+    parser.add_argument(      "--lift-suffix", dest="output_lifted_column_suffix",
+                              help="The suffix used for newly created output columns. (default=%(default)s).", default=cls.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
+
+    parser.add_argument(      "--update-select-value", "--target-new-label-value", dest="output_select_column_value",
+                              help="A new value for the select (label) column for records that received lifted values. " +
+                              "The default is not to update the select(label) column.", default=None)
+    
+
+    parser.add_argument(      "--label-select-column", "--label-name", dest="label_select_column_name",
+                              help="The name of the column that contains a special value that identifies label records. " +
+                              "The default is 'label' or its alias.", default=None)
+
+    parser.add_argument("-p", "--label-select-value", "--label-value", "--property", dest="label_select_column_value",
+                              help="The special value in the label select column that identifies a label record. "
+                              "(default=%(default)s).", default=cls.DEFAULT_LABEL_SELECT_COLUMN_VALUE)
+    
+    parser.add_argument(      "--label-match-column", "--node1-name", dest="label_match_column_name",
+                              help="The name of the column in the label records that contains the value " +
+                              "that matches the value in a column being lifted in the input records. " +
+                              "The default is 'node1' or its alias.", default=None)
+
+    parser.add_argument(      "--label-value-column", "--node2-name", dest="label_value_column_name",
+                              help="The name of the column in the label record that contains the value " +
+                              "to be lifted into the input record that is receiving lifted values. " +
+                              "The default is 'node2' or its alias.", default=None)
+
+
+
     parser.add_argument(      "--remove-label-records", dest="remove_label_records",
                               help="If true, remove label records from the output. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
@@ -704,21 +729,29 @@ def main():
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
         if args.label_file_path is not None:
             print("--label-file=%s" % str(args.label_file_path), file=error_file, flush=True)
-        if args.node1_column_name is not None:
-            print("--node1-name=%s" % args.node1_column_name, file=error_file, flush=True)
-        if args.label_column_name is not None:
-            print("--label-name=%s" % args.label_column_name, file=error_file, flush=True)
-        if args.node2_column_name is not None:
-            print("--node2-name=%s" % args.node2_column_name, file=error_file, flush=True)
-        print("--label-value=%s" % args.label_column_value, file=error_file, flush=True)
-        if args.target_label_column_value is not None:
-            print("--target-label-value=%s" % args.target_label_column_value, file=error_file, flush=True)
-        if args.target_new_label_column_value is not None:
-            print("--target-new-label-value=%s" % args.target_new_label_column_value, file=error_file, flush=True)
-        print("--lift-suffix=%s" % args.lifted_column_suffix, file=error_file, flush=True)
-        if args.lift_column_names is not None and len(args.lift_column_names) > 0:
-            print("--columns-to-lift %s" % " ".join(args.lift_column_names), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
+
+        if args.input_select_column_name is not None:
+            print("--input-select-column=%s" % args.input_select_column_name, file=error_file, flush=True)
+        if args.input_select_column_value is not None:
+            print("--input-select-value=%s" % args.input_select_column_value, file=error_file, flush=True)
+        if args.input_lifting_column_names is not None and len(args.input_lifting_column_names) > 0:
+            print("--columns-to-lift %s" % " ".join(args.input_lifting_column_names), file=error_file, flush=True)
+
+        print("--lift-suffix=%s" % args.output_lifted_column_suffix, file=error_file, flush=True)
+        if args.output_select_column_value is not None:
+            print("--update-label-value=%s" % args.output_select_column_value, file=error_file, flush=True)
+
+        if args.label_select_column_name is not None:
+            print("--label-select-column=%s" % args.label_select_column_name, file=error_file, flush=True)
+        if args.label_select_column_value is not None:
+            print("--label-select-value=%s" % args.label_select_column_value, file=error_file, flush=True)
+        if args.label_match_column_name is not None:
+            print("--label-match-column=%s" % args.label_match_column_name, file=error_file, flush=True)
+        if args.label_value_column_name is not None:
+            print("--label-value-column=%s" % args.label_value_column_name, file=error_file, flush=True)
+
+
         print("--remove-label-records=%s" % str(args.remove_label_records))
         print("--sort-lifted-labels-labels=%s" % str(args.sort_lifted_labels))
         print("--suppress-duplicate-labels=%s" % str(args.suppress_duplicate_labels))
@@ -732,15 +765,20 @@ def main():
     kl: KgtkLift = KgtkLift(
         input_file_path=args.input_file_path,
         label_file_path=args.label_file_path,
-        node1_column_name=args.node1_column_name,
-        label_column_name=args.label_column_name,
-        node2_column_name=args.node2_column_name,
-        label_column_value=args.label_column_value,
-        target_label_column_value=args.target_label_column_value,
-        target_new_label_column_value=args.target_new_label_column_value,
-        lifted_column_suffix=args.lifted_column_suffix,
-        lift_column_names=args.lift_column_names,
         output_file_path=args.output_file_path,
+
+        input_select_column_name=args.input_select_column_name,
+        input_select_column_value=args.input_select_column_value, 
+        input_lifting_column_names=args.input_lifting_column_names,
+
+        output_select_column_value=args.output_select_column_value, 
+        output_lifted_column_suffix=args.output_lifted_column_suffix,
+
+        label_select_column_name=args.label_select_column_name,
+        label_select_column_value=args.label_select_column_value,
+        label_match_column_name=args.label_match_column_name,
+        label_value_column_name=args.label_value_column_name,
+        
         remove_label_records=args.remove_label_records,
         sort_lifted_labels=args.sort_lifted_labels,
         suppress_duplicate_labels=args.suppress_duplicate_labels,
