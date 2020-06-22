@@ -1,6 +1,5 @@
 """
-Unreify RDF statements in KGTK files.
-
+Unreify RDF values in KGTK files
 """
 from argparse import ArgumentParser, Namespace
 import attr
@@ -16,15 +15,12 @@ from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=False)
-class KgtkUnreifyRdfStatements(KgtkFormat):
-    DEFAULT_TRIGGER_LABEL_VALUE: str = "rdf:type"
-    DEFAULT_TRIGGER_NODE2_VALUE: str = "rdf:Statement"
-    DEFAULT_RDF_OBJECT_LABEL_VALUE: str = "rdf:object"
-    DEFAULT_RDF_PREDICATE_LABEL_VALUE: str = "rdf:predicate"
-    DEFAULT_RDF_SUBJECT_LABEL_VALUE: str = "rdf:subject"
-    DEFAULT_ALLOW_MULTIPLE_SUBJECTS: bool = True
-    DEFAULT_ALLOW_MULTIPLE_PREDICATES: bool = True
-    DEFAULT_ALLOW_MULTIPLE_OBJECTS: bool = True
+class KgtkUnreifyValues(KgtkFormat):
+    DEFAULT_TRIGGER_LABEL_VALUE: typing.Optional[str] = None
+    DEFAULT_TRIGGER_NODE2_VALUE: typing.Optional[str] = None
+    DEFAULT_VALUE_LABEL_VALUE: typing.Optional[str] = None
+    DEFAULT_OLD_LABEL_VALUE: typing.Optional[str] = None
+    DEFAULT_NEW_LABEL_VALUE: typing.Optional[str] = None
 
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
@@ -35,13 +31,10 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
 
     trigger_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_LABEL_VALUE)
     trigger_node2_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_NODE2_VALUE)
-    rdf_object_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_RDF_OBJECT_LABEL_VALUE)
-    rdf_predicate_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_RDF_PREDICATE_LABEL_VALUE)
-    rdf_subject_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_RDF_SUBJECT_LABEL_VALUE)
+    value_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_VALUE_LABEL_VALUE)
+    old_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_OLD_LABEL_VALUE)
+    new_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NEW_LABEL_VALUE)
 
-    allow_multiple_subjects: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_MULTIPLE_SUBJECTS)
-    allow_multiple_predicates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_MULTIPLE_PREDICATES)
-    allow_multiple_objects: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_MULTIPLE_OBJECTS)
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -54,6 +47,26 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
 
     # Working variables:
     output_line_count: int = attr.ib(default=0)
+
+    def make_keygen(self, old_label_value: str)->KgtkSortBuffer.KEYGEN_TYPE:
+        def keygen(buf: 'KgtkSortBuffer', row: typing.List[str])->str:
+            node1_column_idx: int = buf.node1_column_idx
+            if node1_column_idx < 0:
+                raise ValueError("Unknown node1 column.")
+            
+            label_column_idx: int = buf.label_column_idx
+            if label_column_idx < 0:
+                raise ValueError("Unknown label column.")
+            
+            node2_column_idx: int = buf.node2_column_idx
+            if node2_column_idx < 0:
+                raise ValueError("Unknown node2 column.")
+
+            if row[label_column_idx] == old_label_value:
+                return row[node2_column_idx]
+            else:
+                return row[node1_column_idx]
+        return keygen
 
     def process(self):
         # Open the input file.
@@ -146,7 +159,9 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
 
         if self.verbose:
             print("Reading and grouping the input records.", file=self.error_file, flush=True)
-        ksb: KgtkSortBuffer = KgtkSortBuffer.readall(kr, grouped=True, keygen=KgtkSortBuffer.node1_keygen)
+        ksb: KgtkSortBuffer = KgtkSortBuffer.readall(kr, grouped=True, keygen=self.make_keygen(self.old_label_value))
+
+        # *************************
 
         input_group_count: int = 0
         input_line_count: int = 0
@@ -447,30 +462,18 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                                   help="A value that identifies the trigger node2. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_TRIGGER_NODE2_VALUE)
     
-        parser.add_argument(      "--node1-role", dest="rdf_subject_label_value",
-                                  help="The label that identifies the edge with the node2 value that will serve in the node1 role. (default=%(default)s).",
-                                  type=str, default=cls.DEFAULT_RDF_SUBJECT_LABEL_VALUE)
+        parser.add_argument(      "--value-label", dest="value_label_value",
+                                  help="The label that identifies the edge with the desired node2 value. (default=%(default)s).",
+                                  type=str, default=cls.DEFAULT_VALUE_LABEL_VALUE)
     
-        parser.add_argument(      "--label-role", dest="rdf_predicate_label_value",
-                                  help="The label that identifies the edge with the node2 value that will serve in the label role. (default=%(default)s).",
-                                  type=str, default=cls.DEFAULT_RDF_PREDICATE_LABEL_VALUE)
+        parser.add_argument(      "--old-label", dest="old_label_value",
+                                  help="The label that identifies the edge with the node1 value being unreified. (default=%(default)s).",
+                                  type=str, default=cls.DEFAULT_OLD_LABEL_VALUE)
     
-        parser.add_argument(      "--node2-role", dest="rdf_object_label_value",
-                                  help="The label that identifies the edge with the node2 value that will serve in the node2 role. (default=%(default)s).",
-                                  type=str, default=cls.DEFAULT_RDF_OBJECT_LABEL_VALUE)
+        parser.add_argument(      "--new-label", dest="new_label_value",
+                                  help="The label to be applied to the unreified edge. (default=value-label).",
+                                  type=str, default=cls.DEFAULT_NEW_LABEL_VALUE)
 
-        parser.add_argument(      "--allow-multiple-subjects", dest="allow_multiple_subjects",
-                                  help="When true, allow multiple subjects, resulting in a cartesian product. (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_SUBJECTS)
-
-        parser.add_argument(      "--allow-multiple-predicates", dest="allow_multiple_predicates",
-                                  help="When true, allow multiple predicates, resulting in a cartesian product. (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_PREDICATES)
-
-        parser.add_argument(      "--allow-multiple-objects", dest="allow_multiple_objects",
-                                  help="When true, allow multiple objects, resulting in a cartesian product. (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_OBJECTS)
-            
 def main():
     """
     Test the KGTK copy template.
@@ -484,15 +487,15 @@ def main():
                         help="The KGTK output file. (default=%(default)s).", type=Path, default="-")
     
     parser.add_argument(      "--reified-file", dest="reified_file_path",
-                              help="A KGTK output file that will contain only the reified RDF statements. (default=%(default)s).", type=Path, default=None)
+                              help="A KGTK output file that will contain only the reified values. (default=%(default)s).", type=Path, default=None)
     
     parser.add_argument(      "--unreified-file", dest="unreified_file_path",
-                              help="A KGTK output file that will contain only the unreified RDF statements. (default=%(default)s).", type=Path, default=None)
+                              help="A KGTK output file that will contain only the unreified values. (default=%(default)s).", type=Path, default=None)
     
     parser.add_argument(      "--uninvolved-file", dest="uninvolved_file_path",
                               help="A KGTK output file that will contain only the uninvolved input records. (default=%(default)s).", type=Path, default=None)
     
-    KgtkUnreifyRdfStatements.add_arguments(parser)
+    KgtkUnreifyValues.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=False, expert=True)
     KgtkValueOptions.add_arguments(parser)
@@ -515,19 +518,22 @@ def main():
             print("--unreified-file=%s" % str(args.unreified_file_path), file=error_file, flush=True)
         if args.uninvolved_file_path is not None:
             print("--uninvolved-file=%s" % str(args.uninvolved_file_path), file=error_file, flush=True)
-        print("--trigger-label=%s" % args.trigger_label_value, file=error_file, flush=True)
-        print("--trigger-node2=%s" % args.trigger_node2_value, file=error_file, flush=True)
-        print("--node1-role=%s" % args.rdf_subject_label_value, file=error_file, flush=True)
-        print("--label-role=%s" % args.rdf_predicate_label_value, file=error_file, flush=True)
-        print("--node2-role=%s" % args.rdf_object_label_value, file=error_file, flush=True)
-        print("--allow-multiple-subjects=%s" % str(args.allow_multiple_subjects), file=error_file, flush=True)
-        print("--allow-multiple-predicates=%s" % str(args.allow_multiple_predicates), file=error_file, flush=True)
-        print("--allow-multiple-objects=%s" % str(args.allow_multiple_objects), file=error_file, flush=True)
+
+        if args.trigger_label_value is not None:
+            print("--trigger-label=%s" % args.trigger_label_value, file=error_file, flush=True)
+        if args.trigger_node2_value is not None:
+            print("--trigger-node2=%s" % args.trigger_node2_value, file=error_file, flush=True)
+        if args.value_label_value is not None:
+            print("--value-label=%s" % args.value_label_value, file=error_file, flush=True)
+        if args.old_label_value is not None:
+            print("--old-label=%s" % args.old_label_value, file=error_file, flush=True)
+        if args.new_label_value is not None:
+            print("--new-label=%s" % args.new_label_value, file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
-    kurs: KgtkUnreifyRdfStatements = KgtkUnreifyRdfStatements(
+    kuv: KgtkUnreifyValues = KgtkUnreifyValues(
         input_file_path=args.input_file_path,
         output_file_path=args.output_file_path,
         reified_file_path=args.reified_file_path,
@@ -536,13 +542,9 @@ def main():
 
         trigger_label_value=args.trigger_label_value,
         trigger_node2_value=args.trigger_node2_value,
-        rdf_object_label_value=args.rdf_object_label_value,
-        rdf_predicate_label_value=args.rdf_predicate_label_value,
-        rdf_subject_label_value=args.rdf_subject_label_value,
-
-        allow_multiple_subjects=args.allow_multiple_subjects,
-        allow_multiple_predicates=args.allow_multiple_predicates,
-        allow_multiple_objects=args.allow_multiple_objects,
+        value_label_value=args.value_label_value,
+        old_label_value=args.old_label_value,
+        new_label_value=args.new_label_value,
 
         reader_options=reader_options,
         value_options=value_options,
@@ -551,7 +553,7 @@ def main():
         very_verbose=args.very_verbose,
     )
 
-    kurs.process()
+    kuv.process()
     
 if __name__ == "__main__":
     main()
