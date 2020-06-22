@@ -275,16 +275,15 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         if reifiedw is not None:
             for row in node1_group:
                 reifiedw.write(row)
-
         if rdf_product == 1:
             # Generate the new edge:
             self.write_new_edge(kw,
                                 unreifiedw,
                                 potential_edge_attributes,
+                                edge_id,
                                 rdf_subject_values[0],
                                 rdf_predicate_values[0],
                                 rdf_object_values[0],
-                                edge_id,
                                 label_column_idx,
                                 node2_column_idx,
                                 node1_column_name,
@@ -306,10 +305,10 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
                         self.write_new_edge(kw,
                                             unreifiedw,
                                             potential_edge_attributes,
+                                            new_edge_id,
                                             rdf_subject_value,
                                             rdf_predicate_value,
                                             rdf_object_value,
-                                            new_edge_id,
                                             label_column_idx,
                                             node2_column_idx,
                                             node1_column_name,
