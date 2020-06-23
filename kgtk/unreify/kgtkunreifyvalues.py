@@ -21,6 +21,7 @@ class KgtkUnreifyValues(KgtkFormat):
     DEFAULT_VALUE_LABEL_VALUE: typing.Optional[str] = None
     DEFAULT_OLD_LABEL_VALUE: typing.Optional[str] = None
     DEFAULT_NEW_LABEL_VALUE: typing.Optional[str] = None
+    DEFAULT_ALLOW_MULTIPLE_VALUES: bool = False
 
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
@@ -35,6 +36,7 @@ class KgtkUnreifyValues(KgtkFormat):
     old_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_OLD_LABEL_VALUE)
     new_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NEW_LABEL_VALUE)
 
+    allow_multiple_values: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_MULTIPLE_VALUES)
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -49,22 +51,23 @@ class KgtkUnreifyValues(KgtkFormat):
     output_line_count: int = attr.ib(default=0)
 
     def make_keygen(self, old_label_value: str)->KgtkSortBuffer.KEYGEN_TYPE:
+        # Create a key generator function passing old_label_value as a
+        # closure value.
         def keygen(buf: 'KgtkSortBuffer', row: typing.List[str])->str:
-            node1_column_idx: int = buf.node1_column_idx
-            if node1_column_idx < 0:
-                raise ValueError("Unknown node1 column.")
-            
             label_column_idx: int = buf.label_column_idx
             if label_column_idx < 0:
                 raise ValueError("Unknown label column.")
             
-            node2_column_idx: int = buf.node2_column_idx
-            if node2_column_idx < 0:
-                raise ValueError("Unknown node2 column.")
-
             if row[label_column_idx] == old_label_value:
+                node2_column_idx: int = buf.node2_column_idx
+                if node2_column_idx < 0:
+                    raise ValueError("Unknown node2 column.")
                 return row[node2_column_idx]
+
             else:
+                node1_column_idx: int = buf.node1_column_idx
+                if node1_column_idx < 0:
+                    raise ValueError("Unknown node1 column.")
                 return row[node1_column_idx]
         return keygen
 
@@ -161,8 +164,6 @@ class KgtkUnreifyValues(KgtkFormat):
             print("Reading and grouping the input records.", file=self.error_file, flush=True)
         ksb: KgtkSortBuffer = KgtkSortBuffer.readall(kr, grouped=True, keygen=self.make_keygen(self.old_label_value))
 
-        # *************************
-
         input_group_count: int = 0
         input_line_count: int = 0
         self.output_line_count = 0
@@ -178,17 +179,17 @@ class KgtkUnreifyValues(KgtkFormat):
             saw_error: bool = False
             saw_trigger: bool = False
             node1_value: typing.Optional[str] = None
-            rdf_object_values: typing.Set[str] = set()
-            rdf_predicate_values: typing.Set[str] = set()
-            rdf_subject_values: typing.Set[str] = set()
-            
+            node2_values: typing.Set[str] = set()
+
+            old_label_node2_value: typing.Optional[str] = None
+            trigger_node1_value: typing.Optional[str] = None
+           
             potential_edge_attributes: typing.List[typing.List[str]] = [ ]
 
             row: typing.List[str]
             for row in node1_group:
                 input_line_count += 1
-                if node1_value is None:
-                    node1_value = row[node1_column_idx]
+                node1: str = row[node1_column_idx]
                 label: str = row[label_column_idx]
                 node2: str = row[node2_column_idx]
 
@@ -198,55 +199,49 @@ class KgtkUnreifyValues(KgtkFormat):
                         if self.verbose:
                             print("Warning: Duplicate trigger in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
                     saw_trigger = True
-                elif label == self.rdf_object_label_value:
-                    if len(rdf_object_values) > 0 and node2 not in rdf_object_values and not self.allow_multple_objects:
+                    trigger_node1_value = node1
+
+                elif label == self.value_label_value:
+                    if len(node2_values) > 0 and node2 not in node2_values and not self.allow_multple_values:
                         # TODO: Shout louder.
                         if self.verbose:
-                            print("Warning: Multiple rdf objects in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
-                        saw_error = True # until we implement the cartesan product
-                    rdf_object_values.add(node2)
-                elif label == self.rdf_predicate_label_value:
-                    if len(rdf_predicate_values) > 0  and node2 not in rdf_predicate_values and not self.allow_multiple_predicates:
-                        # TODO: Shout louder.
-                        if self.verbose:
-                            print("Warning: Multiple rdf predicates in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
-                        saw_error = True # until we implement the cartesan product
-                    rdf_predicate_values.add(node2)
-                elif label == self.rdf_subject_label_value:
-                    if len(rdf_subject_values) > 0 and node2 not in rdf_subject_values and not self.allow_multple_subjects:
-                        # TODO: Shout louder.
-                        if self.verbose:
-                            print("Warning: Multiple rdf subjects in input group %d (%s)" % (input_group_count, node1_value), file=self.error_file, flush=True)
-                        saw_error = True # until we implement the cartesan product
-                    rdf_subject_values.add(node2)
+                            print("Warning: Multiple values in input group %d" % (input_group_count), file=self.error_file, flush=True)
+                        saw_error = True
+                    node2_values.add(node2)
+                    
+                elif label == self.old_label_value:
+                    node1_value = node1
+                    old_label_node2_value = node2
+
                 else:
                     potential_edge_attributes.append(row)
                     
-            rdf_product: int = len(rdf_object_values) * len(rdf_predicate_values) * len(rdf_subject_values)
-
             if saw_trigger and \
                node1_value is not None and \
-               rdf_product > 0 and \
+               len(node2_values) > 0 and \
+               old_label_node2_value == trigger_node1_value and \
                not saw_error:
                 # Unreification was triggered.
                 unreification_count += 1
 
-                self.write_new_edge_or_edges(kw,
-                                             reifiedw,
-                                             unreifiedw,
-                                             potential_edge_attributes,
-                                             node1_group,
-                                             rdf_product,
-                                             list(rdf_subject_values),
-                                             list(rdf_predicate_values),
-                                             list(rdf_object_values),
-                                             node1_value,
-                                             label_column_idx,
-                                             node2_column_idx,
-                                             node1_column_name,
-                                             label_column_name,
-                                             node2_column_name,
-                                             id_column_name,
+                node2_value: str = KgtkFormat.LIST_SEPARATOR.join(list(node2_values))
+
+                if reifiedw is not None:
+                    for row in node1_group:
+                        reifiedw.write(row)
+
+                self.write_new_edge(kw,
+                                    reifiedw,
+                                    potential_edge_attributes,
+                                    node1_value,
+                                    node2_value,
+                                    trigger_node1_value,
+                                    label_column_idx,
+                                    node2_column_idx,
+                                    node1_column_name,
+                                    label_column_name,
+                                    node2_column_name,
+                                    id_column_name,
                 )
                 
             else:
@@ -269,70 +264,6 @@ class KgtkUnreifyValues(KgtkFormat):
         if uninvolvedw is not None:
             uninvolvedw.close()
 
-    def write_new_edge_or_edges(self,
-                                kw: KgtkWriter,
-                                reifiedw: typing.Optional[KgtkWriter],
-                                unreifiedw: typing.Optional[KgtkWriter],
-                                potential_edge_attributes: typing.List[typing.List[str]],
-                                node1_group: typing.List[typing.List[str]],
-                                rdf_product: int,
-                                rdf_subject_values: typing.List[str],
-                                rdf_predicate_values: typing.List[str],
-                                rdf_object_values: typing.List[str],
-                                edge_id: str,
-                                label_column_idx: int,
-                                node2_column_idx: int,
-                                node1_column_name: str,
-                                label_column_name: str,
-                                node2_column_name: str,
-                                id_column_name: str,
-    ):
-        if reifiedw is not None:
-            for row in node1_group:
-                reifiedw.write(row)
-
-        if rdf_product == 1:
-            # Generate the new edge:
-            self.write_new_edge(kw,
-                                unreifiedw,
-                                potential_edge_attributes,
-                                rdf_subject_values[0],
-                                rdf_predicate_values[0],
-                                rdf_object_values[0],
-                                edge_id,
-                                label_column_idx,
-                                node2_column_idx,
-                                node1_column_name,
-                                label_column_name,
-                                node2_column_name,
-                                id_column_name,
-            )
-        else:
-            width: int = self.get_width(rdf_product)
-            edge_number: int = 0
-            rdf_subject_value: str
-            for rdf_subject_value in sorted(rdf_subject_values):
-                rdf_predicate_value: str
-                for rdf_predicate_value in sorted(rdf_predicate_values):
-                    rdf_object_value: str
-                    for rdf_object_value in sorted(rdf_object_values):
-                        edge_number += 1
-                        new_edge_id: str = self.make_new_id(edge_id, edge_number, width)
-                        self.write_new_edge(kw,
-                                            unreifiedw,
-                                            potential_edge_attributes,
-                                            rdf_subject_value,
-                                            rdf_predicate_value,
-                                            rdf_object_value,
-                                            new_edge_id,
-                                            label_column_idx,
-                                            node2_column_idx,
-                                            node1_column_name,
-                                            label_column_name,
-                                            node2_column_name,
-                                            id_column_name,
-            )
-
 
     def make_new_id(self, edge_id: str, count: int, width: int)->str:
         # Generate a new ID that will sort after the new edge.
@@ -353,10 +284,9 @@ class KgtkUnreifyValues(KgtkFormat):
                        kw: KgtkWriter,
                        unreifiedw: typing.Optional[KgtkWriter],
                        potential_edge_attributes: typing.List[typing.List[str]],
+                       node1_value: str,
+                       node2_value: str,
                        edge_id: str,
-                       rdf_subject_value: str,
-                       rdf_predicate_value: str,
-                       rdf_object_value: str,
                        label_column_idx: int,
                        node2_column_idx: int,
                        node1_column_name: str,
@@ -365,18 +295,18 @@ class KgtkUnreifyValues(KgtkFormat):
                        id_column_name: str,
     ):
         kw.writemap({
-            node1_column_name: rdf_subject_value,
-            label_column_name: rdf_predicate_value,
-            node2_column_name: rdf_object_value,
+            node1_column_name: node1_value,
+            label_column_name: self.new_label_value,
+            node2_column_name: node2_value,
             id_column_name: edge_id,
         })
         self.output_line_count += 1
         
         if unreifiedw is not None:
             unreifiedw.writemap({
-                node1_column_name: rdf_subject_value,
-                label_column_name: rdf_predicate_value,
-                node2_column_name: rdf_object_value,
+                node1_column_name: node1_value,
+                label_column_name: self.new_label_value,
+                node2_column_name: node2_value,
                 id_column_name: edge_id,
             })
 
@@ -454,25 +384,29 @@ class KgtkUnreifyValues(KgtkFormat):
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
-        parser.add_argument(      "--trigger-label", dest="trigger_label_value",
+        parser.add_argument(      "--trigger-label", dest="trigger_label_value", required=True,
                                   help="A value that identifies the trigger label. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_TRIGGER_LABEL_VALUE)
 
-        parser.add_argument(      "--trigger-node2", dest="trigger_node2_value",
+        parser.add_argument(      "--trigger-node2", dest="trigger_node2_value", required=True,
                                   help="A value that identifies the trigger node2. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_TRIGGER_NODE2_VALUE)
     
-        parser.add_argument(      "--value-label", dest="value_label_value",
+        parser.add_argument(      "--value-label", dest="value_label_value", required=True,
                                   help="The label that identifies the edge with the desired node2 value. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_VALUE_LABEL_VALUE)
     
-        parser.add_argument(      "--old-label", dest="old_label_value",
+        parser.add_argument(      "--old-label", dest="old_label_value", required=True,
                                   help="The label that identifies the edge with the node1 value being unreified. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_OLD_LABEL_VALUE)
     
-        parser.add_argument(      "--new-label", dest="new_label_value",
+        parser.add_argument(      "--new-label", dest="new_label_value", required=True,
                                   help="The label to be applied to the unreified edge. (default=value-label).",
                                   type=str, default=cls.DEFAULT_NEW_LABEL_VALUE)
+
+        parser.add_argument(      "--allow-multiple-values", dest="allow_multiple_values",
+                                  help="When true, allow multiple values, resulting in a list. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_VALUES)
 
 def main():
     """
@@ -530,6 +464,8 @@ def main():
         if args.new_label_value is not None:
             print("--new-label=%s" % args.new_label_value, file=error_file, flush=True)
 
+        print("--allow-multiple-values=%s" % str(args.allow_multiple_values), file=error_file, flush=True)
+
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -545,6 +481,8 @@ def main():
         value_label_value=args.value_label_value,
         old_label_value=args.old_label_value,
         new_label_value=args.new_label_value,
+
+        allow_multiple_values=args.allow_multiple_values,
 
         reader_options=reader_options,
         value_options=value_options,
