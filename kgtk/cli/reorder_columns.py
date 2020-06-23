@@ -5,6 +5,8 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import Namespace, SUPPRESS
+from pathlib import Path
+import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser
 
@@ -27,7 +29,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     # import modules locally
-    from pathlib import Path
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -51,7 +52,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('-c', "--columns", dest="column_names", required=True, nargs='+',
                               metavar="COLUMN_NAME",
-                              help="The list of reordered column names, optionally ending in '...'.")
+                              help="The list of reordered column names, optionally containing '...' for column names not explicitly mentioned.")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -72,9 +73,7 @@ def run(input_kgtk_file: Path,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
-    from pathlib import Path
     import sys
-    import typing
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
@@ -103,8 +102,8 @@ def run(input_kgtk_file: Path,
 
         if verbose:
             print("Opening the input file %s" % str(input_kgtk_file), file=error_file, flush=True)
-        kr = KgtkReader.open(input_file_path,
-                             options=reader_options
+        kr = KgtkReader.open(input_kgtk_file,
+                             options=reader_options,
                              value_options = value_options,
                              error_file=error_file,
                              verbose=verbose,
@@ -119,6 +118,58 @@ def run(input_kgtk_file: Path,
 
         column_name: str
         for column_name in column_names:
+            if column_name == ellipses:
+                if save_reordered_names is not None:
+                    raise KGTKException("Elipses may appear only once")
+                save_reordered_names = reordered_names
+                reordered_names = [ ]
+            else:
+                if column_name not in kr.column_names:
+                    raise KGTKException("Unknown column name '%s'." % column_name)
+                if column_name not in remaining_names:
+                    raise KGTKException("Column name '%s' was duplicated in the list." % column_name)
+                reordered_names.append(column_name)
+                remaining_names.remove(column_name)
+
+        if len(remaining_names) > 0 and save_reordered_names is None:
+            # There are remaining column names and the ellipses was not seen.
+            raise KGTKException("No ellipses, and the following columns not accounted for: %s" % " ".join(remaining_names))
+        if save_reordered_names is not None:
+            if len(remaining_names) > 0:
+                save_reordered_names.extend(remaining_names)
+            if len(reordered_names) > 0:
+                save_reordered_names.extend(reordered_names)
+            reordered_names = save_reordered_names
+
+        if verbose:
+            print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
+        kw: KgtkWriter = KgtkWriter.open(reordered_names,
+                                         output_kgtk_file,
+                                         require_all_columns=True,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=False,
+                                         gzip_in_parallel=False,
+                                         mode=KgtkWriter.Mode[kr.mode.name],
+                                         output_format=output_format,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose,
+        )
+
+        shuffle_list: typing.List = kw.build_shuffle_list(kr.column_names)
+
+        input_data_lines: int = 0
+        row: typing.List[str]
+        for row in kr:
+            input_data_lines += 1
+            kw.write(row, shuffle_list=shuffle_list)
+
+        # Flush the output file so far:
+        kw.flush()
+
+        if verbose:
+            print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file))
+
+        kw.close()
 
         return 0
 
