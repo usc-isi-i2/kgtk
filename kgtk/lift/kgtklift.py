@@ -140,7 +140,7 @@ class KgtkLift(KgtkFormat):
         else:
             if self.label_value_column_name not in kr.column_name_map:
                 raise ValueError("Label value column `%s` not found." % self.label_value_column_name)
-            mabel_value_column_idx = kr.column_name_map[self.label_value_column_name]
+            label_value_column_idx = kr.column_name_map[self.label_value_column_name]
 
         return label_value_column_idx
 
@@ -306,6 +306,7 @@ class KgtkLift(KgtkFormat):
         do_write: bool = True
         do_lift: bool = True
         if label_select_column_idx >= 0:
+            print("label_select_column_idx %d" % label_select_column_idx)
             if row[label_select_column_idx]  == self.label_select_column_value:
                 # Don't lift label columns, if we have stored labels in the input records.
                 do_lift = False
@@ -384,7 +385,10 @@ class KgtkLift(KgtkFormat):
 
         labels: typing.Mapping[str, str] = { }
         input_rows: typing.Optional[typing.List[typing.List[str]]] = None
-        label_select_column_idx: int
+        
+        # Unless told otherwise, assume that label rows won't be saved
+        # in the input rows:
+        label_select_column_idx: int = -1
 
         # Extract the labels, and maybe store the input rows.
         if lkr is not None and self.label_file_path is not None:
@@ -393,16 +397,17 @@ class KgtkLift(KgtkFormat):
                 print("Loading labels from the label file.", file=self.error_file, flush=True)
             # We don't need to worry about input rows in the label file.
             labels, _ = self.load_labels(lkr, self.label_file_path)
-            label_select_column_idx = self.lookup_label_select_column_idx(lkr)
         else:
             if self.verbose:
                 print("Loading labels and reading data from the input file.", file=self.error_file, flush=True)
             # Read the input file, extracting the labels. The label
             # records may or may not be saved in the input rows, depending
-            # upon whether we plan to pass them throuhg to the output.
+            # upon whether we plan to pass them through to the output.
             labels, input_rows = self.load_labels(ikr, self.input_file_path)
-            # Save the label column index in the input file.
-            label_select_column_idx = self.lookup_label_select_column_idx(ikr)
+
+            if not self.remove_label_records:
+                # Save the label column index in the input rows:
+                label_select_column_idx = self.lookup_label_select_column_idx(ikr)
 
         input_select_column_idx: int
         if self.input_select_column_value is not None or self.output_select_column_value is not None:
@@ -679,7 +684,7 @@ def main():
                               "that matches the value in a column being lifted in the input records. " +
                               "The default is 'node1' or its alias.", default=None)
 
-    parser.add_argument(      "--label-value-column", "--node2-name", dest="label_value_column_name",
+    parser.add_argument(      "--label-value-column", "--node2-name", "--lift-from", dest="label_value_column_name",
                               help="The name of the column in the label record that contains the value " +
                               "to be lifted into the input record that is receiving lifted values. " +
                               "The default is 'node2' or its alias.", default=None)

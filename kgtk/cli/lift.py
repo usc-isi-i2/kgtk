@@ -98,7 +98,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "that matches the value in a column being lifted in the input records. " +
                               "The default is 'node1' or its alias."), default=None)
 
-    parser.add_argument(      "--label-value-column", "--node2-name", dest="label_value_column_name",
+    parser.add_argument(      "--label-value-column", "--node2-name", "--lift-from", dest="label_value_column_name",
                               help=h("The name of the column in the label record that contains the value " +
                               "to be lifted into the input record that is receiving lifted values. " +
                               "The default is 'node2' or its alias."), default=None)
