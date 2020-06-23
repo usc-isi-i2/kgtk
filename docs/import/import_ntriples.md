@@ -389,10 +389,10 @@ unexpected import conversion failures.
  * If you are importing many files which you intend to combine, you may consider
    converting them in a single command.
  * Otherwise, if you are importing many files, which are either:
-   * too many to convert in a single command
-   * not all available at once
-   You may wish to use full UUID options and updated namespace files
-   for the conversion.
+   * too many to convert in a single command, and/or
+   * not all available at once, then
+   * You may wish to use full UUID options and updated namespace files
+     for the conversion.
 
 ### Examples
 
