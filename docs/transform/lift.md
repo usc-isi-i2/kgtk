@@ -316,17 +316,18 @@ kgtk lift lift-file8.tsv \
 | Q2 | P1 | Q5 | False |
 | Q2 | FullName | "Fred Rogers" | False |
 
-Consider the following file, which is like `lift-file9.tsv`, but with the `node1` and `node2` columns swapped and with an additional column, `action`:
+Consider the following file, file10.tsv, which is like `lift-file9.tsv`,
+but with the `node1` and `node2` columns swapped and with an additional column, `action`:
 
-| node2 | label | node1 | full-name | action |
+| node1 | label | node2 | full-name | action |
 | -- | -- | -- | -- | -- |
-| P1 | label | "instance of" |  | go |
-| P2 | label | "friend" |  | go |
-| P3 | label | "enemy" |  | go |
-| Q1 | name | "Elmo" | "Elmo Fudd" | go |
-| Q2 | name | "Alice" | "Alice Cooper" | go |
-| Q5 | species | "human" |  | go |
-| Q6 | name | "Fred" | "Fred Rogers" | go |
+| "instance of" | label | P1 |  | go |
+| "friend" | label | P2 |  | go |
+| "enemy" | label | P3 |  | go |
+| "Elmo" | name | Q1 | "Elmo Fudd" | go |
+| "Alice" | name | Q2 | "Alice Cooper" | go |
+| "human" | species | Q5 |  | go |
+| "Fred" | name | Q6 | "Fred Rogers" | go |
 
 Let's lift full names from this file.  We'll swap the function of the node1 and node2 columns in the label file:
 
