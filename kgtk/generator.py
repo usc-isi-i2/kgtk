@@ -521,6 +521,9 @@ class JsonGenerator(Generator):
             "item": "wikibase-item",
             "WikibaseItem": "wikibase-item",
 
+            "property":"wikibase-item",
+            "WikibaseProperty":"wikibase-item",
+
             "time": "time",
             "Time": "time",
 
