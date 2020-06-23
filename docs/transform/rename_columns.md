@@ -56,7 +56,7 @@ Copy `file1.tsv`, sending the output to standard output, renaming
 the `location` column to `where`
 
 ```
-kgtk rename_col file1.tsv --old-columns location --new-columns where
+kgtk rename_columns file1.tsv --old-columns location --new-columns where
 ```
 
 The result will be the following table in KGTK format:
@@ -73,7 +73,7 @@ Copy `file1.tsv`, sending the output to standard output, naming
 all columns in the output file:
 
 ```
-kgtk rename_col file1.tsv --output-columns node1 label node2 where
+kgtk rename_columns file1.tsv --output-columns node1 label node2 where
 ```
 
 The result will be the following table in KGTK format:
