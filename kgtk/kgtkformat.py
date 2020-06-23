@@ -53,6 +53,11 @@ class KgtkFormat:
                 results.append(name.lower())
             return results
 
+    STRING_SIGIL: str = '"'
+    LANGUAGE_QUALIFIED_STRING_SIGIL: str = "'"
+    DATE_AND_TIMES_SIGIL: str = "^"
+    LOCATION_COORDINATES_SIGIL: str = "@"
+
     TRUE_SYMBOL: str = "True"
     FALSE_SYMBOL: str = "False"
 

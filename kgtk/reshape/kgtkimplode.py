@@ -1,7 +1,5 @@
 """Copy records from the first KGTK file to the output file,
 imploding data type-specific columns into a single column./
-
-TODO: Add the option (defautl True) to remove the exploded columns from the output file.
 """
 
 from argparse import ArgumentParser, Namespace
