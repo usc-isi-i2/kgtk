@@ -96,6 +96,8 @@ def run(input_file_paths: typing.List[Path],
 
         validate: bool,
 
+        override_uuid: typing.Optional[str],
+
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
         show_options: bool = False,
@@ -152,6 +154,8 @@ def run(input_file_paths: typing.List[Path],
         
         print("--validate=%s" % str(validate), file=error_file, flush=True)
         
+        print("--override-uuid=%s" % str(override_uuid), file=error_file, flush=True)
+        
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -182,6 +186,7 @@ def run(input_file_paths: typing.List[Path],
             build_id=build_id,
             escape_pipes=escape_pipes,
             validate=validate,
+            override_uuid=override_uuid,
             idbuilder_options=idbuilder_options,
             reader_options=reader_options,
             value_options=value_options,
