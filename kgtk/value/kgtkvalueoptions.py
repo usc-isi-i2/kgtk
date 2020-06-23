@@ -19,6 +19,10 @@ class KgtkValueOptions:
     seperate class for code isolation and efficiency.
 
     """
+
+    # Not valid in the current standard, but we'll maintain compatability with
+    # older data:
+    DEFAULT_ALLOW_END_OF_DAY: bool = True
     
     # Allow a laxer definition of the Qnode suffix in quantities.
     allow_lax_qnodes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -27,6 +31,10 @@ class KgtkValueOptions:
     # 8601, but appears in wikidata.
     allow_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     repair_month_or_day_zero: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Allow 24:00:00 to represent the end of day. This was allowed bu ISO 8601 until the 2019
+    # revision of the standard, and is still allowed in other standards (e.g., W3C XML Schema).
+    allow_end_of_day: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_END_OF_DAY)
 
     # When allow_lax_strings is true, strings will be checked to see if they
     # start and end with double quote ("), but we won't check if internal
@@ -163,6 +171,10 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "Repair month or day zero in dates. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        vgroup.add_argument(      prefix1 + "allow-end-of-day", dest=prefix2 + "allow_end_of_day",
+                                  help=h(prefix3 + "Allow 24:00:00 to represent the end of the day. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=cls.DEFAULT_ALLOW_END_OF_DAY))
+
         vgroup.add_argument(      prefix1 + "minimum-valid-year", dest=prefix2 + "minimum_valid_year",
                                   help=h(prefix3 + "The minimum valid year in dates. (default=%(default)d)."),
                                   type=int, **d(default=cls.MINIMUM_VALID_YEAR))
@@ -237,6 +249,7 @@ class KgtkValueOptions:
         return cls(allow_lax_qnodes=d.get(prefix + "allow_lax_qnodes", False),
                    allow_month_or_day_zero=d.get(prefix + "allow_month_or_day_zero", False),
                    repair_month_or_day_zero=d.get(prefix + "repair_month_or_day_zero", False),
+                   allow_end_of_day=d.get(prefix + "allow_end_of_day", cls.DEFAULT_ALLOW_END_OF_DAY),
                    allow_language_suffixes=d.get(prefix + "allow_language_suffixes", True),
                    allow_lax_strings=d.get(prefix + "allow_lax_strings", False),
                    allow_lax_lq_strings=d.get(prefix + "allow_lax_lq_strings", False),
@@ -272,6 +285,7 @@ class KgtkValueOptions:
         print("%sallow-lax-qnodes=%s" % (prefix, str(self.allow_lax_qnodes)), file=out)
         print("%sallow-month-or-day-zero=%s" % (prefix, str(self.allow_month_or_day_zero)), file=out)
         print("%srepair-month-or-day-zero=%s" % (prefix, str(self.repair_month_or_day_zero)), file=out)
+        print("%sallow-end-of-day=%s" % (prefix, str(self.allow_end_of_day)), file=out)
         print("%sallow-language-suffixes=%s" % (prefix, str(self.allow_language_suffixes)), file=out)
         print("%sallow-lax-strings=%s" % (prefix, str(self.allow_lax_strings)), file=out)
         print("%sallow-lax-lq-strings=%s" % (prefix, str(self.allow_lax_lq_strings)), file=out)
