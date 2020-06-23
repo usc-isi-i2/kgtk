@@ -141,7 +141,7 @@ _:g14 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#pr
 
 #### Output File
 
-The output file has been converted into KGTK File Format.  Here is a sample conversion:
+The output file contains data records have been converted into KGTK File Format.  Here is a sample of an output file:
 
 ```
 XoBugQcoEt6xNnqGsHDXfTA:g12     rdf:type        ont:CompoundJustification
@@ -230,12 +230,16 @@ option, which is normally True:
 When set to False, all namespace prefix expansions will be written
 to the end of the main output file.
 
+##### prefix_expansion Property
+
 The following option controls the name of the property in which
 URI namespace pefixes are stored.  The default value is "prefix_expansion",
 as shown in the preceeding examples.
 ```
 --prefix-expansion-label PREFIX_EXPANSION_LABEL
 ```
+
+##### Lax URIs
 
 The URI standard requires that URIs staart with a schema, such as
 "http:" or "https:". import_ntriples facilitates processing ntriples records that
@@ -248,7 +252,7 @@ to True.
 ```
 
 
-#### URI Namespace Prefix Generation Controls
+### URI Namespace Prefix Generation Controls
 
 The following options control how namespaces are generated for URI
 prefixes.
@@ -269,7 +273,7 @@ prefixes.
 The order is <prefix><uuid>-<counter>, such as `noBugQcoEt6xNnqGsHDXfTA-7`.   By default,
 the UUID is omitted, but the examples shown above were generated using the UUID.
 
-#### Structured Literal Imports
+### Structured Literal Imports
 
 ntriples files carry many data types as structured literals.  There are two portions
 to each structured literal:  a value string, and a URI that identifies the data type.
@@ -341,7 +345,7 @@ This process is controlled by the following command line options:
                         structured literals. (default=0).
 ```
 
-#### ID Management
+### ID Management
 
 `kgtk import_ntriples` will optionally build a new ID column or populate an existing
 ID column.
@@ -358,7 +362,8 @@ ID column.
                         --verify-id-unique is omitted, it defaults to False. When --verify-id-
                         unique is supplied without an argument, it is True.
 ```
-#### KGTK File Format Validity
+
+### KGTK File Format Validity
 
 `kgtk import_ntriples` will, by default, add backslashes before any pipe characters (|)
 it sees in the input data.
@@ -376,6 +381,19 @@ unexpected import conversion failures.
                         When true, validate that the result fields are good KGTK file format.
                         (default=False).
 ```
+### Import Strategies
+
+ * If you are importing a single file, which will be used in isolation, you may
+   wish to forego local namespace (blank node) prefix conversion and forgo
+   UUIDs in new nodes and namespace prefixes.
+ * If you are importing many files which you intend to combine, you may consider
+   converting them in a single command.
+ * Otherwise, if you are importing many files, which are either:
+   * too many to convert in a single command
+   * not all available at once
+   You may wish to use full UUID options and updated namespace files
+   for the conversion.
+
 ### Examples
 
 Import the entire given ntriple file into kgtk forma, using default settings.
