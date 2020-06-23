@@ -50,18 +50,29 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
             return SUPPRESS
 
     parser.add_argument("-i", "--input-file", dest="input_kgtk_file",
-                        help="The KGTK input file with the reified data. (default=%(default)s)", type=Path, default="-")
+                        help="The KGTK input file with the reified data. " +
+                        "It must have node1, label, and node2 columns, or their aliases. " +
+                        "It may have an ID column;  if it does not, one will be appended to the output file. " +
+                        "It may not have any additional columns. " +
+                        "(default=%(default)s)", type=Path, default="-")
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file",
+                        help="The KGTK file to write output records with unreified data. " +
+                        "This file may differ in shape from the input file by the addition of an ID column. " +
+                        "The records in the output file will not, generally, be in the same order as they appeared in the input file. " +
+                        "(default=%(default)s).", type=Path, default="-")
     
     parser.add_argument(      "--reified-file", dest="reified_kgtk_file",
-                              help="A KGTK output file that will contain only the reified RDF statements. (default=%(default)s).", type=Path, default=None)
+                              help="An optional KGTK output file that will contain only the reified RDF statement output records. (default=%(default)s).",
+                              type=Path, default=None)
     
     parser.add_argument(      "--unreified-file", dest="unreified_kgtk_file",
-                              help="A KGTK output file that will contain only the unreified RDF statements. (default=%(default)s).", type=Path, default=None)
+                              help="An optional KGTK output file that will contain only the unreified RDF statement input records. (default=%(default)s).",
+                              type=Path, default=None)
     
     parser.add_argument(      "--uninvolved-file", dest="uninvolved_kgtk_file",
-                              help="A KGTK output file that will contain only the uninvolved input records. (default=%(default)s).", type=Path, default=None)
+                              help="An optional KGTK output file that will contain only the uninvolved input records. (default=%(default)s).",
+                              type=Path, default=None)
     
     KgtkUnreifyValues.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -78,9 +89,10 @@ def run(input_kgtk_file: Path,
         trigger_node2_value: str,
         value_label_value: str,
         old_label_value: str,
-        new_label_value: str,
+        new_label_value: typing.Optional[str],
 
         allow_multiple_values: bool,
+        allow_extra_columns: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -115,9 +127,11 @@ def run(input_kgtk_file: Path,
         print("--trigger-node2=%s" % trigger_node2_value, file=error_file, flush=True)
         print("--value-label=%s" % value_label_value, file=error_file, flush=True)
         print("--old-label=%s" % old_label_value, file=error_file, flush=True)
-        print("--new-label=%s" % new_label_value, file=error_file, flush=True)
+        if new_label_value is not None:
+            print("--new-label=%s" % new_label_value, file=error_file, flush=True)
 
         print("--allow-multiple-values=%s" % str(allow_multiple_values), file=error_file, flush=True)
+        print("--allow-extra-columns=%s" % str(allow_extra_columns), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -138,6 +152,7 @@ def run(input_kgtk_file: Path,
             new_label_value=new_label_value,
 
             allow_multiple_values=allow_multiple_values,
+            allow_extra_columns=allow_extra_columns,
 
             reader_options=reader_options,
             value_options=value_options,

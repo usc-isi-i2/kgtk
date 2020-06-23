@@ -16,12 +16,15 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=False)
 class KgtkUnreifyValues(KgtkFormat):
+    # Note: If you change any of these default values, be sure to change the
+    # explanation in the corresponding parser.add_argument(...) call.
     DEFAULT_TRIGGER_LABEL_VALUE: typing.Optional[str] = None
     DEFAULT_TRIGGER_NODE2_VALUE: typing.Optional[str] = None
     DEFAULT_VALUE_LABEL_VALUE: typing.Optional[str] = None
     DEFAULT_OLD_LABEL_VALUE: typing.Optional[str] = None
     DEFAULT_NEW_LABEL_VALUE: typing.Optional[str] = None
     DEFAULT_ALLOW_MULTIPLE_VALUES: bool = False
+    DEFAULT_ALLOW_EXTRA_COLUMNS: bool = False
 
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
@@ -34,9 +37,11 @@ class KgtkUnreifyValues(KgtkFormat):
     trigger_node2_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TRIGGER_NODE2_VALUE)
     value_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_VALUE_LABEL_VALUE)
     old_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_OLD_LABEL_VALUE)
-    new_label_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_NEW_LABEL_VALUE)
+    new_label_value: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)),
+                                                    default=DEFAULT_NEW_LABEL_VALUE)
 
     allow_multiple_values: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_MULTIPLE_VALUES)
+    allow_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_EXTRA_COLUMNS)
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -104,6 +109,13 @@ class KgtkUnreifyValues(KgtkFormat):
             id_column_idx = len(output_column_names)
             output_column_names.append(KgtkFormat.ID)
         id_column_name: str = output_column_names[id_column_idx]
+
+        # There should be exactly 4 output columns, iincluding an ID column.
+        # If there are additional columns, some content may be lost when
+        # unreifying records.
+        num_columns: int = len(output_column_names)
+        if num_columns < 4 or (num_columns > 4 and not self.allow_extra_columns):
+            raise ValueError("Expecting 4 output columns, found %d." % num_columns)
 
         if self.verbose:
             print("Opening the output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
@@ -269,7 +281,7 @@ class KgtkUnreifyValues(KgtkFormat):
         # Generate a new ID that will sort after the new edge.
         # What if the existing ID is not a symbol or a string?
         #
-        # TODO: Handle these cases.
+        # TODO: Handle cases where the existing ID is not a symbol or string.
         new_id: str
         if edge_id.startswith(KgtkFormat.STRING_SIGIL) and edge_id.endswith(KgtkFormat.STRING_SIGIL):
             new_id = edge_id[:-1] + "-" + str(count).zfill(width) + KgtkFormat.STRING_SIGIL
@@ -294,9 +306,10 @@ class KgtkUnreifyValues(KgtkFormat):
                        node2_column_name: str,
                        id_column_name: str,
     ):
+        new_label_value: str = self.new_label_value if self.new_label_value is not None else self.value_label_value
         kw.writemap({
             node1_column_name: node1_value,
-            label_column_name: self.new_label_value,
+            label_column_name: new_label_value,
             node2_column_name: node2_value,
             id_column_name: edge_id,
         })
@@ -305,7 +318,7 @@ class KgtkUnreifyValues(KgtkFormat):
         if unreifiedw is not None:
             unreifiedw.writemap({
                 node1_column_name: node1_value,
-                label_column_name: self.new_label_value,
+                label_column_name: new_label_value,
                 node2_column_name: node2_value,
                 id_column_name: edge_id,
             })
@@ -320,7 +333,7 @@ class KgtkUnreifyValues(KgtkFormat):
                                    label_column_name,
                                    node2_column_name,
                                    id_column_name,
-)
+        )
 
     def write_edge_attributes(self,
                               kw: KgtkWriter,
@@ -385,27 +398,40 @@ class KgtkUnreifyValues(KgtkFormat):
     @classmethod
     def add_arguments(cls, parser: ArgumentParser):
         parser.add_argument(      "--trigger-label", dest="trigger_label_value", required=True,
-                                  help="A value that identifies the trigger label. (default=%(default)s).",
+                                  help="A value in the label (or its alias) column that identifies the trigger record. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_TRIGGER_LABEL_VALUE)
 
         parser.add_argument(      "--trigger-node2", dest="trigger_node2_value", required=True,
-                                  help="A value that identifies the trigger node2. (default=%(default)s).",
+                                  help="A value in the node2 (or its alias) column that identifies the trigger record. " +
+                                  "This is a required parameter for which there is no default value. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_TRIGGER_NODE2_VALUE)
     
         parser.add_argument(      "--value-label", dest="value_label_value", required=True,
-                                  help="The label that identifies the edge with the desired node2 value. (default=%(default)s).",
+                                  help="A value in the label (or its alias) column that identifies the record with the node2 value for the new, unreified edge. " +
+                                  "This is a required parameter for which there is no default value. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_VALUE_LABEL_VALUE)
     
         parser.add_argument(      "--old-label", dest="old_label_value", required=True,
-                                  help="The label that identifies the edge with the node1 value being unreified. (default=%(default)s).",
+                                  help="A value in the label (or its alias) column  that identifies the edge with the node1 value being unreified. " +
+                                  "The value in the node1 (or its alias) column of this record will be used in the node1 (or its alias) column for the " +
+                                  "new, unreified edge. " +
+                                  "This is a required parameter for which there is no default value. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_OLD_LABEL_VALUE)
     
-        parser.add_argument(      "--new-label", dest="new_label_value", required=True,
-                                  help="The label to be applied to the unreified edge. (default=value-label).",
+        parser.add_argument(      "--new-label", dest="new_label_value",
+                                  help="The value to be entered in the label (or its alias) column of the new, unreified edge. " +
+                                  "If not specified (None), the value from --value-label is used. (default=%(default)s).",
                                   type=str, default=cls.DEFAULT_NEW_LABEL_VALUE)
 
         parser.add_argument(      "--allow-multiple-values", dest="allow_multiple_values",
-                                  help="When true, allow multiple values, resulting in a list. (default=%(default)s).",
+                                  help="When true, allow multiple values (a '|' list) in the node2 (or its alias) column of the new, unreified edge. " +
+                                  "(default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_VALUES)
+
+        parser.add_argument(      "--allow-extra-columns", dest="allow_extra_columns",
+                                  help="When true, allow extra columns (beyond node1, label, node2, and id, or their aliases. " +
+                                  "Warning: the contents of these columns may be lost silently in unreified statements. " +
+                                  "(default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_MULTIPLE_VALUES)
 
 def main():
@@ -465,6 +491,7 @@ def main():
             print("--new-label=%s" % args.new_label_value, file=error_file, flush=True)
 
         print("--allow-multiple-values=%s" % str(args.allow_multiple_values), file=error_file, flush=True)
+        print("--allow-extra-columns=%s" % str(args.allow_extra_columns), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -483,6 +510,7 @@ def main():
         new_label_value=args.new_label_value,
 
         allow_multiple_values=args.allow_multiple_values,
+        allow_extra_columns=args.allow_extra_columns,
 
         reader_options=reader_options,
         value_options=value_options,
