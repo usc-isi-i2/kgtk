@@ -3,6 +3,8 @@
 The input rows are saved in memory, as well as the value-to-label mapping.
 This will impose a limit on the size of the input files that can be processed.
 
+TODO: Take a list of properties?
+
 TODO: Optionally save the input rows in an external disk file?
 
 TODO: Optionally reread the input stream insted of saving the input rows?

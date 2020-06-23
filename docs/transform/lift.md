@@ -222,7 +222,21 @@ kgtk lift lift-file8.tsv --label-file lift-file9.tsv --property name
 | Q2 | P1 | Q5 | False | "Alice" |  |  |
 | Q2 | P2 | Q6 | False | "Alice" |  | "Fred" |
 
-Let's list the full names.
+Now, let's lift the `name` property, using ";name" as the column name suffix:
+
+```bash
+kgtk lift lift-file8.tsv --label-file lift-file9.tsv --property name --lift-suffix ";name"
+
+```
+
+| node1 | label | node2 | confident | node1;name | label;name | node2;name |
+| -- | -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | True | "Elmo" |  |  |
+| Q1 | P2 | Q6 | True | "Elmo" |  | "Fred" |
+| Q2 | P1 | Q5 | False | "Alice" |  |  |
+| Q2 | P2 | Q6 | False | "Alice" |  | "Fred" |
+
+Let's lift the full names.
 
 ```bash
 kgtk lift lift-file8.tsv --label-file lift-file9.tsv -p name --lift-from full-name
@@ -235,6 +249,21 @@ kgtk lift lift-file8.tsv --label-file lift-file9.tsv -p name --lift-from full-na
 | Q1 | P2 | Q6 | True | "Elmo Fudd" |  | "Fred Rogers" |
 | Q2 | P1 | Q5 | False | "Alice Cooper" |  |  |
 | Q2 | P2 | Q6 | False | "Alice Cooper" |  | "Fred Rogers" |
+
+Let's lift the full names again, this time using ";full-name" as the column
+name suffix instead of "label".
+
+```bash
+kgtk lift lift-file8.tsv --label-file lift-file9.tsv -p name --lift-from full-name --lift-suffix ";full-name"
+
+```
+| node1 | label | node2 | confident | node1;full-name | label;full-name | node2;full-name |
+| -- | -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | True | "Elmo Fudd" |  |  |
+| Q1 | P2 | Q6 | True | "Elmo Fudd" |  | "Fred Rogers" |
+| Q2 | P1 | Q5 | False | "Alice Cooper" |  |  |
+| Q2 | P2 | Q6 | False | "Alice Cooper" |  | "Fred Rogers" |
+
 
 Let's list the full names only when we are confident in the relationship.
 
