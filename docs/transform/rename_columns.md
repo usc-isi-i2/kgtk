@@ -1,4 +1,4 @@
-The rename_col command renames file columns while copying a KGTK file from input to output.
+The rename_columns command renames file columns while copying a KGTK file from input to output.
 ## Usage
 
 ```
