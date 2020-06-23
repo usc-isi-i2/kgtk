@@ -27,6 +27,7 @@ nav:
       - 'md': 'transform/md.md'
       - 'remove_columns': 'transform/remove_columns.md'
       - 'rename_columns': 'transform/rename_columns.md'
+      - 'reorder_columns': 'transform/reorder_columns.md'
       - 'sort': 'transform/sort.md'
       - 'unique': 'transform/unique.md'
       - 'zconcat': 'transform/zconcat.md'
