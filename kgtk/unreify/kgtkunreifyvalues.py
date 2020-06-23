@@ -123,9 +123,9 @@ class KgtkUnreifyValues(KgtkFormat):
         kw: KgtkWriter = KgtkWriter.open(output_column_names,
                                          self.output_file_path,
                                          mode=KgtkWriter.Mode[kr.mode.name],
-                                         require_all_columns=True,
+                                         require_all_columns=not self.allow_extra_columns,
                                          prohibit_extra_columns=True,
-                                         fill_missing_columns=False,
+                                         fill_missing_columns=self.allow_extra_columns,
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
@@ -137,9 +137,9 @@ class KgtkUnreifyValues(KgtkFormat):
             reifiedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.reified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
-                                                   require_all_columns=True,
+                                                   require_all_columns=not self.allow_extra_columns,
                                                    prohibit_extra_columns=True,
-                                                   fill_missing_columns=False,
+                                                   fill_missing_columns=self.allow_extra_columns,
                                                    gzip_in_parallel=False,
                                                    verbose=self.verbose,
                                                    very_verbose=self.very_verbose)
