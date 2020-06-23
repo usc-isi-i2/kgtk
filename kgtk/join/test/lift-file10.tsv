@@ -1,0 +1,8 @@
+node2	label	node1	full-name	action
+P1	label	"instance of"		go
+P2	label	"friend"		go
+P3	label	"enemy"		go
+Q1	name	"Elmo"	"Elmo Fudd"	go
+Q2	name	"Alice"	"Alice Cooper"	go
+Q5	species	"human"		go
+Q6	name	"Fred"	"Fred Rogers"	go
