@@ -109,6 +109,8 @@ class KgtkNtriples(KgtkFormat):
     validate: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_VALIDATE)
     value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
+    override_uuid: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -499,8 +501,11 @@ class KgtkNtriples(KgtkFormat):
             input_line_count: int = 0
             
             if self.local_namespace_use_uuid or self.namespace_id_use_uuid or self.newnode_use_uuid:
-                # Generate a new local namespace UUID.
-                self.local_namespace_uuid = shortuuid.uuid()
+                if self.override_uuid is not None:
+                    self.local_namespace_uuid = self.override_uuid # for debugging
+                else:
+                    # Generate a new local namespace UUID.
+                    self.local_namespace_uuid = shortuuid.uuid()
 
             # Open the input file.
             if self.verbose:
@@ -640,6 +645,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="When true, validate that the result fields are good KGTK file format. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VALIDATE)
 
+        parser.add_argument(      "--override-uuid", dest="override_uuid",
+                                  help="When specified, override UUID generation for debugging. (default=%(default)s).",
+                                  default=None)
+
 def main():
     """
     Test the KGTK ntriples importer.
@@ -706,6 +715,8 @@ def main():
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
         print("--escape-pipes=%s" % str(args.escape_pipes), file=error_file, flush=True)
         print("--validate=%s" % str(args.validate), file=error_file, flush=True)
+        if args.override_uuid is not None:
+            print("--override_uuid=%s" % str(args.override_uuid), file=error_file, flush=True)            
 
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -736,6 +747,7 @@ def main():
         escape_pipes=args.escape_pipes,
         idbuilder_options=idbuilder_options,
         validate=args.validate,
+        override_uuid=args.override_uuid,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
