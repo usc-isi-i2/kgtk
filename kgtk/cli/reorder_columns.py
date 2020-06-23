@@ -15,8 +15,9 @@ def parser():
         'help': 'Reorder KGTK file columns.',
         'description': 'This command reorders one or more columns in a KGTK file. ' +
         '\n\nReorder all columns using --columns col1 col2' +
-        '\nReorder selected columns using --columns col1 col2 ... ' +
-        '\n\nThe input filename must come before --columns. ' +
+        '\nReorder selected columns using --columns col1 col2 ... coln-1 coln' +
+        '\nMove a column to the front: --columns col ...' +
+        '\nMove a column to the end: --columns ... col' +
         '\nIf no input filename is provided, the default is to read standard input. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
     }
@@ -43,7 +44,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file",
+    parser.add_argument("-i", "--input-file", dest="input_kgtk_file",
                               help="The KGTK input file. (default=%(default)s).",
                               type=Path, default="-")
 
@@ -89,7 +90,7 @@ def run(input_kgtk_file: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % str(input_kgtk_file), file=error_file, flush=True)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
