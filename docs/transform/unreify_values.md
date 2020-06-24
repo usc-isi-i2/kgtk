@@ -123,8 +123,6 @@ The input file is a KGTK file containing reified RDF data (among other
 records), such as might have been imported from an ntriples file (see
 `kgtk import_ntriples`).
 
-```
-
 | node1 | label | node2 |
 | -- | -- | -- |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | rdf:type | ont:ClusterMembership |
@@ -135,14 +133,11 @@ records), such as might have been imported from an ntriples file (see
 | XJAABmv8vGfJZZasjV6DAXY:g2 | ont:confidenceValue | 1.0 |
 | XJAABmv8vGfJZZasjV6DAXY:g2 | ont:system | nJAABmv8vGfJZZasjV6DAXY-2: |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | ont:system | nJAABmv8vGfJZZasjV6DAXY-2: |
-```
 
 #### Output File
 
 The output file contains the KGTK data from the input file, with reified RDF statements
 and associated edges replaced with an unreified RDF edge and secondary edges.
-
-```
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
@@ -153,7 +148,6 @@ and associated edges replaced with an unreified RDF edge and secondary edges.
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:confidenceValue | 1.0 | XoBugQcoEt6xNnqGsHDXfTA:g2 |
 | XoBugQcoEt6xNnqGsHDXfTA:g2 | ont:system | noBugQcoEt6xNnqGsHDXfTA-2: | XoBugQcoEt6xNnqGsHDXfTA:g2-1 |
 
-```
 
 A `ID` column is added to the output file if it is not present in the input file.
 This is used to link secondary edges to the newly reconstituted unreified edge.
@@ -247,8 +241,6 @@ and the group of input data will not be unreified.
 
 For example, if the input file looked like this:
 
-```
-
 | node1 | label | node2 |
 | -- | -- | -- |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | rdf:type | ont:ClusterMembership |
@@ -260,12 +252,9 @@ For example, if the input file looked like this:
 | XJAABmv8vGfJZZasjV6DAXY:g2 | ont:confidenceValue | 2.0 |
 | XJAABmv8vGfJZZasjV6DAXY:g2 | ont:system | nJAABmv8vGfJZZasjV6DAXY-2: |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | ont:system | nJAABmv8vGfJZZasjV6DAXY-2: |
-```
 
 With `--allow-multiple-values` in its default setting (`False`), unreification
 will not take place, and the output will look like this:
-
-```
 
 | node1 | label | node2 |
 | -- | -- | -- |
@@ -278,12 +267,9 @@ will not take place, and the output will look like this:
 | XoBugQcoEt6xNnqGsHDXfTA:g2 | ont:confidenceValue | 1.0 |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g2 | ont:confidenceValue | 2.0 |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g2 | ont:system | noBugQcoEt6xNnqGsHDXfTA-2: |  |
-```
 
 With `--allow-multiple-values` is asserted (`True`), unreification will take
 place and the output will look like this:
-
-```
 
 | node1 | label | node2 |
 | -- | -- | -- |
@@ -293,7 +279,6 @@ place and the output will look like this:
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:system | noBugQcoEt6xNnqGsHDXfTA-2: |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:confidenceValue | 1.0\|2.0 | XoBugQcoEt6xNnqGsHDXfTA:g2 |
 | XoBugQcoEt6xNnqGsHDXfTA:g2 | ont:system | noBugQcoEt6xNnqGsHDXfTA-2: | XoBugQcoEt6xNnqGsHDXfTA:g2-1 |
-```
 
 ## Difference Comparison
 

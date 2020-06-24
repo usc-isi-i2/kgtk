@@ -108,8 +108,6 @@ The input file is a KGTK file containing reified RDF data (among other
 records), such as might have been imported from an ntriples file (see
 `kgtk import_ntriples`).
 
-```
-
 | node1 | label | node2 |
 | -- | -- | -- |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | rdf:type | rdf:Statement |
@@ -120,15 +118,10 @@ records), such as might have been imported from an ntriples file (see
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:justifiedBy | XJAABmv8vGfJZZasjV6DAXY:g5 |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:system | nJAABmv8vGfJZZasjV6DAXY-1: |
 
-
-```
-
 #### Output File
 
 The output file contains the KGTK data from the input file, with reified RDF statements
 and associated edges replaced with an unreified RDF edge and secondary edges.
-
-```
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
@@ -137,8 +130,6 @@ and associated edges replaced with an unreified RDF edge and secondary edges.
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:confidence | XJAABmv8vGfJZZasjV6DAXY:g4 | XJAABmv8vGfJZZasjV6DAXY:g3-1 |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:justifiedBy | XJAABmv8vGfJZZasjV6DAXY:g5 | XJAABmv8vGfJZZasjV6DAXY:g3-2 |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:system | nJAABmv8vGfJZZasjV6DAXY-1: | XJAABmv8vGfJZZasjV6DAXY:g3-3 |
-
-```
 
 A `ID` column is added to the output file if it is not present in the input file.
 This is used to link secondary edges to the newly reconstituted unreified edge.
