@@ -48,6 +48,8 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
     reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
+    output_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an enum
+
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -95,6 +97,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
         kw: KgtkWriter = KgtkWriter.open(output_column_names,
                                          self.output_file_path,
                                          mode=KgtkWriter.Mode[kr.mode.name],
+                                         output_format=self.output_format,
                                          require_all_columns=True,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=False,
@@ -109,6 +112,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
             reifiedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.reified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
+                                                   output_format=self.output_format,
                                                    require_all_columns=True,
                                                    prohibit_extra_columns=True,
                                                    fill_missing_columns=False,
@@ -123,6 +127,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
             unreifiedw: KgtkWriter = KgtkWriter.open(output_column_names,
                                                    self.unreified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
+                                                   output_format=self.output_format,
                                                    require_all_columns=True,
                                                    prohibit_extra_columns=True,
                                                    fill_missing_columns=False,
@@ -137,6 +142,7 @@ class KgtkUnreifyRdfStatements(KgtkFormat):
             uninvolvedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.uninvolved_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
+                                                   output_format=self.output_format,
                                                    require_all_columns=True,
                                                    prohibit_extra_columns=True,
                                                    fill_missing_columns=False,
@@ -491,6 +497,9 @@ def main():
     parser.add_argument(      "--uninvolved-file", dest="uninvolved_file_path",
                               help="A KGTK output file that will contain only the uninvolved input records. (default=%(default)s).", type=Path, default=None)
     
+    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
+                              choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
+
     KgtkUnreifyRdfStatements.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=False, expert=True)
@@ -514,11 +523,16 @@ def main():
             print("--unreified-file=%s" % str(args.unreified_file_path), file=error_file, flush=True)
         if args.uninvolved_file_path is not None:
             print("--uninvolved-file=%s" % str(args.uninvolved_file_path), file=error_file, flush=True)
+
+        if args.output_format is not None:
+            print("--output-format=%s" % args.output_format, file=error_file, flush=True)
+
         print("--trigger-label=%s" % args.trigger_label_value, file=error_file, flush=True)
         print("--trigger-node2=%s" % args.trigger_node2_value, file=error_file, flush=True)
         print("--node1-role=%s" % args.rdf_subject_label_value, file=error_file, flush=True)
         print("--label-role=%s" % args.rdf_predicate_label_value, file=error_file, flush=True)
         print("--node2-role=%s" % args.rdf_object_label_value, file=error_file, flush=True)
+
         print("--allow-multiple-subjects=%s" % str(args.allow_multiple_subjects), file=error_file, flush=True)
         print("--allow-multiple-predicates=%s" % str(args.allow_multiple_predicates), file=error_file, flush=True)
         print("--allow-multiple-objects=%s" % str(args.allow_multiple_objects), file=error_file, flush=True)
@@ -545,6 +559,7 @@ def main():
 
         reader_options=reader_options,
         value_options=value_options,
+        output_format=args.output_format,
         error_file=error_file,
         verbose=args.verbose,
         very_verbose=args.very_verbose,
