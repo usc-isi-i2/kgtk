@@ -48,6 +48,8 @@ class KgtkUnreifyValues(KgtkFormat):
     reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
+    output_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an enum
+
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -123,6 +125,7 @@ class KgtkUnreifyValues(KgtkFormat):
         kw: KgtkWriter = KgtkWriter.open(output_column_names,
                                          self.output_file_path,
                                          mode=KgtkWriter.Mode[kr.mode.name],
+                                         output_format=self.output_format,
                                          require_all_columns=not self.allow_extra_columns,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=self.allow_extra_columns,
@@ -137,6 +140,7 @@ class KgtkUnreifyValues(KgtkFormat):
             reifiedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.reified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
+                                                   output_format=self.output_format,
                                                    require_all_columns=not self.allow_extra_columns,
                                                    prohibit_extra_columns=True,
                                                    fill_missing_columns=self.allow_extra_columns,
@@ -151,6 +155,7 @@ class KgtkUnreifyValues(KgtkFormat):
             unreifiedw: KgtkWriter = KgtkWriter.open(output_column_names,
                                                    self.unreified_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
+                                                   output_format=self.output_format,
                                                    require_all_columns=True,
                                                    prohibit_extra_columns=True,
                                                    fill_missing_columns=False,
@@ -165,6 +170,7 @@ class KgtkUnreifyValues(KgtkFormat):
             uninvolvedw: KgtkWriter = KgtkWriter.open(kr.column_names,
                                                    self.uninvolved_file_path,
                                                    mode=KgtkWriter.Mode[kr.mode.name],
+                                                   output_format=self.output_format,
                                                    require_all_columns=True,
                                                    prohibit_extra_columns=True,
                                                    fill_missing_columns=False,
@@ -214,7 +220,7 @@ class KgtkUnreifyValues(KgtkFormat):
                     trigger_node1_value = node1
 
                 elif label == self.value_label_value:
-                    if len(node2_values) > 0 and node2 not in node2_values and not self.allow_multple_values:
+                    if len(node2_values) > 0 and node2 not in node2_values and not self.allow_multiple_values:
                         # TODO: Shout louder.
                         if self.verbose:
                             print("Warning: Multiple values in input group %d" % (input_group_count), file=self.error_file, flush=True)
@@ -352,7 +358,6 @@ class KgtkUnreifyValues(KgtkFormat):
         edge_row: typing.List[str]
         for edge_row in potential_edge_attributes:
             attribute_number += 1
-
             attr_edge_id: str = self.make_new_id(edge_id, attribute_number, width)
 
             kw.writemap({
@@ -455,6 +460,9 @@ def main():
     parser.add_argument(      "--uninvolved-file", dest="uninvolved_file_path",
                               help="A KGTK output file that will contain only the uninvolved input records. (default=%(default)s).", type=Path, default=None)
     
+    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
+                              choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
+
     KgtkUnreifyValues.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=False, expert=True)
@@ -478,6 +486,9 @@ def main():
             print("--unreified-file=%s" % str(args.unreified_file_path), file=error_file, flush=True)
         if args.uninvolved_file_path is not None:
             print("--uninvolved-file=%s" % str(args.uninvolved_file_path), file=error_file, flush=True)
+
+        if args.output_format is not None:
+            print("--output-format=%s" % args.output_format, file=error_file, flush=True)
 
         if args.trigger_label_value is not None:
             print("--trigger-label=%s" % args.trigger_label_value, file=error_file, flush=True)
@@ -514,6 +525,7 @@ def main():
 
         reader_options=reader_options,
         value_options=value_options,
+        output_format=args.output_format,
         error_file=error_file,
         verbose=args.verbose,
         very_verbose=args.very_verbose,
