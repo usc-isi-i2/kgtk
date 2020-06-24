@@ -7,6 +7,7 @@ nav:
       - 'import_conceptnet': 'import/import_conceptnet.md'
       - 'import_ntriples': 'import/import_ntriples.md'
       - 'import_wikidata': 'import/import_wikidata.md'
+      - 'import_wordnet': 'import/import_wordnet.md'
   - 'Export commands':
       - 'export_gt': 'export/export_gt.md'
       - 'generate_wikidata_triples': 'export/generate_wikidata_triples.md'
@@ -30,6 +31,8 @@ nav:
       - 'reorder_columns': 'transform/reorder_columns.md'
       - 'sort': 'transform/sort.md'
       - 'unique': 'transform/unique.md'
+      - 'unreify_rdf_statements': 'transform/unreify_rdf_statements.md'
+      - 'unreify_values': 'transform/unreify_values.md'
       - 'zconcat': 'transform/zconcat.md'
   - 'Curation commands':
       - 'clean_data': 'curate/clean_data.md'
