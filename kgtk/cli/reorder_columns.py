@@ -18,6 +18,7 @@ def parser():
         '\nReorder selected columns using --columns col1 col2 ... coln-1 coln' +
         '\nMove a column to the front: --columns col ...' +
         '\nMove a column to the end: --columns ... col' +
+        '\nExtract named columns, omitting the rest: --columns col1 col2 --trim' +
         '\nIf no input filename is provided, the default is to read standard input. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
     }
@@ -31,6 +32,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
     # import modules locally
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -55,6 +57,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="COLUMN_NAME",
                               help="The list of reordered column names, optionally containing '...' for column names not explicitly mentioned.")
 
+    parser.add_argument(      "--trim", dest="omit_remaining_columns",
+                              help="If true, omit unmentioned columns. (default=%(default)s).",
+                              metavar="True|False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -64,6 +71,8 @@ def run(input_kgtk_file: Path,
         output_format: typing.Optional[str],
 
         column_names: typing.List[str],
+
+        omit_remaining_columns: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -95,6 +104,7 @@ def run(input_kgtk_file: Path,
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
+        print("--trim=%s" % str(omit_remaining_columns), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -134,7 +144,11 @@ def run(input_kgtk_file: Path,
 
         if len(remaining_names) > 0 and save_reordered_names is None:
             # There are remaining column names and the ellipses was not seen.
-            raise KGTKException("No ellipses, and the following columns not accounted for: %s" % " ".join(remaining_names))
+            if not omit_remaining_columns:
+                raise KGTKException("No ellipses, and the following columns not accounted for: %s" % " ".join(remaining_names))
+            else:
+                if verbose:
+                    print("Omitting the following columns: %s" % " ".join(remaining_names))
         if save_reordered_names is not None:
             if len(remaining_names) > 0:
                 save_reordered_names.extend(remaining_names)
