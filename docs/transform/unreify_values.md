@@ -302,11 +302,39 @@ Instead, employ the following strategy:
 
 ## Examples
 
+Unreifying ont:Confidence:
+
 ```
 kgtk unreify_values -i HC00001DO.tsv \
-                    -o HC00001DO-unreified-values.tsv \
+                    -o HC00001DO-unreified-confidenceValue.tsv \
 		    --trigger-label rdf:type \
 		    --trigger-node2 ont:Confidence \
 		    --value-label ont:confidenceValue \
 		    --old-label ont:confidence
+```
+
+Unreifying ont:PrivateData:
+
+```
+kgtk unreify_values -i HC00001DO.tsv \
+                    -o HC00001DO-unreified-jsonContent.tsv \
+		    --trigger-label rdf:type \
+		    --trigger-node2 ont:PrivateData \
+		    --value-label ont:jsonContent \
+		    --old-label ont:privateData
+```
+
+Chaining the two value unreifications:
+```
+kgtk unreify_values -i HC00001DO.tsv \
+                    --trigger-label rdf:type \
+                    --trigger-node2 ont:Confidence \
+                    --value-label ont:confidenceValue \
+                    --old-label ont:confidence \
+   / unreify_values \
+                    -o HC00001DO-unreified-values.tsv \
+                    --trigger-label rdf:type \
+                    --trigger-node2 ont:PrivateData \
+                    --value-label ont:jsonContent \
+                    --old-label ont:privateData
 ```
