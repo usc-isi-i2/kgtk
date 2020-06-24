@@ -125,22 +125,66 @@ def run(input_kgtk_file: Path,
         reordered_names: typing.List[str] = [ ]
         save_reordered_names: typing.Optional[typing.List[str]] = None
 
-        ellipses: str = "..."
+        ellipses: str = "..." # All unmentioned columns
+        ranger: str = ".." # All columns between two columns.
 
+        saw_ranger: bool = False
         column_name: str
         for column_name in column_names:
             if column_name == ellipses:
                 if save_reordered_names is not None:
                     raise KGTKException("Elipses may appear only once")
+
+                if saw_ranger:
+                    raise KGTKException("ELipses may not appear directly after a range operator ('..').")
+
                 save_reordered_names = reordered_names
                 reordered_names = [ ]
-            else:
-                if column_name not in kr.column_names:
-                    raise KGTKException("Unknown column name '%s'." % column_name)
-                if column_name not in remaining_names:
-                    raise KGTKException("Column name '%s' was duplicated in the list." % column_name)
-                reordered_names.append(column_name)
-                remaining_names.remove(column_name)
+                continue
+
+            if column_name == ranger:
+                if len(reordered_names) == 0:
+                    raise KGTKException("The column range operator ('..') may not appear without a preceeding column name.")
+                saw_ranger = True
+                continue
+
+            if column_name not in kr.column_names:
+                raise KGTKException("Unknown column name '%s'." % column_name)
+            if column_name not in remaining_names:
+                raise KGTKException("Column name '%s' was duplicated in the list." % column_name)
+
+            if saw_ranger:
+                saw_ranger = False
+                prior_column_name: str = reordered_names[-1]
+                prior_column_idx: int = kr.column_name_map[prior_column_name]
+                column_name_idx: int = kr.column_name_map[column_name]
+                start_idx: int
+                end_idx: int
+                idx_inc: int
+                if column_name_idx > prior_column_idx:
+                    start_idx = prior_column_idx + 1
+                    end_idx = column_name_idx - 1
+                    idx_inc = 1
+                else:
+                    start_idx = prior_column_idx - 1
+                    end_idx = column_name_idx + 1
+                    idx_inc = -1
+
+                idx: int = start_idx
+                while idx <= end_idx:
+                    idx_column_name: str = kr.column_names[idx]
+                    if idx_column_name not in remaining_names:
+                        raise KGTKException("Column name '%s' (%s .. %s) was duplicated in the list." % (column_name, prior_column_name, column_name))
+                   
+                    reordered_names.append(idx_column_name)
+                    remaining_names.remove(idx_column_name)
+                    idx += idx_inc
+
+            reordered_names.append(column_name)
+            remaining_names.remove(column_name)
+
+        if saw_ranger:
+            raise KGTKException("The column ranger operator ('..') may not end the list of column names.")
 
         if len(remaining_names) > 0 and save_reordered_names is None:
             # There are remaining column names and the ellipses was not seen.
