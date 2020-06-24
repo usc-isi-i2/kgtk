@@ -6,6 +6,7 @@ value and additional properties are defined in the new object.
 
 
 Input Table:
+
 | node1 | label | node2 |
 | ----- | ----- | ----- |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | rdf:type | ont:ClusterMembership |
@@ -22,6 +23,7 @@ understand once the spurious undesired object has been deleted, and its
 label/node2 pairs defined as edges on the simplified edge.
 
 Output Table:
+
 | id | node1 | label | node2 |
 | -- | ----- | ----- | ----- |
 | | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |
@@ -122,6 +124,7 @@ records), such as might have been imported from an ntriples file (see
 `kgtk import_ntriples`).
 
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | rdf:type | ont:ClusterMembership |
@@ -140,6 +143,7 @@ The output file contains the KGTK data from the input file, with reified RDF sta
 and associated edges replaced with an unreified RDF edge and secondary edges.
 
 ```
+
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |  |
@@ -244,6 +248,7 @@ and the group of input data will not be unreified.
 For example, if the input file looked like this:
 
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | rdf:type | ont:ClusterMembership |
@@ -261,6 +266,9 @@ With `--allow-multiple-values` in its default setting (`False`), unreification
 will not take place, and the output will look like this:
 
 ```
+
+| node1 | label | node2 |
+| -- | -- | -- |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:clusterMember | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70 |  |
@@ -276,6 +284,9 @@ With `--allow-multiple-values` is asserted (`True`), unreification will take
 place and the output will look like this:
 
 ```
+
+| node1 | label | node2 |
+| -- | -- | -- |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:clusterMember | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70 |  |

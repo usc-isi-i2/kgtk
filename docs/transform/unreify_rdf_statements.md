@@ -6,6 +6,7 @@ For example, consider the edges in the following table that result from importin
 and AIDA TA1 ntriples file:
 
 Input Table:
+
 | node1 | label | node2 |
 | ----- | ----- | ----- |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:confidence | XJAABmv8vGfJZZasjV6DAXY:g4 |
@@ -21,6 +22,7 @@ understand as it clearly signals that we have an event and we know the place whe
 the attacu occured.  The secondary edges qualify the main edge, giving us context.
 
 Output Table:
+
 | id | node1 | label | node2 |
 | -- | ----- | ----- | ----- |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | gaia:relations/d3e1e4df-6c8c-4fd1-8b93-ee49ef238f72 | nJAABmv8vGfJZZasjV6DAXY-3:Physical.LocatedNear_Place | gaia:entities/d1dcefce-badf-4948-bfcf-5d33116fa12c |
@@ -107,6 +109,7 @@ records), such as might have been imported from an ntriples file (see
 `kgtk import_ntriples`).
 
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | rdf:type | rdf:Statement |
@@ -126,6 +129,7 @@ The output file contains the KGTK data from the input file, with reified RDF sta
 and associated edges replaced with an unreified RDF edge and secondary edges.
 
 ```
+
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | gaia:relations/d3e1e4df-6c8c-4fd1-8b93-ee49ef238f72 | nJAABmv8vGfJZZasjV6DAXY-3:Physical.LocatedNear_Place | gaia:entities/d1dcefce-badf-4948-bfcf-5d33116fa12c |
@@ -228,18 +232,22 @@ extra columns, they will retain linkage to the unreified edges.
 If a Cartesian Crossproduct is being generated, then the node1 value of the input reified
 RDF statement as the base for the ID and node1 values used in the generated edges:
 
+```
 XJAABmv8vGfJZZasjV6DAXY:g3-1
 XJAABmv8vGfJZZasjV6DAXY:g3-2
 ...
+```
 
 The width of the suffix is adjusted for the number of crossproduct edges being generated,
 i.e. if more than 9 edges were being generated, they would use these ID and node1 values:
 
+```
 XJAABmv8vGfJZZasjV6DAXY:g3-01
 XJAABmv8vGfJZZasjV6DAXY:g3-02
 ...
 XJAABmv8vGfJZZasjV6DAXY:g3-10
 ...
+```
 
 These generated edge/node1 values are designed to keep the generated reified
 edges and secondary edges in proximity when sorted by ID, whether Cartesian Crossproducts
