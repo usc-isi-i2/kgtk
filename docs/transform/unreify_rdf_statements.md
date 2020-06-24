@@ -252,7 +252,9 @@ then the new ID and node1 values cannot be as easily linked to esternal nodes re
 statements. Thus, attempting to look for changes between the input file and th eoutput file using
 an ordinary difference utility is not likely to be fruitful.  Instead, employ the following
 strategy:
- * add an ID column to the input data if it does not already have one, using `kgtk add_id`.
+ * add an ID column to the input data if it does not already have one, using `kgtk add_id`
+   * Perhaps without generating ID values, to remove clutter.
+   * kgtk add_id --id-style=empty`
  * sort the resulting data using `kgtk unreify_rdf_statements` with a disabled pattern match parameter.
    * `kgtk unreify_rdf_statements --trigger-label=XXX -o output1.tsv`
  * Apply `kgtk unreify_rdf_statements` a second time without disabling the pattern match.
