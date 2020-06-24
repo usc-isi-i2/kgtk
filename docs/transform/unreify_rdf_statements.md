@@ -166,7 +166,7 @@ file, e.g., an ID column might not be present.
 
 ### Pattern Match Parameters
 
-`kgtk import_rdf_statements` has a built-in set of pattern match parameters that
+`kgtk unreify_rdf_statements` has a built-in set of pattern match parameters that
 will not change for normal operation.  All pattern matches reference the usual
 node1, label, and node2 columns or their aliases; there are no options to
 override the column names.
@@ -248,10 +248,11 @@ then the new ID and node1 values cannot be as easily linked to esternal nodes re
 
 ## Difference Comparison
 
-`kgtk unreify_rdf_statements` sorts its input data as part of detecting reified RDF
-statements. Thus, attempting to look for changes between the input file and th eoutput file using
-an ordinary difference utility is not likely to be fruitful.  Instead, employ the following
-strategy:
+`kgtk unreify_rdf_statements` sorts its input data as part of detecting
+reified RDF statements. Thus, attempting to look for changes between the input
+file and the output file using an ordinary difference utility is not likely to
+be fruitful.  Instead, employ the following strategy:
+
  * add an ID column to the input data if it does not already have one, using `kgtk add_id`
    * Perhaps without generating ID values, to remove clutter.
    * kgtk add_id --id-style=empty`
