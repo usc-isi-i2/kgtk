@@ -173,6 +173,9 @@ class KgtkLift(KgtkFormat):
             print("Loading labels from %s" % path, file=self.error_file, flush=True)
             if labels_needed is not None:
                 print("Filtering for needed labels", file=self.error_file, flush=True)
+            print("label_match_column_idx=%d (%s)." % (label_match_column_idx, kr.column_names[label_match_column_idx]), file=self.error_file, flush=True)
+            print("label_select_column_idx=%d (%s)." % (label_select_column_idx, kr.column_names[label_select_column_idx]), file=self.error_file, flush=True)
+            print("label_value_column_idx=%d (%s)." % (label_value_column_idx, kr.column_names[label_value_column_idx]), file=self.error_file, flush=True)
 
         key: str
         row: typing.List[str]
@@ -193,8 +196,8 @@ class KgtkLift(KgtkFormat):
                     else:
                         # This is the first instance of this label definition.
                         if labels_needed is not None:
-                            if label_value in labels_needed:
-                                labels[label_key] = label_value                                
+                            if label_key in labels_needed:
+                                labels[label_key] = label_value
                         else:
                             labels[label_key] = label_value
                 if save_input and not self.remove_label_records:
