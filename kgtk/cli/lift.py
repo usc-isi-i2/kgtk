@@ -107,34 +107,42 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--remove-label-records", dest="remove_label_records",
                               help=h("If true, remove label records from the output. (default=%(default)s)."),
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--sort-lifted-labels", dest="sort_lifted_labels",
                               help=h("If true, sort lifted labels with lists. (default=%(default)s)."),
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-duplicate-labels", dest="suppress_duplicate_labels",
                               help=h("If true, suppress duplicate values in lists in lifted labels (implies sorting). (default=%(default)s)."),
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--ok-if-no-labels", dest="ok_if_no_labels",
                               help="If true, do not abort if no labels were found. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--prefilter-labels", dest="prefilter_labels",
                               help="If true, read the input file before reading the label file. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--input-file-is-presorted", dest="input_is_presorted",
                               help="If true, the input file is presorted on the column for which values are to be lifted. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--label-file-is-presorted", dest="labels_are_presorted",
                               help="If true, the label file is presorted on the node1 column. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
