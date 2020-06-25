@@ -12,14 +12,8 @@ from kgtk.cli_argparse import KGTKArgumentParser
 
 def parser():
     return {
-        'help': 'Reorder KGTK file columns.',
-        'description': 'This command reorders one or more columns in a KGTK file. ' +
-        '\n\nReorder all columns using --columns col1 col2' +
-        '\nReorder selected columns using --columns col1 col2 ... coln-1 coln' +
-        '\nMove a column to the front: --columns col ...' +
-        '\nMove a column to the end: --columns ... col' +
-        '\nExtract named columns, omitting the rest: --columns col1 col2 --trim' +
-        '\nMove a range of columns: --columns coln .. colm ...' +
+        'help': 'Perform calculations on KGTK file columns.',
+        'description': 'This command performs calculations on one or more columns in a KGTK file. ' +
         '\nIf no input filename is provided, the default is to read standard input. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
     }
@@ -56,12 +50,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('-c', "--columns", dest="column_names", required=True, nargs='+',
                               metavar="COLUMN_NAME",
-                              help="The list of reordered column names, optionally containing '...' for column names not explicitly mentioned.")
+                              help="The list of source column names, optionally containing '..' for column ranges " +
+                        "and '...' for column names not explicitly mentioned.")
+    parser.add_argument(      "--into", dest="into_column_name", help="The name of the column to receive the result of the calculation.", required=True)
+    parser.add_argument(      "--do", dest="operation", help="The name of the operation.", required=True,
+                              choices=["percentage"])
 
-    parser.add_argument(      "--trim", dest="omit_remaining_columns",
-                              help="If true, omit unmentioned columns. (default=%(default)s).",
-                              metavar="True|False",
-                              type=optional_bool, nargs='?', const=True, default=False)
+    parser.add_argument(      "--format", dest="format_string", help="The format string for the calculation.")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -72,8 +67,9 @@ def run(input_kgtk_file: Path,
         output_format: typing.Optional[str],
 
         column_names: typing.List[str],
-
-        omit_remaining_columns: bool,
+        into_column_name: str,
+        operation: str,
+        format_string: typing.Optional[str],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -105,7 +101,11 @@ def run(input_kgtk_file: Path,
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
-        print("--trim=%s" % str(omit_remaining_columns), file=error_file, flush=True)
+        print("--into=%s" % str(into_column_name), file=error_file, flush=True)
+        print("--operation=%s" % str(operation), file=error_file, flush=True)
+        if format_string is not None:
+            print("--format=%s" % format_string, file=error_file, flush=True)
+
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -123,8 +123,8 @@ def run(input_kgtk_file: Path,
         )
 
         remaining_names: typing.List[str] = kr.column_names.copy()
-        reordered_names: typing.List[str] = [ ]
-        save_reordered_names: typing.Optional[typing.List[str]] = None
+        selected_names: typing.List[str] = [ ]
+        save_selected_names: typing.Optional[typing.List[str]] = None
 
         ellipses: str = "..." # All unmentioned columns
         ranger: str = ".." # All columns between two columns.
@@ -133,18 +133,18 @@ def run(input_kgtk_file: Path,
         column_name: str
         for column_name in column_names:
             if column_name == ellipses:
-                if save_reordered_names is not None:
+                if save_selected_names is not None:
                     raise KGTKException("Elipses may appear only once")
 
                 if saw_ranger:
                     raise KGTKException("ELipses may not appear directly after a range operator ('..').")
 
-                save_reordered_names = reordered_names
-                reordered_names = [ ]
+                save_selected_names = selected_names
+                selected_names = [ ]
                 continue
 
             if column_name == ranger:
-                if len(reordered_names) == 0:
+                if len(selected_names) == 0:
                     raise KGTKException("The column range operator ('..') may not appear without a preceeding column name.")
                 saw_ranger = True
                 continue
@@ -156,7 +156,7 @@ def run(input_kgtk_file: Path,
 
             if saw_ranger:
                 saw_ranger = False
-                prior_column_name: str = reordered_names[-1]
+                prior_column_name: str = selected_names[-1]
                 prior_column_idx: int = kr.column_name_map[prior_column_name]
                 column_name_idx: int = kr.column_name_map[column_name]
                 start_idx: int
@@ -177,33 +177,49 @@ def run(input_kgtk_file: Path,
                     if idx_column_name not in remaining_names:
                         raise KGTKException("Column name '%s' (%s .. %s) was duplicated in the list." % (column_name, prior_column_name, column_name))
                    
-                    reordered_names.append(idx_column_name)
+                    selected_names.append(idx_column_name)
                     remaining_names.remove(idx_column_name)
                     idx += idx_inc
 
-            reordered_names.append(column_name)
+            selected_names.append(column_name)
             remaining_names.remove(column_name)
 
         if saw_ranger:
             raise KGTKException("The column ranger operator ('..') may not end the list of column names.")
 
-        if len(remaining_names) > 0 and save_reordered_names is None:
-            # There are remaining column names and the ellipses was not seen.
-            if not omit_remaining_columns:
-                raise KGTKException("No ellipses, and the following columns not accounted for: %s" % " ".join(remaining_names))
-            else:
-                if verbose:
-                    print("Omitting the following columns: %s" % " ".join(remaining_names))
-        if save_reordered_names is not None:
+        if len(remaining_names) > 0 and save_selected_names is None:
+            if verbose:
+                print("Omitting the following columns: %s" % " ".join(remaining_names))
+        if save_selected_names is not None:
             if len(remaining_names) > 0:
-                save_reordered_names.extend(remaining_names)
-            if len(reordered_names) > 0:
-                save_reordered_names.extend(reordered_names)
-            reordered_names = save_reordered_names
+                save_selected_names.extend(remaining_names)
+            if len(selected_names) > 0:
+                save_selected_names.extend(selected_names)
+            selected_names = save_selected_names
+
+        sources: typing.List[int] = [ ]
+        name: str
+        for name in selected_names:
+            sources.append(kr.column_name_map[name])
+
+        new_column: bool = False
+        into_column_idx: int
+        output_column_names: typing.List[str] = kr.column_names
+        if into_column_name in kr.column_name_map:
+            into_column_idx = kr.column_name_map[into_column_name]
+            if verbose:
+                print("Putting the result of the calculation into old column %d (%s)." % (into_column_idx, into_column_name), file=error_file, flush=True)
+        else:
+            new_column = True
+            output_column_names = output_column_names.copy()
+            into_column_idx = len(output_column_names)
+            output_column_names.append(into_column_name)
+            if verbose:
+                print("Putting the result of the calculation into new column %d (%s)." % (into_column_idx, into_column_name), file=error_file, flush=True)
 
         if verbose:
             print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
-        kw: KgtkWriter = KgtkWriter.open(reordered_names,
+        kw: KgtkWriter = KgtkWriter.open(output_column_names,
                                          output_kgtk_file,
                                          require_all_columns=True,
                                          prohibit_extra_columns=True,
@@ -215,13 +231,23 @@ def run(input_kgtk_file: Path,
                                          very_verbose=very_verbose,
         )
 
-        shuffle_list: typing.List = kw.build_shuffle_list(kr.column_names)
-
         input_data_lines: int = 0
         row: typing.List[str]
         for row in kr:
             input_data_lines += 1
-            kw.write(row, shuffle_list=shuffle_list)
+
+            output_row: typing.List[str] = row.copy()
+            if new_column:
+                output_row.append("") # Easiest way to add a new column.
+
+            if operation == "percentage":
+                if len(selected_names) != 2:
+                    raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
+                
+                fs: str = format_string if format_string is not None else "%5.2f"
+                output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
+
+            kw.write(output_row)
 
         # Flush the output file so far:
         kw.flush()

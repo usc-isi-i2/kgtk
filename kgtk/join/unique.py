@@ -31,6 +31,9 @@ class Unique(KgtkFormat):
 
     label_value: str = attr.ib(validator=attr.validators.instance_of(str), default="count")
 
+    where_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    where_values: typing.Optional[typing.List[str]] = attr.ib(default=None) # TODO: Complete this validator!
+
     # TODO: make this an enum
     output_format: str = attr.ib(validator=attr.validators.instance_of(str), default="edge")
     prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="")
@@ -64,15 +67,31 @@ class Unique(KgtkFormat):
             raise ValueError("Column %s is not in the input file" % (self.column_name))
         column_idx: int = kr.column_name_map[self.column_name]
 
+        where_column_idx: int = -1
+        where_value_set: typing.Set[str] = { }
+        if self.where_column_name is not None:
+            if self.where_column_name not in kr.column_name_map:
+                raise ValueError("Where column '%s' is not in the input file." % (self.where_column_name))
+            where_column_idx = kr.column_name_map[self.where_column_name]
+            if self.where_values is None or len(self.where_values) == 0:
+                raise ValueError("Where column '%s' but no values to test." % (self.where_column_name))
+            else:
+                where_value_set = set(self.where_values)
+
         if self.verbose:
             print("Counting unique values from the %s column in %s" % (self.column_name, self.input_file_path), file=self.error_file, flush=True)
         input_line_count: int = 0
+        skip_line_count: int = 0
 
         value_counts: typing.MutableMapping[str, int] = { }
         
         row: typing.list[str]
         for row in kr:
             input_line_count += 1
+            if where_column_idx >= 0:
+                if row[where_column_idx] not in where_value_set:
+                    skip_line_count += 1
+                    continue
             value: str = row[column_idx]
             if len(value) == 0:
                 value = self.empty_value
@@ -81,9 +100,10 @@ class Unique(KgtkFormat):
                 value_counts[value] = value_counts.get(value, 0) + 1
                 
         if self.verbose:
-            print("Read %d records, found %d unique non-empty values, %d empty values." % (input_line_count,
-                                                                                           len(value_counts),
-                                                                                           input_line_count - len(value_counts)),
+            print("Read %d records, skipped %d, found %d unique non-empty values, %d empty values." % (input_line_count,
+                                                                                                       skip_line_count,
+                                                                                                       len(value_counts),
+                                                                                                       input_line_count - len(value_counts)),
                   file=self.error_file, flush=True)
 
         # No node mode we can't open the output file until we are done reading
@@ -149,6 +169,12 @@ def main():
 
     parser.add_argument(      "--prefix", dest="prefix", help="The value prefix (default=%(default)s).", default="")
 
+    parser.add_argument(      "--where", dest="where_column_name",
+                              help="The name of a column for a record selection test. (default=%(default)s).", default=None)
+
+    parser.add_argument(      "--in", dest="where_values", nargs="+",
+                              help="The list of values for a record selection test. (default=%(default)s).", default=None)
+
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
     KgtkValueOptions.add_arguments(parser)
@@ -170,6 +196,11 @@ def main():
         print("--label=%s" % args.label_value, file=error_file)
         print("--format=%s" % args.output_format, file=error_file)
         print("--prefix=%s" % args.prefix, file=error_file)
+        if args.where_column_name is not None:
+            print("--where=%s" % args.where_column_name, file=error_file)
+        if args.where_values is not None and len(args.where_values) > 0:
+            print("--in=%s" % " ".join(args.where_values), file=error_file)
+
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -181,6 +212,8 @@ def main():
         label_value=args.label_value,
         output_format=args.output_format,
         prefix=args.prefix,
+        where_column_name=args.where_column_name,
+        where_values=args.where_values,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
