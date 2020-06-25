@@ -4,6 +4,7 @@ nav:
   - Getting started: install.md
   - KGTK file specification: specification.md
   - 'Import commands':
+      - 'import_atomic': 'import/import_atomic.md'
       - 'import_conceptnet': 'import/import_conceptnet.md'
       - 'import_ntriples': 'import/import_ntriples.md'
       - 'import_wikidata': 'import/import_wikidata.md'
