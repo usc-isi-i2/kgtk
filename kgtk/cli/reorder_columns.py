@@ -18,6 +18,8 @@ def parser():
         '\nReorder selected columns using --columns col1 col2 ... coln-1 coln' +
         '\nMove a column to the front: --columns col ...' +
         '\nMove a column to the end: --columns ... col' +
+        '\nExtract named columns, omitting the rest: --columns col1 col2 --trim' +
+        '\nMove a range of columns: --columns coln .. colm ...' +
         '\nIf no input filename is provided, the default is to read standard input. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
     }
@@ -31,6 +33,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
     # import modules locally
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -55,6 +58,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="COLUMN_NAME",
                               help="The list of reordered column names, optionally containing '...' for column names not explicitly mentioned.")
 
+    parser.add_argument(      "--trim", dest="omit_remaining_columns",
+                              help="If true, omit unmentioned columns. (default=%(default)s).",
+                              metavar="True|False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -64,6 +72,8 @@ def run(input_kgtk_file: Path,
         output_format: typing.Optional[str],
 
         column_names: typing.List[str],
+
+        omit_remaining_columns: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -95,6 +105,7 @@ def run(input_kgtk_file: Path,
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
+        print("--trim=%s" % str(omit_remaining_columns), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -115,26 +126,74 @@ def run(input_kgtk_file: Path,
         reordered_names: typing.List[str] = [ ]
         save_reordered_names: typing.Optional[typing.List[str]] = None
 
-        ellipses: str = "..."
+        ellipses: str = "..." # All unmentioned columns
+        ranger: str = ".." # All columns between two columns.
 
+        saw_ranger: bool = False
         column_name: str
         for column_name in column_names:
             if column_name == ellipses:
                 if save_reordered_names is not None:
                     raise KGTKException("Elipses may appear only once")
+
+                if saw_ranger:
+                    raise KGTKException("ELipses may not appear directly after a range operator ('..').")
+
                 save_reordered_names = reordered_names
                 reordered_names = [ ]
-            else:
-                if column_name not in kr.column_names:
-                    raise KGTKException("Unknown column name '%s'." % column_name)
-                if column_name not in remaining_names:
-                    raise KGTKException("Column name '%s' was duplicated in the list." % column_name)
-                reordered_names.append(column_name)
-                remaining_names.remove(column_name)
+                continue
+
+            if column_name == ranger:
+                if len(reordered_names) == 0:
+                    raise KGTKException("The column range operator ('..') may not appear without a preceeding column name.")
+                saw_ranger = True
+                continue
+
+            if column_name not in kr.column_names:
+                raise KGTKException("Unknown column name '%s'." % column_name)
+            if column_name not in remaining_names:
+                raise KGTKException("Column name '%s' was duplicated in the list." % column_name)
+
+            if saw_ranger:
+                saw_ranger = False
+                prior_column_name: str = reordered_names[-1]
+                prior_column_idx: int = kr.column_name_map[prior_column_name]
+                column_name_idx: int = kr.column_name_map[column_name]
+                start_idx: int
+                end_idx: int
+                idx_inc: int
+                if column_name_idx > prior_column_idx:
+                    start_idx = prior_column_idx + 1
+                    end_idx = column_name_idx - 1
+                    idx_inc = 1
+                else:
+                    start_idx = prior_column_idx - 1
+                    end_idx = column_name_idx + 1
+                    idx_inc = -1
+
+                idx: int = start_idx
+                while idx <= end_idx:
+                    idx_column_name: str = kr.column_names[idx]
+                    if idx_column_name not in remaining_names:
+                        raise KGTKException("Column name '%s' (%s .. %s) was duplicated in the list." % (column_name, prior_column_name, column_name))
+                   
+                    reordered_names.append(idx_column_name)
+                    remaining_names.remove(idx_column_name)
+                    idx += idx_inc
+
+            reordered_names.append(column_name)
+            remaining_names.remove(column_name)
+
+        if saw_ranger:
+            raise KGTKException("The column ranger operator ('..') may not end the list of column names.")
 
         if len(remaining_names) > 0 and save_reordered_names is None:
             # There are remaining column names and the ellipses was not seen.
-            raise KGTKException("No ellipses, and the following columns not accounted for: %s" % " ".join(remaining_names))
+            if not omit_remaining_columns:
+                raise KGTKException("No ellipses, and the following columns not accounted for: %s" % " ".join(remaining_names))
+            else:
+                if verbose:
+                    print("Omitting the following columns: %s" % " ".join(remaining_names))
         if save_reordered_names is not None:
             if len(remaining_names) > 0:
                 save_reordered_names.extend(remaining_names)
