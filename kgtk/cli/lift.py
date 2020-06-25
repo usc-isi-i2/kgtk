@@ -107,30 +107,42 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--remove-label-records", dest="remove_label_records",
                               help=h("If true, remove label records from the output. (default=%(default)s)."),
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--sort-lifted-labels", dest="sort_lifted_labels",
                               help=h("If true, sort lifted labels with lists. (default=%(default)s)."),
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-duplicate-labels", dest="suppress_duplicate_labels",
                               help=h("If true, suppress duplicate values in lists in lifted labels (implies sorting). (default=%(default)s)."),
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--ok-if-no-labels", dest="ok_if_no_labels",
                               help="If true, do not abort if no labels were found. (default=%(default)s).",
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--prefilter-labels", dest="prefilter_labels",
+                              help="If true, read the input file before reading the label file. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--input-file-is-presorted", dest="input_is_presorted",
                               help="If true, the input file is presorted on the column for which values are to be lifted. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--label-file-is-presorted", dest="labels_are_presorted",
                               help="If true, the label file is presorted on the node1 column. (default=%(default)s).",
+                              metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -159,6 +171,7 @@ def run(input_kgtk_file: Path,
         suppress_duplicate_labels: bool = True,
         suppress_empty_columns: bool = False,
         ok_if_no_labels: bool = False,
+        prefilter_labels: bool = False,
         input_is_presorted: bool = False,
         labels_are_presorted: bool = False,
 
@@ -213,6 +226,7 @@ def run(input_kgtk_file: Path,
         print("--suppress-duplicate-labels=%s" % str(suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(suppress_empty_columns))
         print("--ok-if-no-labels=%s" % str(ok_if_no_labels))
+        print("--prefilter-labels=%s" % str(prefilter_labels))
         print("--input-file-is-presorted=%s" % str(input_is_presorted))
         print("--label-file-is-presorted=%s" % str(labels_are_presorted))
         reader_options.show(out=error_file)
@@ -242,6 +256,7 @@ def run(input_kgtk_file: Path,
             suppress_duplicate_labels=suppress_duplicate_labels,
             suppress_empty_columns=suppress_empty_columns,
             ok_if_no_labels=ok_if_no_labels,
+            prefilter_labels=prefilter_labels,
             input_is_presorted=input_is_presorted,
             labels_are_presorted=labels_are_presorted,
             reader_options=reader_options,

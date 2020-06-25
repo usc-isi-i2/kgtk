@@ -8,10 +8,10 @@ This will impose a limit on the size of the input files that can be processed.
 
 ```
 usage: kgtk lift [-h] [--label-file LABEL_KGTK_FILE] [-o OUTPUT_KGTK_FILE]
-                 [--suppress-empty-columns [SUPPRESS_EMPTY_COLUMNS]]
-                 [--ok-if-no-labels [OK_IF_NO_LABELS]]
-                 [--input-file-is-presorted [INPUT_IS_PRESORTED]]
-                 [--label-file-is-presorted [LABELS_ARE_PRESORTED]] [-v]
+                 [--suppress-empty-columns [True/False]]
+                 [--ok-if-no-labels [True/False]] [--prefilter-labels [True/False]]
+                 [--input-file-is-presorted [True/False]]
+                 [--label-file-is-presorted [True/False]] [-v]
                  [input_kgtk_file]
 
 Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
@@ -28,16 +28,19 @@ optional arguments:
                         A KGTK file with label records (default=None).
   -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
                         The KGTK file to write (default=-).
-  --suppress-empty-columns [SUPPRESS_EMPTY_COLUMNS]
+  --suppress-empty-columns [True/False]
                         If true, do not create new columns that would be empty.
                         (default=False).
-  --ok-if-no-labels [OK_IF_NO_LABELS]
+  --ok-if-no-labels [True/False]
                         If true, do not abort if no labels were found.
                         (default=False).
-  --input-file-is-presorted [INPUT_IS_PRESORTED]
-                        If true, the input file is presorted on the column for
-                        which values are to be lifted. (default=False).
-  --label-file-is-presorted [LABELS_ARE_PRESORTED]
+  --prefilter-labels [True/False]
+                        If true, read the input file before reading the label file.
+                        (default=False).
+  --input-file-is-presorted [True/False]
+                        If true, the input file is presorted on the column for which
+                        values are to be lifted. (default=False).
+  --label-file-is-presorted [True/False]
                         If true, the label file is presorted on the node1 column.
                         (default=False).
 
@@ -110,6 +113,13 @@ The labels may be in a seperate file from the input.  If
 processed in a single pass without keeping a copy in memory.  The labels will
 still be loaded into an in-memory dictionary.
 
+If the labels are in a seperate file from the input rows, and the labels are sorted
+on the node1 column, and the only a single column will be lifted from the input rows,
+and the input file is sorted on that column, and if `--suppress-empty-columns` is `False`
+(its default), then the data may be processed using a merge algorithm that does not
+use in-memory buffering.  This is useful if the input and label files are both very
+large.
+
 Suppose that `file5.tsv` contains the following table in KGTK format:
 
 | node1 | label | node2 |
@@ -124,28 +134,36 @@ And `file6.tsv` contains the following table in KGTK format:
 | -- | -- | -- |
 | Q1 | label | "Elmo" |
 | Q2 | label | "Alice" |
-| P1 | label | "instance of" |
-| P2 | label | "friend" |
 | Q5 | label | "human" |
 | Q6 | label | "Fred" |
+| P1 | label | "instance of" |
+| P2 | label | "friend" |
 
 
 ```bash
-kgtk lift file5.tsv --label-file file6.tsv --columns-to-lift node1  --input-file-is-presorted --label-file-is-presorted --suppress-empty-columns
+kgtk lift file5.tsv --label-file file6.tsv --columns-to-lift node1 --input-file-is-presorted --label-file-is-presorted
 ```
 The output will be the following table in KGTK format:
 
-| node1 | label | node2 | node1;label | label;label | node2;label |
-| -- | -- | -- | -- | -- | -- |
-| Q1 | P1 | Q5 | "Elmo" | "instance of" | "human" |
-| Q1 | P2 | Q6 | "Elmo" | "friend" | "Fred" |
-| Q6 | P1 | Q5 | "Fred" | "instance of" | "human" |
+| node1 | label | node2 | node1;label |
+| -- | -- | -- | -- |
+| Q1 | P1 | Q5 | "Elmo" |
+| Q1 | P2 | Q6 | "Elmo" |
+| Q6 | P1 | Q5 | "Fred" |
 
-If the labels are in a seperate file from the input rows, and the labels are sorted
-on the node1 column, and the only a single column will be lifted from the input rows,
-and the input file is sorted on that column, and if `--suppress-empty-columns` is `False`
-(its default), then the data may be process using a merge algorithm that does not
-use in-memory buffering.
+
+If the label file is very large but not sorted, and the input file is small
+enough to fit in memory, then one alternate approach is to use
+`--prefilter-labels`.  This causes the input file to be read into memory
+first, then the values that need labels are extracted from it.  Next,
+the label file is read, filtering out unneeded labels and keeping only needed
+labels in memory.  Finally, the output file is generated from the in-memory
+copy of the input file and the labels.  Multiple columns may be lifted in a
+single pass with this approach.
+
+```bash
+kgtk lift file5.tsv --label-file file6.tsv --prefilter-labels
+```
 
 
 Suppose that `file7.tsv` contains the following table in KGTK format,
