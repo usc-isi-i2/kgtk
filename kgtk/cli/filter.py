@@ -30,10 +30,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     _expert: bool = parsed_shared_args._expert
 
     # '$label == "/r/DefinedAs" && $node2=="/c/en/number_zero"'
-    parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path, default="-")
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write records that pass the filter (default=%(default)s).",
+    parser.add_argument("-i", "--input-file", dest="input_kgtk_file", metavar="INPUT_FILE",
+                        help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path, default="-")
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", metavar="OUTPUT_FILE",
+                        help="The KGTK file to write records that pass the filter (default=%(default)s).",
                         type=Path, default="-")
-    parser.add_argument(      "--reject-file", dest="reject_kgtk_file", help="The KGTK file to write records that fail the filter (default=%(default)s).",
+    parser.add_argument(      "--reject-file", dest="reject_kgtk_file", metavar="REJECT_FILE",
+                              help="The KGTK file to write records that fail the filter (default=%(default)s).",
                               type=Path, default=None)
 
     # parser.add_argument('-dt', "--datatype", action="store", type=str, dest="datatype", help="Datatype of the input file, e.g., tsv or csv.", default="tsv")
@@ -42,10 +45,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--pred', action="store", type=str, dest='pred_col', help="Predicate column, default is label")
     parser.add_argument('--obj', action="store", type=str, dest='obj_col', help="Object column, default is node2")
 
-    parser.add_argument(      "--or", dest="or_pattern", help="'Or' the clauses of the pattern. (default=%(default)s).",
+    parser.add_argument(      "--or", dest="or_pattern", metavar="True|False",
+                              help="'Or' the clauses of the pattern. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--invert", dest="invert", help="Invert the result of applying the pattern. (default=%(default)s).",
+    parser.add_argument(      "--invert", dest="invert", metavar="True|False",
+                              help="Invert the result of applying the pattern. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -84,7 +89,7 @@ def run(input_kgtk_file: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % str(input_kgtk_file), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         if reject_kgtk_file is not None:
             print("--reject-file=%s" % str(reject_kgtk_file), file=error_file)

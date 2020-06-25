@@ -45,18 +45,19 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", type=Path, default="-",
-                              help="The KGTK file to filter. May be omitted or '-' for stdin (default=%(default)s).")
+    parser.add_argument("-o", "--input-file", dest="input_kgtk_file", type=Path, default="-", metavar="INPUT_FILE",
+                        help="The KGTK file to filter. May be omitted or '-' for stdin. (default=%(default)s).")
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", metavar="OUTPUT_FILE",
+                        help="The KGTK file to write. May be omitted or '-' for stdout. (default=%(default)s).", type=Path, default="-")
 
     KgtkIdBuilderOptions.add_arguments(parser, expert=True) # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: typing.Optional[Path],
-        output_kgtk_file: typing.Optional[Path],
+def run(input_kgtk_file: Path,
+        output_kgtk_file: Path,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -79,8 +80,8 @@ def run(input_kgtk_file: typing.Optional[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
-        print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)

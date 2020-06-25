@@ -47,10 +47,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", type=Path, default="-",
+    parser.add_argument("-i", "--input-file", dest="input_kgtk_file", type=Path, default="-", metavar="INPUT_FILE",
                               help="The KGTK file to filter. May be omitted or '-' for stdin (default=%(default)s).")
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", metavar="OUTPUT_FILE",
+                        help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
     parser.add_argument(      "--column", dest="column_name", help="The name of the column to explode. (default=%(default)s).", default=KgtkFormat.NODE2)
 
@@ -67,15 +68,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--prefix", dest="prefix", help="The prefix for exploded column names. (default=%(default)s).",
                               default=KgtkFormat.NODE2 + ";" + KgtkFormat.KGTK_NAMESPACE)
 
-    parser.add_argument(      "--overwrite", dest="overwrite_columns",
+    parser.add_argument(      "--overwrite", dest="overwrite_columns", metavar="True|False",
                               help="Indicate that it is OK to overwrite existing columns. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--expand", dest="expand_list",
+    parser.add_argument(      "--expand", dest="expand_list", metavar="True|False",
                               help="Expand the source column if it contains a list, else fail. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--show-data-types", dest="show_data_types",
+    parser.add_argument(      "--show-data-types", dest="show_data_types", metavar="True|False",
                               help="Print the list of data types and exit. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
@@ -83,8 +84,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: typing.Optional[Path],
-        output_kgtk_file: typing.Optional[Path],
+def run(input_kgtk_file: Path,
+        output_kgtk_file: Path,
         column_name: str,
         type_names: typing.List[str],
         field_names: typing.List[str],
@@ -113,7 +114,8 @@ def run(input_kgtk_file: typing.Optional[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         print("--column %s" % column_name, file=error_file, flush=True)
         print("--prefix %s" % prefix, file=error_file, flush=True)
         print("--overwrite %s" % str(overwrite_columns), file=error_file, flush=True)
@@ -122,7 +124,6 @@ def run(input_kgtk_file: typing.Optional[Path],
             print("--types %s" % " ".join(type_names), file=error_file, flush=True)
         if field_names is not None:
             print("--fields %s" % " ".join(field_names), file=error_file, flush=True)
-        print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
         print("--show-data-types %s" % str(show_data_types), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
