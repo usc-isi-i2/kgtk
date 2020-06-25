@@ -59,6 +59,8 @@ class KgtkLift(KgtkFormat):
     suppress_empty_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     ok_if_no_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    prefilter_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     input_is_presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     labels_are_presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -156,6 +158,8 @@ class KgtkLift(KgtkFormat):
     def load_labels(self,
                     kr: KgtkReader,
                     path: Path,
+                    save_input: bool = True,
+                    labels_needed: typing.Optional[typing.Set[str]] = None,
     )->typing.Tuple[typing.Mapping[str, str], typing.List[typing.List[str]]]:
         input_rows: typing.List[typing.List[str]] = [ ]
         labels: typing.MutableMapping[str, str] = { }
@@ -167,6 +171,13 @@ class KgtkLift(KgtkFormat):
 
         if self.verbose:
             print("Loading labels from %s" % path, file=self.error_file, flush=True)
+            if labels_needed is not None:
+                print("Filtering for needed labels", file=self.error_file, flush=True)
+            print("label_match_column_idx=%d (%s)." % (label_match_column_idx, kr.column_names[label_match_column_idx]), file=self.error_file, flush=True)
+            print("label_select_column_idx=%d (%s)." % (label_select_column_idx, kr.column_names[label_select_column_idx]), file=self.error_file, flush=True)
+            print("label_value_column_idx=%d (%s)." % (label_value_column_idx, kr.column_names[label_value_column_idx]), file=self.error_file, flush=True)
+            print("label_select_column_value='%s'." % self.label_select_column_value, file=self.error_file, flush=True)
+
         key: str
         row: typing.List[str]
         for row in kr:
@@ -185,11 +196,16 @@ class KgtkLift(KgtkFormat):
                             labels[label_key] = KgtkFormat.LIST_SEPARATOR.join((labels[label_key], label_value))
                     else:
                         # This is the first instance of this label definition.
-                        labels[label_key] = label_value
-                if not self.remove_label_records:
+                        if labels_needed is not None:
+                            if label_key in labels_needed:
+                                labels[label_key] = label_value
+                        else:
+                            labels[label_key] = label_value
+                if save_input and not self.remove_label_records:
                     input_rows.append(row)
             else:
-                input_rows.append(row)
+                if save_input:
+                    input_rows.append(row)
         return labels, input_rows
                 
     def load_input_keeping_label_records(self,
@@ -374,6 +390,29 @@ class KgtkLift(KgtkFormat):
 
         return ew, lifted_output_column_idxs
 
+    def build_labels_needed(self,
+                            input_rows: typing.List[typing.List[str]],
+                            input_select_column_idx: int,
+                            lift_column_idxs: typing.List[int],
+    )->typing.Set[str]:
+        labels_needed: typing.Set[str] = set()
+
+        row: typing.List[str]
+        for row in input_rows:
+            if input_select_column_idx >= 0:
+                if self.input_select_column_value is not None and row[input_select_column_idx] != self.input_select_column_value:
+                    # Not selected for lifting into.
+                    continue
+            lift_column_idx: int
+            for lift_column_idx in lift_column_idxs:
+                label_key: str = row[lift_column_idx]
+                labels_needed.add(label_key)
+
+        if self.verbose:
+            print("Labels needed: %d" % len(labels_needed), file=self.error_file, flush=True)
+
+        return labels_needed
+
     def process_in_memory(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader]):
         """
         Process the lift using in-memory buffering.  The labels will added to a
@@ -388,17 +427,29 @@ class KgtkLift(KgtkFormat):
         labels: typing.Mapping[str, str] = { }
         input_rows: typing.Optional[typing.List[typing.List[str]]] = None
         
+        input_select_column_idx: int
+        if self.input_select_column_value is not None or self.output_select_column_value is not None:
+            input_select_column_idx = self.lookup_input_select_column_idx(ikr)
+        else:
+            input_select_column_idx = -1
+
         # Unless told otherwise, assume that label rows won't be saved
         # in the input rows:
         label_select_column_idx: int = -1
 
         # Extract the labels, and maybe store the input rows.
         if lkr is not None and self.label_file_path is not None:
+            labels_needed: typing.Optional[typing.Set[str]] = None
+            if self.prefilter_labels:
+                if self.verbose:
+                    print("Reading input data to prefilter the labels.", file=self.error_file, flush=True)
+                input_rows = self.load_input(ikr, self.input_file_path)
+                labels_needed = self.build_labels_needed(input_rows, input_select_column_idx, lift_column_idxs)
             # Read the label file.
             if self.verbose:
                 print("Loading labels from the label file.", file=self.error_file, flush=True)
             # We don't need to worry about input rows in the label file.
-            labels, _ = self.load_labels(lkr, self.label_file_path)
+            labels, _ = self.load_labels(lkr, self.label_file_path, save_input=False, labels_needed=labels_needed)
         else:
             if self.verbose:
                 print("Loading labels and reading data from the input file.", file=self.error_file, flush=True)
@@ -410,12 +461,6 @@ class KgtkLift(KgtkFormat):
             if not self.remove_label_records:
                 # Save the label column index in the input rows:
                 label_select_column_idx = self.lookup_label_select_column_idx(ikr)
-
-        input_select_column_idx: int
-        if self.input_select_column_value is not None or self.output_select_column_value is not None:
-            input_select_column_idx = self.lookup_input_select_column_idx(ikr)
-        else:
-            input_select_column_idx = -1
 
         label_count: int = len(labels)
         if label_count == 0 and not self.ok_if_no_labels:
@@ -713,6 +758,10 @@ def main():
                               help="If true, do not abort if no labels were found. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--prefilter-labels", dest="prefilter_labels",
+                              help="If true, read the input file before reading the label file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--input-file-is-presorted", dest="input_is_presorted",
                               help="If true, the input file is presorted on the column for which values are to be lifted. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -768,6 +817,7 @@ def main():
         print("--suppress-duplicate-labels=%s" % str(args.suppress_duplicate_labels))
         print("--suppress-empty-columns=%s" % str(args.suppress_empty_columns))
         print("--ok-if-no-labels=%s" % str(args.ok_if_no_labels))
+        print("--prefilter-labels=%s" % str(args.prefilter_labels))
         print("--input-file-is-presorted=%s" % str(args.input_is_presorted))
         print("--label-file-is-presorted=%s" % str(args.labels_are_presorted))
         reader_options.show(out=error_file)
@@ -795,6 +845,7 @@ def main():
         suppress_duplicate_labels=args.suppress_duplicate_labels,
         suppress_empty_columns=args.suppress_empty_columns,
         ok_if_no_labels=args.ok_if_no_labels,
+        prefilter_labels=args.prefilter_labels,
         input_is_presorted=args.input_is_presorted,
         labels_are_presorted=args.labels_are_presorted,
         reader_options=reader_options,
