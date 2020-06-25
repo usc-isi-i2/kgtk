@@ -176,6 +176,7 @@ class KgtkLift(KgtkFormat):
             print("label_match_column_idx=%d (%s)." % (label_match_column_idx, kr.column_names[label_match_column_idx]), file=self.error_file, flush=True)
             print("label_select_column_idx=%d (%s)." % (label_select_column_idx, kr.column_names[label_select_column_idx]), file=self.error_file, flush=True)
             print("label_value_column_idx=%d (%s)." % (label_value_column_idx, kr.column_names[label_value_column_idx]), file=self.error_file, flush=True)
+            print("label_select_column_value='%s'." % self.label_select_column_value, file=self.error_file, flush=True)
 
         key: str
         row: typing.List[str]
