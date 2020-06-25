@@ -84,7 +84,7 @@ def run(input_kgtk_file: Path,
             print("--columns=%s" % " ".join(columns), file=error_file)
         print("--split-on-commas=%s" % str(split_on_commas), file=error_file)
         print("--split-on-spaces=%s" % str(split_on_spaces), file=error_file)
-        print("--sprip-spaces=%s" % str(strip_spaces), file=error_file)
+        print("--strip-spaces=%s" % str(strip_spaces), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
