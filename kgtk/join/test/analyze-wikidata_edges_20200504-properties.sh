@@ -55,7 +55,7 @@ ${KGTK} calc ${VERBOSE} \
 # Lift the property labels:
 ${KGTK} lift ${VERBOSE} \
       ${WORKDIR}/wikidata_edges_20200504-${PROPERTY}-property-counts-with-percents.tsv \
-     --label-file ${WIKIDATADIR}/wikidata_labels_etc.tsv${WIKIDATAGZIP} \
+     --label-file ${WIKIDATADIR}/wikidata_labels_only.tsv${WIKIDATAGZIP} \
      --output-file ${WORKDIR}/wikidata_edges_20200504-${PROPERTY}-property-counts-with-labels.tsv \
      --columns-to-lift node1 \
      --prefilter-labels \
