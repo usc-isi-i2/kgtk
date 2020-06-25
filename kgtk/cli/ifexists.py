@@ -49,17 +49,20 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
+    parser.add_argument("-i", "--input-file", dest="input_kgtk_file", metavar="INPUT_FILE",
+                        help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path, default="-")
+
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", metavar="OUTPUT_FILE",
+                        help="The KGTK file to write. May be omitted or '-' for stdout", type=Path, default="-")
+
+    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", metavar="FILTER_FILE",
+                              help="The KGTK file to filter against (required).", type=Path, required=True)
 
     parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys",
                               help="The key columns in the file being filtered (default=None).", nargs='*')
 
-    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against (required).", type=Path, required=True)
-
     parser.add_argument(      "--filter-keys", "--right-keys", dest="filter_keys",
                               help="The key columns in the filter-on file (default=None).", nargs='*')
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (required).", type=Path, default=None)
 
     parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -77,9 +80,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: typing.Optional[Path],
+def run(input_kgtk_file: Path,
         filter_kgtk_file: Path,
-        output_kgtk_file: typing.Optional[Path],
+        output_kgtk_file: Path,
         input_keys: typing.Optional[typing.List[str]],
         filter_keys: typing.Optional[typing.List[str]],
         
@@ -110,13 +113,13 @@ def run(input_kgtk_file: typing.Optional[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file), file=error_file)
+        print("--filter-on=%s" % str(filter_kgtk_file), file=error_file)
         if input_keys is not None:
             print("--input-keys=%s" % " ".join(input_keys), file=error_file)
-        print("--filter-on=%s" % (str(filter_kgtk_file) if filter_kgtk_file is not None else "-"), file=error_file)
         if filter_keys is not None:
             print("--filter-keys=%s" % " ".join(filter_keys), file=error_file)
-        print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
         print("--cache-input=%s" % str(cache_input), file=error_file)
         print("--preserve-order=%s" % str(preserve_order), file=error_file)
         print("--field-separator=%s" % repr(field_separator), file=error_file)

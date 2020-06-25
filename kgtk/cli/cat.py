@@ -42,9 +42,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_file_paths", help="The KGTK files to concatenate.", type=Path, nargs='+', default=[Path("-")])
+    parser.add_argument("-i", "--input-files", dest="input_file_paths",
+                        help="The KGTK files to concatenate.",
+                        metavar="INPUT_FILE",
+                        type=Path, nargs='+', default=[Path("-")])
 
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+    parser.add_argument("-o", "--output-file", dest="output_file_path", metavar="OUTPUT_FILE",
+                        help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
     parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
                               choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
@@ -54,7 +58,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The list of new column names when renaming all columns."),
                               type=str, nargs='+')
     parser.add_argument(      "--old-columns", dest="old_column_names",
-                              metavar="OLD_COLUMNS_NAME",
+                              metavar="OLD_COLUMN_NAME",
                               help=h("The list of old column names for selective renaming."),
                               type=str, nargs='+')
     parser.add_argument(      "--new-columns", dest="new_column_names",
@@ -97,7 +101,7 @@ def run(input_file_paths: typing.List[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file, flush=True)
+        print("--input-files %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file, flush=True)
         print("--output-file=%s" % str(output_file_path), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)

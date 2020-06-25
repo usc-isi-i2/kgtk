@@ -34,25 +34,29 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
+    parser.add_argument("-i", "--input-file", dest="input_kgtk_file", metavar="INPUT_FILE", default="-",
+                        help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
+
+    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", metavar="OUTPUT_FILE",
+                        help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
     parser.add_argument(      "--columns", dest="filter_column_names",
                               help="The columns in the file being filtered (Required).", nargs='+', required=True)
 
-    parser.add_argument(      "--count", dest="only_count", help="Only count the records, do not copy them. (default=%(default)s).",
+    parser.add_argument(      "--count", dest="only_count", metavar="True|False",
+                              help="Only count the records, do not copy them. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
-
-    parser.add_argument(      "--all", dest="all_are", help="False: Test if any are empty, True: test if all are empty (default=%(default)s).",
+    parser.add_argument(      "--all", dest="all_are", metavar="True|False",
+                              help="False: Test if any are empty, True: test if all are empty (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: typing.Optional[Path],
-        output_kgtk_file: typing.Optional[Path],
+def run(input_kgtk_file: Path,
+        output_kgtk_file: Path,
         filter_column_names: typing.List[str],
         all_are: bool = False,
 
@@ -78,9 +82,9 @@ def run(input_kgtk_file: typing.Optional[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         print("--columns=%s" % " ".join(filter_column_names), file=error_file)
-        print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
         print("--count=%s" % str(only_count), file=error_file)
         print("--all=%s" % str(all_are), file=error_file)
         reader_options.show(out=error_file)
