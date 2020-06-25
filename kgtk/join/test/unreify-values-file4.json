@@ -1,0 +1,14 @@
+[
+    {
+	"trigger-label": "rdf:type",
+	"trigger-node2": "ont:Confidence",
+	"value-label": "ont:confidenceValue",
+	"old-label": "ont:confidence"
+    },
+    {
+	"trigger-label": "rdf:type",
+	"trigger-node2": "ont:PrivateData",
+	"value-label": "ont:jsonContent",
+	"old-label": "ont:privateData"
+    }
+]
