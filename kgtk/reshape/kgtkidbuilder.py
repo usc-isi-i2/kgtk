@@ -13,17 +13,22 @@ from kgtk.value.kgtkvalue import KgtkValue
 
 @attr.s(slots=True, frozen=True)
 class KgtkIdBuilderOptions(KgtkFormat):
+    DEFAULT_OVERWRITE: bool = False
+    DEFAULT_VERIFY_ID_UNIQUE: bool = False
+
     # TODO: use an enum
     CONCAT_NLN_STYLE: str = "node1-label-node2" # node1-label-node2
     CONCAT_NL_NUM_STYLE: str = "node1-label-num" # node1-label-#
     CONCAT_NLN_NUM_STYLE: str = "node1-label-node2-num" # node1-label-node2-#
     CONCAT_WITH_OLD_ID_STYLE: str = "node1-label-node2-id" # Tag on any existing ID value
+    EMPTY_STYLE: str = "empty" # DO not generate an ID (useful for debugging and other special circumstances)
     PREFIXED_STYLE: str = "prefix###" # XXX###
     STYLES: typing.List[str] = [
         CONCAT_NLN_STYLE,
         CONCAT_NL_NUM_STYLE,
         CONCAT_NLN_NUM_STYLE,
         CONCAT_WITH_OLD_ID_STYLE,
+        EMPTY_STYLE,
         PREFIXED_STYLE,
     ]
     DEFAULT_STYLE: str = PREFIXED_STYLE
@@ -36,8 +41,8 @@ class KgtkIdBuilderOptions(KgtkFormat):
 
     old_id_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     new_id_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
-    overwrite_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    verify_id_unique: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    overwrite_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_OVERWRITE)
+    verify_id_unique: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_VERIFY_ID_UNIQUE)
     id_style: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_STYLE)
     id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX)
     initial_id: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_INITIAL_ID)
@@ -45,7 +50,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
     id_concat_num_width: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_CONCAT_NUM_WIDTH)
 
     @classmethod
-    def add_arguments(cls, parser: ArgumentParser, expert: bool = False, overwrite: bool = False):
+    def add_arguments(cls, parser: ArgumentParser, expert: bool = False, overwrite: typing.Optional[bool] = None):
 
         # This helper function makes it easy to suppress options from
         # The help message.  The options are still there, and initialize
@@ -56,6 +61,8 @@ class KgtkIdBuilderOptions(KgtkFormat):
             else:
                 return SUPPRESS
 
+        if overwrite is None:
+            overwrite = cls.DEFAULT_OVERWRITE
 
         # This one is likely to cause conflicts in the future.
         #
@@ -80,7 +87,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
                                   help="When true, verify ID uniqueness using an in-memory set of IDs. " +
                                   "When --verify-id-unique is omitted, it defaults to %(default)s. " +
                                   "When --verify-id-unique is supplied without an argument, it is %(const)s. ",
-                                  type=optional_bool, nargs='?', const=True, default=False)
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VERIFY_ID_UNIQUE)
 
         parser.add_argument(      "--id-style", dest="id_style", default=cls.DEFAULT_STYLE, choices=cls.STYLES,
                                   help=h("The ID generation style. (default=%(default)s)."))
@@ -359,6 +366,8 @@ class KgtkIdBuilder(KgtkFormat):
             new_id = self.build_concat_with_old_id(row)
         elif self.options.id_style == KgtkIdBuilderOptions.PREFIXED_STYLE:
             new_id = self.build_prefixed(row)
+        elif self.options.id_style == KgtkIdBuilderOptions.EMPTY_STYLE:
+            new_id = "" # Useful for debugging and other unusual circumstances.
         else:
             raise ValueError("Unknown ID style '%s'." % self.options.id_style)
 
