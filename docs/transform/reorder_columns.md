@@ -2,42 +2,34 @@ The reorder_columns command reorders file columns while copying a KGTK file from
 ## Usage
 
 ```
-usage: kgtk rename_columns [-h] [-o OUTPUT_FILE_PATH]
-                           [--output-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]]
-                           [--old-columns OLD_COLUMN_NAME [OLD_COLUMN_NAME ...]]
-                           [--new-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]] [-v]
-                           input_file_path
+usage: kgtk reorder_columns [-h] [-i INPUT_KGTK_FILE] [-o OUTPUT_KGTK_FILE] -c COLUMN_NAME
+                            [COLUMN_NAME ...] [--trim [True|False]] [-v]
 
-This command renames one or more columns in a KGTK file. 
+This command reorders one or more columns in a KGTK file. 
 
-Rename all columns using --output-columns newname1 newname2 ... 
-Rename selected columns using --old-columns and --new-columns 
-
-The column names are listed seperately for each option, do not quote them as a group, e.g. 
-kgtk rename_columns --old-columns oldname1 oldname2 --new-columns newname1 nsewname2
-
-The input filename must come before --output-columns, --old-columns, or --new-columns. 
+Reorder all columns using --columns col1 col2
+Reorder selected columns using --columns col1 col2 ... coln-1 coln
+Move a column to the front: --columns col ...
+Move a column to the end: --columns ... col
+Extract named columns, omitting the rest: --columns col1 col2 --trim
+Move a range of columns: --columns coln .. colm ...
 If no input filename is provided, the default is to read standard input. 
 
 Additional options are shown in expert help.
 kgtk --expert rename_columns --help
 
-positional arguments:
-  input_file_path       The KGTK input file. (default=-).
-
 optional arguments:
   -h, --help            show this help message and exit
-  -o OUTPUT_FILE_PATH, --output-file OUTPUT_FILE_PATH
+  -i INPUT_KGTK_FILE, --input-file INPUT_KGTK_FILE
+                        The KGTK input file. (default=-).
+  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
                         The KGTK file to write (default=-).
-  --output-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]
-                        The list of new column names when renaming all columns.
-  --old-columns OLD_COLUMN_NAME [OLD_COLUMN_NAME ...]
-                        The list of old column names for selective renaming.
-  --new-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]
-                        The list of new column names for selective renaming.
+  -c COLUMN_NAME [COLUMN_NAME ...], --columns COLUMN_NAME [COLUMN_NAME ...]
+                        The list of reordered column names, optionally containing '...'
+                        for column names not explicitly mentioned.
+  --trim [True|False]   If true, omit unmentioned columns. (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
-
 ```
 
 ## Examples
