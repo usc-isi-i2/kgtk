@@ -56,7 +56,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--do", dest="operation", help="The name of the operation.", required=True,
                               choices=["percentage"])
 
-
+    parser.add_argument(      "--format", dest="format_string", help="The format string for the calculation.")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -69,6 +69,7 @@ def run(input_kgtk_file: Path,
         column_names: typing.List[str],
         into_column_name: str,
         operation: str,
+        format_string: typing.Optional[str],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -102,6 +103,9 @@ def run(input_kgtk_file: Path,
         print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
         print("--into=%s" % str(into_column_name), file=error_file, flush=True)
         print("--operation=%s" % str(operation), file=error_file, flush=True)
+        if format_string is not None:
+            print("--format=%s" % format_string, file=error_file, flush=True)
+
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -240,7 +244,8 @@ def run(input_kgtk_file: Path,
                 if len(selected_names) != 2:
                     raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
                 
-                output_row[into_column_idx] = "%5.2f" % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
+                fs: str = format_string if format_string is not None else "%5.2f"
+                output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
 
             kw.write(output_row)
 
