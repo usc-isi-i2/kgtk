@@ -19,6 +19,7 @@ def parser():
         '\nMove a column to the front: --columns col ...' +
         '\nMove a column to the end: --columns ... col' +
         '\nExtract named columns, omitting the rest: --columns col1 col2 --trim' +
+        '\nMove a range of columns: --columns coln .. colm ...' +
         '\nIf no input filename is provided, the default is to read standard input. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
     }
