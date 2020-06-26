@@ -14,7 +14,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install thinc==7.4.0
 
-RUN pip install kgtk==0.2.1
+RUN git clone https://github.com/usc-isi-i2/kgtk/ 
+
+RUN cd /kgtk && python setup.py install 
 
 RUN conda update -n base -c defaults conda
 
