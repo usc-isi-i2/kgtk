@@ -41,7 +41,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_input_file(allow_positional=True)
+    parser.add_input_file()
     parser.add_output_file()
 
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
