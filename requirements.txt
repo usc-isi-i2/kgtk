@@ -9,7 +9,7 @@ sklearn
 SPARQLWrapper
 tqdm
 rdflib
-etk
+etk==2.2.3a0
 simplejson
 pyrallel.lib
 attrs
