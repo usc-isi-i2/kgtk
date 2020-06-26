@@ -60,10 +60,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--filter-keys", "--right-keys", dest="filter_keys",
                               help="The key columns in the filter-on file (default=None).", nargs='*')
 
-    parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys (default=%(default)s).",
+    parser.add_argument(      "--cache-input", dest="cache_input", metavar="True|False",
+                              help="Cache the input file instead of the filter keys (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--preserve-order", dest="preserve_order", help="Preserve record order when cacheing the input file. (default=%(default)s).",
+    parser.add_argument(      "--preserve-order", dest="preserve_order", metavar="True|False",
+                              help="Preserve record order when cacheing the input file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--field-separator", dest="field_separator",
