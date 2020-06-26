@@ -106,28 +106,46 @@ class KgtkValueFields():
 
     # TODO: Reorganize these lists and dicts into a structure.
 
+    DATA_TYPE_FIELD_NAME: str = "data_type"
+    DATE_AND_TIMES_FIELD_NAME: str = "date_and_time"
+    HIGH_TOLERANCE_FIELD_NAME: str = "high_tolerance"
+    LANGUAGE_FIELD_NAME: str = "language"
+    LANGUAGE_SUFFIX_FIELD_NAME: str = "language_suffix"
+    LATITUDE_FIELD_NAME: str = "latitude"
+    LIST_LEN_FIELD_NAME: str = "list_len"
+    LONGITUDE_FIELD_NAME: str = "longitude"
+    LOW_TOLERANCE_FIELD_NAME: str = "low_tolerance"
+    NUMBER_FIELD_NAME: str = "number"
+    PRECISION_FIELD_NAME: str = "precision"
+    SI_UNITS_FIELD_NAME: str = "si_units"
+    SYMBOL_FIELD_NAME: str = "symbol"
+    TEXT_FIELD_NAME: str = "text"
+    TRUTH_FIELD_NAME: str = "truth"
+    UNITS_NODE_FIELD_NAME: str = "units_node"
+    VALID_FIELD_NAME: str = "valid"
+
     FIELD_NAMES: typing.List[str] = [
-        "list_len",
-        "data_type",
-        "valid",
-        "text",
-        "language",
-        "language_suffix",
+        LIST_LEN_FIELD_NAME,
+        DATA_TYPE_FIELD_NAME,
+        VALID_FIELD_NAME,
+        TEXT_FIELD_NAME,
+        LANGUAGE_FIELD_NAME,
+        LANGUAGE_SUFFIX_FIELD_NAME,
         "numberstr",
-        "number",
+        NUMBER_FIELD_NAME,
         "low_tolerancestr",
-        "low_tolerance",
+        LOW_TOLERANCE_FIELD_NAME,
         "high_tolerancestr",
-        "high_tolerance",
-        "si_units",
-        "units_node",
+        HIGH_TOLERANCE_FIELD_NAME,
+        SI_UNITS_FIELD_NAME,
+        UNITS_NODE_FIELD_NAME,
         "latitudestr",
-        "latitude",
+        LATITUDE_FIELD_NAME,
         "longitudestr",
-        "longitude",
+        LONGITUDE_FIELD_NAME,
         "date",
         "time",
-        "date_and_time",
+        DATE_AND_TIMES_FIELD_NAME,
         "yearstr",
         "year",
         "monthstr",
@@ -142,54 +160,63 @@ class KgtkValueFields():
         "seconds",
         "zonestr",
         "precisionstr",
-        "precision",
+        PRECISION_FIELD_NAME,
         "iso8601extended",
-        "truth",
-        "symbol"
+        TRUTH_FIELD_NAME,
+        SYMBOL_FIELD_NAME
         ]
 
     DEFAULT_FIELD_NAMES: typing.List[str] = [
-        "data_type",
-        "valid",
-        "list_len",
-        "text",
-        "language",
-        "language_suffix",
-        "number",
-        "low_tolerance",
-        "high_tolerance",
-        "si_units",
-        "units_node",
-        "latitude",
-        "longitude",
-        "date_and_time",
-        "precision",
-        "truth",
-        "symbol"
+        DATA_TYPE_FIELD_NAME,
+        VALID_FIELD_NAME,
+        LIST_LEN_FIELD_NAME,
+        TEXT_FIELD_NAME,
+        LANGUAGE_FIELD_NAME,
+        LANGUAGE_SUFFIX_FIELD_NAME,
+        NUMBER_FIELD_NAME,
+        LOW_TOLERANCE_FIELD_NAME,
+        HIGH_TOLERANCE_FIELD_NAME,
+        SI_UNITS_FIELD_NAME,
+        UNITS_NODE_FIELD_NAME,
+        LATITUDE_FIELD_NAME,
+        LONGITUDE_FIELD_NAME,
+        DATE_AND_TIMES_FIELD_NAME,
+        PRECISION_FIELD_NAME,
+        TRUTH_FIELD_NAME,
+        SYMBOL_FIELD_NAME
+        ]
+
+    OPTIONAL_DEFAULT_FIELD_NAMES: typing.List[str] = [
+        LANGUAGE_SUFFIX_FIELD_NAME,
+        LOW_TOLERANCE_FIELD_NAME,
+        HIGH_TOLERANCE_FIELD_NAME,
+        SI_UNITS_FIELD_NAME,
+        UNITS_NODE_FIELD_NAME,
+        PRECISION_FIELD_NAME,
         ]
 
     FIELD_NAME_FORMATS: typing.Mapping[str, str] = {
-        "list_len": "int",
-        "data_type": "sym",
-        "valid": "bool",
-        "text": "str",
-        "language": "sym",
-        "language_suffix": "sym",
+        LIST_LEN_FIELD_NAME: "int",
+        DATA_TYPE_FIELD_NAME: "sym",
+        VALID_FIELD_NAME: "bool",
+        TEXT_FIELD_NAME: "str",
+        LANGUAGE_FIELD_NAME: "sym",
+        LANGUAGE_SUFFIX_FIELD_NAME: "sym",
         "numberstr": "str",
-        "number": "num",
+        NUMBER_FIELD_NAME: "num",
         "low_tolerancestr": "str",
-        "low_tolerance": "num",
+        LOW_TOLERANCE_FIELD_NAME: "num",
         "high_tolerancestr": "str",
-        "high_tolerance": "num",
-        "si_units": "sym",
-        "units_node": "sym",
+        HIGH_TOLERANCE_FIELD_NAME: "num",
+        SI_UNITS_FIELD_NAME: "sym",
+        UNITS_NODE_FIELD_NAME: "sym",
         "latitudestr": "str",
-        "latitude": "num",
+        LATITUDE_FIELD_NAME: "num",
         "longitudestr": "str",
-        "longitude": "num",
+        LONGITUDE_FIELD_NAME: "num",
         "date": "str",
         "time": "str",
-        "date_and_time": "str",
+        DATE_AND_TIMES_FIELD_NAME: "str",
         "yearstr": "str",
         "year": "int",
         "monthstr": "str",
@@ -204,30 +231,30 @@ class KgtkValueFields():
         "seconds": "int",
         "zonestr": "str",
         "precisionstr": "str",
-        "precision": "int",
+        PRECISION_FIELD_NAME: "int",
         "iso8601extended": "bool",
-        "truth": "bool",
-        "symbol": "sym",
+        TRUTH_FIELD_NAME: "bool",
+        SYMBOL_FIELD_NAME: "sym",
     }
 
     DATA_TYPE_FIELDS: typing.Mapping[str, typing.List[str]] = {
-        KgtkFormat.DataType.EMPTY.lower(): [ "data_type", "valid" ],
-        KgtkFormat.DataType.LIST.lower(): [ "data_type", "valid", "list_len" ],
-        KgtkFormat.DataType.NUMBER.lower(): [ "data_type", "valid", "numberstr", "number" ],
-        KgtkFormat.DataType.QUANTITY.lower(): [ "data_type", "valid",
-                                                "numberstr", "number",
-                                                "low_tolerancestr", "low_tolerance",
-                                                "high_tolerancestr", "high_tolerance",
-                                                "si_units", "units_node",
+        KgtkFormat.DataType.EMPTY.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME ],
+        KgtkFormat.DataType.LIST.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, LIST_LEN_FIELD_NAME ],
+        KgtkFormat.DataType.NUMBER.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, "numberstr", NUMBER_FIELD_NAME ],
+        KgtkFormat.DataType.QUANTITY.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME,
+                                                "numberstr", NUMBER_FIELD_NAME,
+                                                "low_tolerancestr", LOW_TOLERANCE_FIELD_NAME,
+                                                "high_tolerancestr", HIGH_TOLERANCE_FIELD_NAME,
+                                                SI_UNITS_FIELD_NAME, UNITS_NODE_FIELD_NAME,
         ],
-        KgtkFormat.DataType.STRING.lower(): [ "data_type", "valid", "text" ],
-        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "data_type", "valid", "text", "language", "language_suffix" ],
-        KgtkFormat.DataType.LOCATION_COORDINATES.lower(): [ "data_type", "valid",
-                                                            "latitudestr", "latitude",
-                                                            "longitudestr", "longitude",
+        KgtkFormat.DataType.STRING.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, TEXT_FIELD_NAME ],
+        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, TEXT_FIELD_NAME, LANGUAGE_FIELD_NAME, LANGUAGE_SUFFIX_FIELD_NAME ],
+        KgtkFormat.DataType.LOCATION_COORDINATES.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME,
+                                                            "latitudestr", LATITUDE_FIELD_NAME,
+                                                            "longitudestr", LONGITUDE_FIELD_NAME,
         ],
-        KgtkFormat.DataType.DATE_AND_TIMES.lower(): [ "data_type", "valid",
-                                                      "date_and_time",
+        KgtkFormat.DataType.DATE_AND_TIMES.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME,
+                                                      DATE_AND_TIMES_FIELD_NAME,
                                                       "date", "time",
                                                       "yearstr", "year",
                                                       "monthstr", "month",
@@ -236,83 +263,83 @@ class KgtkValueFields():
                                                       "minutesstr", "minutes",
                                                       "secondsstr", "seconds",
                                                       "zonestr",
-                                                      "precisionstr", "precision",
+                                                      "precisionstr", PRECISION_FIELD_NAME,
                                                       "iso8601extended",
         ],
         KgtkFormat.DataType.EXTENSION.lower(): [ ],
-        KgtkFormat.DataType.BOOLEAN.lower(): [ "data_type", "valid", "truth" ],
-        KgtkFormat.DataType.SYMBOL.lower(): [ "data_type", "valid", "symbol" ],
+        KgtkFormat.DataType.BOOLEAN.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, TRUTH_FIELD_NAME ],
+        KgtkFormat.DataType.SYMBOL.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, SYMBOL_FIELD_NAME ],
     }
 
     DEFAULT_DATA_TYPE_FIELDS: typing.Mapping[str, typing.List[str]] = {
-        KgtkFormat.DataType.EMPTY.lower(): [ "data_type", "valid" ],
-        KgtkFormat.DataType.LIST.lower(): [ "data_type", "valid", "list_len" ],
-        KgtkFormat.DataType.NUMBER.lower(): [ "data_type", "valid", "number" ],
-        KgtkFormat.DataType.QUANTITY.lower(): [ "data_type", "valid",
-                                                "number",
-                                                "low_tolerance",
-                                                "high_tolerance",
-                                                "si_units",
-                                                "units_node",
+        KgtkFormat.DataType.EMPTY.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME ],
+        KgtkFormat.DataType.LIST.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, LIST_LEN_FIELD_NAME ],
+        KgtkFormat.DataType.NUMBER.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, NUMBER_FIELD_NAME ],
+        KgtkFormat.DataType.QUANTITY.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME,
+                                                NUMBER_FIELD_NAME,
+                                                LOW_TOLERANCE_FIELD_NAME,
+                                                HIGH_TOLERANCE_FIELD_NAME,
+                                                SI_UNITS_FIELD_NAME,
+                                                UNITS_NODE_FIELD_NAME,
         ],
-        KgtkFormat.DataType.STRING.lower(): [ "data_type", "valid", "text" ],
-        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ "data_type", "valid", "text", "language", "language_suffix" ],
-        KgtkFormat.DataType.LOCATION_COORDINATES.lower(): [ "data_type", "valid",
-                                                            "latitude",
-                                                            "longitude",
+        KgtkFormat.DataType.STRING.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, TEXT_FIELD_NAME ],
+        KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, TEXT_FIELD_NAME, LANGUAGE_FIELD_NAME, LANGUAGE_SUFFIX_FIELD_NAME ],
+        KgtkFormat.DataType.LOCATION_COORDINATES.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME,
+                                                            LATITUDE_FIELD_NAME,
+                                                            LONGITUDE_FIELD_NAME,
         ],
-        KgtkFormat.DataType.DATE_AND_TIMES.lower(): [ "data_type", "valid",
-                                                      "date_and_time",
-                                                      "precision",
+        KgtkFormat.DataType.DATE_AND_TIMES.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME,
+                                                      DATE_AND_TIMES_FIELD_NAME,
+                                                      PRECISION_FIELD_NAME,
         ],
         KgtkFormat.DataType.EXTENSION.lower(): [ ],
-        KgtkFormat.DataType.BOOLEAN.lower(): [ "data_type", "valid", "truth" ],
-        KgtkFormat.DataType.SYMBOL.lower(): [ "data_type", "valid", "symbol" ],
+        KgtkFormat.DataType.BOOLEAN.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, TRUTH_FIELD_NAME ],
+        KgtkFormat.DataType.SYMBOL.lower(): [ DATA_TYPE_FIELD_NAME, VALID_FIELD_NAME, SYMBOL_FIELD_NAME ],
     }
 
     def to_map(self)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
         results: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
-        results["list_len"] = self.list_len
+        results[self.LIST_LEN_FIELD_NAME] = self.list_len
         if self.data_type is not None:
-            results["data_type"] = self.data_type.name.lower()
+            results[self.DATA_TYPE_FIELD_NAME] = self.data_type.name.lower()
         if self.valid is not None:
-            results["valid"] = self.valid
+            results[self.VALID_FIELD_NAME] = self.valid
         if self.text is not None:
-            results["text"] = self.text
+            results[self.TEXT_FIELD_NAME] = self.text
         if self.language is not None:
-            results["language"] = self.language
+            results[self.LANGUAGE_FIELD_NAME] = self.language
         if self.language_suffix is not None:
-            results["language_suffix"] = self.language_suffix
+            results[self.LANGUAGE_SUFFIX_FIELD_NAME] = self.language_suffix
         if self.numberstr is not None:
             results["numberstr"] = self.numberstr
         if self.number is not None:
-            results["number"] = self.number
+            results[self.NUMBER_FIELD_NAME] = self.number
         if self.low_tolerancestr is not None:
             results["low_tolerancestr"] = self.low_tolerancestr
         if self.low_tolerance is not None:
-            results["low_tolerance"] = self.low_tolerance
+            results[self.LOW_TOLERANCE_FIELD_NAME] = self.low_tolerance
         if self.high_tolerancestr is not None:
             results["high_tolerancestr"] = self.high_tolerancestr
         if self.high_tolerance is not None:
-            results["high_tolerance"] = self.high_tolerance
+            results[self.HIGH_TOLERANCE_FIELD_NAME] = self.high_tolerance
         if self.si_units is not None:
-            results["si_units"] = self.si_units
+            results[self.SI_UNITS_FIELD_NAME] = self.si_units
         if self.units_node is not None:
-            results["units_node"] = self.units_node
+            results[self.UNITS_NODE_FIELD_NAME] = self.units_node
         if self.latitudestr is not None:
             results["latitudestr"] = self.latitudestr
         if self.latitude is not None:
-            results["latitude"] = self.latitude
+            results[self.LATITUDE_FIELD_NAME] = self.latitude
         if self.longitudestr is not None:
             results["longitudestr"] = self.longitudestr
         if self.longitude is not None:
-            results["longitude"] = self.longitude
+            results[self.LONGITUDE_FIELD_NAME] = self.longitude
         if self.date is not None:
             results["date"] = self.date
         if self.time is not None:
             results["time"] = self.time
         if self.date_and_time is not None:
-            results["date_and_time"] = self.date_and_time
+            results[self.DATE_AND_TIMES_FIELD_NAME] = self.date_and_time
         if self.yearstr is not None:
             results["yearstr"] = self.yearstr
         if self.year is not None:
@@ -342,13 +369,13 @@ class KgtkValueFields():
         if self.precisionstr is not None:
             results["precisionstr"] = self.precisionstr
         if self.precision is not None:
-            results["precision"] = self.precision
+            results[self.PRECISION_FIELD_NAME] = self.precision
         if self.iso8601extended is not None:
             results["iso8601extended"] = self.iso8601extended
         if self.truth is not None:
-            results["truth"] = self.truth
+            results[self.TRUTH_FIELD_NAME] = self.truth
         if self.symbol is not None:
-            results["symbol"] = self.symbol
+            results[self.SYMBOL_FIELD_NAME] = self.symbol
         return results
     
 @attr.s(slots=True, frozen=False)
@@ -400,6 +427,16 @@ class KgtkValue(KgtkFormat):
             self.fields = KgtkValueFields(data_type=self.data_type, valid=self.valid)
         return True
 
+    # Split on a "|" that is not preceeded by "\".  This is not completely
+    # correct:  we want to split on any "|" that is not preceeded by an odd
+    # number of "\".
+    #
+    # TODO: Find a better splitting pattern.
+    #
+    # Consider: re.findall, or regex.split
+    #
+    # On the other hand: if "\" were disallowed form symbol, then the current
+    # pattern will be OK.
     split_list_re: typing.Pattern = re.compile(r"(?<!\\)" + "\\" + KgtkFormat.LIST_SEPARATOR)
 
     @classmethod
@@ -442,17 +479,19 @@ class KgtkValue(KgtkFormat):
         if KgtkFormat.LIST_SEPARATOR in value1:
             if KgtkFormat.LIST_SEPARATOR in value2:
                 # This is rather expensive, but will work correctly:
-                return cls.join_unique_list(cls.split_list(value1).extend(cls.split_list(value2)))
+                lv1: typing.List[str] = cls.split_list(value1)
+                lv1.extend(cls.split_list(value2))
+                return cls.join_unique_list(lv1)
             else:
                 # This is rather expensive, but will work correctly:
-                lv: typing.List[str] = cls.split_list(value1)
-                lv.append(value2)
-                return cls.join_unique_list(lv)
+                lv2: typing.List[str] = cls.split_list(value1)
+                lv2.append(value2)
+                return cls.join_unique_list(lv2)
         if KgtkFormat.LIST_SEPARATOR in value2:
             # This is rather expensive, but will work correctly:
-            lv2: typing.List[str] = cls.split_list(value2)
-            lv2.append(value1)
-            return cls.join_unique_list(lv2)
+            lv3: typing.List[str] = cls.split_list(value2)
+            lv3.append(value1)
+            return cls.join_unique_list(lv3)
         if value1 < value2:
             return KgtkFormat.LIST_SEPARATOR.join((value1, value2))
         else:
@@ -981,8 +1020,7 @@ class KgtkValue(KgtkFormat):
         self.data_type = KgtkFormat.DataType.BOOLEAN
         self.valid = True
         if self.parse_fields:
-            self.fields = KgtkValueFields(data_type=self.data_type,
-                                          valid=self.valid,
+            self.fields = KgtkValueFields(data_type=self.data_type,                                          valid=self.valid,
                                           truth=self.value == KgtkFormat.TRUE_SYMBOL)
         return True
 
@@ -1207,7 +1245,10 @@ class KgtkValue(KgtkFormat):
                                                                                                         month=lax_month_pat,
                                                                                                         day=lax_day_pat)
     # hour-minutes-seconds
-    hour_pat: str = r'(?P<hour>2[0-3]|[01][0-9])'
+    #
+    # NOTE: hour 24 is valid only when minutes and seconds are 00
+    # and options.allow_end_of_day is True
+    hour_pat: str = r'(?P<hour>2[0-4]|[01][0-9])'
     minutes_pat: str = r'(?P<minutes>[0-5][0-9])'
     seconds_pat: str = r'(?P<seconds>[0-5][0-9])'
 
@@ -1407,6 +1448,12 @@ class KgtkValue(KgtkFormat):
                 seconds = int(secondsstr)
             except ValueError:
                 return False # shouldn't happen
+
+        if hour is not None and hour == 24:
+            if ((minutes is not None and minutes > 0) or (seconds is not None and seconds > 0)):
+                return False # An invalid time
+            if not self.options.allow_end_of_day:
+                return False
 
         precision: typing.Optional[int]
         if precisionstr is None:
@@ -1624,7 +1671,7 @@ class KgtkValue(KgtkFormat):
                 result += kv.describe()
             return result + ")"
         elif dt == KgtkFormat.DataType.NUMBER:
-            return "Number" if self.is_number(validate=True) else "Invali Number"
+            return "Number" if self.is_number(validate=True) else "Invalid Number"
         elif dt == KgtkFormat.DataType.QUANTITY:
             return "Quantity" if self.is_quantity(validate=True) else "Invalid Quantity"
         elif dt == KgtkFormat.DataType.STRING:

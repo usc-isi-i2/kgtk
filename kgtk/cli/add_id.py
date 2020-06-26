@@ -117,7 +117,7 @@ def run(input_kgtk_file: typing.Optional[Path],
                                          very_verbose=very_verbose)
 
         # Process the input file, building IDs.
-        idb.process(ew)
+        idb.process(kr, ew)
         return 0
 
     except SystemExit as e:

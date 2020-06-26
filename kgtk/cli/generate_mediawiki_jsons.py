@@ -68,9 +68,20 @@ def add_arguments(parser):
         "--property-file",
         action="store",
         type=str,
-        required = True,
+        required = False,
+        default="NONE",
         help="path to the file which contains the property datatype mapping in kgtk format.",
         dest="prop_file",
+    )
+    parser.add_argument(
+        "-pd",
+        "--property-declaration-in-file",
+        action="store",
+        type=str2bool,
+        required = False,
+        default=False,
+        help="wehther read properties in the kgtk file. If set to yes, make sure the property declaration happens before its usage",
+        dest="prop_declaration",
     )
     parser.add_argument(
         "-gz",
@@ -129,6 +140,7 @@ def run(
     aliases: str,
     descriptions: str,
     prop_file: str,
+    prop_declaration:bool,
     use_gz: bool,
     output_prefix: str,
     n: int,
@@ -148,7 +160,8 @@ def run(
         output_prefix = output_prefix,
         n = n,
         log_path = log_path,
-        warning = warning
+        warning = warning,
+        prop_declaration = prop_declaration,
     )
     # process stdin
     if use_gz:
@@ -156,9 +169,38 @@ def run(
     else:
         fp = sys.stdin
         # not line by line
-    for line_num, edge in enumerate(fp):
-        if edge.startswith("#") or len(edge.strip("\n")) == 0:
-            continue
-        else:
-            generator.entry_point(line_num+1,edge)
-    generator.finalize()
+
+    if prop_declaration:
+        file_lines = 0
+        begining_edge = None
+        start_generation = False
+        for line_num, edge in enumerate(fp):
+            if line_num == 0:
+                begining_edge = edge
+                generator.entry_point(line_num+1,edge)
+                file_lines += 1
+                # print("initial edge at line {}".format(line_num))
+            else:
+                if start_generation:
+                    # start triple generation because reached the starting position of the second `cat`
+                    line_number = line_num - file_lines
+                    # print("creating jsons at line {} {} with total number of lines: {}".format(line_number+1, edge, file_lines))
+                    generator.entry_point(line_number+1,edge) # file generator
+                    # print("# {}".format(generator.read_num_of_lines))
+                else:
+                    if edge == begining_edge:
+                        # print("set generation start at line {} {}".format(line_num, edge))
+                        start_generation = True
+                    else:
+                        file_lines += 1
+                        # print("creating property declarations at line {} {}".format(line_num, edge))
+                        generator.read_prop_declaration(line_num+1,edge)
+        generator.finalize()
+    else:
+        for line_num, edge in enumerate(fp):
+            if edge.startswith("#") or len(edge.strip("\n")) == 0:
+                continue
+            else:
+                generator.entry_point(line_num+1,edge)
+    
+        generator.finalize()

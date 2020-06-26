@@ -1,3 +1,5 @@
+<img src="/docs/images/kgtk_logo_200x200.png" width="150"/>
+
 # KGTK: Knowledge Graph Toolkit 
 
 [![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)
@@ -31,7 +33,22 @@ https://kgtk.readthedocs.io/en/latest/
 docker pull uscisii2/kgtk
 ```
 
-More information about versions and tags here: https://hub.docker.com/repository/docker/uscisii2/kgtk
+To run KGTK in the command line just type:
+
+```
+docker run -it uscisii2/kgtk /bin/bash
+```
+
+If you want to run KGTK in a Jupyter notebook, then you will have to type:
+```
+docker run -it -p 8888:8888 uscisii2/kgtk /bin/bash -c "jupyter notebook --ip='*' --port=8888 --allow-root --no-browser"
+```
+
+Note: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
+
+More information about versions and tags is available here: https://hub.docker.com/repository/docker/uscisii2/kgtk
+
+See additional examples in [the documentation](https://kgtk.readthedocs.io/en/latest/install/).
 
 ## Local installation
 
@@ -49,66 +66,34 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
 
-4. Install `mlr`. Depending on your environment, you can run one of the following:
-  * `brew update && brew install miller` (on mac)
-  * `sudo port selfupdate && sudo port install miller` (on mac)
-  * `sudo apt-get install miller` (linux)
-  * `sudo apt install miller` (linux)
-  * `sudo yum install miller` (linux)
-  
-More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
-
-If you can't install miller with `yum install` on centOS, please follow this [link](https://centos.pkgs.org/7/openfusion-x86_64/miller-5.3.0-1.of.el7.x86_64.rpm.html).
-
-
 ## Running KGTK commands
 
 To list all the available KGTK commands, run:
 
-`kgtk -h`
+```
+kgtk -h
+```
 
 To see the arguments of a particular commands, run:
 
-`kgtk <command> -h`
+```
+kgtk <command> -h
+```
 
 An example command that computes instances of the subclasses of two classes:
 
-`kgtk instances --transitive --class Q13442814,Q12345678`
-
-## Additional information
-
-### The Miller Package
-
-1. Our code uses the "miller" package to manipulate formatted data.
-
-2. TheGitHub repository for miller is:
 ```
-https://github.com/johnkerl/miller
+kgtk instances --transitive --class Q13442814,Q12345678
 ```
-3. The documentaton is:
+
+## How to cite
+
 ```
-https://www.mankier.com/1/mlr
+@article{ilievski2020kgtk,
+  title={KGTK: A Toolkit for Large Knowledge Graph Manipulation and Analysis},
+  author={Ilievski, Filip and Garijo, Daniel and Chalupsky, Hans and Divvala, Naren Teja and Yao, Yixiang and Rogers, Craig and Li, Ronpeng and Liu, Jun and Singh, Amandeep and Schwabe, Daniel and Szekely, Pedro},
+  journal={arXiv preprint arXiv:2006.00088},
+  year={2020},
+  url={https://arxiv.org/abs/2006.00088}
+}
 ```
-4. You may need to install the miller command (mlr) on your system.
-   * OpenSUSE Tumbleweed Linux: install package `miller` from Main Repository (OSS)
-
-### List of supported tools
-* `instances`
-* `reachable_nodes`
-* `filter`
-* `text_embedding`
-* `remove_columns`
-* `sort`
-* `gt_loader`
-* `merge_identical_nodes`
-* `zconcat`
-* `export_neo4j`
-
-To get an information on how to use each of them, run:
-`kgtk [TOOL] -h`
-
-More detailed description of the arguments will be added here promptly.
-
-### Developer Instructions
-
-Please refer to [this](README_dev.md)

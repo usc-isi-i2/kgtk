@@ -54,14 +54,14 @@ This table shows the fields (without the prefix value, normally `node2;`) that a
 | Data Type                 | Fields                      |
 | ------------------------- | --------------------------- |
 | boolean                   | valid truth                 |
-| date_and_times            | valid year date_and_time precision |
+| date_and_times            | valid date_and_time precision |
 | empty                     | valid                       |
 | extension                 |                             |
-| language_qualified_string | valid text language suffix  |
+| language_qualified_string | valid text language language_suffix  |
 | list                      | valid list_len              |
 | location_coordinates      | valid latitude longitude    |
 | number                    | valid number                |
-| quantity                  | valid number low_tolerance high_tolerance si_units wikidata_node |
+| quantity                  | valid number low_tolerance high_tolerance si_units units_node |
 | string                    | valid text                  |
 | symbol                    | valid symbol                |
 

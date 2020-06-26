@@ -1,5 +1,5 @@
 """Copy records from the first KGTK file to the output file,
-expanding lists.
+exploding a column into several data type-specific columns.
 
 """
 
@@ -22,6 +22,9 @@ class KgtkExplode(KgtkFormat):
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
+    reader_options: KgtkReaderOptions= attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
+    value_options: KgtkValueOptions= attr.ib(validator=attr.validators.instance_of(KgtkValueOptions))
+
     column_name: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.NODE2)
 
     prefix: str = attr.ib(validator=attr.validators.instance_of(str), default= KgtkFormat.NODE2 + ";" + KgtkFormat.KGTK_NAMESPACE)
@@ -39,10 +42,10 @@ class KgtkExplode(KgtkFormat):
     overwrite_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     expand_list: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
                                
-    # TODO: find working validators
-    # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
-    reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
-    value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
+    # TODO: find working validators to allow this parameter to be optional.
+    # value_options: KgtkValueOptions = attr.ib(default=None,
+    #                                           converter=attr.converters.default_if_none(factory=KgtkValueOptions.default),
+    #                                           validator=attr.validators.instance_of(KgtkValueOptions))
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)

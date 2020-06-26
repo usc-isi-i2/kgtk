@@ -1,29 +1,33 @@
 ## KGTK as a Docker image
 
-How to build this docker image:
+To use this Dockerfile, you can build it yourself: 
 
 ```
-docker build -t uscisii2/kgtk:0.2.0 .
+docker build -t user/myImage .
 ```
 
-How to run this docker image (from DockerHub):
+Where `user` corresponds to your DockerHub user and `myImage` to the name you may want to give it.
+
+Alternatively, you can pull the latest image we already built in Dockerhub:
 
 ```
-docker run -it uscisii2/kgtk:0.2.0 /bin/bash
+docker pull uscisii2/kgtk
 ```
 
-This will log you into the image and let you operate with KGTK. Once you executed the step above, just type:
+To run KGTK in the command line just type:
 
 ```
-kgtk -h
+docker run -it uscisii2/kgtk /bin/bash
 ```
 
-to see the KGTK help command.
+If you want to run KGTK in a Jupyter notebook, then you will have to type:
+```
+docker run -it -p 8888:8888 uscisii2/kgtk /bin/bash -c "jupyter notebook --ip='*' --port=8888 --allow-root --no-browser"
+```
 
-## Next features:
-We will include the following features in the next releases of KGTK:
+Note: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
 
-- Examples on how to load volumes with your data.
+More information about versions and tags is available here: https://hub.docker.com/repository/docker/uscisii2/kgtk
 
-- How to launch a Jupyter notebook to operate with KGTK in your browser.
+See additional examples in [the documentation](https://kgtk.readthedocs.io/en/latest/install/).
 
