@@ -4,3 +4,4 @@ lz4
 iso-639
 pycountry
 shortuuid
+etk==2.2.3a0
