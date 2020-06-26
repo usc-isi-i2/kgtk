@@ -44,8 +44,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: KGTKFiles,
-        output_kgtk_file: KGTKFiles,
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
         key_column_names: typing.List[str],
 
         errors_to_stdout: bool = False,
