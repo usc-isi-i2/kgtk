@@ -1,0 +1,12 @@
+loguru
+mypy
+rltk
+seaborn
+sentence_transformers
+sklearn
+SPARQLWrapper
+tqdm
+rdflib
+simplejson
+pyrallel.lib
+redis
