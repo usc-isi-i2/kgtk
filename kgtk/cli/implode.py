@@ -49,7 +49,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
-    parser.add_output_file(who="The KGTK reject file for records that are rejected.",
+    parser.add_output_file(who="The KGTK file for records that are rejected.",
                            dest="reject_file",
                            options=["--reject-file"],
                            metavar="REJECT_FILE",
@@ -115,9 +115,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_file: Path,
-        output_file: Path,
-        reject_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        reject_file: KGTKFiles,
 
         column_name: str,
         prefix: str,
