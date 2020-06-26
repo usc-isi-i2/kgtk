@@ -46,7 +46,7 @@ class KGTKArgumentParser(ArgumentParser):
                        options: typing.List[str] = ["-i", "--input-file"],
                        help: typing.Optional[str] = None,
                        metavar: str = "INPUT_FILE",
-                       nargs: str = "?",
+                       nargs: typing.Union[int, str] = "?",
                        default_stdin: bool = True,
                        required: bool = False,
     ):
@@ -64,7 +64,7 @@ class KGTKArgumentParser(ArgumentParser):
             self.add_argument(dest, nargs=nargs, type=Path, help=help, metavar=metavar, action="append")
 
         if required and not allow_positional:
-            self.add_argument(*options, dest=dest, required=True, type=Path, metavar=metavar, help=help, action="append")
+            self.add_argument(*options, dest=dest, required=True, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
         else:
             self.add_argument(*options, dest=dest, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
 
@@ -74,7 +74,7 @@ class KGTKArgumentParser(ArgumentParser):
                         options: typing.List[str] = ["-o", "--output-file"],
                         help: typing.Optional[str] = None,
                         metavar: str = "OUTPUT_FILE",
-                        nargs: str = "?",
+                        nargs: typing.Union[int, str] = "?",
                         default_stdout: bool = True,
                         required: bool = False,
     ):
@@ -92,7 +92,7 @@ class KGTKArgumentParser(ArgumentParser):
             self.add_argument(dest, nargs=nargs, type=Path, help=help, metavar=metavar, action="append")
 
         if required and not allow_positional:
-            self.add_argument(*options, dest=dest, required=True, type=Path, metavar=metavar, help=help, action="append")
+            self.add_argument(*options, dest=dest, required=True, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
         else:
             self.add_argument(*options, dest=dest, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
 
