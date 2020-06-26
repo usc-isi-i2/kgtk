@@ -45,16 +45,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_input_file("input_kgtk_files", positional=True)
-    parser.add_output_file("output_kgtk_files")
+    parser.add_input_file(allow_positional=True)
+    parser.add_output_file()
 
     KgtkIdBuilderOptions.add_arguments(parser, expert=True) # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_files: KGTKFiles,
-        output_kgtk_files: KGTKFiles,
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -67,8 +67,8 @@ def run(input_kgtk_files: KGTKFiles,
     # import modules locally
     from kgtk.exceptions import KGTKException
 
-    input_kgtk_file: Path = KGTKArgumentParser.get_required_input_file(input_kgtk_files)
-    output_kgtk_file: Path = KGTKArgumentParser.get_required_output_file(output_kgtk_files)
+    input_kgtk_file: Path = KGTKArgumentParser.get_required_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_required_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
