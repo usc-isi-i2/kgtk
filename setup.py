@@ -21,8 +21,8 @@ with open('requirements.txt', 'r') as f:
                 install_requires.append(re)
 
 lite_excluded_modules = {
-    'kgtk.cli': {'filter', 'export_gt', 'export_neo4j', 'connected_components', 'graph_statistics', 'gt_loader',
-                 'reachable_nodes'}
+    'kgtk.cli': {'filter', 'export_gt', 'export_neo4j', 'connected-components', 'graph_statistics', 'gt_loader',
+                 'reachable_nodes', 'text_embedding'}
 }
 
 

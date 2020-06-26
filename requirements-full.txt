@@ -1,0 +1,15 @@
+loguru
+mypy
+rltk
+seaborn
+sentence_transformers
+sklearn
+SPARQLWrapper
+tqdm
+rdflib
+etk==2.2.3a0
+simplejson
+pyrallel.lib
+redis
+rfc3986
+thinc==7.4.0
