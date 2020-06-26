@@ -44,7 +44,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument("-i", "--input-files", dest="input_file_paths",
                         help="The KGTK files to concatenate.",
-                        metavar="INPUT_FILE",
+                        metavar="INPUT_FILE", action='append',
                         type=Path, nargs='+', default=[Path("-")])
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", metavar="OUTPUT_FILE",
