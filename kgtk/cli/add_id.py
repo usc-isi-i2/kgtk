@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
@@ -45,19 +45,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument("-o", "--input-file", dest="input_kgtk_file", type=Path, default="-", metavar="INPUT_FILE",
-                        help="The KGTK file to filter. May be omitted or '-' for stdin. (default=%(default)s).")
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", metavar="OUTPUT_FILE",
-                        help="The KGTK file to write. May be omitted or '-' for stdout. (default=%(default)s).", type=Path, default="-")
+    parser.add_input_file("input_kgtk_files", positional=True)
+    parser.add_output_file("output_kgtk_files")
 
     KgtkIdBuilderOptions.add_arguments(parser, expert=True) # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
+def run(input_kgtk_files: KGTKFiles,
+        output_kgtk_files: KGTKFiles,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -69,6 +66,9 @@ def run(input_kgtk_file: Path,
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
+
+    input_kgtk_file: Path = KGTKArgumentParser.get_required_input_file(input_kgtk_files)
+    output_kgtk_file: Path = KGTKArgumentParser.get_required_output_file(output_kgtk_files)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
