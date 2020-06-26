@@ -13,17 +13,22 @@ from kgtk.value.kgtkvalue import KgtkValue
 
 @attr.s(slots=True, frozen=True)
 class KgtkIdBuilderOptions(KgtkFormat):
+    DEFAULT_OVERWRITE: bool = False
+    DEFAULT_VERIFY_ID_UNIQUE: bool = False
+
     # TODO: use an enum
     CONCAT_NLN_STYLE: str = "node1-label-node2" # node1-label-node2
     CONCAT_NL_NUM_STYLE: str = "node1-label-num" # node1-label-#
     CONCAT_NLN_NUM_STYLE: str = "node1-label-node2-num" # node1-label-node2-#
     CONCAT_WITH_OLD_ID_STYLE: str = "node1-label-node2-id" # Tag on any existing ID value
+    EMPTY_STYLE: str = "empty" # DO not generate an ID (useful for debugging and other special circumstances)
     PREFIXED_STYLE: str = "prefix###" # XXX###
     STYLES: typing.List[str] = [
         CONCAT_NLN_STYLE,
         CONCAT_NL_NUM_STYLE,
         CONCAT_NLN_NUM_STYLE,
         CONCAT_WITH_OLD_ID_STYLE,
+        EMPTY_STYLE,
         PREFIXED_STYLE,
     ]
     DEFAULT_STYLE: str = PREFIXED_STYLE
@@ -36,8 +41,8 @@ class KgtkIdBuilderOptions(KgtkFormat):
 
     old_id_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     new_id_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
-    overwrite_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    verify_id_unique: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    overwrite_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_OVERWRITE)
+    verify_id_unique: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_VERIFY_ID_UNIQUE)
     id_style: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_STYLE)
     id_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX)
     initial_id: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_INITIAL_ID)
@@ -45,7 +50,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
     id_concat_num_width: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_CONCAT_NUM_WIDTH)
 
     @classmethod
-    def add_arguments(cls, parser: ArgumentParser, expert: bool = False, overwrite: bool = False):
+    def add_arguments(cls, parser: ArgumentParser, expert: bool = False, overwrite: typing.Optional[bool] = None):
 
         # This helper function makes it easy to suppress options from
         # The help message.  The options are still there, and initialize
@@ -56,6 +61,8 @@ class KgtkIdBuilderOptions(KgtkFormat):
             else:
                 return SUPPRESS
 
+        if overwrite is None:
+            overwrite = cls.DEFAULT_OVERWRITE
 
         # This one is likely to cause conflicts in the future.
         #
@@ -80,7 +87,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
                                   help="When true, verify ID uniqueness using an in-memory set of IDs. " +
                                   "When --verify-id-unique is omitted, it defaults to %(default)s. " +
                                   "When --verify-id-unique is supplied without an argument, it is %(const)s. ",
-                                  type=optional_bool, nargs='?', const=True, default=False)
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VERIFY_ID_UNIQUE)
 
         parser.add_argument(      "--id-style", dest="id_style", default=cls.DEFAULT_STYLE, choices=cls.STYLES,
                                   help=h("The ID generation style. (default=%(default)s)."))
@@ -136,8 +143,6 @@ class KgtkIdBuilderOptions(KgtkFormat):
 
 @attr.s(slots=True, frozen=False)
 class KgtkIdBuilder(KgtkFormat):
-    kr: KgtkReader = attr.ib(validator=attr.validators.instance_of(KgtkReader))
-    
     options: KgtkIdBuilderOptions = attr.ib(validator=attr.validators.instance_of(KgtkIdBuilderOptions))
 
     column_names: typing.List[str]= attr.ib() # TODO: add validator
@@ -148,6 +153,10 @@ class KgtkIdBuilder(KgtkFormat):
     new_id_column_name: str = attr.ib(validator=attr.validators.instance_of(str))
     new_id_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
     add_new_id_column: bool = attr.ib(validator=attr.validators.instance_of(bool))
+
+    node1_column_idx: int = attr.ib(validator=attr.validators.instance_of(int))
+    label_column_idx: int= attr.ib(validator=attr.validators.instance_of(int))
+    node2_column_idx: int= attr.ib(validator=attr.validators.instance_of(int))
 
     current_id: int = attr.ib(validator=attr.validators.instance_of(int))
 
@@ -164,6 +173,45 @@ class KgtkIdBuilder(KgtkFormat):
         This is the KgtkIdBuilder factory method.
         """
         column_names: typing.List[str] = kr.column_names.copy()
+        column_name_map: typing.Mapping[str, int] = kr.column_name_map
+        node1_column_idx: int = kr.node1_column_idx
+        label_column_idx: int = kr.label_column_idx
+        node2_column_idx: int = kr.node2_column_idx
+        id_column_idx: int = kr.id_column_idx
+
+        return cls.new1(column_names, column_name_map, node1_column_idx, label_column_idx, node2_column_idx, id_column_idx, options)
+
+    @classmethod
+    def from_column_names(cls,
+             column_names: typing.List[str],
+             options: KgtkIdBuilderOptions,
+    )->'KgtkIdBuilder':
+        column_name_map: typing.MutableMapping[str, int] = { }
+        column_idx: int
+        column_name: str
+        for column_idx, column_name in enumerate(column_names):
+            column_name_map[column_name] = column_idx
+        
+        node1_column_idx: int
+        label_column_idx: int
+        node2_column_idx: int
+        id_column_idx: int
+
+        node1_column_idx, label_column_idx, node2_column_idx, id_column_idx = \
+            KgtkReader.get_special_columns(column_name_map, "", "idbuilder")
+
+        return cls.new1(column_names, column_name_map, node1_column_idx, label_column_idx, node2_column_idx, id_column_idx, options)
+
+    @classmethod
+    def new1(cls,
+             column_names: typing.List[str],
+             column_name_map: typing.Mapping[str, int],
+             node1_column_idx: int,
+             label_column_idx: int,
+             node2_column_idx: int,
+             id_column_idx: int,
+             options: KgtkIdBuilderOptions,
+    )->'KgtkIdBuilder':
 
         # Find the old ID column.
         old_id_column_idx: int
@@ -171,17 +219,17 @@ class KgtkIdBuilder(KgtkFormat):
         if options.old_id_column_name is not None:
             # The old ID column was explicitly named.
             old_id_column_name = options.old_id_column_name
-            if new_id_column_name in kr.column_name_map:
+            if new_id_column_name in column_name_map:
                 # The new ID column already exists.
-                old_id_column_idx = kr.column_name_map[old_id_column_name]
+                old_id_column_idx = column_name_map[old_id_column_name]
             else:
                 raise ValueError("The old ID column named '%s' is not known." % options.old_id_column_name)
         else:
             # The old ID column was not explicitly named.
-            if kr.id_column_idx >= 0:
+            if id_column_idx >= 0:
                 # The input file has an ID column.  Use it.
-                old_id_column_name = kr.column_names[kr.id_column_idx]
-                old_id_column_idx = kr.id_column_idx
+                old_id_column_name = column_names[id_column_idx]
+                old_id_column_idx = id_column_idx
             else:
                 # There is not old ID column index.
                 old_id_column_idx = -1
@@ -194,9 +242,9 @@ class KgtkIdBuilder(KgtkFormat):
         if options.new_id_column_name is not None:
             # The new ID column was explicitly named.
             new_id_column_name = options.new_id_column_name
-            if new_id_column_name in kr.column_name_map:
+            if new_id_column_name in column_name_map:
                 # The new ID column already exists.
-                new_id_column_idx = kr.column_name_map[new_id_column_name]
+                new_id_column_idx = column_name_map[new_id_column_name]
                 add_new_id_column = False
             else:
                 # Create a new ID column.
@@ -205,10 +253,10 @@ class KgtkIdBuilder(KgtkFormat):
                 add_new_id_column = True
         else:
             # The new ID column was not explicitly named.
-            if kr.id_column_idx >= 0:
+            if id_column_idx >= 0:
                 # The input file has an ID column.  Use it.
-                new_id_column_name = kr.column_names[kr.id_column_idx]
-                new_id_column_idx = kr.id_column_idx
+                new_id_column_name = column_names[id_column_idx]
+                new_id_column_idx = id_column_idx
                 add_new_id_column = False
             else:
                 # Create a new ID column.
@@ -219,43 +267,45 @@ class KgtkIdBuilder(KgtkFormat):
 
         # Any prerequisites?
         if options.id_style == KgtkIdBuilderOptions.CONCAT_NLN_STYLE:
-            if kr.node1_column_idx < 0:
+            if node1_column_idx < 0:
                 raise ValueError("No node1 column index")
-            if kr.label_column_idx < 0:
+            if label_column_idx < 0:
                 raise ValueError("No label column index")
-            if kr.node2_column_idx < 0:
+            if node2_column_idx < 0:
                 raise ValueError("No node2 column index")
         elif options.id_style == KgtkIdBuilderOptions.CONCAT_NL_NUM_STYLE:
-            if kr.node1_column_idx < 0:
+            if node1_column_idx < 0:
                 raise ValueError("No node1 column index")
-            if kr.label_column_idx < 0:
+            if label_column_idx < 0:
                 raise ValueError("No label column index")
         elif options.id_style == KgtkIdBuilderOptions.CONCAT_NLN_NUM_STYLE:
-            if kr.node1_column_idx < 0:
+            if node1_column_idx < 0:
                 raise ValueError("No node1 column index")
-            if kr.label_column_idx < 0:
+            if label_column_idx < 0:
                 raise ValueError("No label column index")
-            if kr.node2_column_idx < 0:
+            if node2_column_idx < 0:
                 raise ValueError("No node2 column index")
         elif options.id_style == KgtkIdBuilderOptions.CONCAT_WITH_OLD_ID_STYLE:
-            if kr.node1_column_idx < 0:
+            if node1_column_idx < 0:
                 raise ValueError("No node1 column index")
-            if kr.label_column_idx < 0:
+            if label_column_idx < 0:
                 raise ValueError("No label column index")
-            if kr.node2_column_idx < 0:
+            if node2_column_idx < 0:
                 raise ValueError("No node2 column index")
             if old_id_column_idx < 0:
                 raise ValueError("No old ID column index")
 
         
-        return cls(kr,
-                   options=options,
+        return cls(options=options,
                    column_names=column_names,
                    old_id_column_name=old_id_column_name,
                    old_id_column_idx=old_id_column_idx,
                    new_id_column_name=new_id_column_name,
                    new_id_column_idx=new_id_column_idx,
                    add_new_id_column=add_new_id_column,
+                   node1_column_idx=node1_column_idx,
+                   label_column_idx=label_column_idx,
+                   node2_column_idx=node2_column_idx,
                    current_id=options.initial_id
         )
 
@@ -316,6 +366,8 @@ class KgtkIdBuilder(KgtkFormat):
             new_id = self.build_concat_with_old_id(row)
         elif self.options.id_style == KgtkIdBuilderOptions.PREFIXED_STYLE:
             new_id = self.build_prefixed(row)
+        elif self.options.id_style == KgtkIdBuilderOptions.EMPTY_STYLE:
+            new_id = "" # Useful for debugging and other unusual circumstances.
         else:
             raise ValueError("Unknown ID style '%s'." % self.options.id_style)
 
@@ -325,12 +377,12 @@ class KgtkIdBuilder(KgtkFormat):
         return row
 
     def build_concat_nln(self, row: typing.List[str])->str:
-        return row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx]
+        return row[self.node1_column_idx] + "-" + row[self.label_column_idx] + "-" + row[self.node2_column_idx]
 
     def build_concat_nl_num(self, row: typing.List[str])->str:
         # Returns node1-label-### where ### starts at 0.
         # Assumes that records are compact on (node2) or (node2, id), as needed.
-        key: str = row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx]
+        key: str = row[self.node1_column_idx] + "-" + row[self.label_column_idx]
         if key in self.nl_keys:
             self.nl_keys[key] += 1
         else:
@@ -340,7 +392,7 @@ class KgtkIdBuilder(KgtkFormat):
     def build_concat_nln_num(self, row: typing.List[str])->str:
         # Returns node1-label-node2-### where ### starts at 0.
         # Assumes that records are compact on (node2) or (node2, id), as needed.
-        key: str = row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx]
+        key: str = row[self.node1_column_idx] + "-" + row[self.label_column_idx] + "-" + row[self.node2_column_idx]
         if key in self.nl_keys:
             self.nl_keys[key] += 1
         else:
@@ -348,7 +400,7 @@ class KgtkIdBuilder(KgtkFormat):
         return key + "-" + str(self.nl_keys[key]).zfill(self.options.id_concat_num_width)
 
     def build_concat_with_old_id(self, row: typing.List[str])->str:
-        key: str = row[self.kr.node1_column_idx] + "-" + row[self.kr.label_column_idx] + "-" + row[self.kr.node2_column_idx]
+        key: str = row[self.node1_column_idx] + "-" + row[self.label_column_idx] + "-" + row[self.node2_column_idx]
         if row[self.old_id_column_idx] != "":
             key += "-" + row[self.old_id_column_idx]
         return key
@@ -358,10 +410,10 @@ class KgtkIdBuilder(KgtkFormat):
         self.current_id += 1
         return new_id
 
-    def process(self, kw: KgtkWriter):
+    def process(self, kr: KgtkReader, kw: KgtkWriter):
         line_number: int = 0
         row: typing.List[str]
-        for row in self.kr:
+        for row in kr:
             line_number += 1
             kw.write(self.build(row, line_number))
 
@@ -425,7 +477,7 @@ def main():
                                      very_verbose=args.very_verbose)
 
     # Process the input file, building IDs.
-    idb.process(ew)
+    idb.process(kr, ew)
 
 if __name__ == "__main__":
     main()

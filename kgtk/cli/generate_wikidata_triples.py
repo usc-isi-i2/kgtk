@@ -141,6 +141,16 @@ def add_arguments(parser):
         help="set the path of the log file",
         dest="log_path",
     )
+    parser.add_argument(
+        "-prefix",
+        "--prefix-path",
+        action="store",
+        type=str,
+        required = False,
+        default="NONE",
+        help="set the path of the prefix kgtk file that provides customized uri prefix binding",
+        dest="prefix_path",
+    )
 
 
 def run(
@@ -155,6 +165,7 @@ def run(
     use_id:bool,
     log_path:str,
     prop_declaration:bool,
+    prefix_path:str
 ):
     # import modules locally
     import gzip
@@ -174,6 +185,7 @@ def run(
         dest_fp=sys.stdout,
         log_path = log_path,
         prop_declaration= prop_declaration,
+        prefix_path = prefix_path,
     )
 
     # loop first round
@@ -195,9 +207,9 @@ def run(
             else:
                 if start_generation:
                     # start triple generation because reached the starting position of the second `cat`
-                    line_num -= file_lines
-                    # print("creating triples at line {} {} with total number of lines: {}".format(line_num+1, edge, file_lines))
-                    generator.entry_point(line_num+1,edge) # file generator
+                    line_number = line_num - file_lines
+                    # print("creating triples at line {} {} with total number of lines: {}".format(line_number+1, edge, file_lines))
+                    generator.entry_point(line_number+1,edge) # file generator
                     # print("# {}".format(generator.read_num_of_lines))
                 else:
                     if edge == begining_edge:

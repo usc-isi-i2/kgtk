@@ -58,6 +58,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--prefix", dest="prefix", help=h("The value prefix (default=%(default)s)."), default="")
 
+    parser.add_argument(      "--where", dest="where_column_name",
+                              help="The name of a column for a record selection test. (default=%(default)s).", default=None)
+
+    parser.add_argument(      "--in", dest="where_values", nargs="+",
+                              help="The list of values for a record selection test. (default=%(default)s).", default=None)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -71,6 +77,9 @@ def run(input_kgtk_file: typing.Optional[Path],
 
         output_format: str = "edge",
         prefix: str = "",
+
+        where_column_name: typing.Optional[str] = None,
+        where_values: typing.Optional[typing.List[str]] = None,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -100,6 +109,10 @@ def run(input_kgtk_file: typing.Optional[Path],
         print("--label=%s" % str(label_value), file=error_file)
         print("--format=%s" % output_format, file=error_file)
         print("--prefix=%s" % prefix, file=error_file)
+        if where_column_name is not None:
+            print("--where=%s" % where_column_name, file=error_file)
+        if where_values is not None and len(where_values) > 0:
+            print("--in=%s" % " ".join(where_values), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -113,6 +126,8 @@ def run(input_kgtk_file: typing.Optional[Path],
             empty_value=empty_value,
             output_format=output_format,
             prefix=prefix,
+            where_column_name=where_column_name,
+            where_values=where_values,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,

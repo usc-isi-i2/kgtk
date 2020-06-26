@@ -1,0 +1,52 @@
+.md-header {
+    background-color: var(--md-default-bg-color);
+    height: 7em;
+}
+
+.md-header[data-md-state=shadow] {
+    color: var(--md-default-fg-color);
+}
+
+.md-header-nav__button.md-logo img, .md-header-nav__button.md-logo svg {
+    width: 5.2em;
+    height: 5.2em;
+}
+
+.md-header-nav__button.md-logo {
+    margin: 0.2em;
+    padding: 0.7em;
+}
+
+.md-header-nav__title {
+    font-size: 1.2rem;
+    line-height: 3.5rem;
+}
+
+.md-search {
+    padding: 0.7rem 0;
+}
+
+.md-search__input {
+    background-color: rgba(0,0,0,.26);
+}
+
+.md-search__input::placeholder {
+    color: var(--md-default-bg-color);
+}
+
+.md-search__input:hover {
+    background-color: rgba(0,0,0,.52);
+}
+
+.md-source {
+    padding: 0.7rem 0;
+}
+
+.md-header-nav__button {
+    padding: 1rem;
+}
+
+.md-nav--primary .md-nav__title[for=__drawer] {
+    background-color: var(--md-default-bg-color);
+    color: var(--md-default-fg-color);
+}

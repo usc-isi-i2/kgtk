@@ -1,6 +1,6 @@
-The `generate_wikidata_triples` command generates triple files from a kgtk files. The generated triple files can then be loaded into a triple store directly.
+The `generate_wikidata_triples` command generates triple files from a kgtk file. The generated triple files can then be loaded into a triple store directly.
 
-The triple generator reads a tab-separated kgtk file from standard input. The kgtk file is required to have at least the following 4 fields: `node1`, `property`, `node2` and `id`. The `node1` field is the subject; `property` is the predicate and `node2` is the object. 
+The triple generator reads a tab-separated kgtk file from standard input. The kgtk file is required to have at least the following 4 fields: `node1`, `label`, `node2` and `id`. The `node1` field is the subject; `label` is the predicate and `node2` is the object. 
 
 ## Usage
 ```{shell}
@@ -15,7 +15,7 @@ kgtk generate_wikidata_triples OPTIONS < input.tsv > output.ttl
 The following tsv file is a minimal sample `input.tsv` file.
 
 ```
-node1	property	node2	id
+node1	label	node2	id
 Q2140726727_mag_author	P6366	2140726727	id1
 Q2140726727_mag_author	label	Zunyou Wu@en	id2
 Q2140726727_mag_author	P1416	Q184490438_mag_affiliation	id3
@@ -65,9 +65,9 @@ id1 P3  Q4  id4
 - `-w --warning {bool}`: if set to yes, warn various kinds of exceptions and mistakes and log them to a log file with line number in input file. Default to **no**.
 - `-n --output-n-lines {number}`: output triples approximately every {n} lines of reading stdin. Default to **1000**.
 - `-gz --use-gz {bool}`: if set to yes, read from compressed gz file. Default to **no**.
-- `-sid --use-id {bool}`: if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement. Default to **no**
-- `-log --log-path {str}`: set the path of the log file. Default to **warning.log**
-- `-pd --property-declaration-in-file {bool}`: wehther read properties in the kgtk file. If set to yes, use `cat input.tsv input.tsv` to pipe the input file twice. Default to **no**
+- `-sid --use-id {bool}`: if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement. Default to **no**.
+- `-log --log-path {str}`: set the path of the log file. Default to **warning.log**.
+- `-pd --property-declaration-in-file {bool}`: wehther read properties in the kgtk file. If set to yes, use `cat input.tsv input.tsv` to pipe the input file twice. Default to **no**.
 
 ### Shared Options
 
@@ -92,7 +92,7 @@ P501	property_type	item
 P502	property_type	string
 ```
 
-The header line is necessary. If property *P493* is used in the input kgtk file, then the edge `P493	property_type	external-identifier` must exists in the `example_prop.tsv` to tell triple generator that the object of `P493` is an `external-identifier`. On another hand If `p495` is used in the input kgtk file, then the object of `P495` will be treated as an entity.
+The header line is necessary. If property *P493* is used in the input kgtk file, then the edge `P493	data_value	external-identifier` must exists in the `example_prop.tsv` to tell triple generator that the object of `P493` is an `external-identifier`. On another hand If `p495` is used in the input kgtk file, then the object of `P495` will be treated as an entity.
 
 Currently the following datatypes are supported. The complete list of possible data types can be found [here](https://www.wikidata.org/wiki/Help:Data_type).
 
@@ -118,7 +118,7 @@ If set to yes, triple generation errors according to specific line will be writt
 
 ### n
 
-`n` controls after how many lines of reading the standard input, To achieve optimal performance, you can set n larb b d d d d d d d dger to reduce overhead of creating knowledge graph object and frequent serialization. However, large n also requires larger memory.
+`n` controls after how many lines of reading the standard input, To achieve optimal performance, you can set n larger to reduce overhead of creating knowledge graph object and frequent serialization. However, large n also requires larger memory.
 
 ### gz
 
@@ -137,7 +137,7 @@ If using `-log`, the warning `-w` must be set to true.
 If set to yes, besides reading properties from property file, the generator will read from the input stream to find new properties. The user MUST use `cat input.tsv input.tsv | kgtk generate_wikidata_triples`.  
 
 
-## How Triple Generator handles Different Types of Edges
+## How triple generator handles different types of edges
 
 ### label, aliases and descriptions
 
@@ -165,9 +165,9 @@ wd:Q123 skos:prefLabel "Hello"@en .
 wd:Q123 schema:name "Hello"@en .
 ```
 
-`label` should be unique.
+`label` should be unique for the **same** language.
 
-### Property Declaration in Input kgtk File
+### Property declaration in input kgtk file
 
 User can also define properties in the input kgtk file with the following syntax. The `data_type` syntax indicates a new property is defined. Note that any usage of `P20200101` must appear after the definition in the kgtk file or `P20200101` will be incorrectly treated as `item`.
 
@@ -215,4 +215,28 @@ Let's say you are in a directory which contains the `tsv` files. The following c
 ls *tsv | parallel -j+0 --eta 'kgtk generate_wikidata_triples -pf example_props.tsv -n 1000 --debug -gt yes < {} > {.}.ttl'
 ```
 
-Splitting a large tsv file into small tsv files directly may make qualifier edges statementless and cause serious mistake. **Do** make sure the splited files start with an statement edge rather than qualifier edge. The header `node1 property  node2 id` needs to be inserted back at the beginning of splited files as well.
+Splitting a large tsv file into small tsv files directly may make qualifier edges statementless and cause serious mistake. **Do** make sure the splited files start with an statement edge rather than qualifier edge. The header `node1 label node2 id` needs to be inserted back at the beginning of splited files as well.
+
+
+## Branch specific features not yet in dev
+
+
+#### enhancement/triple_uri
+
+Additional options enable the customization of uri prefix.
+
+- `-prefix --prefix-file {path}` a path to the prefix kgtk file that contains the mapping information.
+
+Below is a sample `prefix.tsv` file.
+```
+node1	bound	node2
+p	bound_to	https://w3id.org/datamart/
+pr	bound_to	https://w3id.org/datamart/
+wd	bound_to	https://w3id.org/datamart/
+```
+
+To use it:
+
+```bash
+cat input.tsv | kgtk generate_wikidata_triples -prefix prefix.tsv -pf prop_file.tsv -w yes --debug -n 1000
+```

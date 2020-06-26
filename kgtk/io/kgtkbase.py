@@ -155,7 +155,7 @@ class KgtkBase(KgtkFormat):
                             column_name_map: typing.Mapping[str, int],
                             header_line: str,
                             who: str,
-                            error_action: ValidationAction,
+                            error_action: ValidationAction = ValidationAction.PASS,
                             error_file: typing.TextIO = sys.stderr,
                             is_edge_file: bool = False,
                             is_node_file: bool = False,

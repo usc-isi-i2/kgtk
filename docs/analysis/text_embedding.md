@@ -1,11 +1,7 @@
 # KGTK Text Embedding Utilities
 
-## Install
-The program requires Python vesion >= `3` and `kgtk` package installed.
-The corresponding packages requirement are stored at `text_embedding_requirement.txt`
-
 ## Assumptions
-The input is an edge file sorted by subject.
+The input is an edge file sorted by subject. 
 
 ## Usage
 ```
