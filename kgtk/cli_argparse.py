@@ -41,13 +41,14 @@ class KGTKArgumentParser(ArgumentParser):
         super(KGTKArgumentParser, self).exit(status, message)
 
     def add_input_file(self,
-                       dest: str,
-                       positional: bool = False,
+                       dest: str = "input_file",
+                       allow_positional: bool = False,
                        options: typing.List[str] = ["-i", "--input-file"],
                        help: typing.Optional[str] = None,
                        metavar: str = "INPUT_FILE",
                        nargs: str = "?",
-                       default_stdin: bool = True
+                       default_stdin: bool = True,
+                       required: bool = False,
     ):
 
         if help is None:
@@ -57,19 +58,25 @@ class KGTKArgumentParser(ArgumentParser):
         else:
             help += "."
             
-        if positional and self.SUPPORT_POSITIONAL_ARGS:
+        allow_positional &= self.SUPPORT_POSITIONAL_ARGS
+
+        if allow_positional:
             self.add_argument(dest, nargs=nargs, type=Path, help=help, metavar=metavar, action="append")
 
-        self.add_argument(*options, dest=dest, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
+        if required and not allow_positional:
+            self.add_argument(*options, dest=dest, required=True, type=Path, metavar=metavar, help=help, action="append")
+        else:
+            self.add_argument(*options, dest=dest, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
 
     def add_output_file(self,
-                        dest: str,
-                        positional: bool = False,
+                        dest: str = "output_file",
+                        allow_positional: bool = False,
                         options: typing.List[str] = ["-o", "--output-file"],
                         help: typing.Optional[str] = None,
                         metavar: str = "OUTPUT_FILE",
                         nargs: str = "?",
                         default_stdout: bool = True,
+                        required: bool = False,
     ):
 
         if help is None:
@@ -79,10 +86,15 @@ class KGTKArgumentParser(ArgumentParser):
         else:
             help += "."
             
-        if positional and self.SUPPORT_POSITIONAL_ARGS:
+        allow_positional &= self.SUPPORT_POSITIONAL_ARGS
+
+        if allow_positional:
             self.add_argument(dest, nargs=nargs, type=Path, help=help, metavar=metavar, action="append")
 
-        self.add_argument(*options, dest=dest, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
+        if required and not allow_positional:
+            self.add_argument(*options, dest=dest, required=True, type=Path, metavar=metavar, help=help, action="append")
+        else:
+            self.add_argument(*options, dest=dest, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
 
     @classmethod
     def get_required_input_file(cls,
@@ -120,7 +132,7 @@ class KGTKArgumentParser(ArgumentParser):
         elif len(paths) == 2 and paths[0] is not None and paths[1] is None:
             return paths[0]
         elif len(paths) == 2 and paths[0] is not None and paths[1] is not None:
-            raise KGTKException("Duplicate input files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
+            raise KGTKException("Too many input files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
         else:
             raise KGTKException("Error: please supply %s" % help)
 
@@ -148,7 +160,7 @@ class KGTKArgumentParser(ArgumentParser):
         elif len(paths) == 2 and paths[0] is not None and paths[1] is None:
             return paths[0]
         elif len(paths) == 2 and paths[0] is not None and paths[1] is not None:
-            raise KGTKException("Duplicate input files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
+            raise KGTKException("Too many input files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
         else:
             raise KGTKException("Error: please supply %s" % help)
 
