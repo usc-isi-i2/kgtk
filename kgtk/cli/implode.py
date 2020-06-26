@@ -25,7 +25,7 @@ def parser():
         'description': 'Copy a KGTK file, building one column (usually node2) from seperate columns for each subfield. ' +
         '\n\nStrings may include language qualified strings, and quantities may include numbers. ' +
         '\n\nDate and times subfields and symbol subfields may be optionally quoted. Triple quotes may be used where quotes are accepted. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert expand --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert implode --help'
     }
 
 
