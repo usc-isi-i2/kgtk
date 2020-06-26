@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
@@ -30,14 +30,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     _expert: bool = parsed_shared_args._expert
 
     # '$label == "/r/DefinedAs" && $node2=="/c/en/number_zero"'
-    parser.add_argument("-i", "--input-file", dest="input_kgtk_file", metavar="INPUT_FILE",
-                        help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path, default="-")
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", metavar="OUTPUT_FILE",
-                        help="The KGTK file to write records that pass the filter (default=%(default)s).",
-                        type=Path, default="-")
-    parser.add_argument(      "--reject-file", dest="reject_kgtk_file", metavar="REJECT_FILE",
-                              help="The KGTK file to write records that fail the filter (default=%(default)s).",
-                              type=Path, default=None)
+    parser.add_input_file(positional=True)
+    parser.add_output_file(who="The KGTK output file for records that pass the filter.")
+    parser.add_output_file(who="The KGTK reject file for records that fail the filter.",
+                           dest="reject_file",
+                           options="--reject-file",
+                           metavar="REJECT_FILE",
+                           optional=True)
 
     # parser.add_argument('-dt', "--datatype", action="store", type=str, dest="datatype", help="Datatype of the input file, e.g., tsv or csv.", default="tsv")
     parser.add_argument('-p', '--pattern', action="store", type=str, dest="pattern", help="Pattern to filter on, for instance, \" ; P154 ; \" ", required=True)
@@ -57,9 +56,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
-        reject_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        reject_file: KGTKFiles,
 
         pattern: str,
         subj_col: typing.Optional[str],
@@ -79,6 +78,10 @@ def run(input_kgtk_file: Path,
 )->int:
     # import modules locally
     from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
+
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file, who="KGTK reject file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr

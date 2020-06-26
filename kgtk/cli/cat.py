@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkcat import KgtkCat
@@ -42,13 +42,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument("-i", "--input-files", dest="input_file_paths",
-                        help="The KGTK files to concatenate.",
-                        metavar="INPUT_FILE", action='append',
-                        type=Path, nargs='+', default=[Path("-")])
-
-    parser.add_argument("-o", "--output-file", dest="output_file_path", metavar="OUTPUT_FILE",
-                        help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+    parser.add_input_file(who="KGTK input files",
+                          dest="input_files",
+                          options=["-i", "--input-files"],
+                          allow_list=True,
+                          positional=True)
+    parser.add_output_file()
 
     parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
                               choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
@@ -70,8 +69,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_file_paths: typing.List[Path],
-        output_file_path: Path,
+def run(input_files: KGTKFiles,
+        output_file: KGTKFiles,
         output_format: typing.Optional[str],
 
         output_column_names: typing.Optional[typing.List[str]],
@@ -89,7 +88,9 @@ def run(input_file_paths: typing.List[Path],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
-
+    input_file_paths: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_files)
+    output_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
+    
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 

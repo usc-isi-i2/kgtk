@@ -84,8 +84,8 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
-    input_kgtk_file: Path = KGTKArgumentParser.get_required_input_file(input_file)
-    output_kgtk_file: Path = KGTKArgumentParser.get_required_output_file(output_file)
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr

@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.reshape.kgtkexpand import KgtkExpand
@@ -32,11 +32,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
 
-    parser.add_argument("-i", "--input-file", dest="input_kgtk_file", type=Path, default="-", metavar="INPUT_FILE",
-                              help="The KGTK file to filter. May be omitted or '-' for stdin (default=%(default)s).")
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", metavar="OUTPUT_FILE",
-                        help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+    parser.add_input_file(positional=True)
+    parser.add_output_file()
 
     parser.add_argument(      "--columns", dest="key_column_names",
                               help="The key columns will not be expanded.  They will be repeated on each output record. " +
@@ -47,8 +44,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
+def run(input_kgtk_file: KGTKFiles,
+        output_kgtk_file: KGTKFiles,
         key_column_names: typing.List[str],
 
         errors_to_stdout: bool = False,
@@ -61,6 +58,9 @@ def run(input_kgtk_file: Path,
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
+
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
