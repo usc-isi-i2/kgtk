@@ -47,10 +47,16 @@ class KGTKArgumentParser(ArgumentParser):
                        dest: str = "input_file",
                        options: typing.List[str] = ["-i", "--input-file"],
                        metavar: str = "INPUT_FILE",
-                       allow_positional: bool = True,
+                       optional: bool = False,
+                       allow_list: bool = False,
+                       positional: bool = True,
     ):
-        # Required, defaulting to stdin. Positional input is allowed by default.  Lists not allowed.
 
+        if optional:
+            # Not required, no default. Positional input not allowed, lists not allowed.
+            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
+
+        # This is a required input file, defaulting to stdin.
         helpstr: str
         if who is None:
             helpstr = "The " + self.DEFAULT_INPUT_FILE_HELP + "."
@@ -58,74 +64,59 @@ class KGTKArgumentParser(ArgumentParser):
             helpstr = who
         helpstr += " (May be omitted or '-' for stdin.)"
             
-        allow_positional &= self.SUPPORT_POSITIONAL_ARGS
+        positional &= self.SUPPORT_POSITIONAL_ARGS
 
-        if allow_positional:
-            self.add_argument(dest, nargs="?", type=Path, help=helpstr, metavar=metavar, action="append")
-            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, action="append")
+        if allow_list:
+            if positional:
+                self.add_argument(dest, nargs="*", type=Path, help=helpstr, metavar=metavar, action="append")
+                self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
+            else:
+                self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
+
         else:
-            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, default=Path("-"))
+            if positional:
+                self.add_argument(dest, nargs="?", type=Path, help=helpstr, metavar=metavar, action="append")
+                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, action="append")
+            else:
+                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, default=Path("-"))
 
-
-    def add_input_file_list(self,
-                            who: typing.Optional[str],
-                            dest: str = "input_file",
-                            options: typing.List[str] = ["-i", "--input-file"],
-                            metavar: str = "INPUT_FILE",
-                            allow_positional: bool = False,
+    def add_output_file(self,
+                       who: typing.Optional[str] = None,
+                       dest: str = "output_file",
+                       options: typing.List[str] = ["-o", "--output-file"],
+                       metavar: str = "OUTPUT_FILE",
+                       optional: bool = False,
+                       allow_list: bool = False,
+                       positional: bool = True,
     ):
-        # Required, defaulting to stdin. Positional input is allowed by default.
 
-        helpstr: str = who + " (May be omitted or '-' for stdin.)"
+        if optional:
+            # Not required, no default. Positional output not allowed, lists not allowed.
+            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
+
+        # This is a required output file, defaulting to stdout.
+        helpstr: str
+        if who is None:
+            helpstr = "The " + self.DEFAULT_OUTPUT_FILE_HELP + "."
+        else:
+            helpstr = who
+        helpstr += " (May be omitted or '-' for stdin.)"
             
-        allow_positional &= self.SUPPORT_POSITIONAL_ARGS
+        positional &= self.SUPPORT_POSITIONAL_ARGS
 
-        if allow_positional:
-            self.add_argument(dest, nargs="*", type=Path, help=helpstr, metavar=metavar, action="append")
-            self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
+        if allow_list:
+            if positional:
+                self.add_argument(dest, nargs="*", type=Path, help=helpstr, metavar=metavar, action="append")
+                self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
+            else:
+                self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
+
         else:
-            self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
-
-
-    def add_optional_input_file(self,
-                                who: str,
-                                dest: str,
-                                options: typing.List[str],
-                                metavar: str = "INPUT_FILE",
-    ):
-        # Not required, no default. Positional input not allowed, lists not allowed.
-
-        self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
-
-    def add_output_file_list(self,
-                            who: typing.Optional[str],
-                            dest: str = "output_file",
-                            options: typing.List[str] = ["-o", "--output-file"],
-                            metavar: str = "OUTPUT_FILE",
-                            allow_positional: bool = False,
-    ):
-        # Required, defaulting to stdin. Positional output is allowed by default.
-
-        helpstr: str = who + " (May be omitted or '-' for stdout.)"
-            
-        allow_positional &= self.SUPPORT_POSITIONAL_ARGS
-
-        if allow_positional:
-            self.add_argument(dest, nargs="*", type=Path, help=helpstr, metavar=metavar, action="append")
-            self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
-        else:
-            self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
-
-
-    def add_optional_output_file(self,
-                                who: str,
-                                dest: str,
-                                options: typing.List[str],
-                                metavar: str = "OUTPUT_FILE",
-    ):
-        # Not required, no default. Positional output not allowed, lists not allowed.
-
-        self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
+            if positional:
+                self.add_argument(dest, nargs="?", type=Path, help=helpstr, metavar=metavar, action="append")
+                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, action="append")
+            else:
+                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, default=Path("-"))
 
 
     @classmethod
@@ -200,6 +191,22 @@ class KGTKArgumentParser(ArgumentParser):
             raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
 
     @classmethod
+    def get_input_file_list(cls,
+                            paths: KGTKFiles,
+                            who: typing.Optional[str] = None,
+                            default_stdin: bool = True,
+                       
+    )->typing.List[Path]:
+    
+        from kgtk.exceptions import KGTKException
+
+        if who is None:
+            who = cls.DEFAULT_INPUT_FILE_HELP
+
+        return cls.get_path_list(paths, who, default_stdio=default_stdin)
+
+
+    @classmethod
     def get_output_file(cls,
                        paths: KGTKFiles,
                        who: typing.Optional[str] = None,
@@ -240,6 +247,22 @@ class KGTKArgumentParser(ArgumentParser):
             return p[0]
         else:
             raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
+
+    @classmethod
+    def get_output_file_list(cls,
+                            paths: KGTKFiles,
+                            who: typing.Optional[str] = None,
+                            default_stdin: bool = True,
+                       
+    )->typing.List[Path]:
+    
+        from kgtk.exceptions import KGTKException
+
+        if who is None:
+            who = cls.DEFAULT_OUTPUT_FILE_HELP
+
+        return cls.get_path_list(paths, who, default_stdio=default_stdin)
+
 
 def add_shared_arguments(parser):
     # set shared arguments here
