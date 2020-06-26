@@ -93,7 +93,7 @@ class KGTKArgumentParser(ArgumentParser):
                        positional: bool = False,
     ):
 
-        return cls.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_INPUT_FILE_HELP, "stdin")
+        return self.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_INPUT_FILE_WHO, "stdin")
 
     def add_output_file(self,
                        who: typing.Optional[str] = None,
@@ -104,7 +104,7 @@ class KGTKArgumentParser(ArgumentParser):
                        allow_list: bool = False,
                        positional: bool = False,
     ):
-        return cls.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_OUTPUT_FILE_HELP, "stdout")
+        return self.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_OUTPUT_FILE_WHO, "stdout")
 
     @classmethod
     def get_path_list(cls, paths: KGTKFiles, who: str, default_stdio: bool = False)->typing.List[Path]:
@@ -146,7 +146,7 @@ class KGTKArgumentParser(ArgumentParser):
         from kgtk.exceptions import KGTKException
 
         if who is None:
-            who = cls.DEFAULT_INPUT_FILE_HELP
+            who = cls.DEFAULT_INPUT_FILE_WHO
 
         p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=default_stdin)
         if len(p) == 1:
@@ -167,7 +167,7 @@ class KGTKArgumentParser(ArgumentParser):
         from kgtk.exceptions import KGTKException
 
         if who is None:
-            who = cls.DEFAULT_INPUT_FILE_HELP
+            who = cls.DEFAULT_INPUT_FILE_WHO
 
         p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=False)
         if len(p) == 0:
@@ -188,7 +188,7 @@ class KGTKArgumentParser(ArgumentParser):
         from kgtk.exceptions import KGTKException
 
         if who is None:
-            who = cls.DEFAULT_INPUT_FILE_HELP
+            who = cls.DEFAULT_INPUT_FILE_WHO
 
         return cls.get_path_list(paths, who, default_stdio=default_stdin)
 
@@ -204,7 +204,7 @@ class KGTKArgumentParser(ArgumentParser):
         from kgtk.exceptions import KGTKException
 
         if who is None:
-            who = cls.DEFAULT_OUTPUT_FILE_HELP
+            who = cls.DEFAULT_OUTPUT_FILE_WHO
 
         p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=default_stdin)
         if len(p) == 1:
@@ -225,7 +225,7 @@ class KGTKArgumentParser(ArgumentParser):
         from kgtk.exceptions import KGTKException
 
         if who is None:
-            who = cls.DEFAULT_OUTPUT_FILE_HELP
+            who = cls.DEFAULT_OUTPUT_FILE_WHO
 
         p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=False)
         if len(p) == 0:
@@ -246,7 +246,7 @@ class KGTKArgumentParser(ArgumentParser):
         from kgtk.exceptions import KGTKException
 
         if who is None:
-            who = cls.DEFAULT_OUTPUT_FILE_HELP
+            who = cls.DEFAULT_OUTPUT_FILE_WHO
 
         return cls.get_path_list(paths, who, default_stdio=default_stdin)
 
