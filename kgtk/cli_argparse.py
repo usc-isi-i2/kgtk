@@ -6,12 +6,14 @@ import typing
 from kgtk.exceptions import KGTKArgumentParseException, KGTKSyntaxException
 
 
-KGTKFiles = typing.Optional[typing.List[typing.Optional[Path]]]
+KGTKFiles = typing.Optional[typing.Union[Path,
+                                         typing.List[typing.Union[typing.Optional[Path],
+                                                                  typing.List[Path]]]]]
 
 class KGTKArgumentParser(ArgumentParser):
     SUPPORT_POSITIONAL_ARGS: bool = True
-    DEFAULT_INPUT_FILE_HELP: str = "The KGTK input file"
-    DEFAULT_OUTPUT_FILE_HELP: str = "The KGTK file to write"
+    DEFAULT_INPUT_FILE_WHO: str = "KGTK input file"
+    DEFAULT_OUTPUT_FILE_WHO: str = "KGTK output file"
 
     def __init__(self, *args, **kwargs):
         if not kwargs.get('formatter_class'):
@@ -41,198 +43,203 @@ class KGTKArgumentParser(ArgumentParser):
         super(KGTKArgumentParser, self).exit(status, message)
 
     def add_input_file(self,
+                       who: typing.Optional[str] = None,
                        dest: str = "input_file",
-                       allow_positional: bool = False,
                        options: typing.List[str] = ["-i", "--input-file"],
-                       help: typing.Optional[str] = None,
                        metavar: str = "INPUT_FILE",
-                       nargs: typing.Union[int, str] = "?",
-                       default_stdin: bool = True,
-                       required: bool = False,
+                       allow_positional: bool = True,
     ):
+        # Required, defaulting to stdin. Positional input is allowed by default.  Lists not allowed.
 
-        if help is None:
-            help = self.DEFAULT_INPUT_FILE_HELP
-        if default_stdin:
-            help += ". May be omitted or '-' for stdin."
+        helpstr: str
+        if who is None:
+            helpstr = "The " + self.DEFAULT_INPUT_FILE_HELP + "."
         else:
-            help += "."
+            helpstr = who
+        helpstr += " (May be omitted or '-' for stdin.)"
             
         allow_positional &= self.SUPPORT_POSITIONAL_ARGS
 
         if allow_positional:
-            self.add_argument(dest, nargs=nargs, type=Path, help=help, metavar=metavar, action="append")
-
-        if required and not allow_positional:
-            self.add_argument(*options, dest=dest, required=True, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
+            self.add_argument(dest, nargs="?", type=Path, help=helpstr, metavar=metavar, action="append")
+            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, action="append")
         else:
-            self.add_argument(*options, dest=dest, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
+            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, default=Path("-"))
 
-    def add_output_file(self,
-                        dest: str = "output_file",
-                        allow_positional: bool = False,
-                        options: typing.List[str] = ["-o", "--output-file"],
-                        help: typing.Optional[str] = None,
-                        metavar: str = "OUTPUT_FILE",
-                        nargs: typing.Union[int, str] = "?",
-                        default_stdout: bool = True,
-                        required: bool = False,
+
+    def add_input_file_list(self,
+                            who: typing.Optional[str],
+                            dest: str = "input_file",
+                            options: typing.List[str] = ["-i", "--input-file"],
+                            metavar: str = "INPUT_FILE",
+                            allow_positional: bool = False,
     ):
+        # Required, defaulting to stdin. Positional input is allowed by default.
 
-        if help is None:
-            help = self.DEFAULT_OUTPUT_FILE_HELP
-        if default_stdout:
-            help += ". May be omitted or '-' for stdout."
-        else:
-            help += "."
+        helpstr: str = who + " (May be omitted or '-' for stdin.)"
             
         allow_positional &= self.SUPPORT_POSITIONAL_ARGS
 
         if allow_positional:
-            self.add_argument(dest, nargs=nargs, type=Path, help=help, metavar=metavar, action="append")
-
-        if required and not allow_positional:
-            self.add_argument(*options, dest=dest, required=True, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
+            self.add_argument(dest, nargs="*", type=Path, help=helpstr, metavar=metavar, action="append")
+            self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
         else:
-            self.add_argument(*options, dest=dest, nargs=nargs, type=Path, metavar=metavar, help=help, action="append")
+            self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
+
+
+    def add_optional_input_file(self,
+                                who: str,
+                                dest: str,
+                                options: typing.List[str],
+                                metavar: str = "INPUT_FILE",
+    ):
+        # Not required, no default. Positional input not allowed, lists not allowed.
+
+        self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
+
+    def add_output_file_list(self,
+                            who: typing.Optional[str],
+                            dest: str = "output_file",
+                            options: typing.List[str] = ["-o", "--output-file"],
+                            metavar: str = "OUTPUT_FILE",
+                            allow_positional: bool = False,
+    ):
+        # Required, defaulting to stdin. Positional output is allowed by default.
+
+        helpstr: str = who + " (May be omitted or '-' for stdout.)"
+            
+        allow_positional &= self.SUPPORT_POSITIONAL_ARGS
+
+        if allow_positional:
+            self.add_argument(dest, nargs="*", type=Path, help=helpstr, metavar=metavar, action="append")
+            self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
+        else:
+            self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
+
+
+    def add_optional_output_file(self,
+                                who: str,
+                                dest: str,
+                                options: typing.List[str],
+                                metavar: str = "OUTPUT_FILE",
+    ):
+        # Not required, no default. Positional output not allowed, lists not allowed.
+
+        self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
+
 
     @classmethod
-    def get_required_input_file(cls,
-                                paths: KGTKFiles,
-                                help: typing.Optional[str] = None,
-                                default_stdin: bool = True,
+    def get_path_list(cls, paths: KGTKFiles, who: str, default_stdio: bool = False)->typing.List[Path]:
+        # Builds a list of paths from the awkward possible returns from argument parsing.
+        if paths is None:
+            if default_stdio:
+                return [ Path("-") ]
+            else:
+                return [ ]
+        elif isinstance(paths, Path):
+            return [ paths ]
+        elif isinstance(paths, list):
+            result: typng.List[Path] = [ ]
+            pl: typing.Union[typing.Optional[Path], typing.List[Path]]
+            for pl in paths:
+                if pl is None:
+                    continue
+                if isinstance(pl, Path):
+                    result.append(pl)
+                elif isinstance(pl, List):
+                    result.extend(pl)
+                else:
+                    raise KGTKException("%s: Unexpected component '%s' in path list '%s'." % (who, str(pl), str(paths)))
+            if len(result) == 0 and default_stdio:
+                return [ Path("-") ]
+            else:
+                return result
+        else:
+            raise KGTKException("%s: Unexpected path list '%s'." % (who, str(paths)))
+
+    @classmethod
+    def get_input_file(cls,
+                       paths: KGTKFiles,
+                       who: typing.Optional[str] = None,
+                       default_stdin: bool = True,
                        
     )->Path:
     
         from kgtk.exceptions import KGTKException
 
-        if help is None:
-            help = cls.DEFAULT_INPUT_FILE_HELP
+        if who is None:
+            who = cls.DEFAULT_INPUT_FILE_HELP
 
-        if paths is None:
-            if default_stdin:
-                return Path("-")
-            else:
-                raise KGTKException("Please supply %s." % help)
-
-        elif len(paths) == 0:
-            if default_stdin:
-                return Path("-")
-            else:
-                raise KGTKException("Please supply %s." % help)
-        
-        elif len(paths) == 1:
-            if paths[0] is None:
-                if default_stdin:
-                    return Path("-")
-                else:
-                    raise KGTKException("Please supply %s." % help)
-            return paths[0]
-    
-        elif len(paths) == 2 and paths[0] is not None and paths[1] is None:
-            return paths[0]
-        elif len(paths) == 2 and paths[0] is not None and paths[1] is not None:
-            raise KGTKException("Too many input files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
+        p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=default_stdin)
+        if len(p) == 1:
+            return p[0]
+        elif len(p) == 0:
+            raise KGTKException("%s: Please supply a filename path." % who)
         else:
-            raise KGTKException("Error: please supply %s" % help)
+            raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
 
+                                
     @classmethod
     def get_optional_input_file(cls,
                                 paths: KGTKFiles,
-                                help: typing.Optional[str] = None,
+                                who: typing.Optional[str] = None,
                        
     )->typing.Optional[Path]:
     
         from kgtk.exceptions import KGTKException
 
-        if help is None:
-            help = cls.DEFAULT_INPUT_FILE_HELP
+        if who is None:
+            who = cls.DEFAULT_INPUT_FILE_HELP
 
-        if paths is None:
-            return None
-
-        elif len(paths) == 0:
-            return None
-        
-        elif len(paths) == 1:
-            return paths[0]
-    
-        elif len(paths) == 2 and paths[0] is not None and paths[1] is None:
-            return paths[0]
-        elif len(paths) == 2 and paths[0] is None and paths[1] is not None:
-            return paths[1]
-        elif len(paths) == 2 and paths[0] is not None and paths[1] is not None:
-            raise KGTKException("Too many input files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
+        p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=False)
+        if len(p) == 0:
+            return None                                
+        elif len(p) == 1:
+            return p[0]
         else:
-            raise KGTKException("Error: please supply %s" % help)
+            raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
 
     @classmethod
-    def get_required_output_file(cls,
-                                 paths: typing.Optional[typing.List[typing.Optional[Path]]],
-                                 help: typing.Optional[str] = None,
-                                 default_stdout: bool = True,
+    def get_output_file(cls,
+                       paths: KGTKFiles,
+                       who: typing.Optional[str] = None,
+                       default_stdin: bool = True,
+                       
     )->Path:
     
         from kgtk.exceptions import KGTKException
 
-        if help is None:
-            help = cls.DEFAULT_OUTPUT_FILE_HELP
+        if who is None:
+            who = cls.DEFAULT_OUTPUT_FILE_HELP
 
-        if paths is None:
-            if default_stdout:
-                return Path("-")
-            else:
-                raise KGTKException("Please supply %s." % help)
-        
-        elif len(paths) == 0:
-            if default_stdout:
-                return Path("-")
-            else:
-                raise KGTKException("Please supply %s." % help)
-        
-        elif len(paths) == 1:
-            if paths[0] is None:
-                if default_stdout:
-                    return Path("-")
-                else:
-                    raise KGTKException("Please supply %s." % help)
-            return paths[0]
-    
-        elif len(paths) == 2 and paths[0] is not None and paths[1] is None:
-            return paths[0]
-        elif len(paths) == 2 and paths[0] is None and paths[1] is not None:
-            return paths[1]
-        elif len(paths) == 2 and paths[0] is not None and paths[1] is not None:
-            raise KGTKException("Duplicate output files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
+        p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=default_stdin)
+        if len(p) == 1:
+            return p[0]
+        elif len(p) == 0:
+            raise KGTKException("%s: Please supply a filename path." % who)
         else:
-            raise KGTKException("Error: please supply %s" % help)
+            raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
 
+                                
     @classmethod
     def get_optional_output_file(cls,
-                                 paths: typing.Optional[typing.List[typing.Optional[Path]]],
-                                 help: typing.Optional[str] = None,
+                                paths: KGTKFiles,
+                                who: typing.Optional[str] = None,
+                       
     )->typing.Optional[Path]:
     
         from kgtk.exceptions import KGTKException
 
-        if help is None:
-            help = cls.DEFAULT_OUTPUT_FILE_HELP
+        if who is None:
+            who = cls.DEFAULT_OUTPUT_FILE_HELP
 
-        if paths is None:
-            return None
-        
-        elif len(paths) == 0:
-            return None
-        
-        elif len(paths) == 1:
-            return paths[0]
-    
-        elif len(paths) == 2 and paths[0] is not None and paths[1] is None:
-            return paths[0]
-        elif len(paths) == 2 and paths[0] is not None and paths[1] is not None:
-            raise KGTKException("Duplicate output files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
+        p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=False)
+        if len(p) == 0:
+            return None                                
+        elif len(p) == 1:
+            return p[0]
         else:
-            raise KGTKException("Error: please supply %s" % help)
+            raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
 
 def add_shared_arguments(parser):
     # set shared arguments here
