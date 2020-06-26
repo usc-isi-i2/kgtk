@@ -159,6 +159,8 @@ class KGTKArgumentParser(ArgumentParser):
     
         elif len(paths) == 2 and paths[0] is not None and paths[1] is None:
             return paths[0]
+        elif len(paths) == 2 and paths[0] is None and paths[1] is not None:
+            return paths[1]
         elif len(paths) == 2 and paths[0] is not None and paths[1] is not None:
             raise KGTKException("Too many input files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
         else:
@@ -198,6 +200,8 @@ class KGTKArgumentParser(ArgumentParser):
     
         elif len(paths) == 2 and paths[0] is not None and paths[1] is None:
             return paths[0]
+        elif len(paths) == 2 and paths[0] is None and paths[1] is not None:
+            return paths[1]
         elif len(paths) == 2 and paths[0] is not None and paths[1] is not None:
             raise KGTKException("Duplicate output files:  '%s' and '%s'." % (str(paths[1]), str(paths[0])))
         else:

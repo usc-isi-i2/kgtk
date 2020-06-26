@@ -17,7 +17,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -40,18 +40,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
     _expert: bool = parsed_shared_args._expert
 
-    parser.add_argument("-i", "--input-file", dest="input_file", metavar="INPUT_FILE",
-                        help="The KGTK file to read.  May be omitted or '-' for stdin.", type=Path, default="-")
-    parser.add_argument("-o", "--output-file", dest="output_file", metavar="OUTPUT_FILE",
-                        help="The KGTK file to write.  May be omitted or '-' for stdout.", type=Path, default="-")
-    
+    parser.add_input_file(allow_positional=True)
+    parser.add_output_file(allow_positional=True)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
-def run(input_file: Path,
-        output_file: Path,
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
         show_options: bool = False,
@@ -62,6 +60,9 @@ def run(input_file: Path,
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_required_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_required_output_file(output_file)
+
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
@@ -71,24 +72,24 @@ def run(input_file: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("--input-file=%s" % str(input_file), file=error_file)
-        print("--output-file=%s" % str(output_file), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     if verbose:
         if str(input_file) == "-":
-            print("Cleaning data from '%s'" % str(input_file), file=error_file, flush=True)
+            print("Cleaning data from '%s'" % str(input_kgtk_file), file=error_file, flush=True)
         else:
             print ("Cleaning data from stdin", file=error_file, flush=True)
         if str(output_file) == "-":
-            print("Writing data to '%s'" % str(output_file), file=error_file, flush=True)
+            print("Writing data to '%s'" % str(output_kgtk_file), file=error_file, flush=True)
         else:
             print ("Writing data to stdout", file=error_file, flush=True)
                 
     try:
-        kr: KgtkReader = KgtkReader.open(input_file,
+        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
                                          error_file=error_file,
                                          options=reader_options,
                                          value_options=value_options,
@@ -96,7 +97,7 @@ def run(input_file: Path,
                                          very_verbose=very_verbose)
 
         kw: KgtkWriter = KgtkWriter.open(kr.column_names,
-                                         output_file,
+                                         output_kgtk_file,
                                          verbose=verbose, very_verbose=very_verbose)
         
         line_count: int = 0
