@@ -20,6 +20,16 @@ with open('requirements.txt', 'r') as f:
             else:
                 install_requires.append(re)
 
+if not lite_build:
+    with open('requirements-full.txt', 'r') as f:
+        for line in f:
+            re = line.strip()
+            if re:
+                if re.startswith('git+') or re.startswith('svn+') or re.startswith('hg+'):
+                    dependency_links.append(re)
+                else:
+                    install_requires.append(re)
+
 lite_excluded_modules = {
     'kgtk.cli': {'filter', 'export_gt', 'export_neo4j', 'connected-components', 'graph_statistics', 'gt_loader',
                  'reachable_nodes', 'text_embedding'}
