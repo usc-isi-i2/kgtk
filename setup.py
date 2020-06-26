@@ -49,7 +49,7 @@ packages = find_packages()
 
 setup(
     name='kgtk' if not lite_build else 'kgtk-lite',
-    version=__version__,
+    version=__version__ if not lite_build else f'{__version__}-lite',
     packages=packages,
     url='https://github.com/usc-isi-i2/kgtk',
     license='MIT',
