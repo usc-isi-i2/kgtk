@@ -45,7 +45,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_input_file(allow_positional=True)
+    parser.add_input_file(positional=True)
     parser.add_output_file()
 
     KgtkIdBuilderOptions.add_arguments(parser, expert=True) # Show all the options.
@@ -67,8 +67,8 @@ def run(input_file: KGTKFiles,
     # import modules locally
     from kgtk.exceptions import KGTKException
 
-    input_kgtk_file: Path = KGTKArgumentParser.get_required_input_file(input_file)
-    output_kgtk_file: Path = KGTKArgumentParser.get_required_output_file(output_file)
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr

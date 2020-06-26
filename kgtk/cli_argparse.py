@@ -42,27 +42,29 @@ class KGTKArgumentParser(ArgumentParser):
             status = KGTKArgumentParseException.return_code
         super(KGTKArgumentParser, self).exit(status, message)
 
-    def add_input_file(self,
-                       who: typing.Optional[str] = None,
-                       dest: str = "input_file",
-                       options: typing.List[str] = ["-i", "--input-file"],
-                       metavar: str = "INPUT_FILE",
-                       optional: bool = False,
-                       allow_list: bool = False,
-                       positional: bool = True,
+    def add_file(self,
+                 who: typing.Optional[str],
+                 dest: str,
+                 options: typing.List[str],
+                 metavar: str,
+                 optional: bool,
+                 allow_list: bool,
+                 positional: bool,
+                 default_help: str,
+                 stdio_name: str,
     ):
 
         if optional:
-            # Not required, no default. Positional input not allowed, lists not allowed.
+            # Not required, no default. Positional output not allowed, lists not allowed.
             self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
 
-        # This is a required input file, defaulting to stdin.
+        # This is a required file, defaulting to stdio.
         helpstr: str
         if who is None:
-            helpstr = "The " + self.DEFAULT_INPUT_FILE_HELP + "."
+            helpstr = "The " + default_help + "."
         else:
             helpstr = who
-        helpstr += " (May be omitted or '-' for stdin.)"
+        helpstr += " (May be omitted or '-' for %s.)" % stdio_name
             
         positional &= self.SUPPORT_POSITIONAL_ARGS
 
@@ -79,6 +81,19 @@ class KGTKArgumentParser(ArgumentParser):
                 self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, action="append")
             else:
                 self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, default=Path("-"))
+
+
+    def add_input_file(self,
+                       who: typing.Optional[str] = None,
+                       dest: str = "input_file",
+                       options: typing.List[str] = ["-i", "--input-file"],
+                       metavar: str = "INPUT_FILE",
+                       optional: bool = False,
+                       allow_list: bool = False,
+                       positional: bool = False,
+    ):
+
+        return cls.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_INPUT_FILE_HELP, "stdin")
 
     def add_output_file(self,
                        who: typing.Optional[str] = None,
@@ -87,37 +102,9 @@ class KGTKArgumentParser(ArgumentParser):
                        metavar: str = "OUTPUT_FILE",
                        optional: bool = False,
                        allow_list: bool = False,
-                       positional: bool = True,
+                       positional: bool = False,
     ):
-
-        if optional:
-            # Not required, no default. Positional output not allowed, lists not allowed.
-            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
-
-        # This is a required output file, defaulting to stdout.
-        helpstr: str
-        if who is None:
-            helpstr = "The " + self.DEFAULT_OUTPUT_FILE_HELP + "."
-        else:
-            helpstr = who
-        helpstr += " (May be omitted or '-' for stdin.)"
-            
-        positional &= self.SUPPORT_POSITIONAL_ARGS
-
-        if allow_list:
-            if positional:
-                self.add_argument(dest, nargs="*", type=Path, help=helpstr, metavar=metavar, action="append")
-                self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
-            else:
-                self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
-
-        else:
-            if positional:
-                self.add_argument(dest, nargs="?", type=Path, help=helpstr, metavar=metavar, action="append")
-                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, action="append")
-            else:
-                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, default=Path("-"))
-
+        return cls.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_OUTPUT_FILE_HELP, "stdout")
 
     @classmethod
     def get_path_list(cls, paths: KGTKFiles, who: str, default_stdio: bool = False)->typing.List[Path]:
