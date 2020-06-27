@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
@@ -28,10 +28,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
 
-    # '$label == "/r/DefinedAs" && $node2=="/c/en/number_zero"'
-    parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path, default="-")
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write records that pass the filter (default=%(default)s).",
-                        type=Path, default="-")
+    parser.add_input_file(positional=True)
+    parser.add_output_file()
 
     parser.add_argument('-c', "--columns", action="store", type=str, dest="columns", nargs='+', required=True,
                         help="Columns to remove as a comma- or space-separated strings, e.g., id,docid or id docid")
@@ -49,8 +47,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NONE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
 
         columns: typing.Optional[typing.List[str]],
 
@@ -69,6 +67,9 @@ def run(input_kgtk_file: Path,
     # import modules locally
     from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
@@ -78,7 +79,7 @@ def run(input_kgtk_file: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % str(input_kgtk_file), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         if columns is not None:
             print("--columns=%s" % " ".join(columns), file=error_file)

@@ -1,5 +1,5 @@
 """Copy records from the first KGTK file to the output file,
-compacting repeated items into | lists.
+adding ID values.
 
 TODO: Need KgtkWriterOptions
 """
