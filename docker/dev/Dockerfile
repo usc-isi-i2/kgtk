@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install thinc==7.4.0
 
-RUN git clone https://github.com/usc-isi-i2/kgtk/ 
+RUN git clone https://github.com/usc-isi-i2/kgtk/ --branch dev
 
 RUN cd /kgtk && python setup.py install 
 
