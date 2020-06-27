@@ -69,13 +69,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(who="The left-side KGTK file to join (required).",
                           dest="left_file",
                           options=["--left-file"],
-                          metavar="INPUT_FILE",
+                          metavar="LEFT_FILE",
                           positional=True)
 
     parser.add_input_file(who="The right-side KGTK file to join (required).",
                           dest="right_file",
                           options=["--right-file"],
-                          metavar="INPUT_FILE",
+                          metavar="RIGHT_FILE",
                           positional=True)
 
     parser.add_output_file()
