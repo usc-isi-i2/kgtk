@@ -43,9 +43,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_input_file(allow_list=True)
+    parser.add_input_file(who="The ntriples file(s) to import.", allow_list=True)
     parser.add_output_file()
-    parser.add_output_file(who="The KGTK file for records that are rejected.",
+
+    parser.add_output_file(who="The ntriples output file for records that are rejected.",
                            dest="reject_file",
                            options=["--reject-file"],
                            metavar="REJECT_FILE",
@@ -57,27 +58,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                           metavar="NAMESPACE_FILE",
                           optional=True)
 
-    parser.add_input_file(who="The KGTK output file with updated namespaces.",
-                          dest="updated_namespace_file",
-                          options=["--updated-namespace-file"],
-                          metavar="NAMESPACE_FILE",
-                          optional=True)
+    parser.add_output_file(who="The KGTK output file with updated namespaces.",
+                           dest="updated_namespace_file",
+                           options=["--updated-namespace-file"],
+                           metavar="NAMESPACE_FILE",
+                           optional=True)
 
-    parser.add_argument("-i", "--input-files", dest="input_file_paths", nargs='*',
-                        help="The input file(s) with the ntriples data. (default=%(default)s)", type=Path, default="-")
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
-    
-    parser.add_argument(      "--reject-file", dest="reject_file_path", help="The file into which to write rejected records. (default=%(default)s).",
-                              type=Path, default=None)
-    
-    parser.add_argument(      "--namespace-file", dest="namespace_kgtk_file", help="The KGTK file with known namespaces. (default=%(default)s).",
-                              type=Path, default=None)
-
-    parser.add_argument(      "--updated-namespace-file", dest="updated_namespace_kgtk_file",
-                              help="An updated KGTK file with known namespaces. (default=%(default)s).",
-                              type=Path, default=None)
-    
     KgtkNtriples.add_arguments(parser)
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)

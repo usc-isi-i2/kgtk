@@ -56,7 +56,8 @@ class KGTKArgumentParser(ArgumentParser):
 
         if optional:
             # Not required, no default. Positional output not allowed, lists not allowed.
-            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who)
+            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who + " (Optional, use '-' for %s.)" % stdio_name)
+            return
 
         # This is a required file, defaulting to stdio.
         helpstr: str
