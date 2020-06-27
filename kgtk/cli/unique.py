@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.unique import Unique
@@ -41,14 +41,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
+    parser.add_input_file(positional=True)
+    parser.add_output_file()
 
     parser.add_argument(      "--column", dest="column_name",
                               help="The column to count unique values (required).", required=True)
 
     parser.add_argument(      "--empty", dest="empty_value", help="A value to substitute for empty values (default=%(default)s).", default="")
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (required).", type=Path, default=None)
 
     parser.add_argument(      "--label", dest="label_value", help="The output file label column value (default=%(default)s).", default="count")
 
@@ -68,8 +67,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: typing.Optional[Path],
-        output_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
 
         column_name: str,
         empty_value: str = "",
@@ -92,6 +91,8 @@ def run(input_kgtk_file: typing.Optional[Path],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -102,8 +103,8 @@ def run(input_kgtk_file: typing.Optional[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
-        print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         print("--column=%s" % str(column_name), file=error_file)
         print("--empty=%s" % str(empty_value), file=error_file)
         print("--label=%s" % str(label_value), file=error_file)
