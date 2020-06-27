@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkcat import KgtkCat
@@ -47,11 +47,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_file_path",
-                              help="The KGTK input file. (default=%(default)s).",
-                              type=Path, default="-")
+    parser.add_input_file(positional=True)
+    parser.add_output_file()
 
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
 
     parser.add_argument(      "--output-columns", dest="output_column_names",
@@ -71,8 +69,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_file_path: Path,
-        output_file_path: Path,
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
         output_format: typing.Optional[str],
 
         output_column_names: typing.Optional[typing.List[str]],
@@ -90,6 +88,9 @@ def run(input_file_path: Path,
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    input_file_path: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
+
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
@@ -99,7 +100,7 @@ def run(input_file_path: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % str(input_file_path), file=error_file, flush=True)
+        print("--input-file=%s" % str(input_file_path), file=error_file, flush=True)
         print("--output-file=%s" % str(output_file_path), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
