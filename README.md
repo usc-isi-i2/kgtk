@@ -19,11 +19,13 @@ KGTK is a Python library for easy manipulation with knowledge graphs. It provide
 * Joining and concatenation of graphs
 * Manipulation of Wikidata data
 
-## Documentation
+## Getting started
+
+### Documentation
 
 https://kgtk.readthedocs.io/en/latest/
 
-## Getting Started
+### Getting started with the KGTK notebooks
 
 The [examples folder](examples/) provides a growing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
 * Embeddings for ConceptNet nodes
@@ -32,19 +34,21 @@ The [examples folder](examples/) provides a growing number of easy-to-follow Jup
 * PageRank over Wikidata
 * etc.
 
-## Releases
-
-* [Source code](https://github.com/usc-isi-i2/kgtk/releases)
-
-## Running in MyBinder
-The easiest way of running KGTK is through [MyBinder](https://mybinder.org/). We have made available an **example notebook** to show some of the features of KGTK. The notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) will not run. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/dev?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
+### Running the KGTK notebooks online with MyBinder
+The easiest, no-cost way of trying out KGTK is through [MyBinder](https://mybinder.org/). We have made available an **example notebook** to show some of the features of KGTK. The notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) will not run. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/dev?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
 
 To see the **graph analytics and embedding capabilities** of KGTK, launch the following Notebook (launch usually requires 10-20 minutes):  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
 
-
 For executing KGTK with large datasets, **we recommend a Docker/local installation**.
 
-## Installation through Docker
+## Installation
+
+### Releases
+
+* [Source code](https://github.com/usc-isi-i2/kgtk/releases)
+
+
+### Installation through Docker
 
 ```
 docker pull uscisii2/kgtk
@@ -67,7 +71,7 @@ More information about versions and tags is available here: https://hub.docker.c
 
 See additional examples in [the documentation](https://kgtk.readthedocs.io/en/latest/install/).
 
-## Local installation
+### Local installation
 
 0. Our installations will be in a conda environment. If you don't have a conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it.
 1. Set up your own conda environment:
