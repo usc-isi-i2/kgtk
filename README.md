@@ -6,10 +6,6 @@
 
 KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs. 
 
-## Documentation
-
-https://kgtk.readthedocs.io/en/latest/
-
 ## Features
 
 * Computation of class instances
@@ -22,6 +18,19 @@ https://kgtk.readthedocs.io/en/latest/
 * Computation of graph metrics
 * Joining and concatenation of graphs
 * Manipulation of Wikidata data
+
+## Documentation
+
+https://kgtk.readthedocs.io/en/latest/
+
+## Examples
+
+The folder `examples` provides a growing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
+* Embeddings for ConceptNet nodes
+* Graph statistics over a curated subset of Wikidata
+* Reachable occupations for selected people in Wikidata
+* PageRank over Wikidata
+* etc.
 
 ## Releases
 
