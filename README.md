@@ -23,9 +23,9 @@ KGTK is a Python library for easy manipulation with knowledge graphs. It provide
 
 https://kgtk.readthedocs.io/en/latest/
 
-## Examples
+## Getting Started
 
-The folder `examples` provides a growing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
+The [examples folder](examples/) provides a growing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
 * Embeddings for ConceptNet nodes
 * Graph statistics over a curated subset of Wikidata
 * Reachable occupations for selected people in Wikidata
