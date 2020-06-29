@@ -25,7 +25,7 @@ KGTK is a Python library for easy manipulation with knowledge graphs. It provide
 
 https://kgtk.readthedocs.io/en/latest/
 
-### Getting started with the KGTK notebooks
+### KGTK notebooks
 
 The [examples folder](examples/) provides a growing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
 * Embeddings for ConceptNet nodes
@@ -34,7 +34,7 @@ The [examples folder](examples/) provides a growing number of easy-to-follow Jup
 * PageRank over Wikidata
 * etc.
 
-### Running the KGTK notebooks online with MyBinder
+### Try KGTK online with MyBinder
 The easiest, no-cost way of trying out KGTK is through [MyBinder](https://mybinder.org/). We have made available an **example notebook** to show some of the features of KGTK. The notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) will not run. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/dev?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
 
 To see the **graph analytics and embedding capabilities** of KGTK, launch the following Notebook (launch usually requires 10-20 minutes):  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
