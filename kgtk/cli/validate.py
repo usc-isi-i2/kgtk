@@ -16,7 +16,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -43,7 +43,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
     _expert: bool = parsed_shared_args._expert
 
-    parser.add_argument(      "kgtk_files", nargs="*", help="The KGTK file(s) to validate. May be omitted or '-' for stdin.", type=Path)
+    parser.add_input_file(who="The KGTK file(s) to validate.",
+                          dest="input_files",
+                          options=["-i", "--input-files"],
+                          allow_list=True,
+                          positional=True)
 
     parser.add_argument(      "--header-only", dest="header_only",
                               help="Process the only the header of the input file (default=%(default)s).",
@@ -54,7 +58,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
-def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
+def run(input_files: KGTKFiles,
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
         header_only: bool = False,
@@ -66,8 +70,7 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
-    if kgtk_files is None or len(kgtk_files) == 0:
-        kgtk_files = [ None ]
+    kgtk_files: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_files)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stderr if errors_to_stderr else sys.stdout
@@ -78,18 +81,18 @@ def run(kgtk_files: typing.Optional[typing.List[typing.Optional[Path]]],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % " ".join((str(kgtk_file) for kgtk_file in kgtk_files)), file=error_file)
+        print("--input-files: %s" % " ".join((str(kgtk_file) for kgtk_file in kgtk_files)), file=error_file)
         print("--header-only=%s" % str(header_only), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:
-        kgtk_file: typing.Optional[Path]
+        kgtk_file: Path
         for kgtk_file in kgtk_files:
             if verbose:
                 print("\n====================================================", flush=True)
-                if kgtk_file is not None:
+                if str(kgtk_file) != "-":
                     print("Validating '%s'" % str(kgtk_file), file=error_file, flush=True)
                 else:
                     print ("Validating from stdin", file=error_file, flush=True)
