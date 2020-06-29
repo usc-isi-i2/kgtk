@@ -16,7 +16,7 @@ Use it to convert a KGTK file to a GitHub Markdown tableL
 kgtk md file.tsv 
 
 Additional options are shown in expert help.
-kgtk --expert cat --help
+kgtk --expert md --help
 
 positional arguments:
   input_file_path       The KGTK file to convert to a GitHub markdown table.

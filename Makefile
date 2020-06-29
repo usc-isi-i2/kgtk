@@ -15,3 +15,7 @@ mkdocs:
 
 precommit:
 	tox
+
+clean-build:
+	rm -rf kgtk*.egg-info
+	python setup.py clean --all

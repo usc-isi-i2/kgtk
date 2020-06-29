@@ -60,7 +60,7 @@ kgtk -i reorder_columns file1.tsv --columns ... years location
 ```
 
 The result will be the following table in KGTK format:
-880% kgtk reorder_columns -i kgtk/join/test/compact-file2.tsv --columns ... years location --output-format md
+
 | node1 | label | node2 | years | location |
 | -- | -- | -- | -- | -- |
 | steve | zipcode | 45601 |  | cabin |
@@ -84,6 +84,7 @@ kgtk -i reorder_columns file1.tsv --columns location ...
 ```
 
 The result will be the following table in KGTK format:
+
 | location | node1 | label | node2 | years |
 | -- | -- | -- | -- | -- |
 | cabin | steve | zipcode | 45601 |  |
@@ -106,6 +107,7 @@ the complete list of columns:
 kgtk -i reorder_columns file1.tsv --columns label node1 node2 years location
 ```
 The result will be the following table in KGTK format:
+
 | label | node1 | node2 | years | location |
 | -- | -- | -- | -- | -- |
 | zipcode | steve | 45601 |  | cabin |

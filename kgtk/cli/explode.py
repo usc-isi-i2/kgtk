@@ -25,7 +25,7 @@ def parser():
         'description': 'Copy a KGTK file, exploding one column (usually node2) into seperate columns for each subfield. ' +
         'If a cell in the column being exploded contains a list, that record is optionally expanded into multiple records ' +
         'before explosion, with all other columns copied-as is.' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert expand --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert explode --help'
     }
 
 

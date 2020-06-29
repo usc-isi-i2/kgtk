@@ -1,8 +1,8 @@
-<img src="/docs/images/kgtk_logo_200x200.png" width="150"/>
+<img src="https://github.com/usc-isi-i2/kgtk/raw/master/docs/images/kgtk_logo_200x200.png" width="150"/>
 
 # KGTK: Knowledge Graph Toolkit 
 
-[![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)
+[![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)  
 
 KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs. 
 
@@ -26,6 +26,14 @@ https://kgtk.readthedocs.io/en/latest/
 ## Releases
 
 * [Source code](https://github.com/usc-isi-i2/kgtk/releases)
+
+## Running in MyBinder
+The easiest way of running KGTK is through [MyBinder](https://mybinder.org/). We have made available an **example notebook** to show some of the features of KGTK. The notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) will not run. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/dev?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
+
+To see the **graph analytics and embedding capabilities** of KGTK, launch the following Notebook (launch usually requires 10-20 minutes):  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
+
+
+For executing KGTK with large datasets, **we recommend a Docker/local installation**.
 
 ## Installation through Docker
 
@@ -65,6 +73,7 @@ conda activate kgtk-env
 You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+
 
 ## Running KGTK commands
 

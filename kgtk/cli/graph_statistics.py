@@ -23,7 +23,7 @@ def add_arguments(parser):
                         help="Whether or not to compute PageRank centraility.")
     parser.add_argument('--hits', action='store_true', dest='compute_hits',
                         help="Whether or not to compute HITS centraility.")
-    parser.add_argument('--summary', action='store', type=str, dest='log_file',
+    parser.add_argument('--log', action='store', type=str, dest='log_file',
                         help='Summary file for the global statistics of the graph.', default="./summary.txt")
     parser.add_argument('--statistics-only', action='store_true', dest='output_stats',
                         help='If this flag is set, output only the statistics edges. Else, append the statistics to the original graph.')
