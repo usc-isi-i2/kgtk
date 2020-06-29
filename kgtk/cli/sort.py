@@ -3,6 +3,7 @@ import sys
 import io
 import sh # type: ignore
 
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.exceptions import KGTKException
 import kgtk.cli.zconcat as zcat
 
@@ -12,9 +13,12 @@ def parser():
         'help': 'Sort file based on one or more columns'
     }
 
-def add_arguments(parser):
-    parser.add_argument('-o', '--out', default=None, action='store', dest='output',
-                        help='output file to write to, otherwise output goes to stdout')
+def add_arguments(parser: KGTKArgumentParser):
+    parser.add_input_file(positional=True, metavar="INPUT",
+                          who="Input file to sort.")
+    parser.add_output_file(options=['-o', '--out'],
+                           who='Output file to write to.')
+
     parser.add_argument('-c', '--column', '--columns', default='1', action='store', dest='columns',
                         help="comma-separated list of column names or numbers (1-based) to sort on, defaults to 1")
     parser.add_argument('-r', '--reverse', action='store_true', dest='reverse',
@@ -31,8 +35,6 @@ def add_arguments(parser):
                         help="extra options to supply to the sort program")
     parser.add_argument('-dt', '--datatype', default='tsv', action='store', dest='_dt',
                         help="Deprecated: datatype of the input file, e.g., tsv (default) or csv.")
-    parser.add_argument('input', metavar='INPUT', nargs='?', action='store',
-                        help="input file to sort, if empty or `-' process stdin")
 
 
 # for now: these might require some more refinement:
@@ -162,7 +164,13 @@ def build_command(input=None, output=None, columns='1', colsep='\t', options='',
     return sort_pipe
 
 
-def run(input=None, output=None, columns='1', reverse=False, space=False, speed=False, extra='', tsv=False, csv=False, _dt=None):
+def run(input_file,
+        output_file,
+        columns='1', reverse=False, space=False, speed=False, extra='', tsv=False, csv=False, _dt=None):
+
+    input = str(KGTKArgumentParser.get_input_file(input_file))
+    output = str(KGTKArgumentParser.get_output_file(output_file))
+
     """Run sort according to the provided command-line arguments.
     """
     try:
