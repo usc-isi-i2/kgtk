@@ -23,7 +23,7 @@ def parser():
         '\n\nThe --overwrite-id option can be used to replace existing ID values in the ID column. ' +
         'It does not update instances of the same ID in other columns, such as node1, elsewhere in the file.' +
         '\n\nSeveral ID styles are supported. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert compact --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert add_id --help'
     }
 
 

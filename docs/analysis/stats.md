@@ -5,7 +5,7 @@ The statistics for individual nodes are printed as edges to stdout. The summary 
 ## Usage
 ```
 kgtk graph_statistics [-h] [--directed] [--degrees] [--pagerank]
-                             [--hits] [--summary LOG_FILE] [--statistics-only]
+                             [--hits] [--log LOG_FILE] [--statistics-only]
                              [--vertex-in-degree-property VERTEX_IN_DEGREE]
                              [--vertex-out-degree-property VERTEX_OUT_DEGREE]
                              [--page-rank-property VERTEX_PAGERANK]
@@ -26,7 +26,7 @@ optional arguments:
   --degrees             Whether or not to compute degree distribution.
   --pagerank            Whether or not to compute PageRank centraility.
   --hits                Whether or not to compute HITS centraility.
-  --summary LOG_FILE    Summary file for the global statistics of the graph.
+  --log LOG_FILE    Summary file for the global statistics of the graph.
   --statistics-only     If this flag is set, output only the statistics edges.
                         Else, append the statistics to the original graph.
   --vertex-in-degree-property VERTEX_IN_DEGREE
@@ -57,7 +57,7 @@ Given this file `input.tsv`:
 We can use the following command to compute degree and PageRank statistics over the graph:
 
 ```
-kgtk graph_statistics --directed --summary summary.txt --pagerank --statistics-only input.tsv
+kgtk graph_statistics --directed --log summary.txt --pagerank --statistics-only input.tsv
 ```
 
 The output (printed to stdout) is as follows:

@@ -1,0 +1,240 @@
+node1	label	node2	id	node2;label
+event:03a41b2b-e0ef-42f9-a192-433e0abc3a70	ldc:Movement.TransportPerson.SelfMotion_Destination	entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd	_:g3910	"Kramatorsk"
+event:03a41b2b-e0ef-42f9-a192-433e0abc3a70	ldc:Movement.TransportPerson.SelfMotion_Transporter	entity:c6f32b90-6038-40c0-97e4-6d3f7fd76c03	_:g2301	
+event:03a41b2b-e0ef-42f9-a192-433e0abc3a70	ont:ldcTime	_:g1591		
+event:03a41b2b-e0ef-42f9-a192-433e0abc3a70	rdf:type	ldc:Movement.TransportPerson.SelfMotion	isi:gaia/assertions/536bb130-8e3a-494a-a1a6-af4b8036b6e9	
+event:040acd27-8ba6-440a-b8e3-f246ff715e36	ldc:Transaction.TransferOwnership_Artifact	entity:1d3a1800-b45e-4053-a9e2-c8cfd86c2cd0	_:g5643	
+event:040acd27-8ba6-440a-b8e3-f246ff715e36	ldc:Transaction.TransferOwnership_Recipient	entity:71be8687-73db-492c-9930-93143e7da8ca	_:g8134	
+event:040acd27-8ba6-440a-b8e3-f246ff715e36	ont:ldcTime	_:g310		
+event:040acd27-8ba6-440a-b8e3-f246ff715e36	rdf:type	ldc:Transaction.TransferOwnership	isi:gaia/assertions/3853a6ae-7bd9-4d93-848d-018f39d59120	
+event:084e9f10-7424-4a9c-9f51-87ea580a58a7	ldc:Conflict.Attack_Attacker	entity:71be8687-73db-492c-9930-93143e7da8ca	_:g673	
+event:084e9f10-7424-4a9c-9f51-87ea580a58a7	ldc:Conflict.Attack_Instrument	entity:e7ff9d5c-c284-42b5-8f63-97e25a71e787	_:g637	
+event:084e9f10-7424-4a9c-9f51-87ea580a58a7	ldc:Conflict.Attack_Place	entity:79969b4c-cf9e-4eb7-8123-c7714e087454	_:g3831	
+event:084e9f10-7424-4a9c-9f51-87ea580a58a7	ldc:Conflict.Attack_Target	entity:79969b4c-cf9e-4eb7-8123-c7714e087454	_:g1540	
+event:084e9f10-7424-4a9c-9f51-87ea580a58a7	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/2c92db0b-ec78-40da-a07a-492b50457be6	
+event:08bd69d4-a2ee-47b0-9c9d-5e7e7ec06e9a	rdf:type	ldc:Contact.CommitmentPromiseExpressIntent.Broadcast	isi:gaia/assertions/bfa30de0-c894-4cbd-96fe-41883b1b4a30	
+event:0cbad902-0aa0-4cdf-979e-75f6800e2ea0	ont:ldcTime	_:g859		
+event:0cbad902-0aa0-4cdf-979e-75f6800e2ea0	rdf:type	ldc:Life.Injure.InjuryCausedByViolentEvents	isi:gaia/assertions/e65743f1-2b7a-440d-b78e-ea45bdca79b8	
+event:18362a51-b6c4-4c48-ada0-985632456db8	ldc:Conflict.Attack_Attacker	entity:8390954f-df35-44af-98bf-b836c5aa7c7f	_:g482	
+event:18362a51-b6c4-4c48-ada0-985632456db8	ldc:Conflict.Attack_Place	entity:60e088a8-d7b4-43c4-8891-bf36f3374d58	_:g9671	
+event:18362a51-b6c4-4c48-ada0-985632456db8	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/692da9ec-f4de-49fb-a221-9441d7f79a6e	
+event:1c691b66-103f-4f24-bedc-c887e4ad6010	rdf:type	ldc:Conflict.Demonstrate	isi:gaia/assertions/b99d1a99-615e-4e6e-9c0b-df1321fe9356	
+event:1e96d0cc-7113-4873-870e-ae6a602e85c7	ont:ldcTime	_:g3055		
+event:1e96d0cc-7113-4873-870e-ae6a602e85c7	rdf:type	ldc:Conflict.Attack.SelfDirectedBattle	isi:gaia/assertions/aa35f1bd-6d11-4f94-9e8e-e4bf95fc35f7	
+event:276aabaf-5ee1-4012-908d-1a2499ac416f	rdf:type	ldc:Transaction.Transaction.TransferControl	isi:gaia/assertions/ead88aef-9048-4eba-bdfe-a7afd56e7aa7	
+event:290bf7b5-8464-4ba0-a863-8bf10cc3dabf	ldc:Conflict.Attack.SelfDirectedBattle_Attacker	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g2052	
+event:290bf7b5-8464-4ba0-a863-8bf10cc3dabf	ldc:Conflict.Attack.SelfDirectedBattle_Place	entity:6e3e3711-251e-4472-9cba-425ea47b03a8	_:g7179	
+event:290bf7b5-8464-4ba0-a863-8bf10cc3dabf	rdf:type	ldc:Conflict.Attack.SelfDirectedBattle	isi:gaia/assertions/9e536ffe-de59-4a76-a594-6eea60c86db1	
+event:2b923f37-5105-40cf-8f86-0832b03951bf	ldc:Conflict.Attack_Attacker	entity:71be8687-73db-492c-9930-93143e7da8ca	_:g2528	
+event:2b923f37-5105-40cf-8f86-0832b03951bf	ldc:Conflict.Attack_Instrument	entity:23892484-bbe3-413f-9c36-04f04a38205d	_:g2972	
+event:2b923f37-5105-40cf-8f86-0832b03951bf	ldc:Conflict.Attack_Instrument	entity:ef586cbf-29ff-492d-9e83-b4d3288baef3	_:g8960	
+event:2b923f37-5105-40cf-8f86-0832b03951bf	ldc:Conflict.Attack_Place	entity:ae301857-1da8-4d24-827a-d5a8aa9d3269	_:g2825	
+event:2b923f37-5105-40cf-8f86-0832b03951bf	ldc:Conflict.Attack_Target	entity:28591bdd-1e5e-4cc5-a14c-fbd3b8990a3b	_:g1099	
+event:2b923f37-5105-40cf-8f86-0832b03951bf	ont:ldcTime	_:g9072		
+event:2b923f37-5105-40cf-8f86-0832b03951bf	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/3917e017-91fe-4a29-96be-3b62e5f8ffa6	
+event:315a0da6-0297-4a6e-96ac-96b23c918ef3	ldc:Life.Injure.InjuryCausedByViolentEvents_Victim	entity:ee4172f4-ecba-42e3-a1ef-cce75849b719	_:g7593	
+event:315a0da6-0297-4a6e-96ac-96b23c918ef3	ont:ldcTime	_:g1373		
+event:315a0da6-0297-4a6e-96ac-96b23c918ef3	rdf:type	ldc:Life.Injure.InjuryCausedByViolentEvents	isi:gaia/assertions/b65c7324-90d6-489f-a97b-769a7c3d48bb	
+event:32362eab-116c-497c-8bfc-b9bab7dacc9e	ont:ldcTime	_:g7612		
+event:32362eab-116c-497c-8bfc-b9bab7dacc9e	rdf:type	ldc:Movement.TransportArtifact	isi:gaia/assertions/93dd54c2-db07-4ce2-93b7-a40a85fb1379	
+event:38af6a79-8bf8-4afc-b4c6-e518ffae5db4	ldc:Movement.TransportArtifact.ReceiveImport_Artifact	entity:8390954f-df35-44af-98bf-b836c5aa7c7f	_:g9065	
+event:38af6a79-8bf8-4afc-b4c6-e518ffae5db4	ldc:Movement.TransportArtifact.ReceiveImport_Destination	entity:60e088a8-d7b4-43c4-8891-bf36f3374d58	_:g4003	
+event:38af6a79-8bf8-4afc-b4c6-e518ffae5db4	rdf:type	ldc:Movement.TransportArtifact.ReceiveImport	isi:gaia/assertions/6c86ccff-4381-4c8a-9a24-93190005cfd3	
+event:38f00048-714c-4bd3-a596-496c06a506b2	ldc:Conflict.Attack.Bombing_Instrument	entity:8f6c504e-697a-4049-8f57-921457fee819	_:g7261	
+event:38f00048-714c-4bd3-a596-496c06a506b2	ldc:Conflict.Attack.Bombing_Target	entity:10a7f87c-d055-4e8c-85a7-86185bd8e80f	_:g2711	
+event:38f00048-714c-4bd3-a596-496c06a506b2	ldc:Conflict.Attack.Bombing_Target	entity:87b528a8-bf03-40ab-b571-0c6909cccb95	_:g8159	
+event:38f00048-714c-4bd3-a596-496c06a506b2	ldc:Conflict.Attack.Bombing_Target	entity:a96cee0a-b988-4acb-8e67-beab505366e1	_:g688	
+event:38f00048-714c-4bd3-a596-496c06a506b2	rdf:type	ldc:Conflict.Attack.Bombing	isi:gaia/assertions/2d4f7f58-3578-4962-8317-ecce9eeb3098	
+event:3a79cc73-3daa-4266-a815-44de3d060370	ldc:Conflict.Attack.SelfDirectedBattle_Attacker	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g6211	
+event:3a79cc73-3daa-4266-a815-44de3d060370	ldc:Conflict.Attack.SelfDirectedBattle_Place	entity:9645249d-629f-48d5-b55d-5e96cebe4c02	_:g8303	
+event:3a79cc73-3daa-4266-a815-44de3d060370	ont:ldcTime	_:g5848		
+event:3a79cc73-3daa-4266-a815-44de3d060370	rdf:type	ldc:Conflict.Attack.SelfDirectedBattle	isi:gaia/assertions/b6d321d7-a698-4611-829f-12dcc632fc37	
+event:3d4d8f08-b2a1-4d7d-8540-aa33c9e4f1b0	ont:ldcTime	_:g5235		
+event:3d4d8f08-b2a1-4d7d-8540-aa33c9e4f1b0	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/1231a7e7-10e8-4611-b0e0-c824c036e073	
+event:3ec4634d-52be-4dda-a15b-9fd852c1662c	ldc:Transaction.TransferOwnership_Artifact	entity:fbf6e4a1-54e2-423c-92e2-75b2f2aab53b	_:g7112	
+event:3ec4634d-52be-4dda-a15b-9fd852c1662c	ldc:Transaction.TransferOwnership_Recipient	entity:29895373-9890-4bec-b12f-966e7744f284	_:g1389	
+event:3ec4634d-52be-4dda-a15b-9fd852c1662c	ont:ldcTime	_:g4354		
+event:3ec4634d-52be-4dda-a15b-9fd852c1662c	ont:ldcTime	_:g4357		
+event:3ec4634d-52be-4dda-a15b-9fd852c1662c	rdf:type	ldc:Transaction.TransferOwnership	isi:gaia/assertions/4827e23a-1898-4977-9f0e-e6dd871d3069	
+event:45a36b31-3cdf-4a09-bf4e-9da088d09204	ldc:Transaction.TransferOwnership_Artifact	entity:79969b4c-cf9e-4eb7-8123-c7714e087454	_:g9651	
+event:45a36b31-3cdf-4a09-bf4e-9da088d09204	rdf:type	ldc:Transaction.TransferOwnership	isi:gaia/assertions/6d734b6f-db97-4458-aed6-4b17c92ae12f	
+event:4b44ce16-1483-4f82-ae4d-ad1e2889289f	ldc:Conflict.Demonstrate_Place	entity:9911ecfc-e6b9-41a4-a488-30075e439aa8	_:g3125	"Ukraine"|"Ukrainian"
+event:4b44ce16-1483-4f82-ae4d-ad1e2889289f	ont:ldcTime	_:g3938		
+event:4b44ce16-1483-4f82-ae4d-ad1e2889289f	rdf:type	ldc:Conflict.Demonstrate	isi:gaia/assertions/08ac6fba-bae3-4cd8-9bc6-761519304cff	
+event:4d9a426d-a639-4788-b2e4-aae9709f5c9c	ldc:Movement.TransportPerson.BringCarryUnload_Origin	entity:5d6629ee-be36-4445-8a35-3be47b8ee97a	_:g8289	"SBU"|"Security Service of Ukraine"
+event:4d9a426d-a639-4788-b2e4-aae9709f5c9c	ldc:Movement.TransportPerson.BringCarryUnload_Origin	entity:79969b4c-cf9e-4eb7-8123-c7714e087454	_:g6919	
+event:4d9a426d-a639-4788-b2e4-aae9709f5c9c	ldc:Movement.TransportPerson.BringCarryUnload_Origin	entity:9911ecfc-e6b9-41a4-a488-30075e439aa8	_:g651	"Ukraine"|"Ukrainian"
+event:4d9a426d-a639-4788-b2e4-aae9709f5c9c	ldc:Movement.TransportPerson.BringCarryUnload_Passenger	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g9099	
+event:4d9a426d-a639-4788-b2e4-aae9709f5c9c	rdf:type	ldc:Movement.TransportPerson.BringCarryUnload	isi:gaia/assertions/8703bbba-ccec-4e52-936b-36d01469bf56	
+event:4e2721c1-4bf6-436f-8cdb-433e2baf0e23	ldc:Conflict.Attack_Attacker	entity:272ee6a1-9c6e-4749-b0e1-d65df27a9992	_:g376	
+event:4e2721c1-4bf6-436f-8cdb-433e2baf0e23	ldc:Conflict.Attack_Attacker	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g2725	
+event:4e2721c1-4bf6-436f-8cdb-433e2baf0e23	ldc:Conflict.Attack_Attacker	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g3499	
+event:4e2721c1-4bf6-436f-8cdb-433e2baf0e23	ldc:Conflict.Attack_Instrument	entity:7ab86777-b6c3-4387-b9b2-fe3cc12cc825	_:g7562	
+event:4e2721c1-4bf6-436f-8cdb-433e2baf0e23	ldc:Conflict.Attack_Instrument	entity:8f6c504e-697a-4049-8f57-921457fee819	_:g1555	
+event:4e2721c1-4bf6-436f-8cdb-433e2baf0e23	ldc:Conflict.Attack_Place	entity:584ecaed-6832-489c-8e45-2e63a460ab90	_:g3152	
+event:4e2721c1-4bf6-436f-8cdb-433e2baf0e23	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/8d0dd1eb-11f9-4a46-b48c-e48d6e3f7efe	
+event:50473595-7196-4df6-94ef-1ba5bc07195e	ldc:Life.Injure.InjuryCausedByViolentEvents_Victim	entity:fbf6e4a1-54e2-423c-92e2-75b2f2aab53b	_:g6150	
+event:50473595-7196-4df6-94ef-1ba5bc07195e	ont:ldcTime	_:g1468		
+event:50473595-7196-4df6-94ef-1ba5bc07195e	rdf:type	ldc:Life.Injure.InjuryCausedByViolentEvents	isi:gaia/assertions/744a0589-c0ad-4aca-b595-29831effe094	
+event:519cf108-2005-4d3d-b82c-a4309db8992e	ldc:Conflict.Attack_Attacker	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g166	
+event:519cf108-2005-4d3d-b82c-a4309db8992e	ldc:Conflict.Attack_Attacker	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g2930	
+event:519cf108-2005-4d3d-b82c-a4309db8992e	ldc:Conflict.Attack_Attacker	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g3594	
+event:519cf108-2005-4d3d-b82c-a4309db8992e	ldc:Conflict.Attack_Instrument	entity:23892484-bbe3-413f-9c36-04f04a38205d	_:g5025	
+event:519cf108-2005-4d3d-b82c-a4309db8992e	ldc:Conflict.Attack_Instrument	entity:f92b5062-98f1-4b67-b104-655071159395	_:g8726	
+event:519cf108-2005-4d3d-b82c-a4309db8992e	ldc:Conflict.Attack_Place	entity:6089aa40-b19c-4ae2-8714-a55d86c7a64e	_:g3718	"Semenivka"
+event:519cf108-2005-4d3d-b82c-a4309db8992e	ldc:Conflict.Attack_Target	entity:07baa852-5f32-43cd-93b9-00b6b19f65da	_:g4112	
+event:519cf108-2005-4d3d-b82c-a4309db8992e	ont:ldcTime	_:g8849		
+event:519cf108-2005-4d3d-b82c-a4309db8992e	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/19257532-b416-4ce3-ab70-d0e2d49841f5	
+event:547318e3-a0f6-478e-a167-3a78b4bccf72	ldc:Justice.ArrestJailDetain.ArrestJailDetain_Jailer	entity:8dd058b5-bde8-4b2a-9dd7-511a0b5fff55	_:g2795	"Donbass People's Militia"|"the Donbass People's Militia"
+event:547318e3-a0f6-478e-a167-3a78b4bccf72	ldc:Justice.ArrestJailDetain.ArrestJailDetain_Jailer	entity:a58c1eed-be77-4b4e-8144-ce0cf0f2ff4c	_:g557	
+event:547318e3-a0f6-478e-a167-3a78b4bccf72	ldc:Justice.ArrestJailDetain.ArrestJailDetain_Jailer	entity:a96cee0a-b988-4acb-8e67-beab505366e1	_:g7977	
+event:547318e3-a0f6-478e-a167-3a78b4bccf72	ont:ldcTime	_:g6289		
+event:547318e3-a0f6-478e-a167-3a78b4bccf72	rdf:type	ldc:Justice.ArrestJailDetain.ArrestJailDetain	isi:gaia/assertions/3f512f7b-7792-4730-b296-e86ceafe1737	
+event:561055e4-eb4f-4bc2-b52b-d30f61c03261	ldc:Life.Die.DeathCausedByViolentEvents_Victim	entity:71be8687-73db-492c-9930-93143e7da8ca	_:g8436	
+event:561055e4-eb4f-4bc2-b52b-d30f61c03261	ldc:Life.Die.DeathCausedByViolentEvents_Victim	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g1083	
+event:561055e4-eb4f-4bc2-b52b-d30f61c03261	ldc:Life.Die.DeathCausedByViolentEvents_Victim	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g998	
+event:561055e4-eb4f-4bc2-b52b-d30f61c03261	rdf:type	ldc:Life.Die.DeathCausedByViolentEvents	isi:gaia/assertions/5a124782-50db-4404-a34a-ba13d005f708	
+event:57637d25-f9ad-48ad-8258-243e81181fa7	ont:ldcTime	_:g4923		
+event:57637d25-f9ad-48ad-8258-243e81181fa7	rdf:type	ldc:Movement.TransportPerson	isi:gaia/assertions/7b1cd7e2-631e-4bee-a2d7-09cc1b5249ee	
+event:59e193dc-b767-4e2f-b113-c1bcd61c03f8	ldc:Contact.Discussion.Meet_Participant	entity:23892484-bbe3-413f-9c36-04f04a38205d	_:g3086	
+event:59e193dc-b767-4e2f-b113-c1bcd61c03f8	ldc:Contact.Discussion.Meet_Participant	entity:71be8687-73db-492c-9930-93143e7da8ca	_:g6624	
+event:59e193dc-b767-4e2f-b113-c1bcd61c03f8	rdf:type	ldc:Contact.Discussion.Meet	isi:gaia/assertions/9cd92be7-1c8a-4c80-9008-8b831fd0472c	
+event:5b75725d-c4a2-417a-8287-d4d666fe219d	rdf:type	ldc:Conflict.Attack.FirearmAttack	isi:gaia/assertions/a4c1d277-a66c-4720-b04a-dd875c3b8172	
+event:5bf27170-c02b-4504-828e-0b53606c56c2	ldc:Movement.TransportArtifact_Artifact	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g7748	
+event:5bf27170-c02b-4504-828e-0b53606c56c2	ldc:Movement.TransportArtifact_Artifact	entity:8ad69983-747e-4701-bbb8-8963d5a40b28	_:g7434	
+event:5bf27170-c02b-4504-828e-0b53606c56c2	ldc:Movement.TransportArtifact_Destination	entity:60e088a8-d7b4-43c4-8891-bf36f3374d58	_:g1270	
+event:5bf27170-c02b-4504-828e-0b53606c56c2	ldc:Movement.TransportArtifact_Destination	entity:60e088a8-d7b4-43c4-8891-bf36f3374d58	_:g7524	
+event:5bf27170-c02b-4504-828e-0b53606c56c2	ldc:Movement.TransportArtifact_Transporter	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g3267	
+event:5bf27170-c02b-4504-828e-0b53606c56c2	ont:ldcTime	_:g5576		
+event:5bf27170-c02b-4504-828e-0b53606c56c2	rdf:type	ldc:Movement.TransportArtifact	isi:gaia/assertions/a224d379-5b9d-4b44-9cb9-ccbd54eae80d	
+event:5d489993-c6f2-4b70-8d36-d10bdfaaae55	ldc:Life.Die.DeathCausedByViolentEvents_Victim	entity:fbf6e4a1-54e2-423c-92e2-75b2f2aab53b	_:g3514	
+event:5d489993-c6f2-4b70-8d36-d10bdfaaae55	ldc:Life.Die.DeathCausedByViolentEvents_Victim	entity:fbf6e4a1-54e2-423c-92e2-75b2f2aab53b	_:g5710	
+event:5d489993-c6f2-4b70-8d36-d10bdfaaae55	rdf:type	ldc:Life.Die.DeathCausedByViolentEvents	isi:gaia/assertions/fa9ea3c5-87a6-49a8-8dba-31f4ab184761	
+event:5fdbc19f-9695-4f33-9ec3-24a3569bfbb1	ldc:Life.Die.DeathCausedByViolentEvents_Victim	entity:10147d53-19e3-4b20-b144-02077ba0f2ac	_:g6347	
+event:5fdbc19f-9695-4f33-9ec3-24a3569bfbb1	ont:ldcTime	_:g4899		
+event:5fdbc19f-9695-4f33-9ec3-24a3569bfbb1	rdf:type	ldc:Life.Die.DeathCausedByViolentEvents	isi:gaia/assertions/70cda9f5-0f80-44b3-9036-5a9174891551	
+event:6411f079-79de-4360-aa6e-e0cfe886d897	rdf:type	ldc:Contact.CommitmentPromiseExpressIntent.Meet	isi:gaia/assertions/1a781d03-8627-4bd7-b4aa-a0d7b308c49c	
+event:6aa9bf10-72cd-4873-bc11-79b2c7da6642	ldc:Conflict.Demonstrate.MarchProtestPoliticalGathering_Place	entity:79969b4c-cf9e-4eb7-8123-c7714e087454	_:g7921	
+event:6aa9bf10-72cd-4873-bc11-79b2c7da6642	rdf:type	ldc:Conflict.Demonstrate.MarchProtestPoliticalGathering	isi:gaia/assertions/1d3166ec-0f60-47f9-af48-514d4390526a	
+event:72e7d52f-b688-45cd-b262-5678ce371a0f	ldc:Contact.MediaStatement.Broadcast_Communicator	entity:ceb83cac-4a16-44b9-9e49-4821a44501ee	_:g7321	"BBC News"
+event:72e7d52f-b688-45cd-b262-5678ce371a0f	rdf:type	ldc:Contact.MediaStatement.Broadcast	isi:gaia/assertions/844b398a-2009-44d9-9f9d-70ab6ecb72f2	
+event:7793a410-d365-4183-9c70-f891fe4467cc	rdf:type	ldc:Transaction.Transaction.TransferControl	isi:gaia/assertions/09fb1fc7-a0b0-4893-b330-f86ef2dfe634	
+event:85ebd457-c5eb-4acb-9ad5-027f9805954e	ont:ldcTime	_:g5138		
+event:85ebd457-c5eb-4acb-9ad5-027f9805954e	rdf:type	ldc:Life.Die	isi:gaia/assertions/67894dd6-c4d8-48d2-8695-894018f6e60e	
+event:8712bced-16d9-452b-bfbb-36f600e64534	rdf:type	ldc:Conflict.Attack.FirearmAttack	isi:gaia/assertions/a495bc24-9b79-4799-900b-7151b6d2aa1a	
+event:8aec7eb9-b3c7-4c1d-9527-3c5c67ab754b	ldc:Movement.TransportPerson_Destination	entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd	_:g4311	"Kramatorsk"
+event:8aec7eb9-b3c7-4c1d-9527-3c5c67ab754b	ldc:Movement.TransportPerson_Passenger	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g1830	
+event:8aec7eb9-b3c7-4c1d-9527-3c5c67ab754b	ont:ldcTime	_:g37		
+event:8aec7eb9-b3c7-4c1d-9527-3c5c67ab754b	rdf:type	ldc:Movement.TransportPerson	isi:gaia/assertions/5a5bb011-481c-4617-8ffb-9c7070b909be	
+event:8b2b2a39-b190-4809-9fa0-dd2163457b9d	ldc:Conflict.Attack.SelfDirectedBattle_Target	entity:fbf6e4a1-54e2-423c-92e2-75b2f2aab53b	_:g664	
+event:8b2b2a39-b190-4809-9fa0-dd2163457b9d	ldc:Conflict.Attack.SelfDirectedBattle_Target	entity:fbf6e4a1-54e2-423c-92e2-75b2f2aab53b	_:g9678	
+event:8b2b2a39-b190-4809-9fa0-dd2163457b9d	rdf:type	ldc:Conflict.Attack.SelfDirectedBattle	isi:gaia/assertions/481bf6a9-ede1-40fa-a8bd-8969fcf1a53c	
+event:9100be93-931d-4ee0-89aa-50e7d06f773e	ldc:Transaction.TransferOwnership_Artifact	entity:c72e94f4-e4d1-45de-966f-b52cf4d6de5e	_:g10	
+event:9100be93-931d-4ee0-89aa-50e7d06f773e	ont:ldcTime	_:g6818		
+event:9100be93-931d-4ee0-89aa-50e7d06f773e	rdf:type	ldc:Transaction.TransferOwnership	isi:gaia/assertions/24486386-1025-4b2b-b2e4-ff9004e6d441	
+event:919a8bb7-6ac8-4f9c-bd41-73d4f544cca3	ldc:Conflict.Attack_Place	entity:9911ecfc-e6b9-41a4-a488-30075e439aa8	_:g1240	"Ukraine"|"Ukrainian"
+event:919a8bb7-6ac8-4f9c-bd41-73d4f544cca3	ldc:Conflict.Attack_Place	entity:9911ecfc-e6b9-41a4-a488-30075e439aa8	_:g2788	"Ukraine"|"Ukrainian"
+event:919a8bb7-6ac8-4f9c-bd41-73d4f544cca3	ldc:Conflict.Attack_Place	entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd	_:g958	"Kramatorsk"
+event:919a8bb7-6ac8-4f9c-bd41-73d4f544cca3	ont:ldcTime	_:g4230		
+event:919a8bb7-6ac8-4f9c-bd41-73d4f544cca3	ont:ldcTime	_:g4233		
+event:919a8bb7-6ac8-4f9c-bd41-73d4f544cca3	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/80e0b396-e126-499e-8b92-546ea57414aa	
+event:9270081a-48ad-418f-ba28-2c38fa55ffa5	ldc:Conflict.Attack.Bombing_Attacker	entity:29895373-9890-4bec-b12f-966e7744f284	_:g7859	
+event:9270081a-48ad-418f-ba28-2c38fa55ffa5	ldc:Conflict.Attack.Bombing_Target	entity:abe49605-2e66-47e9-af59-8351050b5a2d	_:g986	
+event:9270081a-48ad-418f-ba28-2c38fa55ffa5	ont:ldcTime	_:g1893		
+event:9270081a-48ad-418f-ba28-2c38fa55ffa5	rdf:type	ldc:Conflict.Attack.Bombing	isi:gaia/assertions/0f6401b2-e71e-4fc7-ba21-d2fe6342de59	
+event:94045f36-5a10-4fa6-a3ee-f9f4fd78fdbf	ldc:Movement.TransportPerson_Destination	entity:79969b4c-cf9e-4eb7-8123-c7714e087454	_:g8572	
+event:94045f36-5a10-4fa6-a3ee-f9f4fd78fdbf	ldc:Movement.TransportPerson_Destination	entity:972b99a1-a595-4335-aeb3-20353a242c6b	_:g148	
+event:94045f36-5a10-4fa6-a3ee-f9f4fd78fdbf	rdf:type	ldc:Movement.TransportPerson	isi:gaia/assertions/fa9b9619-e0de-42c1-8051-0a83003e9a9f	
+event:a125a7f6-0b29-4478-9e47-52fe203b6084	ldc:Conflict.Attack_Instrument	entity:9e1446d5-7a74-4ec0-b1da-0c2d010aa24a	_:g446	"Mil Mi-24"
+event:a125a7f6-0b29-4478-9e47-52fe203b6084	ont:ldcTime	_:g1183		
+event:a125a7f6-0b29-4478-9e47-52fe203b6084	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/721c7a42-072f-4f3d-8696-0dd1f346e026	
+event:a1d9f832-cd56-446e-b5e0-a119b8977165	ldc:Conflict.Attack.Invade_Attacker	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g6823	
+event:a1d9f832-cd56-446e-b5e0-a119b8977165	ldc:Conflict.Attack.Invade_Attacker	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g1922	
+event:a1d9f832-cd56-446e-b5e0-a119b8977165	ldc:Conflict.Attack.Invade_Attacker	entity:c61908e7-3984-441d-9f19-3fb7b2786e62	_:g3381	
+event:a1d9f832-cd56-446e-b5e0-a119b8977165	ldc:Conflict.Attack.Invade_Place	entity:d1dcefce-badf-4948-bfcf-5d33116fa12c	_:g9269	"Sloviansk"
+event:a1d9f832-cd56-446e-b5e0-a119b8977165	ldc:Conflict.Attack.Invade_Target	entity:eaff3673-b32b-4d3d-ac52-f2886cebf8c5	_:g1284	
+event:a1d9f832-cd56-446e-b5e0-a119b8977165	ont:ldcTime	_:g5720		
+event:a1d9f832-cd56-446e-b5e0-a119b8977165	rdf:type	ldc:Conflict.Attack.Invade	isi:gaia/assertions/a5c42ff3-d1a4-4079-bbc7-44b8a2aaffe5	
+event:a94980a7-40f4-456c-8ce9-3bbec02e4674	ldc:Movement.TransportPerson_Destination	entity:5c64e1a6-d96a-41ef-b584-2c3c30757bf4	_:g2750	
+event:a94980a7-40f4-456c-8ce9-3bbec02e4674	ldc:Movement.TransportPerson_Origin	entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd	_:g1321	"Kramatorsk"
+event:a94980a7-40f4-456c-8ce9-3bbec02e4674	ldc:Movement.TransportPerson_Passenger	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g5932	
+event:a94980a7-40f4-456c-8ce9-3bbec02e4674	ldc:Movement.TransportPerson_Passenger	entity:d21b8cb7-939f-4406-8832-a3439e04e8c4	_:g8984	
+event:a94980a7-40f4-456c-8ce9-3bbec02e4674	rdf:type	ldc:Movement.TransportPerson	isi:gaia/assertions/c1f10e3f-9e2f-4169-8538-b57108c869d0	
+event:af573fc7-671f-4a47-b544-070da9325803	ldc:Movement.TransportArtifact_Destination	entity:79969b4c-cf9e-4eb7-8123-c7714e087454	_:g2535	
+event:af573fc7-671f-4a47-b544-070da9325803	ont:ldcTime	_:g7218		
+event:af573fc7-671f-4a47-b544-070da9325803	rdf:type	ldc:Movement.TransportArtifact	isi:gaia/assertions/8cd45adc-5988-46f9-882d-0d420481a74a	
+event:b547d141-9ad1-4c89-97d1-d56ced7e1b5f	ont:ldcTime	_:g8758		
+event:b547d141-9ad1-4c89-97d1-d56ced7e1b5f	rdf:type	ldc:Conflict.Demonstrate	isi:gaia/assertions/1ec67223-43ac-4e86-8736-eb9770d27c8a	
+event:b97595ba-aef4-4dc5-8ccb-f95114dd0941	rdf:type	ldc:Contact.MediaStatement.Broadcast	isi:gaia/assertions/15e7630a-dee2-4de8-ac3a-fdc7b5e70086	
+event:b9f073ee-d79e-47f0-9237-3749fd32483d	ldc:Movement.TransportArtifact_Artifact	entity:972b99a1-a595-4335-aeb3-20353a242c6b	_:g1996	
+event:b9f073ee-d79e-47f0-9237-3749fd32483d	rdf:type	ldc:Movement.TransportArtifact	isi:gaia/assertions/5acc422f-a61f-43fd-9d5a-80a89e2e676d	
+event:bf6a3b78-bd23-48a2-9745-aad4be5de7e7	ldc:Conflict.Attack_Place	entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd	_:g8066	"Kramatorsk"
+event:bf6a3b78-bd23-48a2-9745-aad4be5de7e7	ldc:Conflict.Attack_Target	entity:35d37f9c-97ff-4e5c-9584-b7b765ac3143	_:g4890	
+event:bf6a3b78-bd23-48a2-9745-aad4be5de7e7	ldc:Conflict.Attack_Target	entity:fbf6e4a1-54e2-423c-92e2-75b2f2aab53b	_:g2468	
+event:bf6a3b78-bd23-48a2-9745-aad4be5de7e7	ont:ldcTime	_:g500		
+event:bf6a3b78-bd23-48a2-9745-aad4be5de7e7	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/a9ed4f5d-2122-4d89-9bf9-da86da0b1467	
+event:c4e299ba-a057-489b-a2cb-082e45edede7	ldc:Conflict.Attack.FirearmAttack_Attacker	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g4341	
+event:c4e299ba-a057-489b-a2cb-082e45edede7	ldc:Conflict.Attack.FirearmAttack_Instrument	entity:23892484-bbe3-413f-9c36-04f04a38205d	_:g7186	
+event:c4e299ba-a057-489b-a2cb-082e45edede7	ldc:Conflict.Attack.FirearmAttack_Instrument	entity:f92b5062-98f1-4b67-b104-655071159395	_:g1090	
+event:c4e299ba-a057-489b-a2cb-082e45edede7	rdf:type	ldc:Conflict.Attack.FirearmAttack	isi:gaia/assertions/87315403-628d-4e4b-b478-93bc4cff4ecb	
+event:c66f14ee-991f-4d33-bfe7-a75ba002e3f7	ont:ldcTime	_:g5500		
+event:c66f14ee-991f-4d33-bfe7-a75ba002e3f7	rdf:type	ldc:Conflict.Attack.FirearmAttack	isi:gaia/assertions/c8572238-f993-4838-95f1-6b9c9e680e33	
+event:c8da2ab4-a693-4fa3-8661-e7142f57802d	ldc:Movement.TransportArtifact_Vehicle	entity:c6f32b90-6038-40c0-97e4-6d3f7fd76c03	_:g9010	
+event:c8da2ab4-a693-4fa3-8661-e7142f57802d	rdf:type	ldc:Movement.TransportArtifact	isi:gaia/assertions/9963fa54-46ea-469c-aaa0-80e7f34ca7f0	
+event:ccab90f8-cc7e-4223-9d30-81c487ef573a	ldc:Transaction.TransferOwnership_Recipient	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g4676	
+event:ccab90f8-cc7e-4223-9d30-81c487ef573a	rdf:type	ldc:Transaction.TransferOwnership	isi:gaia/assertions/530d0478-d7d4-4011-b345-c10ed57515f8	
+event:cd95fe0f-a762-4147-89b2-1d1b0bde4515	ldc:Transaction.TransferOwnership_Artifact	entity:c6f32b90-6038-40c0-97e4-6d3f7fd76c03	_:g5325	
+event:cd95fe0f-a762-4147-89b2-1d1b0bde4515	ont:ldcTime	_:g3507		
+event:cd95fe0f-a762-4147-89b2-1d1b0bde4515	rdf:type	ldc:Transaction.TransferOwnership	isi:gaia/assertions/adb61233-5937-40f1-8a52-bff1af368ddd	
+event:d10a70b6-aea4-46ea-b329-50ea95bd0b36	ldc:Conflict.Attack_Place	entity:9911ecfc-e6b9-41a4-a488-30075e439aa8	_:g5427	"Ukraine"|"Ukrainian"
+event:d10a70b6-aea4-46ea-b329-50ea95bd0b36	ldc:Conflict.Attack_Target	entity:8e97e2c0-5ed1-4ae3-81bc-f66cedd2d8e5	_:g4808	
+event:d10a70b6-aea4-46ea-b329-50ea95bd0b36	ont:ldcTime	_:g4752		
+event:d10a70b6-aea4-46ea-b329-50ea95bd0b36	ont:ldcTime	_:g4755		
+event:d10a70b6-aea4-46ea-b329-50ea95bd0b36	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/e48b6ac7-18d3-4e7d-899c-18fabf95a882	
+event:d430d13e-d74c-492f-887b-bfe47beb459d	ldc:Life.Die_Victim	entity:706649f5-1e01-47ee-a5e7-8ae80951e688	_:g6399	
+event:d430d13e-d74c-492f-887b-bfe47beb459d	ldc:Life.Die_Victim	entity:706649f5-1e01-47ee-a5e7-8ae80951e688	_:g9056	
+event:d430d13e-d74c-492f-887b-bfe47beb459d	ont:ldcTime	_:g875		
+event:d430d13e-d74c-492f-887b-bfe47beb459d	ont:ldcTime	_:g878		
+event:d430d13e-d74c-492f-887b-bfe47beb459d	rdf:type	ldc:Life.Die	isi:gaia/assertions/39e1f071-0d94-44a4-8c80-6a211f9ccd3b	
+event:d63bd203-8b55-45f0-b42f-88b2126406c6	rdf:type	ldc:Life.Injure.InjuryCausedByViolentEvents	isi:gaia/assertions/1e132a06-d35b-4b6a-b484-4bc03684214c	
+event:dab890d7-aa46-4e1f-9309-e7c2834a164d	ldc:Conflict.Attack_Attacker	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g5354	
+event:dab890d7-aa46-4e1f-9309-e7c2834a164d	ldc:Conflict.Attack_Attacker	entity:cb14e199-571a-4262-a92f-b295d154f346	_:g9040	"The Ukrainian Ground Forces"
+event:dab890d7-aa46-4e1f-9309-e7c2834a164d	ldc:Conflict.Attack_Place	entity:60e088a8-d7b4-43c4-8891-bf36f3374d58	_:g3188	
+event:dab890d7-aa46-4e1f-9309-e7c2834a164d	ldc:Conflict.Attack_Target	entity:5c64e1a6-d96a-41ef-b584-2c3c30757bf4	_:g4667	
+event:dab890d7-aa46-4e1f-9309-e7c2834a164d	ldc:Conflict.Attack_Target	entity:5c64e1a6-d96a-41ef-b584-2c3c30757bf4	_:g6306	
+event:dab890d7-aa46-4e1f-9309-e7c2834a164d	ldc:Conflict.Attack_Target	entity:5c64e1a6-d96a-41ef-b584-2c3c30757bf4	_:g9579	
+event:dab890d7-aa46-4e1f-9309-e7c2834a164d	ont:ldcTime	_:g5694		
+event:dab890d7-aa46-4e1f-9309-e7c2834a164d	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/afd17ac6-bf78-4381-ac2f-5d0838726734	
+event:dd540056-e5b6-4d4d-b20c-c2ec00dcf2fa	ldc:Movement.TransportArtifact_Artifact	entity:ecf050d1-8955-4c1b-bc84-1387184cf445	_:g8715	
+event:dd540056-e5b6-4d4d-b20c-c2ec00dcf2fa	ldc:Movement.TransportArtifact_Destination	entity:ae301857-1da8-4d24-827a-d5a8aa9d3269	_:g7228	
+event:dd540056-e5b6-4d4d-b20c-c2ec00dcf2fa	ont:ldcTime	_:g1072		
+event:dd540056-e5b6-4d4d-b20c-c2ec00dcf2fa	rdf:type	ldc:Movement.TransportArtifact	isi:gaia/assertions/f69efb66-8d17-4c0a-a946-d321daddfc9a	
+event:de45ac19-fa32-4f75-8dcd-7596e06361a0	ldc:Conflict.Attack.SelfDirectedBattle_Place	entity:2de03f86-234c-4733-a2d6-70497c910e6c	_:g5185	"Donbass"
+event:de45ac19-fa32-4f75-8dcd-7596e06361a0	ont:ldcTime	_:g2682		
+event:de45ac19-fa32-4f75-8dcd-7596e06361a0	rdf:type	ldc:Conflict.Attack.SelfDirectedBattle	isi:gaia/assertions/9977a21a-a8b2-435e-80bc-8c7cb3ea15b3	
+event:e5cb7766-2fce-48f4-b829-bbac79d31298	ldc:Conflict.Attack.AirstrikeMissileStrike_Place	entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd	_:g8012	"Kramatorsk"
+event:e5cb7766-2fce-48f4-b829-bbac79d31298	ont:ldcTime	_:g2198		
+event:e5cb7766-2fce-48f4-b829-bbac79d31298	rdf:type	ldc:Conflict.Attack.AirstrikeMissileStrike	isi:gaia/assertions/7b4ef55e-e149-4603-96de-779650a9be6a	
+event:e88b2c77-0ac9-4814-b9ec-08095842e4e3	ldc:Conflict.Attack_Place	entity:46f05b2c-ded3-4f10-ba81-69ef092a5c9c	_:g2919	
+event:e88b2c77-0ac9-4814-b9ec-08095842e4e3	rdf:type	ldc:Conflict.Attack	isi:gaia/assertions/fd66d456-d09f-417f-b66d-c11333830d39	
+event:ec84fe9a-36c0-4925-be64-ffc25620d4f3	ldc:Movement.TransportPerson_Destination	entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd	_:g2346	"Kramatorsk"
+event:ec84fe9a-36c0-4925-be64-ffc25620d4f3	ldc:Movement.TransportPerson_Transporter	entity:16c96b48-fceb-4a5c-9420-75ffb0299ed1	_:g8881	
+event:ec84fe9a-36c0-4925-be64-ffc25620d4f3	ldc:Movement.TransportPerson_Transporter	entity:8ad69983-747e-4701-bbb8-8963d5a40b28	_:g929	
+event:ec84fe9a-36c0-4925-be64-ffc25620d4f3	ont:ldcTime	_:g1043		
+event:ec84fe9a-36c0-4925-be64-ffc25620d4f3	rdf:type	ldc:Movement.TransportPerson	isi:gaia/assertions/c691db10-35e3-4f77-83a1-b8f0d2d15ef4	
+event:f492085b-2897-4557-9aa5-29592f7375fc	ldc:Conflict.Attack.SelfDirectedBattle_Place	entity:584ecaed-6832-489c-8e45-2e63a460ab90	_:g7966	
+event:f492085b-2897-4557-9aa5-29592f7375fc	ont:ldcTime	_:g6704		
+event:f492085b-2897-4557-9aa5-29592f7375fc	rdf:type	ldc:Conflict.Attack.SelfDirectedBattle	isi:gaia/assertions/ff480f31-beab-4a1d-b0ec-bc886c3b092b	
+event:f89f099a-82d3-4261-8777-f21dcf94b11a	ont:ldcTime	_:g6862		
+event:f89f099a-82d3-4261-8777-f21dcf94b11a	rdf:type	ldc:Transaction.TransferOwnership	isi:gaia/assertions/23566012-7013-4cff-a882-f90063e60200	
+event:fa2d666b-b648-408a-9998-8fce66bc9426	ont:ldcTime	_:g4365		
+event:fa2d666b-b648-408a-9998-8fce66bc9426	rdf:type	ldc:Conflict.Attack.SelfDirectedBattle	isi:gaia/assertions/2af2060b-77a0-4aa5-8917-24bf2b20b2f1	
+event:fb54ebf4-c34e-4d1b-8dd2-1154aa0ca4a4	ont:ldcTime	_:g3735		
+event:fb54ebf4-c34e-4d1b-8dd2-1154aa0ca4a4	rdf:type	ldc:Contact.CommitmentPromiseExpressIntent.Meet	isi:gaia/assertions/204db13f-15bd-49b0-802f-5466552138ad	
+event:fd10a73e-5236-40e9-b2e0-35f86fe82423	ont:ldcTime	_:g2125		
+event:fd10a73e-5236-40e9-b2e0-35f86fe82423	rdf:type	ldc:Conflict.Attack.FirearmAttack	isi:gaia/assertions/a7803bf1-fef0-48fc-a1ae-b5d43fcd4d67	
+event:fd2323ad-b9c6-4b57-9228-8579b52475c8	ldc:Life.Die_Place	entity:584ecaed-6832-489c-8e45-2e63a460ab90	_:g3162	
+event:fd2323ad-b9c6-4b57-9228-8579b52475c8	ldc:Life.Die_Victim	entity:10147d53-19e3-4b20-b144-02077ba0f2ac	_:g2654	
+event:fd2323ad-b9c6-4b57-9228-8579b52475c8	ldc:Life.Die_Victim	entity:fbf6e4a1-54e2-423c-92e2-75b2f2aab53b	_:g8555	
+event:fd2323ad-b9c6-4b57-9228-8579b52475c8	ont:ldcTime	_:g5041		
+event:fd2323ad-b9c6-4b57-9228-8579b52475c8	rdf:type	ldc:Life.Die	isi:gaia/assertions/ef947ce3-6fe8-4f74-bf6c-30a2ac49379c	
