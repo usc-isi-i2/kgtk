@@ -125,7 +125,7 @@ class KGTKArgumentParser(ArgumentParser):
                     continue
                 if isinstance(pl, Path):
                     result.append(pl)
-                elif isinstance(pl, List):
+                elif isinstance(pl, list):
                     result.extend(pl)
                 else:
                     raise KGTKException("%s: Unexpected component '%s' in path list '%s'." % (who, str(pl), str(paths)))
