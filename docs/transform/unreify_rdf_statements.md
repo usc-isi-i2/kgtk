@@ -1,4 +1,4 @@
-The unreify_rdf_statements command simplifies data while copying a KGTK file
+The unreify-rdf-statements command simplifies data while copying a KGTK file
 from input to output, by removing extra nodes caused by RDF statement
 reification.
 
@@ -17,7 +17,7 @@ Input Table:
 | XJAABmv8vGfJZZasjV6DAXY:g3 | rdf:subject | gaia:relations/d3e1e4df-6c8c-4fd1-8b93-ee49ef238f72 |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | rdf:type | rdf:Statement |
 
-The output of `kgtk unreify_rdf_statements` is below. The unified table is easier to
+The output of `kgtk unreify-rdf-statements` is below. The unified table is easier to
 understand as it clearly signals that we have an event and we know the place where
 the attacu occured.  The secondary edges qualify the main edge, giving us context.
 
@@ -161,7 +161,7 @@ file, e.g., an ID column might not be present.
 
 ### Pattern Match Parameters
 
-`kgtk unreify_rdf_statements` has a built-in set of pattern match parameters that
+`kgtk unreify-rdf-statements` has a built-in set of pattern match parameters that
 will not change for normal operation.  All pattern matches reference the usual
 node1, label, and node2 columns or their aliases; there are no options to
 override the column names.
@@ -187,7 +187,7 @@ the pattern match parameters can be beneficial.
 
 ### Cartesian Crossproduct
 
-`kgtk unreify_rdf_statements` processes multiple subject, predicates, and/or
+`kgtk unreify-rdf-statements` processes multiple subject, predicates, and/or
 objects in the reified input edges by generating one set of unreified edges
 (both the unreified data edge and any secondary edges) for each combination
 of (subject, predicate, object).  This processing may be disabled by options
@@ -213,7 +213,7 @@ and the group of input data will not be unreified.
 
 ## Broken Edges
 
-Unless a Cartesian Crossproduct is being generated, `kgtk unreify_rdf_statements`
+Unless a Cartesian Crossproduct is being generated, `kgtk unreify-rdf-statements`
 uses the node1 value of an input reified RDF statement ("XJAABmv8vGfJZZasjV6DAXY:g3")
 as the edge ID of the output unreified RDF edge record, and as the node1 value of the
 secondary edges. If for some reason there are other edges that refer to
@@ -247,7 +247,7 @@ then the new ID and node1 values cannot be as easily linked to esternal nodes re
 
 ## Difference Comparison
 
-`kgtk unreify_rdf_statements` sorts its input data as part of detecting
+`kgtk unreify-rdf-statements` sorts its input data as part of detecting
 reified RDF statements. Thus, attempting to look for changes between the input
 file and the output file using an ordinary difference utility is not likely to
 be fruitful.  Instead, employ the following strategy:
@@ -255,14 +255,14 @@ be fruitful.  Instead, employ the following strategy:
  * add an ID column to the input data if it does not already have one, using `kgtk add_id`
    * Perhaps without generating ID values, to remove clutter.
    * kgtk add_id --id-style=empty`
- * sort the resulting data using `kgtk unreify_rdf_statements` with a disabled pattern match parameter.
-   * `kgtk unreify_rdf_statements --trigger-label=XXX -o output1.tsv`
- * Apply `kgtk unreify_rdf_statements` a second time without disabling the pattern match.
-   * `kgtk unreify_rdf_statements -o output2.tsv`
+ * sort the resulting data using `kgtk unreify-rdf-statements` with a disabled pattern match parameter.
+   * `kgtk unreify-rdf-statements --trigger-label=XXX -o output1.tsv`
+ * Apply `kgtk unreify-rdf-statements` a second time without disabling the pattern match.
+   * `kgtk unreify-rdf-statements -o output2.tsv`
  * Compare the two output files.
 
 ## Examples
 
 ```
-kgtk unreify_rdf_statements -i HC00001DO.tsv -o HC00001DO-unreified-statements.tsv
+kgtk unreify-rdf-statements -i HC00001DO.tsv -o HC00001DO-unreified-statements.tsv
 ```

@@ -1,4 +1,4 @@
-The add_id command copies its input file to its output file,
+The add-id command copies its input file to its output file,
 adding ID values where needed.
 
 New IDs may be generated using one of several available ID generation
@@ -86,7 +86,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 Add an ID column using the default ID style (prefixed):
 
 ```bash
-kgtk add_id file1.tsv
+kgtk add-id file1.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -109,7 +109,7 @@ The output will be the following table in KGTK format:
 Add an ID column using the node1-label-num ID style:
 
 ```bash
-kgtk add_id file1.tsv --id-style node1-label-num
+kgtk add-id file1.tsv --id-style node1-label-num
 ```
 
 The output will be the following table in KGTK format:

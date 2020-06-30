@@ -1,4 +1,4 @@
-The rename_columns command renames file columns while copying a KGTK file from input to output.
+The rename-columns command renames file columns while copying a KGTK file from input to output.
 ## Usage
 
 ```
@@ -14,7 +14,7 @@ Rename all columns using --output-columns newname1 newname2 ...
 Rename selected columns using --old-columns and --new-columns 
 
 The column names are listed seperately for each option, do not quote them as a group, e.g. 
-kgtk rename_columns --old-columns oldname1 oldname2 --new-columns newname1 nsewname2
+kgtk rename-columns --old-columns oldname1 oldname2 --new-columns newname1 nsewname2
 
 The input filename must come before --output-columns, --old-columns, or --new-columns. 
 If no input filename is provided, the default is to read standard input. 
@@ -56,7 +56,7 @@ Copy `file1.tsv`, sending the output to standard output, renaming
 the `location` column to `where`
 
 ```
-kgtk rename_columns file1.tsv --old-columns location --new-columns where
+kgtk rename-columns file1.tsv --old-columns location --new-columns where
 ```
 
 The result will be the following table in KGTK format:
@@ -73,7 +73,7 @@ Copy `file1.tsv`, sending the output to standard output, naming
 all columns in the output file:
 
 ```
-kgtk rename_columns file1.tsv --output-columns node1 label node2 where
+kgtk rename-columns file1.tsv --output-columns node1 label node2 where
 ```
 
 The result will be the following table in KGTK format:

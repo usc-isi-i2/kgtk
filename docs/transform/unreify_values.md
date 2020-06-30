@@ -1,4 +1,4 @@
-The unreify_values command simplifies data while copying a KGTK file from
+The unreify-values command simplifies data while copying a KGTK file from
 input to output, by removing extra nodes caused by RDF value reification. This
 type of reification happens when there is a desire to model contextual or
 complementary information about a value. A new object is created to hold the
@@ -18,7 +18,7 @@ Input Table:
 | XJAABmv8vGfJZZasjV6DAXY:g2 | ont:system | nJAABmv8vGfJZZasjV6DAXY-2: |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | ont:system | nJAABmv8vGfJZZasjV6DAXY-2: |
 
-The output of `kgtk unreify_values` is below. The unified table is easier to
+The output of `kgtk unreify-values` is below. The unified table is easier to
 understand once the spurious undesired object has been deleted, and its
 label/node2 pairs defined as edges on the simplified edge.
 
@@ -152,7 +152,7 @@ and associated edges replaced with an unreified RDF edge and secondary edges.
 A `ID` column is added to the output file if it is not present in the input file.
 This is used to link secondary edges to the newly reconstituted unreified edge.
 
-At the present time, `kgtk unreify_rf_statements` does not generate ID values for
+At the present time, `kgtk unreify-rf_statements` does not generate ID values for
 other edges in the file. This feature may be added in the future.
 
 The edges in the output file are not likely to be in the same order as they appeared
@@ -179,7 +179,7 @@ file, e.g., an ID column might not be present.
 
 ### Pattern Match Parameters
 
-`kgtk unreify_values` does not have a built-in set of pattern match parameters;
+`kgtk unreify-values` does not have a built-in set of pattern match parameters;
 the user must supply the following values.  All pattern matches reference the usual
 node1, label, and node2 columns or their aliases; there are no options to
 override the column names.
@@ -224,7 +224,7 @@ For the examples shown above, the following pattern match values were used:
 
 ### Multiple Values
 
-`kgtk unreify_values` optionally accepts multiple values from records with the label
+`kgtk unreify-values` optionally accepts multiple values from records with the label
 field having the ``--value-label` value, forming a vertical bar (pipe) (|) separated
 list.
 
@@ -282,7 +282,7 @@ place and the output will look like this:
 
 ## Difference Comparison
 
-`kgtk unreify_values` sorts its input data as part of detecting reified RDF
+`kgtk unreify-values` sorts its input data as part of detecting reified RDF
 values. Thus, attempting to look for changes between the input file and the
 output file using an ordinary difference utility is not likely to be fruitful.
 Instead, employ the following strategy:
@@ -290,10 +290,10 @@ Instead, employ the following strategy:
  * add an ID column to the input data if it does not already have one, using `kgtk add_id`
    * Perhaps without generating ID values, to remove clutter.
    * kgtk add_id --id-style=empty`
- * sort the resulting data using `kgtk unreify_rdf_statements` with invalid pattern match parameters:
-   * `kgtk unreify_values --trigger-label=XXX --trigger-node2=XXX --value-label=XXX --old-label=XXX -o output1.tsv`
- * Apply `kgtk unreify_values` a second time with the desired pattern match parameters.
-   * `kgtk unreify_values --trigger-label rdf:type --trigger-node2 ont:Confidence --value-label ont:confidenceValue --old-label ont:confidence-o output2.tsv`
+ * sort the resulting data using `kgtk unreify-values` with invalid pattern match parameters:
+   * `kgtk unreify-values --trigger-label=XXX --trigger-node2=XXX --value-label=XXX --old-label=XXX -o output1.tsv`
+ * Apply `kgtk unreify-values` a second time with the desired pattern match parameters.
+   * `kgtk unreify-values --trigger-label rdf:type --trigger-node2 ont:Confidence --value-label ont:confidenceValue --old-label ont:confidence-o output2.tsv`
  * Compare the two output files.
 
 ## Examples
@@ -301,7 +301,7 @@ Instead, employ the following strategy:
 Unreifying ont:Confidence:
 
 ```
-kgtk unreify_values -i HC00001DO.tsv \
+kgtk unreify-values -i HC00001DO.tsv \
                     -o HC00001DO-unreified-confidenceValue.tsv \
 		    --trigger-label rdf:type \
 		    --trigger-node2 ont:Confidence \
@@ -312,7 +312,7 @@ kgtk unreify_values -i HC00001DO.tsv \
 Unreifying ont:PrivateData:
 
 ```
-kgtk unreify_values -i HC00001DO.tsv \
+kgtk unreify-values -i HC00001DO.tsv \
                     -o HC00001DO-unreified-jsonContent.tsv \
 		    --trigger-label rdf:type \
 		    --trigger-node2 ont:PrivateData \
@@ -322,12 +322,12 @@ kgtk unreify_values -i HC00001DO.tsv \
 
 Chaining the two value unreifications:
 ```
-kgtk unreify_values -i HC00001DO.tsv \
+kgtk unreify-values -i HC00001DO.tsv \
                     --trigger-label rdf:type \
                     --trigger-node2 ont:Confidence \
                     --value-label ont:confidenceValue \
                     --old-label ont:confidence \
-   / unreify_values \
+   / unreify-values \
                     -o HC00001DO-unreified-values.tsv \
                     --trigger-label rdf:type \
                     --trigger-node2 ont:PrivateData \
