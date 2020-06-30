@@ -46,7 +46,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         no_header: bool = False,
-        properties: str = None,
+        properties: str = '',
         undirected: bool = False,
         strong: bool = False,
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
@@ -66,5 +66,6 @@ def run(input_file: KGTKFiles,
 
     try:
         cc.process()
+        return 0
     except Exception as e:
         raise KGTKException(str(e))
