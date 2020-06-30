@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.reshape.kgtkcompact import KgtkCompact
@@ -48,40 +48,38 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", type=Path, default="-",
-                              help="The KGTK file to filter. May be omitted or '-' for stdin (default=%(default)s).")
+    parser.add_input_file(positional=True)
+    parser.add_output_file()
 
     parser.add_argument(      "--columns", dest="key_column_names",
                               help="The key columns to identify records for compaction. " +
                               "(default=id for node files, (node1, label, node2, id) for edge files).", nargs='+', default=[ ])
-
+    
     parser.add_argument(      "--compact-id", dest="compact_id",
                               help="Indicate that the ID column in KGTK edge files should be compacted. " +
                               "Normally, if the ID column exists, it is not compacted, " +
                               "as there are use cases that need to maintain distinct lists of secondary edges for each ID value. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False)
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
     parser.add_argument(      "--presorted", dest="sorted_input",
                               help="Indicate that the input has been presorted (or at least pregrouped) (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False)
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
     parser.add_argument(      "--verify-sort", dest="verify_sort",
                               help="If the input has been presorted, verify its consistency (disable if only pregrouped). (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=True)
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
+                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     parser.add_argument(      "--build-id", dest="build_id",
                               help="Build id values in an id column. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False)
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
     
     KgtkIdBuilderOptions.add_arguments(parser, expert=_expert)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: typing.Optional[Path],
-        output_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
         key_column_names: typing.List[str],
         compact_id: bool,
         sorted_input: bool,
@@ -99,6 +97,9 @@ def run(input_kgtk_file: typing.Optional[Path],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
@@ -109,12 +110,12 @@ def run(input_kgtk_file: typing.Optional[Path],
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         print("--columns=%s" % " ".join(key_column_names), file=error_file)
         print("--compact-id=%s" % str(compact_id), file=error_file, flush=True)
         print("--presorted=%s" % str(sorted_input))
         print("--verify-sort=%s" % str(verify_sort), file=error_file, flush=True)
-        print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)

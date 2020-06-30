@@ -2,7 +2,9 @@ import os
 import sys
 import io
 import sh # type: ignore
+# import logging
 
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.exceptions import KGTKException
 import kgtk.cli.zconcat as zcat
 
@@ -12,9 +14,12 @@ def parser():
         'help': 'Sort file based on one or more columns'
     }
 
-def add_arguments(parser):
-    parser.add_argument('-o', '--out', default=None, action='store', dest='output',
-                        help='output file to write to, otherwise output goes to stdout')
+def add_arguments(parser: KGTKArgumentParser):
+    parser.add_input_file(positional=True, metavar="INPUT",
+                          who="Input file to sort.")
+    parser.add_output_file(options=['-o', '--out'],
+                           who='Output file to write to.')
+
     parser.add_argument('-c', '--column', '--columns', default='1', action='store', dest='columns',
                         help="comma-separated list of column names or numbers (1-based) to sort on, defaults to 1")
     parser.add_argument('-r', '--reverse', action='store_true', dest='reverse',
@@ -23,6 +28,8 @@ def add_arguments(parser):
                         help="assume tab-separated input (default)")
     parser.add_argument('--csv', action='store_true', dest='csv',
                         help="assume comma-separated input (for non-KGTK files)")
+    parser.add_argument('--naptime', action='store', dest='naptime', type=int,
+                        help="Seconds to nap before starting", default=1)
     parser.add_argument('--space', action='store_true', dest='space',
                         help="space-optimized configuration for sorting large files")
     parser.add_argument('--speed', action='store_true', dest='speed',
@@ -31,8 +38,6 @@ def add_arguments(parser):
                         help="extra options to supply to the sort program")
     parser.add_argument('-dt', '--datatype', default='tsv', action='store', dest='_dt',
                         help="Deprecated: datatype of the input file, e.g., tsv (default) or csv.")
-    parser.add_argument('input', metavar='INPUT', nargs='?', action='store',
-                        help="input file to sort, if empty or `-' process stdin")
 
 
 # for now: these might require some more refinement:
@@ -99,7 +104,7 @@ def build_command(input=None, output=None, columns='1', colsep='\t', options='',
     # to sort, but its arguments depend on what we find in the header line, so this requires some
     # inter-process communication between different stages in the sorting pipe:
     buffer = io.StringIO()
-    catcmd = sh.cat.bake(_piped=True)
+    catcmd = sh.cat.bake(_piped=True, _err=sys.stderr)
     if catcmd.__name__ == sort_pipe[-1].__name__:
         # last command of the pipe is a plain cat, use it instead:
         catcmd = sort_pipe[-1]
@@ -112,6 +117,7 @@ def build_command(input=None, output=None, columns='1', colsep='\t', options='',
 
     # define these in here, so we can pass in some process-local variables via closures:
     def record_key_spec(chunk):
+        # print("record_key_spec: start", file=sys.stderr, flush=True) # ***
         # starting with sh 1.13 it looks like we can get either strings or bytes here;
         # if we get bytes we convert to an identical string using `latin1' encoding:
         if isinstance(chunk, bytes):
@@ -124,17 +130,22 @@ def build_command(input=None, output=None, columns='1', colsep='\t', options='',
                 out.write(header[0:eol+1])
             # reencode from latin1 to utf8 for header processing:
             header = header[0:eol].encode('latin1').decode(zcat.kgtk_encoding)
+            # print("record_key_spec: open", file=sys.stderr, flush=True) # ***
             with open(sort_env['KGTK_SORT_KEY_SPEC'], 'w') as out:
                 out.write(build_sort_key_spec(header, columns, colsep))
+            # print("record_key_spec: done", file=sys.stderr, flush=True) # ***
             # this signals to ignore the callback once we are done collecting the header:
             return True
 
     # this waits as a precondition to sort so the header and key files will be available when it starts:
     def wait_for_key_spec():
+        # print("wait_for_key_spec", file=sys.stderr, flush=True) # ***
         import time
         for i in range(100): # try for at most 5 secs:
             with open(sort_env['KGTK_SORT_KEY_SPEC'], 'r') as inp:
-                if inp.read().endswith('\t'):
+                x = inp.read()
+                # print("inp: '%s'" % x, file=sys.stderr, flush=True) # ***
+                if x.endswith('\t'):
                     break
                 time.sleep(0.05)
         else:
@@ -151,18 +162,29 @@ def build_command(input=None, output=None, columns='1', colsep='\t', options='',
     )
     sort_pipe.append(
         sh.sh.bake('-c', """exec sort -t "%s" %s `cat $KGTK_SORT_KEY_SPEC`""" % (colsep, options),
-                   _env=sort_env, _piped=True, _preexec_fn=wait_for_key_spec, _in_bufsize=in_bufsize, _out_bufsize=out_bufsize)
+                   _env=sort_env, _piped=True, _preexec_fn=wait_for_key_spec, _in_bufsize=in_bufsize, _out_bufsize=out_bufsize, _err=sys.stderr)
     )
     in_bufsize, out_bufsize = zcat.get_buf_sizes(output=output, _piped=_piped)
     cleanup = lambda cmd, status, exit_code: [sh.rm('-f', sort_env['KGTK_HEADER']), sh.rm('-f', sort_env['KGTK_SORT_KEY_SPEC'])]
     sort_pipe.append(
         sh.sh.bake('-c', """exec cat $KGTK_HEADER -""",
-                   _env=sort_env, _out=output, _done=cleanup, _piped=_piped, _in_bufsize=in_bufsize, _out_bufsize=out_bufsize)
+                   _env=sort_env, _out=output, _done=cleanup, _piped=_piped, _in_bufsize=in_bufsize, _out_bufsize=out_bufsize, _err=sys.stderr)
     )
     return sort_pipe
 
 
-def run(input=None, output=None, columns='1', reverse=False, space=False, speed=False, extra='', tsv=False, csv=False, _dt=None):
+def run(input_file,
+        output_file,
+        columns='1', reverse=False, space=False, speed=False, extra='', tsv=False, csv=False, _dt=None, naptime=1):
+    import time
+    time.sleep(int(naptime))
+    # print("Sort running.", file=sys.stderr, flush=True) # ***
+
+    input = str(KGTKArgumentParser.get_input_file(input_file))
+    output = str(KGTKArgumentParser.get_output_file(output_file))
+
+    # logging.basicConfig(level=logging.INFO)
+
     """Run sort according to the provided command-line arguments.
     """
     try:
@@ -179,6 +201,7 @@ def run(input=None, output=None, columns='1', reverse=False, space=False, speed=
             options += ' ' + speed_config
             
         pipe = build_command(input=input, output=output, columns=columns, colsep=colsep, options=options)
+        # print("pipe: %s" % str(pipe), file=sys.stderr, flush=True) # ***
         return zcat.run_sh_commands(pipe).exit_code
     except sh.SignalException_SIGPIPE:
         # hack to work around Python3 issue when stdout is gone when we try to report an exception;

@@ -9,7 +9,7 @@ import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.imports.kgtkntriples import KgtkNtriples
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
@@ -43,32 +43,39 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument("-i", "--input-files", dest="input_file_paths", nargs='*',
-                        help="The input file(s) with the ntriples data. (default=%(default)s)", type=Path, default="-")
+    parser.add_input_file(who="The ntriples file(s) to import.", allow_list=True)
+    parser.add_output_file()
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
-    
-    parser.add_argument(      "--reject-file", dest="reject_file_path", help="The file into which to write rejected records. (default=%(default)s).",
-                              type=Path, default=None)
-    
-    parser.add_argument(      "--namespace-file", dest="namespace_kgtk_file", help="The KGTK file with known namespaces. (default=%(default)s).",
-                              type=Path, default=None)
+    parser.add_output_file(who="The ntriples output file for records that are rejected.",
+                           dest="reject_file",
+                           options=["--reject-file"],
+                           metavar="REJECT_FILE",
+                           optional=True)
 
-    parser.add_argument(      "--updated-namespace-file", dest="updated_namespace_kgtk_file",
-                              help="An updated KGTK file with known namespaces. (default=%(default)s).",
-                              type=Path, default=None)
-    
+    parser.add_input_file(who="The KGTK input file with known namespaces.",
+                          dest="namespace_file",
+                          options=["--namespace-file"],
+                          metavar="NAMESPACE_FILE",
+                          optional=True)
+
+    parser.add_output_file(who="The KGTK output file with updated namespaces.",
+                           dest="updated_namespace_file",
+                           options=["--updated-namespace-file"],
+                           metavar="NAMESPACE_FILE",
+                           optional=True)
+
     KgtkNtriples.add_arguments(parser)
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser)
 
-def run(input_file_paths: typing.List[Path],
-        output_kgtk_file: Path,
-        reject_file_path: typing.Optional[Path],
-        namespace_kgtk_file: typing.Optional[Path],
-        updated_namespace_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        reject_file: KGTKFiles,
+
+        namespace_file: KGTKFiles,
+        updated_namespace_file: KGTKFiles,
 
         namespace_id_prefix: str,
         namespace_id_use_uuid: bool,
@@ -108,6 +115,14 @@ def run(input_file_paths: typing.List[Path],
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
+
+    # Select where to send error messages, defaulting to stderr.
+    input_file_paths: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    reject_file_path: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file, who="KGTK reject file")
+
+    namespace_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_input_file(namespace_file, who="KGTK namespace file")
+    updated_namespace_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(updated_namespace_file, who="KGTK updated namespace file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr

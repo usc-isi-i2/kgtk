@@ -16,7 +16,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.lift.kgtklift import KgtkLift
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
@@ -51,12 +51,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to lift. May be omitted or '-' for stdin.", type=Path, default="-")
-
-    parser.add_argument(      "--label-file", dest="label_kgtk_file", help="A KGTK file with label records (default=%(default)s).", type=Path, default=None)
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
-
+    parser.add_input_file(positional=True)
+    parser.add_output_file()
+    parser.add_input_file(who="A KGTK file with label records",
+                          dest="label_file",
+                          options=["--label-file"],
+                          optional=True)
 
     parser.add_argument(      "--input-select-column", "--input-label-column", dest="input_select_column_name",
                               help=h("If input record selection is enabled by --input-select-value, " +
@@ -69,11 +69,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "and all input records except label records may receive lifted values. "),
                               default=None)
     
+
     parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
                               help=h("The columns for which matching labels are to be lifted. " +
                               "The default is [node1, label, node2] or their aliases."), nargs='*')
-
-
 
     parser.add_argument(      "--lift-suffix", dest="output_lifted_column_suffix",
                               help=h("The suffix used for newly created output columns. (default=%(default)s)."),
@@ -83,7 +82,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("A new value for the select (label) column for records that received lifted values. " +
                               "The default is not to update the select(label) column."), default=None)
     
-
 
     parser.add_argument(      "--label-select-column", "--label-name", dest="label_select_column_name",
                               help=h("The name of the column that contains a special value that identifies label records. " +
@@ -102,7 +100,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The name of the column in the label record that contains the value " +
                               "to be lifted into the input record that is receiving lifted values. " +
                               "The default is 'node2' or its alias."), default=None)
-
 
 
     parser.add_argument(      "--remove-label-records", dest="remove_label_records",
@@ -150,9 +147,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
-        label_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        label_file: KGTKFiles,
 
         input_select_column_name: typing.Optional[str],
         input_select_column_value: typing.Optional[str],
@@ -186,6 +183,10 @@ def run(input_kgtk_file: Path,
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    label_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_input_file(label_file, who="KGTK label file")
+
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
@@ -195,7 +196,7 @@ def run(input_kgtk_file: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % str(input_kgtk_file), file=error_file, flush=True)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
         if label_kgtk_file is not None:
             print("-label-file=%s" % label_kgtk_file, file=error_file, flush=True)
