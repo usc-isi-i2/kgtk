@@ -9,17 +9,17 @@ INPUT can be a filename or empty if piped from another command
 
 Remove the columns 'other' and 'pos' from the conceptnet CSKG file
 ```
-kgtk remove_columns -c "other, pos" data/conceptnet_first10.tsv
+kgtk remove-columns -c "other, pos" data/conceptnet_first10.tsv
 ```
 
 Remove id and docid from Wikidata edges file
 ```
-kgtk remove_columns -c 'id, docid' data/wikidata_edges.tsv
+kgtk remove-columns -c 'id, docid' data/wikidata_edges.tsv
 ```
 
 Remove id and docid from Wikidata edges file piped from another command
 
 ```
-gzcat wikidata_edges.tsv.gz | kgtk remove_columns -c 'id, docid'
+gzcat wikidata_edges.tsv.gz | kgtk remove-columns -c 'id, docid'
 ```
 
