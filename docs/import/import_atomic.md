@@ -20,7 +20,7 @@ optional arguments:
 Import ATOMIC into KGTK. 
 
 ```
-kgtk import_atomic v4_atomic_all_agg.csv
+kgtk import-atomic v4_atomic_all_agg.csv
 ```
 
 Example output (first and last 10 lines):

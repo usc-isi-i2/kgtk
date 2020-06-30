@@ -31,5 +31,5 @@ kgtk import-wikidata OPTIONS
 Import the entire wikidata dump into kgtk format, extracting english labels, descriptions and aliases.
 
 ```
-kgtk import_wikidata -i wikidata-all-20200504.json.bz2 --node nodefile.tsv --edge edgefile.tsv --qual qualfile.tsv 
+kgtk import-wikidata -i wikidata-all-20200504.json.bz2 --node nodefile.tsv --edge edgefile.tsv --qual qualfile.tsv 
 ```

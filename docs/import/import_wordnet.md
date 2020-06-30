@@ -19,7 +19,7 @@ optional arguments:
 Importing WordNet can be done as follows (no arguments should be provided, as WordNet is read through the NLTK package):
 
 ```
-kgtk import_wordnet
+kgtk import-wordnet
 ```
 
 Example output (first and last 10 lines):

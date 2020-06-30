@@ -11,7 +11,7 @@ usage: kgtk clean-data [-h] [-v] [input_file] [output_file]
 Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
 
 Additional options are shown in expert help.
-kgtk --expert clean_data --help
+kgtk --expert clean-data --help
 
 positional arguments:
   input_file     The KGTK file to read. May be omitted or '-' for stdin.
@@ -26,7 +26,7 @@ optional arguments:
 
 Expert help:
 ```
-usage: kgtk clean_data [-h] [--errors-to-stdout | --errors-to-stderr] [--show-options]
+usage: kgtk clean-data [-h] [--errors-to-stdout | --errors-to-stderr] [--show-options]
                        [-v] [--very-verbose] [--column-separator COLUMN_SEPARATOR]
                        [--compression-type COMPRESSION_TYPE] [--error-limit ERROR_LIMIT]
                        [--gzip-in-parallel [GZIP_IN_PARALLEL]]
@@ -74,7 +74,7 @@ usage: kgtk clean_data [-h] [--errors-to-stdout | --errors-to-stderr] [--show-op
 Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
 
 Additional options are shown in expert help.
-kgtk --expert clean_data --help
+kgtk --expert clean-data --help
 
 positional arguments:
   input_file            The KGTK file to read. May be omitted or '-' for stdin.
@@ -251,7 +251,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 ### Clean the data, using default options
 
 ```bash
-kgtk clean_data file1.tsv
+kgtk clean-data file1.tsv
 ```
 
 Standard output will get the following data:
@@ -274,7 +274,7 @@ field, which violates the ISO 8601 specification.
 Change day "00" to day "01:
 
 ```bash
-kgtk clean_data file1.tsv --repair-month-or-day-zero
+kgtk clean-data file1.tsv --repair-month-or-day-zero
 ```
 
 Standard output will get the following data, and no errors will be issued:
