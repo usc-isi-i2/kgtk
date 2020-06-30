@@ -50,6 +50,7 @@ def cli_entry(*args):
     shared_args = base_parser.add_argument_group('shared optional arguments')
     shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
     shared_args.add_argument('--expert', dest='_expert', action='store_true', default=False, help='enable expert mode')
+    shared_args.add_argument('--pipedebug', dest='_pipedebug', action='store_true', default=False, help='enable pipe debug mode')
     add_shared_arguments(shared_args)
 
     # parse shared arguments
@@ -135,12 +136,14 @@ def cli_entry(*args):
             cmd_str += ', _bg_exc=False, _done=cmd_done'  # , _err=sys.stdout
             # add specific arguments
             if idx == 0:  # first command
-                concat_cmd_str = 'sh.kgtk({}, _in=sys.stdin, _piped=True)'.format(cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, _in=sys.stdin, _piped=True, _err=sys.stderr)'.format(cmd_str)
             elif idx + 1 == len(pipe):  # last command
-                concat_cmd_str = 'sh.kgtk({}, {}, _out=sys.stdout)'.format(concat_cmd_str, cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, {}, _out=sys.stdout, _err=sys.stderr)'.format(concat_cmd_str, cmd_str)
             else:
-                concat_cmd_str = 'sh.kgtk({}, {}, _piped=True)'.format(concat_cmd_str, cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, {}, _piped=True, _err=sys.stderr)'.format(concat_cmd_str, cmd_str)
         try:
+            if parsed_shared_args._pipedebug:
+                print("eval: %s" % concat_cmd_str)
             process = eval(concat_cmd_str)
             process.wait()
         except sh.SignalException_SIGPIPE:
