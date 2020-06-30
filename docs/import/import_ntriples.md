@@ -29,7 +29,7 @@ usage: kgtk import-ntriples [-h] [-i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]]
 Import an ntriples file, writing a KGTK file.
 
 Additional options are shown in expert help.
-kgtk --expert expand --help
+kgtk --expert import-ntriples --help
 
 optional arguments:
   -h, --help            show this help message and exit
