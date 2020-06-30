@@ -197,12 +197,12 @@ xml-schema-type prefix_expansion        "http://www.w3.org/2001/XMLSchema#"
 
 #### Reject File
 
-If `kgtk import_ntriples` has problems inporting a record, the input record
+If `kgtk import-ntriples` has problems inporting a record, the input record
 may be recorded in a reject file.  The reject file has ntriples format, not KGTK File format.
 
 #### URI Namespace Prefix Files
 
-`kgtk import_ntriples` may be provided an input file, in KGTK FIle format,
+`kgtk import-ntriples` may be provided an input file, in KGTK FIle format,
 containing predefined URI namespace prefix expansions.  Here is an example:
 
 | node1 | label | node2 |
@@ -214,7 +214,7 @@ containing predefined URI namespace prefix expansions.  Here is an example:
 | xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
 
 
-`kgtk import_ntriples` may optionally write an updated namespace file.
+`kgtk import-ntriples` may optionally write an updated namespace file.
 This will facilitate converting a series of ntriples files.
 The contents of the file will be the same as was shown fot the end
 of the converted file in the output file section, above.
@@ -242,7 +242,7 @@ as shown in the preceeding examples.
 ##### Lax URIs
 
 The URI standard requires that URIs staart with a schema, such as
-"http:" or "https:". import_ntriples facilitates processing ntriples records that
+"http:" or "https:". import-ntriples facilitates processing ntriples records that
 do not strictly adhere to the standard, such as having just "www.isi.edu".
 This enhancement is controlled with `--allow-lax-uri`, which defaults
 to True.
@@ -278,7 +278,7 @@ the UUID is omitted, but the examples shown above were generated using the UUID.
 ntriples files carry many data types as structured literals.  There are two portions
 to each structured literal:  a value string, and a URI that identifies the data type.
 
-`kgtk import_ntriples` can import the following ntriples data types to KGTK data types,
+`kgtk import-ntriples` can import the following ntriples data types to KGTK data types,
 resulting in a single KGTK edge in the output file:
 
 | ntriples URI | KGTK Data Type |
@@ -347,7 +347,7 @@ This process is controlled by the following command line options:
 
 ### ID Management
 
-`kgtk import_ntriples` will optionally build a new ID column or populate an existing
+`kgtk import-ntriples` will optionally build a new ID column or populate an existing
 ID column.
 
 ```
@@ -365,7 +365,7 @@ ID column.
 
 ### KGTK File Format Validity
 
-`kgtk import_ntriples` will, by default, add backslashes before any pipe characters (|)
+`kgtk import-ntriples` will, by default, add backslashes before any pipe characters (|)
 it sees in the input data.
 
 ```
@@ -399,13 +399,13 @@ unexpected import conversion failures.
 Import the entire given ntriple file into kgtk forma, using default settings.
 
 ```
-kgtk import_ntriples -i dbpedia_wikipedia_links.ttl -o DbpediaWikipediaLinks.tsv
+kgtk import-ntriples -i dbpedia_wikipedia_links.ttl -o DbpediaWikipediaLinks.tsv
 ```
 
 Import the HC00001DO file, using UUIDs extensively:
 
 ```
-kgtk import_ntriples \
+kgtk import-ntriples \
      -i ../../HC00001DO.ttl.nt \
      -o HC00001DO.tsv \
      --reject-file HC00001DO-rejects.ttl.nt \

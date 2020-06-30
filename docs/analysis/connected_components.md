@@ -31,5 +31,5 @@ kgtk connected-components filename OPTIONS
 Find connected URI's that redirect to the same page
 
 ```
-kgtk connected_components Dbpedia_redirects.tsv -o connected_dbpedia_uris.tsv
+kgtk connected-components Dbpedia_redirects.tsv -o connected-dbpedia_uris.tsv
 ```

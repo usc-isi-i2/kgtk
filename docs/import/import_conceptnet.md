@@ -21,7 +21,7 @@ optional arguments:
 Import the English part of ConceptNet into KGTK. 
 
 ```
-kgtk import_conceptnet --english_only examples/conceptnet-assertions-5.7.0.csv
+kgtk import-conceptnet --english_only examples/conceptnet-assertions-5.7.0.csv
 ```
 
 Example output (first and last 10 lines):
