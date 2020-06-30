@@ -1,7 +1,9 @@
 """
 Export a KGTK file to Graph-tool format.
-"""
 
+Note:  the log file wasn't coverted to the new filename parsing.
+"""
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -9,22 +11,22 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='filename here')
+    parser.add_input_file(positional=True)
+    parser.add_output_file(who="Graph tool file to dump the graph too - if empty, it will not be saved.", optional=True)
+
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
     parser.add_argument('--log', action='store', type=str, dest='log_file',
                         help='Log file for summarized statistics of the graph.', default="./log.txt")
 
-    parser.add_argument('-o', '--out', action='store', type=str, dest='output',
-                        help='Graph tool file to dump the graph too - if empty, it will not be saved.')
-
-
-def run(filename, directed, log_file, output):
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        directed, log_file):
     from kgtk.exceptions import KGTKException
     def infer_index(h, options=[]):
         for o in options:
@@ -40,11 +42,16 @@ def run(filename, directed, log_file, output):
 
     try:
         # import modules locally
+        from pathlib import Path
         import socket
+        import sys
+        import typing
         from graph_tool import load_graph_from_csv
         from graph_tool import centrality
         import kgtk.gt.analysis_utils as gtanalysis
-        import sys
+
+        filename: Path = KGTKArgumentParser.get_input_file(input_file)
+        output: typing.Optional[Path] = KGTKArgumentParser.get_output_file(output_file, optional=True)
 
         with open(filename, 'r') as f:
             header = next(f).split('\t')
@@ -75,7 +82,7 @@ def run(filename, directed, log_file, output):
             
 
             if output:
-                writer.write('now saving the graph to %s\n' % output)
-                G2.save(output)
+                writer.write('now saving the graph to %s\n' % str(output))
+                G2.save(str(output))
     except Exception as e:
         raise KGTKException('Error: ' + str(e))
