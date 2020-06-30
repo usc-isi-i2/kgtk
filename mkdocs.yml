@@ -46,7 +46,6 @@ nav:
       - 'text-embeddings': 'analysis/text_embedding.md'         
       - 'paths': 'analysis/paths.md'
 
->>>>>>> origin/dev
 theme:
   name: material
   logo: images/kgtk_logo_200x200.png
