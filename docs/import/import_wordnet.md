@@ -2,7 +2,7 @@ Import WordNet v3.0 into KGTK format. Currently, four relations are included: hy
 
 ## Usage
 ```
-kgtk import_wordnet [-h] 
+kgtk import-wordnet [-h] 
 ```
 
 positional arguments:

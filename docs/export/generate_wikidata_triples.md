@@ -4,7 +4,7 @@ The triple generator reads a tab-separated kgtk file from standard input. The kg
 
 ## Usage
 ```{shell}
-cat input.tsv | kgtk generate_wikidata_triples OPTIONS > output.ttl
+cat input.tsv | kgtk generate-wikidata-triples OPTIONS > output.ttl
 ```
 or 
 ```

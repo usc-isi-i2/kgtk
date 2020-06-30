@@ -2,7 +2,7 @@ Import the entire ConceptNet, or just its English part, into KGTK format.
 
 ## Usage
 ```
-kgtk import_conceptnet [-h] [--english_only] filename
+kgtk import-conceptnet [-h] [--english_only] filename
 ```
 
 positional arguments:

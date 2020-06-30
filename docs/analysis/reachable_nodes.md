@@ -8,7 +8,7 @@ The output file is an edge file that contains the following columns:
 
 ## Usage
 ```
-kgtk reachable_nodes filename OPTIONS
+kgtk reachable-nodes filename OPTIONS
 ```
 ***OPTIONS***:
 

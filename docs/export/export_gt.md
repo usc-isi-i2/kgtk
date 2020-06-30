@@ -2,7 +2,7 @@ This command loads a TSV edges file into Graph-tool, and exports it to Graph-too
 
 ## Usage
 ```
-kgtk export_gt [-h] [--directed]
+kgtk export-gt [-h] [--directed]
                 [--log LOG_FILE]  [-o OUTPUT] 
                       filename
 ```

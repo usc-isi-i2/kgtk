@@ -20,7 +20,7 @@ The --verify-id-unique=false optin may be used to disable this check.
 ## Usage
 
 ```
-usage: kgtk add_id [-h] [-o OUTPUT_KGTK_FILE] [--old-id-column-name COLUMN_NAME] [--new-id-column-name COLUMN_NAME] [--overwrite-id [optional true|false]]
+usage: kgtk add-id [-h] [-o OUTPUT_KGTK_FILE] [--old-id-column-name COLUMN_NAME] [--new-id-column-name COLUMN_NAME] [--overwrite-id [optional true|false]]
                    [--verify-id-unique [optional true|false]] [--id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,prefix###}]
                    [--id-prefix PREFIX] [--initial-id INTEGER] [--id-prefix-num-width INTEGER] [--id-concat-num-width INTEGER] [-v]
                    [input_kgtk_file]

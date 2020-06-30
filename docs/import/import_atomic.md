@@ -2,7 +2,7 @@ Import the entire ATOMIC into KGTK format.
 
 ## Usage
 ```
-kgtk import_atomic [-h] filename
+kgtk import-atomic [-h] filename
 ```
 
 positional arguments:

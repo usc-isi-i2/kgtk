@@ -7,7 +7,7 @@ The JSON generator reads a tab-separated kgtk file from standard input. The kgtk
 
 ## Usage
 ```{shell}
-cat input.tsv | kgtk generate_mediawiki_jsons OPTIONS
+cat input.tsv | kgtk generate-mediawiki-jsons OPTIONS
 ```
 or 
 ```

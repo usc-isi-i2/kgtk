@@ -37,7 +37,7 @@ Output Table:
 ## Usage
 
 ```
-usage: kgtk unreify_values [-h] [-i INPUT_KGTK_FILE] [-o OUTPUT_KGTK_FILE]
+usage: kgtk unreify-values [-h] [-i INPUT_KGTK_FILE] [-o OUTPUT_KGTK_FILE]
                            [--reified-file REIFIED_KGTK_FILE]
                            [--unreified-file UNREIFIED_KGTK_FILE]
                            [--uninvolved-file UNINVOLVED_KGTK_FILE] --trigger-label
@@ -58,7 +58,7 @@ An ID column will be added to the output file if not present in the input file.
 --unreified-file PATH, if specified, will get a copy of the unreified output records, which  will still be written to the main output file.
 
 Additional options are shown in expert help.
-kgtk --expert expand --help
+kgtk --expert unreify-values --help
 
 optional arguments:
   -h, --help            show this help message and exit
