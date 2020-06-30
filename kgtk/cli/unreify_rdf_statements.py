@@ -27,7 +27,7 @@ def parser():
         ' identified as not being reified RDF statements. ' +
         '\n\n--unreified-file PATH, if specified, will get a copy of the unreified output records, which ' +
         ' will still be written to the main output file.' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert expand --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert unreify-rdb-statements --help'
     }
 
 

@@ -21,7 +21,7 @@ def parser():
     return {
         'help': 'Import an ntriples file.',
         'description': 'Import an ntriples file, writing a KGTK file.' + 
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert expand --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert import-ntriples --help'
     }
 
 

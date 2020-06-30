@@ -73,8 +73,9 @@ def cli_entry(*args):
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         subp = mod.parser()
         # only create sub-parser with sub-command name and defer full build
-        sub_parser = sub_parsers.add_parser(h, **subp)
-        subparser_lookup[h] = (mod, sub_parser)
+        cmd = h.replace("_", "-")
+        sub_parser = sub_parsers.add_parser(cmd, **subp)
+        subparser_lookup[cmd] = (mod, sub_parser)
         if 'aliases' in subp:
             for alias in subp['aliases']:
                 subparser_lookup[alias] = (mod, sub_parser)
@@ -91,7 +92,7 @@ def cli_entry(*args):
     elif len(pipe) == 1:  # single command
         cmd_args = pipe[0]
 
-        cmd_name = cmd_args[0]
+        cmd_name = cmd_args[0].replace("_", "-")
         # build sub-parser
         if cmd_name in subparser_lookup:
             mod, sub_parser = subparser_lookup[cmd_name]
