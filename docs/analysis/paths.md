@@ -58,6 +58,7 @@ The output (printed to stdout) is as follows:
 | f | r3 | d | e7 |  |
 
 Essentially, this tells us that there are three paths that connect 'a' and 'e', all of them two hops away:
+
 1. graph 1 is comprised of the edges e1 and e5
 2. graph 2 one spans e2 and e4
 3. graph 3 spans e3 and e5
