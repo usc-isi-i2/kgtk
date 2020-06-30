@@ -6,7 +6,7 @@ This command will find the connected components in a KGTK edge file. The output 
 
 ## Usage
 ```
-kgtk connected_components filename OPTIONS
+kgtk connected-components filename OPTIONS
 ```
 ***OPTIONS***:
 

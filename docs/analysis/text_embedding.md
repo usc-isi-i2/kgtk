@@ -5,7 +5,7 @@ The input is an edge file sorted by subject.
 
 ## Usage
 ```
-kgtk text_embedding OPTIONS
+kgtk text-embedding OPTIONS
 ```
 Computes embeddings of nodes using properties of nodes. The values are concatenated into sentences defined by a template, and embedded using a pre-trained language model.
 

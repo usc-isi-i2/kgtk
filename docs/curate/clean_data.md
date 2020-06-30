@@ -6,7 +6,7 @@ by the file extension: .bz2 .gz .lz4 .xy
 
 ## Usage
 ```
-usage: kgtk clean_data [-h] [-v] [input_file] [output_file]
+usage: kgtk clean-data [-h] [-v] [input_file] [output_file]
 
 Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
 

@@ -2,7 +2,7 @@ Command to remove a subset of the columns from a TSV file. For instance, remove 
 
 ## Usage
 ```
-kgtk remove_columns -c COLUMNS INPUT
+kgtk remove-columns -c COLUMNS INPUT
 INPUT can be a filename or empty if piped from another command
 ```
 ## Examples

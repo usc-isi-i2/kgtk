@@ -2,7 +2,7 @@ The rename_columns command renames file columns while copying a KGTK file from i
 ## Usage
 
 ```
-usage: kgtk rename_columns [-h] [-o OUTPUT_FILE_PATH]
+usage: kgtk rename-columns [-h] [-o OUTPUT_FILE_PATH]
                            [--output-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]]
                            [--old-columns OLD_COLUMNS_NAME [OLD_COLUMNS_NAME ...]]
                            [--new-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]] [-v]

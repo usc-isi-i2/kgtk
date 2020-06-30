@@ -3,7 +3,7 @@ This command will import one or more ntriple files into KGTK format.
 
 ## Usage
 ```
-usage: kgtk import_ntriples [-h] [-i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]]
+usage: kgtk import-ntriples [-h] [-i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]]
                             [-o OUTPUT_KGTK_FILE] [--reject-file REJECT_FILE_PATH]
                             [--namespace-file NAMESPACE_KGTK_FILE]
                             [--updated-namespace-file UPDATED_NAMESPACE_KGTK_FILE]

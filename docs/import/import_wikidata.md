@@ -6,7 +6,7 @@ This command will import Wikidata into KGTK format and generates 3 files.
 
 ## Usage
 ```
-kgtk import_wikidata OPTIONS
+kgtk import-wikidata OPTIONS
 ```
 **OPTIONS**: 
 
