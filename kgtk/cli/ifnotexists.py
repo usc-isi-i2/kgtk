@@ -17,7 +17,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.iff.kgtkifexists import KgtkIfExists
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
@@ -49,22 +49,23 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path)
+    parser.add_input_file(positional=True)
+    parser.add_input_file(who="The KGTK file to filter against (required).",
+                          options=["--filter-on"], dest="filter_file", metavar="FILTER_FILE")
+    parser.add_output_file()
 
     parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys",
                               help="The key columns in the file being filtered (default=None).", nargs='*')
 
-    parser.add_argument(      "--filter-on", dest="filter_kgtk_file", help="The KGTK file to filter against (required).", type=Path, required=True)
-
     parser.add_argument(      "--filter-keys", "--right-keys", dest="filter_keys",
                               help="The key columns in the filter-on file (default=None).", nargs='*')
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (required),", type=Path, default=None)
-
-    parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys (default=%(default)s).",
+    parser.add_argument(      "--cache-input", dest="cache_input", metavar="True|False",
+                              help="Cache the input file instead of the filter keys (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--preserve-order", dest="preserve_order", help="Preserve record order when cacheing the input file. (default=%(default)s).",
+    parser.add_argument(      "--preserve-order", dest="preserve_order", metavar="True|False",
+                              help="Preserve record order when cacheing the input file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--field-separator", dest="field_separator",
@@ -77,9 +78,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: typing.Optional[Path],
-        filter_kgtk_file: Path,
-        output_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        filter_file: KGTKFiles,
+        output_file: KGTKFiles,
+
         input_keys: typing.Optional[typing.List[str]],
         filter_keys: typing.Optional[typing.List[str]],
         
@@ -99,6 +101,9 @@ def run(input_kgtk_file: typing.Optional[Path],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    filter_kgtk_file: Path = KGTKArgumentParser.get_input_file(filter_file, who="KGTK filter file")
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
