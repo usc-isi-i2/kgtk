@@ -44,7 +44,9 @@ nav:
       - 'graph-statistics': 'analysis/stats.md'
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
       - 'text-embeddings': 'analysis/text_embedding.md'         
-     
+      - 'paths': 'analysis/paths.md'
+
+>>>>>>> origin/dev
 theme:
   name: material
   logo: images/kgtk_logo_200x200.png

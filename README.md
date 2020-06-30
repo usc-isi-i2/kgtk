@@ -8,12 +8,11 @@ KGTK is a Python library for easy manipulation with knowledge graphs. It provide
 
 ## Features
 
-* Computation of class instances
 * Computation of reachable nodes
 * Filtering based on property values
 * Removal of columns
 * Sorting
-* Computation of various embeddings
+* Computation of embeddings
 * Cleaning and validation
 * Computation of graph metrics
 * Joining and concatenation of graphs
