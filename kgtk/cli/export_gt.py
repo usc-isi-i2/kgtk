@@ -51,7 +51,7 @@ def run(input_file: KGTKFiles,
         import kgtk.gt.analysis_utils as gtanalysis
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
-        output: typing.Optional[Path] = KGTKArgumentParser.get_output_file(output_file, optional=True)
+        output: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file)
 
         with open(filename, 'r') as f:
             header = next(f).split('\t')

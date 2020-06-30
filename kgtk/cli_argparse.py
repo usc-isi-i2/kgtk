@@ -108,13 +108,13 @@ class KGTKArgumentParser(ArgumentParser):
         return self.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_OUTPUT_FILE_WHO, "stdout")
 
     @classmethod
-    def get_path_list(cls, paths: KGTKFiles, who: str, optional: bool)->typing.List[Path]:
+    def get_path_list(cls, paths: KGTKFiles, who: str, default_stdio: bool)->typing.List[Path]:
         # Builds a list of paths from the awkward possible returns from argument parsing.
         if paths is None:
-            if optional:
-                return [ ]
-            else:
+            if default_stdio:
                 return [ Path("-") ]
+            else:
+                return [ ]
         elif isinstance(paths, Path):
             return [ paths ]
         elif isinstance(paths, list):
@@ -129,7 +129,7 @@ class KGTKArgumentParser(ArgumentParser):
                     result.extend(pl)
                 else:
                     raise KGTKException("%s: Unexpected component '%s' in path list '%s'." % (who, str(pl), str(paths)))
-            if len(result) == 0 and not optional:
+            if len(result) == 0 and default_stdio:
                 return [ Path("-") ]
             else:
                 return result
@@ -140,7 +140,7 @@ class KGTKArgumentParser(ArgumentParser):
     def get_input_file(cls,
                        paths: KGTKFiles,
                        who: typing.Optional[str] = None,
-                       optional: bool = False,
+                       default_stdin: bool = True,
                        
     )->Path:
     
@@ -149,7 +149,7 @@ class KGTKArgumentParser(ArgumentParser):
         if who is None:
             who = cls.DEFAULT_INPUT_FILE_WHO
 
-        p: typing.List[Path] = cls.get_path_list(paths, who, optional=optional)
+        p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=default_stdin)
         if len(p) == 1:
             return p[0]
         elif len(p) == 0:
@@ -170,7 +170,7 @@ class KGTKArgumentParser(ArgumentParser):
         if who is None:
             who = cls.DEFAULT_INPUT_FILE_WHO
 
-        p: typing.List[Path] = cls.get_path_list(paths, who, optional=True)
+        p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=False)
         if len(p) == 0:
             return None                                
         elif len(p) == 1:
@@ -182,7 +182,7 @@ class KGTKArgumentParser(ArgumentParser):
     def get_input_file_list(cls,
                             paths: KGTKFiles,
                             who: typing.Optional[str] = None,
-                            optional: bool = False,
+                            default_stdin: bool = True,
                        
     )->typing.List[Path]:
     
@@ -191,14 +191,14 @@ class KGTKArgumentParser(ArgumentParser):
         if who is None:
             who = cls.DEFAULT_INPUT_FILE_WHO
 
-        return cls.get_path_list(paths, who, optional=optional)
+        return cls.get_path_list(paths, who, default_stdio=default_stdin)
 
 
     @classmethod
     def get_output_file(cls,
                        paths: KGTKFiles,
                        who: typing.Optional[str] = None,
-                       optional: bool = False,
+                       default_stdout: bool = True,
                        
     )->Path:
     
@@ -207,7 +207,7 @@ class KGTKArgumentParser(ArgumentParser):
         if who is None:
             who = cls.DEFAULT_OUTPUT_FILE_WHO
 
-        p: typing.List[Path] = cls.get_path_list(paths, who, optional=optional)
+        p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=default_stdout)
         if len(p) == 1:
             return p[0]
         elif len(p) == 0:
@@ -228,7 +228,7 @@ class KGTKArgumentParser(ArgumentParser):
         if who is None:
             who = cls.DEFAULT_OUTPUT_FILE_WHO
 
-        p: typing.List[Path] = cls.get_path_list(paths, who, optional=True)
+        p: typing.List[Path] = cls.get_path_list(paths, who, default_stdio=False)
         if len(p) == 0:
             return None                                
         elif len(p) == 1:
@@ -240,7 +240,7 @@ class KGTKArgumentParser(ArgumentParser):
     def get_output_file_list(cls,
                             paths: KGTKFiles,
                             who: typing.Optional[str] = None,
-                            optional: bool = False,
+                            default_stdout: bool = True,
                        
     )->typing.List[Path]:
     
@@ -249,7 +249,7 @@ class KGTKArgumentParser(ArgumentParser):
         if who is None:
             who = cls.DEFAULT_OUTPUT_FILE_WHO
 
-        return cls.get_path_list(paths, who, optional=optional)
+        return cls.get_path_list(paths, who, default_stdio=default_stdout)
 
 
 def add_shared_arguments(parser):
