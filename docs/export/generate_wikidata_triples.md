@@ -8,7 +8,7 @@ cat input.tsv | kgtk generate-wikidata-triples OPTIONS > output.ttl
 ```
 or 
 ```
-kgtk generate_wikidata_triples OPTIONS < input.tsv > output.ttl
+kgtk generate-wikidata-triples OPTIONS < input.tsv > output.ttl
 ```
 
 
