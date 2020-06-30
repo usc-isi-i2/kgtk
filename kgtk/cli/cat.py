@@ -94,6 +94,8 @@ def run(input_files: KGTKFiles,
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
+    # print("cat running", file=error_file, flush=True) # ***
+
     # TODO: check that at most one input file is stdin?
 
     # Build the option structures.
@@ -145,6 +147,7 @@ def run(input_files: KGTKFiles,
         
         kc.process()
 
+        # print("cat done", file=error_file, flush=True) # ***
         return 0
 
     except SystemExit as e:
