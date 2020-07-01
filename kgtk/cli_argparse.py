@@ -54,31 +54,34 @@ class KGTKArgumentParser(ArgumentParser):
                  stdio_name: str,
     ):
 
-        if optional:
-            # Not required, no default. Positional output not allowed, lists not allowed.
-            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=who + " (Optional, use '-' for %s.)" % stdio_name)
-            return
-
-        # This is a required file, defaulting to stdio.
         helpstr: str
         if who is None:
             helpstr = "The " + default_help + "."
         else:
             helpstr = who
+
+        if optional:
+            # Not required, no default. Positional output not allowed, lists not allowed.
+            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr + " (Optional, use '-' for %s.)" % stdio_name)
+            return
+
+        # This is a required file, defaulting to stdio.
         helpstr += " (May be omitted or '-' for %s.)" % stdio_name
-            
+
         positional &= self.SUPPORT_POSITIONAL_ARGS
+        if positional:
+            helpstr2: str = helpstr + " (Deprecated, use %s %s)" % (options[0], metavar)            
 
         if allow_list:
             if positional:
-                self.add_argument(dest, nargs="*", type=Path, help=helpstr, metavar=metavar, action="append")
+                self.add_argument(dest, nargs="*", type=Path, help=helpstr2, metavar=metavar, action="append")
                 self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
             else:
                 self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
 
         else:
             if positional:
-                self.add_argument(dest, nargs="?", type=Path, help=helpstr, metavar=metavar, action="append")
+                self.add_argument(dest, nargs="?", type=Path, help=helpstr2, metavar=metavar, action="append")
                 self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, action="append")
             else:
                 self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, default=Path("-"))
@@ -118,7 +121,7 @@ class KGTKArgumentParser(ArgumentParser):
         elif isinstance(paths, Path):
             return [ paths ]
         elif isinstance(paths, list):
-            result: typng.List[Path] = [ ]
+            result: typing.List[Path] = [ ]
             pl: typing.Union[typing.Optional[Path], typing.List[Path]]
             for pl in paths:
                 if pl is None:
@@ -128,13 +131,13 @@ class KGTKArgumentParser(ArgumentParser):
                 elif isinstance(pl, list):
                     result.extend(pl)
                 else:
-                    raise KGTKException("%s: Unexpected component '%s' in path list '%s'." % (who, str(pl), str(paths)))
+                    raise KGTKArgumentParseException("%s: Unexpected component '%s' in path list '%s'." % (who, str(pl), str(paths)))
             if len(result) == 0 and default_stdio:
                 return [ Path("-") ]
             else:
                 return result
         else:
-            raise KGTKException("%s: Unexpected path list '%s'." % (who, str(paths)))
+            raise KGTKArgumentParseException("%s: Unexpected path list '%s'." % (who, str(paths)))
 
     @classmethod
     def get_input_file(cls,
@@ -144,8 +147,6 @@ class KGTKArgumentParser(ArgumentParser):
                        
     )->Path:
     
-        from kgtk.exceptions import KGTKException
-
         if who is None:
             who = cls.DEFAULT_INPUT_FILE_WHO
 
@@ -153,9 +154,9 @@ class KGTKArgumentParser(ArgumentParser):
         if len(p) == 1:
             return p[0]
         elif len(p) == 0:
-            raise KGTKException("%s: Please supply a filename path." % who)
+            raise KGTKArgumentParseException("%s: Please supply a filename path." % who)
         else:
-            raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
+            raise KGTKArgumentParseException("%s: Too many files: '%s'" % (who, str(paths)))
 
                                 
     @classmethod
@@ -165,8 +166,6 @@ class KGTKArgumentParser(ArgumentParser):
                        
     )->typing.Optional[Path]:
     
-        from kgtk.exceptions import KGTKException
-
         if who is None:
             who = cls.DEFAULT_INPUT_FILE_WHO
 
@@ -176,7 +175,7 @@ class KGTKArgumentParser(ArgumentParser):
         elif len(p) == 1:
             return p[0]
         else:
-            raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
+            raise KGTKArgumentParseException("%s: Too many files: '%s'" % (who, str(paths)))
 
     @classmethod
     def get_input_file_list(cls,
@@ -186,8 +185,6 @@ class KGTKArgumentParser(ArgumentParser):
                        
     )->typing.List[Path]:
     
-        from kgtk.exceptions import KGTKException
-
         if who is None:
             who = cls.DEFAULT_INPUT_FILE_WHO
 
@@ -202,8 +199,6 @@ class KGTKArgumentParser(ArgumentParser):
                        
     )->Path:
     
-        from kgtk.exceptions import KGTKException
-
         if who is None:
             who = cls.DEFAULT_OUTPUT_FILE_WHO
 
@@ -211,9 +206,9 @@ class KGTKArgumentParser(ArgumentParser):
         if len(p) == 1:
             return p[0]
         elif len(p) == 0:
-            raise KGTKException("%s: Please supply a filename path." % who)
+            raise KGTKArgumentParseException("%s: Please supply a filename path." % who)
         else:
-            raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
+            raise KGTKArgumentParseException("%s: Too many files: '%s'" % (who, str(paths)))
 
                                 
     @classmethod
@@ -223,8 +218,6 @@ class KGTKArgumentParser(ArgumentParser):
                        
     )->typing.Optional[Path]:
     
-        from kgtk.exceptions import KGTKException
-
         if who is None:
             who = cls.DEFAULT_OUTPUT_FILE_WHO
 
@@ -234,7 +227,7 @@ class KGTKArgumentParser(ArgumentParser):
         elif len(p) == 1:
             return p[0]
         else:
-            raise KGTKException("%s: Too many files: '%s'" % (who, str(paths)))
+            raise KGTKArgumentParseException("%s: Too many files: '%s'" % (who, str(paths)))
 
     @classmethod
     def get_output_file_list(cls,
@@ -244,8 +237,6 @@ class KGTKArgumentParser(ArgumentParser):
                        
     )->typing.List[Path]:
     
-        from kgtk.exceptions import KGTKException
-
         if who is None:
             who = cls.DEFAULT_OUTPUT_FILE_WHO
 
