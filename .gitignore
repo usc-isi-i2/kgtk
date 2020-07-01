@@ -139,4 +139,6 @@ dmypy.json
 
 # warning log exception
 !corrupted_warning.log
-examples/sample_data/aida/results/*.tsv
+
+# Keep intermediate files in GitHub so people can eecute individual cells of the notebook
+# examples/sample_data/aida/results/*.tsv
