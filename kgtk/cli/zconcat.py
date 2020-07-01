@@ -3,6 +3,7 @@ import sys
 import io
 import sh # type: ignore
 import tempfile
+import typing
 
 from kgtk.exceptions import KGTKException
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -24,7 +25,7 @@ def add_arguments(parser: KGTKArgumentParser):
 
     # parser.add_argument("inputs", metavar="INPUT", nargs="*", action="store",
     #                    help="input files to process, if empty or `-' read from stdin")
-    parser.add_input_file(positional=True, allow_list="true", dest="input_files")
+    parser.add_input_file(positional=True, allow_list=True, dest="input_files")
 
 
 ### general command utilities (some of these should make it into a more central location):
