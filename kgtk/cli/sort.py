@@ -182,6 +182,8 @@ def run(input_file,
 
     input = str(KGTKArgumentParser.get_input_file(input_file))
     output = str(KGTKArgumentParser.get_output_file(output_file))
+    if output == "-":
+        output = None
 
     # logging.basicConfig(level=logging.INFO)
 
