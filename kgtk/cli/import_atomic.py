@@ -1,28 +1,30 @@
 """
 Import an ATOMIC file to KGTK.
+
+TODO: Add --output-file
 """
 
 import sys
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
         'help': 'Import ATOMIC into KGTK.' 
     }
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='filename here')
+    parser.add_input_file(positional=True)
 
-
-def run(filename):
+def run(input_file: KGTKFiles):
 
     # import modules locally
     import sys # type: ignore
-    from kgtk.exceptions import kgtk_exception_auto_handler
+    from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
     import csv
     import re
     import json
@@ -85,6 +87,8 @@ def run(filename):
         return 'If %s, then %s %s.' % (node_label, rel_label, value_label)
 
     try:
+
+        filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
         out_columns=['node1', 'label', 'node2', 'node1_label', 'label_label', 'node2_label', 'label_dimension', 'source', 'weight', 'creator', 'sentence', 'question']
 

@@ -1,7 +1,7 @@
 """
 Import CSV file in Graph-tool.
 """
-
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -9,13 +9,14 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='filename here')
+    parser.add_input_file(positional=True)
+
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
     parser.add_argument('--degrees', action='store_true', dest='compute_degrees',
                         help="Whether or not to compute degree distribution.")
@@ -44,7 +45,7 @@ def add_arguments(parser):
                         help='Label for edge: vertex hits hubs')
 
 
-def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output_stats,
+def run(input_file: KGTKFiles, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output_stats,
         vertex_in_degree, vertex_out_degree, vertex_pagerank, vertex_auth, vertex_hubs):
     from kgtk.exceptions import KGTKException
     def infer_index(h, options=[]):
@@ -71,6 +72,8 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
         from graph_tool import centrality
         import kgtk.gt.analysis_utils as gtanalysis
         import sys
+
+        filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
         # hardcoded values useful for the script. Perhaps some of them should be exposed as arguments later
         directions = ['in', 'out', 'total']
