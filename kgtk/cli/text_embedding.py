@@ -23,14 +23,15 @@ ALL_EMBEDDING_MODELS_NAMES = [
 
 
 def load_property_labels_file(input_files: typing.List[str]):
-    labels_dict = {}
-    headers = None
+    labels_dict: typing.MutableMapping[str, str] = {}
+    headers: typing.Optional[typing.List[str]] = None
     for each_file in input_files:
         with open(each_file, "r") as f:
+            each_line: str
             for each_line in f.readlines():
-                each_line = each_line.replace("\n", "").split("\t")
+                fields: typing.List[str] = each_line.replace("\n", "").split("\t")
                 if headers is None:
-                    headers = each_line
+                    headers = fields
                     if len(headers) < 2:
                         raise KGTKException(
                             "No enough columns found on given input file. Only {} columns given but at least 2 needed.".format(
@@ -46,8 +47,8 @@ def load_property_labels_file(input_files: typing.List[str]):
                         raise KGTKException("Can't determine which column is label column for label file!")
 
                 else:
-                    node_id = each_line[column_references["predicate"]]
-                    node_label = each_line[column_references["label"]]
+                    node_id: str = fields[column_references["predicate"]]
+                    node_label: str = fields[column_references["label"]]
                     if "@en" in node_label:
                         node_label = node_label.replace("'", "").split("@")[0]
                         labels_dict[node_id] = node_label
