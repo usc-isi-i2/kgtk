@@ -1,5 +1,12 @@
 """
 Import CSV file in Graph-tool.
+
+Note:  the log file wasn't coverted to the new filename parsing API.
+
+Note:  The input file is read twice: once for the header, and once for the
+data.  Thus, stdin cannot be used as the input file.
+
+TODO: Convert to KgtkReader and read the file only once.
 """
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
@@ -15,7 +22,7 @@ def add_arguments(parser: KGTKArgumentParser):
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_input_file(positional=True)
+    parser.add_input_file(positional=True, optional=False)
 
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
     parser.add_argument('--degrees', action='store_true', dest='compute_degrees',
@@ -92,7 +99,7 @@ def run(input_file: KGTKFiles, directed, compute_degrees, compute_pagerank, comp
         with open(log_file, 'w') as writer:
 
             writer.write('loading the TSV graph now ...\n')
-            G2 = load_graph_from_csv(filename,
+            G2 = load_graph_from_csv(str(filename),
                                      skip_first=True,
                                      directed=directed,
                                      hashed=True,

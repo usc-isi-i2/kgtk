@@ -1,5 +1,6 @@
 import typing
 from kgtk.exceptions import KGTKException
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 ALL_EMBEDDING_MODELS_NAMES = [
     "bert-base-nli-cls-token",
@@ -139,11 +140,13 @@ def main(**kwargs):
         black_list_files = kwargs.get("black_list_files", [])
         all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
         input_format = kwargs.get("input_format", "kgtk_format")
-        input_file = kwargs.get("input_file", None)
         output_format = kwargs.get("output_format", "kgtk_format")
         property_labels_files = kwargs.get("property_labels_file_uri", [])
         query_server = kwargs.get("query_server")
         save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
+
+        filename: Path = KGTKArgumentParser.get_input_file(kwargs.get("input_file"))
+        input_file = open(filename, "r") if str(filename) != "-" else sys.stdin
 
         cache_config = {
             "use_cache": kwargs.get("use_cache", False),
@@ -188,13 +191,14 @@ def main(**kwargs):
         dimensional_reduction = kwargs.get("dimensional_reduction", "none")
         dimension_val = kwargs.get("dimension_val", 2)
 
-        try:
-            input_file_name = input_file.name
-        except AttributeError:
-            input_file_name = "input from memory"
+        # try:
+        #     input_file_name = input_file.name
+        # except AttributeError:
+        #     input_file_name = "input from memory"
 
         for each_model_name in all_models_names:
-            _logger.info("Running {} model on {}".format(each_model_name, input_file_name))
+            # _logger.info("Running {} model on {}".format(each_model_name, input_file_name))
+            _logger.info("Running {} model on {}".format(each_model_name, str(filename)))
             process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
                                       parallel_count=parallel_count)
             process.read_input(input_file=input_file, skip_nodes_set=black_list_set,
@@ -218,19 +222,21 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     from kgtk.utils.argparsehelpers import optional_bool
     import sys
     import argparse
     parser.accept_shared_argument('_debug')
+
+    # input file
+    # parser.add_argument('input_file', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
+    parser.add_input_file(positional=True)
 
     # model name
     all_models_names = ALL_EMBEDDING_MODELS_NAMES
     parser.add_argument('-m', '--model', action='store', nargs='+', dest='all_models_names',
                         default="bert-base-wikipedia-sections-mean-tokens", choices=all_models_names,
                         help="the model to used for embedding")
-    # input file
-    parser.add_argument('input_file', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
     # parser.add_argument('-i', '--input', action='store', nargs='+', dest='input_uris',
     #                     help="input path", )
     parser.add_argument('-f', '--input-format', action='store', dest='input_format',
