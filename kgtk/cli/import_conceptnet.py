@@ -29,8 +29,9 @@ def run(input_file: KGTKFiles, english_only):
     import sys # type: ignore
     from kgtk.exceptions import kgtk_exception_auto_handler
     import csv
-    import re
     import json
+    import re
+    from pathlib import Path
     from string import Template
 
     def header_to_edge(row):
