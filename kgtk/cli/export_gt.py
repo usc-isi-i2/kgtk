@@ -1,7 +1,12 @@
 """
 Export a KGTK file to Graph-tool format.
 
-Note:  the log file wasn't coverted to the new filename parsing.
+Note:  the log file wasn't coverted to the new filename parsingAPI.
+
+Note:  The input file is read twice: once for the header, and once for the
+data.  Thus, stdin cannot be used as the input file.
+
+TODO: Convert to KgtkReader and read the file only once.
 """
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
@@ -17,7 +22,7 @@ def add_arguments(parser: KGTKArgumentParser):
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_input_file(positional=True)
+    parser.add_input_file(positional=True, optional=False)
     parser.add_output_file(who="Graph tool file to dump the graph too - if empty, it will not be saved.", optional=True)
 
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
@@ -66,7 +71,7 @@ def run(input_file: KGTKFiles,
 
         with open(log_file, 'w') as writer:
             writer.write('loading the TSV graph now ...\n')
-            G2 = load_graph_from_csv(filename,
+            G2 = load_graph_from_csv(str(filename),
                                      skip_first=True,
                                      directed=directed,
                                      hashed=True,
