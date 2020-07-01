@@ -69,6 +69,14 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
 
+## Updating your KGTK installation
+To update your version of KGTK, just follow the instructions below:
+
+- If you installed KGTK with through Docker, then just pull the most recent image: `docker pull <image_name>`, where `<image_name>` is the tag of the image of interest (e.g. uscisii2/kgtk:latest)
+- If you installed KGTK from pip, then type `pip install -U kgtk`.
+- If you installed KGTK from GitHub, then type `git pull && pip install` . Alternatively, you may execute:  `git pull && python setup.py install`. 
+- If you installed KGTK in development mode, (i.e., `pip install -e`); then you only need to do update your repository: `git pull`.
+
 
 ## Running KGTK commands
 
