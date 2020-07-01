@@ -28,6 +28,7 @@ def run(input_file: KGTKFiles):
     import csv
     import re
     import json
+    from pathlib import Path
     from string import Template
     import pandas as pd
 

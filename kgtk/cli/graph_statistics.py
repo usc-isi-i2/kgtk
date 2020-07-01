@@ -78,6 +78,7 @@ def run(input_file: KGTKFiles, directed, compute_degrees, compute_pagerank, comp
         from graph_tool import load_graph_from_csv
         from graph_tool import centrality
         import kgtk.gt.analysis_utils as gtanalysis
+        from pathlib import Path
         import sys
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
