@@ -2,30 +2,31 @@ This command will sort any KGTK file on one or more columns. If more than one co
 
 ## Usage
 ```
-kgtk sort [-h] [-o OUTPUT] [-c COLUMNS] [-r] [--tsv] [--csv]
-                        [--space] [--speed] [-X EXTRA] [-dt _DT] [INPUT]
-```
+usage: kgtk sort [-h] [-i INPUT] [-o OUTPUT_FILE] [-c COLUMNS] [-r] [--tsv] [--csv]
+                 [--naptime NAPTIME] [--space] [--speed] [-X EXTRA] [-dt _DT]
+                 [INPUT]
 
 positional arguments:
-```
-  INPUT                 input file to sort, if empty or `-' process stdin
-```
+  INPUT                 Input file to sort. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT)
 
 optional arguments:
-```
   -h, --help            show this help message and exit
-  -o OUTPUT, --out OUTPUT
-                        output file to write to, otherwise output goes to stdout
+  -i INPUT, --input-file INPUT
+                        Input file to sort. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --out OUTPUT_FILE
+                        Output file to write to. (May be omitted or '-' for stdout.)
   -c COLUMNS, --column COLUMNS, --columns COLUMNS
-                        comma-separated list of column names or numbers
-                        (1-based) to sort on, defaults to 1
+                        comma-separated list of column names or numbers (1-based) to sort
+                        on, defaults to 1
   -r, --reverse         generate output in reverse sort order
   --tsv                 assume tab-separated input (default)
   --csv                 assume comma-separated input (for non-KGTK files)
+  --naptime NAPTIME     Seconds to nap before starting
   --space               space-optimized configuration for sorting large files
   --speed               speed-optimized configuration for sorting large files
   -X EXTRA, --extra EXTRA
-                        extra options to supply to the Unix sort program
+                        extra options to supply to the sort program
   -dt _DT, --datatype _DT
                         Deprecated: datatype of the input file, e.g., tsv (default) or csv.
 ```

@@ -2,8 +2,36 @@ Command to remove a subset of the columns from a TSV file. For instance, remove 
 
 ## Usage
 ```
-kgtk remove-columns -c COLUMNS INPUT
-INPUT can be a filename or empty if piped from another command
+usage: kgtk remove-columns [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] -c COLUMNS [COLUMNS ...]
+                           [--split-on-commas [SPLIT_ON_COMMAS]]
+                           [--split-on-spaces [SPLIT_ON_SPACES]]
+                           [--strip-spaces [STRIP_SPACES]] [-v]
+                           [INPUT_FILE]
+
+Remove specific columns from a KGTK file.
+
+positional arguments:
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
+  -c COLUMNS [COLUMNS ...], --columns COLUMNS [COLUMNS ...]
+                        Columns to remove as a comma- or space-separated strings, e.g.,
+                        id,docid or id docid
+  --split-on-commas [SPLIT_ON_COMMAS]
+                        Parse the list of columns, splitting on commas. (default=True).
+  --split-on-spaces [SPLIT_ON_SPACES]
+                        Parse the list of columns, splitting on spaces. (default=False).
+  --strip-spaces [STRIP_SPACES]
+                        Parse the list of columns, stripping whitespace. (default=True).
+
+  -v, --verbose         Print additional progress messages (default=False).
+
 ```
 ## Examples
 

@@ -33,10 +33,10 @@ Output Table:
 ## Usage
 
 ```
-usage: kgtk unreify-rdf-statements [-h] [-i INPUT_KGTK_FILE] [-o OUTPUT_KGTK_FILE]
-                                   [--reified-file REIFIED_KGTK_FILE]
-                                   [--unreified-file UNREIFIED_KGTK_FILE]
-                                   [--uninvolved-file UNINVOLVED_KGTK_FILE]
+usage: kgtk unreify-rdf-statements [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                                   [--reified-file REIFIED_FILE]
+                                   [--unreified-file UNREIFIED_FILE]
+                                   [--uninvolved-file UNINVOLVED_FILE]
                                    [--trigger-label TRIGGER_LABEL_VALUE]
                                    [--trigger-node2 TRIGGER_NODE2_VALUE]
                                    [--node1-role RDF_SUBJECT_LABEL_VALUE]
@@ -57,23 +57,24 @@ An ID column will be added to the output file if not present in the input file.
 --unreified-file PATH, if specified, will get a copy of the unreified output records, which  will still be written to the main output file.
 
 Additional options are shown in expert help.
-kgtk --expert unreify-rdf-statements --help
+kgtk --expert unreify-rdb-statements --help
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INPUT_KGTK_FILE, --input-file INPUT_KGTK_FILE
-                        The KGTK input file with the reified data. (default=-)
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
-  --reified-file REIFIED_KGTK_FILE
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file with the reified data. (May be omitted or '-'
+                        for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
+  --reified-file REIFIED_FILE
                         A KGTK output file that will contain only the reified RDF
-                        statements. (default=None).
-  --unreified-file UNREIFIED_KGTK_FILE
+                        statements. (Optional, use '-' for stdout.)
+  --unreified-file UNREIFIED_FILE
                         A KGTK output file that will contain only the unreified RDF
-                        statements. (default=None).
-  --uninvolved-file UNINVOLVED_KGTK_FILE
-                        A KGTK output file that will contain only the uninvolved input
-                        records. (default=None).
+                        statements. (Optional, use '-' for stdout.)
+  --uninvolved-file UNINVOLVED_FILE
+                        A KGTK output file that will contain only the uninvolved input.
+                        (Optional, use '-' for stdout.)
   --trigger-label TRIGGER_LABEL_VALUE
                         A value that identifies the trigger label. (default=rdf:type).
   --trigger-node2 TRIGGER_NODE2_VALUE

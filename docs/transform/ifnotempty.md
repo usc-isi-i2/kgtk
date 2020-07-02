@@ -9,9 +9,10 @@ copying the rows to the output file.
 ## Usage
 
 ```
-usage: kgtk ifnotempty [-h] --columns FILTER_COLUMN_NAMES [FILTER_COLUMN_NAMES ...]
-                       [--count [ONLY_COUNT]] [-o OUTPUT_KGTK_FILE] [--all [ALL_ARE]] [-v]
-                       [input_kgtk_file]
+usage: kgtk ifnotempty [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --columns FILTER_COLUMN_NAMES
+                       [FILTER_COLUMN_NAMES ...] [--count [True|False]] [--all [True|False]]
+                       [-v]
+                       [INPUT_FILE]
 
 Filter a KGTK file based on whether one or more fields are not empty. When multiple fields are specified, either any field or all fields must be not empty.
 
@@ -19,16 +20,20 @@ Additional options are shown in expert help.
 kgtk --expert ifnotempty --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin.
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   --columns FILTER_COLUMN_NAMES [FILTER_COLUMN_NAMES ...]
                         The columns in the file being filtered (Required).
-  --count [ONLY_COUNT]  Only count the records, do not copy them. (default=False).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
-  --all [ALL_ARE]       False: Test if any are, True: test if all are (default=False).
+  --count [True|False]  Only count the records, do not copy them. (default=False).
+  --all [True|False]    False: Test if any are not empty, True: test if all are not empty
+                        (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```

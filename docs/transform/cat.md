@@ -19,7 +19,10 @@ Optionally, the output can be written in a selection of other formats.
 ## Usage
 
 ```bash
-usage: kgtk cat [-h] [-o OUTPUT_FILE_PATH] [--output-format OUTPUT_FORMAT] [-v] input_file_paths [input_file_paths ...]
+usage: kgtk cat [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
+                [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md}]
+                [-v]
+                [INPUT_FILE [INPUT_FILE ...]]
 
 Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
 
@@ -27,13 +30,16 @@ Additional options are shown in expert help.
 kgtk --expert cat --help
 
 positional arguments:
-  input_file_paths      The KGTK files to concatenate.
+  INPUT_FILE            KGTK input files (May be omitted or '-' for stdin.) (Deprecated, use
+                        -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
-  -o OUTPUT_FILE_PATH, --output-file OUTPUT_FILE_PATH
-                        The KGTK file to write (default=-).
-  --output-format OUTPUT_FORMAT
+  -i INPUT_FILE [INPUT_FILE ...], --input-files INPUT_FILE [INPUT_FILE ...]
+                        KGTK input files (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
+  --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md}
                         The file format (default=kgtk)
 
   -v, --verbose         Print additional progress messages (default=False).

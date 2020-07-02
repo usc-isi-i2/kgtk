@@ -37,10 +37,9 @@ Output Table:
 ## Usage
 
 ```
-usage: kgtk unreify-values [-h] [-i INPUT_KGTK_FILE] [-o OUTPUT_KGTK_FILE]
-                           [--reified-file REIFIED_KGTK_FILE]
-                           [--unreified-file UNREIFIED_KGTK_FILE]
-                           [--uninvolved-file UNINVOLVED_KGTK_FILE] --trigger-label
+usage: kgtk unreify-values [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                           [--reified-file REIFIED_FILE] [--unreified-file UNREIFIED_FILE]
+                           [--uninvolved-file UNINVOLVED_FILE] --trigger-label
                            TRIGGER_LABEL_VALUE --trigger-node2 TRIGGER_NODE2_VALUE
                            --value-label VALUE_LABEL_VALUE --old-label OLD_LABEL_VALUE
                            [--new-label NEW_LABEL_VALUE]
@@ -62,57 +61,58 @@ kgtk --expert unreify-values --help
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INPUT_KGTK_FILE, --input-file INPUT_KGTK_FILE
+  -i INPUT_FILE, --input-file INPUT_FILE
                         The KGTK input file with the reified data. It must have node1,
                         label, and node2 columns, or their aliases. It may have an ID
-                        column; if it does not, one will be appended to the output
-                        file. It may not have any additional columns. (default=-)
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write output records with unreified data. This
-                        file may differ in shape from the input file by the addition of
-                        an ID column. The records in the output file will not,
-                        generally, be in the same order as they appeared in the input
-                        file. (default=-).
-  --reified-file REIFIED_KGTK_FILE
-                        An optional KGTK output file that will contain only the reified
-                        RDF statement output records. (default=None).
-  --unreified-file UNREIFIED_KGTK_FILE
-                        An optional KGTK output file that will contain only the
-                        unreified RDF statement input records. (default=None).
-  --uninvolved-file UNINVOLVED_KGTK_FILE
-                        An optional KGTK output file that will contain only the
-                        uninvolved input records. (default=None).
+                        column; if it does not, one will be appended to the output file. It
+                        may not have any additional columns. (May be omitted or '-' for
+                        stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK file to write output records with unreified data. This file
+                        may differ in shape from the input file by the addition of an ID
+                        column. The records in the output file will not, generally, be in
+                        the same order as they appeared in the input file. (May be omitted
+                        or '-' for stdout.)
+  --reified-file REIFIED_FILE
+                        A KGTK output file that will contain only the reified RDF
+                        statements. (Optional, use '-' for stdout.)
+  --unreified-file UNREIFIED_FILE
+                        A KGTK output file that will contain only the unreified RDF
+                        statements. (Optional, use '-' for stdout.)
+  --uninvolved-file UNINVOLVED_FILE
+                        A KGTK output file that will contain only the uninvolved input.
+                        (Optional, use '-' for stdout.)
   --trigger-label TRIGGER_LABEL_VALUE
                         A value in the label (or its alias) column that identifies the
                         trigger record. (default=None).
   --trigger-node2 TRIGGER_NODE2_VALUE
                         A value in the node2 (or its alias) column that identifies the
-                        trigger record. This is a required parameter for which there is
-                        no default value. (default=None).
+                        trigger record. This is a required parameter for which there is no
+                        default value. (default=None).
   --value-label VALUE_LABEL_VALUE
                         A value in the label (or its alias) column that identifies the
-                        record with the node2 value for the new, unreified edge. This
-                        is a required parameter for which there is no default value.
+                        record with the node2 value for the new, unreified edge. This is a
+                        required parameter for which there is no default value.
                         (default=None).
   --old-label OLD_LABEL_VALUE
-                        A value in the label (or its alias) column that identifies the
-                        edge with the node1 value being unreified. The value in the
-                        node1 (or its alias) column of this record will be used in the
-                        node1 (or its alias) column for the new, unreified edge. This
-                        is a required parameter for which there is no default value.
-                        (default=None).
+                        A value in the label (or its alias) column that identifies the edge
+                        with the node1 value being unreified. The value in the node1 (or its
+                        alias) column of this record will be used in the node1 (or its
+                        alias) column for the new, unreified edge. This is a required
+                        parameter for which there is no default value. (default=None).
   --new-label NEW_LABEL_VALUE
-                        The value to be entered in the label (or its alias) column of
-                        the new, unreified edge. If not specified (None), the value
-                        from --value-label is used. (default=None).
+                        The value to be entered in the label (or its alias) column of the
+                        new, unreified edge. If not specified (None), the value from
+                        --value-label is used. (default=None).
   --allow-multiple-values [ALLOW_MULTIPLE_VALUES]
-                        When true, allow multiple values (a '|' list) in the node2 (or
-                        its alias) column of the new, unreified edge. (default=False).
+                        When true, allow multiple values (a '|' list) in the node2 (or its
+                        alias) column of the new, unreified edge. (default=False).
   --allow-extra-columns [ALLOW_EXTRA_COLUMNS]
-                        When true, allow extra columns (beyond node1, label, node2, and
-                        id, or their aliases. Warning: the contents of these columns
-                        may be lost silently in unreified statements. (default=False).
+                        When true, allow extra columns (beyond node1, label, node2, and id,
+                        or their aliases. Warning: the contents of these columns may be lost
+                        silently in unreified statements. (default=False).
 
+  -v, --verbose         Print additional progress messages (default=False).
 ```
 
 ### Files

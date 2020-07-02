@@ -2,7 +2,7 @@ The reorder-columns command reorders file columns while copying a KGTK file from
 ## Usage
 
 ```
-usage: kgtk reorder-columns [-h] [-i INPUT_KGTK_FILE] [-o OUTPUT_KGTK_FILE] -c COLUMN_NAME
+usage: kgtk reorder-columns [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] -c COLUMN_NAME
                             [COLUMN_NAME ...] [--trim [True|False]] [-v]
 
 This command reorders one or more columns in a KGTK file. 
@@ -20,13 +20,13 @@ kgtk --expert reorder-columns --help
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INPUT_KGTK_FILE, --input-file INPUT_KGTK_FILE
-                        The KGTK input file. (default=-).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   -c COLUMN_NAME [COLUMN_NAME ...], --columns COLUMN_NAME [COLUMN_NAME ...]
-                        The list of reordered column names, optionally containing '...'
-                        for column names not explicitly mentioned.
+                        The list of reordered column names, optionally containing '...' for
+                        column names not explicitly mentioned.
   --trim [True|False]   If true, omit unmentioned columns. (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).

@@ -7,12 +7,11 @@ This will impose a limit on the size of the input files that can be processed.
 ## Usage
 
 ```
-usage: kgtk lift [-h] [--label-file LABEL_KGTK_FILE] [-o OUTPUT_KGTK_FILE]
-                 [--suppress-empty-columns [True/False]]
-                 [--ok-if-no-labels [True/False]] [--prefilter-labels [True/False]]
-                 [--input-file-is-presorted [True/False]]
+usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--label-file INPUT_FILE]
+                 [--suppress-empty-columns [True/False]] [--ok-if-no-labels [True/False]]
+                 [--prefilter-labels [True/False]] [--input-file-is-presorted [True/False]]
                  [--label-file-is-presorted [True/False]] [-v]
-                 [input_kgtk_file]
+                 [INPUT_FILE]
 
 Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
 
@@ -20,26 +19,28 @@ Additional options are shown in expert help.
 kgtk --expert lift --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to lift. May be omitted or '-' for stdin.
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
-  --label-file LABEL_KGTK_FILE
-                        A KGTK file with label records (default=None).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
+  --label-file INPUT_FILE
+                        A KGTK file with label records (Optional, use '-' for stdin.)
   --suppress-empty-columns [True/False]
                         If true, do not create new columns that would be empty.
                         (default=False).
   --ok-if-no-labels [True/False]
-                        If true, do not abort if no labels were found.
-                        (default=False).
+                        If true, do not abort if no labels were found. (default=False).
   --prefilter-labels [True/False]
                         If true, read the input file before reading the label file.
                         (default=False).
   --input-file-is-presorted [True/False]
-                        If true, the input file is presorted on the column for which
-                        values are to be lifted. (default=False).
+                        If true, the input file is presorted on the column for which values
+                        are to be lifted. (default=False).
   --label-file-is-presorted [True/False]
                         If true, the label file is presorted on the node1 column.
                         (default=False).
