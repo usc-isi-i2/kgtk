@@ -3,7 +3,7 @@ The `generate_mediawiki_jsons` command is a special command that generates [json
 The motivation of this command is to build a [SQID](https://tools.wmflabs.org/sqid/#/) UI interface for customized knowledge graph. The generated jsonlines can be loaded into Elasticsearch to mimic the official wikidata's `wbgetentities` and `wbsearchentities` API to get the SQID UI up and running.
 
 
-The JSON generator reads a tab-separated kgtk file from standard input. The kgtk file is required to have at least the following 4 fields: `node1`, `label`, `node2` and `id`. The `node1` field is the subject; `label` is the predicate and `node2` is the object. 
+The JSON generator reads a tab-separated kgtk file from standard input, by default, or from a given file. The kgtk file is required to have at least the following 4 fields: `node1`, `label`, `node2` and `id`. The `node1` field is the subject; `label` is the predicate and `node2` is the object. 
 
 ## Usage
 ```{shell}
@@ -16,24 +16,24 @@ kgtk generate_mediawiki_jsons OPTIONS < input.tsv
 
 The `generate_mediawiki_jsons` doesn't write to standard output. Instead, it creates a `.jsonl` file with prefix and numbering. You can specify the prefix of the output file with `-pr prefix` option. The default prefix is `kgtk`. The numbering start with `0` and roughly after reading 1000 lines of the kgtk file, the numbering will increase. With a kgtk file with 1500 lines, by default two files `kgtk0.jsonl` and `kgtk1.jsonl` will be generated.
 
+### Quick effect overview
 
 The following tsv file is a minimal sample `input.tsv` file.
 
-```
-node1	label	node2	id
-Q2140726727_mag_author	P6366	2140726727	id1
-Q2140726727_mag_author	label	Zunyou Wu@en	id2
-Q2140726727_mag_author	P1416	Q184490438_mag_affiliation	id3
-Q184490438_mag_affiliation	label	Chinese Center For Disease Control And Prevention@en	id4
-```
+|node1|	label|	node2|	id|
+| ----- | ----- | ------------- |------------- |
+|Q2140726727_mag_author|	P6366|	2140726727|	id1|
+|Q2140726727_mag_author|	label|	Zunyou Wu@en|	id2|
+|Q2140726727_mag_author|	P1416|	Q184490438_mag_affiliation|	id3|
+|Q184490438_mag_affiliation|	label|	Chinese Center For Disease Control And Prevention@en|	id4|
 
 Similar to `generate_wikidata_triples`, we need a `property` file `example_props.tsv` to declare the properties' data_values. Its cotent is below.
 
-```
-node1	label	node2
-P6366	data_type	external-identifier
-P1416	data_type	item
-```
+|node1|	label|	node2|
+| ----- | ----- | ------------- |
+|P493|	property_type|	external-identifier|
+|P494|	property_type|	external-identifier|
+|P495|	property_type|	item|
 
 With the simplest command `kgtk generate_mediawiki_jsons -pf example_props.tsv < input.tsv `, the generated jsonlines file is below.
 
@@ -53,7 +53,7 @@ Both the items and properties are properly identified as `entities`.
 
 1. The qualifer edge has to follow the corresponding statement edge **immediately**. Qualifier edge's `node1` needs to be the statement edge's `id`. This is the only way to identify the relationship between statement edge and its qualifier.
 2. To avoid duplicated creation of jsons, statements with the same subject should be **close** to each other. The definition of **closeness** here means that they can't exceed the number of edges before two jsonl serializations. If `Q1` is met as a subject in line **1**, and after **1000** lines the json gets serialized into `kgtk0.jsonl`. However, if `Q1` is met again as a subject at line **1200** which will be serialized into `kgtk1.jsonl`. When loading into the Elasticsearch, whichever one has the label or description will be indexed. When querying by id `Q1` both records will be returned. 
-   1. To achieve this goal, the input kgtk file should have a sorted structure on `node1`, achieving this depends on the creation of the kgtk file from raw data.
+3. To achieve this goal, the input kgtk file should have a sorted structure on `node1`, achieving this depends on the creation of the kgtk file from raw data.
 
 ## Options
 - `--pf --property-types {str}`: path to the **property file** which contains the property datatype mapping in kgtk format. Default to **NONE**
@@ -67,6 +67,7 @@ Both the items and properties are properly identified as `entities`.
 - `-gz --use-gz {bool}`: if set to yes, read from compressed gz file. Default to **no**.
 - `-log --log-path {str}`: set the path of the log file. Default to **warning.log**.
 - `-pd --property-declaration-in-file {bool}`: wehther read properties in the kgtk file. If set to yes, use `cat input.tsv input.tsv` to pipe the input file twice. Default to **no**.
+- `-i --input-file {str}`: if this argument is set, kgtk will read from the input file rather than default standard input. If `pd` is also set to `yes`, the file will be loopped twice.
 
 ### Shared Options
 
@@ -74,7 +75,7 @@ Both the items and properties are properly identified as `entities`.
 
 ## Explanation of Options
 
-### **--property-types** 
+### --property-types
 
 If set to true, read proprty data_type information from the property file following the format below. It is also a kgtk file. Here is an example file `example_prop.tsv`
 
@@ -115,6 +116,10 @@ If using `-log`, the warning `-w` must be set to true.
 
 If set to yes, besides reading properties from property file, the generator will read from the input stream to find new properties. The user MUST use `cat input.tsv input.tsv | kgtk generate_mediawiki_jsons`.  
 
+### input-file 
+
+If set to a path to a file, kgtk will not read from standard input but open the given file and read from it.
+
 
 ## How json generator handles different types of edges
 
@@ -122,13 +127,12 @@ If set to yes, besides reading properties from property file, the generator will
 
 **-lp**, **-ap**, **-dp** defines properties that triple generator should identify as label, description or aliases creation. There can be multiple choices separated by `,`. Note that the `label` is different from the `label` in a kgtk file's header.
 
-For example, if you have `-ap aliases,alias`, then when the following edge is met, both `Alice` and `Alicia` will be treated as aliases to the node `q2020`.
+For example, if you have `-ap aliases,alias`, then when the following edge is met, both `Alice` and `Alicia` will be treated as aliases to the node `Q2020`.
 
-```
-node1	label	node2	id
-q2020	aliases	Alice@en	id1
-q2020	alias	Alicia@sp	id2
-```
+|node1|	label|	node2|	id|
+| ----- | ----- | ------------- |------------- |
+|Q2020|	aliases|	Alice@en|	id1|
+|Q2020|	alias|	Alicia@sp|	id2|
 
 `label` should be unique for the **same** language.
 
@@ -136,9 +140,9 @@ q2020	alias	Alicia@sp	id2
 
 User can also define properties in the input kgtk file with the following syntax. The `data_type` syntax indicates a new property is defined. Note that any usage of `P20200101` must appear after the definition in the kgtk file or `P20200101` will be incorrectly treated as `item`.
 
-```
-P20200101 data_type string
-```
+|node1|	label|	node2|
+| ----- | ----- | -------------|
+|P20200101| data_type| string|
 
 ### Regular Edges
 
@@ -150,22 +154,18 @@ Regular edges will be generated according to the data type of the property defin
 
 1. If properties are **only** defined in `example_prop.tsv`
 
-```bash
-
+```{shell}
 kgtk generate_mediawiki_jsons -pf example_prop.tsv -w yes < input_file.tsv
-
 ```
 
 2. If properties are **only** defined in `input_file.tsv`
 
-```bash
-
+```{shell}
 cat input_file.tsv input_file.tsv | kgtk generate_mediawiki_jsons -w yes -pd yes
-
 ```
 1. If properties are defined in both files.
 
-```bash
+```{shell}
 cat input_file.tsv input_file.tsv | kgtk generate_mediawiki_jsons -pf example_prop.tsv -w yes -pd yes
 ```
 
@@ -176,7 +176,7 @@ You can split the input files into several smaller pieces and run the command si
 
 Let's say you are in a directory which contains the `tsv` files. The following command will generate the `jsonl` files with the same file name, plus numbering. 
 
-```bash
+```{shell}
 ls *tsv | parallel -j+0 --eta 'kgtk generate_mediawiki_jsons -pf example_props.tsv -n 1000 --debug -gt yes < {}'
 ```
 
