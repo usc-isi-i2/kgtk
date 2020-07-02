@@ -2,17 +2,16 @@ Import the entire ATOMIC into KGTK format.
 
 ## Usage
 ```
-kgtk import-atomic [-h] filename
-```
+usage: kgtk import-atomic [-h] [-i INPUT_FILE] [INPUT_FILE]
 
 positional arguments:
-```
-  filename        filename here
-```
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
-```
-  -h, --help      show this help message and exit
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
 ```
 
 ## Examples

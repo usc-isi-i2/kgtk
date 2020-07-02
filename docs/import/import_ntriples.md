@@ -3,10 +3,9 @@ This command will import one or more ntriple files into KGTK format.
 
 ## Usage
 ```
-usage: kgtk import-ntriples [-h] [-i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]]
-                            [-o OUTPUT_KGTK_FILE] [--reject-file REJECT_FILE_PATH]
-                            [--namespace-file NAMESPACE_KGTK_FILE]
-                            [--updated-namespace-file UPDATED_NAMESPACE_KGTK_FILE]
+usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
+                            [--reject-file REJECT_FILE] [--namespace-file NAMESPACE_FILE]
+                            [--updated-namespace-file NAMESPACE_FILE]
                             [--namespace-id-prefix NAMESPACE_ID_PREFIX]
                             [--namespace-id-use-uuid [NAMESPACE_ID_USE_UUID]]
                             [--namespace-id-counter NAMESPACE_ID_COUNTER]
@@ -20,9 +19,10 @@ usage: kgtk import-ntriples [-h] [-i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]]
                             [--structured-uri-label STRUCTURED_URI_LABEL]
                             [--newnode-prefix NEWNODE_PREFIX]
                             [--newnode-use-uuid [NEWNODE_USE_UUID]]
-                            [--newnode-counter NEWNODE_COUNTER] [--newnode-zfill NEWNODE_ZFILL]
-                            [--build-id [BUILD_ID]] [--escape-pipes [ESCAPE_PIPES]]
-                            [--validate [VALIDATE]] [--override-uuid OVERRIDE_UUID]
+                            [--newnode-counter NEWNODE_COUNTER]
+                            [--newnode-zfill NEWNODE_ZFILL] [--build-id [BUILD_ID]]
+                            [--escape-pipes [ESCAPE_PIPES]] [--validate [VALIDATE]]
+                            [--override-uuid OVERRIDE_UUID]
                             [--overwrite-id [optional true|false]]
                             [--verify-id-unique [optional true|false]] [-v]
 
@@ -33,35 +33,40 @@ kgtk --expert import-ntriples --help
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]], --input-files [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]
-                        The input file(s) with the ntriples data. (default=-)
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
-  --reject-file REJECT_FILE_PATH
-                        The file into which to write rejected records. (default=None).
-  --namespace-file NAMESPACE_KGTK_FILE
-                        The KGTK file with known namespaces. (default=None).
-  --updated-namespace-file UPDATED_NAMESPACE_KGTK_FILE
-                        An updated KGTK file with known namespaces. (default=None).
+  -i INPUT_FILE [INPUT_FILE ...], --input-file INPUT_FILE [INPUT_FILE ...]
+                        The ntriples file(s) to import. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        The ntriples output file for records that are rejected. (Optional,
+                        use '-' for stdout.)
+  --namespace-file NAMESPACE_FILE
+                        The KGTK input file with known namespaces. (Optional, use '-' for
+                        stdin.)
+  --updated-namespace-file NAMESPACE_FILE
+                        The KGTK output file with updated namespaces. (Optional, use '-' for
+                        stdout.)
   --namespace-id-prefix NAMESPACE_ID_PREFIX
                         The prefix used to generate new namespaces. (default=n).
   --namespace-id-use-uuid [NAMESPACE_ID_USE_UUID]
-                        Use the local namespace UUID when generating namespaces. When there are
-                        multiple input files, each input file gets its own UUID.
+                        Use the local namespace UUID when generating namespaces. When there
+                        are multiple input files, each input file gets its own UUID.
                         (default=False).
   --namespace-id-counter NAMESPACE_ID_COUNTER
                         The counter used to generate new namespaces. (default=1).
   --namespace-id-zfill NAMESPACE_ID_ZFILL
-                        The width of the counter used to generate new namespaces. (default=0).
+                        The width of the counter used to generate new namespaces.
+                        (default=0).
   --output-only-used-namespaces [OUTPUT_ONLY_USED_NAMESPACES]
                         Write only used namespaces to the output file. (default=True).
   --allow-lax-uri [ALLOW_LAX_URI]
-                        Allow URIs that don't begin with a http:// or https://. (default=True).
+                        Allow URIs that don't begin with a http:// or https://.
+                        (default=True).
   --local-namespace-prefix LOCAL_NAMESPACE_PREFIX
                         The namespace prefix for blank nodes. (default=X).
   --local-namespace-use-uuid [LOCAL_NAMESPACE_USE_UUID]
-                        Generate a UUID for the local namespace. When there are multiple input
-                        files, each input file gets its own UUID. (default=True).
+                        Generate a UUID for the local namespace. When there are multiple
+                        input files, each input file gets its own UUID. (default=True).
   --prefix-expansion-label PREFIX_EXPANSION_LABEL
                         The label for prefix expansions in the namespace file.
                         (default=prefix_expansion).
@@ -72,39 +77,39 @@ optional arguments:
                         The label for URI records for ntriple structured literals.
                         (default=kgtk:structured_uri).
   --newnode-prefix NEWNODE_PREFIX
-                        The prefix used to generate new nodes for ntriple structured literals.
-                        (default=kgtk:node).
+                        The prefix used to generate new nodes for ntriple structured
+                        literals. (default=kgtk:node).
   --newnode-use-uuid [NEWNODE_USE_UUID]
                         Use the local namespace UUID when generating new nodes for ntriple
                         structured literals. When there are multiple input files, each input
                         file gets its own UUID. (default=False).
   --newnode-counter NEWNODE_COUNTER
-                        The counter used to generate new nodes for ntriple structured literals.
-                        (default=1).
+                        The counter used to generate new nodes for ntriple structured
+                        literals. (default=1).
   --newnode-zfill NEWNODE_ZFILL
                         The width of the counter used to generate new nodes for ntriple
                         structured literals. (default=0).
   --build-id [BUILD_ID]
                         Build id values in an id column. (default=False).
   --escape-pipes [ESCAPE_PIPES]
-                        When true, input pipe characters (|) need to be escaped (\|) per KGTK
-                        file format. (default=True).
+                        When true, input pipe characters (|) need to be escaped (\|) per
+                        KGTK file format. (default=True).
   --validate [VALIDATE]
-                        When true, validate that the result fields are good KGTK file format.
-                        (default=False).
+                        When true, validate that the result fields are good KGTK file
+                        format. (default=False).
   --override-uuid OVERRIDE_UUID
-                        When specified, override UUID generation for debugging. (default=None).
+                        When specified, override UUID generation for debugging.
+                        (default=None).
   --overwrite-id [optional true|false]
                         When true, replace existing ID values. When false, copy existing ID
                         values. When --overwrite-id is omitted, it defaults to False. When
                         --overwrite-id is supplied without an argument, it is True.
   --verify-id-unique [optional true|false]
                         When true, verify ID uniqueness using an in-memory set of IDs. When
-                        --verify-id-unique is omitted, it defaults to False. When --verify-id-
-                        unique is supplied without an argument, it is True.
+                        --verify-id-unique is omitted, it defaults to False. When --verify-
+                        id-unique is supplied without an argument, it is True.
 
   -v, --verbose         Print additional progress messages (default=False).
-
 ```
 ### Files
 There four categories of files:
