@@ -45,7 +45,7 @@ Given the file `examples/sample_data/paths/test.tsv`:
 Let's say we want to compute all paths between the nodes 'a' and 'e' of length up to 2. We can do so with the following command:
 
 ```
-kgtk paths --directed --max_hops 2 --source_nodes a --target_nodes e --i examples/sample_data/paths/test.tsv
+kgtk paths --directed --max_hops 2 --from a --to e -i examples/sample_data/paths/test.tsv
 ```
 
 The output (printed to stdout) is as follows:
