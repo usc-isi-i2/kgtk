@@ -6,6 +6,45 @@ The motivation of this command is to build a [SQID](https://tools.wmflabs.org/sq
 The JSON generator reads a tab-separated kgtk file from standard input. The kgtk file is required to have at least the following 4 fields: `node1`, `label`, `node2` and `id`. The `node1` field is the subject; `label` is the predicate and `node2` is the object. 
 
 ## Usage
+```
+usage: kgtk generate-mediawiki-jsons [-h] [-lp LABELS] [-ap ALIASES] [-dp DESCRIPTIONS]
+                                     [-pf PROP_FILE] [-pd PROP_DECLARATION] [-gz USE_GZ]
+                                     [-pr OUTPUT_PREFIX] [-n N] [-log LOG_PATH] [-w WARNING]
+
+Generating json files that mimic mediawiki *wbgetentities* api call response. This tool assumes statements and qualifiers related to one entity will be bundled close as the `generate-wikidata-triples` function assumes. If this requirement is not met, please set `n` to a number LARGER than the total number of entities in the kgtk file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -lp LABELS, --label-property LABELS
+                        property identifiers which will create labels, separated by
+                        comma','.
+  -ap ALIASES, --alias-property ALIASES
+                        alias identifiers which will create labels, separated by comma','.
+  -dp DESCRIPTIONS, --description-property DESCRIPTIONS
+                        description identifiers which will create labels, separated by
+                        comma','.
+  -pf PROP_FILE, --property-file PROP_FILE
+                        path to the file which contains the property datatype mapping in
+                        kgtk format.
+  -pd PROP_DECLARATION, --property-declaration-in-file PROP_DECLARATION
+                        wehther read properties in the kgtk file. If set to yes, make sure
+                        the property declaration happens before its usage
+  -gz USE_GZ, --use-gz USE_GZ
+                        if set to yes, read from compressed gz file
+  -pr OUTPUT_PREFIX, --output-file-prefix OUTPUT_PREFIX
+                        set the prefix of the output files. Default to `kgtk`
+  -n N, --output-n-lines N
+                        output json file when the corresponding dictionary size reaches n.
+                        Default to 1000
+  -log LOG_PATH, --log-path LOG_PATH
+                        set the path of the log file
+  -w WARNING, --warning WARNING
+                        if set to yes, warn various kinds of exceptions and mistakes and log
+                        them to a log file with line number in input file, rather than
+                        stopping. logging
+```
+
+
 ```{shell}
 cat input.tsv | kgtk generate-mediawiki-jsons OPTIONS
 ```

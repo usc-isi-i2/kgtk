@@ -37,6 +37,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--strong', action='store_true', dest="strong",
                         help="Treat graph as directed or not, independent of its actual directionality.")
 
+
+    # CMR: The folowing options aren't used.  Is the intent to support them, or
+    # was this cut-and-paste overkill?
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)

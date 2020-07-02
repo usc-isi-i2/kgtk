@@ -6,19 +6,41 @@ This command will find the connected components in a KGTK edge file. The output 
 
 ## Usage
 ```
-kgtk connected-components filename OPTIONS
+usage: kgtk connected-components [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--no-header]
+                                 [--properties PROPERTIES] [--undirected] [--strong] [-v]
+                                 [INPUT_FILE]
+
+Find all the connected components in an undirected or directed Graph.
+
+Additional options are shown in expert help.
+kgtk --expert connected-components --help
+
+positional arguments:
+  INPUT_FILE            The KGTK file to find connected components in. (May be omitted or
+                        '-' for stdin.) (Deprecated, use -i INPUT_FILE)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK file to find connected components in. (May be omitted or
+                        '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
+  --no-header           Specify if the input file does not have a header, default FALSE
+  --properties PROPERTIES
+                        A comma separated list of properties to traverse while finding
+                        connected components, by default all properties will be considered
+  --undirected          Specify if the input graph is undirected, default FALSE
+  --strong              Treat graph as directed or not, independent of its actual
+                        directionality.
+
+  -v, --verbose         Print additional progress messages (default=False).
 ```
 ***OPTIONS***:
 
 `-o {string}`: Path to the output edge file.
 
 `--noheader`: Option to specify that the input file does not contain a header.
-
-`--subj {integer}`: Column in which the subject is given. Default: 0.
-
-`--pred {integer}`: Column in which the predicate is given. Default: 1.
-
-`--obj {integer}`: Column in which the object is given. Default: 2.
 
 `--props {p1, p2, ...}`: Properties to consider while finding connected components. Default: All properties are considered. 
 

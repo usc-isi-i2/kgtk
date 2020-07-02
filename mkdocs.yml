@@ -40,8 +40,7 @@ nav:
       - 'validate': 'curate/validate.md'
   - 'Analysis commands':
       - 'connected-components': 'analysis/connected_components.md'
-      - 'instances': 'analysis/instances.md'  
-      - 'graph-statistics': 'analysis/stats.md'
+      - 'graph-statistics': 'analysis/graph_statistics.md'
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
       - 'text-embeddings': 'analysis/text_embedding.md'         
       - 'paths': 'analysis/paths.md'

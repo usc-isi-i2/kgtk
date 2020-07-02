@@ -4,31 +4,30 @@ The statistics for individual nodes are printed as edges to stdout. The summary 
 
 ## Usage
 ```
-kgtk graph_statistics [-h] [--directed] [--degrees] [--pagerank]
+usage: kgtk graph-statistics [-h] [-i INPUT_FILE] [--directed] [--degrees] [--pagerank]
                              [--hits] [--log LOG_FILE] [--statistics-only]
                              [--vertex-in-degree-property VERTEX_IN_DEGREE]
                              [--vertex-out-degree-property VERTEX_OUT_DEGREE]
                              [--page-rank-property VERTEX_PAGERANK]
                              [--vertex-hits-authority-property VERTEX_AUTH]
                              [--vertex-hits-hubs-property VERTEX_HUBS]
-                             filename
-```
+                             [INPUT_FILE]
 
 positional arguments:
-```
-  filename              filename here
-```
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
-```
   -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
   --directed            Is the graph directed or not?
   --degrees             Whether or not to compute degree distribution.
   --pagerank            Whether or not to compute PageRank centraility.
   --hits                Whether or not to compute HITS centraility.
-  --log LOG_FILE    Summary file for the global statistics of the graph.
-  --statistics-only     If this flag is set, output only the statistics edges.
-                        Else, append the statistics to the original graph.
+  --log LOG_FILE        Summary file for the global statistics of the graph.
+  --statistics-only     If this flag is set, output only the statistics edges. Else, append
+                        the statistics to the original graph.
   --vertex-in-degree-property VERTEX_IN_DEGREE
                         Label for edge: vertex in degree property
   --vertex-out-degree-property VERTEX_OUT_DEGREE
