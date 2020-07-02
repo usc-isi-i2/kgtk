@@ -8,31 +8,33 @@ The output file is an edge file that contains the following columns:
 
 ## Usage
 ```
-kgtk reachable-nodes filename OPTIONS
+usage: kgtk reachable-nodes [-h] [--root ROOT] [--rootfile ROOTFILE]
+                            [--rootfilecolumn ROOTFILECOLUMN] [--norootheader] [-o OUTPUT]
+                            [--noheader] [--subj SUB] [--obj OBJ] [--pred PRED]
+                            [--props PROPS] [--undirected]
+                            filename
+
+positional arguments:
+  filename              input filename here
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --root ROOT           Set of root nodes to use, comma-separated string
+  --rootfile ROOTFILE   Option to specify a file containing the set of root nodes
+  --rootfilecolumn ROOTFILECOLUMN
+                        Option to specify column of roots file to use, default 0
+  --norootheader        Option to specify that root file has no header
+  -o OUTPUT, --out OUTPUT
+                        File to output the reachable nodes,if empty will be written out to
+                        standard output
+  --noheader            Option to specify that file does not have a header
+  --subj SUB            Column in which the subject is given, default 0
+  --obj OBJ             Column in which the subject is given, default 2
+  --pred PRED           Column in which predicate is given, default 1
+  --props PROPS         Properties to consider while finding reachable nodes - comma-
+                        separated string,default all properties
+  --undirected          Option to specify graph as undirected?
 ```
-***OPTIONS***:
-
-`--root {r1, r2, ...}`: Root nodes to be considered specified as a command line argument.
-
-`--rootfile {string}`: edge file that contains the root nodes in some column.
-
-`--rootfilecolumn`: column of the root file that contains the root nodes. Default: 0.
-
-`--norootheader` Option to specify that file containing root nodes does not contain a header.
-
-`-o {string}`: Path to the output edge file.
-
-`--noheader`: Option to specify that the input file does not contain a header.
-
-`--subj {integer}`: Column in which the subject is given. Default: 0.
-
-`--pred {integer}`: Column in which the predicate is given. Default: 1.
-
-`--obj {integer}`: Column in which the object is given. Default: 2.
-
-`--props {p1, p2, ...}`: Properties to consider while finding reachable nodes. Default: All properties are considered. 
-
-`--undirected`: Option to specify that input file contains undirected graph.
 
 ### Examples
 

@@ -6,11 +6,10 @@ The output, printed to stdout, is the input edge file with its primary columns, 
 
 ## Usage
 ```
-kgtk paths [-h] [--i FILENAME] [--directed] [--max_hops MAX_HOPS]
+usage: kgtk paths [-h] [--i FILENAME] [--directed] [--max_hops MAX_HOPS]
                   [--source_nodes [SOURCE_NODES [SOURCE_NODES ...]]]
                   [--target_nodes [TARGET_NODES [TARGET_NODES ...]]]
                   [--graph_edge GRAPH_EDGE]
-```
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -22,8 +21,9 @@ optional arguments:
   --target_nodes [TARGET_NODES [TARGET_NODES ...]]
                         List of target nodes
   --graph_edge GRAPH_EDGE
-                        Name of the secondary edge type that stores the path
-                        id, default is 'graph'.
+                        Name of the secondary edge type that stores the path id, default is
+                        'graph'.
+```
 
 ## Examples
 
