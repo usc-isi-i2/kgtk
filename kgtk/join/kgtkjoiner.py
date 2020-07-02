@@ -1,7 +1,7 @@
 """
 Join two KTKG edge files or two KGTK node files.  The output file is an edge file or a node file.
 
-Note: This implementation builds im-memory sets of all the key values in
+Note: This implementation builds in-memory sets of all the key values in
 each input file.
 
 """
