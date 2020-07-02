@@ -6,28 +6,31 @@ The output, printed to stdout, is the input edge file with its primary columns, 
 
 ## Usage
 ```
-usage: kgtk paths [-h] [--i FILENAME] [--directed] [--max_hops MAX_HOPS]
-                  [--source_nodes [SOURCE_NODES [SOURCE_NODES ...]]]
-                  [--target_nodes [TARGET_NODES [TARGET_NODES ...]]]
-                  [--graph_edge GRAPH_EDGE]
+usage: kgtk paths [-h] [-i INPUT_FILE] [--directed] [--max_hops MAX_HOPS]
+                  [--from [SOURCE_NODES [SOURCE_NODES ...]]]
+                  [--to [TARGET_NODES [TARGET_NODES ...]]]
+                  [INPUT_FILE]
+
+positional arguments:
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for
+                        stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
-  --i FILENAME          Input filename
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   --directed            Is the graph directed or not?
   --max_hops MAX_HOPS   Maximum number of hops allowed.
-  --source_nodes [SOURCE_NODES [SOURCE_NODES ...]]
+  --from [SOURCE_NODES [SOURCE_NODES ...]]
                         List of source nodes
-  --target_nodes [TARGET_NODES [TARGET_NODES ...]]
+  --to [TARGET_NODES [TARGET_NODES ...]]
                         List of target nodes
-  --graph_edge GRAPH_EDGE
-                        Name of the secondary edge type that stores the path id, default is
-                        'graph'.
 ```
 
 ## Examples
 
-Given this file `examples/sample_data/paths/test.tsv`:
+Given the file `examples/sample_data/paths/test.tsv`:
 
 | node1 | label | node2 | id | col |
 | -- | -- | -- | -- | -- |
@@ -42,7 +45,7 @@ Given this file `examples/sample_data/paths/test.tsv`:
 Let's say we want to compute all paths between the nodes 'a' and 'e' of length up to 2. We can do so with the following command:
 
 ```
-kgtk paths --directed --max_hops 2 --source_nodes a --target_nodes e --i examples/sample_data/paths/test.tsv
+kgtk paths --directed --max_hops 2 --from a --to e -i examples/sample_data/paths/test.tsv
 ```
 
 The output (printed to stdout) is as follows:

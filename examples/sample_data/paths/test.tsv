@@ -1,0 +1,8 @@
+node1	label	node2	id	col
+a	r1	c	e1	1
+a	r1	d	e2	2
+a	r2	c	e3	3
+d	r3	e	e4	4
+c	r4	e	e5	1
+d	r3	f	e6	2
+f	r3	d	e7	3
