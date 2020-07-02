@@ -1,6 +1,6 @@
 The `generate_wikidata_triples` command generates triple files from a kgtk file. The generated triple files can then be loaded into a triple store directly.
 
-The triple generator reads a tab-separated kgtk file from standard input. The kgtk file is required to have at least the following 4 fields: `node1`, `label`, `node2` and `id`. The `node1` field is the subject; `label` is the predicate and `node2` is the object. 
+The triple generator reads a tab-separated kgtk file from standard input, by default, or a given file. The kgtk file is required to have at least the following 4 fields: `node1`, `label`, `node2` and `id`. The `node1` field is the subject; `label` is the predicate and `node2` is the object. 
 
 ## Usage
 ```{shell}
@@ -84,7 +84,7 @@ However, the following sample input is not legal and will be converted to incorr
 
 ## Explanation of Options
 
-### **--property-types** 
+### -property-types
 
 If set to true, read proprty data_type information from the property file following the format below. It is also a kgtk file. Here is an example file `example_prop.tsv`
 
@@ -145,19 +145,23 @@ If using `-log`, the warning `-w` must be set to true.
 
 If set to yes, besides reading properties from property file, the generator will read from the input stream to find new properties. The user MUST use `cat input.tsv input.tsv | kgtk generate_wikidata_triples`.  
 
-### Additional option `-prefix` enable the customization of uri prefix.
+### input-file 
 
-Below is a sample `prefix.tsv` file.
-```
-node1	bound	node2
-p	bound_to	https://w3id.org/datamart/
-pr	bound_to	https://w3id.org/datamart/
-wd	bound_to	https://w3id.org/datamart/
-```
+If set to a path to a file, kgtk will not read from standard input but open the given file and read from it. 
+
+### prefix
+
+`prefix` allows one to specific a `prefix file` which contains the desired mapping from prefix to exapanded prefix. For example, `prefix.tsv` is such a file as below where `p` is rebounded.
+
+|node1|	bound|	node2|
+| ----- | ----- | ------------- |
+|p|	bound_to|	https://w3id.org/datamart/|
+|pr|	bound_to|	https://w3id.org/datamart/|
+|wd| bound_to|	https://w3id.org/datamart/|
 
 To use it:
 
-```bash
+```{shell}
 cat input.tsv | kgtk generate_wikidata_triples -prefix prefix.tsv -pf prop_file.tsv -w yes --debug -n 1000
 ```
 
@@ -168,7 +172,7 @@ cat input.tsv | kgtk generate_wikidata_triples -prefix prefix.tsv -pf prop_file.
 
 **-lp**, **-ap**, **-dp** defines properties that triple generator should identify as label, description or aliases creation. There can be multiple choices separated by `,`.
 
-For example, if you have `-ap aliases,alias`, then when the following edge is met, both `Alice` and `Alicia` will be treated as aliases to the node `q2020`.
+For example, if you have `-ap aliases,alias`, then when the following edge is met, both `Alice` and `Alicia` will be treated as aliases to the node `Q2020`.
 
 
 |node1|	label|	node2|	id|
@@ -198,6 +202,8 @@ wd:Q123 schema:name "Hello"@en .
 User can also define properties in the input kgtk file with the following syntax. The `data_type` syntax indicates a new property is defined. Note that any usage of `P20200101` must appear after the definition in the kgtk file or `P20200101` will be incorrectly treated as `item`.
 
 
+|node1|	label|	node2|
+| ----- | ----- | -------------|
 |P20200101| data_type| string|
 
 ### Regular Edges
