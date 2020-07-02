@@ -50,7 +50,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
             return SUPPRESS
 
     parser.add_input_file(positional=True)
-    parser.add_input_file(who="The KGTK file to filter against (required).",
+    parser.add_input_file(who="The KGTK file to filter against.",
                           options=["--filter-on"], dest="filter_file", metavar="FILTER_FILE")
     parser.add_output_file()
 
@@ -104,6 +104,9 @@ def run(input_file: KGTKFiles,
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     filter_kgtk_file: Path = KGTKArgumentParser.get_input_file(filter_file, who="KGTK filter file")
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+
+    if (str(input_kgtk_file) == "-" and str(filter_kgtk_file) == "-"):
+        raise KGTKException("My not use stdin for both --input-file and --filter-on files.")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
