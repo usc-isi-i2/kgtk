@@ -19,9 +19,6 @@ optional arguments:
   --attr-synsets ATTR_SYN_FILE
                         Visual Genome file with attribute synsets. (May be
                         omitted or '-' for stdin.)
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for
-                        stdout.)
 ```
 
 ## Examples

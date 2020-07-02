@@ -1,5 +1,8 @@
 """
 Import Visual Genome into KGTK.
+
+TODO: Add --output-file
+
 """
 
 import sys
@@ -19,11 +22,9 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_input_file(positional=True, who="Visual Genome scene graph file")
     parser.add_input_file(who="Visual Genome file with attribute synsets.",
                             options=["--attr-synsets"], dest="attr_syn_file", metavar="ATTR_SYN_FILE")
-    parser.add_output_file()
 
 def run(input_file: KGTKFiles,
-        attr_syn_file: KGTKFiles,
-        output_file: KGTKFiles):
+        attr_syn_file: KGTKFiles):
 
     # import modules locally
     import sys # type: ignore
