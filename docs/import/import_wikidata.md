@@ -6,25 +6,28 @@ This command will import Wikidata into KGTK format and generates 3 files.
 
 ## Usage
 ```
-kgtk import-wikidata OPTIONS
+usage: kgtk import-wikidata [-h] [-i INPUT_FILE] [--procs PROCS] [--node NODE_FILE]
+                            [--edge EDGE_FILE] [--qual QUAL_FILE] [--limit LIMIT]
+                            [--lang LANG] [--source SOURCE] [--deprecated]
+                            [INPUT_FILE]
+
+positional arguments:
+  INPUT_FILE            input path file (May be omitted or '-' for stdin.) (Deprecated, use
+                        -i INPUT_FILE)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        input path file (May be omitted or '-' for stdin.)
+  --procs PROCS         number of processes to run in parallel, default 2
+  --node NODE_FILE      path to output node file
+  --edge EDGE_FILE      path to output edge file
+  --qual QUAL_FILE      path to output qualifier file
+  --limit LIMIT         number of lines of input file to run on, default runs on all
+  --lang LANG           languages to extract, comma separated, default en
+  --source SOURCE       wikidata version number, default: wikidata
+  --deprecated          option to include deprecated statements, not included by default
 ```
-**OPTIONS**: 
-
-`-i {string}`: The wikidata dump file in bz2 format
-
-`--procs {integer}`: The number of processes to run in parallel. Defualt: 2.
-
-`--node {string}`: The path to the output node file. If not given, nodes will not be written out.
-
-`--edge {string}`: The path to the output edge file. If not given, edges will not be written out.
-
-`--qual {string}`: The path to the output qualifiers file. If not given, qualifiers will not be written out.
-
-`--limit {integer}`: The number of lines of the wikidata dump to import. Defualt: imports whole dump.
-
-`--lang {l1, l2, ...}`: The languages to extract from the wikidata dump, for labels, aliases and descriptions. Default: en
-
-`--deprecated`: Default is not to include deprecated statements. Use this option to include them.
 
 ### Examples
 

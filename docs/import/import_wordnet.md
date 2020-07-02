@@ -2,16 +2,32 @@ Import WordNet v3.0 into KGTK format. Currently, four relations are included: hy
 
 ## Usage
 ```
-kgtk import-wordnet [-h] 
-```
+usage: kgtk import-wikidata [-h] [-i INPUT_FILE] [--procs PROCS] [--node NODE_FILE]
+                            [--edge EDGE_FILE] [--qual QUAL_FILE] [--limit LIMIT]
+                            [--lang LANG] [--source SOURCE] [--deprecated]
+                            [INPUT_FILE]
 
 positional arguments:
-```
-```
+  INPUT_FILE            input path file (May be omitted or '-' for stdin.) (Deprecated, use
+                        -i INPUT_FILE)
 
 optional arguments:
-```
-  -h, --help      show this help message and exit
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        input path file (May be omitted or '-' for stdin.)
+  --procs PROCS         number of processes to run in parallel, default 2
+  --node NODE_FILE      path to output node file
+  --edge EDGE_FILE      path to output edge file
+  --qual QUAL_FILE      path to output qualifier file
+  --limit LIMIT         number of lines of input file to run on, default runs on all
+  --lang LANG           languages to extract, comma separated, default en
+  --source SOURCE       wikidata version number, default: wikidata
+  --deprecated          option to include deprecated statements, not included by default
+179% kgtk import-wordnet -h
+usage: kgtk import-wordnet [-h]
+
+optional arguments:
+  -h, --help  show this help message and exit
 ```
 
 ## Examples
