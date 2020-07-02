@@ -1,5 +1,5 @@
 """
-Import ConceptNet file to KGTK.
+Import ConceptNet into KGTK.
 
 TODO: Add --output-file
 """
@@ -18,7 +18,6 @@ def add_arguments(parser: KGTKArgumentParser):
     Args:
             parser (argparse.ArgumentParser)
     """
-    # '$label == "/r/DefinedAs" && $node2=="/c/en/number_zero"'
     parser.add_input_file(positional=True)
     parser.add_argument('--english_only', action="store_true", help="Only english conceptnet?")
 
