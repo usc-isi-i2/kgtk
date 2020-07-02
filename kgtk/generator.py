@@ -79,10 +79,13 @@ class Generator:
     def parse_edges(self,edge:str):
         # use the order_map to map the node
         edge_list = edge.strip("\n").split("\t")
-        node1 = edge_list[self.order_map["node1"]].strip()
-        node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["label"]].strip()
-        e_id = edge_list[self.order_map["id"]].strip()  
+        try:
+            node1 = edge_list[self.order_map["node1"]].strip()
+            node2 = edge_list[self.order_map["node2"]].strip()
+            prop = edge_list[self.order_map["label"]].strip()
+            e_id = edge_list[self.order_map["id"]].strip()  
+        except:
+            print(edge_list)
         return node1, node2, prop, e_id
 
     @staticmethod
@@ -844,6 +847,10 @@ class JsonGenerator(Generator):
         else:
             try:
                 time_string, precision = node2.split("/")
+                if time_string.startswith("^"):
+                    time_string = time_string[1:]
+                if time_string.startswith("+"):
+                    time_string = time_string[1:]
                 precision = int(precision)
             except:
                 return None
