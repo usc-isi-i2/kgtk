@@ -7,6 +7,7 @@ nav:
       - 'import-atomic': 'import/import_atomic.md'
       - 'import-conceptnet': 'import/import_conceptnet.md'
       - 'import-ntriples': 'import/import_ntriples.md'
+      - 'import-visualgenome': 'import/import_visualgenome.md'
       - 'import-wikidata': 'import/import_wikidata.md'
       - 'import-wordnet': 'import/import_wordnet.md'
   - 'Export commands':
