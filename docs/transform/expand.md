@@ -3,10 +3,10 @@ expanding | lists into multiple records.
 
 ## Usage
 
-```bash
-usage: kgtk expand [-h] [--columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]]
-                   [-o OUTPUT_KGTK_FILE] [-v]
-                   [input_kgtk_file]
+```
+usage: kgtk expand [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                   [--columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]] [-v]
+                   [INPUT_FILE]
 
 Copy a KGTK file, expanding | lists into multiple records. 
 
@@ -14,16 +14,19 @@ Additional options are shown in expert help.
 kgtk --expert expand --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin (default=-).
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   --columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]
                         The key columns will not be expanded. They will be repeated on each
                         output record. (default=id for node files, (node1, label, node2) for
                         edge files).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```

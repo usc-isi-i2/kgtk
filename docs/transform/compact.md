@@ -10,12 +10,13 @@ option may be used.
 ## Usage
 
 ```
-usage: kgtk compact [-h] [--columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]]
-                    [--compact-id [COMPACT_ID]] [--presorted [SORTED_INPUT]]
-                    [--verify-sort [VERIFY_SORT]] [-o OUTPUT_KGTK_FILE]
-                    [--build-id [BUILD_ID]] [--overwrite-id [OVERWRITE_ID]]
-                    [--verify-id-unique [VERIFY_ID_UNIQUE]] [-v]
-                    [input_kgtk_file]
+usage: kgtk compact [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                    [--columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]]
+                    [--compact-id [True|False]] [--presorted [True|False]]
+                    [--verify-sort [True|False]] [--build-id [True|False]]
+                    [--overwrite-id [optional true|false]]
+                    [--verify-id-unique [optional true|false]] [-v]
+                    [INPUT_FILE]
 
 Copy a KGTK file, compacting multiple records into | lists. 
 
@@ -25,35 +26,39 @@ Additional options are shown in expert help.
 kgtk --expert compact --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin
-                        (default=-).
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   --columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]
-                        The key columns to identify records for compaction. (default=id
-                        for node files, (node1, label, node2, id) for edge files).
-  --compact-id [COMPACT_ID]
-                        Indicate that the ID column in KGTK edge files should be
-                        compacted. Normally, if the ID column exists, it is not
-                        compacted, as there are use cases that need to maintain
-                        distinct lists of secondary edges for each ID value.
+                        The key columns to identify records for compaction. (default=id for
+                        node files, (node1, label, node2, id) for edge files).
+  --compact-id [True|False]
+                        Indicate that the ID column in KGTK edge files should be compacted.
+                        Normally, if the ID column exists, it is not compacted, as there are
+                        use cases that need to maintain distinct lists of secondary edges
+                        for each ID value. (default=False).
+  --presorted [True|False]
+                        Indicate that the input has been presorted (or at least pregrouped)
                         (default=False).
-  --presorted [SORTED_INPUT]
-                        Indicate that the input has been presorted (or at least
-                        pregrouped) (default=False).
-  --verify-sort [VERIFY_SORT]
-                        If the input has been presorted, verify its consistency
-                        (disable if only pregrouped). (default=True).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
-  --build-id [BUILD_ID]
+  --verify-sort [True|False]
+                        If the input has been presorted, verify its consistency (disable if
+                        only pregrouped). (default=True).
+  --build-id [True|False]
                         Build id values in an id column. (default=False).
-  --overwrite-id [OVERWRITE_ID]
-                        Replace existing id values. (default=False).
-  --verify-id-unique [VERIFY_ID_UNIQUE]
-                        Verify ID uniqueness. Uses an in-memory set of IDs.
-                        (default=True).
+  --overwrite-id [optional true|false]
+                        When true, replace existing ID values. When false, copy existing ID
+                        values. When --overwrite-id is omitted, it defaults to False. When
+                        --overwrite-id is supplied without an argument, it is True.
+  --verify-id-unique [optional true|false]
+                        When true, verify ID uniqueness using an in-memory set of IDs. When
+                        --verify-id-unique is omitted, it defaults to False. When --verify-
+                        id-unique is supplied without an argument, it is True.
 
   -v, --verbose         Print additional progress messages (default=False).
 ```

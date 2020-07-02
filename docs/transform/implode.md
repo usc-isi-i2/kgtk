@@ -12,7 +12,7 @@ KGTK language qualified strings.
 
 ## Usage
 ```
-usage: kgtk implode [-h] [-o OUTPUT_KGTK_FILE] [--reject-file REJECT_KGTK_FILE]
+usage: kgtk implode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--reject-file REJECT_FILE]
                     [--column COLUMN_NAME] [--prefix PREFIX]
                     [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]]
                     [--without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]]
@@ -26,7 +26,7 @@ usage: kgtk implode [-h] [-o OUTPUT_KGTK_FILE] [--reject-file REJECT_KGTK_FILE]
                     [--build-id [BUILD_ID]] [--show-data-types [SHOW_DATA_TYPES]]
                     [--overwrite-id [optional true|false]]
                     [--verify-id-unique [optional true|false]] [-v]
-                    [input_kgtk_file]
+                    [INPUT_FILE]
 
 Copy a KGTK file, building one column (usually node2) from seperate columns for each subfield. 
 
@@ -35,22 +35,23 @@ Strings may include language qualified strings, and quantities may include numbe
 Date and times subfields and symbol subfields may be optionally quoted. Triple quotes may be used where quotes are accepted. 
 
 Additional options are shown in expert help.
-kgtk --expert expand --help
+kgtk --expert implode --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin
-                        (default=-).
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
-  --reject-file REJECT_KGTK_FILE
-                        The KGTK file into which to write rejected records
-                        (default=None).
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        The KGTK file for records that are rejected. (Optional, use '-' for
+                        stdout.)
   --column COLUMN_NAME  The name of the column to explode. (default=node2).
-  --prefix PREFIX       The prefix for exploded column names.
-                        (default=node2;kgtk:).
+  --prefix PREFIX       The prefix for exploded column names. (default=node2;kgtk:).
   --types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]
                         The KGTK data types for which fields should be imploded.
                         (default=['empty', 'list', 'number', 'quantity', 'string',
@@ -59,43 +60,39 @@ optional arguments:
   --without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]
                         The KGTK fields to do without. (default=None).
   --overwrite [OVERWRITE_COLUMN]
-                        Indicate that it is OK to overwrite an existing imploded
-                        column. (default=True).
+                        Indicate that it is OK to overwrite an existing imploded column.
+                        (default=True).
   --validate [VALIDATE]
                         Validate imploded values. (default=True).
   --escape-pipes [ESCAPE_PIPES]
-                        When true, pipe characters (|) need to be escaped (\|) per
-                        KGTK file format. (default=False).
+                        When true, pipe characters (|) need to be escaped (\|) per KGTK file
+                        format. (default=False).
   --quantities-include-numbers [QUANTITIES_INCLUDE_NUMBERS]
-                        When true, numbers are acceptable quantities.
-                        (default=True).
+                        When true, numbers are acceptable quantities. (default=True).
   --general-strings [GENERAL_STRINGS]
                         When true, strings may include language qualified strings.
                         (default=True).
   --remove-prefixed-columns [REMOVE_PREFIXED_COLUMNS]
-                        When true, remove all columns beginning with the prefix
-                        from the output file. (default=False).
+                        When true, remove all columns beginning with the prefix from the
+                        output file. (default=False).
   --ignore-unselected-types [IGNORE_UNSELECTED_TYPES]
-                        When true, input records with valid but unselected data
-                        types will be passed through to output. (default=True).
+                        When true, input records with valid but unselected data types will
+                        be passed through to output. (default=True).
   --retain-unselected-types [RETAIN_UNSELECTED_TYPES]
-                        When true, input records with valid but unselected data
-                        types will be retain existing data on output.
-                        (default=True).
+                        When true, input records with valid but unselected data types will
+                        be retain existing data on output. (default=True).
   --build-id [BUILD_ID]
                         Build id values in an id column. (default=False).
   --show-data-types [SHOW_DATA_TYPES]
                         Print the list of data types and exit. (default=False).
   --overwrite-id [optional true|false]
-                        When true, replace existing ID values. When false, copy
-                        existing ID values. When --overwrite-id is omitted, it
-                        defaults to False. When --overwrite-id is supplied without
-                        an argument, it is True.
+                        When true, replace existing ID values. When false, copy existing ID
+                        values. When --overwrite-id is omitted, it defaults to False. When
+                        --overwrite-id is supplied without an argument, it is True.
   --verify-id-unique [optional true|false]
-                        When true, verify ID uniqueness using an in-memory set of
-                        IDs. When --verify-id-unique is omitted, it defaults to
-                        False. When --verify-id-unique is supplied without an
-                        argument, it is True.
+                        When true, verify ID uniqueness using an in-memory set of IDs. When
+                        --verify-id-unique is omitted, it defaults to False. When --verify-
+                        id-unique is supplied without an argument, it is True.
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
