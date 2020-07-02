@@ -1,6 +1,11 @@
 """
 Compute paths between nodes in a KGTK graph.
+
+TODO: Add --output-file
 """
+
+import sys
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -8,21 +13,19 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_argument('--i', action="store", type=str, dest="filename", help='Input filename')
+    parser.add_input_file(positional=True)
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
     parser.add_argument('--max_hops', action="store", type=int, dest="max_hops", help="Maximum number of hops allowed.")
-    parser.add_argument('--source_nodes', action="store", nargs="*", dest="source_nodes", help="List of source nodes")
-    parser.add_argument('--target_nodes', action="store", nargs="*", dest="target_nodes", help="List of target nodes")
-    parser.add_argument('--graph_edge', action="store", type=str, dest="graph_edge", default="graph", help="Name of the secondary edge type that stores the path id, default is 'graph'.")
+    parser.add_argument('--from', action="store", nargs="*", dest="source_nodes", help="List of source nodes")
+    parser.add_argument('--to', action="store", nargs="*", dest="target_nodes", help="List of target nodes")
 
-def run(filename, directed, max_hops, source_nodes, target_nodes, graph_edge):
-    from kgtk.exceptions import KGTKException
+def run(input_file: KGTKFiles, directed, max_hops, source_nodes, target_nodes):
     def infer_index(h, options=[]):
         for o in options:
             if o in h:
@@ -37,6 +40,7 @@ def run(filename, directed, max_hops, source_nodes, target_nodes, graph_edge):
 
     try:
         # import modules locally
+        from kgtk.exceptions import KGTKException
         import socket
         from graph_tool import load_graph_from_csv
         from graph_tool import centrality
@@ -46,7 +50,10 @@ def run(filename, directed, max_hops, source_nodes, target_nodes, graph_edge):
         from collections import defaultdict
 
         id_col = 'name'
-
+        graph_edge='graph'
+    
+        filename: Path = KGTKArgumentParser.get_input_file(input_file)
+        filename=str(filename)
         with open(filename, 'r') as f:
             header = next(f).split('\t')
             subj_index = infer_index(header, options=['node1', 'subject'])

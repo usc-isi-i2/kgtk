@@ -2,17 +2,6 @@ Import the entire ConceptNet, or just its English part, into KGTK format.
 
 ## Usage
 ```
-usage: kgtk import-atomic [-h] [-i INPUT_FILE] [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
-176% kgtk import-conceptnet -h
 usage: kgtk import-conceptnet [-h] [-i INPUT_FILE] [--english_only] [INPUT_FILE]
 
 positional arguments:
