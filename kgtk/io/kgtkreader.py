@@ -856,7 +856,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             
             return row
 
-    # This is both and iterable and an iterator object.
+    # This is both an iterable and an iterator object.
     def __iter__(self)->typing.Iterator[typing.List[str]]:
         return self
 

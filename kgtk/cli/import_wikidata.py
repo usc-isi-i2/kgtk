@@ -2,19 +2,22 @@
 Import an wikidata file into KGTK file
 """
 
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
+
 def parser():
     return {
         'help': 'Import an wikidata file into KGTK file'
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
         parser (argparse.ArgumentParser)
     """
-    parser.add_argument("-i",'--inp', action="store", type=str, dest="inp_path",help='input path file')
+    parser.add_input_file(positional=True, who='input path file')
+
     parser.add_argument(
         '--procs',
         action="store",
@@ -71,7 +74,7 @@ def add_arguments(parser):
         help='option to include deprecated statements, not included by default')
     
     
-def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecated):
+def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,source,deprecated):
     # import modules locally
     import bz2
     import simplejson as json
@@ -448,6 +451,8 @@ def run(inp_path,procs,node_file,edge_file,qual_file,limit,lang,source,deprecate
 
     
     try:
+        inp_path = KGTKArgumentParser.get_input_file(input_file)
+        
         start=time.time()
         languages=lang.split(',')
         if node_file:

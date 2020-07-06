@@ -1,3 +1,11 @@
+## Running in MyBinder
+The easiest way of running KGTK is through [MyBinder](https://mybinder.org/). We have made available an **example notebook** to show some of the features of KGTK. The notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) will **not** run. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/dev?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
+
+To see the **graph analytics and embedding capabilities** of KGTK, launch the following Notebook (launch usually requires 10-15 minutes):  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
+
+
+For executing KGTK with large datasets, **we recommend a Docker/local installation**.
+
 ## Using KGTK with Docker
 
 If you have Docker installed, we have prepared a Docker image with KGTK (latest version corresponds to 0.2.1):
@@ -61,14 +69,14 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
 
-4. Install `mlr`. Depending on your environment, you can run one of the following:
-  * `brew update && brew install miller` (on mac)
-  * `sudo port selfupdate && sudo port install miller` (on mac)
-  * `sudo apt-get install miller` (linux)
-  * `sudo apt install miller` (linux)
-  * `sudo yum install miller` (linux)
-  
-More installation options for `mlr` can be found [here](https://johnkerl.org/miller/doc/build.html).
+## Updating your KGTK installation
+To update your version of KGTK, just follow the instructions below:
+
+- If you installed KGTK with through Docker, then just pull the most recent image: `docker pull <image_name>`, where `<image_name>` is the tag of the image of interest (e.g. uscisii2/kgtk:latest)
+- If you installed KGTK from pip, then type `pip install -U kgtk`.
+- If you installed KGTK from GitHub, then type `git pull && pip install` . Alternatively, you may execute:  `git pull && python setup.py install`. 
+- If you installed KGTK in development mode, (i.e., `pip install -e`); then you only need to do update your repository: `git pull`.
+
 
 ## Running KGTK commands
 
@@ -89,20 +97,3 @@ An example command that computes instances of the subclasses of two classes:
 ```
 kgtk instances --transitive --class Q13442814,Q12345678
 ```
-
-## Additional information
-
-### The Miller Package
-
-1. Our code uses the "miller" package to manipulate formatted data.
-
-2. TheGitHub repository for miller is:
-```
-https://github.com/johnkerl/miller
-```
-3. The documentaton is:
-```
-https://www.mankier.com/1/mlr
-```
-4. You may need to install the miller command (mlr) on your system.
-   * OpenSUSE Tumbleweed Linux: install package `miller` from Main Repository (OSS)

@@ -207,9 +207,9 @@ def run(
             else:
                 if start_generation:
                     # start triple generation because reached the starting position of the second `cat`
-                    line_num -= file_lines
-                    # print("creating triples at line {} {} with total number of lines: {}".format(line_num+1, edge, file_lines))
-                    generator.entry_point(line_num+1,edge) # file generator
+                    line_number = line_num - file_lines
+                    # print("creating triples at line {} {} with total number of lines: {}".format(line_number+1, edge, file_lines))
+                    generator.entry_point(line_number+1,edge) # file generator
                     # print("# {}".format(generator.read_num_of_lines))
                 else:
                     if edge == begining_edge:

@@ -1,6 +1,0 @@
-sentence-transformers
-sklearn
-matplotlib
-SPARQLWrapper
-torch
-redis
