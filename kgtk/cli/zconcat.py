@@ -3,16 +3,17 @@ import sys
 import io
 import sh # type: ignore
 import tempfile
+import typing
 
 from kgtk.exceptions import KGTKException
-
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
         'help': 'Concatenate any mixture of plain or gzip/bzip2/xz-compressed files'
     }
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument('-o', '--out', default=None, dest='output',
                         help='output file to write to, otherwise output goes to stdout')
     parser.add_argument('--gz', '--gzip', action='store_true', dest='gz',
@@ -21,8 +22,10 @@ def add_arguments(parser):
                         help='compress result with bzip2')
     parser.add_argument('--xz', action='store_true', dest='xz',
                         help='compress result with xz')
-    parser.add_argument("inputs", metavar="INPUT", nargs="*", action="store",
-                        help="input files to process, if empty or `-' read from stdin")
+
+    # parser.add_argument("inputs", metavar="INPUT", nargs="*", action="store",
+    #                    help="input files to process, if empty or `-' read from stdin")
+    parser.add_input_file(positional=True, allow_list=True, dest="input_files")
 
 
 ### general command utilities (some of these should make it into a more central location):
@@ -206,11 +209,13 @@ def build_command(inputs=[], output=None, gz=False, bz2=False, xz=False):
         out_mode='ab'
     return command
 
-def run(inputs=[], output=None, gz=False, bz2=False, xz=False, _debug=False):
+# def run(inputs=[], output=None, gz=False, bz2=False, xz=False, _debug=False):
+def run(input_files: KGTKFiles, output=None, gz=False, bz2=False, xz=False, _debug=False):
     """Run zconcat according to the provided command-line arguments.
     """
     # TO DO: figure out how to properly access shared --debug option
     try:
+        inputs: typing.List[str] = [str(input_file) for input_file in KGTKArgumentParser.get_input_file_list(input_files)]
         commands = build_command(inputs=inputs, output=output, gz=gz, bz2=bz2, xz=xz)
         return run_sh_commands(commands, debug=_debug).exit_code
     except sh.SignalException_SIGPIPE:

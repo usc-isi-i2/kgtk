@@ -10,7 +10,7 @@ import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
@@ -25,7 +25,7 @@ def parser():
         'description': 'Copy a KGTK file, building one column (usually node2) from seperate columns for each subfield. ' +
         '\n\nStrings may include language qualified strings, and quantities may include numbers. ' +
         '\n\nDate and times subfields and symbol subfields may be optionally quoted. Triple quotes may be used where quotes are accepted. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert expand --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert implode --help'
     }
 
 
@@ -47,13 +47,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "input_kgtk_file", nargs="?", type=Path, default="-",
-                              help="The KGTK file to filter. May be omitted or '-' for stdin (default=%(default)s).")
-
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
-
-    parser.add_argument(      "--reject-file", dest="reject_kgtk_file", help="The KGTK file into which to write rejected records (default=%(default)s).",
-                              type=Path, default=None)
+    parser.add_input_file(positional=True)
+    parser.add_output_file()
+    parser.add_output_file(who="The KGTK file for records that are rejected.",
+                           dest="reject_file",
+                           options=["--reject-file"],
+                           metavar="REJECT_FILE",
+                           optional=True)
 
     parser.add_argument(      "--column", dest="column_name", help="The name of the column to explode. (default=%(default)s).", default=KgtkFormat.NODE2)
 
@@ -115,9 +115,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
-        reject_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        reject_file: KGTKFiles,
+
         column_name: str,
         prefix: str,
         type_names: typing.List[str],
@@ -144,6 +145,10 @@ def run(input_kgtk_file: Path,
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file, who="KGTK reject file")
+
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
@@ -154,7 +159,11 @@ def run(input_kgtk_file: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
+        if reject_kgtk_file is not None:
+            print("--reject-file=%s" % str(reject_kgtk_file), file=error_file, flush=True)
+
         print("--column %s" % column_name, file=error_file, flush=True)
         print("--prefix %s" % prefix, file=error_file, flush=True)
         print("--overwrite %s" % str(overwrite_column), file=error_file, flush=True)
@@ -169,9 +178,6 @@ def run(input_kgtk_file: Path,
             print("--types %s" % " ".join(type_names), file=error_file, flush=True)
         if without_fields is not None:
             print("--without %s" % " ".join(without_fields), file=error_file, flush=True)
-        print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file, flush=True)
-        if reject_kgtk_file is not None:
-            print("--reject-file=%s" % str(reject_kgtk_file), file=error_file, flush=True)
         print("--show-data-types %s" % str(show_data_types), file=error_file, flush=True)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)

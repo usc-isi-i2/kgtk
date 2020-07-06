@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
@@ -30,11 +30,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     _expert: bool = parsed_shared_args._expert
 
     # '$label == "/r/DefinedAs" && $node2=="/c/en/number_zero"'
-    parser.add_argument(      "input_kgtk_file", nargs="?", help="The KGTK file to filter. May be omitted or '-' for stdin.", type=Path, default="-")
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write records that pass the filter (default=%(default)s).",
-                        type=Path, default="-")
-    parser.add_argument(      "--reject-file", dest="reject_kgtk_file", help="The KGTK file to write records that fail the filter (default=%(default)s).",
-                              type=Path, default=None)
+    parser.add_input_file(positional=True)
+    parser.add_output_file(who="The KGTK output file for records that pass the filter.")
+    parser.add_output_file(who="The KGTK reject file for records that fail the filter.",
+                           dest="reject_file",
+                           options=["--reject-file"],
+                           metavar="REJECT_FILE",
+                           optional=True)
 
     # parser.add_argument('-dt', "--datatype", action="store", type=str, dest="datatype", help="Datatype of the input file, e.g., tsv or csv.", default="tsv")
     parser.add_argument('-p', '--pattern', action="store", type=str, dest="pattern", help="Pattern to filter on, for instance, \" ; P154 ; \" ", required=True)
@@ -42,19 +44,21 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--pred', action="store", type=str, dest='pred_col', help="Predicate column, default is label")
     parser.add_argument('--obj', action="store", type=str, dest='obj_col', help="Object column, default is node2")
 
-    parser.add_argument(      "--or", dest="or_pattern", help="'Or' the clauses of the pattern. (default=%(default)s).",
+    parser.add_argument(      "--or", dest="or_pattern", metavar="True|False",
+                              help="'Or' the clauses of the pattern. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--invert", dest="invert", help="Invert the result of applying the pattern. (default=%(default)s).",
+    parser.add_argument(      "--invert", dest="invert", metavar="True|False",
+                              help="Invert the result of applying the pattern. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
-        reject_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        reject_file: KGTKFiles,
 
         pattern: str,
         subj_col: typing.Optional[str],
@@ -75,6 +79,10 @@ def run(input_kgtk_file: Path,
     # import modules locally
     from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file, who="KGTK reject file")
+
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
@@ -84,7 +92,7 @@ def run(input_kgtk_file: Path,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("input: %s" % str(input_kgtk_file), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         if reject_kgtk_file is not None:
             print("--reject-file=%s" % str(reject_kgtk_file), file=error_file)

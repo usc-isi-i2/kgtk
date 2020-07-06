@@ -217,4 +217,4 @@ class KgtkBase(KgtkFormat):
             if column_name not in KgtkFormat.ID_COLUMN_NAMES:
                 additional_columns.append(column_name)
         return additional_columns
-    
+

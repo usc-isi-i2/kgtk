@@ -1,33 +1,53 @@
-<img src="/docs/images/kgtk_logo_200x200.png" width="150"/>
+<img src="https://github.com/usc-isi-i2/kgtk/raw/master/docs/images/kgtk_logo_200x200.png" width="150"/>
 
 # KGTK: Knowledge Graph Toolkit 
 
-[![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)
+[![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=dev)  
 
 KGTK is a Python library for easy manipulation with knowledge graphs. It provides a flexible framework that allows chaining of common graph operations, such as: extraction of subgraphs, filtering, computation of graph metrics, validation, cleaning, generating embeddings, and so on. Its principal format is TSV, though we do support a number of other inputs. 
 
-## Documentation
-
-https://kgtk.readthedocs.io/en/latest/
-
 ## Features
 
-* Computation of class instances
 * Computation of reachable nodes
 * Filtering based on property values
 * Removal of columns
 * Sorting
-* Computation of various embeddings
+* Computation of embeddings
 * Cleaning and validation
 * Computation of graph metrics
 * Joining and concatenation of graphs
 * Manipulation of Wikidata data
 
-## Releases
+## Getting started
+
+### Documentation
+
+https://kgtk.readthedocs.io/en/latest/
+
+### Try KGTK online with MyBinder
+The easiest, no-cost way of trying out KGTK now is through [MyBinder](https://mybinder.org/). We have made available an **example notebook** to show some of the features of KGTK. The notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) will not run. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/dev?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
+
+To see the **graph analytics and embedding capabilities** of KGTK, launch the following Notebook (launch usually requires 10-20 minutes):  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
+
+For executing KGTK with large datasets, **we recommend a Docker/local installation**.
+
+### KGTK notebooks
+
+The [examples folder](examples/) provides a larger and constantly increasing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
+* Embeddings for ConceptNet nodes
+* Graph statistics over a curated subset of Wikidata
+* Reachable occupations for selected people in Wikidata
+* PageRank over Wikidata
+* etc.
+
+## Installation
+
+### Releases
 
 * [Source code](https://github.com/usc-isi-i2/kgtk/releases)
 
-## Installation through Docker
+
+### Installation through Docker
 
 ```
 docker pull uscisii2/kgtk
@@ -50,7 +70,7 @@ More information about versions and tags is available here: https://hub.docker.c
 
 See additional examples in [the documentation](https://kgtk.readthedocs.io/en/latest/install/).
 
-## Local installation
+### Local installation
 
 0. Our installations will be in a conda environment. If you don't have a conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it.
 1. Set up your own conda environment:
@@ -65,6 +85,14 @@ conda activate kgtk-env
 You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+
+### Updating your KGTK installation
+To update your version of KGTK, just follow the instructions below:
+
+- If you installed KGTK with through Docker, then just pull the most recent image: `docker pull <image_name>`, where `<image_name>` is the tag of the image of interest (e.g. uscisii2/kgtk:latest)
+- If you installed KGTK from pip, then type `pip install -U kgtk`.
+- If you installed KGTK from GitHub, then type `git pull && pip install` . Alternatively, you may execute:  `git pull && python setup.py install`. 
+- If you installed KGTK in development mode, (i.e., `pip install -e`); then you only need to do update your repository: `git pull`.
 
 ## Running KGTK commands
 

@@ -25,71 +25,17 @@ The `--format node` option creates a KGTK node file as its output.  The value
 columns (prefixed) are created for each unique value found in the specified
 column in the input file.
 
+Usint the `--where name` and `--in value(s)` options, you can restrict the
+count to records where the value in a specified column matches a list of
+specified values.
+
 ## Usage
 
-```bash
-usage: kgtk unique [-h] --column COLUMN_NAME [--empty EMPTY_VALUE] [-o OUTPUT_KGTK_FILE]
-                   [--label LABEL_VALUE] [-v]
-                   [input_kgtk_file]
-
-Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.
-
-Additional options are shown in expert help.
-kgtk --expert ifnotempty --help
-
-positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --column COLUMN_NAME  The column to count unique values (required).
-  --empty EMPTY_VALUE   A value to substitute for empty values (default=).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (required).
-  --label LABEL_VALUE   The output file label column value (default=count).
-
-  -v, --verbose         Print additional progress messages (default=False).
-
 ```
-
-Expert help:
-```
-usage: kgtk unique [-h] --column COLUMN_NAME [--empty EMPTY_VALUE] [-o OUTPUT_KGTK_FILE]
-                   [--label LABEL_VALUE] [--format {edge,node}] [--prefix PREFIX]
-                   [--errors-to-stdout | --errors-to-stderr] [--show-options] [-v]
-                   [--very-verbose] [--column-separator COLUMN_SEPARATOR]
-                   [--compression-type COMPRESSION_TYPE] [--error-limit ERROR_LIMIT]
-                   [--gzip-in-parallel [GZIP_IN_PARALLEL]] [--gzip-queue-size GZIP_QUEUE_SIZE]
-                   [--mode {NONE,EDGE,NODE,AUTO}]
-                   [--force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
-                   [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--skip-first-record [SKIP_FIRST_RECORD]]
-                   [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--repair-and-validate-lines [REPAIR_AND_VALIDATE_LINES]]
-                   [--repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]]
-                   [--blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--fill-short-lines [FILL_SHORT_LINES]]
-                   [--invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--truncate-long-lines [TRUNCATE_LONG_LINES]]
-                   [--whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                   [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]]
-                   [--allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]]
-                   [--allow-lax-strings [ALLOW_LAX_STRINGS]]
-                   [--allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]]
-                   [--allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]]
-                   [--repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]]
-                   [--minimum-valid-year MINIMUM_VALID_YEAR]
-                   [--maximum-valid-year MAXIMUM_VALID_YEAR]
-                   [--minimum-valid-lat MINIMUM_VALID_LAT]
-                   [--maximum-valid-lat MAXIMUM_VALID_LAT]
-                   [--minimum-valid-lon MINIMUM_VALID_LON]
-                   [--maximum-valid-lon MAXIMUM_VALID_LON]
-                   [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
-                   [input_kgtk_file]
+usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --column COLUMN_NAME
+                   [--empty EMPTY_VALUE] [--label LABEL_VALUE] [--where WHERE_COLUMN_NAME]
+                   [--in WHERE_VALUES [WHERE_VALUES ...]] [-v]
+                   [INPUT_FILE]
 
 Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.
 
@@ -97,21 +43,25 @@ Additional options are shown in expert help.
 kgtk --expert unique --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin.
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   --column COLUMN_NAME  The column to count unique values (required).
   --empty EMPTY_VALUE   A value to substitute for empty values (default=).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (required).
   --label LABEL_VALUE   The output file label column value (default=count).
-  --format {edge,node}  The output file format and mode (default=edge).
-  --prefix PREFIX       The value prefix (default=).
+  --where WHERE_COLUMN_NAME
+                        The name of a column for a record selection test. (default=None).
+  --in WHERE_VALUES [WHERE_VALUES ...]
+                        The list of values for a record selection test. (default=None).
 
-...
+  -v, --verbose         Print additional progress messages (default=False).
 ```
-(See `kgtk validate` for a description of additional options)
 
 ## Examples
 
@@ -168,3 +118,11 @@ kgtk unique file1.tsv --column location --empty NONE --format node --prefix 'loc
 | -------- | ---- | ---- | ---- |
 | location | 3    | 2    | 3    |
 
+```bash
+kgtk unique file1.tsv --column location --where node1 --in peter
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| home | count | 1 |
+| work | count | 1 |

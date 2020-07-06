@@ -9,7 +9,9 @@ decompression selectin algorithim;  this is useful when reading from piped input
 
 ## Usage
 ```
-usage: kgtk validate [-h] [--header-only [HEADER_ONLY]] [-v] [kgtk_files [kgtk_files ...]]
+usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--header-only [HEADER_ONLY]]
+                     [-v]
+                     [INPUT_FILE [INPUT_FILE ...]]
 
 Validate a KGTK file. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
 
@@ -19,10 +21,13 @@ Additional options are shown in expert help.
 kgtk --expert validate --help
 
 positional arguments:
-  kgtk_files            The KGTK file(s) to validate. May be omitted or '-' for stdin.
+  INPUT_FILE            The KGTK file(s) to validate. (May be omitted or '-' for stdin.)
+                        (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  -i INPUT_FILE [INPUT_FILE ...], --input-files INPUT_FILE [INPUT_FILE ...]
+                        The KGTK file(s) to validate. (May be omitted or '-' for stdin.)
   --header-only [HEADER_ONLY]
                         Process the only the header of the input file (default=False).
 
@@ -32,24 +37,28 @@ optional arguments:
 Expert help:
 
 ```
-usage: kgtk validate [-h] [--header-only [HEADER_ONLY]]
+usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--header-only [HEADER_ONLY]]
                      [--errors-to-stdout | --errors-to-stderr] [--show-options] [-v]
                      [--very-verbose] [--column-separator COLUMN_SEPARATOR]
                      [--compression-type COMPRESSION_TYPE] [--error-limit ERROR_LIMIT]
-                     [--gzip-in-parallel [GZIP_IN_PARALLEL]]
+                     [--gzip-in-parallel [optional True|False]]
                      [--gzip-queue-size GZIP_QUEUE_SIZE] [--mode {NONE,EDGE,NODE,AUTO}]
                      [--force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
                      [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--skip-first-record [SKIP_FIRST_RECORD]]
+                     [--skip-header-record [optional True|False]]
                      [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--repair-and-validate-lines [REPAIR_AND_VALIDATE_LINES]]
-                     [--repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]]
+                     [--initial-skip-count INITIAL_SKIP_COUNT]
+                     [--every-nth-record EVERY_NTH_RECORD] [--record-limit RECORD_LIMIT]
+                     [--tail-count TAIL_COUNT]
+                     [--repair-and-validate-lines [optional True|False]]
+                     [--repair-and-validate-values [optional True|False]]
                      [--blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--comment-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--fill-short-lines [FILL_SHORT_LINES]]
+                     [--fill-short-lines [optional True|False]]
                      [--invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
+                     [--prohibited-list-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--truncate-long-lines [TRUNCATE_LONG_LINES]]
                      [--whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
@@ -60,6 +69,7 @@ usage: kgtk validate [-h] [--header-only [HEADER_ONLY]]
                      [--allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]]
                      [--allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]]
                      [--repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]]
+                     [--allow-end-of-day [ALLOW_END_OF_DAY]]
                      [--minimum-valid-year MINIMUM_VALID_YEAR]
                      [--clamp-minimum-year [CLAMP_MINIMUM_YEAR]]
                      [--maximum-valid-year MAXIMUM_VALID_YEAR]
@@ -76,7 +86,7 @@ usage: kgtk validate [-h] [--header-only [HEADER_ONLY]]
                      [--clamp-maximum-lon [CLAMP_MAXIMUM_LON]]
                      [--modulo-repair-lon [MODULO_REPAIR_LON]]
                      [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
-                     [kgtk_files [kgtk_files ...]]
+                     [INPUT_FILE [INPUT_FILE ...]]
 
 Validate a KGTK file. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
 
@@ -86,10 +96,13 @@ Additional options are shown in expert help.
 kgtk --expert validate --help
 
 positional arguments:
-  kgtk_files            The KGTK file(s) to validate. May be omitted or '-' for stdin.
+  INPUT_FILE            The KGTK file(s) to validate. (May be omitted or '-' for stdin.)
+                        (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  -i INPUT_FILE [INPUT_FILE ...], --input-files INPUT_FILE [INPUT_FILE ...]
+                        The KGTK file(s) to validate. (May be omitted or '-' for stdin.)
   --header-only [HEADER_ONLY]
                         Process the only the header of the input file (default=False).
 
@@ -103,16 +116,15 @@ Error and feedback messages:
   --very-verbose        Print additional progress messages (default=False).
 
 File options:
-  Options affecting processing
+  Options affecting processing.
 
   --column-separator COLUMN_SEPARATOR
                         Column separator (default=<TAB>).
   --compression-type COMPRESSION_TYPE
                         Specify the compression type (default=None).
   --error-limit ERROR_LIMIT
-                        The maximum number of errors to report before failing
-                        (default=1000)
-  --gzip-in-parallel [GZIP_IN_PARALLEL]
+                        The maximum number of errors to report before failing (default=1000)
+  --gzip-in-parallel [optional True|False]
                         Execute gzip in parallel (default=False).
   --gzip-queue-size GZIP_QUEUE_SIZE
                         Queue size for parallel gzip (default=1000).
@@ -120,25 +132,37 @@ File options:
                         Determine the KGTK file mode (default=KgtkReaderMode.AUTO).
 
 Header parsing:
-  Options affecting header parsing
+  Options affecting header parsing.
 
   --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
                         Force the column names (default=None).
   --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a header error is detected. Only ERROR or
                         EXIT are supported (default=ValidationAction.EXIT).
-  --skip-first-record [SKIP_FIRST_RECORD]
+  --skip-header-record [optional True|False]
                         Skip the first record when forcing column names (default=False).
   --unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a column name is unsafe
                         (default=ValidationAction.REPORT).
 
-Line parsing:
-  Options affecting data line parsing
+Pre-validation sampling:
+  Options affecting pre-validation data line sampling.
 
-  --repair-and-validate-lines [REPAIR_AND_VALIDATE_LINES]
+  --initial-skip-count INITIAL_SKIP_COUNT
+                        The number of data records to skip initially (default=do not skip).
+  --every-nth-record EVERY_NTH_RECORD
+                        Pass every nth record (default=pass all records).
+  --record-limit RECORD_LIMIT
+                        Limit the number of records read (default=no limit).
+  --tail-count TAIL_COUNT
+                        Pass this number of records (default=no tail processing).
+
+Line parsing:
+  Options affecting data line parsing.
+
+  --repair-and-validate-lines [optional True|False]
                         Repair and validate lines (default=True).
-  --repair-and-validate-values [REPAIR_AND_VALIDATE_VALUES]
+  --repair-and-validate-values [optional True|False]
                         Repair and validate values (default=True).
   --blank-required-field-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a line with a blank node1, node2, or id
@@ -149,7 +173,7 @@ Line parsing:
   --empty-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when an empty line is detected
                         (default=ValidationAction.EXCLUDE).
-  --fill-short-lines [FILL_SHORT_LINES]
+  --fill-short-lines [optional True|False]
                         Fill missing trailing columns in short lines with empty values
                         (default=False).
   --invalid-value-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
@@ -157,6 +181,9 @@ Line parsing:
                         (default=ValidationAction.COMPLAIN).
   --long-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a long line is detected
+                        (default=ValidationAction.COMPLAIN).
+  --prohibited-list-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
+                        The action to take when a data cell contains a prohibited list
                         (default=ValidationAction.COMPLAIN).
   --short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a short line is detected
@@ -188,6 +215,8 @@ Data value parsing:
                         Allow month or day zero in dates. (default=False).
   --repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]
                         Repair month or day zero in dates. (default=False).
+  --allow-end-of-day [ALLOW_END_OF_DAY]
+                        Allow 24:00:00 to represent the end of the day. (default=True).
   --minimum-valid-year MINIMUM_VALID_YEAR
                         The minimum valid year in dates. (default=1583).
   --clamp-minimum-year [CLAMP_MINIMUM_YEAR]
