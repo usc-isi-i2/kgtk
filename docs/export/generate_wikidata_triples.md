@@ -53,13 +53,8 @@ optional arguments:
 cat input.tsv | kgtk generate-wikidata-triples OPTIONS > output.ttl
 ```
 or 
-<<<<<<< HEAD
 ```{shell}
 kgtk generate_wikidata_triples OPTIONS < input.tsv > output.ttl
-=======
-```
-kgtk generate-wikidata-triples OPTIONS < input.tsv > output.ttl
->>>>>>> dev
 ```
 
 or 
@@ -104,7 +99,7 @@ wdt:P6366 "2140726727"^^xsd:string .
 
 However, the following sample input is not legal and will be converted to incorrect triples..
 
-<<<<<<< HEAD
+
 |node1| label|  node2| id|
 | ----- | ----- | ------------- |------------- |
 |Q1| P1|  Q2|	id1|
@@ -113,16 +108,6 @@ However, the following sample input is not legal and will be converted to incorr
 |id1| P3| Q4| id4|
 
 `generate_wikidata_triples` is **memoryless**, the qualifers has to follow the statement **immediately**. In the example above, the `id1` (in column `node1`) in 5th line will be treated as a new subject rather than an id of previous statement. Users should sort the kgtk file in a way such that qualifiers follow corresponding statement immediately. This can be done by creating meaningful ids.
-=======
-```
-node1 property  node2 id
-Q1  P1  Q2	id1
-id1 P2  Q3  id2
-Q2  P5  "string"@en id3
-id1 P3  Q4  id4
-```
-`generate-wikidata-triples` is **memoryless**, the qualifers has to follow the statement **immediately**. In the example above, the `id1` (in column `node1`) in 5th line will be treated as a new subject rather than an id of previous statement. Users should sort the kgtk file in a way such that qualifiers follow corresponding statement immediately. This can be done by creating meaningful ids.
->>>>>>> dev
 
 ## Options
 
@@ -278,38 +263,17 @@ Regular edges will be generated according to the data type of the property defin
 
 1. If properties are **only** defined in `example_prop.tsv`
 
-<<<<<<< HEAD
 ```{shell}
 kgtk generate_wikidata_triples -pf example_prop.tsv -w yes < input_file.tsv > output_file.ttl
-=======
-```bash
-
-kgtk generate-wikidata-triples -pf example_prop.tsv -w yes < input_file.tsv > output_file.ttl
->>>>>>> dev
-
 ```
+1. If properties are **only** defined in `input_file.tsv`
 
-2. If properties are **only** defined in `input_file.tsv`
-
-<<<<<<< HEAD
 ```{shell}
 cat input_file.tsv input_file.tsv | kgtk generate_wikidata_triples -w yes -pd yes > output_file.ttl
-=======
-```bash
-
-cat input_file.tsv input_file.tsv | kgtk generate-wikidata-triples -w yes -pd yes > output_file.ttl
->>>>>>> dev
-
 ```
 1. If properties are defined in both files.
-
-<<<<<<< HEAD
 ```{shell}
 cat input_file.tsv input_file.tsv | kgtk generate_wikidata_triples -pf example_prop.tsv -w yes -pd yes > output_file.ttl
-=======
-```bash
-cat input_file.tsv input_file.tsv | kgtk generate-wikidata-triples -pf example_prop.tsv -w yes -pd yes > output_file.ttl
->>>>>>> dev
 ```
 
 
@@ -319,40 +283,8 @@ You can split the input files into several smaller pieces and run the command si
 
 Let's say you are in a directory which contains the `tsv` files. The following command will generate the `ttl` files with the same file name. 
 
-<<<<<<< HEAD
 ```{shell}
 ls *tsv | parallel -j+0 --eta 'kgtk generate_wikidata_triples -pf example_props.tsv -n 1000 --debug -gt yes < {} > {.}.ttl'
-=======
-```bash
-ls *tsv | parallel -j+0 --eta 'kgtk generate-wikidata-triples -pf example_props.tsv -n 1000 --debug -gt yes < {} > {.}.ttl'
->>>>>>> dev
 ```
 
 Splitting a large tsv file into small tsv files directly may make qualifier edges statementless and cause serious mistake. **Do** make sure the splited files start with an statement edge rather than qualifier edge. The header `node1 label node2 id` needs to be inserted back at the beginning of splited files as well.
-
-<<<<<<< HEAD
-=======
-
-## Branch specific features not yet in dev
-
-
-#### enhancement/triple_uri
-
-Additional options enable the customization of uri prefix.
-
-- `-prefix --prefix-file {path}` a path to the prefix kgtk file that contains the mapping information.
-
-Below is a sample `prefix.tsv` file.
-```
-node1	bound	node2
-p	bound_to	https://w3id.org/datamart/
-pr	bound_to	https://w3id.org/datamart/
-wd	bound_to	https://w3id.org/datamart/
-```
-
-To use it:
-
-```bash
-cat input.tsv | kgtk generate-wikidata-triples -prefix prefix.tsv -pf prop_file.tsv -w yes --debug -n 1000
-```
->>>>>>> dev

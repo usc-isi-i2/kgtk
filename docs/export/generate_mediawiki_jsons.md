@@ -193,29 +193,17 @@ Regular edges will be generated according to the data type of the property defin
 
 1. If properties are **only** defined in `example_prop.tsv`
 
-<<<<<<< HEAD
+
 ```{shell}
 kgtk generate_mediawiki_jsons -pf example_prop.tsv -w yes < input_file.tsv
-=======
-```bash
-
-kgtk generate-mediawiki-jsons -pf example_prop.tsv -w yes < input_file.tsv
-
->>>>>>> dev
 ```
 
-2. If properties are **only** defined in `input_file.tsv`
+1. If properties are **only** defined in `input_file.tsv`
 
-<<<<<<< HEAD
+
 ```{shell}
 cat input_file.tsv input_file.tsv | kgtk generate_mediawiki_jsons -w yes -pd yes
 ```
-1. If properties are defined in both files.
-
-```{shell}
-cat input_file.tsv input_file.tsv | kgtk generate_mediawiki_jsons -pf example_prop.tsv -w yes -pd yes
-=======
-```bash
 
 cat input_file.tsv input_file.tsv | kgtk generate-mediawiki-jsons -w yes -pd yes
 
@@ -234,14 +222,10 @@ You can split the input files into several smaller pieces and run the command si
 
 Let's say you are in a directory which contains the `tsv` files. The following command will generate the `jsonl` files with the same file name, plus numbering. 
 
-<<<<<<< HEAD
 ```{shell}
 ls *tsv | parallel -j+0 --eta 'kgtk generate_mediawiki_jsons -pf example_props.tsv -n 1000 --debug -gt yes < {}'
-=======
-```bash
-ls *tsv | parallel -j+0 --eta 'kgtk generate-mediawiki-jsons -pf example_props.tsv -n 1000 --debug -gt yes < {}'
->>>>>>> dev
 ```
+
 
 Splitting a large tsv file into small tsv files directly may make qualifier edges statementless and cause serious mistake. **Do** make sure the splited files start with an statement edge rather than qualifier edge. Again, statemenets with the same entity as Qnodes should be aggregated into the same input file.
 
