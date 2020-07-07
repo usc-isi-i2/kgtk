@@ -32,11 +32,10 @@ specified values.
 ## Usage
 
 ```
-usage: kgtk unique [-h] --column COLUMN_NAME [--empty EMPTY_VALUE]
-                   [-o OUTPUT_KGTK_FILE] [--label LABEL_VALUE]
-                   [--where WHERE_COLUMN_NAME] [--in WHERE_VALUES [WHERE_VALUES ...]]
-                   [-v]
-                   [input_kgtk_file]
+usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --column COLUMN_NAME
+                   [--empty EMPTY_VALUE] [--label LABEL_VALUE] [--where WHERE_COLUMN_NAME]
+                   [--in WHERE_VALUES [WHERE_VALUES ...]] [-v]
+                   [INPUT_FILE]
 
 Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.
 
@@ -44,18 +43,20 @@ Additional options are shown in expert help.
 kgtk --expert unique --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin.
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   --column COLUMN_NAME  The column to count unique values (required).
   --empty EMPTY_VALUE   A value to substitute for empty values (default=).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (required).
   --label LABEL_VALUE   The output file label column value (default=count).
   --where WHERE_COLUMN_NAME
-                        The name of a column for a record selection test.
-                        (default=None).
+                        The name of a column for a record selection test. (default=None).
   --in WHERE_VALUES [WHERE_VALUES ...]
                         The list of values for a record selection test. (default=None).
 

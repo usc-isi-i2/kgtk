@@ -17,32 +17,42 @@ or --fields may be used, but not both.
 ## Usage
 
 ```
-usage: kgtk explode [-h] [-o OUTPUT_KGTK_FILE] [--column COLUMN_NAME]
+usage: kgtk explode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--column COLUMN_NAME]
                     [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]]
-                    [--prefix PREFIX] [--overwrite [OVERWRITE_COLUMNS]] [--expand [EXPAND_LIST]] [-v]
-                    [input_kgtk_file]
+                    [--prefix PREFIX] [--overwrite [True|False]] [--expand [True|False]]
+                    [--show-data-types [True|False]] [-v]
+                    [INPUT_FILE]
 
 Copy a KGTK file, exploding one column (usually node2) into seperate columns for each subfield. If a cell in the column being exploded contains a list, that record is optionally expanded into multiple records before explosion, with all other columns copied-as is.
 
 Additional options are shown in expert help.
-kgtk --expert expand --help
+kgtk --expert explode --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin (default=-).
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   --column COLUMN_NAME  The name of the column to explode. (default=node2).
   --types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]
-                        The KGTK data types for which fields should be exploded. (default=['empty', 'list', 'number', 'quantity', 'string',
-                        'language_qualified_string', 'location_coordinates', 'date_and_times', 'extension', 'boolean', 'symbol']).
+                        The KGTK data types for which fields should be exploded.
+                        (default=['empty', 'list', 'number', 'quantity', 'string',
+                        'language_qualified_string', 'location_coordinates',
+                        'date_and_times', 'extension', 'boolean', 'symbol']).
   --prefix PREFIX       The prefix for exploded column names. (default=node2;kgtk:).
-  --overwrite [OVERWRITE_COLUMNS]
-                        Indicate that it is OK to overwrite existing columns. (default=False).
-  --expand [EXPAND_LIST]
-                        Expand the source column if it contains a list, else fail. (default=False).
+  --overwrite [True|False]
+                        Indicate that it is OK to overwrite existing columns.
+                        (default=False).
+  --expand [True|False]
+                        Expand the source column if it contains a list, else fail.
+                        (default=False).
+  --show-data-types [True|False]
+                        Print the list of data types and exit. (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```

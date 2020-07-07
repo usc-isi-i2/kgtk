@@ -1,7 +1,14 @@
 """
 Import CSV file in Graph-tool.
-"""
 
+Note:  the log file wasn't coverted to the new filename parsing API.
+
+Note:  The input file is read twice: once for the header, and once for the
+data.  Thus, stdin cannot be used as the input file.
+
+TODO: Convert to KgtkReader and read the file only once.
+"""
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -9,13 +16,14 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='filename here')
+    parser.add_input_file(positional=True, optional=False)
+
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
     parser.add_argument('--degrees', action='store_true', dest='compute_degrees',
                         help="Whether or not to compute degree distribution.")
@@ -44,7 +52,7 @@ def add_arguments(parser):
                         help='Label for edge: vertex hits hubs')
 
 
-def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output_stats,
+def run(input_file: KGTKFiles, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output_stats,
         vertex_in_degree, vertex_out_degree, vertex_pagerank, vertex_auth, vertex_hubs):
     from kgtk.exceptions import KGTKException
     def infer_index(h, options=[]):
@@ -70,7 +78,10 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
         from graph_tool import load_graph_from_csv
         from graph_tool import centrality
         import kgtk.gt.analysis_utils as gtanalysis
+        from pathlib import Path
         import sys
+
+        filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
         # hardcoded values useful for the script. Perhaps some of them should be exposed as arguments later
         directions = ['in', 'out', 'total']
@@ -89,7 +100,7 @@ def run(filename, directed, compute_degrees, compute_pagerank, compute_hits, log
         with open(log_file, 'w') as writer:
 
             writer.write('loading the TSV graph now ...\n')
-            G2 = load_graph_from_csv(filename,
+            G2 = load_graph_from_csv(str(filename),
                                      skip_first=True,
                                      directed=directed,
                                      hashed=True,

@@ -1,5 +1,8 @@
 """
 Import WordNet to KGTK.
+
+TODO: Add --output-file
+
 """
 
 

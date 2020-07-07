@@ -9,7 +9,7 @@ import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.unreify.kgtkunreifyvalues import KgtkUnreifyValues
 from kgtk.utils.argparsehelpers import optional_bool
@@ -27,7 +27,7 @@ def parser():
         ' identified as not being reified values. ' +
         '\n\n--unreified-file PATH, if specified, will get a copy of the unreified output records, which ' +
         ' will still be written to the main output file.' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert expand --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert unreify-values --help'
     }
 
 
@@ -49,41 +49,41 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument("-i", "--input-file", dest="input_kgtk_file",
-                        help="The KGTK input file with the reified data. " +
+    parser.add_input_file(who="The KGTK input file with the reified data. " +
                         "It must have node1, label, and node2 columns, or their aliases. " +
                         "It may have an ID column;  if it does not, one will be appended to the output file. " +
-                        "It may not have any additional columns. " +
-                        "(default=%(default)s)", type=Path, default="-")
+                        "It may not have any additional columns. ")
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file",
-                        help="The KGTK file to write output records with unreified data. " +
+    parser.add_output_file(who="The KGTK file to write output records with unreified data. " +
                         "This file may differ in shape from the input file by the addition of an ID column. " +
-                        "The records in the output file will not, generally, be in the same order as they appeared in the input file. " +
-                        "(default=%(default)s).", type=Path, default="-")
+                        "The records in the output file will not, generally, be in the same order as they appeared in the input file. ")
     
-    parser.add_argument(      "--reified-file", dest="reified_kgtk_file",
-                              help="An optional KGTK output file that will contain only the reified RDF statement output records. (default=%(default)s).",
-                              type=Path, default=None)
-    
-    parser.add_argument(      "--unreified-file", dest="unreified_kgtk_file",
-                              help="An optional KGTK output file that will contain only the unreified RDF statement input records. (default=%(default)s).",
-                              type=Path, default=None)
-    
-    parser.add_argument(      "--uninvolved-file", dest="uninvolved_kgtk_file",
-                              help="An optional KGTK output file that will contain only the uninvolved input records. (default=%(default)s).",
-                              type=Path, default=None)
+    parser.add_output_file(who="A KGTK output file that will contain only the reified RDF statements.",
+                           dest="reified_file",
+                           options=["--reified-file"],
+                           metavar="REIFIED_FILE",
+                           optional=True)
+    parser.add_output_file(who="A KGTK output file that will contain only the unreified RDF statements.",
+                           dest="unreified_file",
+                           options=["--unreified-file"],
+                           metavar="UNREIFIED_FILE",
+                           optional=True)
+    parser.add_output_file(who="A KGTK output file that will contain only the uninvolved input.",
+                           dest="uninvolved_file",
+                           options=["--uninvolved-file"],
+                           metavar="UNINVOLVED_FILE",
+                           optional=True)
     
     KgtkUnreifyValues.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
-        reified_kgtk_file: typing.Optional[Path],
-        unreified_kgtk_file: typing.Optional[Path],
-        uninvolved_kgtk_file: typing.Optional[Path],
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        reified_file: KGTKFiles,
+        unreified_file: KGTKFiles,
+        uninvolved_file: KGTKFiles,
 
         trigger_label_value: str,
         trigger_node2_value: str,
@@ -104,6 +104,12 @@ def run(input_kgtk_file: Path,
 )->int:
     # import modules locally
     from kgtk.exceptions import KGTKException
+
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    reified_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reified_file, who="KGTK reified file")
+    unreified_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(unreified_file, who="KGTK unreified file")
+    uninvolved_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(uninvolved_file, who="KGTK uninvolved file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr

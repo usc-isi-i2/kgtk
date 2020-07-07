@@ -1,8 +1,8 @@
-The reorder_columns command reorders file columns while copying a KGTK file from input to output.
+The reorder-columns command reorders file columns while copying a KGTK file from input to output.
 ## Usage
 
 ```
-usage: kgtk reorder_columns [-h] [-i INPUT_KGTK_FILE] [-o OUTPUT_KGTK_FILE] -c COLUMN_NAME
+usage: kgtk reorder-columns [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] -c COLUMN_NAME
                             [COLUMN_NAME ...] [--trim [True|False]] [-v]
 
 This command reorders one or more columns in a KGTK file. 
@@ -16,17 +16,17 @@ Move a range of columns: --columns coln .. colm ...
 If no input filename is provided, the default is to read standard input. 
 
 Additional options are shown in expert help.
-kgtk --expert rename_columns --help
+kgtk --expert reorder-columns --help
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INPUT_KGTK_FILE, --input-file INPUT_KGTK_FILE
-                        The KGTK input file. (default=-).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   -c COLUMN_NAME [COLUMN_NAME ...], --columns COLUMN_NAME [COLUMN_NAME ...]
-                        The list of reordered column names, optionally containing '...'
-                        for column names not explicitly mentioned.
+                        The list of reordered column names, optionally containing '...' for
+                        column names not explicitly mentioned.
   --trim [True|False]   If true, omit unmentioned columns. (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
@@ -56,7 +56,7 @@ Copy `file1.tsv`, sending the output to standard output, swapping
 the positions of the `location` and `years` columns.
 
 ```
-kgtk -i reorder_columns file1.tsv --columns ... years location
+kgtk -i reorder-columns file1.tsv --columns ... years location
 ```
 
 The result will be the following table in KGTK format:
@@ -80,7 +80,7 @@ Copy `file1.tsv`, sending the output to standard output, with
 the `location` column first:
 
 ```
-kgtk -i reorder_columns file1.tsv --columns location ...
+kgtk -i reorder-columns file1.tsv --columns location ...
 ```
 
 The result will be the following table in KGTK format:
@@ -104,7 +104,7 @@ Copy `file1.tsv`, sending the output to standard output, giving
 the complete list of columns:
 
 ```
-kgtk -i reorder_columns file1.tsv --columns label node1 node2 years location
+kgtk -i reorder-columns file1.tsv --columns label node1 node2 years location
 ```
 The result will be the following table in KGTK format:
 

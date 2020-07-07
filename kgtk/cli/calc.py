@@ -8,7 +8,7 @@ from argparse import Namespace, SUPPRESS
 from pathlib import Path
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -41,16 +41,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument("-i", "--input-file", dest="input_kgtk_file",
-                              help="The KGTK input file. (default=%(default)s).",
-                              type=Path, default="-")
+    parser.add_input_file()
+    parser.add_output_file()
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
 
     parser.add_argument('-c', "--columns", dest="column_names", required=True, nargs='+',
-                              metavar="COLUMN_NAME",
-                              help="The list of source column names, optionally containing '..' for column ranges " +
+                        metavar="COLUMN_NAME",
+                        help="The list of source column names, optionally containing '..' for column ranges " +
                         "and '...' for column names not explicitly mentioned.")
     parser.add_argument(      "--into", dest="into_column_name", help="The name of the column to receive the result of the calculation.", required=True)
     parser.add_argument(      "--do", dest="operation", help="The name of the operation.", required=True,
@@ -62,8 +60,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
         output_format: typing.Optional[str],
 
         column_names: typing.List[str],
@@ -86,6 +84,8 @@ def run(input_kgtk_file: Path,
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr

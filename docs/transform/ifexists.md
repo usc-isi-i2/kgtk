@@ -25,11 +25,12 @@ filtered, and "right" refers to the file supplying the matching records.
 
 ## Usage
 
-```bash
-usage: kgtk ifexists [-h] [--input-keys [INPUT_KEYS [INPUT_KEYS ...]]] --filter-on
-                     FILTER_KGTK_FILE [--filter-keys [FILTER_KEYS [FILTER_KEYS ...]]]
-                     [-o OUTPUT_KGTK_FILE] [--cache-input [CACHE_INPUT]] [-v]
-                     [input_kgtk_file]
+```
+usage: kgtk ifexists [-h] [-i INPUT_FILE] [--filter-on FILTER_FILE] [-o OUTPUT_FILE]
+                     [--input-keys [INPUT_KEYS [INPUT_KEYS ...]]]
+                     [--filter-keys [FILTER_KEYS [FILTER_KEYS ...]]]
+                     [--cache-input [True|False]] [--preserve-order [True|False]] [-v]
+                     [INPUT_FILE]
 
 Filter a KGTK file based on whether one or more records exist in a second KGTK file with matching values for one or more fields.
 
@@ -37,20 +38,26 @@ Additional options are shown in expert help.
 kgtk --expert ifexists --help
 
 positional arguments:
-  input_kgtk_file       The KGTK file to filter. May be omitted or '-' for stdin.
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  --filter-on FILTER_FILE
+                        The KGTK file to filter against (required). (May be omitted or '-'
+                        for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   --input-keys [INPUT_KEYS [INPUT_KEYS ...]], --left-keys [INPUT_KEYS [INPUT_KEYS ...]]
                         The key columns in the file being filtered (default=None).
-  --filter-on FILTER_KGTK_FILE
-                        The KGTK file to filter against (required).
   --filter-keys [FILTER_KEYS [FILTER_KEYS ...]], --right-keys [FILTER_KEYS [FILTER_KEYS ...]]
                         The key columns in the filter-on file (default=None).
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (required).
-  --cache-input [CACHE_INPUT]
+  --cache-input [True|False]
                         Cache the input file instead of the filter keys (default=False).
+  --preserve-order [True|False]
+                        Preserve record order when cacheing the input file. (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```

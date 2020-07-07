@@ -50,6 +50,7 @@ def cli_entry(*args):
     shared_args = base_parser.add_argument_group('shared optional arguments')
     shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
     shared_args.add_argument('--expert', dest='_expert', action='store_true', default=False, help='enable expert mode')
+    shared_args.add_argument('--pipedebug', dest='_pipedebug', action='store_true', default=False, help='enable pipe debug mode')
     add_shared_arguments(shared_args)
 
     # parse shared arguments
@@ -72,8 +73,9 @@ def cli_entry(*args):
         mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
         subp = mod.parser()
         # only create sub-parser with sub-command name and defer full build
-        sub_parser = sub_parsers.add_parser(h, **subp)
-        subparser_lookup[h] = (mod, sub_parser)
+        cmd: str = h.replace("_", "-")
+        sub_parser = sub_parsers.add_parser(cmd, **subp)
+        subparser_lookup[cmd] = (mod, sub_parser)
         if 'aliases' in subp:
             for alias in subp['aliases']:
                 subparser_lookup[alias] = (mod, sub_parser)
@@ -83,14 +85,15 @@ def cli_entry(*args):
     parser.usage = '%(prog)s [options] command [ / command]*'
 
     # parse internal pipe
-    pipe = [tuple(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
+    pipe = [list(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
     if len(pipe) == 0:
         parser.print_usage()
         parser.exit(KGTKArgumentParseException.return_code)
     elif len(pipe) == 1:  # single command
         cmd_args = pipe[0]
 
-        cmd_name = cmd_args[0]
+        cmd_name = cmd_args[0].replace("_", "-")
+        cmd_args[0] = cmd_name
         # build sub-parser
         if cmd_name in subparser_lookup:
             mod, sub_parser = subparser_lookup[cmd_name]
@@ -135,12 +138,14 @@ def cli_entry(*args):
             cmd_str += ', _bg_exc=False, _done=cmd_done'  # , _err=sys.stdout
             # add specific arguments
             if idx == 0:  # first command
-                concat_cmd_str = 'sh.kgtk({}, _in=sys.stdin, _piped=True)'.format(cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, _in=sys.stdin, _piped=True, _err=sys.stderr)'.format(cmd_str)
             elif idx + 1 == len(pipe):  # last command
-                concat_cmd_str = 'sh.kgtk({}, {}, _out=sys.stdout)'.format(concat_cmd_str, cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, {}, _out=sys.stdout, _err=sys.stderr)'.format(concat_cmd_str, cmd_str)
             else:
-                concat_cmd_str = 'sh.kgtk({}, {}, _piped=True)'.format(concat_cmd_str, cmd_str)
+                concat_cmd_str = 'sh.kgtk({}, {}, _piped=True, _err=sys.stderr)'.format(concat_cmd_str, cmd_str)
         try:
+            if parsed_shared_args._pipedebug:
+                print("eval: %s" % concat_cmd_str)
             process = eval(concat_cmd_str)
             process.wait()
         except sh.SignalException_SIGPIPE:

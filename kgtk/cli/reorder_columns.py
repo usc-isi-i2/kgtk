@@ -8,7 +8,7 @@ from argparse import Namespace, SUPPRESS
 from pathlib import Path
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -21,7 +21,7 @@ def parser():
         '\nExtract named columns, omitting the rest: --columns col1 col2 --trim' +
         '\nMove a range of columns: --columns coln .. colm ...' +
         '\nIf no input filename is provided, the default is to read standard input. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert reorder-columns --help'
     }
 
 
@@ -47,11 +47,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument("-i", "--input-file", dest="input_kgtk_file",
-                              help="The KGTK input file. (default=%(default)s).",
-                              type=Path, default="-")
+    parser.add_input_file()
+    parser.add_output_file()
 
-    parser.add_argument("-o", "--output-file", dest="output_kgtk_file", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
 
     parser.add_argument('-c', "--columns", dest="column_names", required=True, nargs='+',
@@ -67,8 +65,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_kgtk_file: Path,
-        output_kgtk_file: Path,
+def run(input_file: Path,
+        output_file: Path,
         output_format: typing.Optional[str],
 
         column_names: typing.List[str],
@@ -93,6 +91,9 @@ def run(input_kgtk_file: Path,
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
