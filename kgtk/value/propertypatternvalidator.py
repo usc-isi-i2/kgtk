@@ -4,6 +4,7 @@ Validate property patterns..
 
 from argparse import ArgumentParser, Namespace
 import attr
+import copy
 from enum import Enum
 from pathlib import Path
 import re
@@ -20,9 +21,9 @@ class PropertyPattern:
         NODE1_TYPE = "node1_type"
         NODE2_TYPE = "node2_type"
         NOT_IN = "not_in"
-        LABEL_COLUM = "label_column"
-        NODE1_COLUMN = "node1_column"
-        NODE2_COLUMN = "node2_column"
+        # LABEL_COLUM = "label_column"
+        # NODE1_COLUMN = "node1_column"
+        # NODE2_COLUMN = "node2_column"
         NODE1_VALUES = "node1_values"
         NODE2_VALUES = "node2_values"
         MINVAL = "minval"
@@ -48,6 +49,9 @@ class PropertyPattern:
     number: typing.Optional[float] = attr.ib()
     column_names: typing.List[str] = attr.ib()
     value: str = attr.ib()
+
+    # Even though the object is frozen, we can still alter lists.
+    column_idxs: typing.List[int] = attr.ib(factory=list)
 
     @classmethod
     def new(cls, node1_value: KgtkValue, label_value: KgtkValue, node2_value: KgtkValue)->'PropertyPattern':
@@ -88,11 +92,11 @@ class PropertyPattern:
 
         column_names: typing.List[str] = [ ]
         if action in (cls.Action.NOT_IN,):
-            if label_value.is_symbol:
-                column_names.append(label_value.value)
-            elif label_value.is_list:
+            if node2_value.is_symbol:
+                column_names.append(node2_value.value)
+            elif node2_value.is_list:
                 kv: KgtkValue
-                for kv in label_value.get_list_items:
+                for kv in node2_value.get_list_items:
                     if kv.is_symbol:
                         column_names.append(kv.value)
                     else:
@@ -101,10 +105,11 @@ class PropertyPattern:
                 raise ValueError("%s:Value is not a symbol or list of symbols" % (action.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
 
-        if action in (cls.Action.LABEL_COLUM,
-                      cls.Action.NODE1_COLUMN,
-                      cls.Action.NODE2_COLUMN,
-                      cls.Action.REQUIRED_IN):
+        if action in (
+                # cls.Action.LABEL_COLUM,
+                # cls.Action.NODE1_COLUMN,
+                # cls.Action.NODE2_COLUMN,
+                cls.Action.REQUIRED_IN,):
             if label_value.is_symbol:
                 column_names.append(label_value.value)
             else:
@@ -143,9 +148,40 @@ class PropertyPatternFactory:
 class PropertyPatternValidator:
     patterns: typing.Mapping[str, typing.Mapping[PropertyPattern.Action, PropertyPattern]] = attr.ib()
 
+    column_names: typing.List[str] = attr.ib()
+    column_name_map: typing.Mapping[str, int] = attr.ib()
+
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
+        """
+        Check each column of the row to see if the contents violates a not_in relationship.
+        """
+        result: bool = True
+        idx: int
+        column_name: str
+        for idx, column_name in enumerate(self.column_names):
+            thing: str = row[idx]
+            # print("Row %d: idx=%d column_name=%s thing=%s" % (rownum, idx, column_name, thing), file=self.error_file, flush=True)
+            if thing in self.patterns:
+                thing_patterns: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.patterns[thing]
+                # print("len(thing_patterns) = %d" % len(thing_patterns), file=self.error_file, flush=True)
+                if PropertyPattern.Action.NOT_IN in thing_patterns:
+                    column_names: typing.List[str] = thing_patterns[PropertyPattern.Action.NOT_IN].column_names
+                    # print("NOT_IN columns: %s" % " ".join(column_names), file=self.error_file, flush=True)
+                    if column_name in column_names:
+                        print("Row %d: Found '%s' in column '%s', which is prohibited." % (rownum, thing, column_name), file=self.error_file, flush=True)
+                        result = False
+        return result
+
+    def validate(self, rownum: int, row: typing.List[str])->bool:
+        result: bool = True # Everying's good until we discover otherwise.
+
+        result &= self.validate_not_in(rownum, row)
+
+        return result
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -183,10 +219,16 @@ class PropertyPatternValidator:
             if very_verbose:
                 print("loaded %s->%s" % (prop_datatype, action.value), file=error_file, flush=True)
 
-        return cls(patmap, error_file=error_file, verbose=verbose, very_verbose=very_verbose)
+        return cls(patmap,
+                   column_names=kr.column_names.copy(),
+                   column_name_map=copy.copy(kr.column_name_map), # TODO: can't use xxx.copy() because typing.Mapping not typing.Dict.
+                   error_file=error_file,
+                   verbose=verbose,
+                   very_verbose=very_verbose)
 
 def main():
     parser: ArgumentParser = ArgumentParser()
+    parser.add_argument(      "--input-file", dest="input_file", help="The input file to validate.", type=Path)
     parser.add_argument(      "--pattern-file", dest="pattern_file", help="The property pattern file to load.", required=True, type=Path)
 
     KgtkReader.add_debug_arguments(parser, expert=True)
@@ -200,7 +242,7 @@ def main():
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-    kr: KgtkReader = KgtkReader.open(args.pattern_file,
+    pkr: KgtkReader = KgtkReader.open(args.pattern_file,
                                      error_file=error_file,
                                      mode=KgtkReaderMode.EDGE,
                                      options=reader_options,
@@ -208,12 +250,37 @@ def main():
                                      verbose=args.verbose,
                                      very_verbose=args.very_verbose)
 
-    ppv: PropertyPatternValidator = PropertyPatternValidator.load(kr,
+    ppv: PropertyPatternValidator = PropertyPatternValidator.load(pkr,
                                                                   value_options,
                                                                   error_file=error_file,
                                                                   verbose=args.verbose,
                                                                   very_verbose=args.very_verbose,
     )
+
+    if args.input_file is not None:
+        ikr: KgtkReader = KgtkReader.open(args.input_file,
+                                          error_file=error_file,
+                                          mode=KgtkReaderMode.EDGE,
+                                          options=reader_options,
+                                          value_options=value_options,
+                                          verbose=args.verbose,
+                                          very_verbose=args.very_verbose)
+
+        input_row_count: int = 0
+        valid_row_count: int = 0
+
+        row: typing.List[str]
+        for row in ikr:
+            input_row_count += 1
+            result: bool = ppv.validate(input_row_count, row)
+            if result:
+                valid_row_count += 1
+
+        print("Read %d input rows, %d valid." % (input_row_count, valid_row_count), file=error_file, flush=True)
+
+        ikr.close()
+
+    pkr.close()
 
 if __name__ == "__main__":
     main()
