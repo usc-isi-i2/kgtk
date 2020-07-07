@@ -83,10 +83,10 @@ class ValidateDatatypesRecord:
                 raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
             if node2_value.fields.number is None:
                 raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
-            number = float(node2_value)
+            number = float(node2_value.fields.number)
 
         column_names: typing.List[str] = [ ]
-        if action in (ValidateDatatypesAction.NOT_IN):
+        if action in (ValidateDatatypesAction.NOT_IN,):
             if label_value.is_symbol:
                 column_names.append(label_value.value)
             elif label_value.is_list:
@@ -121,5 +121,4 @@ class ValidateDatatypesRecord:
 
 @attr.s(slots=True, frozen=True)
 class ValidateDatatypes:
-
-    
+    pass
