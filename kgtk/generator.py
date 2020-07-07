@@ -809,14 +809,16 @@ class JsonGenerator(Generator):
                         "hash":"",
                         "datavalue":{
                             "value":{
-                                "entity-type":"item","numeric-id":0,"id":node2 # place holder for numeric id
+                                "entity-type":"item",
+                                "numeric-id":0,
+                                "id":node2
                             },
                             "type":"wikibase-entityid"
                         },
                         "datatype":"wikibase-item"
                     },
                     "type":"statement",
-                    "id":"",
+                    "id":node1 + prop + node2,
                     "rank":"normal", #TODO
                     "references":[],
                     "qualifiers":{},
@@ -829,7 +831,9 @@ class JsonGenerator(Generator):
                         "hash":"",
                         "datavalue":{
                             "value":{
-                                "entity-type":"item","numeric-id":0,"id": node2 # place holder for numeric id
+                                "entity-type":"item",
+                                "numeric-id":0,
+                                "id": node2
                             },
                             "type":"wikibase-entityid"
                         },
@@ -874,7 +878,7 @@ class JsonGenerator(Generator):
                     "datatype":"time"
                 },
                 "type":"statement",
-                "id":"",
+                "id":node1 + prop + node2,
                 "rank":"normal", #TODO
                 "references":[],
                 "qualifiers":{},
@@ -926,8 +930,8 @@ class JsonGenerator(Generator):
                     "datatype":"globecoordinate"
                 },
                 "type":"statement",
-                "id":"",
-                "rank":"normal", #TODO
+                "id":node1+prop+node2,
+                "rank":"normal",
                 "references":[],
                 "qualifiers":{},
                 "qualifiers-order":[]
@@ -979,8 +983,8 @@ class JsonGenerator(Generator):
                     "datatype":"quantity"
                 },
                 "type":"statement",
-                "id":"",
-                "rank":"normal", #TODO
+                "id":node1 + prop + node2,
+                "rank":"normal",
                 "references":[],
                 "qualifiers":{},
                 "qualifiers-order":[]
@@ -1021,7 +1025,7 @@ class JsonGenerator(Generator):
                         "datatype":"monolingualtext"
                     },
                     "type":"statement",
-                    "id":"",
+                    "id": node1 + prop + node2,
                     "rank":"normal", #TODO
                     "references":[],
                     "qualifiers":{},
@@ -1055,7 +1059,7 @@ class JsonGenerator(Generator):
                 "datatype": "string"
                 },
                 "type": "statement",
-                "id": "",
+                "id": node1 + prop + node2,
                 "rank": "normal",
                 "references":[],
                 "qualifiers":{},
@@ -1082,7 +1086,7 @@ class JsonGenerator(Generator):
                 "datatype": "external-id"
             },
             "type": "statement",
-            "id": "",
+            "id": node1 + prop + node2,
             "rank": "normal",            
             "references":[],
             "qualifiers":{},
@@ -1112,7 +1116,7 @@ class JsonGenerator(Generator):
                 "datatype": "url"
             },
             "type": "statement",
-            "id": "",
+            "id": node1 + prop + node2,
             "rank": "normal",            
             "references":[],
             "qualifiers":{},
