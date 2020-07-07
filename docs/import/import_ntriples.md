@@ -3,10 +3,9 @@ This command will import one or more ntriple files into KGTK format.
 
 ## Usage
 ```
-usage: kgtk import_ntriples [-h] [-i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]]
-                            [-o OUTPUT_KGTK_FILE] [--reject-file REJECT_FILE_PATH]
-                            [--namespace-file NAMESPACE_KGTK_FILE]
-                            [--updated-namespace-file UPDATED_NAMESPACE_KGTK_FILE]
+usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
+                            [--reject-file REJECT_FILE] [--namespace-file NAMESPACE_FILE]
+                            [--updated-namespace-file NAMESPACE_FILE]
                             [--namespace-id-prefix NAMESPACE_ID_PREFIX]
                             [--namespace-id-use-uuid [NAMESPACE_ID_USE_UUID]]
                             [--namespace-id-counter NAMESPACE_ID_COUNTER]
@@ -20,48 +19,54 @@ usage: kgtk import_ntriples [-h] [-i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]]
                             [--structured-uri-label STRUCTURED_URI_LABEL]
                             [--newnode-prefix NEWNODE_PREFIX]
                             [--newnode-use-uuid [NEWNODE_USE_UUID]]
-                            [--newnode-counter NEWNODE_COUNTER] [--newnode-zfill NEWNODE_ZFILL]
-                            [--build-id [BUILD_ID]] [--escape-pipes [ESCAPE_PIPES]]
-                            [--validate [VALIDATE]] [--override-uuid OVERRIDE_UUID]
+                            [--newnode-counter NEWNODE_COUNTER]
+                            [--newnode-zfill NEWNODE_ZFILL] [--build-id [BUILD_ID]]
+                            [--escape-pipes [ESCAPE_PIPES]] [--validate [VALIDATE]]
+                            [--override-uuid OVERRIDE_UUID]
                             [--overwrite-id [optional true|false]]
                             [--verify-id-unique [optional true|false]] [-v]
 
 Import an ntriples file, writing a KGTK file.
 
 Additional options are shown in expert help.
-kgtk --expert expand --help
+kgtk --expert import-ntriples --help
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]], --input-files [INPUT_FILE_PATHS [INPUT_FILE_PATHS ...]]
-                        The input file(s) with the ntriples data. (default=-)
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write (default=-).
-  --reject-file REJECT_FILE_PATH
-                        The file into which to write rejected records. (default=None).
-  --namespace-file NAMESPACE_KGTK_FILE
-                        The KGTK file with known namespaces. (default=None).
-  --updated-namespace-file UPDATED_NAMESPACE_KGTK_FILE
-                        An updated KGTK file with known namespaces. (default=None).
+  -i INPUT_FILE [INPUT_FILE ...], --input-file INPUT_FILE [INPUT_FILE ...]
+                        The ntriples file(s) to import. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        The ntriples output file for records that are rejected. (Optional,
+                        use '-' for stdout.)
+  --namespace-file NAMESPACE_FILE
+                        The KGTK input file with known namespaces. (Optional, use '-' for
+                        stdin.)
+  --updated-namespace-file NAMESPACE_FILE
+                        The KGTK output file with updated namespaces. (Optional, use '-' for
+                        stdout.)
   --namespace-id-prefix NAMESPACE_ID_PREFIX
                         The prefix used to generate new namespaces. (default=n).
   --namespace-id-use-uuid [NAMESPACE_ID_USE_UUID]
-                        Use the local namespace UUID when generating namespaces. When there are
-                        multiple input files, each input file gets its own UUID.
+                        Use the local namespace UUID when generating namespaces. When there
+                        are multiple input files, each input file gets its own UUID.
                         (default=False).
   --namespace-id-counter NAMESPACE_ID_COUNTER
                         The counter used to generate new namespaces. (default=1).
   --namespace-id-zfill NAMESPACE_ID_ZFILL
-                        The width of the counter used to generate new namespaces. (default=0).
+                        The width of the counter used to generate new namespaces.
+                        (default=0).
   --output-only-used-namespaces [OUTPUT_ONLY_USED_NAMESPACES]
                         Write only used namespaces to the output file. (default=True).
   --allow-lax-uri [ALLOW_LAX_URI]
-                        Allow URIs that don't begin with a http:// or https://. (default=True).
+                        Allow URIs that don't begin with a http:// or https://.
+                        (default=True).
   --local-namespace-prefix LOCAL_NAMESPACE_PREFIX
                         The namespace prefix for blank nodes. (default=X).
   --local-namespace-use-uuid [LOCAL_NAMESPACE_USE_UUID]
-                        Generate a UUID for the local namespace. When there are multiple input
-                        files, each input file gets its own UUID. (default=True).
+                        Generate a UUID for the local namespace. When there are multiple
+                        input files, each input file gets its own UUID. (default=True).
   --prefix-expansion-label PREFIX_EXPANSION_LABEL
                         The label for prefix expansions in the namespace file.
                         (default=prefix_expansion).
@@ -72,39 +77,39 @@ optional arguments:
                         The label for URI records for ntriple structured literals.
                         (default=kgtk:structured_uri).
   --newnode-prefix NEWNODE_PREFIX
-                        The prefix used to generate new nodes for ntriple structured literals.
-                        (default=kgtk:node).
+                        The prefix used to generate new nodes for ntriple structured
+                        literals. (default=kgtk:node).
   --newnode-use-uuid [NEWNODE_USE_UUID]
                         Use the local namespace UUID when generating new nodes for ntriple
                         structured literals. When there are multiple input files, each input
                         file gets its own UUID. (default=False).
   --newnode-counter NEWNODE_COUNTER
-                        The counter used to generate new nodes for ntriple structured literals.
-                        (default=1).
+                        The counter used to generate new nodes for ntriple structured
+                        literals. (default=1).
   --newnode-zfill NEWNODE_ZFILL
                         The width of the counter used to generate new nodes for ntriple
                         structured literals. (default=0).
   --build-id [BUILD_ID]
                         Build id values in an id column. (default=False).
   --escape-pipes [ESCAPE_PIPES]
-                        When true, input pipe characters (|) need to be escaped (\|) per KGTK
-                        file format. (default=True).
+                        When true, input pipe characters (|) need to be escaped (\|) per
+                        KGTK file format. (default=True).
   --validate [VALIDATE]
-                        When true, validate that the result fields are good KGTK file format.
-                        (default=False).
+                        When true, validate that the result fields are good KGTK file
+                        format. (default=False).
   --override-uuid OVERRIDE_UUID
-                        When specified, override UUID generation for debugging. (default=None).
+                        When specified, override UUID generation for debugging.
+                        (default=None).
   --overwrite-id [optional true|false]
                         When true, replace existing ID values. When false, copy existing ID
                         values. When --overwrite-id is omitted, it defaults to False. When
                         --overwrite-id is supplied without an argument, it is True.
   --verify-id-unique [optional true|false]
                         When true, verify ID uniqueness using an in-memory set of IDs. When
-                        --verify-id-unique is omitted, it defaults to False. When --verify-id-
-                        unique is supplied without an argument, it is True.
+                        --verify-id-unique is omitted, it defaults to False. When --verify-
+                        id-unique is supplied without an argument, it is True.
 
   -v, --verbose         Print additional progress messages (default=False).
-
 ```
 ### Files
 There four categories of files:
@@ -197,12 +202,12 @@ xml-schema-type prefix_expansion        "http://www.w3.org/2001/XMLSchema#"
 
 #### Reject File
 
-If `kgtk import_ntriples` has problems inporting a record, the input record
+If `kgtk import-ntriples` has problems inporting a record, the input record
 may be recorded in a reject file.  The reject file has ntriples format, not KGTK File format.
 
 #### URI Namespace Prefix Files
 
-`kgtk import_ntriples` may be provided an input file, in KGTK FIle format,
+`kgtk import-ntriples` may be provided an input file, in KGTK FIle format,
 containing predefined URI namespace prefix expansions.  Here is an example:
 
 | node1 | label | node2 |
@@ -214,7 +219,7 @@ containing predefined URI namespace prefix expansions.  Here is an example:
 | xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
 
 
-`kgtk import_ntriples` may optionally write an updated namespace file.
+`kgtk import-ntriples` may optionally write an updated namespace file.
 This will facilitate converting a series of ntriples files.
 The contents of the file will be the same as was shown fot the end
 of the converted file in the output file section, above.
@@ -242,7 +247,7 @@ as shown in the preceeding examples.
 ##### Lax URIs
 
 The URI standard requires that URIs staart with a schema, such as
-"http:" or "https:". import_ntriples facilitates processing ntriples records that
+"http:" or "https:". import-ntriples facilitates processing ntriples records that
 do not strictly adhere to the standard, such as having just "www.isi.edu".
 This enhancement is controlled with `--allow-lax-uri`, which defaults
 to True.
@@ -278,7 +283,7 @@ the UUID is omitted, but the examples shown above were generated using the UUID.
 ntriples files carry many data types as structured literals.  There are two portions
 to each structured literal:  a value string, and a URI that identifies the data type.
 
-`kgtk import_ntriples` can import the following ntriples data types to KGTK data types,
+`kgtk import-ntriples` can import the following ntriples data types to KGTK data types,
 resulting in a single KGTK edge in the output file:
 
 | ntriples URI | KGTK Data Type |
@@ -347,7 +352,7 @@ This process is controlled by the following command line options:
 
 ### ID Management
 
-`kgtk import_ntriples` will optionally build a new ID column or populate an existing
+`kgtk import-ntriples` will optionally build a new ID column or populate an existing
 ID column.
 
 ```
@@ -365,7 +370,7 @@ ID column.
 
 ### KGTK File Format Validity
 
-`kgtk import_ntriples` will, by default, add backslashes before any pipe characters (|)
+`kgtk import-ntriples` will, by default, add backslashes before any pipe characters (|)
 it sees in the input data.
 
 ```
@@ -399,16 +404,16 @@ unexpected import conversion failures.
 Import the entire given ntriple file into kgtk forma, using default settings.
 
 ```
-kgtk import_ntriples -i dbpedia_wikipedia_links.ttl -o DbpediaWikipediaLinks.tsv
+kgtk import-ntriples -i dbpedia_wikipedia_links.nt -o DbpediaWikipediaLinks.tsv
 ```
 
 Import the HC00001DO file, using UUIDs extensively:
 
 ```
-kgtk import_ntriples \
-     -i ../../HC00001DO.ttl.nt \
+kgtk import-ntriples \
+     -i ../../HC00001DO.nt \
      -o HC00001DO.tsv \
-     --reject-file HC00001DO-rejects.ttl.nt \
+     --reject-file HC00001DO-rejects.nt \
      --namespace-file kgtk/join/test/initial-ntriple-namespaces.tsv \
      --updated-namespace-file HC00001DO-namespaces.tsv \
      --namespace-id-use-uuid True \

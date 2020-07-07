@@ -1,4 +1,4 @@
-The unreify_values command simplifies data while copying a KGTK file from
+The unreify-values command simplifies data while copying a KGTK file from
 input to output, by removing extra nodes caused by RDF value reification. This
 type of reification happens when there is a desire to model contextual or
 complementary information about a value. A new object is created to hold the
@@ -18,7 +18,7 @@ Input Table:
 | XJAABmv8vGfJZZasjV6DAXY:g2 | ont:system | nJAABmv8vGfJZZasjV6DAXY-2: |
 | XJAABmv8vGfJZZasjV6DAXY:g1 | ont:system | nJAABmv8vGfJZZasjV6DAXY-2: |
 
-The output of `kgtk unreify_values` is below. The unified table is easier to
+The output of `kgtk unreify-values` is below. The unified table is easier to
 understand once the spurious undesired object has been deleted, and its
 label/node2 pairs defined as edges on the simplified edge.
 
@@ -37,10 +37,9 @@ Output Table:
 ## Usage
 
 ```
-usage: kgtk unreify_values [-h] [-i INPUT_KGTK_FILE] [-o OUTPUT_KGTK_FILE]
-                           [--reified-file REIFIED_KGTK_FILE]
-                           [--unreified-file UNREIFIED_KGTK_FILE]
-                           [--uninvolved-file UNINVOLVED_KGTK_FILE] --trigger-label
+usage: kgtk unreify-values [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                           [--reified-file REIFIED_FILE] [--unreified-file UNREIFIED_FILE]
+                           [--uninvolved-file UNINVOLVED_FILE] --trigger-label
                            TRIGGER_LABEL_VALUE --trigger-node2 TRIGGER_NODE2_VALUE
                            --value-label VALUE_LABEL_VALUE --old-label OLD_LABEL_VALUE
                            [--new-label NEW_LABEL_VALUE]
@@ -58,61 +57,62 @@ An ID column will be added to the output file if not present in the input file.
 --unreified-file PATH, if specified, will get a copy of the unreified output records, which  will still be written to the main output file.
 
 Additional options are shown in expert help.
-kgtk --expert expand --help
+kgtk --expert unreify-values --help
 
 optional arguments:
   -h, --help            show this help message and exit
-  -i INPUT_KGTK_FILE, --input-file INPUT_KGTK_FILE
+  -i INPUT_FILE, --input-file INPUT_FILE
                         The KGTK input file with the reified data. It must have node1,
                         label, and node2 columns, or their aliases. It may have an ID
-                        column; if it does not, one will be appended to the output
-                        file. It may not have any additional columns. (default=-)
-  -o OUTPUT_KGTK_FILE, --output-file OUTPUT_KGTK_FILE
-                        The KGTK file to write output records with unreified data. This
-                        file may differ in shape from the input file by the addition of
-                        an ID column. The records in the output file will not,
-                        generally, be in the same order as they appeared in the input
-                        file. (default=-).
-  --reified-file REIFIED_KGTK_FILE
-                        An optional KGTK output file that will contain only the reified
-                        RDF statement output records. (default=None).
-  --unreified-file UNREIFIED_KGTK_FILE
-                        An optional KGTK output file that will contain only the
-                        unreified RDF statement input records. (default=None).
-  --uninvolved-file UNINVOLVED_KGTK_FILE
-                        An optional KGTK output file that will contain only the
-                        uninvolved input records. (default=None).
+                        column; if it does not, one will be appended to the output file. It
+                        may not have any additional columns. (May be omitted or '-' for
+                        stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK file to write output records with unreified data. This file
+                        may differ in shape from the input file by the addition of an ID
+                        column. The records in the output file will not, generally, be in
+                        the same order as they appeared in the input file. (May be omitted
+                        or '-' for stdout.)
+  --reified-file REIFIED_FILE
+                        A KGTK output file that will contain only the reified RDF
+                        statements. (Optional, use '-' for stdout.)
+  --unreified-file UNREIFIED_FILE
+                        A KGTK output file that will contain only the unreified RDF
+                        statements. (Optional, use '-' for stdout.)
+  --uninvolved-file UNINVOLVED_FILE
+                        A KGTK output file that will contain only the uninvolved input.
+                        (Optional, use '-' for stdout.)
   --trigger-label TRIGGER_LABEL_VALUE
                         A value in the label (or its alias) column that identifies the
                         trigger record. (default=None).
   --trigger-node2 TRIGGER_NODE2_VALUE
                         A value in the node2 (or its alias) column that identifies the
-                        trigger record. This is a required parameter for which there is
-                        no default value. (default=None).
+                        trigger record. This is a required parameter for which there is no
+                        default value. (default=None).
   --value-label VALUE_LABEL_VALUE
                         A value in the label (or its alias) column that identifies the
-                        record with the node2 value for the new, unreified edge. This
-                        is a required parameter for which there is no default value.
+                        record with the node2 value for the new, unreified edge. This is a
+                        required parameter for which there is no default value.
                         (default=None).
   --old-label OLD_LABEL_VALUE
-                        A value in the label (or its alias) column that identifies the
-                        edge with the node1 value being unreified. The value in the
-                        node1 (or its alias) column of this record will be used in the
-                        node1 (or its alias) column for the new, unreified edge. This
-                        is a required parameter for which there is no default value.
-                        (default=None).
+                        A value in the label (or its alias) column that identifies the edge
+                        with the node1 value being unreified. The value in the node1 (or its
+                        alias) column of this record will be used in the node1 (or its
+                        alias) column for the new, unreified edge. This is a required
+                        parameter for which there is no default value. (default=None).
   --new-label NEW_LABEL_VALUE
-                        The value to be entered in the label (or its alias) column of
-                        the new, unreified edge. If not specified (None), the value
-                        from --value-label is used. (default=None).
+                        The value to be entered in the label (or its alias) column of the
+                        new, unreified edge. If not specified (None), the value from
+                        --value-label is used. (default=None).
   --allow-multiple-values [ALLOW_MULTIPLE_VALUES]
-                        When true, allow multiple values (a '|' list) in the node2 (or
-                        its alias) column of the new, unreified edge. (default=False).
+                        When true, allow multiple values (a '|' list) in the node2 (or its
+                        alias) column of the new, unreified edge. (default=False).
   --allow-extra-columns [ALLOW_EXTRA_COLUMNS]
-                        When true, allow extra columns (beyond node1, label, node2, and
-                        id, or their aliases. Warning: the contents of these columns
-                        may be lost silently in unreified statements. (default=False).
+                        When true, allow extra columns (beyond node1, label, node2, and id,
+                        or their aliases. Warning: the contents of these columns may be lost
+                        silently in unreified statements. (default=False).
 
+  -v, --verbose         Print additional progress messages (default=False).
 ```
 
 ### Files
@@ -152,7 +152,7 @@ and associated edges replaced with an unreified RDF edge and secondary edges.
 A `ID` column is added to the output file if it is not present in the input file.
 This is used to link secondary edges to the newly reconstituted unreified edge.
 
-At the present time, `kgtk unreify_rf_statements` does not generate ID values for
+At the present time, `kgtk unreify-rf_statements` does not generate ID values for
 other edges in the file. This feature may be added in the future.
 
 The edges in the output file are not likely to be in the same order as they appeared
@@ -179,7 +179,7 @@ file, e.g., an ID column might not be present.
 
 ### Pattern Match Parameters
 
-`kgtk unreify_values` does not have a built-in set of pattern match parameters;
+`kgtk unreify-values` does not have a built-in set of pattern match parameters;
 the user must supply the following values.  All pattern matches reference the usual
 node1, label, and node2 columns or their aliases; there are no options to
 override the column names.
@@ -224,7 +224,7 @@ For the examples shown above, the following pattern match values were used:
 
 ### Multiple Values
 
-`kgtk unreify_values` optionally accepts multiple values from records with the label
+`kgtk unreify-values` optionally accepts multiple values from records with the label
 field having the ``--value-label` value, forming a vertical bar (pipe) (|) separated
 list.
 
@@ -282,7 +282,7 @@ place and the output will look like this:
 
 ## Difference Comparison
 
-`kgtk unreify_values` sorts its input data as part of detecting reified RDF
+`kgtk unreify-values` sorts its input data as part of detecting reified RDF
 values. Thus, attempting to look for changes between the input file and the
 output file using an ordinary difference utility is not likely to be fruitful.
 Instead, employ the following strategy:
@@ -290,10 +290,10 @@ Instead, employ the following strategy:
  * add an ID column to the input data if it does not already have one, using `kgtk add_id`
    * Perhaps without generating ID values, to remove clutter.
    * kgtk add_id --id-style=empty`
- * sort the resulting data using `kgtk unreify_rdf_statements` with invalid pattern match parameters:
-   * `kgtk unreify_values --trigger-label=XXX --trigger-node2=XXX --value-label=XXX --old-label=XXX -o output1.tsv`
- * Apply `kgtk unreify_values` a second time with the desired pattern match parameters.
-   * `kgtk unreify_values --trigger-label rdf:type --trigger-node2 ont:Confidence --value-label ont:confidenceValue --old-label ont:confidence-o output2.tsv`
+ * sort the resulting data using `kgtk unreify-values` with invalid pattern match parameters:
+   * `kgtk unreify-values --trigger-label=XXX --trigger-node2=XXX --value-label=XXX --old-label=XXX -o output1.tsv`
+ * Apply `kgtk unreify-values` a second time with the desired pattern match parameters.
+   * `kgtk unreify-values --trigger-label rdf:type --trigger-node2 ont:Confidence --value-label ont:confidenceValue --old-label ont:confidence-o output2.tsv`
  * Compare the two output files.
 
 ## Examples
@@ -301,7 +301,7 @@ Instead, employ the following strategy:
 Unreifying ont:Confidence:
 
 ```
-kgtk unreify_values -i HC00001DO.tsv \
+kgtk unreify-values -i HC00001DO.tsv \
                     -o HC00001DO-unreified-confidenceValue.tsv \
 		    --trigger-label rdf:type \
 		    --trigger-node2 ont:Confidence \
@@ -312,7 +312,7 @@ kgtk unreify_values -i HC00001DO.tsv \
 Unreifying ont:PrivateData:
 
 ```
-kgtk unreify_values -i HC00001DO.tsv \
+kgtk unreify-values -i HC00001DO.tsv \
                     -o HC00001DO-unreified-jsonContent.tsv \
 		    --trigger-label rdf:type \
 		    --trigger-node2 ont:PrivateData \
@@ -322,12 +322,12 @@ kgtk unreify_values -i HC00001DO.tsv \
 
 Chaining the two value unreifications:
 ```
-kgtk unreify_values -i HC00001DO.tsv \
+kgtk unreify-values -i HC00001DO.tsv \
                     --trigger-label rdf:type \
                     --trigger-node2 ont:Confidence \
                     --value-label ont:confidenceValue \
                     --old-label ont:confidence \
-   / unreify_values \
+   / unreify-values \
                     -o HC00001DO-unreified-values.tsv \
                     --trigger-label rdf:type \
                     --trigger-node2 ont:PrivateData \

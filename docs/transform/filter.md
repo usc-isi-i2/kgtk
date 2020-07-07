@@ -6,11 +6,39 @@ Each of the patterns can consist of a list of symbols separated using commas.
 
 ## Usage
 
-```bash
-kgtk filter -p PATTERN OPTIONS INPUT
 ```
-- `OPTIONS` allow the user to specify different column headers for node1/subject (argument: `--subj`), label/predicate (argument: `--pred`), node2/object (argument: `--obj`)
-- `INPUT` can be a filename or empty if piped from another command
+usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--reject-file REJECT_FILE] -p
+                   PATTERN [--subj SUBJ_COL] [--pred PRED_COL] [--obj OBJ_COL]
+                   [--or [True|False]] [--invert [True|False]] [-v]
+                   [INPUT_FILE]
+
+Filter KGTK file based on values in the node1 (subject), label (predicate), and node2 (object) fields.
+
+positional arguments:
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file for records that pass the filter. (May be
+                        omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        The KGTK reject file for records that fail the filter. (Optional,
+                        use '-' for stdout.)
+  -p PATTERN, --pattern PATTERN
+                        Pattern to filter on, for instance, " ; P154 ; "
+  --subj SUBJ_COL       Subject column, default is node1
+  --pred PRED_COL       Predicate column, default is label
+  --obj OBJ_COL         Object column, default is node2
+  --or [True|False]     'Or' the clauses of the pattern. (default=False).
+  --invert [True|False]
+                        Invert the result of applying the pattern. (default=False).
+
+  -v, --verbose         Print additional progress messages (default=False).
+```
 
 ## Examples
 

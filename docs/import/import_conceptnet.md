@@ -2,18 +2,17 @@ Import the entire ConceptNet, or just its English part, into KGTK format.
 
 ## Usage
 ```
-kgtk import_conceptnet [-h] [--english_only] filename
-```
+usage: kgtk import-conceptnet [-h] [-i INPUT_FILE] [--english_only] [INPUT_FILE]
 
 positional arguments:
-```
-  filename        filename here
-```
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
+                        use -i INPUT_FILE)
 
 optional arguments:
-```
-  -h, --help      show this help message and exit
-  --english_only  Only english conceptnet?
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for stdin.)
+  --english_only        Only english conceptnet?
 ```
 
 ## Examples
@@ -21,7 +20,7 @@ optional arguments:
 Import the English part of ConceptNet into KGTK. 
 
 ```
-kgtk import_conceptnet --english_only examples/conceptnet-assertions-5.7.0.csv
+kgtk import-conceptnet --english_only examples/conceptnet-assertions-5.7.0.csv
 ```
 
 Example output (first and last 10 lines):

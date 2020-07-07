@@ -2,16 +2,10 @@ Import WordNet v3.0 into KGTK format. Currently, four relations are included: hy
 
 ## Usage
 ```
-kgtk import_wordnet [-h] 
-```
-
-positional arguments:
-```
-```
+usage: kgtk import-wordnet [-h]
 
 optional arguments:
-```
-  -h, --help      show this help message and exit
+  -h, --help  show this help message and exit
 ```
 
 ## Examples
@@ -19,7 +13,7 @@ optional arguments:
 Importing WordNet can be done as follows (no arguments should be provided, as WordNet is read through the NLTK package):
 
 ```
-kgtk import_wordnet
+kgtk import-wordnet
 ```
 
 Example output (first and last 10 lines):

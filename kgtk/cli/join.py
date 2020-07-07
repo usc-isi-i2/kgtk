@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 import typing
 
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkjoiner import KgtkJoiner
@@ -66,9 +66,19 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_argument(      "left_file_path", help="The left-side KGTK file to join (required).", type=Path, default=None)
+    parser.add_input_file(who="The left-side KGTK file to join (required).",
+                          dest="left_file",
+                          options=["--left-file"],
+                          metavar="LEFT_FILE",
+                          positional=True)
 
-    parser.add_argument(      "right_file_path", help="The right-side KGTK file to join (required).", type=Path, default=None)
+    parser.add_input_file(who="The right-side KGTK file to join (required).",
+                          dest="right_file",
+                          options=["--right-file"],
+                          metavar="RIGHT_FILE",
+                          positional=True)
+
+    parser.add_output_file()
 
     parser.add_argument(      "--join-on-label", dest="join_on_label",
                               help="If both input files are edge files, include the label column in the join (default=%(default)s).",
@@ -82,8 +92,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
-
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
     parser.add_argument(      "--prefix", dest="prefix",
                               help="An optional prefix applied to right file column names in the output file (default=None).")
@@ -105,15 +113,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="right", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(left_file_path: typing.Optional[Path],
-        right_file_path: typing.Optional[Path],
+def run(left_file: KGTKFiles,
+        right_file: KGTKFiles,
+        output_file: KGTKFiles,
+
         left_join: bool,
         right_join: bool,
         join_on_label: bool,
         join_on_node2: bool,
         left_join_columns: typing.Optional[typing.List[str]],
         right_join_columns: typing.Optional[typing.List[str]],
-        output_file_path: Path,
         prefix: typing.Optional[str] = None,
 
         field_separator: str = KgtkJoiner.FIELD_SEPARATOR_DEFAULT,
@@ -129,30 +138,26 @@ def run(left_file_path: typing.Optional[Path],
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    left_file_path: Path = KGTKArgumentParser.get_input_file(left_file, who="KGTK left file")
+    right_file_path: Path = KGTKArgumentParser.get_input_file(right_file, who="KGTK right file")
+    output_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     if not right_join:
-        if left_file_path is None or str(left_file_path) == "-":
+        if str(left_file_path) == "-":
             print("The left file may not be stdin when an inner join or left join is requested.", file=error_file, flush=True)
             return 1
 
     if not left_join:
-        if right_file_path is None or str(right_file_path) == "-":
+        if str(right_file_path) == "-":
             print("The right file may not be stdin when an inner join or right join is requested.", file=error_file, flush=True)
             return 1
 
-    if (left_file_path is None or str(left_file_path) == "-") and (right_file_path is None or str(right_file_path) == "-"):
+    if str(left_file_path) == "-" and str(right_file_path) == "-":
         print("The left and right files may not both be stdin.", file=error_file, flush=True)
         return 1
-
-    if left_file_path is None:
-        left_file_path = Path("-")
-        
-    if right_file_path is None:
-        right_file_path = Path("-")
-        
 
     # Build the option structures.
     left_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="left", fallback=True)
@@ -162,9 +167,10 @@ def run(left_file_path: typing.Optional[Path],
     # Show the final option structures for debugging and documentation.
     if show_options:
         # TODO: left_file_path, right_file_path, --join-on-label, etc.
-        print("left: %s" % (str(left_file_path) if left_file_path is not None else "-"), file=error_file)
-        print("right: %s" % (str(left_file_path) if left_file_path is not None else "-"), file=error_file)
-        print("--output-file=%s" % (str(output_file_path) if output_file_path is not None else "-"), file=error_file)
+        print("--left-file=%s" % str(left_file_path), file=error_file)
+        print("--right-file=%s" % str(right_file_path), file=error_file)
+        print("--output-file=%s" % str(output_file_path), file=error_file)
+        
         print("--left-join=%s" % str(left_join), file=error_file)
         print("--right-join=%s" % str(right_join), file=error_file)
         print("--join-on-label=%s" % str(join_on_label), file=error_file)

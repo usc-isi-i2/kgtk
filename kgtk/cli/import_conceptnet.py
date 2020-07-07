@@ -1,35 +1,36 @@
 """
-Import ConceptNet file to KGTK.
+Import ConceptNet into KGTK.
+
+TODO: Add --output-file
 """
 
-
 import sys
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
         'help': 'Import ConceptNet into KGTK.' 
     }
 
-
-def add_arguments(parser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
-    # '$label == "/r/DefinedAs" && $node2=="/c/en/number_zero"'
-    parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='filename here')
+    parser.add_input_file(positional=True)
     parser.add_argument('--english_only', action="store_true", help="Only english conceptnet?")
 
 
-def run(filename, english_only):
+def run(input_file: KGTKFiles, english_only):
 
     # import modules locally
     import sys # type: ignore
     from kgtk.exceptions import kgtk_exception_auto_handler
     import csv
-    import re
     import json
+    import re
+    from pathlib import Path
     from string import Template
 
     def header_to_edge(row):
@@ -120,6 +121,8 @@ def run(filename, english_only):
         return '\t'.join(edge_list) + '\n'
 
     try:
+        filename: Path = KGTKArgumentParser.get_input_file(input_file)
+
         in_columns=['assertion','rel','subj','obj','metadata']
         out_columns=['node1', 'label', 'node2', 'node1_label', 'label_label', 'node2_label', 'label_dimension', 'source', 'weight', 'creator', 'sentence', 'question']
 
