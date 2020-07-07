@@ -5,10 +5,14 @@ Validate property patterns..
 from argparse import ArgumentParser, Namespace
 import attr
 from enum import Enum
+from pathlib import Path
 import re
+import sys
 import typing
 
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
 from kgtk.value.kgtkvalue import KgtkValue
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class PropertyPattern:
@@ -36,11 +40,8 @@ class PropertyPattern:
         MINDATE = "mindate"
         MAXDATE = "maxdate"
         
-    node1_value: KgtkValue = attr.ib(validator=attr.validators.instance_of(KgtkValue))
-    label_value: KgtkValue = attr.ib(validator=attr.validators.instance_of(KgtkValue))
-    node2_value: KgtkValue = attr.ib(validator=attr.validators.instance_of(KgtkValue))
-
-    # TODO: create validators:
+    # TODO: create validators where missing:
+    prop_datatype: str = attr.ib(validator=attr.validators.instance_of(str))
     action: Action = attr.ib()
     pattern: typing.Optional[typing.Pattern] = attr.ib()
     intval: typing.Optional[int] = attr.ib()
@@ -50,7 +51,8 @@ class PropertyPattern:
 
     @classmethod
     def new(cls, node1_value: KgtkValue, label_value: KgtkValue, node2_value: KgtkValue)->'PropertyPattern':
-        action: cls.Action = cls.Action(label_value.value)
+        prop_datatype = node1_value.value
+        action: PropertyPattern.Action = cls.Action(label_value.value)
 
         pattern: typing.Optional[typing.Pattern] = None
         if action in (cls.Action.NODE1_PATTERN,
@@ -116,8 +118,102 @@ class PropertyPattern:
             value = node2_value.value
                         
 
-        return cls(node1_value, label_value, node2_value, action, pattern, intval, number, column_names, value)
+        return cls(prop_datatype, action, pattern, intval, number, column_names, value)
+
+@attr.s(slots=True, frozen=True)
+class PropertyPatternFactory:
+    # Indices in the property pattern file:
+    node1_idx: int = attr.ib(validator=attr.validators.instance_of(int))
+    label_idx: int = attr.ib(validator=attr.validators.instance_of(int))
+    node2_idx: int = attr.ib(validator=attr.validators.instance_of(int))
+
+    value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions))
+
+    verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    def from_row(self, row: typing.List[str])->'PropertyPattern':
+        node1_value: KgtkValue = KgtkValue(row[self.node1_idx], options=self.value_options, parse_fields=True)
+        label_value: KgtkValue = KgtkValue(row[self.label_idx], options=self.value_options, parse_fields=True)
+        node2_value: KgtkValue = KgtkValue(row[self.node2_idx], options=self.value_options, parse_fields=True)
+
+        return PropertyPattern.new(node1_value, label_value, node2_value)
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatternValidator:
-    pass
+    patterns: typing.Mapping[str, typing.Mapping[PropertyPattern.Action, PropertyPattern]] = attr.ib()
+
+    error_file: typing.TextIO = attr.ib(default=sys.stderr)
+    verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    @classmethod
+    def load(cls, kr: KgtkReader,
+             value_options: KgtkValueOptions,
+             error_file: typing.TextIO = sys.stderr,
+             verbose: bool = False,
+             very_verbose: bool = False,
+    )->'PropertyPatternValidator':
+        patmap: typing.MutableMapping[str, typing.MutableMapping[PropertyPattern.Action, PropertyPattern]] = { }
+        if kr.node1_column_idx < 0:
+            raise ValueError("node1 column missing from property pattern file")
+        if kr.label_column_idx < 0:
+            raise ValueError("label column missing from property pattern file")
+        if kr.node2_column_idx < 0:
+            raise ValueError("node2 column missing from property pattern file")
+
+        ppf: PropertyPatternFactory = PropertyPatternFactory(kr.node1_column_idx,
+                                                             kr.label_column_idx,
+                                                             kr.node2_column_idx,
+                                                             value_options,
+                                                             verbose=verbose,
+                                                             very_verbose=very_verbose,
+        )
+
+        row: typing.List[str]
+        for row in kr:
+            pp: PropertyPattern = ppf.from_row(row)
+            prop_datatype: str = pp.prop_datatype
+            if prop_datatype not in patmap:
+                patmap[prop_datatype] = { }
+            action: PropertyPattern.Action = pp.action
+            if action in patmap[prop_datatype]:
+                raise ValueError("Duplicate action record in (%s)" % "|".join(row))
+            patmap[prop_datatype][action] = pp
+            if very_verbose:
+                print("loaded %s->%s" % (prop_datatype, action.value), file=error_file, flush=True)
+
+        return cls(patmap, error_file=error_file, verbose=verbose, very_verbose=very_verbose)
+
+def main():
+    parser: ArgumentParser = ArgumentParser()
+    parser.add_argument(      "--pattern-file", dest="pattern_file", help="The property pattern file to load.", required=True, type=Path)
+
+    KgtkReader.add_debug_arguments(parser, expert=True)
+    KgtkReaderOptions.add_arguments(parser, validate_by_default=True, expert=True)
+    KgtkValueOptions.add_arguments(parser)
+    args: Namespace = parser.parse_args()
+
+    error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+
+    # Build the option structures.
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
+
+    kr: KgtkReader = KgtkReader.open(args.pattern_file,
+                                     error_file=error_file,
+                                     mode=KgtkReaderMode.EDGE,
+                                     options=reader_options,
+                                     value_options=value_options,
+                                     verbose=args.verbose,
+                                     very_verbose=args.very_verbose)
+
+    ppv: PropertyPatternValidator = PropertyPatternValidator.load(kr,
+                                                                  value_options,
+                                                                  error_file=error_file,
+                                                                  verbose=args.verbose,
+                                                                  very_verbose=args.very_verbose,
+    )
+
+if __name__ == "__main__":
+    main()
