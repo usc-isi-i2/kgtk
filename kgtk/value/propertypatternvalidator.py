@@ -272,6 +272,38 @@ class PropertyPatternValidator:
                         result = False
         return result
 
+    def validate_type(self, rownum: int, value: KgtkValue, prop: str, allowed_types: typing.List[str], who: str)->bool:
+        if value.data_type is None:
+            print("Row %d: the %s value '%s' KGTK type is missing." % (rownum, who, value.value), file=self.error_file, flush=True)
+            return False
+        else:
+            type_name: str = value.data_type.lower()
+            if type_name not in allowed_types:
+                print("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop,
+                                                                                                               KgtkFormat.LIST_SEPARATOR.join(allowed_types)),
+                      file=self.error_file, flush=True)
+                return False
+            return True
+
+    def validate_value(self, rownum: int, value: KgtkValue, prop: str, allowed_values: typing.List[str], who: str)->bool:
+        if value.value not in allowed_values:
+            print("Row %d: the %s value '%s' is not in the list of %s values for %s: %s" % (rownum, who, value.value, who, prop,
+                                                                                            KgtkFormat.LIST_SEPARATOR.join(allowed_values)),
+                  file=self.error_file, flush=True)
+            return False
+        return True        
+
+    def validate_pattern(self, rownum: int, item: str, prop: str, pattern: typing.Optional[typing.Pattern], who: str)->bool:
+        if pattern is None:
+            raise ValueError("Missing %s pattern for %s" % (who, prop))
+
+        match: typing.Optional[typing.Match] = pattern.fullmatch(item)
+        if match:
+            return True
+
+        print("Row %d: the %s value '%s' does not match the %s pattern for %s" % (rownum, who, item, who, prop), file=self.error_file, flush=True)
+        return False
+
     def validate_node1(self,
                        rownum: int,
                        node1: str,
@@ -303,26 +335,13 @@ class PropertyPatternValidator:
                 return False
 
         if PropertyPattern.Action.NODE1_TYPE in pats:
-            if node1_value.data_type is None:
-                print("Row %d: the node1 value '%s' KGTK type is missing." % (rownum, node1_value.value), file=self.error_file, flush=True)
-                result = False
-            else:
-                node1_type_name: str = node1_value.data_type.lower()
-
-                allowed_types: typing.List[str] = pats[PropertyPattern.Action.NODE1_TYPE].values
-                if node1_type_name not in allowed_types:
-                    print("Row %d: the node1 KGTK datatype '%s' is not in the list of node1 types for %s: %s" % (rownum, node1_type_name, prop,
-                                                                                                                 KgtkFormat.LIST_SEPARATOR.join(allowed_types)),
-                          file=self.error_file, flush=True)
-                    result = False
+            result &= self.validate_type(rownum, node1_value, prop, pats[PropertyPattern.Action.NODE1_TYPE].values, "node1")
 
         if PropertyPattern.Action.NODE1_VALUES in pats:
-            allowed_values: typing.List[str] = pats[PropertyPattern.Action.NODE1_VALUES].values
-            if node1_value.value not in allowed_values:
-                print("Row %d: the node1 value '%s' is not in the list of node1 values for %s: %s" % (rownum, node1_value.value, prop,
-                                                                                                      KgtkFormat.LIST_SEPARATOR.join(allowed_values)),
-                      file=self.error_file, flush=True)
-                result = False                
+            result &= self.validate_value(rownum, node1_value, prop, pats[PropertyPattern.Action.NODE1_VALUES].values, "node1")
+
+        if PropertyPattern.Action.NODE1_PATTERN in pats:
+            result &= self.validate_pattern(rownum, node1_value.value, prop, pats[PropertyPattern.Action.NODE1_PATTERN].pattern, "node1")
 
         return result
 
@@ -357,26 +376,13 @@ class PropertyPatternValidator:
                 return False
 
         if PropertyPattern.Action.NODE2_TYPE in pats:
-            if node2_value.data_type is None:
-                print("Row %d: the node2 value '%s' KGTK type is missing." % (rownum, node2_value.value), file=self.error_file, flush=True)
-                result = False
-            else:
-                node2_type_name: str = node2_value.data_type.lower()
-
-                allowed_types: typing.List[str] = pats[PropertyPattern.Action.NODE2_TYPE].values
-                if node2_type_name not in allowed_types:
-                    print("Row %d: the node2 KGTK datatype '%s' is not in the list of node2 types for %s: %s" % (rownum, node2_type_name, prop,
-                                                                                                                 KgtkFormat.LIST_SEPARATOR.join(allowed_types)),
-                          file=self.error_file, flush=True)
-                    result = False
+            result &= self.validate_type(rownum, node2_value, prop, pats[PropertyPattern.Action.NODE2_TYPE].values, "node2")
 
         if PropertyPattern.Action.NODE2_VALUES in pats:
-            allowed_values: typing.List[str] = pats[PropertyPattern.Action.NODE2_VALUES].values
-            if node2_value.value not in allowed_values:
-                print("Row %d: the node2 value '%s' is not in the list of node2 values for %s: %s" % (rownum, node2_value.value, prop,
-                                                                                                      KgtkFormat.LIST_SEPARATOR.join(allowed_values)),
-                      file=self.error_file, flush=True)
-                result = False                
+            result &= self.validate_value(rownum, node2_value, prop, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2")
+
+        if PropertyPattern.Action.NODE2_PATTERN in pats:
+            result &= self.validate_pattern(rownum, node2_value.value, prop, pats[PropertyPattern.Action.NODE2_PATTERN].pattern, "node2")
 
         return result
 
@@ -396,11 +402,17 @@ class PropertyPatternValidator:
 
         if prop in self.pps.patterns:
             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
-            result &= self.validate_node1(rownum, row[self.node1_idx], prop, pats)
-            result &= self.validate_node2(rownum, row[self.node2_idx], prop, pats)
+            node1_idx: int = self.node1_idx
+            node2_idx: int = self.node2_idx
+            result &= self.validate_node1(rownum, row[node1_idx], prop, pats)
+            result &= self.validate_node2(rownum, row[node2_idx], prop, pats)
             
             if PropertyPattern.Action.ISA in pats:
                 result &= self.validate_isa(rownum, row, prop, pats[PropertyPattern.Action.ISA].values)
+
+            if PropertyPattern.Action.LABEL_PATTERN in pats:
+                result &= self.validate_pattern(rownum, row[self.label_idx], prop, pats[PropertyPattern.Action.LABEL_PATTERN].pattern, "label")
+
         return result
 
     def validate(self, rownum: int, row: typing.List[str])->bool:
@@ -409,7 +421,8 @@ class PropertyPatternValidator:
         self.isa_scoreboard.clear()
 
         result &= self.validate_not_in(rownum, row)
-        result &= self.validate_prop(rownum, row,  row[self.label_idx])
+        prop: str = row[self.label_idx]
+        result &= self.validate_prop(rownum, row, prop)
 
         return result
 

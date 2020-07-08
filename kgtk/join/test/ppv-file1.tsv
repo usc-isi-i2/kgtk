@@ -8,3 +8,8 @@ color	node1_values	obj10|obj11|obj12
 color	node2_type	symbol
 color	node2_values	red|green
 color	node2_allow_list	True
+predicate	label_pattern	"p.*"
+prop4	isa	predicate
+quad1	isa	predicate
+xnode	node1_pattern	"x.*"
+xvalue	node2_pattern	"x.*"

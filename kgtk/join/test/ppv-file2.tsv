@@ -11,3 +11,9 @@ obj12	color	yellow
 obj10|obj12	color	red
 obj13	color	red
 obj11	color	red|green|yellow
+obj21	prop4	10
+obj22	quad1	11
+xnode1	xnode	15
+znode1	xnode	15
+xvalue1	xvalue	x10
+xvalue2	xvalue	y10
