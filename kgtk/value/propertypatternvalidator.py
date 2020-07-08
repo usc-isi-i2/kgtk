@@ -20,11 +20,13 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 @attr.s(slots=True, frozen=True)
 class PropertyPattern:
     class Action(Enum):
+        NODE1_COLUMN = "node1_column"
         NODE1_TYPE = "node1_type"
         NODE1_ALLOW_LIST = "node1_allow_list"
         NODE1_VALUES = "node1_values"
         NODE1_PATTERN = "node1_pattern"
 
+        NODE2_COLUMN = "node2_column"
         NODE2_TYPE = "node2_type"
         NODE2_ALLOW_LIST = "node2_allow_list"
         NODE2_VALUES = "node2_values"
@@ -32,8 +34,6 @@ class PropertyPattern:
 
         NOT_IN = "not_in"
         # LABEL_COLUM = "label_column"
-        # NODE1_COLUMN = "node1_column"
-        # NODE2_COLUMN = "node2_column"
         MINVAL = "minval"
         MAXVAL = "maxval"
         MINOCCURS = "minoccurs"
@@ -115,11 +115,11 @@ class PropertyPattern:
 
         if action in (
                 # cls.Action.LABEL_COLUM,
-                # cls.Action.NODE1_COLUMN,
-                # cls.Action.NODE2_COLUMN,
+                cls.Action.NODE1_COLUMN,
+                cls.Action.NODE2_COLUMN,
                 cls.Action.REQUIRED_IN,):
             if label_value.is_symbol():
-                column_names.append(label_value.value)
+                column_names.append(node2_value.value)
             else:
                 raise ValueError("%s:Value is not a symbol" % (action.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
@@ -402,16 +402,41 @@ class PropertyPatternValidator:
                 result &= self.validate_prop(rownum, row, newprop)
         return result
 
+    def get_idx(self,
+                rownum: int,
+                prop: str,
+                action: PropertyPattern.Action,
+                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern],
+                default_idx: int,
+                who: str,
+    )->int:
+        if action in pats:
+            column_name: str = pats[action].column_names[0]
+            if column_name in self.column_name_map:
+                return self.column_name_map[column_name]
+            else:
+                print("Row %d: prop '%s' %s column name '%s' not found in input file." % (rownum, prop, who, column_name), file=self.error_file, flush=True)
+                return -1
+        else:
+            return default_idx        
+
     def validate_prop(self, rownum: int, row: typing.List[str], prop: str)->bool:
         result: bool = True # Everying's good until we discover otherwise.
 
         if prop in self.pps.patterns:
             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
-            node1_idx: int = self.node1_idx
-            node2_idx: int = self.node2_idx
-            result &= self.validate_node1(rownum, row[node1_idx], prop, pats)
-            result &= self.validate_node2(rownum, row[node2_idx], prop, pats)
-            
+            node1_idx: int = self.get_idx(rownum, prop, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
+            if node1_idx >= 0:
+                result &= self.validate_node1(rownum, row[node1_idx], prop, pats)
+            else:
+                result = False
+
+            node2_idx: int = self.get_idx(rownum, prop, PropertyPattern.Action.NODE2_COLUMN, pats, self.node2_idx, "node2")
+            if node2_idx >= 0:
+                result &= self.validate_node2(rownum, row[node2_idx], prop, pats)
+            else:
+                result = False
+                
             if PropertyPattern.Action.ISA in pats:
                 result &= self.validate_isa(rownum, row, prop, pats[PropertyPattern.Action.ISA].values)
 
