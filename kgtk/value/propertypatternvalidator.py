@@ -21,21 +21,25 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 class PropertyPattern:
     class Action(Enum):
         NODE1_TYPE = "node1_type"
+        NODE1_ALLOW_LIST = "node1_allow_list"
+        NODE1_VALUES = "node1_values"
+        NODE1_PATTERN = "node1_pattern"
+
         NODE2_TYPE = "node2_type"
+        NODE2_ALLOW_LIST = "node2_allow_list"
+        NODE2_VALUES = "node2_values"
+        NODE2_PATTERN = "node2_pattern"
+
         NOT_IN = "not_in"
         # LABEL_COLUM = "label_column"
         # NODE1_COLUMN = "node1_column"
         # NODE2_COLUMN = "node2_column"
-        NODE1_VALUES = "node1_values"
-        NODE2_VALUES = "node2_values"
         MINVAL = "minval"
         MAXVAL = "maxval"
         MINOCCURS = "minoccurs"
         MAXOCCURS = "maxoccurs"
         ISA = "isa"
         MATCHES = "matches"
-        NODE1_PATTERN = "node1_pattern"
-        NODE2_PATTERN = "node2_pattern"
         LABEL_PATTERN = "label_pattern"
         MINDISTINCT = "mindistinct"
         MAXDISTINCT = "maxdistinct"
@@ -51,6 +55,7 @@ class PropertyPattern:
     number: typing.Optional[float] = attr.ib()
     column_names: typing.List[str] = attr.ib()
     values: typing.List[str] = attr.ib()
+    truth: bool = attr.ib()
 
     # Even though the object is frozen, we can still alter lists.
     column_idxs: typing.List[int] = attr.ib(factory=list)
@@ -142,7 +147,15 @@ class PropertyPattern:
             else:
                 values.append(node2_value.value)
 
-        return cls(prop_datatype, action, pattern, intval, number, column_names, values)
+        truth: bool = False
+        if action in (cls.Action.NODE1_ALLOW_LIST,
+                      cls.Action.NODE2_ALLOW_LIST,):
+            if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
+                truth = node2_value.fields.truth
+            else:
+                raise ValueError("%s: Value '%s' is not a boolean" % (action.value, node2_value.value)) # TODO: better complaint
+
+        return cls(prop_datatype, action, pattern, intval, number, column_names, values, truth)
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatternFactory:
@@ -264,12 +277,30 @@ class PropertyPatternValidator:
                        node1: str,
                        prop: str,
                        pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
-        result: bool = True
-
         node1_value = KgtkValue(node1, options=self.value_options, parse_fields=True)
-        if not node1_value.validate():
+        if node1_value.validate():
+            return self.validate_node1_value(rownum, node1_value, prop, pats)
+        else:
             print("Row %d: the node1 value '%s' is not valid KGTK." % (rownum, node1_value.value), file=self.error_file, flush=True)
             return False
+
+    def validate_node1_value(self,
+                             rownum: int,
+                             node1_value: KgtkValue,
+                             prop: str,
+                             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
+        result: bool = True
+
+        if node1_value.is_list():
+            if PropertyPattern.Action.NODE1_ALLOW_LIST in pats and pats[PropertyPattern.Action.NODE1_ALLOW_LIST].truth:
+                # Validate each item on the list seperately.
+                list_item: KgtkValue
+                for list_item in node1_value.get_list_items():
+                    result &= self.validate_node1_value(rownum, list_item, prop, pats)
+                return result
+            else:
+                print("Row %d: The node1 value '%s' is not allowed to be a list." % (rownum, node1_value.value), file=self.error_file, flush=True)
+                return False
 
         if PropertyPattern.Action.NODE1_TYPE in pats:
             if node1_value.data_type is None:
@@ -278,11 +309,20 @@ class PropertyPatternValidator:
             else:
                 node1_type_name: str = node1_value.data_type.lower()
 
-                type_list: typing.List[str] = pats[PropertyPattern.Action.NODE1_TYPE].values
-                if node1_type_name not in type_list:
-                    print("Row %d: the node1 KGTK datatype '%s' is not in the list of node1 types for %s: %s" % (rownum, node1_type_name, prop, ", ".join(type_list)),
+                allowed_types: typing.List[str] = pats[PropertyPattern.Action.NODE1_TYPE].values
+                if node1_type_name not in allowed_types:
+                    print("Row %d: the node1 KGTK datatype '%s' is not in the list of node1 types for %s: %s" % (rownum, node1_type_name, prop,
+                                                                                                                 KgtkFormat.LIST_SEPARATOR.join(allowed_types)),
                           file=self.error_file, flush=True)
                     result = False
+
+        if PropertyPattern.Action.NODE1_VALUES in pats:
+            allowed_values: typing.List[str] = pats[PropertyPattern.Action.NODE1_VALUES].values
+            if node1_value.value not in allowed_values:
+                print("Row %d: the node1 value '%s' is not in the list of node1 values for %s: %s" % (rownum, node1_value.value, prop,
+                                                                                                      KgtkFormat.LIST_SEPARATOR.join(allowed_values)),
+                      file=self.error_file, flush=True)
+                result = False                
 
         return result
 
@@ -291,11 +331,30 @@ class PropertyPatternValidator:
                        node2: str,
                        prop: str,
                        pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
-        result: bool = True
         node2_value = KgtkValue(node2, options=self.value_options, parse_fields=True)
-        if not node2_value.validate():
+        if node2_value.validate():
+            return self.validate_node2_value(rownum, node2_value, prop, pats)
+        else:
             print("Row %d: the node2 value '%s' is not valid KGTK." % (rownum, node2_value.value), file=self.error_file, flush=True)
             return False
+
+    def validate_node2_value(self,
+                             rownum: int,
+                             node2_value: KgtkValue,
+                             prop: str,
+                             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
+        result: bool = True
+
+        if node2_value.is_list():
+            if PropertyPattern.Action.NODE2_ALLOW_LIST in pats and pats[PropertyPattern.Action.NODE2_ALLOW_LIST].truth:
+                # Validate each item on the list seperately.
+                list_item: KgtkValue
+                for list_item in node2_value.get_list_items():
+                    result &= self.validate_node2_value(rownum, list_item, prop, pats)
+                return result
+            else:
+                print("Row %d: The node2 value '%s' is not allowed to be a list." % (rownum, node2_value.value), file=self.error_file, flush=True)
+                return False
 
         if PropertyPattern.Action.NODE2_TYPE in pats:
             if node2_value.data_type is None:
@@ -304,11 +363,20 @@ class PropertyPatternValidator:
             else:
                 node2_type_name: str = node2_value.data_type.lower()
 
-                type_list: typing.List[str] = pats[PropertyPattern.Action.NODE2_TYPE].values
-                if node2_type_name not in type_list:
-                    print("Row %d: the node2 KGTK datatype '%s' is not in the list of node2 types for %s: %s" % (rownum, node2_type_name, prop, ", ".join(type_list)),
+                allowed_types: typing.List[str] = pats[PropertyPattern.Action.NODE2_TYPE].values
+                if node2_type_name not in allowed_types:
+                    print("Row %d: the node2 KGTK datatype '%s' is not in the list of node2 types for %s: %s" % (rownum, node2_type_name, prop,
+                                                                                                                 KgtkFormat.LIST_SEPARATOR.join(allowed_types)),
                           file=self.error_file, flush=True)
                     result = False
+
+        if PropertyPattern.Action.NODE2_VALUES in pats:
+            allowed_values: typing.List[str] = pats[PropertyPattern.Action.NODE2_VALUES].values
+            if node2_value.value not in allowed_values:
+                print("Row %d: the node2 value '%s' is not in the list of node2 values for %s: %s" % (rownum, node2_value.value, prop,
+                                                                                                      KgtkFormat.LIST_SEPARATOR.join(allowed_values)),
+                      file=self.error_file, flush=True)
+                result = False                
 
         return result
 

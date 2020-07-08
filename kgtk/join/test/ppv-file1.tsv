@@ -3,3 +3,8 @@ prop1	node1_type	symbol
 prop1	node2_type	string
 prop1	not_in	node2
 prop3	isa	prop1
+color	node1_type	symbol
+color	node1_values	obj10|obj11|obj12
+color	node2_type	symbol
+color	node2_values	red|green
+color	node2_allow_list	True
