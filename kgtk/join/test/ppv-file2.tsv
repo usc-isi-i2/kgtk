@@ -2,3 +2,5 @@ node1	label	node2
 prop1	label	"Property 1"
 obj1	prop1	"Value 1"
 obj2	prop2	prop1
+"str1"	prop1	"str2"
+obj1	prop1	obj2
