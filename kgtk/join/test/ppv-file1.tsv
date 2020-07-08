@@ -2,3 +2,4 @@ node1	label	node2
 prop1	node1_type	symbol
 prop1	node2_type	string
 prop1	not_in	node2
+prop3	isa	prop1
