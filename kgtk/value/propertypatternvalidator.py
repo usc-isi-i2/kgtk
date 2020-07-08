@@ -209,6 +209,14 @@ class PropertyPatterns:
 
         return cls(patmap)
 
+
+    def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
+        if prop in self.patterns:
+            if action in self.patterns[prop]:
+                return self.patterns[prop][action]
+        return None
+        
+
 @attr.s(slots=True, frozen=True)
 class PropertyPatternValidator:
     pps: PropertyPatterns = attr.ib()
@@ -226,6 +234,9 @@ class PropertyPatternValidator:
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # We clear this set, getting wround frozen attribute.
+    isa_scoreboard: typing.Set[str] = attr.ib(factory=set)
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
         """
@@ -269,7 +280,7 @@ class PropertyPatternValidator:
 
                 type_list: typing.List[str] = pats[PropertyPattern.Action.NODE1_TYPE].values
                 if node1_type_name not in type_list:
-                    print("Row %d: the node1 KGTK datatype '%s' is not in the list of node1 types: %s" % (rownum, node1_type_name, ", ".join(type_list)),
+                    print("Row %d: the node1 KGTK datatype '%s' is not in the list of node1 types for %s: %s" % (rownum, node1_type_name, prop, ", ".join(type_list)),
                           file=self.error_file, flush=True)
                     result = False
 
@@ -295,23 +306,42 @@ class PropertyPatternValidator:
 
                 type_list: typing.List[str] = pats[PropertyPattern.Action.NODE2_TYPE].values
                 if node2_type_name not in type_list:
-                    print("Row %d: the node2 KGTK datatype '%s' is not in the list of node2 types: %s" % (rownum, node2_type_name, ", ".join(type_list)),
+                    print("Row %d: the node2 KGTK datatype '%s' is not in the list of node2 types for %s: %s" % (rownum, node2_type_name, prop, ", ".join(type_list)),
                           file=self.error_file, flush=True)
                     result = False
 
         return result
 
-    def validate(self, rownum: int, row: typing.List[str])->bool:
+    def validate_isa(self, rownum: int, row: typing.List[str], prop: str, newprops: typing.List[str])->bool:
+        result: bool = True # Everying's good until we discover otherwise.
+        self.isa_scoreboard.add(prop)
+        newprop: str
+        for newprop in newprops:
+            if newprop in self.isa_scoreboard:
+                print("Row %d: isa loop detected with %s." % (rownum, newprop), file=self.error_file, flush=True)
+            else:
+                result &= self.validate_prop(rownum, row, newprop)
+        return result
+
+    def validate_prop(self, rownum: int, row: typing.List[str], prop: str)->bool:
         result: bool = True # Everying's good until we discover otherwise.
 
-        result &= self.validate_not_in(rownum, row)
-
-        prop: str = row[self.label_idx]
         if prop in self.pps.patterns:
             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
             result &= self.validate_node1(rownum, row[self.node1_idx], prop, pats)
-
             result &= self.validate_node2(rownum, row[self.node2_idx], prop, pats)
+            
+            if PropertyPattern.Action.ISA in pats:
+                result &= self.validate_isa(rownum, row, prop, pats[PropertyPattern.Action.ISA].values)
+        return result
+
+    def validate(self, rownum: int, row: typing.List[str])->bool:
+        result: bool = True # Everying's good until we discover otherwise.
+
+        self.isa_scoreboard.clear()
+
+        result &= self.validate_not_in(rownum, row)
+        result &= self.validate_prop(rownum, row,  row[self.label_idx])
 
         return result
 
