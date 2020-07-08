@@ -179,7 +179,7 @@ def run(
     if use_gz:
         if input_file:
             try:
-                fp = open(prefix_path,"rb")
+                fp = open(input_file,"rb")
             except:
                 raise KGTKException("Fail to read from compressed file {}. Exiting.".format(input_file))
         else:
@@ -187,7 +187,7 @@ def run(
     else:
         if input_file:
             try:
-                fp = open(prefix_path,"r")
+                fp = open(input_file,"r")
             except:
                 raise KGTKException("Fail to read from file {}. Exiting.".format(input_file))
         else:
