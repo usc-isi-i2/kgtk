@@ -24,3 +24,6 @@ min20-fail	min20	19
 min20-pass	min20	21
 max30-fail	max30	31
 max30-pass	max30	29
+justonce-pass	justonce	xxx1
+justonce-fail	justonce	xxx1
+justonce-fail	justonce	xxx2

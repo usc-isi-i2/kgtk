@@ -256,6 +256,9 @@ class PropertyPatternValidator:
     # We clear this set, getting around frozen attribute.
     isa_scoreboard: typing.Set[str] = attr.ib(factory=set)
 
+    # The occurance counting scoreboard:
+    occurs_scoreboard: typing.MutableMapping[str, typing.MutableMapping[str, int]] = attr.ib(factory=dict)
+
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
         """
         Check each column of the row to see if the contents violates a not_in relationship.
@@ -388,6 +391,14 @@ class PropertyPatternValidator:
         if PropertyPattern.Action.NODE1_PATTERN in pats:
             result &= self.validate_pattern(rownum, node1_value.value, prop, pats[PropertyPattern.Action.NODE1_PATTERN].pattern, "node1")
 
+        if PropertyPattern.Action.MINOCCURS in pats or PropertyPattern.Action.MAXOCCURS in pats:
+            if prop not in self.occurs_scoreboard:
+                self.occurs_scoreboard[prop] = { }
+            if node1_value.value in self.occurs_scoreboard[prop]:
+                self.occurs_scoreboard[prop][node1_value.value] += 1
+            else:
+                self.occurs_scoreboard[prop][node1_value.value] = 1
+
         return result
 
     def validate_node2(self,
@@ -507,6 +518,33 @@ class PropertyPatternValidator:
 
         return result
 
+    def report_occurance_violations(self)->bool:
+        """
+        Print of a minoccurs or maxoccurs violation happened. The results are
+        grouped by property, then by node1 value.  Perhaps the users would prefer
+        node1 value, then property?
+        """
+        result: bool = True
+        prop: str
+        for prop in sorted(self.occurs_scoreboard.keys()):
+            nodecounts: typing.Mapping[str, int] = self.occurs_scoreboard[prop]
+            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
+            node1: str
+            for node1 in sorted(nodecounts.keys()):
+                count: int = nodecounts[node1]
+                if PropertyPattern.Action.MINOCCURS in pats:
+                    ppmin: PropertyPattern = pats[PropertyPattern.Action.MINOCCURS]
+                    if ppmin.intval is not None and count < ppmin.intval:
+                        print("Property '%s' occured %d times for node1 '%s', minimum is %d." % (prop, count, node1, ppmin.intval), file=self.error_file, flush=True)
+                        result = False
+                if PropertyPattern.Action.MAXOCCURS in pats:
+                    ppmax: PropertyPattern = pats[PropertyPattern.Action.MAXOCCURS]
+                    if ppmax.intval is not None and count > ppmax.intval:
+                        print("Property '%s' occured %d times for node1 '%s', maximum is %d." % (prop, count, node1, ppmax.intval), file=self.error_file, flush=True)
+                        result = False
+
+        return result
+
     @classmethod
     def new(cls,
             pps: PropertyPatterns,
@@ -602,7 +640,8 @@ def main():
             if rkw is not None:
                 rkw.write(row)
                 reject_row_count += 1
-                
+
+    ppv.report_occurance_violations()
 
     print("Read %d input rows, %d valid." % (input_row_count, valid_row_count), file=error_file, flush=True)
     if okw is not None:
