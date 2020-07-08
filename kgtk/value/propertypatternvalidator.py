@@ -184,6 +184,8 @@ class PropertyPatternFactory:
 class PropertyPatterns:
     patterns: typing.Mapping[str, typing.Mapping[PropertyPattern.Action, PropertyPattern]] = attr.ib()
 
+    matches: typing.Mapping[str, typing.Pattern] = attr.ib()
+
     @classmethod
     def load(cls, kr: KgtkReader,
              value_options: KgtkValueOptions,
@@ -192,6 +194,8 @@ class PropertyPatterns:
              very_verbose: bool = False,
     )->'PropertyPatterns':
         patmap: typing.MutableMapping[str, typing.MutableMapping[PropertyPattern.Action, PropertyPattern]] = { }
+        matches: typing.MutableMapping[str, typing.Pattern] = { }
+        
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
         if kr.label_column_idx < 0:
@@ -219,9 +223,10 @@ class PropertyPatterns:
             patmap[prop_datatype][action] = pp
             if very_verbose:
                 print("loaded %s->%s" % (prop_datatype, action.value), file=error_file, flush=True)
+            if action == PropertyPattern.Action.MATCHES and pp.pattern is not None:
+                matches[prop_datatype] = pp.pattern
 
-        return cls(patmap)
-
+        return cls(patmap, matches)
 
     def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
         if prop in self.patterns:
@@ -248,7 +253,7 @@ class PropertyPatternValidator:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # We clear this set, getting wround frozen attribute.
+    # We clear this set, getting around frozen attribute.
     isa_scoreboard: typing.Set[str] = attr.ib(factory=set)
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
@@ -423,6 +428,11 @@ class PropertyPatternValidator:
         result &= self.validate_not_in(rownum, row)
         prop: str = row[self.label_idx]
         result &= self.validate_prop(rownum, row, prop)
+
+        prop2: str
+        for prop2 in sorted(self.pps.matches.keys()):
+            if self.pps.matches[prop2].fullmatch(prop):
+                result &= self.validate_prop(rownum, row, prop2)
 
         return result
 
