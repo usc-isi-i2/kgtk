@@ -5,3 +5,9 @@ obj2	prop2	prop1
 "str1"	prop1	"str2"
 obj1	prop1	obj2
 obj1	prop3	obj2
+obj10	color	red
+obj11	color	red|green
+obj12	color	yellow
+obj10|obj12	color	red
+obj13	color	red
+obj11	color	red|green|yellow
