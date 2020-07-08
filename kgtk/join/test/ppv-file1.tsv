@@ -15,3 +15,7 @@ xnode	node1_pattern	"x.*"
 xvalue	node2_pattern	"x.*"
 zprop	matches	"z.*"
 zprop	node2_type	string
+backp	node1_column	node2
+backp	node2_column	node1
+backp	node1_type	symbol
+backp	node2_type	string

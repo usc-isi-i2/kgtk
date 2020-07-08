@@ -19,3 +19,4 @@ xvalue1	xvalue	x10
 xvalue2	xvalue	y10
 ztest	zprop1	"ztring1"
 ztest	zprop1	ztring2
+backtest	backp	"backwards"
