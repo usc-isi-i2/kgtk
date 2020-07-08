@@ -45,7 +45,7 @@ def run(input_file: KGTKFiles,
 
 
     def create_edge(node1, node1_lbl, node2, node2_lbl, rel, rel_lbl, image_id):
-        my_row=[node1, rel, node2, '|'.join(node1_lbl), '|'.join(node2_lbl), rel_lbl, '', '', 'VG', '', 'I' + image_id, '', '']
+        my_row=[node1, rel, node2, '|'.join(node1_lbl), '|'.join(node2_lbl), rel_lbl, '', '', 'VG', 'I' + image_id, '', '']
         return '\t'.join(my_row) + '\n'
 
     def header_to_edge(row):
