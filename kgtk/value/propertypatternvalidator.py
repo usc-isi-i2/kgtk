@@ -13,6 +13,7 @@ import typing
 
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
+from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -268,7 +269,7 @@ class PropertyPatternValidator:
 
                 type_list: typing.List[str] = pats[PropertyPattern.Action.NODE1_TYPE].values
                 if node1_type_name not in type_list:
-                    print("Row %d: the node1 KGTK datatype '%s' is not in the list (%s)" % (rownum, node1_type_name, ", ".join(type_list)),
+                    print("Row %d: the node1 KGTK datatype '%s' is not in the list of node1 types: %s" % (rownum, node1_type_name, ", ".join(type_list)),
                           file=self.error_file, flush=True)
                     result = False
 
@@ -294,7 +295,7 @@ class PropertyPatternValidator:
 
                 type_list: typing.List[str] = pats[PropertyPattern.Action.NODE2_TYPE].values
                 if node2_type_name not in type_list:
-                    print("Row %d: the node2 KGTK datatype '%s' is not in the list (%s)" % (rownum, node2_type_name, ", ".join(type_list)),
+                    print("Row %d: the node2 KGTK datatype '%s' is not in the list of node2 types: %s" % (rownum, node2_type_name, ", ".join(type_list)),
                           file=self.error_file, flush=True)
                     result = False
 
@@ -335,11 +336,13 @@ class PropertyPatternValidator:
 
 def main():
     parser: ArgumentParser = ArgumentParser()
-    parser.add_argument(      "--input-file", dest="input_file", help="The input file to validate.", type=Path)
-    parser.add_argument(      "--pattern-file", dest="pattern_file", help="The property pattern file to load.", required=True, type=Path)
+    parser.add_argument("-i", "--input-file", dest="input_file", help="The input file to validate. (default stdin)", type=Path, default="-")
+    parser.add_argument(      "--pattern-file", dest="pattern_file", help="The property pattern file to load.", type=Path, required=True)
+    parser.add_argument("-o", "--output-file", dest="output_file", help="The output file for good records. (optional)", type=Path)
+    parser.add_argument(      "--reject-file", dest="reject_file", help="The output file for bad records. (optional)", type=Path)
 
     KgtkReader.add_debug_arguments(parser, expert=True)
-    KgtkReaderOptions.add_arguments(parser, validate_by_default=True, expert=True)
+    KgtkReaderOptions.add_arguments(parser, expert=True)
     KgtkValueOptions.add_arguments(parser)
     args: Namespace = parser.parse_args()
 
@@ -364,37 +367,63 @@ def main():
                                                   very_verbose=args.very_verbose,
     )
 
-    if args.input_file is not None:
-        ikr: KgtkReader = KgtkReader.open(args.input_file,
-                                          error_file=error_file,
-                                          mode=KgtkReaderMode.EDGE,
-                                          options=reader_options,
-                                          value_options=value_options,
-                                          verbose=args.verbose,
-                                          very_verbose=args.very_verbose)
+    ikr: KgtkReader = KgtkReader.open(args.input_file,
+                                      error_file=error_file,
+                                      mode=KgtkReaderMode.EDGE,
+                                      options=reader_options,
+                                      value_options=value_options,
+                                      verbose=args.verbose,
+                                      very_verbose=args.very_verbose)
 
-        ppv: PropertyPatternValidator = PropertyPatternValidator.new(pps,
-                                                                     ikr,
-                                                                     value_options=value_options,
-                                                                     error_file=error_file,
-                                                                     verbose=args.verbose,
-                                                                     very_verbose=args.very_verbose)
+    ppv: PropertyPatternValidator = PropertyPatternValidator.new(pps,
+                                                                 ikr,
+                                                                 value_options=value_options,
+                                                                 error_file=error_file,
+                                                                 verbose=args.verbose,
+                                                                 very_verbose=args.very_verbose)
 
-        input_row_count: int = 0
-        valid_row_count: int = 0
+    input_row_count: int = 0
+    valid_row_count: int = 0
+    output_row_count: int = 0
+    reject_row_count: int = 0
 
-        row: typing.List[str]
-        for row in ikr:
-            input_row_count += 1
-            result: bool = ppv.validate(input_row_count, row)
-            if result:
-                valid_row_count += 1
+    okw: KgtkWriter = None
+    if args.output_file is not None:
+        okw = KgtkWriter.open(ikr.column_names, args.output_file)
+        
 
-        print("Read %d input rows, %d valid." % (input_row_count, valid_row_count), file=error_file, flush=True)
+    rkw: KgtkWriter = None
+    if args.reject_file is not None:
+        rkw = KgtkWriter.open(ikr.column_names, args.reject_file)
+        
 
-        ikr.close()
+    row: typing.List[str]
+    for row in ikr:
+        input_row_count += 1
+        result: bool = ppv.validate(input_row_count, row)
+        if result:
+            valid_row_count += 1
+            if okw is not None:
+                okw.write(row)
+                output_row_count += 1
+        else:
+            if rkw is not None:
+                rkw.write(row)
+                reject_row_count += 1
+                
 
+    print("Read %d input rows, %d valid." % (input_row_count, valid_row_count), file=error_file, flush=True)
+    if okw is not None:
+        print("Wrote %d output rows." % (output_row_count), file=error_file, flush=True)
+    if rkw is not None:
+        print("Wrote %d reject rows." % (reject_row_count), file=error_file, flush=True)
+
+    ikr.close()
     pkr.close()
+    if okw is not None:
+        okw.close()
+    if rkw is not None:
+        rkw.close()
 
 if __name__ == "__main__":
     main()
