@@ -6,6 +6,7 @@ nav:
   - 'Import commands':
       - 'import-atomic': 'import/import_atomic.md'
       - 'import-conceptnet': 'import/import_conceptnet.md'
+      - 'import-concept-pairs': 'import/import_concept_pairs.md'
       - 'import-ntriples': 'import/import_ntriples.md'
       - 'import-visualgenome': 'import/import_visualgenome.md'
       - 'import-wikidata': 'import/import_wikidata.md'
