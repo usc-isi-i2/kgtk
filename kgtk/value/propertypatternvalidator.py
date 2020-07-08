@@ -309,6 +309,46 @@ class PropertyPatternValidator:
         print("Row %d: the %s value '%s' does not match the %s pattern for %s" % (rownum, who, item, who, prop), file=self.error_file, flush=True)
         return False
 
+    def validate_minval(self, rownum: int, prop: str, minval: typing.Optional[float], node2_value: KgtkValue)->bool:
+        if minval is None:
+            return True
+
+        if not node2_value.is_number_or_quantity():
+            return True
+        
+        if node2_value.fields is None:
+            return True
+        
+        if node2_value.fields.number is None:
+            return True
+        number: float = float(node2_value.fields.number)
+
+        if number >= minval:
+            return True
+
+        print("Row: %d: prop %s value %f is less than minval %f." % (rownum, prop, number, minval), file=self.error_file, flush=True)
+        return False
+
+    def validate_maxval(self, rownum: int, prop: str, maxval: typing.Optional[float], node2_value: KgtkValue)->bool:
+        if maxval is None:
+            return True
+
+        if not node2_value.is_number_or_quantity():
+            return True
+        
+        if node2_value.fields is None:
+            return True
+        
+        if node2_value.fields.number is None:
+            return True
+        number: float = float(node2_value.fields.number)
+
+        if number <= maxval:
+            return True
+
+        print("Row: %d: prop %s value %f is greater than maxval %f." % (rownum, prop, number, maxval), file=self.error_file, flush=True)
+        return False
+
     def validate_node1(self,
                        rownum: int,
                        node1: str,
@@ -388,6 +428,12 @@ class PropertyPatternValidator:
 
         if PropertyPattern.Action.NODE2_PATTERN in pats:
             result &= self.validate_pattern(rownum, node2_value.value, prop, pats[PropertyPattern.Action.NODE2_PATTERN].pattern, "node2")
+
+        if PropertyPattern.Action.MINVAL in pats:
+            result &= self.validate_minval(rownum, prop, pats[PropertyPattern.Action.MINVAL].number, node2_value)
+
+        if PropertyPattern.Action.MAXVAL in pats:
+            result &= self.validate_maxval(rownum, prop, pats[PropertyPattern.Action.MAXVAL].number, node2_value)
 
         return result
 
