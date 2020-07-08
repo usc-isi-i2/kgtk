@@ -67,7 +67,7 @@ def run(input_file: KGTKFiles, directed, max_hops, source_nodes, target_nodes):
 
         if 'id' not in p:
             raise KGTKException('Error: no id column found')
-
+        
         G = load_graph_from_csv(filename,
                                  skip_first=True,
                                  directed=directed,
