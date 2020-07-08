@@ -21,3 +21,5 @@ backp	node1_type	symbol
 backp	node2_type	string
 min20	minval	20
 max30	maxval	30
+justonce	minoccurs	1
+justonce	maxoccurs	1
