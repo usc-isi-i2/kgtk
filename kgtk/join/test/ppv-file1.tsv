@@ -19,3 +19,5 @@ backp	node1_column	node2
 backp	node2_column	node1
 backp	node1_type	symbol
 backp	node2_type	string
+min20	minval	20
+max30	maxval	30

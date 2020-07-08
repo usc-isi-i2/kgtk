@@ -20,3 +20,7 @@ xvalue2	xvalue	y10
 ztest	zprop1	"ztring1"
 ztest	zprop1	ztring2
 backtest	backp	"backwards"
+min20-fail	min20	19
+min20-pass	min20	21
+max30-fail	max30	31
+max30-pass	max30	29
