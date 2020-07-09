@@ -80,13 +80,13 @@ def run(input_file: KGTKFiles,
 
     if verbose:
         if str(input_file) == "-":
-            print("Cleaning data from '%s'" % str(input_kgtk_file), file=error_file, flush=True)
-        else:
             print ("Cleaning data from stdin", file=error_file, flush=True)
-        if str(output_file) == "-":
-            print("Writing data to '%s'" % str(output_kgtk_file), file=error_file, flush=True)
         else:
+            print("Cleaning data from '%s'" % str(input_kgtk_file), file=error_file, flush=True)
+        if str(output_file) == "-":
             print ("Writing data to stdout", file=error_file, flush=True)
+        else:
+            print("Writing data to '%s'" % str(output_kgtk_file), file=error_file, flush=True)
                 
     try:
         kr: KgtkReader = KgtkReader.open(input_kgtk_file,
