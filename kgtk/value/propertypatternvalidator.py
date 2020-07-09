@@ -36,14 +36,18 @@ class PropertyPattern:
         # LABEL_COLUM = "label_column"
         MINVAL = "minval"
         MAXVAL = "maxval"
+        MUSTOCCUR = "mustoccur"
         MINOCCURS = "minoccurs"
         MAXOCCURS = "maxoccurs"
         ISA = "isa"
         MATCHES = "matches"
         LABEL_PATTERN = "label_pattern"
+        UNKNOWN = "unknown"
+        REJECT = "reject"
+
         MINDISTINCT = "mindistinct"
         MAXDISTINCT = "maxdistinct"
-        REQUIRED_IN = "required_id"
+
         MINDATE = "mindate"
         MAXDATE = "maxdate"
         
@@ -117,7 +121,7 @@ class PropertyPattern:
                 # cls.Action.LABEL_COLUM,
                 cls.Action.NODE1_COLUMN,
                 cls.Action.NODE2_COLUMN,
-                cls.Action.REQUIRED_IN,):
+        ):
             if label_value.is_symbol():
                 column_names.append(node2_value.value)
             else:
@@ -149,7 +153,11 @@ class PropertyPattern:
 
         truth: bool = False
         if action in (cls.Action.NODE1_ALLOW_LIST,
-                      cls.Action.NODE2_ALLOW_LIST,):
+                      cls.Action.NODE2_ALLOW_LIST,
+                      cls.Action.MUSTOCCUR,
+                      cls.Action.UNKNOWN,
+                      cls.Action.REJECT,
+        ):
             if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
                 truth = node2_value.fields.truth
             else:
@@ -183,8 +191,9 @@ class PropertyPatternFactory:
 @attr.s(slots=True, frozen=True)
 class PropertyPatterns:
     patterns: typing.Mapping[str, typing.Mapping[PropertyPattern.Action, PropertyPattern]] = attr.ib()
-
     matches: typing.Mapping[str, typing.Pattern] = attr.ib()
+    mustoccur: typing.Set[str] = attr.ib()
+    unknown: typing.Set[str] = attr.ib()
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -195,6 +204,8 @@ class PropertyPatterns:
     )->'PropertyPatterns':
         patmap: typing.MutableMapping[str, typing.MutableMapping[PropertyPattern.Action, PropertyPattern]] = { }
         matches: typing.MutableMapping[str, typing.Pattern] = { }
+        mustoccur: typing.Set[str] = set()
+        unknown: typing.Set[str] = set()
         
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
@@ -225,8 +236,12 @@ class PropertyPatterns:
                 print("loaded %s->%s" % (prop_datatype, action.value), file=error_file, flush=True)
             if action == PropertyPattern.Action.MATCHES and pp.pattern is not None:
                 matches[prop_datatype] = pp.pattern
+            if action == PropertyPattern.Action.MUSTOCCUR and pp.truth:
+                mustoccur.add(prop_datatype)
+            if action == PropertyPattern.Action.UNKNOWN and pp.truth:
+                unknown.add(prop_datatype)
 
-        return cls(patmap, matches)
+        return cls(patmap, matches, mustoccur, unknown)
 
     def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
         if prop in self.patterns:
@@ -257,6 +272,7 @@ class PropertyPatternValidator:
     isa_scoreboard: typing.Set[str] = attr.ib(factory=set)
 
     # The occurance counting scoreboard:
+    # node1->prop->count
     occurs_scoreboard: typing.MutableMapping[str, typing.MutableMapping[str, int]] = attr.ib(factory=dict)
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
@@ -392,14 +408,25 @@ class PropertyPatternValidator:
             result &= self.validate_pattern(rownum, node1_value.value, prop, pats[PropertyPattern.Action.NODE1_PATTERN].pattern, "node1")
 
         if PropertyPattern.Action.MINOCCURS in pats or PropertyPattern.Action.MAXOCCURS in pats:
-            if prop not in self.occurs_scoreboard:
-                self.occurs_scoreboard[prop] = { }
-            if node1_value.value in self.occurs_scoreboard[prop]:
-                self.occurs_scoreboard[prop][node1_value.value] += 1
+            if node1_value.value not in self.occurs_scoreboard:
+                self.occurs_scoreboard[node1_value.value] = { }
+            if prop in self.occurs_scoreboard[node1_value.value]:
+                self.occurs_scoreboard[node1_value.value][prop] += 1
             else:
-                self.occurs_scoreboard[prop][node1_value.value] = 1
+                self.occurs_scoreboard[node1_value.value][prop] = 1
 
         return result
+
+    def setup_mustoccur(self, rownum: int, row: typing.List[str]):
+        prop: str
+        for prop in sorted(self.pps.mustoccur):
+            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
+            node1_idx: int = self.get_idx(rownum, prop, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
+            node1 = row[node1_idx]
+            if node1 not in self.occurs_scoreboard:
+                self.occurs_scoreboard[node1] = { }
+            if prop not in self.occurs_scoreboard[node1]:
+                self.occurs_scoreboard[node1][prop] = 0
 
     def validate_node2(self,
                        rownum: int,
@@ -456,7 +483,10 @@ class PropertyPatternValidator:
             if newprop in self.isa_scoreboard:
                 print("Row %d: isa loop detected with %s." % (rownum, newprop), file=self.error_file, flush=True)
             else:
-                result &= self.validate_prop(rownum, row, newprop)
+                valid: bool
+                matched: bool
+                valid, matched = self.validate_prop(rownum, row, newprop)
+                result &= valid
         return result
 
     def get_idx(self,
@@ -477,11 +507,20 @@ class PropertyPatternValidator:
         else:
             return default_idx        
 
-    def validate_prop(self, rownum: int, row: typing.List[str], prop: str)->bool:
+    def validate_prop(self, rownum: int, row: typing.List[str], prop: str)->typing.Tuple[bool, bool]:
         result: bool = True # Everying's good until we discover otherwise.
+        matched: bool = False
 
         if prop in self.pps.patterns:
+            matched = True
             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
+
+            if PropertyPattern.Action.REJECT in pats and pats[PropertyPattern.Action.REJECT].truth:
+                print("Row %d: rejecting property '%s'." % (rownum, row[self.label_idx]), file=self.error_file, flush=True)
+
+            if PropertyPattern.Action.LABEL_PATTERN in pats:
+                result &= self.validate_pattern(rownum, row[self.label_idx], prop, pats[PropertyPattern.Action.LABEL_PATTERN].pattern, "label")
+
             node1_idx: int = self.get_idx(rownum, prop, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
             if node1_idx >= 0:
                 result &= self.validate_node1(rownum, row[node1_idx], prop, pats)
@@ -497,24 +536,36 @@ class PropertyPatternValidator:
             if PropertyPattern.Action.ISA in pats:
                 result &= self.validate_isa(rownum, row, prop, pats[PropertyPattern.Action.ISA].values)
 
-            if PropertyPattern.Action.LABEL_PATTERN in pats:
-                result &= self.validate_pattern(rownum, row[self.label_idx], prop, pats[PropertyPattern.Action.LABEL_PATTERN].pattern, "label")
-
-        return result
+        return result, matched
 
     def validate(self, rownum: int, row: typing.List[str])->bool:
         result: bool = True # Everying's good until we discover otherwise.
+        matched_any: bool = False
 
         self.isa_scoreboard.clear()
+        if len(self.pps.mustoccur) > 0:
+            self.setup_mustoccur(rownum, row)
 
         result &= self.validate_not_in(rownum, row)
         prop: str = row[self.label_idx]
-        result &= self.validate_prop(rownum, row, prop)
+        valid: bool
+        matched: bool
+        valid, matched = self.validate_prop(rownum, row, prop)
+        result &= valid
+        matched_any |= matched
 
         prop2: str
         for prop2 in sorted(self.pps.matches.keys()):
             if self.pps.matches[prop2].fullmatch(prop):
-                result &= self.validate_prop(rownum, row, prop2)
+                valid, matched = self.validate_prop(rownum, row, prop2)
+                result &= valid
+                matched_any |= matched
+
+        if not matched_any:
+            unknown_prop: str
+            for unknown_prop in self.pps.unknown:
+                valid, matched = self.validate_prop(rownum, row, unknown_prop)
+                result &= valid
 
         return result
 
@@ -525,17 +576,22 @@ class PropertyPatternValidator:
         node1 value, then property?
         """
         result: bool = True
-        prop: str
-        for prop in sorted(self.occurs_scoreboard.keys()):
-            nodecounts: typing.Mapping[str, int] = self.occurs_scoreboard[prop]
-            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
-            node1: str
-            for node1 in sorted(nodecounts.keys()):
-                count: int = nodecounts[node1]
+        node1: str
+        for node1 in sorted(self.occurs_scoreboard.keys()):
+            propcounts: typing.Mapping[str, int] = self.occurs_scoreboard[node1]
+            prop: str
+            for prop in sorted(propcounts.keys()):
+                count: int = propcounts[prop]
+                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
                 if PropertyPattern.Action.MINOCCURS in pats:
                     ppmin: PropertyPattern = pats[PropertyPattern.Action.MINOCCURS]
                     if ppmin.intval is not None and count < ppmin.intval:
                         print("Property '%s' occured %d times for node1 '%s', minimum is %d." % (prop, count, node1, ppmin.intval), file=self.error_file, flush=True)
+                        result = False
+                elif PropertyPattern.Action.MUSTOCCUR in pats:
+                    ppmust: PropertyPattern = pats[PropertyPattern.Action.MUSTOCCUR]
+                    if ppmust.truth and count == 0:
+                        print("Property '%s' occured %d times for node1 '%s', minimum is %d." % (prop, count, node1, 1), file=self.error_file, flush=True)
                         result = False
                 if PropertyPattern.Action.MAXOCCURS in pats:
                     ppmax: PropertyPattern = pats[PropertyPattern.Action.MAXOCCURS]
