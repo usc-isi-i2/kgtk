@@ -236,7 +236,7 @@ def add_arguments(parser: KGTKArgumentParser):
     # model name
     all_models_names = ALL_EMBEDDING_MODELS_NAMES
     parser.add_argument('-m', '--model', action='store', nargs='+', dest='all_models_names',
-                        default="bert-base-wikipedia-sections-mean-tokens", choices=all_models_names,
+                        default="bert-base-nli-cls-token", choices=all_models_names,
                         help="the model to used for embedding")
     # parser.add_argument('-i', '--input', action='store', nargs='+', dest='input_uris',
     #                     help="input path", )
