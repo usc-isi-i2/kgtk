@@ -91,7 +91,7 @@ def run(input_file: KGTKFiles):
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
-        out_columns=['node1', 'label', 'node2', 'node1_label', 'label_label', 'node2_label', 'label_dimension', 'source', 'weight', 'creator', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'weight', 'source', 'origin', 'sentence', 'question']
 
         df = pd.read_csv(filename,index_col=0)
         df.iloc[:,:9] = df.iloc[:,:9].apply(lambda col: col.apply(json.loads))
@@ -119,9 +119,9 @@ def run(input_file: KGTKFiles):
 
                     question=make_question(first_event_label, rel_label)
 
-                    label=make_node(c)
+                    relation=make_node(c)
 
-                    this_row=[n1, label, n2, event_label, rel_label, value_label, '', 'AT', "1.0", "", sentence, question]
+                    this_row=[n1, relation, n2, event_label, value_label, rel_label, '', '', 'AT', "", sentence, question]
 
                     sys.stdout.write('\t'.join(this_row) + '\n')
 
