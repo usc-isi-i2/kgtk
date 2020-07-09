@@ -27,3 +27,9 @@ mustoccur	mustoccur	True
 unknown	unknown	True
 unknown	reject	True
 reject	reject	True
+dist5-1	mindistinct	5
+dist5-1	maxdistinct	5
+dist5-2	mindistinct	5
+dist5-2	maxdistinct	5
+dist5-3	mindistinct	5
+dist5-3	maxdistinct	5

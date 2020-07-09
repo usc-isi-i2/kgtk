@@ -29,3 +29,15 @@ justonce-fail	justonce	xxx1
 justonce-fail	justonce	xxx2
 trouble-fail	trouble	xxx3
 reject-fail	reject	xxx3
+dist5-low-fail	dist5-1	x1
+dist5-pass	dist5-2	x1
+dist5-pass	dist5-2	x2
+dist5-pass	dist5-2	x3
+dist5-pass	dist5-2	x4
+dist5-pass	dist5-2	x5
+dist5-high-fail	dist5-3	x1
+dist5-high-fail	dist5-3	x2
+dist5-high-fail	dist5-3	x3
+dist5-high-fail	dist5-3	x4
+dist5-high-fail	dist5-3	x5
+dist5-high-fail	dist5-3	x6
