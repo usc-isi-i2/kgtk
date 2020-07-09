@@ -308,6 +308,8 @@ class PropertyPatternValidator:
     minoccurs_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
     maxoccurs_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
 
+    mustoccur_node1_idx: typing.MutableMapping[str, int] = attr.ib(factory=dict)
+
     # The distinct value counting scoreboard:
     # prop->set(values)
     distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
@@ -640,12 +642,19 @@ class PropertyPatternValidator:
 
     def setup_mustoccur(self, rownum: int, row: typing.List[str]):
         """
-        This is rather expensive to do for each line.
+        This is rather expensive to do for each line, mainly because each prop_or_datatype
+        might have its own idea of which column to treat as the node1 column.
         """
         prop_or_datatype: str
         for prop_or_datatype in sorted(self.pps.mustoccur):
-            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
-            node1_idx: int = self.get_idx(rownum, prop_or_datatype, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
+            node1_idx: int
+            if prop_or_datatype in self.mustoccur_node1_idx:
+                node1_idx = self.mustoccur_node1_idx[prop_or_datatype]
+            else:            
+                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
+                node1_idx = self.get_idx(rownum, prop_or_datatype, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
+                self.mustoccur_node1_idx[prop_or_datatype] = node1_idx
+
             node1 = row[node1_idx]
             if node1 not in self.occurs_scoreboard:
                 self.occurs_scoreboard[node1] = { }
