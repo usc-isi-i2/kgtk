@@ -194,6 +194,7 @@ class PropertyPatterns:
     matches: typing.Mapping[str, typing.Pattern] = attr.ib()
     mustoccur: typing.Set[str] = attr.ib()
     unknown: typing.Set[str] = attr.ib()
+    distinct: typing.Set[str] = attr.ib()
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -206,6 +207,7 @@ class PropertyPatterns:
         matches: typing.MutableMapping[str, typing.Pattern] = { }
         mustoccur: typing.Set[str] = set()
         unknown: typing.Set[str] = set()
+        distinct: typing.Set[str] = set()
         
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
@@ -236,12 +238,16 @@ class PropertyPatterns:
                 print("loaded %s->%s" % (prop_datatype, action.value), file=error_file, flush=True)
             if action == PropertyPattern.Action.MATCHES and pp.pattern is not None:
                 matches[prop_datatype] = pp.pattern
-            if action == PropertyPattern.Action.MUSTOCCUR and pp.truth:
+            elif action == PropertyPattern.Action.MUSTOCCUR and pp.truth:
                 mustoccur.add(prop_datatype)
-            if action == PropertyPattern.Action.UNKNOWN and pp.truth:
+            elif action == PropertyPattern.Action.UNKNOWN and pp.truth:
                 unknown.add(prop_datatype)
+            elif action == PropertyPattern.Action.MINDISTINCT:
+                distinct.add(prop_datatype)
+            elif action == PropertyPattern.Action.MAXDISTINCT:
+                distinct.add(prop_datatype)
 
-        return cls(patmap, matches, mustoccur, unknown)
+        return cls(patmap, matches, mustoccur, unknown, distinct)
 
     def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
         if prop in self.patterns:
@@ -274,6 +280,10 @@ class PropertyPatternValidator:
     # The occurance counting scoreboard:
     # node1->prop->count
     occurs_scoreboard: typing.MutableMapping[str, typing.MutableMapping[str, int]] = attr.ib(factory=dict)
+
+    # The distinct value counting scoreboard:
+    # prop->set(values)
+    distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
         """
@@ -473,6 +483,11 @@ class PropertyPatternValidator:
         if PropertyPattern.Action.MAXVAL in pats:
             result &= self.validate_maxval(rownum, prop, pats[PropertyPattern.Action.MAXVAL].number, node2_value)
 
+        if prop in self.pps.distinct:
+            if prop not in self.distinct_scoreboard:
+                self.distinct_scoreboard[prop] = set()
+            self.distinct_scoreboard[prop].add(node2_value.value)
+        
         return result
 
     def validate_isa(self, rownum: int, row: typing.List[str], prop: str, newprops: typing.List[str])->bool:
@@ -571,9 +586,8 @@ class PropertyPatternValidator:
 
     def report_occurance_violations(self)->bool:
         """
-        Print of a minoccurs or maxoccurs violation happened. The results are
-        grouped by property, then by node1 value.  Perhaps the users would prefer
-        node1 value, then property?
+        Print a line when a minoccurs or maxoccurs violation happened. The results are
+        grouped by node1 value, then by property.
         """
         result: bool = True
         node1: str
@@ -598,6 +612,33 @@ class PropertyPatternValidator:
                     if ppmax.intval is not None and count > ppmax.intval:
                         print("Property '%s' occured %d times for node1 '%s', maximum is %d." % (prop, count, node1, ppmax.intval), file=self.error_file, flush=True)
                         result = False
+
+        return result
+
+    def report_distinct_violations(self)->bool:
+        """
+        Print a line when a mindistinct or maxdistinct violation happened. The results are
+        grouped by property, then by node2 value.
+        """
+        result: bool = True
+        prop: str
+        for prop in sorted(self.pps.distinct):
+            count: int
+            if prop in self.distinct_scoreboard:
+                count = len(self.distinct_scoreboard[prop])
+            else:
+                count = 0
+            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
+            if PropertyPattern.Action.MINDISTINCT in pats:
+                mindpp: PropertyPattern = pats[PropertyPattern.Action.MINDISTINCT]
+                if mindpp.intval is not None and count < mindpp.intval:
+                    print("Property '%s' has %d distinct node2 values, minimum is %d." % (prop, count, mindpp.intval), file=self.error_file, flush=True)
+                    result = False
+            if PropertyPattern.Action.MAXDISTINCT in pats:
+                maxdpp: PropertyPattern = pats[PropertyPattern.Action.MAXDISTINCT]
+                if maxdpp.intval is not None and count > maxdpp.intval:
+                    print("Property '%s' has %d distinct node2 values, maximum is %d." % (prop, count, maxdpp.intval), file=self.error_file, flush=True)
+                    result = False
 
         return result
 
@@ -698,6 +739,7 @@ def main():
                 reject_row_count += 1
 
     ppv.report_occurance_violations()
+    ppv.report_distinct_violations()
 
     print("Read %d input rows, %d valid." % (input_row_count, valid_row_count), file=error_file, flush=True)
     if okw is not None:
