@@ -646,7 +646,7 @@ class PropertyPatternValidator:
         might have its own idea of which column to treat as the node1 column.
         """
         prop_or_datatype: str
-        for prop_or_datatype in sorted(self.pps.mustoccur):
+        for prop_or_datatype in self.pps.mustoccur:
             node1_idx: int
             if prop_or_datatype in self.mustoccur_node1_idx:
                 node1_idx = self.mustoccur_node1_idx[prop_or_datatype]
