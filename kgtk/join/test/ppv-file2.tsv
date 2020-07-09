@@ -41,3 +41,5 @@ dist5-high-fail	dist5-3	x3
 dist5-high-fail	dist5-3	x4
 dist5-high-fail	dist5-3	x5
 dist5-high-fail	dist5-3	x6
+mustoccur-fail	mustnotoccur	qupid
+mustoccur-pass	mustoccur	qupid

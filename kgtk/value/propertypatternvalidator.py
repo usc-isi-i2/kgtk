@@ -39,6 +39,9 @@ class PropertyPattern:
         MUSTOCCUR = "mustoccur"
         MINOCCURS = "minoccurs"
         MAXOCCURS = "maxoccurs"
+
+        GROUPBYPROP = "groupbyprop"
+        
         ISA = "isa"
         MATCHES = "matches"
         LABEL_PATTERN = "label_pattern"
@@ -157,6 +160,7 @@ class PropertyPattern:
                       cls.Action.MUSTOCCUR,
                       cls.Action.UNKNOWN,
                       cls.Action.REJECT,
+                      cls.Action.GROUPBYPROP,
         ):
             if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
                 truth = node2_value.fields.truth
@@ -193,8 +197,10 @@ class PropertyPatterns:
     patterns: typing.Mapping[str, typing.Mapping[PropertyPattern.Action, PropertyPattern]] = attr.ib()
     matches: typing.Mapping[str, typing.Pattern] = attr.ib()
     mustoccur: typing.Set[str] = attr.ib()
-    unknown: typing.Set[str] = attr.ib()
+    occurs: typing.Set[str] = attr.ib()
     distinct: typing.Set[str] = attr.ib()
+    groupbyprop: typing.Set[str] = attr.ib()
+    unknown: typing.Set[str] = attr.ib()
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -206,8 +212,10 @@ class PropertyPatterns:
         patmap: typing.MutableMapping[str, typing.MutableMapping[PropertyPattern.Action, PropertyPattern]] = { }
         matches: typing.MutableMapping[str, typing.Pattern] = { }
         mustoccur: typing.Set[str] = set()
-        unknown: typing.Set[str] = set()
+        occurs: typing.Set[str] = set()
         distinct: typing.Set[str] = set()
+        groupbyprop: typing.Set[str] = set()
+        unknown: typing.Set[str] = set()
         
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
@@ -240,14 +248,28 @@ class PropertyPatterns:
                 matches[prop_datatype] = pp.pattern
             elif action == PropertyPattern.Action.MUSTOCCUR and pp.truth:
                 mustoccur.add(prop_datatype)
-            elif action == PropertyPattern.Action.UNKNOWN and pp.truth:
-                unknown.add(prop_datatype)
+                occurs.add(prop_datatype)
+            elif action == PropertyPattern.Action.MINOCCURS:
+                occurs.add(prop_datatype)
+            elif action == PropertyPattern.Action.MAXOCCURS:
+                occurs.add(prop_datatype)
             elif action == PropertyPattern.Action.MINDISTINCT:
                 distinct.add(prop_datatype)
             elif action == PropertyPattern.Action.MAXDISTINCT:
                 distinct.add(prop_datatype)
+            elif action == PropertyPattern.Action.GROUPBYPROP and pp.truth:
+                groupbyprop.add(prop_datatype)
+            elif action == PropertyPattern.Action.UNKNOWN and pp.truth:
+                unknown.add(prop_datatype)
 
-        return cls(patmap, matches, mustoccur, unknown, distinct)
+        return cls(patterns=patmap,
+                   matches=matches,
+                   mustoccur=mustoccur,
+                   occurs=occurs,
+                   distinct=distinct,
+                   groupbyprop=groupbyprop,
+                   unknown=unknown,
+        )
 
     def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
         if prop in self.patterns:
@@ -281,9 +303,19 @@ class PropertyPatternValidator:
     # node1->prop->count
     occurs_scoreboard: typing.MutableMapping[str, typing.MutableMapping[str, int]] = attr.ib(factory=dict)
 
+    # The occurs limits after ISA and GROUPBY:
+    # prop->limit
+    minoccurs_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
+    maxoccurs_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
+
     # The distinct value counting scoreboard:
     # prop->set(values)
     distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
+
+    # The distinct limits after ISA and GROUPBY:
+    # prop->limit
+    mindistinct_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
+    maxdistinct_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
         """
@@ -306,39 +338,39 @@ class PropertyPatternValidator:
                         result = False
         return result
 
-    def validate_type(self, rownum: int, value: KgtkValue, prop: str, allowed_types: typing.List[str], who: str)->bool:
+    def validate_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, allowed_types: typing.List[str], who: str)->bool:
         if value.data_type is None:
             print("Row %d: the %s value '%s' KGTK type is missing." % (rownum, who, value.value), file=self.error_file, flush=True)
             return False
         else:
             type_name: str = value.data_type.lower()
             if type_name not in allowed_types:
-                print("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop,
+                print("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
                                                                                                                KgtkFormat.LIST_SEPARATOR.join(allowed_types)),
                       file=self.error_file, flush=True)
                 return False
             return True
 
-    def validate_value(self, rownum: int, value: KgtkValue, prop: str, allowed_values: typing.List[str], who: str)->bool:
+    def validate_value(self, rownum: int, value: KgtkValue, prop_or_datatype: str, allowed_values: typing.List[str], who: str)->bool:
         if value.value not in allowed_values:
-            print("Row %d: the %s value '%s' is not in the list of %s values for %s: %s" % (rownum, who, value.value, who, prop,
+            print("Row %d: the %s value '%s' is not in the list of %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
                                                                                             KgtkFormat.LIST_SEPARATOR.join(allowed_values)),
                   file=self.error_file, flush=True)
             return False
         return True        
 
-    def validate_pattern(self, rownum: int, item: str, prop: str, pattern: typing.Optional[typing.Pattern], who: str)->bool:
+    def validate_pattern(self, rownum: int, item: str, prop_or_datatype: str, pattern: typing.Optional[typing.Pattern], who: str)->bool:
         if pattern is None:
-            raise ValueError("Missing %s pattern for %s" % (who, prop))
+            raise ValueError("Missing %s pattern for %s" % (who, prop_or_datatype))
 
         match: typing.Optional[typing.Match] = pattern.fullmatch(item)
         if match:
             return True
 
-        print("Row %d: the %s value '%s' does not match the %s pattern for %s" % (rownum, who, item, who, prop), file=self.error_file, flush=True)
+        print("Row %d: the %s value '%s' does not match the %s pattern for %s" % (rownum, who, item, who, prop_or_datatype), file=self.error_file, flush=True)
         return False
 
-    def validate_minval(self, rownum: int, prop: str, minval: typing.Optional[float], node2_value: KgtkValue)->bool:
+    def validate_minval(self, rownum: int, prop_or_datatype: str, minval: typing.Optional[float], node2_value: KgtkValue)->bool:
         if minval is None:
             return True
 
@@ -355,10 +387,10 @@ class PropertyPatternValidator:
         if number >= minval:
             return True
 
-        print("Row: %d: prop %s value %f is less than minval %f." % (rownum, prop, number, minval), file=self.error_file, flush=True)
+        print("Row: %d: prop_or_datatype %s value %f is less than minval %f." % (rownum, prop_or_datatype, number, minval), file=self.error_file, flush=True)
         return False
 
-    def validate_maxval(self, rownum: int, prop: str, maxval: typing.Optional[float], node2_value: KgtkValue)->bool:
+    def validate_maxval(self, rownum: int, prop_or_datatype: str, maxval: typing.Optional[float], node2_value: KgtkValue)->bool:
         if maxval is None:
             return True
 
@@ -375,17 +407,18 @@ class PropertyPatternValidator:
         if number <= maxval:
             return True
 
-        print("Row: %d: prop %s value %f is greater than maxval %f." % (rownum, prop, number, maxval), file=self.error_file, flush=True)
+        print("Row: %d: prop_or_datatype %s value %f is greater than maxval %f." % (rownum, prop_or_datatype, number, maxval), file=self.error_file, flush=True)
         return False
 
     def validate_node1(self,
                        rownum: int,
                        node1: str,
-                       prop: str,
+                       prop_or_datatype: str,
+                       orig_prop: str,
                        pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
         node1_value = KgtkValue(node1, options=self.value_options, parse_fields=True)
         if node1_value.validate():
-            return self.validate_node1_value(rownum, node1_value, prop, pats)
+            return self.validate_node1_value(rownum, node1_value, prop_or_datatype, orig_prop, pats)
         else:
             print("Row %d: the node1 value '%s' is not valid KGTK." % (rownum, node1_value.value), file=self.error_file, flush=True)
             return False
@@ -393,7 +426,8 @@ class PropertyPatternValidator:
     def validate_node1_value(self,
                              rownum: int,
                              node1_value: KgtkValue,
-                             prop: str,
+                             prop_or_datatype: str,
+                             orig_prop: str,
                              pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
         result: bool = True
 
@@ -402,50 +436,53 @@ class PropertyPatternValidator:
                 # Validate each item on the list seperately.
                 list_item: KgtkValue
                 for list_item in node1_value.get_list_items():
-                    result &= self.validate_node1_value(rownum, list_item, prop, pats)
+                    result &= self.validate_node1_value(rownum, list_item, prop_or_datatype, orig_prop, pats)
                 return result
             else:
                 print("Row %d: The node1 value '%s' is not allowed to be a list." % (rownum, node1_value.value), file=self.error_file, flush=True)
                 return False
 
         if PropertyPattern.Action.NODE1_TYPE in pats:
-            result &= self.validate_type(rownum, node1_value, prop, pats[PropertyPattern.Action.NODE1_TYPE].values, "node1")
+            result &= self.validate_type(rownum, node1_value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_TYPE].values, "node1")
 
         if PropertyPattern.Action.NODE1_VALUES in pats:
-            result &= self.validate_value(rownum, node1_value, prop, pats[PropertyPattern.Action.NODE1_VALUES].values, "node1")
+            result &= self.validate_value(rownum, node1_value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_VALUES].values, "node1")
 
         if PropertyPattern.Action.NODE1_PATTERN in pats:
-            result &= self.validate_pattern(rownum, node1_value.value, prop, pats[PropertyPattern.Action.NODE1_PATTERN].pattern, "node1")
+            result &= self.validate_pattern(rownum, node1_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_PATTERN].pattern, "node1")
 
-        if PropertyPattern.Action.MINOCCURS in pats or PropertyPattern.Action.MAXOCCURS in pats:
+        if prop_or_datatype in self.pps.occurs:
+            groupby: str = orig_prop if prop_or_datatype in self.pps.groupbyprop else prop_or_datatype
+            if groupby not in self.minoccurs_limits:
+                if PropertyPattern.Action.MINOCCURS in pats and pats[PropertyPattern.Action.MINOCCURS].intval is not None:
+                    self.minoccurs_limits[groupby] = pats[PropertyPattern.Action.MAXOCCURS].intval
+                else:
+                    self.minoccurs_limits[groupby] = None
+                    
+            if groupby not in self.maxoccurs_limits:
+                if PropertyPattern.Action.MAXOCCURS in pats and pats[PropertyPattern.Action.MAXOCCURS].intval is not None:
+                    self.maxoccurs_limits[groupby] = pats[PropertyPattern.Action.MAXOCCURS].intval
+                else:
+                    self.maxoccurs_limits[groupby] = None
+                    
             if node1_value.value not in self.occurs_scoreboard:
                 self.occurs_scoreboard[node1_value.value] = { }
-            if prop in self.occurs_scoreboard[node1_value.value]:
-                self.occurs_scoreboard[node1_value.value][prop] += 1
+            if prop_or_datatype in self.occurs_scoreboard[node1_value.value]:
+                self.occurs_scoreboard[node1_value.value][groupby] += 1
             else:
-                self.occurs_scoreboard[node1_value.value][prop] = 1
+                self.occurs_scoreboard[node1_value.value][groupby] = 1
 
         return result
-
-    def setup_mustoccur(self, rownum: int, row: typing.List[str]):
-        prop: str
-        for prop in sorted(self.pps.mustoccur):
-            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
-            node1_idx: int = self.get_idx(rownum, prop, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
-            node1 = row[node1_idx]
-            if node1 not in self.occurs_scoreboard:
-                self.occurs_scoreboard[node1] = { }
-            if prop not in self.occurs_scoreboard[node1]:
-                self.occurs_scoreboard[node1][prop] = 0
 
     def validate_node2(self,
                        rownum: int,
                        node2: str,
-                       prop: str,
+                       prop_or_datatype: str,
+                       orig_prop: str,
                        pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
         node2_value = KgtkValue(node2, options=self.value_options, parse_fields=True)
         if node2_value.validate():
-            return self.validate_node2_value(rownum, node2_value, prop, pats)
+            return self.validate_node2_value(rownum, node2_value, prop_or_datatype, orig_prop, pats)
         else:
             print("Row %d: the node2 value '%s' is not valid KGTK." % (rownum, node2_value.value), file=self.error_file, flush=True)
             return False
@@ -453,7 +490,8 @@ class PropertyPatternValidator:
     def validate_node2_value(self,
                              rownum: int,
                              node2_value: KgtkValue,
-                             prop: str,
+                             prop_or_datatype: str,
+                             orig_prop: str,
                              pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
         result: bool = True
 
@@ -462,51 +500,64 @@ class PropertyPatternValidator:
                 # Validate each item on the list seperately.
                 list_item: KgtkValue
                 for list_item in node2_value.get_list_items():
-                    result &= self.validate_node2_value(rownum, list_item, prop, pats)
+                    result &= self.validate_node2_value(rownum, list_item, prop_or_datatype, orig_prop, pats)
                 return result
             else:
                 print("Row %d: The node2 value '%s' is not allowed to be a list." % (rownum, node2_value.value), file=self.error_file, flush=True)
                 return False
 
         if PropertyPattern.Action.NODE2_TYPE in pats:
-            result &= self.validate_type(rownum, node2_value, prop, pats[PropertyPattern.Action.NODE2_TYPE].values, "node2")
+            result &= self.validate_type(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_TYPE].values, "node2")
 
         if PropertyPattern.Action.NODE2_VALUES in pats:
-            result &= self.validate_value(rownum, node2_value, prop, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2")
+            result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2")
 
         if PropertyPattern.Action.NODE2_PATTERN in pats:
-            result &= self.validate_pattern(rownum, node2_value.value, prop, pats[PropertyPattern.Action.NODE2_PATTERN].pattern, "node2")
+            result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_PATTERN].pattern, "node2")
 
         if PropertyPattern.Action.MINVAL in pats:
-            result &= self.validate_minval(rownum, prop, pats[PropertyPattern.Action.MINVAL].number, node2_value)
+            result &= self.validate_minval(rownum, prop_or_datatype, pats[PropertyPattern.Action.MINVAL].number, node2_value)
 
         if PropertyPattern.Action.MAXVAL in pats:
-            result &= self.validate_maxval(rownum, prop, pats[PropertyPattern.Action.MAXVAL].number, node2_value)
+            result &= self.validate_maxval(rownum, prop_or_datatype, pats[PropertyPattern.Action.MAXVAL].number, node2_value)
 
-        if prop in self.pps.distinct:
-            if prop not in self.distinct_scoreboard:
-                self.distinct_scoreboard[prop] = set()
-            self.distinct_scoreboard[prop].add(node2_value.value)
+        if prop_or_datatype in self.pps.distinct:
+            groupby: str = orig_prop if prop_or_datatype in self.pps.groupbyprop else prop_or_datatype
+            if groupby not in self.mindistinct_limits:
+                if PropertyPattern.Action.MINDISTINCT in pats and pats[PropertyPattern.Action.MINDISTINCT].intval is not None:
+                    self.mindistinct_limits[groupby] = pats[PropertyPattern.Action.MAXDISTINCT].intval
+                else:
+                    self.mindistinct_limits[groupby] = None
+                    
+            if groupby not in self.maxdistinct_limits:
+                if PropertyPattern.Action.MAXDISTINCT in pats and pats[PropertyPattern.Action.MAXDISTINCT].intval is not None:
+                    self.maxdistinct_limits[groupby] = pats[PropertyPattern.Action.MAXDISTINCT].intval
+                else:
+                    self.maxdistinct_limits[groupby] = None
+                    
+            if groupby not in self.distinct_scoreboard:
+                self.distinct_scoreboard[groupby] = set()
+            self.distinct_scoreboard[groupby].add(node2_value.value)
         
         return result
 
-    def validate_isa(self, rownum: int, row: typing.List[str], prop: str, newprops: typing.List[str])->bool:
+    def validate_isa(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str, new_datatypes: typing.List[str])->bool:
         result: bool = True # Everying's good until we discover otherwise.
-        self.isa_scoreboard.add(prop)
-        newprop: str
-        for newprop in newprops:
-            if newprop in self.isa_scoreboard:
-                print("Row %d: isa loop detected with %s." % (rownum, newprop), file=self.error_file, flush=True)
+        self.isa_scoreboard.add(prop_or_datatype)
+        new_datatype: str
+        for new_datatype in new_datatypes:
+            if new_datatype in self.isa_scoreboard:
+                print("Row %d: isa loop detected with %s." % (rownum, new_datatype), file=self.error_file, flush=True)
             else:
                 valid: bool
                 matched: bool
-                valid, matched = self.validate_prop(rownum, row, newprop)
+                valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
                 result &= valid
         return result
 
     def get_idx(self,
                 rownum: int,
-                prop: str,
+                prop_or_datatype: str,
                 action: PropertyPattern.Action,
                 pats: typing.Mapping[PropertyPattern.Action, PropertyPattern],
                 default_idx: int,
@@ -517,39 +568,40 @@ class PropertyPatternValidator:
             if column_name in self.column_name_map:
                 return self.column_name_map[column_name]
             else:
-                print("Row %d: prop '%s' %s column name '%s' not found in input file." % (rownum, prop, who, column_name), file=self.error_file, flush=True)
+                print("Row %d: pro_or_datatypep '%s' %s column name '%s' not found in input file." % (rownum, prop_or_datatype, who, column_name),
+                      file=self.error_file, flush=True)
                 return -1
         else:
             return default_idx        
 
-    def validate_prop(self, rownum: int, row: typing.List[str], prop: str)->typing.Tuple[bool, bool]:
+    def validate_prop_or_datatype(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str)->typing.Tuple[bool, bool]:
         result: bool = True # Everying's good until we discover otherwise.
         matched: bool = False
 
-        if prop in self.pps.patterns:
+        if prop_or_datatype in self.pps.patterns:
             matched = True
-            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
+            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
 
             if PropertyPattern.Action.REJECT in pats and pats[PropertyPattern.Action.REJECT].truth:
-                print("Row %d: rejecting property '%s'." % (rownum, row[self.label_idx]), file=self.error_file, flush=True)
+                print("Row %d: rejecting property '%s' based on '%s'." % (rownum, row[self.label_idx], prop_or_datatype), file=self.error_file, flush=True)
 
             if PropertyPattern.Action.LABEL_PATTERN in pats:
-                result &= self.validate_pattern(rownum, row[self.label_idx], prop, pats[PropertyPattern.Action.LABEL_PATTERN].pattern, "label")
+                result &= self.validate_pattern(rownum, row[self.label_idx], prop_or_datatype, pats[PropertyPattern.Action.LABEL_PATTERN].pattern, "label")
 
-            node1_idx: int = self.get_idx(rownum, prop, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
+            node1_idx: int = self.get_idx(rownum, prop_or_datatype, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
             if node1_idx >= 0:
-                result &= self.validate_node1(rownum, row[node1_idx], prop, pats)
+                result &= self.validate_node1(rownum, row[node1_idx], prop_or_datatype, orig_prop, pats)
             else:
                 result = False
 
-            node2_idx: int = self.get_idx(rownum, prop, PropertyPattern.Action.NODE2_COLUMN, pats, self.node2_idx, "node2")
+            node2_idx: int = self.get_idx(rownum, prop_or_datatype, PropertyPattern.Action.NODE2_COLUMN, pats, self.node2_idx, "node2")
             if node2_idx >= 0:
-                result &= self.validate_node2(rownum, row[node2_idx], prop, pats)
+                result &= self.validate_node2(rownum, row[node2_idx], prop_or_datatype, orig_prop, pats)
             else:
                 result = False
                 
             if PropertyPattern.Action.ISA in pats:
-                result &= self.validate_isa(rownum, row, prop, pats[PropertyPattern.Action.ISA].values)
+                result &= self.validate_isa(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.ISA].values)
 
         return result, matched
 
@@ -562,57 +614,77 @@ class PropertyPatternValidator:
             self.setup_mustoccur(rownum, row)
 
         result &= self.validate_not_in(rownum, row)
+
         prop: str = row[self.label_idx]
+
         valid: bool
         matched: bool
-        valid, matched = self.validate_prop(rownum, row, prop)
+        valid, matched = self.validate_prop_or_datatype(rownum, row, prop, prop)
         result &= valid
         matched_any |= matched
 
-        prop2: str
-        for prop2 in sorted(self.pps.matches.keys()):
-            if self.pps.matches[prop2].fullmatch(prop):
-                valid, matched = self.validate_prop(rownum, row, prop2)
+        datatype: str
+        for datatype in sorted(self.pps.matches.keys()):
+            if self.pps.matches[datatype].fullmatch(prop):
+                valid, matched = self.validate_prop_or_datatype(rownum, row, datatype, prop)
                 result &= valid
                 matched_any |= matched
 
         if not matched_any:
-            unknown_prop: str
-            for unknown_prop in self.pps.unknown:
-                valid, matched = self.validate_prop(rownum, row, unknown_prop)
+            unknown_datatype: str
+            for unknown_datatype in self.pps.unknown:
+                valid, matched = self.validate_prop_or_datatype(rownum, row, unknown_datatype, prop)
                 result &= valid
 
         return result
 
+    def setup_mustoccur(self, rownum: int, row: typing.List[str]):
+        """
+        This is rather expensive to do for each line.
+        """
+        prop_or_datatype: str
+        for prop_or_datatype in sorted(self.pps.mustoccur):
+            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
+            node1_idx: int = self.get_idx(rownum, prop_or_datatype, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
+            node1 = row[node1_idx]
+            if node1 not in self.occurs_scoreboard:
+                self.occurs_scoreboard[node1] = { }
+            if prop_or_datatype not in self.occurs_scoreboard[node1]:
+                self.occurs_scoreboard[node1][prop_or_datatype] = 0
+
     def report_occurance_violations(self)->bool:
         """
         Print a line when a minoccurs or maxoccurs violation happened. The results are
-        grouped by node1 value, then by property.
+        ordered by node1 value, then by property.
         """
         result: bool = True
+        limit: typing.Optional[int]
         node1: str
         for node1 in sorted(self.occurs_scoreboard.keys()):
             propcounts: typing.Mapping[str, int] = self.occurs_scoreboard[node1]
-            prop: str
-            for prop in sorted(propcounts.keys()):
-                count: int = propcounts[prop]
-                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
-                if PropertyPattern.Action.MINOCCURS in pats:
-                    ppmin: PropertyPattern = pats[PropertyPattern.Action.MINOCCURS]
-                    if ppmin.intval is not None and count < ppmin.intval:
-                        print("Property '%s' occured %d times for node1 '%s', minimum is %d." % (prop, count, node1, ppmin.intval), file=self.error_file, flush=True)
-                        result = False
-                elif PropertyPattern.Action.MUSTOCCUR in pats:
-                    ppmust: PropertyPattern = pats[PropertyPattern.Action.MUSTOCCUR]
-                    if ppmust.truth and count == 0:
-                        print("Property '%s' occured %d times for node1 '%s', minimum is %d." % (prop, count, node1, 1), file=self.error_file, flush=True)
-                        result = False
-                if PropertyPattern.Action.MAXOCCURS in pats:
-                    ppmax: PropertyPattern = pats[PropertyPattern.Action.MAXOCCURS]
-                    if ppmax.intval is not None and count > ppmax.intval:
-                        print("Property '%s' occured %d times for node1 '%s', maximum is %d." % (prop, count, node1, ppmax.intval), file=self.error_file, flush=True)
+            prop_or_datatype: str
+            for prop_or_datatype in sorted(propcounts.keys()):
+                count: int = propcounts[prop_or_datatype]
+                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
+
+                if prop_or_datatype in self.pps.mustoccur and count == 0:
+                    print("Property or datatype '%s' did not occur for node1 '%s'." % (prop_or_datatype, node1),
+                          file=self.error_file, flush=True)
+                    result = False                    
+                    
+                elif prop_or_datatype in self.minoccurs_limits:
+                    limit = self.minoccurs_limits[prop_or_datatype]
+                    if limit is not None and count < limit:
+                        print("Property or datatype '%s' occured %d times for node1 '%s', minimum is %d." % (prop_or_datatype, count, node1, limit),
+                              file=self.error_file, flush=True)
                         result = False
 
+                if prop_or_datatype in self.maxoccurs_limits:
+                    limit = self.maxoccurs_limits[prop_or_datatype]
+                    if limit is not None and count > limit:
+                        print("Property or datatype '%s' occured %d times for node1 '%s', maximum is %d." % (prop_or_datatype, count, node1, limit),
+                              file=self.error_file, flush=True)
+                        result = False
         return result
 
     def report_distinct_violations(self)->bool:
@@ -621,23 +693,22 @@ class PropertyPatternValidator:
         grouped by property, then by node2 value.
         """
         result: bool = True
-        prop: str
-        for prop in sorted(self.pps.distinct):
-            count: int
-            if prop in self.distinct_scoreboard:
-                count = len(self.distinct_scoreboard[prop])
-            else:
-                count = 0
-            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop]
-            if PropertyPattern.Action.MINDISTINCT in pats:
-                mindpp: PropertyPattern = pats[PropertyPattern.Action.MINDISTINCT]
-                if mindpp.intval is not None and count < mindpp.intval:
-                    print("Property '%s' has %d distinct node2 values, minimum is %d." % (prop, count, mindpp.intval), file=self.error_file, flush=True)
+        prop_or_datatype: str
+        for prop_or_datatype in sorted(self.distinct_scoreboard.keys()):
+            count: int = len(self.distinct_scoreboard[prop_or_datatype])
+
+            if prop_or_datatype in self.mindistinct_limits:
+                limit = self.mindistinct_limits[prop_or_datatype]
+                if limit is not None and count < limit:
+                    print("Property or datatype '%s' has %d distinct node2 values, minimum is %d." % (prop_or_datatype, count, limit),
+                          file=self.error_file, flush=True)
                     result = False
-            if PropertyPattern.Action.MAXDISTINCT in pats:
-                maxdpp: PropertyPattern = pats[PropertyPattern.Action.MAXDISTINCT]
-                if maxdpp.intval is not None and count > maxdpp.intval:
-                    print("Property '%s' has %d distinct node2 values, maximum is %d." % (prop, count, maxdpp.intval), file=self.error_file, flush=True)
+
+            if prop_or_datatype in self.maxdistinct_limits:
+                limit = self.maxdistinct_limits[prop_or_datatype]
+                if limit is not None and count < limit:
+                    print("Property or datatype '%s' has %d distinct node2 values, maximum is %d." % (prop_or_datatype, count, limit),
+                          file=self.error_file, flush=True)
                     result = False
 
         return result
