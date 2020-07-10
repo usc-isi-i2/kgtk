@@ -984,7 +984,6 @@ class PropertyPatternValidator:
         row_number: int
         row: typing.List[str]
         for row_number, row in row_group:
-            print("%s" % "\t".join(row)) # ***
             result &= self.validate_row(row_number, row)
 
         result &= self.report_occurance_violations()
