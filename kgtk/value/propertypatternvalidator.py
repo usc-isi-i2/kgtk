@@ -374,8 +374,11 @@ class PropertyPatternValidator:
     # node1->prop->count
     occurs_scoreboard: typing.MutableMapping[str, typing.MutableMapping[str, int]] = attr.ib(factory=dict)
 
-    # The occurs limits after ISA and GROUPBY:
+    # The cache of occurs limits after ISA and GROUPBY:
     # prop->limit
+    #
+    # Note: this might not work as desired if SWITCH implies
+    # conflicting values.
     minoccurs_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
     maxoccurs_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
 
@@ -385,12 +388,20 @@ class PropertyPatternValidator:
 
     # The distinct limits after ISA and GROUPBY:
     # prop->limit
+    #
+    # Note: this might not work as desired if SWITCH implies
+    # conflicting values.
     mindistinct_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
     maxdistinct_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
 
     # Retain interesting properties or datatypes for requires/prohibits analysis:
     # node1->set(prop_or_datatype)
     interesting_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
+
+    def clear_node1_group(self):
+        self.isa_scoreboard.clear()
+        self.occurs_scoreboard.clear()
+        self.interesting_scoreboard.clear()
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
         """
@@ -963,6 +974,123 @@ class PropertyPatternValidator:
                                         verbose=verbose,
                                         very_verbose=very_verbose)
 
+    def process_node1_group(self,
+                            previous_row_count: int,
+                            row_group: typing.List[typing.List[str]])->bool:
+        result: bool
+
+        row_number: int = previous_row_count
+        row: typing.List[str]
+        for row in row_group:
+            row_number += 1
+            result &= self.validate_row(row_number, row)
+
+        result &= self.report_occurance_violations()
+        result &= self.report_interesting_violations()
+
+        self.clear_node1_group()
+
+        return result
+
+    def process_pregrouped(self,
+                           ikr: KgtkReader,
+                           okw: typing.Optional[KgtkWriter] = None,
+                           rkw: typing.Optional[KgtkWriter] = None,
+    )->typing.Tuple[int, int, int, int]:
+        input_row_count: int = 0
+        valid_row_count: int = 0
+        output_row_count: int = 0
+        reject_row_count: int = 0
+
+        row_group: typing.List[typing.List[str]] = [ ]
+
+        previous_row_count: int = 0
+        previous_node1: typing.Optional[str] = None
+        node1: str
+        result: bool
+        row: typing.List[str]
+        for row in ikr:
+            input_row_count += 1
+            node1 = row[self.node1_idx]
+            if previous_node1 is not None and node1 != previous_node1:
+                result = self.process_node1_group(previous_row_count, row_group)
+                if result:
+                    valid_row_count += len(row_group)
+                    if okw is not None:
+                        for row in row_group:
+                            okw.write(row)
+                            output_row_count += 1
+                else:
+                    if rkw is not None:
+                        for row in row_group:
+                            rkw.write(row)
+                            reject_row_count += 1
+                previous_row_count += len(row_group)
+                row_group.clear()
+            row_group.append(row)
+
+        result = self.process_node1_group(previous_row_count, row_group)
+        if result:
+            valid_row_count += len(row_group)
+            if okw is not None:
+                for row in row_group:
+                    okw.write(row)
+                    output_row_count += 1
+        else:
+            if rkw is not None:
+                for row in row_group:
+                    rkw.write(row)
+                    reject_row_count += 1
+
+        self.report_distinct_violations()
+
+        return (input_row_count, valid_row_count, output_row_count, reject_row_count)
+                
+
+    def process_sort_and_group(self,
+                               ikr: KgtkReader,
+                               okw: typing.Optional[KgtkWriter] = None,
+                               rkw: typing.Optional[KgtkWriter] = None,
+    )->typing.Tuple[int, int, int, int]:
+        input_row_count: int = 0
+        valid_row_count: int = 0
+        output_row_count: int = 0
+        reject_row_count: int = 0
+
+        row_groups: typing.MutableMapping[str, typing.List[typing.List[str]]] = { }
+
+        node1: str
+        row: typing.List[str]
+        for row in ikr:
+            input_row_count += 1
+            node1 = row[self.node1_idx]
+            if node1 in row_groups:
+                row_groups[node1].append(row)
+            else:
+                row_groups[node1] = [row]
+
+        previous_row_count: int = 0
+        for node1 in sorted(row_groups.keys()):
+            row_group: typing.List[typing.List[str]] = row_groups[node1]
+            result: bool = self.process_node1_group(previous_row_count, row_group)
+            if result:
+                valid_row_count += len(row_group)
+                if okw is not None:
+                    for row in row_group:
+                        okw.write(row)
+                        output_row_count += 1
+            else:
+                if rkw is not None:
+                    for row in row_group:
+                        rkw.write(row)
+                        reject_row_count += 1
+            previous_row_count += len(row_group)
+
+        self.report_distinct_violations()
+
+        return (input_row_count, valid_row_count, output_row_count, reject_row_count)
+                
+
     def process_ungrouped(self,
                           ikr: KgtkReader,
                           okw: typing.Optional[KgtkWriter] = None,
@@ -988,8 +1116,9 @@ class PropertyPatternValidator:
                     reject_row_count += 1
 
         self.report_occurance_violations()
-        self.report_distinct_violations()
         self.report_interesting_violations()
+
+        self.report_distinct_violations()
 
         return (input_row_count, valid_row_count, output_row_count, reject_row_count)
 
@@ -998,7 +1127,13 @@ class PropertyPatternValidator:
                 okw: typing.Optional[KgtkWriter] = None,
                 rkw: typing.Optional[KgtkWriter] = None,
     )-> typing.Tuple[int, int, int, int]:
-        return self.process_ungrouped(ikr, okw, rkw)
+        if self.reject_node1_groups :
+            if self.grouped_input:
+                return self.process_pregrouped(ikr, okw, rkw)
+            else:
+                return self.process_sort_and_group(ikr, okw, rkw)
+        else:
+            return self.process_ungrouped(ikr, okw, rkw)
                 
 
 def main():
