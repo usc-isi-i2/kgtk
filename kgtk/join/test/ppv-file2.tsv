@@ -27,7 +27,7 @@ max30-pass	max30	29
 justonce-pass	justonce	xxx1
 justonce-fail	justonce	xxx1
 justonce-fail	justonce	xxx2
-trouble-fail	trouble	xxx3
+unknown-trouble-fail	trouble	xxx3
 reject-fail	reject	xxx3
 dist5-low-fail	dist5-1	x1
 dist5-pass	dist5-2	x1
@@ -43,3 +43,17 @@ dist5-high-fail	dist5-3	x5
 dist5-high-fail	dist5-3	x6
 mustoccur-fail	mustnotoccur	qupid
 mustoccur-pass	mustoccur	qupid
+tradition-pass	tradition	True
+tradition-pass	respect	True
+tradition-fail	tradition	True
+notradition	respect	True
+civility-pass	civility	True
+civility-fail	civility	True
+civility-fail	incivility	True
+incivility	incivility	True
+group-fail	civility	True
+group-fail	unknown	XXX
+
+
+
+

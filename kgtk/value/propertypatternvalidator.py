@@ -57,6 +57,7 @@ class PropertyPattern:
         LABEL_PATTERN = "label_pattern"
         UNKNOWN = "unknown"
         REJECT = "reject"
+        PROPERTY = "property"
 
         MINDISTINCT = "mindistinct"
         MAXDISTINCT = "maxdistinct"
@@ -209,6 +210,7 @@ class PropertyPattern:
                       cls.Action.MUSTOCCUR,
                       cls.Action.UNKNOWN,
                       cls.Action.REJECT,
+                      cls.Action.PROPERTY,
                       cls.Action.GROUPBYPROP,
         ):
             if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
@@ -792,6 +794,7 @@ class PropertyPatternValidator:
             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
 
             if PropertyPattern.Action.REJECT in pats and pats[PropertyPattern.Action.REJECT].truth:
+                result = False
                 print("Row %d: rejecting property '%s' based on '%s'." % (rownum, row[self.label_idx], prop_or_datatype), file=self.error_file, flush=True)
 
             if PropertyPattern.Action.LABEL_PATTERN in pats:
@@ -977,12 +980,13 @@ class PropertyPatternValidator:
     def process_node1_group(self,
                             previous_row_count: int,
                             row_group: typing.List[typing.List[str]])->bool:
-        result: bool
+        result: bool = True
 
         row_number: int = previous_row_count
         row: typing.List[str]
         for row in row_group:
             row_number += 1
+            print("%s" % "\t".join(row)) # ***
             result &= self.validate_row(row_number, row)
 
         result &= self.report_occurance_violations()
@@ -1029,18 +1033,23 @@ class PropertyPatternValidator:
                 row_group.clear()
             row_group.append(row)
 
-        result = self.process_node1_group(previous_row_count, row_group)
-        if result:
-            valid_row_count += len(row_group)
-            if okw is not None:
-                for row in row_group:
-                    okw.write(row)
-                    output_row_count += 1
-        else:
-            if rkw is not None:
-                for row in row_group:
-                    rkw.write(row)
-                    reject_row_count += 1
+        if len(row_group) > 0:
+            # Process the last group of rows.
+            #
+            # Note: the only time we wouldn't get here is if the input file
+            # has no data rows.
+            result = self.process_node1_group(previous_row_count, row_group)
+            if result:
+                valid_row_count += len(row_group)
+                if okw is not None:
+                    for row in row_group:
+                        okw.write(row)
+                        output_row_count += 1
+            else:
+                if rkw is not None:
+                    for row in row_group:
+                        rkw.write(row)
+                        reject_row_count += 1
 
         self.report_distinct_violations()
 
