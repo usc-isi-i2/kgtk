@@ -20,7 +20,6 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 @attr.s(slots=True, frozen=True)
 class PropertyPattern:
     class Action(Enum):
-        NODE1_COLUMN = "node1_column"
         NODE1_TYPE = "node1_type"
         NODE1_ALLOW_LIST = "node1_allow_list"
         NODE1_VALUES = "node1_values"
@@ -29,11 +28,11 @@ class PropertyPattern:
         NODE2_COLUMN = "node2_column"
         NODE2_ALLOW_LIST = "node2_allow_list"
         NODE2_TYPE = "node2_type"
-        NODE2_NOT_TYPE = "node2_type"
+        NODE2_NOT_TYPE = "node2_not_type"
         NODE2_VALUES = "node2_values"
         NODE2_NOT_VALUES = "node2_not_values"
         NODE2_PATTERN = "node2_pattern"
-        NODE2_NOT_PATTERN = "node2_pattern"
+        NODE2_NOT_PATTERN = "node2_not_pattern"
 
         NOT_IN = "not_in"
 
@@ -62,6 +61,7 @@ class PropertyPattern:
         MAXDISTINCT = "maxdistinct"
 
         REQUIRES = "requires"
+        PROHIBITS = "prohibits"
 
         MINDATE = "mindate"
         MAXDATE = "maxdate"
@@ -166,7 +166,6 @@ class PropertyPattern:
 
         elif action in (
                 # cls.Action.LABEL_COLUM,
-                cls.Action.NODE1_COLUMN,
                 cls.Action.NODE2_COLUMN,
         ):
             if label_value.is_symbol():
@@ -181,6 +180,7 @@ class PropertyPattern:
                         cls.Action.ISA,
                         cls.Action.SWITCH,
                         cls.Action.REQUIRES,
+                        cls.Action.PROHIBITS,
         ):
             if node2_value.is_symbol():
                 values.append(node2_value.value)
@@ -250,7 +250,8 @@ class PropertyPatterns:
     groupbyprop: typing.Set[str] = attr.ib()
     unknown: typing.Set[str] = attr.ib()
     requires: typing.Mapping[str, typing.Set[str]] = attr.ib()
-    required: typing.Set[str] = attr.ib()
+    prohibits: typing.Mapping[str, typing.Set[str]] = attr.ib()
+    interesting: typing.Set[str] = attr.ib()
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -267,7 +268,8 @@ class PropertyPatterns:
         groupbyprop: typing.Set[str] = set()
         unknown: typing.Set[str] = set()
         requires: typing.MutableMapping[str, typing.Set[str]] = dict()
-        required: typing.Set[str] = set()
+        prohibits: typing.MutableMapping[str, typing.Set[str]] = dict()
+        interesting: typing.Set[str] = set()
         
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
@@ -314,9 +316,15 @@ class PropertyPatterns:
             elif action == PropertyPattern.Action.UNKNOWN and pp.truth:
                 unknown.add(prop_or_datatype)
             elif action == PropertyPattern.Action.REQUIRES and len(pp.values) > 0:
-                valueset: typing.Set[str] = set(pp.values)
-                requires[prop_or_datatype] = valueset
-                required.update(valueset)
+                requires_set: typing.Set[str] = set(pp.values)
+                requires[prop_or_datatype] = requires_set
+                interesting.add(prop_or_datatype)
+                interesting.update(requires_set)
+            elif action == PropertyPattern.Action.PROHIBITS and len(pp.values) > 0:
+                prohibits_set: typing.Set[str] = set(pp.values)
+                prohibits[prop_or_datatype] = prohibits_set
+                interesting.add(prop_or_datatype)
+                interesting.update(prohibits_set)
 
         return cls(patterns=patmap,
                    matches=matches,
@@ -326,7 +334,8 @@ class PropertyPatterns:
                    groupbyprop=groupbyprop,
                    unknown=unknown,
                    requires=requires,
-                   required=required,
+                   prohibits=prohibits,
+                   interesting=interesting,
         )
 
     def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
@@ -366,8 +375,6 @@ class PropertyPatternValidator:
     minoccurs_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
     maxoccurs_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
 
-    mustoccur_node1_idx: typing.MutableMapping[str, int] = attr.ib(factory=dict)
-
     # The distinct value counting scoreboard:
     # prop->set(values)
     distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
@@ -376,6 +383,10 @@ class PropertyPatternValidator:
     # prop->limit
     mindistinct_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
     maxdistinct_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
+
+    # Retain interesting properties or datatypes for requires/prohibits analysis:
+    # node1->set(prop_or_datatype)
+    interesting_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
         """
@@ -750,7 +761,7 @@ class PropertyPatternValidator:
             if column_name in self.column_name_map:
                 return self.column_name_map[column_name]
             else:
-                print("Row %d: pro_or_datatypep '%s' %s column name '%s' not found in input file." % (rownum, prop_or_datatype, who, column_name),
+                print("Row %d: prop_or_datatypep '%s' %s column name '%s' not found in input file." % (rownum, prop_or_datatype, who, column_name),
                       file=self.error_file, flush=True)
                 return -1
         else:
@@ -771,11 +782,7 @@ class PropertyPatternValidator:
             if PropertyPattern.Action.LABEL_PATTERN in pats:
                 result &= self.validate_pattern(rownum, row[self.label_idx], prop_or_datatype, pats[PropertyPattern.Action.LABEL_PATTERN].pattern, "label")
 
-            node1_idx: int = self.get_idx(rownum, prop_or_datatype, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
-            if node1_idx >= 0:
-                result &= self.validate_node1(rownum, row[node1_idx], prop_or_datatype, orig_prop, pats)
-            else:
-                result = False
+            result &= self.validate_node1(rownum, row[self.node1_idx], prop_or_datatype, orig_prop, pats)
 
             node2_idx: int = self.get_idx(rownum, prop_or_datatype, PropertyPattern.Action.NODE2_COLUMN, pats, self.node2_idx, "node2")
             if node2_idx >= 0:
@@ -791,7 +798,7 @@ class PropertyPatternValidator:
 
         return result, matched
 
-    def validate(self, rownum: int, row: typing.List[str])->bool:
+    def validate_row(self, rownum: int, row: typing.List[str])->bool:
         result: bool = True # Everying's good until we discover otherwise.
         matched_any: bool = False
 
@@ -822,24 +829,19 @@ class PropertyPatternValidator:
                 valid, matched = self.validate_prop_or_datatype(rownum, row, unknown_datatype, prop)
                 result &= valid
 
+        if len(self.pps.interesting) > 0:
+            node1: str = row[self.node1_idx]
+            if node1 in self.interesting_scoreboard:
+                self.interesting_scoreboard[row[self.node1_idx]].update(self.isa_scoreboard.intersection(self.pps.interesting))
+            else:
+                self.interesting_scoreboard[row[self.node1_idx]] = self.isa_scoreboard.intersection(self.pps.interesting)
+
         return result
 
     def setup_mustoccur(self, rownum: int, row: typing.List[str]):
-        """
-        This is rather expensive to do for each line, mainly because each prop_or_datatype
-        might have its own idea of which column to treat as the node1 column.
-        """
         prop_or_datatype: str
         for prop_or_datatype in self.pps.mustoccur:
-            node1_idx: int
-            if prop_or_datatype in self.mustoccur_node1_idx:
-                node1_idx = self.mustoccur_node1_idx[prop_or_datatype]
-            else:            
-                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
-                node1_idx = self.get_idx(rownum, prop_or_datatype, PropertyPattern.Action.NODE1_COLUMN, pats, self.node1_idx, "node1")
-                self.mustoccur_node1_idx[prop_or_datatype] = node1_idx
-
-            node1 = row[node1_idx]
+            node1 = row[self.node1_idx]
             if node1 not in self.occurs_scoreboard:
                 self.occurs_scoreboard[node1] = { }
             if prop_or_datatype not in self.occurs_scoreboard[node1]:
@@ -878,6 +880,34 @@ class PropertyPatternValidator:
                         print("Property or datatype '%s' occured %d times for node1 '%s', maximum is %d." % (prop_or_datatype, count, node1, limit),
                               file=self.error_file, flush=True)
                         result = False
+        return result
+
+    def report_interesting_violations(self)->bool:
+        """
+        Print a line when a requires or prohibits violation happened. The results are
+        ordered by node1 value, then by property.
+        """
+        result: bool = True
+        limit: typing.Optional[int]
+        node1: str
+        for node1 in sorted(self.interesting_scoreboard.keys()):
+            interesting_set: typing.Set[str] = self.interesting_scoreboard[node1]
+
+            prop_or_datatype: str
+            for prop_or_datatype in sorted(self.pps.requires.keys()):
+                if prop_or_datatype in interesting_set:
+                    missing_set: typing.Set[str] = self.pps.requires[prop_or_datatype].difference(interesting_set)
+                    if len(missing_set) > 0:
+                        print("Node '%s': Property or datatype '%s' requires %s." % (node1, prop_or_datatype, ", ".join(sorted(list(missing_set)))),
+                              file=self.error_file, flush=True)
+                        result = False                    
+            for prop_or_datatype in sorted(self.pps.prohibits.keys()):
+                if prop_or_datatype in interesting_set:
+                    prohibited_set: typing.Set[str] = self.pps.prohibits[prop_or_datatype].intersection(interesting_set)
+                    if len(prohibited_set) > 0:
+                        print("Node '%s': Property or datatype '%s' prohibits %s." % (node1, prop_or_datatype, ", ".join(sorted(list(prohibited_set)))),
+                              file=self.error_file, flush=True)
+                        result = False                    
         return result
 
     def report_distinct_violations(self)->bool:
@@ -924,6 +954,44 @@ class PropertyPatternValidator:
                                         error_file=error_file,
                                         verbose=verbose,
                                         very_verbose=very_verbose)
+
+    def process_ungrouped(self,
+                          ikr: KgtkReader,
+                          okw: typing.Optional[KgtkWriter] = None,
+                          rkw: typing.Optional[KgtkWriter] = None,
+    )->typing.Tuple[int, int, int, int]:
+        input_row_count: int = 0
+        valid_row_count: int = 0
+        output_row_count: int = 0
+        reject_row_count: int = 0
+
+        row: typing.List[str]
+        for row in ikr:
+            input_row_count += 1
+            result: bool = self.validate_row(input_row_count, row)
+            if result:
+                valid_row_count += 1
+                if okw is not None:
+                    okw.write(row)
+                    output_row_count += 1
+            else:
+                if rkw is not None:
+                    rkw.write(row)
+                    reject_row_count += 1
+
+        self.report_occurance_violations()
+        self.report_distinct_violations()
+        self.report_interesting_violations()
+
+        return (input_row_count, valid_row_count, output_row_count, reject_row_count)
+
+    def process(self,
+                ikr: KgtkReader,
+                okw: typing.Optional[KgtkWriter] = None,
+                rkw: typing.Optional[KgtkWriter] = None,
+    )-> typing.Tuple[int, int, int, int]:
+        return self.process_ungrouped(ikr, okw, rkw)
+                
 
 def main():
     parser: ArgumentParser = ArgumentParser()
@@ -973,11 +1041,6 @@ def main():
                                                                  verbose=args.verbose,
                                                                  very_verbose=args.very_verbose)
 
-    input_row_count: int = 0
-    valid_row_count: int = 0
-    output_row_count: int = 0
-    reject_row_count: int = 0
-
     okw: KgtkWriter = None
     if args.output_file is not None:
         okw = KgtkWriter.open(ikr.column_names, args.output_file)
@@ -988,22 +1051,11 @@ def main():
         rkw = KgtkWriter.open(ikr.column_names, args.reject_file)
         
 
-    row: typing.List[str]
-    for row in ikr:
-        input_row_count += 1
-        result: bool = ppv.validate(input_row_count, row)
-        if result:
-            valid_row_count += 1
-            if okw is not None:
-                okw.write(row)
-                output_row_count += 1
-        else:
-            if rkw is not None:
-                rkw.write(row)
-                reject_row_count += 1
-
-    ppv.report_occurance_violations()
-    ppv.report_distinct_violations()
+    input_row_count: int = 0
+    valid_row_count: int = 0
+    output_row_count: int = 0
+    reject_row_count: int = 0
+    input_row_count, valid_row_count, output_row_count, reject_row_count = ppv.process(ikr, okw, rkw)
 
     print("Read %d input rows, %d valid." % (input_row_count, valid_row_count), file=error_file, flush=True)
     if okw is not None:
