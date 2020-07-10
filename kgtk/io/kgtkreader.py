@@ -280,7 +280,7 @@ class KgtkReaderOptions():
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "prohibited-list-action",
-                            dest=prefix2 + "prohibited list_action",
+                            dest=prefix2 + "prohibited_list_action",
                             help=h(prefix3 + "The action to take when a data cell contains a prohibited list (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
