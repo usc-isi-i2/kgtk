@@ -52,6 +52,7 @@ class PropertyPattern:
         GROUPBYPROP = "groupbyprop"
         
         ISA = "isa"
+        SWITCH = "switch"
         MATCHES = "matches"
         LABEL_PATTERN = "label_pattern"
         UNKNOWN = "unknown"
@@ -178,6 +179,7 @@ class PropertyPattern:
                         cls.Action.NODE2_TYPE,
                         cls.Action.NODE2_NOT_TYPE,
                         cls.Action.ISA,
+                        cls.Action.SWITCH,
                         cls.Action.REQUIRES,
         ):
             if node2_value.is_symbol():
@@ -706,7 +708,6 @@ class PropertyPatternValidator:
 
     def validate_isa(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str, new_datatypes: typing.List[str])->bool:
         result: bool = True # Everying's good until we discover otherwise.
-        self.isa_scoreboard.add(prop_or_datatype)
         new_datatype: str
         for new_datatype in new_datatypes:
             if new_datatype in self.isa_scoreboard:
@@ -717,6 +718,24 @@ class PropertyPatternValidator:
                 valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
                 result &= valid
         return result
+
+    def validate_switch(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str, new_datatypes: typing.List[str])->bool:
+        new_datatype: str
+        for new_datatype in new_datatypes:
+            if new_datatype in self.isa_scoreboard:
+                print("Row %d: isa loop detected with %s." % (rownum, new_datatype), file=self.error_file, flush=True)
+            else:
+                save_isa_scoreboard: typing.Set[str] = self.isa_scoreboard
+                valid: bool
+                matched: bool
+                valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
+                if valid:
+                    return True
+
+                # If self weren't frozen, we could do a simple assignment:
+                self.isa_scoreboard.clear()
+                self.isa_scoreboard.update(save_isa_scoreboard)
+        return False
 
     def get_idx(self,
                 rownum: int,
@@ -742,6 +761,7 @@ class PropertyPatternValidator:
         matched: bool = False
 
         if prop_or_datatype in self.pps.patterns:
+            self.isa_scoreboard.add(prop_or_datatype)
             matched = True
             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
 
@@ -765,6 +785,9 @@ class PropertyPatternValidator:
                 
             if PropertyPattern.Action.ISA in pats:
                 result &= self.validate_isa(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.ISA].values)
+
+            if PropertyPattern.Action.SWITCH in pats:
+                result &= self.validate_switch(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.ISA].values)
 
         return result, matched
 
