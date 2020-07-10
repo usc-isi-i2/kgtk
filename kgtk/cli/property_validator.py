@@ -144,23 +144,7 @@ def run(input_file: KGTKFiles,
         valid_row_count: int = 0
         output_row_count: int = 0
         reject_row_count: int = 0
-
-        row: typing.List[str]
-        for row in kr:
-            input_row_count += 1
-            result: bool = ppv.validate(input_row_count, row)
-            if result:
-                valid_row_count += 1
-                if kw is not None:
-                    kw.write(row)
-                    output_row_count+= 1
-            else:
-                if rkw is not None:
-                    rkw.write(row)
-                    reject_row_count+= 1
-
-        ppv.report_occurance_violations()
-        ppv.report_distinct_violations()
+        input_row_count, valid_row_count, output_row_count, reject_row_count = ppv.process(kr, kw, rkw)
 
         if verbose:
             print("Read %d rows, %d valid" % (input_row_count, valid_row_count), file=error_file, flush=True)
