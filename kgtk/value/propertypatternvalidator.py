@@ -40,6 +40,10 @@ class PropertyPattern:
         # LABEL_COLUM = "label_column"
         MINVAL = "minval" # GE
         MAXVAL = "maxval" # LE
+        GREATER_THAN = "greater_than" # GT
+        LESS_THAN = "less_than" # LT
+        EQUAL_TO = "equal_to" # EQ, may take a list of numbers
+        NOT_EQUAL_TO = "not_equal_to" # NE, may take a list of numbers
 
         MUSTOCCUR = "mustoccur"
         MINOCCURS = "minoccurs"
@@ -66,7 +70,7 @@ class PropertyPattern:
     action: Action = attr.ib()
     pattern: typing.Optional[typing.Pattern] = attr.ib()
     intval: typing.Optional[int] = attr.ib()
-    number: typing.Optional[float] = attr.ib()
+    numbers: typing.List[float] = attr.ib()
     column_names: typing.List[str] = attr.ib()
     values: typing.List[str] = attr.ib()
     truth: bool = attr.ib()
@@ -83,7 +87,7 @@ class PropertyPattern:
         
         pattern: typing.Optional[typing.Pattern] = None
         intval: typing.Optional[int] = None
-        number: typing.Optional[float] = None
+        numbers: typing.List[float] = [ ]
         column_names: typing.List[str] = [ ]
         values: typing.List[str] = [ ]
         truth: bool = False
@@ -111,14 +115,42 @@ class PropertyPattern:
             intval = int(node2_value.fields.number)
 
         elif action in(cls.Action.MINVAL,
-                     cls.Action.MAXVAL):
-            if node2_value.fields is None:
-                raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
-            if node2_value.fields.number is None:
-                raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
-            number = float(node2_value.fields.number)
+                       cls.Action.MAXVAL,
+                       cls.Action.GREATER_THAN,
+                       cls.Action.LESS_THAN,
+        ):
+            if node2_value.is_number_or_quantity():
+                if node2_value.fields is None:
+                    raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
+                if node2_value.fields.number is None:
+                    raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
+                numbers.append(float(node2_value.fields.number))
+            else:
+                raise ValueError("%s: Value '%s' is not a number or quantity" % (action.value, node2_value.value)) # TODO: better complaint
+
+        elif action in (cls.Action.EQUAL_TO,
+                        cls.Action.NOT_EQUAL_TO,):
+            if node2_value.is_number_or_quantity():
+                if node2_value.fields is None:
+                    raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
+                if node2_value.fields.number is None:
+                    raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
+                numbers.append(float(node2_value.fields.number))
+            elif node2_value.is_list():
+                for kv in node2_value.get_list_items():
+                    if kv.is_number_or_quantity():
+                        if kv.fields is None:
+                            raise ValueError("%s: Node2  list element has no fields" % (action.value)) # TODO: better complaint
+                        if kv.fields.number is None:
+                            raise ValueError("%s: Node2 list element has no number" % (action.value)) # TODO: better complaint
+                        numbers.append(float(kv.fields.number))
+                    else:
+                        raise ValueError("%s: List value is not a number" % (action.value)) # TODO: better complaint
+            else:
+                raise ValueError("%s: Value '%s' is not a number or list of numbers" % (action.value, node2_value.value)) # TODO: better complaint
 
         elif action in (cls.Action.NOT_IN,):
+            # TODO: validate that the column names are valid and get their indexes.
             if node2_value.is_symbol():
                 column_names.append(node2_value.value)
             elif node2_value.is_list():
@@ -181,7 +213,7 @@ class PropertyPattern:
             else:
                 raise ValueError("%s: Value '%s' is not a boolean" % (action.value, node2_value.value)) # TODO: better complaint
 
-        return cls(prop_or_datatype, action, pattern, intval, number, column_names, values, truth)
+        return cls(prop_or_datatype, action, pattern, intval, numbers, column_names, values, truth)
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatternFactory:
@@ -417,10 +449,55 @@ class PropertyPatternValidator:
                 return False
         return True
 
-    def validate_minval(self, rownum: int, prop_or_datatype: str, minval: typing.Optional[float], node2_value: KgtkValue)->bool:
-        if minval is None:
-            return True
+    def validate_minval(self, rownum: int, prop_or_datatype: str, minval: float, node2_value: KgtkValue)->bool:
+        if not node2_value.is_number_or_quantity():
+            return False
+        
+        if node2_value.fields is None:
+            return False
+        
+        if node2_value.fields.number is None:
+            return False
+        number: float = float(node2_value.fields.number)
 
+        if number < minval:
+            print("Row: %d: prop_or_datatype %s value %f is less than minval %f." % (rownum, prop_or_datatype, number, minval), file=self.error_file, flush=True)
+            return False
+        return True
+
+    def validate_maxval(self, rownum: int, prop_or_datatype: str, maxval: float, node2_value: KgtkValue)->bool:
+        if not node2_value.is_number_or_quantity():
+            return False
+        
+        if node2_value.fields is None:
+            return False
+        
+        if node2_value.fields.number is None:
+            return False
+        number: float = float(node2_value.fields.number)
+
+        if number > maxval:
+            print("Row: %d: prop_or_datatype %s value %f is greater than maxval %f." % (rownum, prop_or_datatype, number, maxval), file=self.error_file, flush=True)
+            return False
+        return True
+
+    def validate_greater_than(self, rownum: int, prop_or_datatype: str, minval: float, node2_value: KgtkValue)->bool:
+        if not node2_value.is_number_or_quantity():
+            return False
+        
+        if node2_value.fields is None:
+            return False
+        
+        if node2_value.fields.number is None:
+            return False
+        number: float = float(node2_value.fields.number)
+
+        if number <= minval:
+            print("Row: %d: prop_or_datatype %s value %f is not greater than %f." % (rownum, prop_or_datatype, number, minval), file=self.error_file, flush=True)
+            return False
+        return True
+
+    def validate_less_than(self, rownum: int, prop_or_datatype: str, maxval: float, node2_value: KgtkValue)->bool:
         if not node2_value.is_number_or_quantity():
             return True
         
@@ -431,16 +508,12 @@ class PropertyPatternValidator:
             return True
         number: float = float(node2_value.fields.number)
 
-        if number >= minval:
-            return True
+        if number >= maxval:
+            print("Row: %d: prop_or_datatype %s value %f is not less than %f." % (rownum, prop_or_datatype, number, maxval), file=self.error_file, flush=True)
+            return False
+        return True
 
-        print("Row: %d: prop_or_datatype %s value %f is less than minval %f." % (rownum, prop_or_datatype, number, minval), file=self.error_file, flush=True)
-        return False
-
-    def validate_maxval(self, rownum: int, prop_or_datatype: str, maxval: typing.Optional[float], node2_value: KgtkValue)->bool:
-        if maxval is None:
-            return True
-
+    def validate_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
         if not node2_value.is_number_or_quantity():
             return True
         
@@ -451,11 +524,33 @@ class PropertyPatternValidator:
             return True
         number: float = float(node2_value.fields.number)
 
-        if number <= maxval:
-            return True
+        value: float
+        for value in value_list:
+            if number == value:
+                return True
 
-        print("Row: %d: prop_or_datatype %s value %f is greater than maxval %f." % (rownum, prop_or_datatype, number, maxval), file=self.error_file, flush=True)
+        print("Row: %d: prop_or_datatype %s value %f is not equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])),
+                                                                             file=self.error_file, flush=True)
         return False
+
+    def validate_not_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
+        if not node2_value.is_number_or_quantity():
+            return True
+        
+        if node2_value.fields is None:
+            return True
+        
+        if node2_value.fields.number is None:
+            return True
+        number: float = float(node2_value.fields.number)
+
+        value: float
+        for value in value_list:
+            if number != value:
+              print("Row: %d: prop_or_datatype %s value %f is equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])),
+                                                                               file=self.error_file, flush=True)
+              return False
+        return True
 
     def validate_node1(self,
                        rownum: int,
@@ -557,25 +652,37 @@ class PropertyPatternValidator:
             result &= self.validate_type(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_TYPE].values, "node2")
 
         if PropertyPattern.Action.NODE2_NOT_TYPE in pats:
-            result &= self.validate_type(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_TYPE].values, "node2", invert=True)
+            result &= self.validate_type(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_TYPE].values, "node2", invert=True)
 
         if PropertyPattern.Action.NODE2_VALUES in pats:
             result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2")
 
         if PropertyPattern.Action.NODE2_NOT_VALUES in pats:
-            result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2", invert=True)
+            result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_VALUES].values, "node2", invert=True)
 
         if PropertyPattern.Action.NODE2_PATTERN in pats:
             result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_PATTERN].pattern, "node2")
 
         if PropertyPattern.Action.NODE2_NOT_PATTERN in pats:
-            result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_PATTERN].pattern, "node2", invert=True)
+            result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_PATTERN].pattern, "node2", invert=True)
 
         if PropertyPattern.Action.MINVAL in pats:
-            result &= self.validate_minval(rownum, prop_or_datatype, pats[PropertyPattern.Action.MINVAL].number, node2_value)
+            result &= self.validate_minval(rownum, prop_or_datatype, pats[PropertyPattern.Action.MINVAL].numbers[0], node2_value)
 
         if PropertyPattern.Action.MAXVAL in pats:
-            result &= self.validate_maxval(rownum, prop_or_datatype, pats[PropertyPattern.Action.MAXVAL].number, node2_value)
+            result &= self.validate_maxval(rownum, prop_or_datatype, pats[PropertyPattern.Action.MAXVAL].numbers[0], node2_value)
+
+        if PropertyPattern.Action.GREATER_THAN in pats:
+            result &= self.validate_greater_than(rownum, prop_or_datatype, pats[PropertyPattern.Action.GREATER_THAN].numbers[0], node2_value)
+
+        if PropertyPattern.Action.LESS_THAN in pats:
+            result &= self.validate_less_than(rownum, prop_or_datatype, pats[PropertyPattern.Action.LESS_THAN].numbers[0], node2_value)
+
+        if PropertyPattern.Action.EQUAL_TO in pats:
+            result &= self.validate_equal_to(rownum, prop_or_datatype, pats[PropertyPattern.Action.EQUAL_TO].numbers, node2_value)
+
+        if PropertyPattern.Action.NOT_EQUAL_TO in pats:
+            result &= self.validate_not_equal_to(rownum, prop_or_datatype, pats[PropertyPattern.Action.NOT_EQUAL_TO].numbers, node2_value)
 
         if prop_or_datatype in self.pps.distinct:
             groupby: str = orig_prop if prop_or_datatype in self.pps.groupbyprop else prop_or_datatype
