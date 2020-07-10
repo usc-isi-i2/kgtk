@@ -20,6 +20,7 @@ import typing
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.propertypatternvalidator import PropertyPatterns, PropertyPatternValidator
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -48,6 +49,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_output_file(who="The property pattern reject output.", optional=True,
                           options=["--reject-file"], dest="reject_file", metavar="REJECT_FILE")
 
+    parser.add_argument(      "--presorted", dest="grouped_input",
+                              help="Indicate that the input has been presorted (or at least pregrouped) on the node1 column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--reject-node1-groups", dest="reject_node1_groups",
+                              help="Indicate that when a record is rejected, all records for the same node1 value " +
+                              "should be rejected. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -57,6 +67,8 @@ def run(input_file: KGTKFiles,
         pattern_file: KGTKFiles,
         output_file: KGTKFiles,
         reject_file: KGTKFiles,
+        grouped_input: bool = False,
+        reject_node1_groups: bool = False,
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
         show_options: bool = False,
@@ -87,6 +99,8 @@ def run(input_file: KGTKFiles,
             print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         if reject_kgtk_file is not None:
             print("--reject-file=%s" % str(reject_kgtk_file), file=error_file)
+        print("--presorted=%s" % str(grouped_input))
+        print("--reject-node1-groups=%s" % str(reject_node1_groups))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -123,6 +137,8 @@ def run(input_file: KGTKFiles,
 
         ppv: PropertyPatternValidator = PropertyPatternValidator.new(pps,
                                                                      kr,
+                                                                     grouped_input=grouped_input,
+                                                                     reject_node1_groups=reject_node1_groups,
                                                                      value_options=value_options,
                                                                      error_file=error_file,
                                                                      verbose=verbose,
