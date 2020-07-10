@@ -27,15 +27,20 @@ class PropertyPattern:
         NODE1_PATTERN = "node1_pattern"
 
         NODE2_COLUMN = "node2_column"
-        NODE2_TYPE = "node2_type"
         NODE2_ALLOW_LIST = "node2_allow_list"
+        NODE2_TYPE = "node2_type"
+        NODE2_NOT_TYPE = "node2_type"
         NODE2_VALUES = "node2_values"
+        NODE2_NOT_VALUES = "node2_not_values"
         NODE2_PATTERN = "node2_pattern"
+        NODE2_NOT_PATTERN = "node2_pattern"
 
         NOT_IN = "not_in"
+
         # LABEL_COLUM = "label_column"
-        MINVAL = "minval"
-        MAXVAL = "maxval"
+        MINVAL = "minval" # GE
+        MAXVAL = "maxval" # LE
+
         MUSTOCCUR = "mustoccur"
         MINOCCURS = "minoccurs"
         MAXOCCURS = "maxoccurs"
@@ -51,11 +56,13 @@ class PropertyPattern:
         MINDISTINCT = "mindistinct"
         MAXDISTINCT = "maxdistinct"
 
+        REQUIRES = "requires"
+
         MINDATE = "mindate"
         MAXDATE = "maxdate"
         
     # TODO: create validators where missing:
-    prop_datatype: str = attr.ib(validator=attr.validators.instance_of(str))
+    prop_or_datatype: str = attr.ib(validator=attr.validators.instance_of(str))
     action: Action = attr.ib()
     pattern: typing.Optional[typing.Pattern] = attr.ib()
     intval: typing.Optional[int] = attr.ib()
@@ -69,14 +76,21 @@ class PropertyPattern:
 
     @classmethod
     def new(cls, node1_value: KgtkValue, label_value: KgtkValue, node2_value: KgtkValue)->'PropertyPattern':
-        prop_datatype = node1_value.value
+        prop_or_datatype = node1_value.value
         action: PropertyPattern.Action = cls.Action(label_value.value)
 
         kv: KgtkValue
         
         pattern: typing.Optional[typing.Pattern] = None
+        intval: typing.Optional[int] = None
+        number: typing.Optional[float] = None
+        column_names: typing.List[str] = [ ]
+        values: typing.List[str] = [ ]
+        truth: bool = False
+
         if action in (cls.Action.NODE1_PATTERN,
                       cls.Action.NODE2_PATTERN,
+                      cls.Action.NODE2_NOT_PATTERN,
                       cls.Action.LABEL_PATTERN,
                       cls.Action.MATCHES):
             if node2_value.fields is None:
@@ -86,19 +100,17 @@ class PropertyPattern:
                 
             pattern = re.compile(node2_value.fields.text)
 
-        intval: typing.Optional[int] = None
-        if action in (cls.Action.MINOCCURS,
-                      cls.Action.MAXOCCURS,
-                      cls.Action.MINDISTINCT,
-                      cls.Action.MAXDISTINCT):
+        elif action in (cls.Action.MINOCCURS,
+                        cls.Action.MAXOCCURS,
+                        cls.Action.MINDISTINCT,
+                        cls.Action.MAXDISTINCT):
             if node2_value.fields is None:
                 raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
             if node2_value.fields.number is None:
                 raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
             intval = int(node2_value.fields.number)
 
-        number: typing.Optional[float] = None
-        if action in(cls.Action.MINVAL,
+        elif action in(cls.Action.MINVAL,
                      cls.Action.MAXVAL):
             if node2_value.fields is None:
                 raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
@@ -106,8 +118,7 @@ class PropertyPattern:
                 raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
             number = float(node2_value.fields.number)
 
-        column_names: typing.List[str] = [ ]
-        if action in (cls.Action.NOT_IN,):
+        elif action in (cls.Action.NOT_IN,):
             if node2_value.is_symbol():
                 column_names.append(node2_value.value)
             elif node2_value.is_list():
@@ -120,7 +131,7 @@ class PropertyPattern:
                 raise ValueError("%s: Value '%s' is not a symbol or list of symbols" % (action.value, node2_value.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
 
-        if action in (
+        elif action in (
                 # cls.Action.LABEL_COLUM,
                 cls.Action.NODE1_COLUMN,
                 cls.Action.NODE2_COLUMN,
@@ -131,10 +142,12 @@ class PropertyPattern:
                 raise ValueError("%s:Value is not a symbol" % (action.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
 
-        values: typing.List[str] = [ ]
-        if action in (cls.Action.NODE1_TYPE,
-                      cls.Action.NODE2_TYPE,
-                      cls.Action.ISA,):
+        elif action in (cls.Action.NODE1_TYPE,
+                        cls.Action.NODE2_TYPE,
+                        cls.Action.NODE2_NOT_TYPE,
+                        cls.Action.ISA,
+                        cls.Action.REQUIRES,
+        ):
             if node2_value.is_symbol():
                 values.append(node2_value.value)
             elif node2_value.is_list():
@@ -146,16 +159,17 @@ class PropertyPattern:
             else:
                 raise ValueError("%s: Value '%s' is not a symbol or list of symbols" % (action.value, node2_value.value)) # TODO: better complaint
 
-        if action in (cls.Action.NODE1_VALUES,
-                      cls.Action.NODE2_VALUES,):
+        elif action in (cls.Action.NODE1_VALUES,
+                        cls.Action.NODE2_VALUES,
+                        cls.Action.NODE2_NOT_VALUES,
+        ):
             if node2_value.is_list():
                 for kv in node2_value.get_list_items():
                     values.append(kv.value)
             else:
                 values.append(node2_value.value)
 
-        truth: bool = False
-        if action in (cls.Action.NODE1_ALLOW_LIST,
+        elif action in (cls.Action.NODE1_ALLOW_LIST,
                       cls.Action.NODE2_ALLOW_LIST,
                       cls.Action.MUSTOCCUR,
                       cls.Action.UNKNOWN,
@@ -167,7 +181,7 @@ class PropertyPattern:
             else:
                 raise ValueError("%s: Value '%s' is not a boolean" % (action.value, node2_value.value)) # TODO: better complaint
 
-        return cls(prop_datatype, action, pattern, intval, number, column_names, values, truth)
+        return cls(prop_or_datatype, action, pattern, intval, number, column_names, values, truth)
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatternFactory:
@@ -201,6 +215,8 @@ class PropertyPatterns:
     distinct: typing.Set[str] = attr.ib()
     groupbyprop: typing.Set[str] = attr.ib()
     unknown: typing.Set[str] = attr.ib()
+    requires: typing.Mapping[str, typing.Set[str]] = attr.ib()
+    required: typing.Set[str] = attr.ib()
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -216,6 +232,8 @@ class PropertyPatterns:
         distinct: typing.Set[str] = set()
         groupbyprop: typing.Set[str] = set()
         unknown: typing.Set[str] = set()
+        requires: typing.MutableMapping[str, typing.Set[str]] = dict()
+        required: typing.Set[str] = set()
         
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
@@ -235,32 +253,36 @@ class PropertyPatterns:
         row: typing.List[str]
         for row in kr:
             pp: PropertyPattern = ppf.from_row(row)
-            prop_datatype: str = pp.prop_datatype
-            if prop_datatype not in patmap:
-                patmap[prop_datatype] = { }
+            prop_or_datatype: str = pp.prop_or_datatype
+            if prop_or_datatype not in patmap:
+                patmap[prop_or_datatype] = { }
             action: PropertyPattern.Action = pp.action
-            if action in patmap[prop_datatype]:
+            if action in patmap[prop_or_datatype]:
                 raise ValueError("Duplicate action record in (%s)" % "|".join(row))
-            patmap[prop_datatype][action] = pp
+            patmap[prop_or_datatype][action] = pp
             if very_verbose:
-                print("loaded %s->%s" % (prop_datatype, action.value), file=error_file, flush=True)
+                print("loaded %s->%s" % (prop_or_datatype, action.value), file=error_file, flush=True)
             if action == PropertyPattern.Action.MATCHES and pp.pattern is not None:
-                matches[prop_datatype] = pp.pattern
+                matches[prop_or_datatype] = pp.pattern
             elif action == PropertyPattern.Action.MUSTOCCUR and pp.truth:
-                mustoccur.add(prop_datatype)
-                occurs.add(prop_datatype)
+                mustoccur.add(prop_or_datatype)
+                occurs.add(prop_or_datatype)
             elif action == PropertyPattern.Action.MINOCCURS:
-                occurs.add(prop_datatype)
+                occurs.add(prop_or_datatype)
             elif action == PropertyPattern.Action.MAXOCCURS:
-                occurs.add(prop_datatype)
+                occurs.add(prop_or_datatype)
             elif action == PropertyPattern.Action.MINDISTINCT:
-                distinct.add(prop_datatype)
+                distinct.add(prop_or_datatype)
             elif action == PropertyPattern.Action.MAXDISTINCT:
-                distinct.add(prop_datatype)
+                distinct.add(prop_or_datatype)
             elif action == PropertyPattern.Action.GROUPBYPROP and pp.truth:
-                groupbyprop.add(prop_datatype)
+                groupbyprop.add(prop_or_datatype)
             elif action == PropertyPattern.Action.UNKNOWN and pp.truth:
-                unknown.add(prop_datatype)
+                unknown.add(prop_or_datatype)
+            elif action == PropertyPattern.Action.REQUIRES and len(pp.values) > 0:
+                valueset: typing.Set[str] = set(pp.values)
+                requires[prop_or_datatype] = valueset
+                required.update(valueset)
 
         return cls(patterns=patmap,
                    matches=matches,
@@ -269,6 +291,8 @@ class PropertyPatterns:
                    distinct=distinct,
                    groupbyprop=groupbyprop,
                    unknown=unknown,
+                   requires=requires,
+                   required=required,
         )
 
     def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
@@ -340,37 +364,58 @@ class PropertyPatternValidator:
                         result = False
         return result
 
-    def validate_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, allowed_types: typing.List[str], who: str)->bool:
+    def validate_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, type_list: typing.List[str], who: str, invert: bool=False)->bool:
         if value.data_type is None:
             print("Row %d: the %s value '%s' KGTK type is missing." % (rownum, who, value.value), file=self.error_file, flush=True)
-            return False
-        else:
-            type_name: str = value.data_type.lower()
-            if type_name not in allowed_types:
+            return False # regardless of invert flag
+
+        type_name: str = value.data_type.lower()
+        if not invert:
+            if type_name not in type_list:
                 print("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
-                                                                                                               KgtkFormat.LIST_SEPARATOR.join(allowed_types)),
+                                                                                                               KgtkFormat.LIST_SEPARATOR.join(type_list)),
                       file=self.error_file, flush=True)
                 return False
-            return True
+        else:
+            if type_name in type_list:
+                print("Row %d: the %s KGTK datatype '%s' is in the list of disallowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
+                                                                                                               KgtkFormat.LIST_SEPARATOR.join(type_list)),
+                       file=self.error_file, flush=True)
+                return False
+        return True
 
-    def validate_value(self, rownum: int, value: KgtkValue, prop_or_datatype: str, allowed_values: typing.List[str], who: str)->bool:
-        if value.value not in allowed_values:
-            print("Row %d: the %s value '%s' is not in the list of %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
-                                                                                            KgtkFormat.LIST_SEPARATOR.join(allowed_values)),
-                  file=self.error_file, flush=True)
-            return False
+    def validate_value(self, rownum: int, value: KgtkValue, prop_or_datatype: str, value_list: typing.List[str], who: str, invert: bool=False)->bool:
+        if not invert:
+            if value.value not in value_list:
+                print("Row %d: the %s value '%s' is not in the list of allowed %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
+                                                                                                KgtkFormat.LIST_SEPARATOR.join(value_list)),
+                      file=self.error_file, flush=True)
+                return False
+        else:
+            if value.value in value_list:
+                print("Row %d: the %s value '%s' is in the list of disallowed %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
+                                                                                                KgtkFormat.LIST_SEPARATOR.join(value_list)),
+                      file=self.error_file, flush=True)
+                return False
         return True        
 
-    def validate_pattern(self, rownum: int, item: str, prop_or_datatype: str, pattern: typing.Optional[typing.Pattern], who: str)->bool:
+    def validate_pattern(self, rownum: int, item: str, prop_or_datatype: str, pattern: typing.Optional[typing.Pattern], who: str, invert: bool=False)->bool:
         if pattern is None:
             raise ValueError("Missing %s pattern for %s" % (who, prop_or_datatype))
 
         match: typing.Optional[typing.Match] = pattern.fullmatch(item)
-        if match:
-            return True
 
-        print("Row %d: the %s value '%s' does not match the %s pattern for %s" % (rownum, who, item, who, prop_or_datatype), file=self.error_file, flush=True)
-        return False
+        if not invert:
+            if not match:
+                print("Row %d: the %s value '%s' does not match the inclusion %s pattern for %s" % (rownum, who, item, who, prop_or_datatype),
+                      file=self.error_file, flush=True)
+                return False
+        else:
+            if match:
+                print("Row %d: the %s value '%s' matches the exclusion %s pattern for %s" % (rownum, who, item, who, prop_or_datatype),
+                      file=self.error_file, flush=True)
+                return False
+        return True
 
     def validate_minval(self, rownum: int, prop_or_datatype: str, minval: typing.Optional[float], node2_value: KgtkValue)->bool:
         if minval is None:
@@ -511,11 +556,20 @@ class PropertyPatternValidator:
         if PropertyPattern.Action.NODE2_TYPE in pats:
             result &= self.validate_type(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_TYPE].values, "node2")
 
+        if PropertyPattern.Action.NODE2_NOT_TYPE in pats:
+            result &= self.validate_type(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_TYPE].values, "node2", invert=True)
+
         if PropertyPattern.Action.NODE2_VALUES in pats:
             result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2")
 
+        if PropertyPattern.Action.NODE2_NOT_VALUES in pats:
+            result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2", invert=True)
+
         if PropertyPattern.Action.NODE2_PATTERN in pats:
             result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_PATTERN].pattern, "node2")
+
+        if PropertyPattern.Action.NODE2_NOT_PATTERN in pats:
+            result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_PATTERN].pattern, "node2", invert=True)
 
         if PropertyPattern.Action.MINVAL in pats:
             result &= self.validate_minval(rownum, prop_or_datatype, pats[PropertyPattern.Action.MINVAL].number, node2_value)
