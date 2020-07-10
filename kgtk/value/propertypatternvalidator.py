@@ -978,14 +978,12 @@ class PropertyPatternValidator:
                                         very_verbose=very_verbose)
 
     def process_node1_group(self,
-                            previous_row_count: int,
-                            row_group: typing.List[typing.List[str]])->bool:
+                            row_group: typing.List[typing.Tuple[int, typing.List[str]]])->bool:
         result: bool = True
 
-        row_number: int = previous_row_count
+        row_number: int
         row: typing.List[str]
-        for row in row_group:
-            row_number += 1
+        for row_number, row in row_group:
             print("%s" % "\t".join(row)) # ***
             result &= self.validate_row(row_number, row)
 
@@ -1006,9 +1004,9 @@ class PropertyPatternValidator:
         output_row_count: int = 0
         reject_row_count: int = 0
 
-        row_group: typing.List[typing.List[str]] = [ ]
+        row_group: typing.List[typing.Tuple[int, typing.List[str]]] = [ ]
 
-        previous_row_count: int = 0
+        row_num: int
         previous_node1: typing.Optional[str] = None
         node1: str
         result: bool
@@ -1017,37 +1015,36 @@ class PropertyPatternValidator:
             input_row_count += 1
             node1 = row[self.node1_idx]
             if previous_node1 is not None and node1 != previous_node1:
-                result = self.process_node1_group(previous_row_count, row_group)
+                result = self.process_node1_group(row_group)
                 if result:
                     valid_row_count += len(row_group)
                     if okw is not None:
-                        for row in row_group:
+                        for row_num, row in row_group:
                             okw.write(row)
                             output_row_count += 1
                 else:
                     if rkw is not None:
-                        for row in row_group:
+                        for rownum, row in row_group:
                             rkw.write(row)
                             reject_row_count += 1
-                previous_row_count += len(row_group)
                 row_group.clear()
-            row_group.append(row)
+            row_group.append((input_row_count, row))
 
         if len(row_group) > 0:
             # Process the last group of rows.
             #
             # Note: the only time we wouldn't get here is if the input file
             # has no data rows.
-            result = self.process_node1_group(previous_row_count, row_group)
+            result = self.process_node1_group(row_group)
             if result:
                 valid_row_count += len(row_group)
                 if okw is not None:
-                    for row in row_group:
+                    for row_num, row in row_group:
                         okw.write(row)
                         output_row_count += 1
             else:
                 if rkw is not None:
-                    for row in row_group:
+                    for row_num, row in row_group:
                         rkw.write(row)
                         reject_row_count += 1
 
@@ -1066,7 +1063,7 @@ class PropertyPatternValidator:
         output_row_count: int = 0
         reject_row_count: int = 0
 
-        row_groups: typing.MutableMapping[str, typing.List[typing.List[str]]] = { }
+        row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]] = { }
 
         node1: str
         row: typing.List[str]
@@ -1074,26 +1071,25 @@ class PropertyPatternValidator:
             input_row_count += 1
             node1 = row[self.node1_idx]
             if node1 in row_groups:
-                row_groups[node1].append(row)
+                row_groups[node1].append((input_row_count, row))
             else:
-                row_groups[node1] = [row]
+                row_groups[node1] = [(input_row_count, row)]
 
-        previous_row_count: int = 0
+        row_num: int
         for node1 in sorted(row_groups.keys()):
-            row_group: typing.List[typing.List[str]] = row_groups[node1]
-            result: bool = self.process_node1_group(previous_row_count, row_group)
+            row_group: typing.List[typing.Tuple[int, typing.List[str]]] = row_groups[node1]
+            result: bool = self.process_node1_group(row_group)
             if result:
                 valid_row_count += len(row_group)
                 if okw is not None:
-                    for row in row_group:
+                    for row_num, row in row_group:
                         okw.write(row)
                         output_row_count += 1
             else:
                 if rkw is not None:
-                    for row in row_group:
+                    for row_num, row in row_group:
                         rkw.write(row)
                         reject_row_count += 1
-            previous_row_count += len(row_group)
 
         self.report_distinct_violations()
 
@@ -1159,7 +1155,7 @@ def main():
     parser.add_argument(      "--reject-node1-groups", dest="reject_node1_groups",
                               help="Indicate that when a record is rejected, all records for the same node1 value " +
                               "should be rejected. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, expert=True)

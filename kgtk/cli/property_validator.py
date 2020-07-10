@@ -56,7 +56,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--reject-node1-groups", dest="reject_node1_groups",
                               help="Indicate that when a record is rejected, all records for the same node1 value " +
                               "should be rejected. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
