@@ -14,6 +14,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -358,6 +359,9 @@ class PropertyPatternValidator:
     node2_idx: int = attr.ib()
 
     value_options: KgtkValueOptions = attr.ib()
+
+    grouped_input: bool = attr.ib(default=False)
+    reject_node1_groups: bool = attr.ib(default=False)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -940,6 +944,8 @@ class PropertyPatternValidator:
     def new(cls,
             pps: PropertyPatterns,
             kr: KgtkReader,
+            grouped_input: bool,
+            reject_node1_groups: bool,
             value_options: KgtkValueOptions,
             error_file: typing.TextIO,
             verbose: bool,
@@ -950,6 +956,8 @@ class PropertyPatternValidator:
                                         kr.node1_column_idx,
                                         kr.label_column_idx,
                                         kr.node2_column_idx,
+                                        grouped_input=grouped_input,
+                                        reject_node1_groups=reject_node1_groups,
                                         value_options=value_options,
                                         error_file=error_file,
                                         verbose=verbose,
@@ -1000,6 +1008,15 @@ def main():
     parser.add_argument("-o", "--output-file", dest="output_file", help="The output file for good records. (optional)", type=Path)
     parser.add_argument(      "--reject-file", dest="reject_file", help="The output file for bad records. (optional)", type=Path)
 
+    parser.add_argument(      "--presorted", dest="grouped_input",
+                              help="Indicate that the input has been presorted (or at least pregrouped) on the node1 column. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--reject-node1-groups", dest="reject_node1_groups",
+                              help="Indicate that when a record is rejected, all records for the same node1 value " +
+                              "should be rejected. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, expert=True)
     KgtkValueOptions.add_arguments(parser)
@@ -1036,6 +1053,8 @@ def main():
 
     ppv: PropertyPatternValidator = PropertyPatternValidator.new(pps,
                                                                  ikr,
+                                                                 grouped_input=args.grouped_input,
+                                                                 reject_node1_groups=args.reject_node1_groups,
                                                                  value_options=value_options,
                                                                  error_file=error_file,
                                                                  verbose=args.verbose,
