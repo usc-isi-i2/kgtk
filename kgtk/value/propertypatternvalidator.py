@@ -66,6 +66,8 @@ class PropertyPattern:
         REQUIRES = "requires"
         PROHIBITS = "prohibits"
 
+        CHAIN = "chain"
+
         MINDATE = "mindate"
         MAXDATE = "maxdate"
         
@@ -229,6 +231,7 @@ class PropertyPattern:
         elif action in (cls.Action.NODE1_VALUES,
                         cls.Action.NODE2_VALUES,
                         cls.Action.NODE2_NOT_VALUES,
+                        cls.Action.CHAIN,
         ):
             if node2_value.is_list():
                 for kv in node2_value.get_list_items():
@@ -299,6 +302,7 @@ class PropertyPatterns:
     requires: typing.Mapping[str, typing.Set[str]] = attr.ib()
     prohibits: typing.Mapping[str, typing.Set[str]] = attr.ib()
     interesting: typing.Set[str] = attr.ib()
+    chain_targets: typing.Set[str] = attr.ib()
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -317,6 +321,7 @@ class PropertyPatterns:
         requires: typing.MutableMapping[str, typing.Set[str]] = dict()
         prohibits: typing.MutableMapping[str, typing.Set[str]] = dict()
         interesting: typing.Set[str] = set()
+        chain_targets: typing.Set[str] = set()
         
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
@@ -376,6 +381,10 @@ class PropertyPatterns:
                 prohibits[prop_or_datatype] = prohibits_set
                 interesting.add(prop_or_datatype)
                 interesting.update(prohibits_set)
+            elif action == PropertyPattern.Action.CHAIN and len(pp.values) > 0:
+                chain_target_set: typing.Set[str] = set(pp.values)
+                chain_targets.update(chain_target_set)
+                interesting.update(chain_target_set)
 
         return cls(patterns=patmap,
                    matches=matches,
@@ -387,6 +396,7 @@ class PropertyPatterns:
                    requires=requires,
                    prohibits=prohibits,
                    interesting=interesting,
+                   chain_targets=chain_targets,
         )
 
     def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
@@ -417,11 +427,14 @@ class PropertyPatternValidator:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # We clear this set, getting around frozen attribute.
+    # We clear these set, getting around frozen attribute.
+    
+    # The datatype inheritance scoreboard.  It starts fresh for each new row.
     isa_scoreboard: typing.Set[str] = attr.ib(factory=set)
 
     # The occurance counting scoreboard:
     # node1->prop->count
+    # This scoreboard is cleared for enach new node1_group.
     occurs_scoreboard: typing.MutableMapping[str, typing.MutableMapping[str, int]] = attr.ib(factory=dict)
 
     # The cache of occurs limits after ISA and GROUPBY:
@@ -434,6 +447,7 @@ class PropertyPatternValidator:
 
     # The distinct value counting scoreboard:
     # prop->set(values)
+    # This scoreboard is cleared for enach new node1_group.
     distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
 
     # The distinct limits after ISA and GROUPBY:
@@ -444,9 +458,15 @@ class PropertyPatternValidator:
     mindistinct_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
     maxdistinct_limits: typing.MutableMapping[str, typing.Optional[int]] = attr.ib(factory=dict)
 
-    # Retain interesting properties or datatypes for requires/prohibits analysis:
+    # Retain interesting properties or datatypes for requires/prohibits analysis and chaining:
     # node1->set(prop_or_datatype)
+    # This scoreboard is cleared for enach new node1_group.
     interesting_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
+
+    # Chaining between node1 groups:
+    # node1->set(prop_or_datatype)
+    # This scoreboard is not cleared, but it gets content only when chaining is needed.
+    chain_target_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
 
     def clear_node1_group(self):
         self.isa_scoreboard.clear()
@@ -917,9 +937,9 @@ class PropertyPatternValidator:
         if len(self.pps.interesting) > 0:
             node1: str = row[self.node1_idx]
             if node1 in self.interesting_scoreboard:
-                self.interesting_scoreboard[row[self.node1_idx]].update(self.isa_scoreboard.intersection(self.pps.interesting))
+                self.interesting_scoreboard[node1].update(self.isa_scoreboard.intersection(self.pps.interesting))
             else:
-                self.interesting_scoreboard[row[self.node1_idx]] = self.isa_scoreboard.intersection(self.pps.interesting)
+                self.interesting_scoreboard[node1] = self.isa_scoreboard.intersection(self.pps.interesting)
 
         return result
 
@@ -1045,8 +1065,12 @@ class PropertyPatternValidator:
                                         very_verbose=very_verbose)
 
     def process_node1_group(self,
-                            row_group: typing.List[typing.Tuple[int, typing.List[str]]])->bool:
+                            row_group: typing.List[typing.Tuple[int, typing.List[str]]],
+                            node1: str,
+    )->bool:
         result: bool = True
+
+        self.clear_node1_group()
 
         row_number: int
         row: typing.List[str]
@@ -1056,7 +1080,8 @@ class PropertyPatternValidator:
         result &= self.report_occurance_violations()
         result &= self.report_interesting_violations()
 
-        self.clear_node1_group()
+        if result:
+            self.chain_target_scoreboard[node1] = self.interesting_scoreboard[node1].intersection(self.pps.chain_targets)
 
         return result
 
@@ -1074,14 +1099,14 @@ class PropertyPatternValidator:
 
         row_num: int
         previous_node1: typing.Optional[str] = None
-        node1: str
+        node1: typing.Optional[str] = None
         result: bool
         row: typing.List[str]
         for row in ikr:
             input_row_count += 1
             node1 = row[self.node1_idx]
             if previous_node1 is not None and node1 != previous_node1:
-                result = self.process_node1_group(row_group)
+                result = self.process_node1_group(row_group, node1)
                 if result:
                     valid_row_count += len(row_group)
                     if okw is not None:
@@ -1096,12 +1121,12 @@ class PropertyPatternValidator:
                 row_group.clear()
             row_group.append((input_row_count, row))
 
-        if len(row_group) > 0:
+        if len(row_group) > 0 and node1 is not None:
             # Process the last group of rows.
             #
             # Note: the only time we wouldn't get here is if the input file
             # has no data rows.
-            result = self.process_node1_group(row_group)
+            result = self.process_node1_group(row_group, node1)
             if result:
                 valid_row_count += len(row_group)
                 if okw is not None:
@@ -1144,7 +1169,7 @@ class PropertyPatternValidator:
         row_num: int
         for node1 in sorted(row_groups.keys()):
             row_group: typing.List[typing.Tuple[int, typing.List[str]]] = row_groups[node1]
-            result: bool = self.process_node1_group(row_group)
+            result: bool = self.process_node1_group(row_group, node1)
             if result:
                 valid_row_count += len(row_group)
                 if okw is not None:
