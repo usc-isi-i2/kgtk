@@ -53,6 +53,7 @@ class PropertyPattern:
         
         ISA = "isa"
         SWITCH = "switch"
+        NEXTCASE = "nextcase"
         MATCHES = "matches"
         LABEL_PATTERN = "label_pattern"
         UNKNOWN = "unknown"
@@ -205,6 +206,7 @@ class PropertyPattern:
                         cls.Action.NODE2_NOT_TYPE,
                         cls.Action.ISA,
                         cls.Action.SWITCH,
+                        cls.Action.NEXTCASE,
                         cls.Action.REQUIRES,
                         cls.Action.PROHIBITS,
         ):
@@ -799,22 +801,33 @@ class PropertyPatternValidator:
                 result &= valid
         return result
 
-    def validate_switch(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str, new_datatypes: typing.List[str])->bool:
+    def validate_switch(self,
+                        rownum: int, row: typing.List[str],
+                        prop_or_datatype: str,
+                        orig_prop: str,
+                        new_datatypes: typing.List[str])->bool:
+        save_isa_scoreboard: typing.Set[str] = self.isa_scoreboard
         new_datatype: str
         for new_datatype in new_datatypes:
-            if new_datatype in self.isa_scoreboard:
-                print("Row %d: isa loop detected with %s." % (rownum, new_datatype), file=self.error_file, flush=True)
-            else:
-                save_isa_scoreboard: typing.Set[str] = self.isa_scoreboard
-                valid: bool
-                matched: bool
-                valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
-                if valid:
-                    return True
+            while True: # Start of NEXTCASE loop
+                if new_datatype in self.isa_scoreboard:
+                    print("Row %d: isa loop detected with %s." % (rownum, new_datatype), file=self.error_file, flush=True)
+                else:
+                    valid: bool
+                    matched: bool
+                    valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
+                    if valid:
+                        return True
 
-                # If self weren't frozen, we could do a simple assignment:
-                self.isa_scoreboard.clear()
-                self.isa_scoreboard.update(save_isa_scoreboard)
+                    # If self weren't frozen, we could do a simple assignment:
+                    self.isa_scoreboard.clear()
+                    self.isa_scoreboard.update(save_isa_scoreboard)
+
+                    pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[new_datatype]
+                    if PropertyPattern.Action.NEXTCASE not in pats:
+                        break # no NEXTCASE
+                    new_datatype = pats[PropertyPattern.Action.LABEL_PATTERN].values[0]
+                
         return False
 
     def get_idx(self,
