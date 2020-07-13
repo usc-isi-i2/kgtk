@@ -6,11 +6,14 @@ obj2	prop2	prop1
 obj1	prop1	obj2
 obj1	prop3	obj2
 obj10	color	red
-obj11	color	red|green
+obj11	color	red
+obj11	color	green
 obj12	color	yellow
 obj10|obj12	color	red
 obj13	color	red
-obj11	color	red|green|yellow
+obj11	color	red
+obj11	color	green
+obj11	color	yellow
 obj21	prop4	10
 obj22	quad1	11
 xnode1	xnode	15

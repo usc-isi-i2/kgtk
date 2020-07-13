@@ -82,7 +82,11 @@ class PropertyPattern:
     column_idxs: typing.List[int] = attr.ib(factory=list)
 
     @classmethod
-    def new(cls, node1_value: KgtkValue, label_value: KgtkValue, node2_value: KgtkValue)->'PropertyPattern':
+    def new(cls,
+            node1_value: KgtkValue,
+            label_value: KgtkValue,
+            node2_value: KgtkValue,
+            old_ppat: typing.Optional['PropertyPattern'])->'PropertyPattern':
         prop_or_datatype = node1_value.value
         action: PropertyPattern.Action = cls.Action(label_value.value)
 
@@ -131,6 +135,11 @@ class PropertyPattern:
             else:
                 raise ValueError("%s: Value '%s' is not a number or quantity" % (action.value, node2_value.value)) # TODO: better complaint
 
+            # Merge any existing numbers, then removed duplicates and sort:
+            if old_ppat is not None and len(old_ppat.numbers) > 0:
+                numbers.extend(old_ppat.numbers)
+            numbers == sorted(list(set(numbers)))
+
         elif action in (cls.Action.EQUAL_TO,
                         cls.Action.NOT_EQUAL_TO,):
             if node2_value.is_number_or_quantity():
@@ -152,6 +161,11 @@ class PropertyPattern:
             else:
                 raise ValueError("%s: Value '%s' is not a number or list of numbers" % (action.value, node2_value.value)) # TODO: better complaint
 
+            # Merge any existing numbers, then removed duplicates and sort:
+            if old_ppat is not None and  len(old_ppat.numbers) > 0:
+                numbers.extend(old_ppat.numbers)
+            numbers == sorted(list(set(numbers)))
+
         elif action in (cls.Action.NOT_IN,):
             # TODO: validate that the column names are valid and get their indexes.
             if node2_value.is_symbol():
@@ -165,6 +179,11 @@ class PropertyPattern:
             else:
                 raise ValueError("%s: Value '%s' is not a symbol or list of symbols" % (action.value, node2_value.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
+
+            # Merge any existing column names, then removed duplicates and sort:
+            if old_ppat is not None and len(old_ppat.column_names) > 0:
+                column_names.extend(old_ppat.column_names)
+            column_names == sorted(list(set(column_names)))
 
         elif action in (
                 # cls.Action.LABEL_COLUM,
@@ -195,6 +214,11 @@ class PropertyPattern:
             else:
                 raise ValueError("%s: Value '%s' is not a symbol or list of symbols" % (action.value, node2_value.value)) # TODO: better complaint
 
+            # Merge any existing values, then removed duplicates and sort:
+            if old_ppat is not None and len(old_ppat.values) > 0:
+                values.extend(old_ppat.values)
+            values == sorted(list(set(values)))
+
         elif action in (cls.Action.NODE1_VALUES,
                         cls.Action.NODE2_VALUES,
                         cls.Action.NODE2_NOT_VALUES,
@@ -204,6 +228,11 @@ class PropertyPattern:
                     values.append(kv.value)
             else:
                 values.append(node2_value.value)
+
+            # Merge any existing values, then removed duplicates and sort:
+            if old_ppat is not None and len(old_ppat.values) > 0:
+                values.extend(old_ppat.values)
+            values == sorted(list(set(values)))
 
         elif action in (cls.Action.NODE1_ALLOW_LIST,
                       cls.Action.NODE2_ALLOW_LIST,
@@ -217,6 +246,11 @@ class PropertyPattern:
                 truth = node2_value.fields.truth
             else:
                 raise ValueError("%s: Value '%s' is not a boolean" % (action.value, node2_value.value)) # TODO: better complaint
+
+            # Merge any existing values, then removed duplicates and sort:
+            if old_ppat is not None and len(old_ppat.values) > 0:
+                values.extend(old_ppat.values)
+            values == sorted(list(set(values)))
 
         return cls(prop_or_datatype, action, pattern, intval, numbers, column_names, values, truth)
 
@@ -232,7 +266,10 @@ class PropertyPatternFactory:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    def from_row(self, row: typing.List[str])->'PropertyPattern':
+    def from_row(self,
+                 row: typing.List[str],
+                 old_ppat: typing.Optional[PropertyPattern]=None,
+    )->PropertyPattern:
         node1_value: KgtkValue = KgtkValue(row[self.node1_idx], options=self.value_options, parse_fields=True)
         label_value: KgtkValue = KgtkValue(row[self.label_idx], options=self.value_options, parse_fields=True)
         node2_value: KgtkValue = KgtkValue(row[self.node2_idx], options=self.value_options, parse_fields=True)
@@ -241,7 +278,7 @@ class PropertyPatternFactory:
         label_value.validate()
         node2_value.validate()
 
-        return PropertyPattern.new(node1_value, label_value, node2_value)
+        return PropertyPattern.new(node1_value, label_value, node2_value, old_ppat)
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatterns:
@@ -296,9 +333,13 @@ class PropertyPatterns:
             if prop_or_datatype not in patmap:
                 patmap[prop_or_datatype] = { }
             action: PropertyPattern.Action = pp.action
+
             if action in patmap[prop_or_datatype]:
-                raise ValueError("Duplicate action record in (%s)" % "|".join(row))
+                # Rebuild the property pattern, merging lists from the prior property pattern.
+                # Non-list fields will be silently overwritten.
+                pp = ppf.from_row(row, old_ppat=patmap[prop_or_datatype][action])
             patmap[prop_or_datatype][action] = pp
+            
             if very_verbose:
                 print("loaded %s->%s" % (prop_or_datatype, action.value), file=error_file, flush=True)
             if action == PropertyPattern.Action.MATCHES and pp.pattern is not None:
