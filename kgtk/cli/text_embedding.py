@@ -1,6 +1,7 @@
 import typing
 from kgtk.exceptions import KGTKException
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
+import sys
 
 ALL_EMBEDDING_MODELS_NAMES = [
     "bert-base-nli-cls-token",
