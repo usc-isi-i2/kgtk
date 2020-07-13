@@ -1,15 +1,7 @@
 """
-Copy a KGTK file, validating it and producing a clean KGTK file (no
-comments, whitespace lines, etc.), then running the property validator.
+Validate property patterns in a KGTK file.
 
 TODO: Need KgtkWriterOptions.
-
-TODO: Need to plumn the infrastructure so we can report at least
-a count of how many repair actions took place (per action type).
-Ideally, we'ld like the optino to log individual repair actions.
-
-TODO: Add a reject file.
-
 """
 
 from argparse import Namespace, SUPPRESS
@@ -26,10 +18,8 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Validate a KGTK file and output a clean copy: no comments, whitespace lines, invalid lines, etc. ',
-        'description': 'Validate a KGTK file and output a clean copy. ' +
-        'Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. ' +
-        'Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. ' +
+        'help': 'Validate property patterns in a KGTK file. ',
+        'description': 'Validate property patterns in a KGTK file. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert clean-data --help'
     }
 
