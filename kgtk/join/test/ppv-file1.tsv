@@ -11,7 +11,7 @@ color	node2_type	symbol
 color	node2_values	red
 color	node2_values	green
 color	node2_allow_list	True
-predicate	label_pattern	"p.*"
+predicate	label_pattern	"p.*"|"q.*"
 prop4	isa	predicate
 quad1	isa	predicate
 xnode	node1_pattern	"x.*"
