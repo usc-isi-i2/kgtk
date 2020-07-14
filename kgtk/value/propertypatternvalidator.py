@@ -413,6 +413,8 @@ class PropertyPatterns:
 
 @attr.s(slots=True, frozen=False)
 class PropertyPatternValidator:
+    ISA_SCOREBOARD_TYPE = typing.Set[str]
+    OCCURS_SCOREBOARD_TYPE = typing.MutableMapping[str, typing.MutableMapping[str, int]]
     DISTINCT_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
     ROW_TYPE =  typing.List[str]
     ROW_GROUP_TYPE = typing.List[typing.Tuple[int, ROW_TYPE]]
@@ -441,12 +443,12 @@ class PropertyPatternValidator:
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # The datatype inheritance scoreboard.  It starts fresh for each new row.
-    isa_scoreboard: typing.Set[str] = attr.ib(factory=set)
+    isa_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=set)
 
     # The occurance counting scoreboard:
     # node1->prop->count
     # This scoreboard is cleared for each new node1_group.
-    occurs_scoreboard: typing.MutableMapping[str, typing.MutableMapping[str, int]] = attr.ib(factory=dict)
+    occurs_scoreboard: OCCURS_SCOREBOARD_TYPE = attr.ib(factory=dict)
 
     # The cache of occurs limits after ISA and GROUPBY:
     # prop->limit
@@ -473,7 +475,7 @@ class PropertyPatternValidator:
 
     # Retain interesting properties or datatypes for requires/prohibits analysis and chaining:
     # node1->set(prop_or_datatype)
-    # This scoreboard is cleared for enach new node1_group.
+    # This scoreboard is cleared for each new node1_group.
     interesting_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
 
     # Chaining between node1 groups:
@@ -889,11 +891,13 @@ class PropertyPatternValidator:
         for new_datatype in new_datatypes:
             if new_datatype in self.isa_scoreboard:
                 print("Row %d: isa loop detected with %s." % (rownum, new_datatype), file=self.error_file, flush=True)
-            else:
-                valid: bool
-                matched: bool
-                valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
-                result &= valid
+                return False
+
+            valid: bool
+            matched: bool
+            valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
+            result &= valid
+
         return result
 
     def validate_switch(self,
@@ -901,28 +905,47 @@ class PropertyPatternValidator:
                         prop_or_datatype: str,
                         orig_prop: str,
                         new_datatypes: typing.List[str])->bool:
-        save_isa_scoreboard: typing.Set[str] = self.isa_scoreboard
+
+        # Save the scoreboards to prevent failed cases from having a permanent
+        # affect.
+        #
+        # TODO: Can this be made cheaper?
+        save_isa_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_scoreboard.copy()
+        save_occurs_scoreboard: PropertyPatternValidator.OCCURS_SCOREBOARD_TYPE = copy.copy(self.occurs_scoreboard)
+        save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
+        if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
+            save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
+
         new_datatype: str
         for new_datatype in new_datatypes:
             while True: # Start of NEXTCASE loop
                 if new_datatype in self.isa_scoreboard:
                     print("Row %d: isa loop detected with %s." % (rownum, new_datatype), file=self.error_file, flush=True)
+                    return False
+
+                valid: bool
+                matched: bool
+                valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
+                if valid:
+                    return True
+
+                # The case failed, restore the scoreboards.
+                #
+                # TODO: Can this be made cheaper?
+                self.isa_scoreboard = save_isa_scoreboard.copy()
+                self.occurs_scoreboard = copy.copy(save_occurs_scoreboard)
+                if self.distinct_scoreboard is None:
+                    self.distinct_scoreboard = None
                 else:
-                    valid: bool
-                    matched: bool
-                    valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
-                    if valid:
-                        return True
+                    self.distinct_scoreboard = copy.copy(save_distinct_scoreboard)
 
-                    # If self weren't frozen, we could do a simple assignment:
-                    self.isa_scoreboard.clear()
-                    self.isa_scoreboard.update(save_isa_scoreboard)
+                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[new_datatype]
+                if PropertyPattern.Action.NEXTCASE not in pats:
+                    break # no NEXTCASE
 
-                    pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[new_datatype]
-                    if PropertyPattern.Action.NEXTCASE not in pats:
-                        break # no NEXTCASE
-                    new_datatype = pats[PropertyPattern.Action.LABEL_PATTERN].values[0]
+                new_datatype = pats[PropertyPattern.Action.NEXTCASE].values[0]
                 
+        print("Row %d: no switch case succeeded for %s." % (rownum, prop_or_datatype), file=self.error_file, flush=True)
         return False
 
     def get_idx(self,
@@ -972,7 +995,7 @@ class PropertyPatternValidator:
                 result &= self.validate_isa(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.ISA].values)
 
             if PropertyPattern.Action.SWITCH in pats:
-                result &= self.validate_switch(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.ISA].values)
+                result &= self.validate_switch(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.SWITCH].values)
 
         return result, matched
 

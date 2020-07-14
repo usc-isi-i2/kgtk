@@ -44,3 +44,16 @@ bubble	property	True
 burble	isa	babble
 churble	property	True
 churble	chain	babble
+swatch	property	True
+swatch	switch	S001
+S001	isa	swatch1
+S001	nextcase	S002
+S002	isa	swatch2
+S002	nextcase	S003
+S003	isa	swatch3
+swatch1	datatype	True
+swatch1	node2_values	1
+swatch2	datatype	True
+swatch2	node2_values	2
+swatch3	datatype	True
+swatch3	node2_values	3
