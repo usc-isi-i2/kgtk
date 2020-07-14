@@ -445,7 +445,7 @@ class PropertyPatternValidator:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # The datatype inheritance scoreboard.  It starts fresh for each new row.
+    # The datatype inheritance scoreboard, used to detect loops.  It starts fresh for each new row.
     isa_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=set)
 
     # The occurance counting scoreboard:
