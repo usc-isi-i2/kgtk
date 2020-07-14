@@ -438,7 +438,7 @@ class PropertyPatternValidator:
 
     # The occurance counting scoreboard:
     # node1->prop->count
-    # This scoreboard is cleared for enach new node1_group.
+    # This scoreboard is cleared for each new node1_group.
     occurs_scoreboard: typing.MutableMapping[str, typing.MutableMapping[str, int]] = attr.ib(factory=dict)
 
     # The cache of occurs limits after ISA and GROUPBY:
@@ -451,7 +451,9 @@ class PropertyPatternValidator:
 
     # The distinct value counting scoreboard:
     # prop->set(values)
-    # This scoreboard is cleared for enach new node1_group.
+    #
+    # This scoreboard is saved before possible chain suspensions, and is
+    # restored when a suspension takes place.  This requires an unfrozen object.
     distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
 
     # The distinct limits after ISA and GROUPBY:
@@ -472,6 +474,10 @@ class PropertyPatternValidator:
     # This scoreboard is not cleared, but it gets content only when chaining is needed.
     chain_target_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
 
+    # The suspended row groups.
+    # node1->row_group
+    # row_group: list[tuple[rownum, row]]
+    #
     # This requires an unfrozen object.
     suspended_row_groups: typing.Optional[typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]]] = attr.ib(default=None)
 
@@ -1139,6 +1145,11 @@ class PropertyPatternValidator:
             input_row_count += 1
             node1 = row[self.node1_idx]
             if previous_node1 is not None and node1 != previous_node1:
+                # We need to save the distinct scoreboard and restore it
+                # on suspension. This could be expensive.
+                #
+                # TODO: Find a better way to do this.
+                save_distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = copy.copy(self.distinct_scoreboard)
                 try:
                     result = self.process_node1_group(row_group, node1)
                     if result:
@@ -1154,6 +1165,7 @@ class PropertyPatternValidator:
                                 reject_row_count += 1
                 except PropertyPatternValidator.ChainSuspensionException as e:
                     new_suspended_row_groups[node1] = row_group
+                    self.distinct_scoreboard = save_distinct_scoreboard
                 row_group.clear()
             row_group.append((input_row_count, row))
 
@@ -1162,6 +1174,11 @@ class PropertyPatternValidator:
             #
             # Note: the only time we wouldn't get here is if the input file
             # has no data rows.
+            # We need to save the distinct scoreboard and restore it
+            # on suspension. This could be expensive.
+            #
+            # TODO: Find a better way to do this.
+            save_distinct_scoreboard2: typing.MutableMapping[str, typing.Set[str]] = copy.copy(self.distinct_scoreboard)
             try:
                 result = self.process_node1_group(row_group, node1)
                 if result:
@@ -1172,12 +1189,14 @@ class PropertyPatternValidator:
                             output_row_count += 1
                 else:
                     if rkw is not None:
+
                         for row_num, row in row_group:
                             rkw.write(row)
                             reject_row_count += 1
 
             except PropertyPatternValidator.ChainSuspensionException as e:
                 new_suspended_row_groups[node1] = row_group
+                self.distinct_scoreboard = save_distinct_scoreboard2
                 
         if len(new_suspended_row_groups) > 0:
             valid_row_count, output_row_count, reject_row_count = \
@@ -1219,6 +1238,11 @@ class PropertyPatternValidator:
         row_num: int
         for node1 in sorted(row_groups.keys()):
             row_group: typing.List[typing.Tuple[int, typing.List[str]]] = row_groups[node1]
+            # We need to save the distinct scoreboard and restore it
+            # on suspension. This could be expensive.
+            #
+            # TODO: Find a better way to do this.
+            save_distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = copy.copy(self.distinct_scoreboard)
             try:
                 result: bool = self.process_node1_group(row_group, node1)
                 if result:
@@ -1235,6 +1259,7 @@ class PropertyPatternValidator:
 
             except PropertyPatternValidator.ChainSuspensionException as e:
                 new_suspended_row_groups[node1] = row_group
+                self.distinct_scoreboard = save_distinct_scoreboard
 
         if len(new_suspended_row_groups) > 0:
             valid_row_count, output_row_count, reject_row_count = \
@@ -1272,10 +1297,16 @@ class PropertyPatternValidator:
             new_suspended_row_groups = dict()
             for node1 in sorted(self.suspended_row_groups.keys()):
                 row_group = self.suspended_row_groups[node1]
+                # We need to save the distinct scoreboard and restore it
+                # on suspension. This could be expensive.
+                #
+                # TODO: Find a better way to do this.
+                save_distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = copy.copy(self.distinct_scoreboard)
                 try:
                     result: bool = self.process_node1_group(row_group, node1)
                 except PropertyPatternValidator.ChainSuspensionException as e:
                     new_suspended_row_groups[node1] = row_group
+                    self.distinct_scoreboard = save_distinct_scoreboard
                     continue
                 if result:
                     valid_row_count += len(row_group)
