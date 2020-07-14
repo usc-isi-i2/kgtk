@@ -58,6 +58,8 @@ class PropertyPattern:
         LABEL_PATTERN = "label_pattern"
         UNKNOWN = "unknown"
         REJECT = "reject"
+
+        DATATYPE = "datatype"
         PROPERTY = "property"
 
         MINDISTINCT = "mindistinct"
@@ -250,6 +252,7 @@ class PropertyPattern:
                       cls.Action.UNKNOWN,
                       cls.Action.REJECT,
                       cls.Action.PROPERTY,
+                      cls.Action.DATATYPE,
                       cls.Action.GROUPBYPROP,
         ):
             if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
@@ -406,8 +409,11 @@ class PropertyPatterns:
         return None
         
 
-@attr.s(slots=True, frozen=True)
+@attr.s(slots=True, frozen=False)
 class PropertyPatternValidator:
+    class ChainSuspensionException(Exception):
+        pass
+
     pps: PropertyPatterns = attr.ib()
 
     column_names: typing.List[str] = attr.ib()
@@ -427,8 +433,6 @@ class PropertyPatternValidator:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # We clear these set, getting around frozen attribute.
-    
     # The datatype inheritance scoreboard.  It starts fresh for each new row.
     isa_scoreboard: typing.Set[str] = attr.ib(factory=set)
 
@@ -467,6 +471,9 @@ class PropertyPatternValidator:
     # node1->set(prop_or_datatype)
     # This scoreboard is not cleared, but it gets content only when chaining is needed.
     chain_target_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
+
+    # This requires an unfrozen object.
+    suspended_row_groups: typing.Optional[typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]]] = attr.ib(default=None)
 
     def clear_node1_group(self):
         self.isa_scoreboard.clear()
@@ -656,6 +663,27 @@ class PropertyPatternValidator:
               return False
         return True
 
+    def validate_chain(self, rownum: int, remote_node1: str, prop_or_datatype: str, value_list: typing.List[str])->bool:
+        if remote_node1 not in self.chain_target_scoreboard:
+            if self.suspended_row_groups is not None:
+                if remote_node1 not in self.suspended_row_groups:
+                    print("Row %d: remote node1 '%s' not found" % (rownum, remote_node1), file=self.error_file, flush=True)
+                    return False
+            raise PropertyPatternValidator.ChainSuspensionException("Row %d: remote node1 '%s' is not ready." % (rownum, remote_node1));
+        remote_datatypes: typing.Set[str] = self.chain_target_scoreboard[remote_node1]
+
+        test_value: str
+        for test_value in value_list:
+            if test_value in remote_datatypes:
+                return True
+
+        print("Row %d: datatype '%s' not in remote node1 '%s' datatypes '%s'" % (rownum,
+                                                                                 KgtkFormat.LIST_SEPARATOR.join(value_list),
+                                                                                 remote_node1,
+                                                                                 KgtkFormat.LIST_SEPARATOR.join(remote_datatypes)),
+              file=self.error_file, flush=True)
+        return False
+
     def validate_node1(self,
                        rownum: int,
                        node1: str,
@@ -787,6 +815,9 @@ class PropertyPatternValidator:
 
         if PropertyPattern.Action.NOT_EQUAL_TO in pats:
             result &= self.validate_not_equal_to(rownum, prop_or_datatype, pats[PropertyPattern.Action.NOT_EQUAL_TO].numbers, node2_value)
+
+        if PropertyPattern.Action.CHAIN in pats:
+            result &= self.validate_chain(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.CHAIN].values)
 
         if prop_or_datatype in self.pps.distinct:
             groupby: str = orig_prop if prop_or_datatype in self.pps.groupbyprop else prop_or_datatype
@@ -1097,6 +1128,8 @@ class PropertyPatternValidator:
 
         row_group: typing.List[typing.Tuple[int, typing.List[str]]] = [ ]
 
+        new_suspended_row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]] = dict()
+
         row_num: int
         previous_node1: typing.Optional[str] = None
         node1: typing.Optional[str] = None
@@ -1106,6 +1139,30 @@ class PropertyPatternValidator:
             input_row_count += 1
             node1 = row[self.node1_idx]
             if previous_node1 is not None and node1 != previous_node1:
+                try:
+                    result = self.process_node1_group(row_group, node1)
+                    if result:
+                        valid_row_count += len(row_group)
+                        if okw is not None:
+                            for row_num, row in row_group:
+                                okw.write(row)
+                                output_row_count += 1
+                    else:
+                        if rkw is not None:
+                            for rownum, row in row_group:
+                                rkw.write(row)
+                                reject_row_count += 1
+                except PropertyPatternValidator.ChainSuspensionException as e:
+                    new_suspended_row_groups[node1] = row_group
+                row_group.clear()
+            row_group.append((input_row_count, row))
+
+        if len(row_group) > 0 and node1 is not None:
+            # Process the last group of rows.
+            #
+            # Note: the only time we wouldn't get here is if the input file
+            # has no data rows.
+            try:
                 result = self.process_node1_group(row_group, node1)
                 if result:
                     valid_row_count += len(row_group)
@@ -1115,29 +1172,21 @@ class PropertyPatternValidator:
                             output_row_count += 1
                 else:
                     if rkw is not None:
-                        for rownum, row in row_group:
+                        for row_num, row in row_group:
                             rkw.write(row)
                             reject_row_count += 1
-                row_group.clear()
-            row_group.append((input_row_count, row))
 
-        if len(row_group) > 0 and node1 is not None:
-            # Process the last group of rows.
-            #
-            # Note: the only time we wouldn't get here is if the input file
-            # has no data rows.
-            result = self.process_node1_group(row_group, node1)
-            if result:
-                valid_row_count += len(row_group)
-                if okw is not None:
-                    for row_num, row in row_group:
-                        okw.write(row)
-                        output_row_count += 1
-            else:
-                if rkw is not None:
-                    for row_num, row in row_group:
-                        rkw.write(row)
-                        reject_row_count += 1
+            except PropertyPatternValidator.ChainSuspensionException as e:
+                new_suspended_row_groups[node1] = row_group
+                
+        if len(new_suspended_row_groups) > 0:
+            valid_row_count, output_row_count, reject_row_count = \
+                self.process_suspended_row_groups(new_suspended_row_groups,
+                                                  okw,
+                                                  rkw,
+                                                  valid_row_count,
+                                                  output_row_count,
+                                                  reject_row_count)
 
         self.report_distinct_violations()
 
@@ -1155,6 +1204,7 @@ class PropertyPatternValidator:
         reject_row_count: int = 0
 
         row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]] = { }
+        new_suspended_row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]] = dict()
 
         node1: str
         row: typing.List[str]
@@ -1169,23 +1219,91 @@ class PropertyPatternValidator:
         row_num: int
         for node1 in sorted(row_groups.keys()):
             row_group: typing.List[typing.Tuple[int, typing.List[str]]] = row_groups[node1]
-            result: bool = self.process_node1_group(row_group, node1)
-            if result:
-                valid_row_count += len(row_group)
-                if okw is not None:
-                    for row_num, row in row_group:
-                        okw.write(row)
-                        output_row_count += 1
-            else:
+            try:
+                result: bool = self.process_node1_group(row_group, node1)
+                if result:
+                    valid_row_count += len(row_group)
+                    if okw is not None:
+                        for row_num, row in row_group:
+                            okw.write(row)
+                            output_row_count += 1
+                else:
+                    if rkw is not None:
+                        for row_num, row in row_group:
+                            rkw.write(row)
+                            reject_row_count += 1
+
+            except PropertyPatternValidator.ChainSuspensionException as e:
+                new_suspended_row_groups[node1] = row_group
+
+        if len(new_suspended_row_groups) > 0:
+            valid_row_count, output_row_count, reject_row_count = \
+                self.process_suspended_row_groups(new_suspended_row_groups,
+                                                  okw,
+                                                  rkw,
+                                                  valid_row_count,
+                                                  output_row_count,
+                                                  reject_row_count)
+
+        self.report_distinct_violations()
+
+        return (input_row_count, valid_row_count, output_row_count, reject_row_count)
+
+    def process_suspended_row_groups(self,
+                                     new_suspended_row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]],
+                                     okw: typing.Optional[KgtkWriter] = None,
+                                     rkw: typing.Optional[KgtkWriter] = None,
+                                     valid_row_count: int = 0,
+                                     output_row_count: int = 0,
+                                     reject_row_count: int = 0,
+    )->typing.Tuple[int, int, int]:
+        
+        row_num: int
+        row_group: typing.List[typing.Tuple[int, typing.List[str]]]
+        node1: str
+        row: typing.List[str]
+        old_count: typing.Optional[int] = None
+
+        # Stop when we don't have any more suspended row groups, or when the
+        # number of suspended row groups stops decreasing.
+        while len(new_suspended_row_groups) > 0 and (old_count is None or old_count > len(new_suspended_row_groups)):
+            old_count = len(new_suspended_row_groups)
+            self.suspended_row_groups = new_suspended_row_groups
+            new_suspended_row_groups = dict()
+            for node1 in sorted(self.suspended_row_groups.keys()):
+                row_group = self.suspended_row_groups[node1]
+                try:
+                    result: bool = self.process_node1_group(row_group, node1)
+                except PropertyPatternValidator.ChainSuspensionException as e:
+                    new_suspended_row_groups[node1] = row_group
+                    continue
+                if result:
+                    valid_row_count += len(row_group)
+                    if okw is not None:
+                        for row_num, row in row_group:
+                            okw.write(row)
+                            output_row_count += 1
+                else:
+                    if rkw is not None:
+                        for row_num, row in row_group:
+                            rkw.write(row)
+                            reject_row_count += 1
+
+        if len(new_suspended_row_groups) > 0:
+            print("There were %d unprocessed row groups due to unresolved chain requests." % (len(new_suspended_row_groups)),
+                  file=self.error_file, flush=True)
+
+            for node1 in sorted(new_suspended_row_groups.keys()):
+                row_group = new_suspended_row_groups[node1]
+                print("Node1 '%s': %d rows not processed due to unresolved chain requests." % (node1, len(row_group)),
+                      file=self.error_file, flush=True)
+            
                 if rkw is not None:
                     for row_num, row in row_group:
                         rkw.write(row)
                         reject_row_count += 1
 
-        self.report_distinct_violations()
-
-        return (input_row_count, valid_row_count, output_row_count, reject_row_count)
-                
+        return (valid_row_count, output_row_count, reject_row_count)
 
     def process_ungrouped(self,
                           ikr: KgtkReader,

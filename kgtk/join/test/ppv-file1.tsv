@@ -38,3 +38,9 @@ tradition	requires	respect
 respect	isa	property
 civility	prohibits	incivility
 incivility	isa	property
+blark	property	True
+babble	datatype	True
+bubble	property	True
+burble	isa	babble
+churble	property	True
+churble	chain	babble

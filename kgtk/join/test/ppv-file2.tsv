@@ -56,7 +56,8 @@ civility-fail	incivility	True
 incivility	incivility	True
 group-fail	civility	True
 group-fail	unknown	XXX
-
-
-
-
+blark1	blark	True
+burble1	burble	True
+churble1	churble	burble1
+churble2	churble	blark1
+churble3	churble	burble2
