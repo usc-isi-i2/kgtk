@@ -295,7 +295,9 @@ class PropertyPatternFactory:
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatterns:
-    patterns: typing.Mapping[str, typing.Mapping[PropertyPattern.Action, PropertyPattern]] = attr.ib()
+    PATTERN_MAP_TYPE = typing.Mapping[PropertyPattern.Action, PropertyPattern]
+
+    patterns: typing.Mapping[str, PATTERN_MAP_TYPE] = attr.ib()
     matches: typing.Mapping[str, typing.List[typing.Pattern]] = attr.ib()
     mustoccur: typing.Set[str] = attr.ib()
     occurs: typing.Set[str] = attr.ib()
@@ -531,7 +533,7 @@ class PropertyPatternValidator:
             thing: str = row[idx]
             # print("Row %d: idx=%d column_name=%s thing=%s" % (rownum, idx, column_name, thing), file=self.error_file, flush=True)
             if thing in self.pps.patterns:
-                thing_patterns: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[thing]
+                thing_patterns: PropertyPatterns.PATTERN_MAP_TYPE = self.pps.patterns[thing]
                 # print("len(thing_patterns) = %d" % len(thing_patterns), file=self.error_file, flush=True)
                 if PropertyPattern.Action.NOT_IN in thing_patterns:
                     column_names: typing.List[str] = thing_patterns[PropertyPattern.Action.NOT_IN].column_names
@@ -742,7 +744,7 @@ class PropertyPatternValidator:
                              node1_value: KgtkValue,
                              prop_or_datatype: str,
                              orig_prop: str,
-                             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
+                             pats: PropertyPatterns.PATTERN_MAP_TYPE)->bool:
         result: bool = True
 
         if node1_value.is_list():
@@ -793,7 +795,7 @@ class PropertyPatternValidator:
                        node2: str,
                        prop_or_datatype: str,
                        orig_prop: str,
-                       pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
+                       pats: PropertyPatterns.PATTERN_MAP_TYPE)->bool:
         node2_value = KgtkValue(node2, options=self.value_options, parse_fields=True)
         if node2_value.validate():
             return self.validate_node2_value(rownum, node2_value, prop_or_datatype, orig_prop, pats)
@@ -806,7 +808,7 @@ class PropertyPatternValidator:
                              node2_value: KgtkValue,
                              prop_or_datatype: str,
                              orig_prop: str,
-                             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
+                             pats: PropertyPatterns.PATTERN_MAP_TYPE)->bool:
         result: bool = True
 
         if node2_value.is_list():
@@ -927,7 +929,7 @@ class PropertyPatternValidator:
                 rownum: int,
                 prop_or_datatype: str,
                 action: PropertyPattern.Action,
-                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern],
+                pats: PropertyPatterns.PATTERN_MAP_TYPE,
                 default_idx: int,
                 who: str,
     )->int:
@@ -949,7 +951,7 @@ class PropertyPatternValidator:
         if prop_or_datatype in self.pps.patterns:
             self.isa_scoreboard.add(prop_or_datatype)
             matched = True
-            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
+            pats: PropertyPatterns.PATTERN_MAP_TYPE = self.pps.patterns[prop_or_datatype]
 
             if PropertyPattern.Action.REJECT in pats and pats[PropertyPattern.Action.REJECT].truth:
                 result = False
@@ -1038,7 +1040,6 @@ class PropertyPatternValidator:
             prop_or_datatype: str
             for prop_or_datatype in sorted(propcounts.keys()):
                 count: int = propcounts[prop_or_datatype]
-                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[prop_or_datatype]
 
                 if prop_or_datatype in self.pps.mustoccur and count == 0:
                     print("Property or datatype '%s' did not occur for node1 '%s'." % (prop_or_datatype, node1),
