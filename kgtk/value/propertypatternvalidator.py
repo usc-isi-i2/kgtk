@@ -412,6 +412,9 @@ class PropertyPatterns:
 @attr.s(slots=True, frozen=False)
 class PropertyPatternValidator:
     DISTINCT_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
+    ROW_TYPE =  typing.List[str]
+    ROW_GROUP_TYPE = typing.List[typing.Tuple[int, ROW_TYPE]]
+    MAPPED_ROW_GROUPS_TYPE = typing.MutableMapping[str, ROW_GROUP_TYPE]
 
     class ChainSuspensionException(Exception):
         pass
@@ -481,7 +484,36 @@ class PropertyPatternValidator:
     # row_group: list[tuple[rownum, row]]
     #
     # This requires an unfrozen object.
-    suspended_row_groups: typing.Optional[typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]]] = attr.ib(default=None)
+    suspended_row_groups: typing.Optional['PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE'] = attr.ib(default=None)
+
+    # It's easier to keep these counters here rather than passing them around:
+    input_row_count: int = attr.ib(default=0)
+    valid_row_count: int = attr.ib(default=0)
+    output_row_count: int = attr.ib(default=0)
+    reject_row_count: int = attr.ib(default=0)
+
+    @classmethod
+    def new(cls,
+            pps: PropertyPatterns,
+            kr: KgtkReader,
+            grouped_input: bool,
+            reject_node1_groups: bool,
+            value_options: KgtkValueOptions,
+            error_file: typing.TextIO,
+            verbose: bool,
+            very_verbose: bool)->'PropertyPatternValidator':
+        return PropertyPatternValidator(pps,
+                                        kr.column_names.copy(),
+                                        copy.copy(kr.column_name_map),
+                                        kr.node1_column_idx,
+                                        kr.label_column_idx,
+                                        kr.node2_column_idx,
+                                        grouped_input=grouped_input,
+                                        reject_node1_groups=reject_node1_groups,
+                                        value_options=value_options,
+                                        error_file=error_file,
+                                        verbose=verbose,
+                                        very_verbose=very_verbose)
 
     def clear_node1_group(self):
         self.isa_scoreboard.clear()
@@ -942,7 +974,7 @@ class PropertyPatternValidator:
 
         return result, matched
 
-    def validate_row(self, rownum: int, row: typing.List[str])->bool:
+    def validate_row(self, rownum: int, row: 'PropertyPatternValidator.ROW_TYPE')->bool:
         result: bool = True # Everying's good until we discover otherwise.
         matched_any: bool = False
 
@@ -984,7 +1016,7 @@ class PropertyPatternValidator:
 
         return result
 
-    def setup_mustoccur(self, rownum: int, row: typing.List[str]):
+    def setup_mustoccur(self, rownum: int, row: 'PropertyPatternValidator.ROW_TYPE'):
         prop_or_datatype: str
         for prop_or_datatype in self.pps.mustoccur:
             node1 = row[self.node1_idx]
@@ -1087,39 +1119,18 @@ class PropertyPatternValidator:
 
         return result
 
-    @classmethod
-    def new(cls,
-            pps: PropertyPatterns,
-            kr: KgtkReader,
-            grouped_input: bool,
-            reject_node1_groups: bool,
-            value_options: KgtkValueOptions,
-            error_file: typing.TextIO,
-            verbose: bool,
-            very_verbose: bool)->'PropertyPatternValidator':
-        return PropertyPatternValidator(pps,
-                                        kr.column_names.copy(),
-                                        copy.copy(kr.column_name_map),
-                                        kr.node1_column_idx,
-                                        kr.label_column_idx,
-                                        kr.node2_column_idx,
-                                        grouped_input=grouped_input,
-                                        reject_node1_groups=reject_node1_groups,
-                                        value_options=value_options,
-                                        error_file=error_file,
-                                        verbose=verbose,
-                                        very_verbose=very_verbose)
-
     def process_node1_group(self,
-                            row_group: typing.List[typing.Tuple[int, typing.List[str]]],
+                            row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE',
                             node1: str,
+                            okw: typing.Optional[KgtkWriter] = None,
+                            rkw: typing.Optional[KgtkWriter] = None,
     )->bool:
         result: bool = True
 
         self.clear_node1_group()
 
         row_number: int
-        row: typing.List[str]
+        row: PropertyPatternValidator.ROW_TYPE
         for row_number, row in row_group:
             result &= self.validate_row(row_number, row)
 
@@ -1129,29 +1140,33 @@ class PropertyPatternValidator:
         if result:
             self.chain_target_scoreboard[node1] = self.interesting_scoreboard[node1].intersection(self.pps.chain_targets)
 
+            self.valid_row_count += len(row_group)
+            if okw is not None:
+                for row_num, row in row_group:
+                    okw.write(row)
+                    self.output_row_count += 1
+        else:
+            if rkw is not None:
+                for rownum, row in row_group:
+                    rkw.write(row)
+                    self.reject_row_count += 1
         return result
 
     def process_pregrouped(self,
                            ikr: KgtkReader,
                            okw: typing.Optional[KgtkWriter] = None,
                            rkw: typing.Optional[KgtkWriter] = None,
-    )->typing.Tuple[int, int, int, int]:
-        input_row_count: int = 0
-        valid_row_count: int = 0
-        output_row_count: int = 0
-        reject_row_count: int = 0
-
-        row_group: typing.List[typing.Tuple[int, typing.List[str]]] = [ ]
-
-        new_suspended_row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]] = dict()
+    ):
+        row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE' = [ ]
+        new_suspended_row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE' = dict()
 
         row_num: int
         previous_node1: typing.Optional[str] = None
         node1: typing.Optional[str] = None
         result: bool
-        row: typing.List[str]
+        row: 'PropertyPatternValidator.ROW_TYPE'
         for row in ikr:
-            input_row_count += 1
+            self.input_row_count += 1
             node1 = row[self.node1_idx]
             if previous_node1 is not None and node1 != previous_node1:
                 # We need to save the distinct scoreboard and restore it
@@ -1162,23 +1177,12 @@ class PropertyPatternValidator:
                 if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
                     save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
                 try:
-                    result = self.process_node1_group(row_group, node1)
-                    if result:
-                        valid_row_count += len(row_group)
-                        if okw is not None:
-                            for row_num, row in row_group:
-                                okw.write(row)
-                                output_row_count += 1
-                    else:
-                        if rkw is not None:
-                            for rownum, row in row_group:
-                                rkw.write(row)
-                                reject_row_count += 1
+                    self.process_node1_group(row_group, node1, okw, rkw)
                 except PropertyPatternValidator.ChainSuspensionException as e:
                     new_suspended_row_groups[node1] = row_group
                     self.distinct_scoreboard = save_distinct_scoreboard
                 row_group.clear()
-            row_group.append((input_row_count, row))
+            row_group.append((self.input_row_count, row))
 
         if len(row_group) > 0 and node1 is not None:
             # Process the last group of rows.
@@ -1193,115 +1197,69 @@ class PropertyPatternValidator:
             if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
                 save_distinct_scoreboard2 = copy.copy(self.distinct_scoreboard)
             try:
-                result = self.process_node1_group(row_group, node1)
-                if result:
-                    valid_row_count += len(row_group)
-                    if okw is not None:
-                        for row_num, row in row_group:
-                            okw.write(row)
-                            output_row_count += 1
-                else:
-                    if rkw is not None:
-
-                        for row_num, row in row_group:
-                            rkw.write(row)
-                            reject_row_count += 1
-
+                self.process_node1_group(row_group, node1, okw, rkw)
             except PropertyPatternValidator.ChainSuspensionException as e:
                 new_suspended_row_groups[node1] = row_group
                 self.distinct_scoreboard = save_distinct_scoreboard2
                 
         if len(new_suspended_row_groups) > 0:
-            valid_row_count, output_row_count, reject_row_count = \
-                self.process_suspended_row_groups(new_suspended_row_groups,
-                                                  okw,
-                                                  rkw,
-                                                  valid_row_count,
-                                                  output_row_count,
-                                                  reject_row_count)
-
+            self.process_suspended_row_groups(new_suspended_row_groups, okw, rkw)
         self.report_distinct_violations()
 
-        return (input_row_count, valid_row_count, output_row_count, reject_row_count)
+        return
                 
 
     def process_sort_and_group(self,
                                ikr: KgtkReader,
                                okw: typing.Optional[KgtkWriter] = None,
                                rkw: typing.Optional[KgtkWriter] = None,
-    )->typing.Tuple[int, int, int, int]:
-        input_row_count: int = 0
-        valid_row_count: int = 0
-        output_row_count: int = 0
-        reject_row_count: int = 0
-
-        row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]] = { }
-        new_suspended_row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]] = dict()
+    ):
+        row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE' = dict()
+        new_suspended_row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE' = dict()
 
         node1: str
-        row: typing.List[str]
+        row: 'PropertyPatternValidator.ROW_TYPE'
         for row in ikr:
-            input_row_count += 1
+            self.input_row_count += 1
             node1 = row[self.node1_idx]
             if node1 in row_groups:
-                row_groups[node1].append((input_row_count, row))
+                row_groups[node1].append((self.input_row_count, row))
             else:
-                row_groups[node1] = [(input_row_count, row)]
+                row_groups[node1] = [(self.input_row_count, row)]
 
         row_num: int
         for node1 in sorted(row_groups.keys()):
-            row_group: typing.List[typing.Tuple[int, typing.List[str]]] = row_groups[node1]
+            row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE' = row_groups[node1]
             # We need to save the distinct scoreboard and restore it
             # on suspension. This could be expensive.
             #
             # TODO: Find a better way to do this.
-            save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
+            save_distinct_scoreboard: 'PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE' = None
             if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
                 save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
             try:
-                result: bool = self.process_node1_group(row_group, node1)
-                if result:
-                    valid_row_count += len(row_group)
-                    if okw is not None:
-                        for row_num, row in row_group:
-                            okw.write(row)
-                            output_row_count += 1
-                else:
-                    if rkw is not None:
-                        for row_num, row in row_group:
-                            rkw.write(row)
-                            reject_row_count += 1
-
+                self.process_node1_group(row_group, node1, okw, rkw)
             except PropertyPatternValidator.ChainSuspensionException as e:
                 new_suspended_row_groups[node1] = row_group
                 self.distinct_scoreboard = save_distinct_scoreboard
 
         if len(new_suspended_row_groups) > 0:
-            valid_row_count, output_row_count, reject_row_count = \
-                self.process_suspended_row_groups(new_suspended_row_groups,
-                                                  okw,
-                                                  rkw,
-                                                  valid_row_count,
-                                                  output_row_count,
-                                                  reject_row_count)
+            self.process_suspended_row_groups(new_suspended_row_groups, okw, rkw)
 
         self.report_distinct_violations()
 
-        return (input_row_count, valid_row_count, output_row_count, reject_row_count)
+        return
 
     def process_suspended_row_groups(self,
-                                     new_suspended_row_groups: typing.MutableMapping[str, typing.List[typing.Tuple[int, typing.List[str]]]],
+                                     new_suspended_row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE',
                                      okw: typing.Optional[KgtkWriter] = None,
                                      rkw: typing.Optional[KgtkWriter] = None,
-                                     valid_row_count: int = 0,
-                                     output_row_count: int = 0,
-                                     reject_row_count: int = 0,
-    )->typing.Tuple[int, int, int]:
+    ):
         
         row_num: int
-        row_group: typing.List[typing.Tuple[int, typing.List[str]]]
+        row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE'
         node1: str
-        row: typing.List[str]
+        row: 'PropertyPatternValidator.ROW_TYPE'
         old_count: typing.Optional[int] = None
 
         # Stop when we don't have any more suspended row groups, or when the
@@ -1320,19 +1278,7 @@ class PropertyPatternValidator:
                 if self.distinct_scoreboard is not None:
                     save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
                 try:
-                    result: bool = self.process_node1_group(row_group, node1)
-                    if result:
-                        valid_row_count += len(row_group)
-                        if okw is not None:
-                            for row_num, row in row_group:
-                                okw.write(row)
-                                output_row_count += 1
-                    else:
-                        if rkw is not None:
-                            for row_num, row in row_group:
-                                rkw.write(row)
-                                reject_row_count += 1
-
+                    self.process_node1_group(row_group, node1, okw, rkw)
                 except PropertyPatternValidator.ChainSuspensionException as e:
                     new_suspended_row_groups[node1] = row_group
                     self.distinct_scoreboard = save_distinct_scoreboard
@@ -1349,46 +1295,41 @@ class PropertyPatternValidator:
                 if rkw is not None:
                     for row_num, row in row_group:
                         rkw.write(row)
-                        reject_row_count += 1
+                        self.reject_row_count += 1
 
-        return (valid_row_count, output_row_count, reject_row_count)
+        return
 
     def process_ungrouped(self,
                           ikr: KgtkReader,
                           okw: typing.Optional[KgtkWriter] = None,
                           rkw: typing.Optional[KgtkWriter] = None,
-    )->typing.Tuple[int, int, int, int]:
-        input_row_count: int = 0
-        valid_row_count: int = 0
-        output_row_count: int = 0
-        reject_row_count: int = 0
-
-        row: typing.List[str]
+    ):        
+        row: 'PropertyPatternValidator.ROW_TYPE'
         for row in ikr:
-            input_row_count += 1
-            result: bool = self.validate_row(input_row_count, row)
+            self.input_row_count += 1
+            result: bool = self.validate_row(self.input_row_count, row)
             if result:
-                valid_row_count += 1
+                self.valid_row_count += 1
                 if okw is not None:
                     okw.write(row)
-                    output_row_count += 1
+                    self.output_row_count += 1
             else:
                 if rkw is not None:
                     rkw.write(row)
-                    reject_row_count += 1
+                    self.reject_row_count += 1
 
         self.report_occurance_violations()
         self.report_interesting_violations()
 
         self.report_distinct_violations()
 
-        return (input_row_count, valid_row_count, output_row_count, reject_row_count)
+        return
 
     def process(self,
                 ikr: KgtkReader,
                 okw: typing.Optional[KgtkWriter] = None,
                 rkw: typing.Optional[KgtkWriter] = None,
-    )-> typing.Tuple[int, int, int, int]:
+    ):
         if self.reject_node1_groups :
             if self.grouped_input:
                 return self.process_pregrouped(ikr, okw, rkw)
@@ -1467,17 +1408,13 @@ def main():
         rkw = KgtkWriter.open(ikr.column_names, args.reject_file)
         
 
-    input_row_count: int = 0
-    valid_row_count: int = 0
-    output_row_count: int = 0
-    reject_row_count: int = 0
-    input_row_count, valid_row_count, output_row_count, reject_row_count = ppv.process(ikr, okw, rkw)
+    ppv.process(ikr, okw, rkw)
 
-    print("Read %d input rows, %d valid." % (input_row_count, valid_row_count), file=error_file, flush=True)
+    print("Read %d input rows, %d valid." % (ppv.input_row_count, ppv.valid_row_count), file=error_file, flush=True)
     if okw is not None:
-        print("Wrote %d output rows." % (output_row_count), file=error_file, flush=True)
+        print("Wrote %d output rows." % (ppv.output_row_count), file=error_file, flush=True)
     if rkw is not None:
-        print("Wrote %d reject rows." % (reject_row_count), file=error_file, flush=True)
+        print("Wrote %d reject rows." % (ppv.reject_row_count), file=error_file, flush=True)
 
     ikr.close()
     pkr.close()

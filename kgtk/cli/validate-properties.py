@@ -146,18 +146,14 @@ def run(input_file: KGTKFiles,
                                   reject_kgtk_file,
                                   verbose=verbose, very_verbose=very_verbose)
         
-        input_row_count: int = 0
-        valid_row_count: int = 0
-        output_row_count: int = 0
-        reject_row_count: int = 0
-        input_row_count, valid_row_count, output_row_count, reject_row_count = ppv.process(kr, kw, rkw)
+        ppv.process(kr, kw, rkw)
 
         if verbose:
-            print("Read %d rows, %d valid" % (input_row_count, valid_row_count), file=error_file, flush=True)
+            print("Read %d rows, %d valid" % (ppv.input_row_count, ppv.valid_row_count), file=error_file, flush=True)
             if kw is not None:
-                print("Wrote %d good rows" % output_row_count, file=error_file, flush=True)
+                print("Wrote %d good rows" % ppv.output_row_count, file=error_file, flush=True)
             if rkw is not None:
-                print("Wrote %d rejected rows" % reject_row_count, file=error_file, flush=True)
+                print("Wrote %d rejected rows" % ppv.reject_row_count, file=error_file, flush=True)
 
         if kw is not None:
             kw.close()
