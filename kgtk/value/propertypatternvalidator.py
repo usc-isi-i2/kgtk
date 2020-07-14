@@ -411,6 +411,8 @@ class PropertyPatterns:
 
 @attr.s(slots=True, frozen=False)
 class PropertyPatternValidator:
+    DISTINCT_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
+
     class ChainSuspensionException(Exception):
         pass
 
@@ -454,7 +456,7 @@ class PropertyPatternValidator:
     #
     # This scoreboard is saved before possible chain suspensions, and is
     # restored when a suspension takes place.  This requires an unfrozen object.
-    distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
+    distinct_scoreboard: DISTINCT_SCOREBOARD_TYPE = attr.ib(default=None)
 
     # The distinct limits after ISA and GROUPBY:
     # prop->limit
@@ -839,6 +841,8 @@ class PropertyPatternValidator:
                 else:
                     self.maxdistinct_limits[groupby] = None
                     
+            if self.distinct_scoreboard is None:
+                self.distinct_scoreboard = dict()
             if groupby not in self.distinct_scoreboard:
                 self.distinct_scoreboard[groupby] = set()
             self.distinct_scoreboard[groupby].add(node2_value.value)
@@ -1056,7 +1060,12 @@ class PropertyPatternValidator:
         """
         Print a line when a mindistinct or maxdistinct violation happened. The results are
         grouped by property, then by node2 value.
+
+        result: True if no problems, False if violations occured.
         """
+        if self.distinct_scoreboard is None:
+            return True
+
         result: bool = True
         prop_or_datatype: str
         for prop_or_datatype in sorted(self.distinct_scoreboard.keys()):
@@ -1149,8 +1158,8 @@ class PropertyPatternValidator:
                 # on suspension. This could be expensive.
                 #
                 # TODO: Find a better way to do this.
-                save_distinct_scoreboard: typing.Optional[typing.MutableMapping[str, typing.Set[str]]] = None
-                if len(self.pps.chain_targets) > 0:
+                save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
+                if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
                     save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
                 try:
                     result = self.process_node1_group(row_group, node1)
@@ -1167,8 +1176,7 @@ class PropertyPatternValidator:
                                 reject_row_count += 1
                 except PropertyPatternValidator.ChainSuspensionException as e:
                     new_suspended_row_groups[node1] = row_group
-                    if save_distinct_scoreboard is not None:
-                        self.distinct_scoreboard = save_distinct_scoreboard
+                    self.distinct_scoreboard = save_distinct_scoreboard
                 row_group.clear()
             row_group.append((input_row_count, row))
 
@@ -1181,8 +1189,8 @@ class PropertyPatternValidator:
             # on suspension. This could be expensive.
             #
             # TODO: Find a better way to do this.
-            save_distinct_scoreboard2: typing.Optional[typing.MutableMapping[str, typing.Set[str]]] = None
-            if len(self.pps.chain_targets) > 0:
+            save_distinct_scoreboard2: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
+            if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
                 save_distinct_scoreboard2 = copy.copy(self.distinct_scoreboard)
             try:
                 result = self.process_node1_group(row_group, node1)
@@ -1201,8 +1209,7 @@ class PropertyPatternValidator:
 
             except PropertyPatternValidator.ChainSuspensionException as e:
                 new_suspended_row_groups[node1] = row_group
-                if save_distinct_scoreboard2 is not None:
-                    self.distinct_scoreboard = save_distinct_scoreboard2
+                self.distinct_scoreboard = save_distinct_scoreboard2
                 
         if len(new_suspended_row_groups) > 0:
             valid_row_count, output_row_count, reject_row_count = \
@@ -1248,8 +1255,8 @@ class PropertyPatternValidator:
             # on suspension. This could be expensive.
             #
             # TODO: Find a better way to do this.
-            save_distinct_scoreboard: typing.Optional[typing.MutableMapping[str, typing.Set[str]]] = None
-            if len(self.pps.chain_targets) > 0:
+            save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
+            if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
                 save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
             try:
                 result: bool = self.process_node1_group(row_group, node1)
@@ -1267,8 +1274,7 @@ class PropertyPatternValidator:
 
             except PropertyPatternValidator.ChainSuspensionException as e:
                 new_suspended_row_groups[node1] = row_group
-                if save_distinct_scoreboard is not None:
-                    self.distinct_scoreboard = save_distinct_scoreboard
+                self.distinct_scoreboard = save_distinct_scoreboard
 
         if len(new_suspended_row_groups) > 0:
             valid_row_count, output_row_count, reject_row_count = \
@@ -1310,24 +1316,26 @@ class PropertyPatternValidator:
                 # on suspension. This could be expensive.
                 #
                 # TODO: Find a better way to do this.
-                save_distinct_scoreboard: typing.MutableMapping[str, typing.Set[str]] = copy.copy(self.distinct_scoreboard)
+                save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
+                if self.distinct_scoreboard is not None:
+                    save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
                 try:
                     result: bool = self.process_node1_group(row_group, node1)
+                    if result:
+                        valid_row_count += len(row_group)
+                        if okw is not None:
+                            for row_num, row in row_group:
+                                okw.write(row)
+                                output_row_count += 1
+                    else:
+                        if rkw is not None:
+                            for row_num, row in row_group:
+                                rkw.write(row)
+                                reject_row_count += 1
+
                 except PropertyPatternValidator.ChainSuspensionException as e:
                     new_suspended_row_groups[node1] = row_group
                     self.distinct_scoreboard = save_distinct_scoreboard
-                    continue
-                if result:
-                    valid_row_count += len(row_group)
-                    if okw is not None:
-                        for row_num, row in row_group:
-                            okw.write(row)
-                            output_row_count += 1
-                else:
-                    if rkw is not None:
-                        for row_num, row in row_group:
-                            rkw.write(row)
-                            reject_row_count += 1
 
         if len(new_suspended_row_groups) > 0:
             print("There were %d unprocessed row groups due to unresolved chain requests." % (len(new_suspended_row_groups)),
