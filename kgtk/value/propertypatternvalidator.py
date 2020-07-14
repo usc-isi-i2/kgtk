@@ -415,10 +415,12 @@ class PropertyPatterns:
 class PropertyPatternValidator:
     ISA_SCOREBOARD_TYPE = typing.Set[str]
     OCCURS_SCOREBOARD_TYPE = typing.MutableMapping[str, typing.MutableMapping[str, int]]
+    INTERESTING_SCOREBOARD_TYPE = typing.MutableMapping[str, typing.Set[str]]
     DISTINCT_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
     ROW_TYPE =  typing.List[str]
     ROW_GROUP_TYPE = typing.List[typing.Tuple[int, ROW_TYPE]]
     MAPPED_ROW_GROUPS_TYPE = typing.MutableMapping[str, ROW_GROUP_TYPE]
+    COMPLAINT_LIST_TYPE = typing.List[str]
 
     class ChainSuspensionException(Exception):
         pass
@@ -437,6 +439,7 @@ class PropertyPatternValidator:
 
     grouped_input: bool = attr.ib(default=False)
     reject_node1_groups: bool = attr.ib(default=False)
+    complain_immediately: bool = attr.ib(default=False) # True is good for debugging.
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -476,7 +479,7 @@ class PropertyPatternValidator:
     # Retain interesting properties or datatypes for requires/prohibits analysis and chaining:
     # node1->set(prop_or_datatype)
     # This scoreboard is cleared for each new node1_group.
-    interesting_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
+    interesting_scoreboard: INTERESTING_SCOREBOARD_TYPE = attr.ib(factory=dict)
 
     # Chaining between node1 groups:
     # node1->set(prop_or_datatype)
@@ -495,6 +498,8 @@ class PropertyPatternValidator:
     valid_row_count: int = attr.ib(default=0)
     output_row_count: int = attr.ib(default=0)
     reject_row_count: int = attr.ib(default=0)
+
+    complaints: 'PropertyPatternValidator.COMPLAINT_LIST_TYPE' = attr.ib(factory=list)
 
     @classmethod
     def new(cls,
@@ -519,10 +524,24 @@ class PropertyPatternValidator:
                                         verbose=verbose,
                                         very_verbose=very_verbose)
 
+    def grouse(self, complaint: str, immediately: bool = False):
+        if self.complain_immediately or immediately:
+            # For better debugging, complain immediately:
+            print("%s" % complaint, file=self.error_file, flush=True)
+        else:
+            self.complaints.append(complaint)
+
+    def show_complaints(self):
+        complaint: str
+        for complaint in self.complaints:
+            print("%s" % complaint, file=self.error_file, flush=True)
+        self.complaints.clear()
+
     def clear_node1_group(self):
         self.isa_scoreboard.clear()
         self.occurs_scoreboard.clear()
         self.interesting_scoreboard.clear()
+        self.complaints.clear()
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
         """
@@ -547,36 +566,32 @@ class PropertyPatternValidator:
 
     def validate_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, type_list: typing.List[str], who: str, invert: bool=False)->bool:
         if value.data_type is None:
-            print("Row %d: the %s value '%s' KGTK type is missing." % (rownum, who, value.value), file=self.error_file, flush=True)
+            self.grouse("Row %d: the %s value '%s' KGTK type is missing." % (rownum, who, value.value))
             return False # regardless of invert flag
 
         type_name: str = value.data_type.lower()
         if not invert:
             if type_name not in type_list:
-                print("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
-                                                                                                               KgtkFormat.LIST_SEPARATOR.join(type_list)),
-                      file=self.error_file, flush=True)
+                self.grouse("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
+                                                                                                                     KgtkFormat.LIST_SEPARATOR.join(type_list)))
                 return False
         else:
             if type_name in type_list:
-                print("Row %d: the %s KGTK datatype '%s' is in the list of disallowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
-                                                                                                               KgtkFormat.LIST_SEPARATOR.join(type_list)),
-                       file=self.error_file, flush=True)
+                self.grouse("Row %d: the %s KGTK datatype '%s' is in the list of disallowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
+                                                                                                                    KgtkFormat.LIST_SEPARATOR.join(type_list)))
                 return False
         return True
 
     def validate_value(self, rownum: int, value: KgtkValue, prop_or_datatype: str, value_list: typing.List[str], who: str, invert: bool=False)->bool:
         if not invert:
             if value.value not in value_list:
-                print("Row %d: the %s value '%s' is not in the list of allowed %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
-                                                                                                KgtkFormat.LIST_SEPARATOR.join(value_list)),
-                      file=self.error_file, flush=True)
+                self.grouse("Row %d: the %s value '%s' is not in the list of allowed %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
+                                                                                                              KgtkFormat.LIST_SEPARATOR.join(value_list)))
                 return False
         else:
             if value.value in value_list:
-                print("Row %d: the %s value '%s' is in the list of disallowed %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
-                                                                                                KgtkFormat.LIST_SEPARATOR.join(value_list)),
-                      file=self.error_file, flush=True)
+                self.grouse("Row %d: the %s value '%s' is in the list of disallowed %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
+                                                                                                KgtkFormat.LIST_SEPARATOR.join(value_list)))
                 return False
         return True        
 
@@ -594,13 +609,11 @@ class PropertyPatternValidator:
 
         if not invert:
             if not success:
-                print("Row %d: the %s value '%s' does not match the inclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype),
-                      file=self.error_file, flush=True)
+                self.grouse("Row %d: the %s value '%s' does not match the inclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype))
                 return False
         else:
             if success:
-                print("Row %d: the %s value '%s' matches the exclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype),
-                      file=self.error_file, flush=True)
+                self.grouse("Row %d: the %s value '%s' matches the exclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype))
                 return False
         return True
 
@@ -616,7 +629,7 @@ class PropertyPatternValidator:
         number: float = float(node2_value.fields.number)
 
         if number < minval:
-            print("Row: %d: prop_or_datatype %s value %f is less than minval %f." % (rownum, prop_or_datatype, number, minval), file=self.error_file, flush=True)
+            self.grouse("Row: %d: prop_or_datatype %s value %f is less than minval %f." % (rownum, prop_or_datatype, number, minval))
             return False
         return True
 
@@ -632,7 +645,7 @@ class PropertyPatternValidator:
         number: float = float(node2_value.fields.number)
 
         if number > maxval:
-            print("Row: %d: prop_or_datatype %s value %f is greater than maxval %f." % (rownum, prop_or_datatype, number, maxval), file=self.error_file, flush=True)
+            self.grouse("Row: %d: prop_or_datatype %s value %f is greater than maxval %f." % (rownum, prop_or_datatype, number, maxval))
             return False
         return True
 
@@ -648,7 +661,7 @@ class PropertyPatternValidator:
         number: float = float(node2_value.fields.number)
 
         if number <= minval:
-            print("Row: %d: prop_or_datatype %s value %f is not greater than %f." % (rownum, prop_or_datatype, number, minval), file=self.error_file, flush=True)
+            self.grouse("Row: %d: prop_or_datatype %s value %f is not greater than %f." % (rownum, prop_or_datatype, number, minval))
             return False
         return True
 
@@ -664,7 +677,7 @@ class PropertyPatternValidator:
         number: float = float(node2_value.fields.number)
 
         if number >= maxval:
-            print("Row: %d: prop_or_datatype %s value %f is not less than %f." % (rownum, prop_or_datatype, number, maxval), file=self.error_file, flush=True)
+            self.grouse("Row: %d: prop_or_datatype %s value %f is not less than %f." % (rownum, prop_or_datatype, number, maxval))
             return False
         return True
 
@@ -684,8 +697,7 @@ class PropertyPatternValidator:
             if number == value:
                 return True
 
-        print("Row: %d: prop_or_datatype %s value %f is not equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])),
-                                                                             file=self.error_file, flush=True)
+        self.grouse("Row: %d: prop_or_datatype %s value %f is not equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
         return False
 
     def validate_not_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
@@ -702,8 +714,7 @@ class PropertyPatternValidator:
         value: float
         for value in value_list:
             if number != value:
-              print("Row: %d: prop_or_datatype %s value %f is equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])),
-                                                                               file=self.error_file, flush=True)
+              self.grouse("Row: %d: prop_or_datatype %s value %f is equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
               return False
         return True
 
@@ -711,7 +722,7 @@ class PropertyPatternValidator:
         if remote_node1 not in self.chain_target_scoreboard:
             if self.suspended_row_groups is not None:
                 if remote_node1 not in self.suspended_row_groups:
-                    print("Row %d: remote node1 '%s' not found" % (rownum, remote_node1), file=self.error_file, flush=True)
+                    self.grouse("Row %d: remote node1 '%s' not found" % (rownum, remote_node1))
                     return False
             raise PropertyPatternValidator.ChainSuspensionException("Row %d: remote node1 '%s' is not ready." % (rownum, remote_node1));
         remote_datatypes: typing.Set[str] = self.chain_target_scoreboard[remote_node1]
@@ -721,11 +732,10 @@ class PropertyPatternValidator:
             if test_value in remote_datatypes:
                 return True
 
-        print("Row %d: datatype '%s' not in remote node1 '%s' datatypes '%s'" % (rownum,
-                                                                                 KgtkFormat.LIST_SEPARATOR.join(value_list),
-                                                                                 remote_node1,
-                                                                                 KgtkFormat.LIST_SEPARATOR.join(remote_datatypes)),
-              file=self.error_file, flush=True)
+        self.grouse("Row %d: datatype '%s' not in remote node1 '%s' datatypes '%s'" % (rownum,
+                                                                                       KgtkFormat.LIST_SEPARATOR.join(value_list),
+                                                                                       remote_node1,
+                                                                                       KgtkFormat.LIST_SEPARATOR.join(remote_datatypes)))
         return False
 
     def validate_node1(self,
@@ -738,7 +748,7 @@ class PropertyPatternValidator:
         if node1_value.validate():
             return self.validate_node1_value(rownum, node1_value, prop_or_datatype, orig_prop, pats)
         else:
-            print("Row %d: the node1 value '%s' is not valid KGTK." % (rownum, node1_value.value), file=self.error_file, flush=True)
+            self.grouse("Row %d: the node1 value '%s' is not valid KGTK." % (rownum, node1_value.value))
             return False
 
     def validate_node1_value(self,
@@ -757,7 +767,7 @@ class PropertyPatternValidator:
                     result &= self.validate_node1_value(rownum, list_item, prop_or_datatype, orig_prop, pats)
                 return result
             else:
-                print("Row %d: The node1 value '%s' is not allowed to be a list." % (rownum, node1_value.value), file=self.error_file, flush=True)
+                self.grouse("Row %d: The node1 value '%s' is not allowed to be a list." % (rownum, node1_value.value))
                 return False
 
         if PropertyPattern.Action.NODE1_TYPE in pats:
@@ -802,7 +812,7 @@ class PropertyPatternValidator:
         if node2_value.validate():
             return self.validate_node2_value(rownum, node2_value, prop_or_datatype, orig_prop, pats)
         else:
-            print("Row %d: the node2 value '%s' is not valid KGTK." % (rownum, node2_value.value), file=self.error_file, flush=True)
+            self.grouse("Row %d: the node2 value '%s' is not valid KGTK." % (rownum, node2_value.value))
             return False
 
     def validate_node2_value(self,
@@ -821,7 +831,7 @@ class PropertyPatternValidator:
                     result &= self.validate_node2_value(rownum, list_item, prop_or_datatype, orig_prop, pats)
                 return result
             else:
-                print("Row %d: The node2 value '%s' is not allowed to be a list." % (rownum, node2_value.value), file=self.error_file, flush=True)
+                self.grouse("Row %d: The node2 value '%s' is not allowed to be a list." % (rownum, node2_value.value))
                 return False
 
         if PropertyPattern.Action.NODE2_TYPE in pats:
@@ -890,7 +900,7 @@ class PropertyPatternValidator:
         new_datatype: str
         for new_datatype in new_datatypes:
             if new_datatype in self.isa_scoreboard:
-                print("Row %d: isa loop detected with %s." % (rownum, new_datatype), file=self.error_file, flush=True)
+                self.grouse("Row %d: isa loop detected with %s." % (rownum, new_datatype))
                 return False
 
             valid: bool
@@ -911,33 +921,39 @@ class PropertyPatternValidator:
         #
         # TODO: Can this be made cheaper?
         save_isa_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_scoreboard.copy()
-        save_occurs_scoreboard: PropertyPatternValidator.OCCURS_SCOREBOARD_TYPE = copy.copy(self.occurs_scoreboard)
+        save_occurs_scoreboard: PropertyPatternValidator.OCCURS_SCOREBOARD_TYPE = copy.deepcopy(self.occurs_scoreboard)
+        save_interesting_scoreboard: PropertyPatternValidator.INTERESTING_SCOREBOARD_TYPE = copy.deepcopy(self.interesting_scoreboard)
         save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
         if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
-            save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
+            save_distinct_scoreboard = copy.deepcopy(self.distinct_scoreboard)
+
+        save_complaints: PropertyPatternValidator.COMPLAINT_LIST_TYPE = self.complaints
+        self.complaints = [ ]
 
         new_datatype: str
         for new_datatype in new_datatypes:
             while True: # Start of NEXTCASE loop
                 if new_datatype in self.isa_scoreboard:
-                    print("Row %d: isa loop detected with %s." % (rownum, new_datatype), file=self.error_file, flush=True)
+                    self.grouse("Row %d: isa loop detected with %s." % (rownum, new_datatype))
                     return False
 
                 valid: bool
                 matched: bool
                 valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
                 if valid:
+                    self.complaints = save_complaints # Forget any complaints on failed cases
                     return True
 
                 # The case failed, restore the scoreboards.
                 #
                 # TODO: Can this be made cheaper?
                 self.isa_scoreboard = save_isa_scoreboard.copy()
-                self.occurs_scoreboard = copy.copy(save_occurs_scoreboard)
+                self.occurs_scoreboard = copy.deepcopy(save_occurs_scoreboard)
+                self.interesting_scoreboard = copy.deepcopy(save_interesting_scoreboard)
                 if self.distinct_scoreboard is None:
                     self.distinct_scoreboard = None
                 else:
-                    self.distinct_scoreboard = copy.copy(save_distinct_scoreboard)
+                    self.distinct_scoreboard = copy.deepcopy(save_distinct_scoreboard)
 
                 pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[new_datatype]
                 if PropertyPattern.Action.NEXTCASE not in pats:
@@ -945,7 +961,9 @@ class PropertyPatternValidator:
 
                 new_datatype = pats[PropertyPattern.Action.NEXTCASE].values[0]
                 
-        print("Row %d: no switch case succeeded for %s." % (rownum, prop_or_datatype), file=self.error_file, flush=True)
+        save_complaints.extend(self.complaints) # Retain all complaints from failed cases.
+        self.complaints = save_complaints
+        self.grouse("Row %d: no switch case succeeded for %s." % (rownum, prop_or_datatype))
         return False
 
     def get_idx(self,
@@ -961,8 +979,7 @@ class PropertyPatternValidator:
             if column_name in self.column_name_map:
                 return self.column_name_map[column_name]
             else:
-                print("Row %d: prop_or_datatypep '%s' %s column name '%s' not found in input file." % (rownum, prop_or_datatype, who, column_name),
-                      file=self.error_file, flush=True)
+                self.grouse("Row %d: prop_or_datatypep '%s' %s column name '%s' not found in input file." % (rownum, prop_or_datatype, who, column_name))
                 return -1
         else:
             return default_idx        
@@ -978,7 +995,7 @@ class PropertyPatternValidator:
 
             if PropertyPattern.Action.REJECT in pats and pats[PropertyPattern.Action.REJECT].truth:
                 result = False
-                print("Row %d: rejecting property '%s' based on '%s'." % (rownum, row[self.label_idx], prop_or_datatype), file=self.error_file, flush=True)
+                self.grouse("Row %d: rejecting property '%s' based on '%s'." % (rownum, row[self.label_idx], prop_or_datatype))
 
             if PropertyPattern.Action.LABEL_PATTERN in pats:
                 result &= self.validate_pattern(rownum, row[self.label_idx], prop_or_datatype, pats[PropertyPattern.Action.LABEL_PATTERN].patterns, "label")
@@ -1050,7 +1067,7 @@ class PropertyPatternValidator:
             if prop_or_datatype not in self.occurs_scoreboard[node1]:
                 self.occurs_scoreboard[node1][prop_or_datatype] = 0
 
-    def report_occurance_violations(self)->bool:
+    def report_occurance_violations(self, immediately: bool = False)->bool:
         """
         Print a line when a minoccurs or maxoccurs violation happened. The results are
         ordered by node1 value, then by property.
@@ -1065,26 +1082,25 @@ class PropertyPatternValidator:
                 count: int = propcounts[prop_or_datatype]
 
                 if prop_or_datatype in self.pps.mustoccur and count == 0:
-                    print("Property or datatype '%s' did not occur for node1 '%s'." % (prop_or_datatype, node1),
-                          file=self.error_file, flush=True)
+                    self.grouse("Property or datatype '%s' did not occur for node1 '%s'." % (prop_or_datatype, node1), immediately=immediately)
                     result = False                    
                     
                 elif prop_or_datatype in self.minoccurs_limits:
                     limit = self.minoccurs_limits[prop_or_datatype]
                     if limit is not None and count < limit:
-                        print("Property or datatype '%s' occured %d times for node1 '%s', minimum is %d." % (prop_or_datatype, count, node1, limit),
-                              file=self.error_file, flush=True)
+                        self.grouse("Property or datatype '%s' occured %d times for node1 '%s', minimum is %d." % (prop_or_datatype, count, node1, limit),
+                                    immediately=immediately)
                         result = False
 
                 if prop_or_datatype in self.maxoccurs_limits:
                     limit = self.maxoccurs_limits[prop_or_datatype]
                     if limit is not None and count > limit:
-                        print("Property or datatype '%s' occured %d times for node1 '%s', maximum is %d." % (prop_or_datatype, count, node1, limit),
-                              file=self.error_file, flush=True)
+                        self.grouse("Property or datatype '%s' occured %d times for node1 '%s', maximum is %d." % (prop_or_datatype, count, node1, limit),
+                                    immediately=immediately)
                         result = False
         return result
 
-    def report_interesting_violations(self)->bool:
+    def report_interesting_violations(self, immediately: bool = False)->bool:
         """
         Print a line when a requires or prohibits violation happened. The results are
         ordered by node1 value, then by property.
@@ -1100,19 +1116,19 @@ class PropertyPatternValidator:
                 if prop_or_datatype in interesting_set:
                     missing_set: typing.Set[str] = self.pps.requires[prop_or_datatype].difference(interesting_set)
                     if len(missing_set) > 0:
-                        print("Node '%s': Property or datatype '%s' requires %s." % (node1, prop_or_datatype, ", ".join(sorted(list(missing_set)))),
-                              file=self.error_file, flush=True)
+                        self.grouse("Node '%s': Property or datatype '%s' requires %s." % (node1, prop_or_datatype, ", ".join(sorted(list(missing_set)))),
+                                    immediately=immediately)
                         result = False                    
             for prop_or_datatype in sorted(self.pps.prohibits.keys()):
                 if prop_or_datatype in interesting_set:
                     prohibited_set: typing.Set[str] = self.pps.prohibits[prop_or_datatype].intersection(interesting_set)
                     if len(prohibited_set) > 0:
-                        print("Node '%s': Property or datatype '%s' prohibits %s." % (node1, prop_or_datatype, ", ".join(sorted(list(prohibited_set)))),
-                              file=self.error_file, flush=True)
+                        self.grouse("Node '%s': Property or datatype '%s' prohibits %s." % (node1, prop_or_datatype, ", ".join(sorted(list(prohibited_set)))),
+                                    immediately=immediately)
                         result = False                    
         return result
 
-    def report_distinct_violations(self)->bool:
+    def report_distinct_violations(self, immediately: bool = True)->bool:
         """
         Print a line when a mindistinct or maxdistinct violation happened. The results are
         grouped by property, then by node2 value.
@@ -1130,17 +1146,16 @@ class PropertyPatternValidator:
             if prop_or_datatype in self.mindistinct_limits:
                 limit = self.mindistinct_limits[prop_or_datatype]
                 if limit is not None and count < limit:
-                    print("Property or datatype '%s' has %d distinct node2 values, minimum is %d." % (prop_or_datatype, count, limit),
-                          file=self.error_file, flush=True)
+                    self.grouse("Property or datatype '%s' has %d distinct node2 values, minimum is %d." % (prop_or_datatype, count, limit),
+                                immediately=immediately)
                     result = False
 
             if prop_or_datatype in self.maxdistinct_limits:
                 limit = self.maxdistinct_limits[prop_or_datatype]
                 if limit is not None and count > limit:
-                    print("Property or datatype '%s' has %d distinct node2 values, maximum is %d." % (prop_or_datatype, count, limit),
-                          file=self.error_file, flush=True)
+                    self.grouse("Property or datatype '%s' has %d distinct node2 values, maximum is %d." % (prop_or_datatype, count, limit),
+                                immediately=immediately)
                     result = False
-
         return result
 
     def process_node1_group(self,
@@ -1160,6 +1175,8 @@ class PropertyPatternValidator:
 
         result &= self.report_occurance_violations()
         result &= self.report_interesting_violations()
+
+        self.show_complaints()
 
         if result:
             self.chain_target_scoreboard[node1] = self.interesting_scoreboard[node1].intersection(self.pps.chain_targets)
@@ -1199,7 +1216,7 @@ class PropertyPatternValidator:
                 # TODO: Find a better way to do this.
                 save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
                 if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
-                    save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
+                    save_distinct_scoreboard = copy.deepcopy(self.distinct_scoreboard)
                 try:
                     self.process_node1_group(row_group, node1, okw, rkw)
                 except PropertyPatternValidator.ChainSuspensionException as e:
@@ -1219,7 +1236,7 @@ class PropertyPatternValidator:
             # TODO: Find a better way to do this.
             save_distinct_scoreboard2: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
             if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
-                save_distinct_scoreboard2 = copy.copy(self.distinct_scoreboard)
+                save_distinct_scoreboard2 = copy.deepcopy(self.distinct_scoreboard)
             try:
                 self.process_node1_group(row_group, node1, okw, rkw)
             except PropertyPatternValidator.ChainSuspensionException as e:
@@ -1228,10 +1245,6 @@ class PropertyPatternValidator:
                 
         if len(new_suspended_row_groups) > 0:
             self.process_suspended_row_groups(new_suspended_row_groups, okw, rkw)
-        self.report_distinct_violations()
-
-        return
-                
 
     def process_sort_and_group(self,
                                ikr: KgtkReader,
@@ -1260,7 +1273,7 @@ class PropertyPatternValidator:
             # TODO: Find a better way to do this.
             save_distinct_scoreboard: 'PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE' = None
             if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
-                save_distinct_scoreboard = copy.copy(self.distinct_scoreboard)
+                save_distinct_scoreboard = copy.deepcopy(self.distinct_scoreboard)
             try:
                 self.process_node1_group(row_group, node1, okw, rkw)
             except PropertyPatternValidator.ChainSuspensionException as e:
@@ -1269,10 +1282,6 @@ class PropertyPatternValidator:
 
         if len(new_suspended_row_groups) > 0:
             self.process_suspended_row_groups(new_suspended_row_groups, okw, rkw)
-
-        self.report_distinct_violations()
-
-        return
 
     def process_suspended_row_groups(self,
                                      new_suspended_row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE',
@@ -1308,20 +1317,16 @@ class PropertyPatternValidator:
                     self.distinct_scoreboard = save_distinct_scoreboard
 
         if len(new_suspended_row_groups) > 0:
-            print("There were %d unprocessed row groups due to unresolved chain requests." % (len(new_suspended_row_groups)),
-                  file=self.error_file, flush=True)
+            self.grouse("There were %d unprocessed row groups due to unresolved chain requests." % (len(new_suspended_row_groups)), immediately=True)
 
             for node1 in sorted(new_suspended_row_groups.keys()):
                 row_group = new_suspended_row_groups[node1]
-                print("Node1 '%s': %d rows not processed due to unresolved chain requests." % (node1, len(row_group)),
-                      file=self.error_file, flush=True)
+                self.grouse("Node1 '%s': %d rows not processed due to unresolved chain requests." % (node1, len(row_group)), immediately=True)
             
                 if rkw is not None:
                     for row_num, row in row_group:
                         rkw.write(row)
                         self.reject_row_count += 1
-
-        return
 
     def process_ungrouped(self,
                           ikr: KgtkReader,
@@ -1332,6 +1337,7 @@ class PropertyPatternValidator:
         for row in ikr:
             self.input_row_count += 1
             result: bool = self.validate_row(self.input_row_count, row)
+            self.show_complaints()
             if result:
                 self.valid_row_count += 1
                 if okw is not None:
@@ -1342,26 +1348,24 @@ class PropertyPatternValidator:
                     rkw.write(row)
                     self.reject_row_count += 1
 
-        self.report_occurance_violations()
-        self.report_interesting_violations()
-
-        self.report_distinct_violations()
-
-        return
+        self.report_occurance_violations(immediately=True)
+        self.report_interesting_violations(immediately=True)
 
     def process(self,
                 ikr: KgtkReader,
                 okw: typing.Optional[KgtkWriter] = None,
                 rkw: typing.Optional[KgtkWriter] = None,
     ):
-        if self.reject_node1_groups :
+        if self.reject_node1_groups:
             if self.grouped_input:
-                return self.process_pregrouped(ikr, okw, rkw)
+                self.process_pregrouped(ikr, okw, rkw)
             else:
-                return self.process_sort_and_group(ikr, okw, rkw)
+                self.process_sort_and_group(ikr, okw, rkw)
         else:
-            return self.process_ungrouped(ikr, okw, rkw)
+            self.process_ungrouped(ikr, okw, rkw)
                 
+        self.report_distinct_violations(immediately=True)
+
 
 def main():
     parser: ArgumentParser = ArgumentParser()
