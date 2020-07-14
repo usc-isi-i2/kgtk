@@ -1136,7 +1136,7 @@ class PropertyPatternValidator:
 
             if prop_or_datatype in self.maxdistinct_limits:
                 limit = self.maxdistinct_limits[prop_or_datatype]
-                if limit is not None and count < limit:
+                if limit is not None and count > limit:
                     print("Property or datatype '%s' has %d distinct node2 values, maximum is %d." % (prop_or_datatype, count, limit),
                           file=self.error_file, flush=True)
                     result = False
