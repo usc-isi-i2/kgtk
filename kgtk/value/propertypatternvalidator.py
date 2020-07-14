@@ -1067,7 +1067,7 @@ class PropertyPatternValidator:
             if prop_or_datatype not in self.occurs_scoreboard[node1]:
                 self.occurs_scoreboard[node1][prop_or_datatype] = 0
 
-    def report_occurance_violations(self, immediately: bool = False)->bool:
+    def report_occurance_violations(self, immediately: bool = True)->bool:
         """
         Print a line when a minoccurs or maxoccurs violation happened. The results are
         ordered by node1 value, then by property.
@@ -1100,7 +1100,7 @@ class PropertyPatternValidator:
                         result = False
         return result
 
-    def report_interesting_violations(self, immediately: bool = False)->bool:
+    def report_interesting_violations(self, immediately: bool = True)->bool:
         """
         Print a line when a requires or prohibits violation happened. The results are
         ordered by node1 value, then by property.
@@ -1173,10 +1173,9 @@ class PropertyPatternValidator:
         for row_number, row in row_group:
             result &= self.validate_row(row_number, row)
 
+        self.show_complaints()
         result &= self.report_occurance_violations()
         result &= self.report_interesting_violations()
-
-        self.show_complaints()
 
         if result:
             self.chain_target_scoreboard[node1] = self.interesting_scoreboard[node1].intersection(self.pps.chain_targets)
@@ -1348,8 +1347,8 @@ class PropertyPatternValidator:
                     rkw.write(row)
                     self.reject_row_count += 1
 
-        self.report_occurance_violations(immediately=True)
-        self.report_interesting_violations(immediately=True)
+        self.report_occurance_violations()
+        self.report_interesting_violations()
 
     def process(self,
                 ikr: KgtkReader,
@@ -1364,7 +1363,7 @@ class PropertyPatternValidator:
         else:
             self.process_ungrouped(ikr, okw, rkw)
                 
-        self.report_distinct_violations(immediately=True)
+        self.report_distinct_violations()
 
 
 def main():
