@@ -1246,7 +1246,8 @@ class PropertyPatternValidator:
                     self.output_row_count += 1
         else:
             if rkw is not None:
-                for rownum, row in row_group:
+                for row_num, row in row_group:
+                    row = self.maybe_add_isa_column(row, save_isa_scoreboards[row_num])
                     rkw.write(row)
                     self.reject_row_count += 1
         return result
@@ -1399,10 +1400,12 @@ class PropertyPatternValidator:
             if result:
                 self.valid_row_count += 1
                 if okw is not None:
-                    okw.write(self.maybe_add_isa_column(row, self.isa_scoreboard))
+                    row = self.maybe_add_isa_column(row, self.isa_scoreboard)
+                    okw.write(row)
                     self.output_row_count += 1
             else:
-                if rkw is not None:
+                if rkw is not None: 
+                    row = self.maybe_add_isa_column(row, self.isa_scoreboard)
                     rkw.write(row)
                     self.reject_row_count += 1
 
@@ -1445,7 +1448,7 @@ def main():
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
     parser.add_argument(      "--add-isa-column", dest="add_isa_column",
-                              help="When true, add an ISA column to the output file. (default=%(default)s).",
+                              help="When true, add an ISA column to the output and reject files. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
     parser.add_argument(      "--isa-column-name", dest="isa_column_name", default="isa;node2",
@@ -1512,7 +1515,7 @@ def main():
 
     rkw: KgtkWriter = None
     if args.reject_file is not None:
-        rkw = KgtkWriter.open(ikr.column_names, args.reject_file)
+        rkw = KgtkWriter.open(output_column_names, args.reject_file)
         
 
     ppv.process(ikr, okw, rkw)
