@@ -414,7 +414,7 @@ class PropertyPatterns:
 @attr.s(slots=True, frozen=False)
 class PropertyPatternValidator:
     ISA_SCOREBOARD_TYPE = typing.Set[str]
-    OCCURS_SCOREBOARD_TYPE = typing.MutableMapping[str, typing.MutableMapping[str, int]]
+    OCCURS_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.MutableMapping[str, int]]]
     INTERESTING_SCOREBOARD_TYPE = typing.MutableMapping[str, typing.Set[str]]
     DISTINCT_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
     ROW_TYPE =  typing.List[str]
@@ -451,7 +451,7 @@ class PropertyPatternValidator:
     # The occurance counting scoreboard:
     # node1->prop->count
     # This scoreboard is cleared for each new node1_group.
-    occurs_scoreboard: OCCURS_SCOREBOARD_TYPE = attr.ib(factory=dict)
+    occurs_scoreboard: OCCURS_SCOREBOARD_TYPE = attr.ib(default=None)
 
     # The cache of occurs limits after ISA and GROUPBY:
     # prop->limit
@@ -539,7 +539,7 @@ class PropertyPatternValidator:
 
     def clear_node1_group(self):
         self.isa_scoreboard.clear()
-        self.occurs_scoreboard.clear()
+        self.occurs_scoreboard = None
         self.interesting_scoreboard.clear()
         self.complaints.clear()
 
@@ -793,6 +793,8 @@ class PropertyPatternValidator:
                 else:
                     self.maxoccurs_limits[groupby] = None
                     
+            if self.occurs_scoreboard is None:
+                self.occurs_scoreboard = dict()
             item: str = node1_value.value
             if item not in self.occurs_scoreboard:
                 self.occurs_scoreboard[item] = { }
@@ -922,7 +924,7 @@ class PropertyPatternValidator:
         #
         # TODO: Can this be made cheaper?
         save_isa_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_scoreboard.copy()
-        save_occurs_scoreboard: PropertyPatternValidator.OCCURS_SCOREBOARD_TYPE = copy.deepcopy(self.occurs_scoreboard)
+        save_occurs_scoreboard: PropertyPatternValidator.OCCURS_SCOREBOARD_TYPE = copy.deepcopy(self.occurs_scoreboard) if self.occurs_scoreboard is not None else None
         save_interesting_scoreboard: PropertyPatternValidator.INTERESTING_SCOREBOARD_TYPE = copy.deepcopy(self.interesting_scoreboard)
         save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
         if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
@@ -949,7 +951,7 @@ class PropertyPatternValidator:
                 #
                 # TODO: Can this be made cheaper?
                 self.isa_scoreboard = save_isa_scoreboard.copy()
-                self.occurs_scoreboard = copy.deepcopy(save_occurs_scoreboard)
+                self.occurs_scoreboard = copy.deepcopy(save_occurs_scoreboard) if save_occurs_scoreboard is not None else None
                 self.interesting_scoreboard = copy.deepcopy(save_interesting_scoreboard)
                 if self.distinct_scoreboard is None:
                     self.distinct_scoreboard = None
@@ -1060,6 +1062,12 @@ class PropertyPatternValidator:
         return result
 
     def setup_mustoccur(self, rownum: int, row: 'PropertyPatternValidator.ROW_TYPE'):
+        if len(self.pps.mustoccur) == 0:
+            return
+
+        if self.occurs_scoreboard is None:
+            self.occurs_scoreboard = dict()
+
         prop_or_datatype: str
         for prop_or_datatype in self.pps.mustoccur:
             node1 = row[self.node1_idx]
@@ -1073,6 +1081,9 @@ class PropertyPatternValidator:
         Print a line when a minoccurs or maxoccurs violation happened. The results are
         ordered by node1 value, then by property.
         """
+        if self.occurs_scoreboard is None:
+            return True
+
         result: bool = True
         limit: typing.Optional[int]
         node1: str
