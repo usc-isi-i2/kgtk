@@ -34,6 +34,7 @@ class PropertyPattern:
         NODE2_NOT_VALUES = "node2_not_values"
         NODE2_PATTERN = "node2_pattern"
         NODE2_NOT_PATTERN = "node2_not_pattern"
+        NODE2_NOT_BLANK = "node2_not_blank"
 
         NOT_IN = "not_in"
 
@@ -119,7 +120,7 @@ class PropertyPattern:
             # Merge any existing patterns, then removed duplicates:
             if old_ppat is not None and len(old_ppat.patterns) > 0:
                 patterns.extend(old_ppat.patterns)
-            patterns == list(set(patterns))
+            patterns = list(set(patterns))
 
         elif action in (cls.Action.MINOCCURS,
                         cls.Action.MAXOCCURS,
@@ -148,7 +149,7 @@ class PropertyPattern:
             # Merge any existing numbers, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.numbers) > 0:
                 numbers.extend(old_ppat.numbers)
-            numbers == sorted(list(set(numbers)))
+            numbers = sorted(list(set(numbers)))
 
         elif action in (cls.Action.EQUAL_TO,
                         cls.Action.NOT_EQUAL_TO,):
@@ -174,7 +175,7 @@ class PropertyPattern:
             # Merge any existing numbers, then removed duplicates and sort:
             if old_ppat is not None and  len(old_ppat.numbers) > 0:
                 numbers.extend(old_ppat.numbers)
-            numbers == sorted(list(set(numbers)))
+            numbers = sorted(list(set(numbers)))
 
         elif action in (cls.Action.NOT_IN,):
             # TODO: validate that the column names are valid and get their indexes.
@@ -193,7 +194,7 @@ class PropertyPattern:
             # Merge any existing column names, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.column_names) > 0:
                 column_names.extend(old_ppat.column_names)
-            column_names == sorted(list(set(column_names)))
+            column_names = sorted(list(set(column_names)))
 
         elif action in (
                 # cls.Action.LABEL_COLUM,
@@ -228,7 +229,7 @@ class PropertyPattern:
             # Merge any existing values, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.values) > 0:
                 values.extend(old_ppat.values)
-            values == sorted(list(set(values)))
+            values = sorted(list(set(values)))
 
         elif action in (cls.Action.NODE1_VALUES,
                         cls.Action.NODE2_VALUES,
@@ -244,26 +245,22 @@ class PropertyPattern:
             # Merge any existing values, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.values) > 0:
                 values.extend(old_ppat.values)
-            values == sorted(list(set(values)))
+            values = sorted(list(set(values)))
 
         elif action in (cls.Action.NODE1_ALLOW_LIST,
-                      cls.Action.NODE2_ALLOW_LIST,
-                      cls.Action.MUSTOCCUR,
-                      cls.Action.UNKNOWN,
-                      cls.Action.REJECT,
-                      cls.Action.PROPERTY,
-                      cls.Action.DATATYPE,
-                      cls.Action.GROUPBYPROP,
+                        cls.Action.NODE2_ALLOW_LIST,
+                        cls.Action.MUSTOCCUR,
+                        cls.Action.UNKNOWN,
+                        cls.Action.REJECT,
+                        cls.Action.PROPERTY,
+                        cls.Action.DATATYPE,
+                        cls.Action.GROUPBYPROP,
+                        cls.Action.NODE2_NOT_BLANK,
         ):
             if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
                 truth = node2_value.fields.truth
             else:
                 raise ValueError("%s: Value '%s' is not a boolean" % (action.value, node2_value.value)) # TODO: better complaint
-
-            # Merge any existing values, then removed duplicates and sort:
-            if old_ppat is not None and len(old_ppat.values) > 0:
-                values.extend(old_ppat.values)
-            values == sorted(list(set(values)))
 
         return cls(prop_or_datatype, action, intval, patterns, numbers, column_names, values, truth)
 
@@ -638,6 +635,17 @@ class PropertyPatternValidator:
                 return False
         return True
 
+    def validate_not_blank(self, rownum: int, value: KgtkValue, prop_or_datatype: str, truth: bool, who: str)->bool:
+        if truth:
+            if value.is_empty():
+                self.grouse("Row %d: the %s value '%s' is blank for %s" % (rownum, who, value.value, prop_or_datatype,))
+                return False
+        else:
+            if not value.is_empty():
+                self.grouse("Row %d: the %s value '%s' is not blank for %s" % (rownum, who, value.value, prop_or_datatype,))
+                return False
+        return True        
+
     def validate_minval(self, rownum: int, prop_or_datatype: str, minval: float, node2_value: KgtkValue)->bool:
         if not node2_value.is_number_or_quantity():
             return False
@@ -881,6 +889,9 @@ class PropertyPatternValidator:
 
         if PropertyPattern.Action.NODE2_NOT_PATTERN in pats:
             result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_PATTERN].patterns, "node2", invert=True)
+
+        if PropertyPattern.Action.NODE2_NOT_BLANK in pats:
+            result &= self.validate_not_blank(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_BLANK].truth, "node2")
 
         if PropertyPattern.Action.MINVAL in pats:
             result &= self.validate_minval(rownum, prop_or_datatype, pats[PropertyPattern.Action.MINVAL].numbers[0], node2_value)
