@@ -793,12 +793,13 @@ class PropertyPatternValidator:
                 else:
                     self.maxoccurs_limits[groupby] = None
                     
-            if node1_value.value not in self.occurs_scoreboard:
-                self.occurs_scoreboard[node1_value.value] = { }
-            if prop_or_datatype in self.occurs_scoreboard[node1_value.value]:
-                self.occurs_scoreboard[node1_value.value][groupby] += 1
+            item: str = node1_value.value
+            if item not in self.occurs_scoreboard:
+                self.occurs_scoreboard[item] = { }
+            if groupby in self.occurs_scoreboard[item]:
+                self.occurs_scoreboard[item][groupby] += 1
             else:
-                self.occurs_scoreboard[node1_value.value][groupby] = 1
+                self.occurs_scoreboard[item][groupby] = 1
 
         return result
 
