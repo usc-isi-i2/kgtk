@@ -48,6 +48,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "should be rejected. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
+    parser.add_argument(      "--complain-immediately", dest="complain_immediately",
+                              help="When true, print complaints immediately (for debugging). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--add-isa-column", dest="add_isa_column",
+                              help="When true, add an ISA column to the output file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--isa-column-name", dest="isa_column_name", default="isa;node2",
+                              help="The name for the ISA column. (default %(default)s)")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -59,6 +70,9 @@ def run(input_file: KGTKFiles,
         reject_file: KGTKFiles,
         grouped_input: bool = False,
         reject_node1_groups: bool = False,
+        complain_immediately: bool = False,
+        add_isa_column: bool = False,
+        isa_column_name: str = "isa;node2",
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
         show_options: bool = False,
@@ -91,6 +105,9 @@ def run(input_file: KGTKFiles,
             print("--reject-file=%s" % str(reject_kgtk_file), file=error_file)
         print("--presorted=%s" % str(grouped_input))
         print("--reject-node1-groups=%s" % str(reject_node1_groups))
+        print("--complain-immediately=%s" % str(complain_immediately))
+        print("--add-isa-column=%s" % str(add_isa_column))
+        print("--isa-column-name=%s" % str(isa_column_name))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -125,10 +142,23 @@ def run(input_file: KGTKFiles,
                                          verbose=verbose,
                                          very_verbose=very_verbose)
 
+        output_column_names: typing.List[str] = [ ]
+        isa_column_idx: int = -1
+        if output_kgtk_file is not None:
+            output_column_names = kr.column_names.copy()
+            if add_isa_column:
+                if isa_column_name in output_column_names:
+                    isa_column_idx = output_column_names.index(isa_column_name)
+                else:
+                    isa_column_idx = len(output_column_names)
+                    output_column_names.append(isa_column_name)
+
         ppv: PropertyPatternValidator = PropertyPatternValidator.new(pps,
                                                                      kr,
                                                                      grouped_input=grouped_input,
                                                                      reject_node1_groups=reject_node1_groups,
+                                                                     complain_immediately=complain_immediately,
+                                                                     isa_column_idx=isa_column_idx,
                                                                      value_options=value_options,
                                                                      error_file=error_file,
                                                                      verbose=verbose,
@@ -136,7 +166,7 @@ def run(input_file: KGTKFiles,
 
         kw: typing.Optional[KgtkWriter] = None
         if output_kgtk_file is not None:
-            kw = KgtkWriter.open(kr.column_names,
+            kw = KgtkWriter.open(output_column_names,
                                  output_kgtk_file,
                                  verbose=verbose, very_verbose=very_verbose)
         
