@@ -415,7 +415,7 @@ class PropertyPatterns:
 class PropertyPatternValidator:
     ISA_SCOREBOARD_TYPE = typing.Set[str]
     OCCURS_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.MutableMapping[str, int]]]
-    INTERESTING_SCOREBOARD_TYPE = typing.MutableMapping[str, typing.Set[str]]
+    INTERESTING_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
     DISTINCT_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
     ROW_TYPE =  typing.List[str]
     ROW_GROUP_TYPE = typing.List[typing.Tuple[int, ROW_TYPE]]
@@ -479,7 +479,7 @@ class PropertyPatternValidator:
     # Retain interesting properties or datatypes for requires/prohibits analysis and chaining:
     # node1->set(prop_or_datatype)
     # This scoreboard is cleared for each new node1_group.
-    interesting_scoreboard: INTERESTING_SCOREBOARD_TYPE = attr.ib(factory=dict)
+    interesting_scoreboard: INTERESTING_SCOREBOARD_TYPE = attr.ib(default=None)
 
     # Chaining between node1 groups:
     # node1->set(prop_or_datatype)
@@ -540,7 +540,7 @@ class PropertyPatternValidator:
     def clear_node1_group(self):
         self.isa_scoreboard.clear()
         self.occurs_scoreboard = None
-        self.interesting_scoreboard.clear()
+        self.interesting_scoreboard = None
         self.complaints.clear()
 
     def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
@@ -924,8 +924,10 @@ class PropertyPatternValidator:
         #
         # TODO: Can this be made cheaper?
         save_isa_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_scoreboard.copy()
-        save_occurs_scoreboard: PropertyPatternValidator.OCCURS_SCOREBOARD_TYPE = copy.deepcopy(self.occurs_scoreboard) if self.occurs_scoreboard is not None else None
-        save_interesting_scoreboard: PropertyPatternValidator.INTERESTING_SCOREBOARD_TYPE = copy.deepcopy(self.interesting_scoreboard)
+        save_occurs_scoreboard: PropertyPatternValidator.OCCURS_SCOREBOARD_TYPE = \
+            copy.deepcopy(self.occurs_scoreboard) if self.occurs_scoreboard is not None else None
+        save_interesting_scoreboard: PropertyPatternValidator.INTERESTING_SCOREBOARD_TYPE = \
+            copy.deepcopy(self.interesting_scoreboard) if self.interesting_scoreboard is not None else None
         save_distinct_scoreboard: PropertyPatternValidator.DISTINCT_SCOREBOARD_TYPE = None
         if self.distinct_scoreboard is not None and len(self.pps.chain_targets) > 0:
             save_distinct_scoreboard = copy.deepcopy(self.distinct_scoreboard)
@@ -952,7 +954,7 @@ class PropertyPatternValidator:
                 # TODO: Can this be made cheaper?
                 self.isa_scoreboard = save_isa_scoreboard.copy()
                 self.occurs_scoreboard = copy.deepcopy(save_occurs_scoreboard) if save_occurs_scoreboard is not None else None
-                self.interesting_scoreboard = copy.deepcopy(save_interesting_scoreboard)
+                self.interesting_scoreboard = copy.deepcopy(save_interesting_scoreboard) if save_interesting_scoreboard is not None else None
                 if self.distinct_scoreboard is None:
                     self.distinct_scoreboard = None
                 else:
@@ -1053,6 +1055,8 @@ class PropertyPatternValidator:
                 result &= valid
 
         if len(self.pps.interesting) > 0:
+            if self.interesting_scoreboard is None:
+                self.interesting_scoreboard = dict()
             node1: str = row[self.node1_idx]
             if node1 in self.interesting_scoreboard:
                 self.interesting_scoreboard[node1].update(self.isa_scoreboard.intersection(self.pps.interesting))
@@ -1117,6 +1121,9 @@ class PropertyPatternValidator:
         Print a line when a requires or prohibits violation happened. The results are
         ordered by node1 value, then by property.
         """
+        if self.interesting_scoreboard is None:
+            return True
+
         result: bool = True
         limit: typing.Optional[int]
         node1: str
@@ -1190,7 +1197,10 @@ class PropertyPatternValidator:
         result &= self.report_interesting_violations()
 
         if result:
-            self.chain_target_scoreboard[node1] = self.interesting_scoreboard[node1].intersection(self.pps.chain_targets)
+            if self.interesting_scoreboard is None:
+                self.chain_target_scoreboard[node1] = set() # TODO: optimize to use a single, frozen, empty set.
+            else:
+                self.chain_target_scoreboard[node1] = self.interesting_scoreboard[node1].intersection(self.pps.chain_targets)
 
             self.valid_row_count += len(row_group)
             if okw is not None:
