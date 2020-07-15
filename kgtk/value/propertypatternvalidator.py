@@ -413,7 +413,7 @@ class PropertyPatterns:
 
 @attr.s(slots=True, frozen=False)
 class PropertyPatternValidator:
-    ISA_SCOREBOARD_TYPE = typing.Set[str]
+    ISA_SCOREBOARD_TYPE = typing.List[str]
     OCCURS_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.MutableMapping[str, int]]]
     INTERESTING_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
     DISTINCT_SCOREBOARD_TYPE = typing.Optional[typing.MutableMapping[str, typing.Set[str]]]
@@ -440,13 +440,14 @@ class PropertyPatternValidator:
     grouped_input: bool = attr.ib(default=False)
     reject_node1_groups: bool = attr.ib(default=False)
     complain_immediately: bool = attr.ib(default=False) # True is good for debugging.
+    isa_column_idx: int = attr.ib(default=-1)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # The datatype inheritance scoreboard, used to detect loops.  It starts fresh for each new row.
-    isa_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=set)
+    isa_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=list)
 
     # The occurance counting scoreboard:
     # node1->prop->count
@@ -507,6 +508,8 @@ class PropertyPatternValidator:
             kr: KgtkReader,
             grouped_input: bool,
             reject_node1_groups: bool,
+            complain_immediately: bool,
+            isa_column_idx: int,
             value_options: KgtkValueOptions,
             error_file: typing.TextIO,
             verbose: bool,
@@ -519,6 +522,8 @@ class PropertyPatternValidator:
                                         kr.node2_column_idx,
                                         grouped_input=grouped_input,
                                         reject_node1_groups=reject_node1_groups,
+                                        complain_immediately=complain_immediately,
+                                        isa_column_idx=isa_column_idx,
                                         value_options=value_options,
                                         error_file=error_file,
                                         verbose=verbose,
@@ -1000,7 +1005,7 @@ class PropertyPatternValidator:
         matched: bool = False
 
         if prop_or_datatype in self.pps.patterns:
-            self.isa_scoreboard.add(prop_or_datatype)
+            self.isa_scoreboard.append(prop_or_datatype)
             matched = True
             pats: PropertyPatterns.PATTERN_MAP_TYPE = self.pps.patterns[prop_or_datatype]
 
@@ -1065,9 +1070,9 @@ class PropertyPatternValidator:
                 self.interesting_scoreboard = dict()
             node1: str = row[self.node1_idx]
             if node1 in self.interesting_scoreboard:
-                self.interesting_scoreboard[node1].update(self.isa_scoreboard.intersection(self.pps.interesting))
+                self.interesting_scoreboard[node1].update(set(self.isa_scoreboard).intersection(self.pps.interesting))
             else:
-                self.interesting_scoreboard[node1] = self.isa_scoreboard.intersection(self.pps.interesting)
+                self.interesting_scoreboard[node1] = set(self.isa_scoreboard).intersection(self.pps.interesting)
 
         return result
 
@@ -1183,6 +1188,24 @@ class PropertyPatternValidator:
                     result = False
         return result
 
+    def build_isa_path(self,
+                       isa_scoreboard: 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE',
+    )->str:
+        return "->".join(isa_scoreboard)
+
+    def maybe_add_isa_column(self,
+                             row: 'PropertyPatternValidator.ROW_TYPE',
+                             isa_scoreboard: 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE',
+    )->'PropertyPatternValidator.ROW_TYPE':
+        if self.isa_column_idx < 0:
+            return row
+        row = row.copy()
+        if self.isa_column_idx < len(row):
+            row[self.isa_column_idx] = self.build_isa_path(isa_scoreboard)
+        else:
+            row.append(self.build_isa_path(isa_scoreboard))
+        return row
+
     def process_node1_group(self,
                             row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE',
                             node1: str,
@@ -1193,10 +1216,13 @@ class PropertyPatternValidator:
 
         self.clear_node1_group()
 
+        save_isa_scoreboards: typing.MutableMapping[int, 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE'] = dict()
+
         row_number: int
         row: PropertyPatternValidator.ROW_TYPE
         for row_number, row in row_group:
             result &= self.validate_row(row_number, row)
+            save_isa_scoreboards[row_number] = self.isa_scoreboard
 
         self.show_complaints()
         result &= self.report_occurance_violations()
@@ -1215,6 +1241,7 @@ class PropertyPatternValidator:
             self.valid_row_count += len(row_group)
             if okw is not None:
                 for row_num, row in row_group:
+                    row = self.maybe_add_isa_column(row, save_isa_scoreboards[row_num])
                     okw.write(row)
                     self.output_row_count += 1
         else:
@@ -1372,7 +1399,7 @@ class PropertyPatternValidator:
             if result:
                 self.valid_row_count += 1
                 if okw is not None:
-                    okw.write(row)
+                    okw.write(self.maybe_add_isa_column(row, self.isa_scoreboard))
                     self.output_row_count += 1
             else:
                 if rkw is not None:
@@ -1397,7 +1424,6 @@ class PropertyPatternValidator:
                 
         self.report_distinct_violations()
 
-
 def main():
     parser: ArgumentParser = ArgumentParser()
     parser.add_argument("-i", "--input-file", dest="input_file", help="The input file to validate. (default stdin)", type=Path, default="-")
@@ -1413,6 +1439,17 @@ def main():
                               help="Indicate that when a record is rejected, all records for the same node1 value " +
                               "should be rejected. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+
+    parser.add_argument(      "--complain-immediately", dest="complain_immediately",
+                              help="When true, print complaints immediately (for debugging). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--add-isa-column", dest="add_isa_column",
+                              help="When true, add an ISA column to the output file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--isa-column-name", dest="isa_column_name", default="isa;node2",
+                              help="The name for the ISA column. (default %(default)s)")
 
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, expert=True)
@@ -1448,19 +1485,30 @@ def main():
                                       verbose=args.verbose,
                                       very_verbose=args.very_verbose)
 
+    output_column_names: typing.List[str] = [ ]
+    isa_column_idx: int = -1
+    if args.output_file is not None:
+        output_column_names = ikr.column_names.copy()
+        if args.add_isa_column:
+            if args.isa_column_name in output_column_names:
+                isa_column_idx = output_column_names.index(args.isa_column_name)
+            else:
+                isa_column_idx = len(output_column_names)
+                output_column_names.append(args.isa_column_name)
+
     ppv: PropertyPatternValidator = PropertyPatternValidator.new(pps,
                                                                  ikr,
                                                                  grouped_input=args.grouped_input,
                                                                  reject_node1_groups=args.reject_node1_groups,
+                                                                 complain_immediately=args.complain_immediately,
+                                                                 isa_column_idx=isa_column_idx,
                                                                  value_options=value_options,
                                                                  error_file=error_file,
                                                                  verbose=args.verbose,
                                                                  very_verbose=args.very_verbose)
-
     okw: KgtkWriter = None
     if args.output_file is not None:
-        okw = KgtkWriter.open(ikr.column_names, args.output_file)
-        
+        okw = KgtkWriter.open(output_column_names, args.output_file)
 
     rkw: KgtkWriter = None
     if args.reject_file is not None:
