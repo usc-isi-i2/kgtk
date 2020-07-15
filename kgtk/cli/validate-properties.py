@@ -53,7 +53,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
     parser.add_argument(      "--add-isa-column", dest="add_isa_column",
-                              help="When true, add an ISA column to the output file. (default=%(default)s).",
+                              help="When true, add an ISA column to the output and reject files. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
     parser.add_argument(      "--isa-column-name", dest="isa_column_name", default="isa;node2",
@@ -172,7 +172,7 @@ def run(input_file: KGTKFiles,
         
         rkw: typing.Optional[KgtkWriter] = None
         if reject_kgtk_file is not None:
-            rkw = KgtkWriter.open(kr.column_names,
+            rkw = KgtkWriter.open(output_column_names,
                                   reject_kgtk_file,
                                   verbose=verbose, very_verbose=very_verbose)
         
