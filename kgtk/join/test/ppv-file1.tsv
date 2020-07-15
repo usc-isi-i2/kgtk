@@ -57,3 +57,16 @@ swatch2	datatype	True
 swatch2	node2_values	2
 swatch3	datatype	True
 swatch3	node2_values	3
+color2obj	node1_type	symbol
+color2obj	node1_values	obj20
+color2obj	node1_values	obj21
+color2obj	node1_values	obj22
+color2red	node2_values	red
+color2green	node2_values	green
+color2color	node2_type	symbol
+color2color	node2_allow_list	True
+color2color	switch	color2red
+color2color	switch	color2green
+color2	isa	color2obj
+color2	isa	color2color
+

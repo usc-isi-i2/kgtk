@@ -447,12 +447,20 @@ class PropertyPatternValidator:
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # The datatype inheritance scoreboard, used to detect loops.  It starts
-    # fresh for each new row.  This is a list instead of a set so we can add
-    # an ordered list to the output files.
-    #
-    # Note: the ordering won't make as much sense when multiple isa
-    # inheritance takes place.
-    isa_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=list)
+    # fresh for each new row, and contains only the currently evaluated
+    # datatype for ISA multiple inheritance.  This is a list instead of a set
+    # because we expect it to be short.
+    isa_current_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=list)
+
+    # The next datatype inheritance scoreboard records all of the datatypes,
+    # including multiple inheritance.  It starts fresh for each row. We will build
+    # a list first, then deduplicate it at the end.
+    isa_full_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=list)
+
+    # Finally, we build a human-oriented representation of the inheritance tree.
+    # It starts fresh for each row.  We will build it as a list, which we will join
+    # when done, this supposedly being more efficient than concatenation.
+    isa_tree_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=list)
 
     # The occurance counting scoreboard:
     # node1->prop->count
@@ -548,7 +556,9 @@ class PropertyPatternValidator:
         self.complaints.clear()
 
     def clear_node1_group(self):
-        self.isa_scoreboard.clear()
+        self.isa_current_scoreboard.clear()
+        self.isa_full_scoreboard.clear()
+        self.isa_tree_scoreboard.clear()
         self.occurs_scoreboard = None
         self.interesting_scoreboard = None
         self.complaints.clear()
@@ -915,17 +925,40 @@ class PropertyPatternValidator:
         return result
 
     def validate_isa(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str, new_datatypes: typing.List[str])->bool:
+        """
+        If there are multiple datatypes to test, then the current ISA scoreboard is reset
+        after each datatype to prevent false loop detection, either here or in SWITCH.
+        """
+        save_isa_current_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_current_scoreboard.copy()
+
+        build_tree: bool = self.isa_column_idx >= 0
+        if build_tree and len(new_datatypes) > 1:
+            self.isa_tree_scoreboard.append("->(")
+
         result: bool = True # Everying's good until we discover otherwise.
+        first: bool = True
         new_datatype: str
         for new_datatype in new_datatypes:
-            if new_datatype in self.isa_scoreboard:
+            if new_datatype in self.isa_current_scoreboard:
                 self.grouse("Row %d: isa loop detected with %s." % (rownum, new_datatype))
                 return False
+
+
+            if build_tree and len(new_datatypes) > 1:
+                if first:
+                    first = False
+                else:
+                    self.isa_tree_scoreboard.append(", ")
 
             valid: bool
             matched: bool
             valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
             result &= valid
+
+            self.isa_current_scoreboard = save_isa_current_scoreboard.copy()
+            
+        if build_tree and len(new_datatypes) > 1:
+            self.isa_tree_scoreboard.append(")")
 
         return result
 
@@ -939,7 +972,10 @@ class PropertyPatternValidator:
         # affect.
         #
         # TODO: Can this be made cheaper?
-        save_isa_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_scoreboard.copy()
+        save_isa_current_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_current_scoreboard.copy()
+        save_isa_full_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_full_scoreboard.copy()
+        save_isa_tree_scoreboard: typing.Optional[PropertyPatternValidator.ISA_SCOREBOARD_TYPE] = \
+            None if self.isa_column_idx < 0 else self.isa_tree_scoreboard.copy()
         save_occurs_scoreboard: PropertyPatternValidator.OCCURS_SCOREBOARD_TYPE = \
             copy.deepcopy(self.occurs_scoreboard) if self.occurs_scoreboard is not None else None
         save_interesting_scoreboard: PropertyPatternValidator.INTERESTING_SCOREBOARD_TYPE = \
@@ -954,7 +990,7 @@ class PropertyPatternValidator:
         new_datatype: str
         for new_datatype in new_datatypes:
             while True: # Start of NEXTCASE loop
-                if new_datatype in self.isa_scoreboard:
+                if new_datatype in self.isa_current_scoreboard:
                     self.grouse("Row %d: isa loop detected with %s." % (rownum, new_datatype))
                     return False
 
@@ -963,12 +999,16 @@ class PropertyPatternValidator:
                 valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
                 if valid:
                     self.complaints = save_complaints # Forget any complaints on failed cases
+                    self.isa_current_scoreboard = save_isa_current_scoreboard.copy()
                     return True
 
                 # The case failed, restore the scoreboards.
                 #
                 # TODO: Can this be made cheaper?
-                self.isa_scoreboard = save_isa_scoreboard.copy()
+                self.isa_current_scoreboard = save_isa_current_scoreboard.copy()
+                self.isa_full_scoreboard = save_isa_full_scoreboard.copy()
+                if save_isa_tree_scoreboard is not None:
+                    self.isa_tree_scoreboard = save_isa_tree_scoreboard.copy()
                 self.occurs_scoreboard = copy.deepcopy(save_occurs_scoreboard) if save_occurs_scoreboard is not None else None
                 self.interesting_scoreboard = copy.deepcopy(save_interesting_scoreboard) if save_interesting_scoreboard is not None else None
                 if self.distinct_scoreboard is None:
@@ -1010,7 +1050,14 @@ class PropertyPatternValidator:
         matched: bool = False
 
         if prop_or_datatype in self.pps.patterns:
-            self.isa_scoreboard.append(prop_or_datatype)
+            self.isa_current_scoreboard.append(prop_or_datatype)
+            self.isa_full_scoreboard.append(prop_or_datatype)
+
+            if self.isa_column_idx >= 0:
+                if len(self.isa_tree_scoreboard) > 0 and self.isa_tree_scoreboard[-1] not in ("->(", ", "):
+                    self.isa_tree_scoreboard.append("->")
+                self.isa_tree_scoreboard.append(prop_or_datatype)
+
             matched = True
             pats: PropertyPatterns.PATTERN_MAP_TYPE = self.pps.patterns[prop_or_datatype]
 
@@ -1041,7 +1088,9 @@ class PropertyPatternValidator:
         result: bool = True # Everying's good until we discover otherwise.
         matched_any: bool = False
 
-        self.isa_scoreboard.clear()
+        self.isa_current_scoreboard.clear()
+        self.isa_full_scoreboard.clear()
+        self.isa_tree_scoreboard.clear()
         if len(self.pps.mustoccur) > 0:
             self.setup_mustoccur(rownum, row)
 
@@ -1075,9 +1124,9 @@ class PropertyPatternValidator:
                 self.interesting_scoreboard = dict()
             node1: str = row[self.node1_idx]
             if node1 in self.interesting_scoreboard:
-                self.interesting_scoreboard[node1].update(set(self.isa_scoreboard).intersection(self.pps.interesting))
+                self.interesting_scoreboard[node1].update(set(self.isa_full_scoreboard).intersection(self.pps.interesting))
             else:
-                self.interesting_scoreboard[node1] = set(self.isa_scoreboard).intersection(self.pps.interesting)
+                self.interesting_scoreboard[node1] = set(self.isa_full_scoreboard).intersection(self.pps.interesting)
 
         return result
 
@@ -1193,19 +1242,21 @@ class PropertyPatternValidator:
                     result = False
         return result
 
-    def build_isa_path(self,
-                       isa_scoreboard: 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE',
+    def build_isa_tree(self,
+                       isa_tree_scoreboard: 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE',
     )->str:
         """
-        Builf an ISA chain.  Unfortunately, this doesn't capture
-        the full ISA tree when multiple inheritance takes place.
+        Build an ISA tree.
 
         """
-        return "->".join(isa_scoreboard)
+        if len(isa_tree_scoreboard) > 0:
+            return "".join(isa_tree_scoreboard)
+        else:
+            return ""
 
     def maybe_add_isa_column(self,
                              row: 'PropertyPatternValidator.ROW_TYPE',
-                             isa_scoreboard: 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE',
+                             isa_tree_scoreboard: 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE',
     )->'PropertyPatternValidator.ROW_TYPE':
         """
         Add an ISA chain to the output file.  Unfortunately, this doesn't capture
@@ -1216,9 +1267,9 @@ class PropertyPatternValidator:
             return row
         row = row.copy()
         if self.isa_column_idx < len(row):
-            row[self.isa_column_idx] = self.build_isa_path(isa_scoreboard)
+            row[self.isa_column_idx] = self.build_isa_tree(isa_tree_scoreboard)
         else:
-            row.append(self.build_isa_path(isa_scoreboard))
+            row.append(self.build_isa_tree(isa_tree_scoreboard))
         return row
 
     def process_node1_group(self,
@@ -1231,13 +1282,13 @@ class PropertyPatternValidator:
 
         self.clear_node1_group()
 
-        save_isa_scoreboards: typing.MutableMapping[int, 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE'] = dict()
+        save_isa_tree_scoreboards: typing.MutableMapping[int, 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE'] = dict()
 
         row_number: int
         row: PropertyPatternValidator.ROW_TYPE
         for row_number, row in row_group:
             result &= self.validate_row(row_number, row)
-            save_isa_scoreboards[row_number] = self.isa_scoreboard
+            save_isa_tree_scoreboards[row_number] = self.isa_tree_scoreboard
 
         self.show_complaints()
         result &= self.report_occurance_violations()
@@ -1256,13 +1307,13 @@ class PropertyPatternValidator:
             self.valid_row_count += len(row_group)
             if okw is not None:
                 for row_num, row in row_group:
-                    row = self.maybe_add_isa_column(row, save_isa_scoreboards[row_num])
+                    row = self.maybe_add_isa_column(row, save_isa_tree_scoreboards[row_num])
                     okw.write(row)
                     self.output_row_count += 1
         else:
             if rkw is not None:
                 for row_num, row in row_group:
-                    row = self.maybe_add_isa_column(row, save_isa_scoreboards[row_num])
+                    row = self.maybe_add_isa_column(row, save_isa_tree_scoreboards[row_num])
                     rkw.write(row)
                     self.reject_row_count += 1
         return result
@@ -1399,6 +1450,7 @@ class PropertyPatternValidator:
             
                 if rkw is not None:
                     for row_num, row in row_group:
+                        row = self.maybe_add_isa_column(row, [])
                         rkw.write(row)
                         self.reject_row_count += 1
 
@@ -1415,12 +1467,12 @@ class PropertyPatternValidator:
             if result:
                 self.valid_row_count += 1
                 if okw is not None:
-                    row = self.maybe_add_isa_column(row, self.isa_scoreboard)
+                    row = self.maybe_add_isa_column(row, self.isa_tree_scoreboard)
                     okw.write(row)
                     self.output_row_count += 1
             else:
                 if rkw is not None: 
-                    row = self.maybe_add_isa_column(row, self.isa_scoreboard)
+                    row = self.maybe_add_isa_column(row, self.isa_tree_scoreboard)
                     rkw.write(row)
                     self.reject_row_count += 1
 
