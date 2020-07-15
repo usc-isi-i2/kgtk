@@ -43,9 +43,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Indicate that the input has been presorted (or at least pregrouped) on the node1 column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
-    parser.add_argument(      "--reject-node1-groups", dest="reject_node1_groups",
-                              help="Indicate that when a record is rejected, all records for the same node1 value " +
-                              "should be rejected. (default=%(default)s).",
+    parser.add_argument(      "--process-node1-groups", dest="reject_node1_groups",
+                              help="When True, process all records for a node1 value " +
+                              "as a group. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     parser.add_argument(      "--complain-immediately", dest="complain_immediately",
