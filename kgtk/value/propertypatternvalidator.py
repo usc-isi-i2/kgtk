@@ -446,7 +446,12 @@ class PropertyPatternValidator:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # The datatype inheritance scoreboard, used to detect loops.  It starts fresh for each new row.
+    # The datatype inheritance scoreboard, used to detect loops.  It starts
+    # fresh for each new row.  This is a list instead of a set so we can add
+    # an ordered list to the output files.
+    #
+    # Note: the ordering won't make as much sense when multiple isa
+    # inheritance takes place.
     isa_scoreboard: ISA_SCOREBOARD_TYPE = attr.ib(factory=list)
 
     # The occurance counting scoreboard:
@@ -1191,12 +1196,22 @@ class PropertyPatternValidator:
     def build_isa_path(self,
                        isa_scoreboard: 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE',
     )->str:
+        """
+        Builf an ISA chain.  Unfortunately, this doesn't capture
+        the full ISA tree when multiple inheritance takes place.
+
+        """
         return "->".join(isa_scoreboard)
 
     def maybe_add_isa_column(self,
                              row: 'PropertyPatternValidator.ROW_TYPE',
                              isa_scoreboard: 'PropertyPatternValidator.ISA_SCOREBOARD_TYPE',
     )->'PropertyPatternValidator.ROW_TYPE':
+        """
+        Add an ISA chain to the output file.  Unfortunately, this doesn't capture
+        the complexity of the ISA tree when multiple inheritance takes place.
+
+        """
         if self.isa_column_idx < 0:
             return row
         row = row.copy()
