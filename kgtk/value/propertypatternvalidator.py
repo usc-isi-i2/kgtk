@@ -484,7 +484,7 @@ class PropertyPatternValidator:
     # Chaining between node1 groups:
     # node1->set(prop_or_datatype)
     # This scoreboard is not cleared, but it gets content only when chaining is needed.
-    chain_target_scoreboard: typing.MutableMapping[str, typing.Set[str]] = attr.ib(factory=dict)
+    chain_target_scoreboard: typing.MutableMapping[str, typing.Optional[typing.Set[str]]] = attr.ib(factory=dict)
 
     # The suspended row groups.
     # node1->row_group
@@ -725,7 +725,13 @@ class PropertyPatternValidator:
                     self.grouse("Row %d: remote node1 '%s' not found" % (rownum, remote_node1))
                     return False
             raise PropertyPatternValidator.ChainSuspensionException("Row %d: remote node1 '%s' is not ready." % (rownum, remote_node1));
-        remote_datatypes: typing.Set[str] = self.chain_target_scoreboard[remote_node1]
+
+        remote_datatypes: typing.Optional[typing.Set[str]] = self.chain_target_scoreboard[remote_node1]
+        if remote_datatypes is None:
+            self.grouse("Row %d: datatype '%s': remote node1 '%s' has not relevant datatypes'" % (rownum,
+                                                                                                  KgtkFormat.LIST_SEPARATOR.join(value_list),
+                                                                                                  remote_node1))
+            return False
 
         test_value: str
         for test_value in value_list:
@@ -1198,9 +1204,13 @@ class PropertyPatternValidator:
 
         if result:
             if self.interesting_scoreboard is None:
-                self.chain_target_scoreboard[node1] = set() # TODO: optimize to use a single, frozen, empty set.
+                self.chain_target_scoreboard[node1] = None
             else:
-                self.chain_target_scoreboard[node1] = self.interesting_scoreboard[node1].intersection(self.pps.chain_targets)
+                interesting_stuff: typing.Set[str] = self.interesting_scoreboard[node1].intersection(self.pps.chain_targets)
+                if len(interesting_stuff) > 0:
+                    self.chain_target_scoreboard[node1] = interesting_stuff
+                else:
+                    self.chain_target_scoreboard[node1] = None
 
             self.valid_row_count += len(row_group)
             if okw is not None:
