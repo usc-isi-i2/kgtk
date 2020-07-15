@@ -506,6 +506,7 @@ class PropertyPatternValidator:
     #
     # This requires an unfrozen object.
     suspended_row_groups: typing.Optional['PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE'] = attr.ib(default=None)
+    new_suspended_row_groups: typing.Optional['PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE'] = attr.ib(default=None)
 
     # It's easier to keep these counters here rather than passing them around:
     input_row_count: int = attr.ib(default=0)
@@ -1328,9 +1329,9 @@ class PropertyPatternValidator:
                            okw: typing.Optional[KgtkWriter] = None,
                            rkw: typing.Optional[KgtkWriter] = None,
     ):
-        row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE' = [ ]
-        new_suspended_row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE' = dict()
+        self.start_new_suspended_row_groups()
 
+        row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE' = [ ]
         row_num: int
         previous_node1: typing.Optional[str] = None
         node1: typing.Optional[str] = None
@@ -1350,7 +1351,7 @@ class PropertyPatternValidator:
                 try:
                     self.process_node1_group(row_group, node1, okw, rkw)
                 except PropertyPatternValidator.ChainSuspensionException as e:
-                    new_suspended_row_groups[node1] = row_group
+                    self.suspend_row_group(node1, row_group)
                     self.distinct_scoreboard = save_distinct_scoreboard
                 row_group.clear()
             row_group.append((self.input_row_count, row))
@@ -1370,20 +1371,19 @@ class PropertyPatternValidator:
             try:
                 self.process_node1_group(row_group, node1, okw, rkw)
             except PropertyPatternValidator.ChainSuspensionException as e:
-                new_suspended_row_groups[node1] = row_group
+                self.suspend_row_group(node1, row_group)
                 self.distinct_scoreboard = save_distinct_scoreboard2
                 
-        if len(new_suspended_row_groups) > 0:
-            self.process_suspended_row_groups(new_suspended_row_groups, okw, rkw)
+        self.process_suspended_row_groups(okw, rkw)
 
     def process_sort_and_group(self,
                                ikr: KgtkReader,
                                okw: typing.Optional[KgtkWriter] = None,
                                rkw: typing.Optional[KgtkWriter] = None,
     ):
+        self.start_new_suspended_row_groups()
+        
         row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE' = dict()
-        new_suspended_row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE' = dict()
-
         node1: str
         row: 'PropertyPatternValidator.ROW_TYPE'
         for row in ikr:
@@ -1407,17 +1407,33 @@ class PropertyPatternValidator:
             try:
                 self.process_node1_group(row_group, node1, okw, rkw)
             except PropertyPatternValidator.ChainSuspensionException as e:
-                new_suspended_row_groups[node1] = row_group
+                self.suspend_row_group(node1, row_group)
                 self.distinct_scoreboard = save_distinct_scoreboard
 
-        if len(new_suspended_row_groups) > 0:
-            self.process_suspended_row_groups(new_suspended_row_groups, okw, rkw)
+        self.process_suspended_row_groups(okw, rkw)
+
+    def start_new_suspended_row_groups(self):
+        self.new_suspended_row_groups = dict()
+
+    def suspend_row_group(self, node1: str, row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE'):
+        """This code could spill the suspended row groups to an output fle if there
+        are too many of the, but we'de need to sort the external file before
+        processing it.
+
+        """
+        if self.new_suspended_row_groups is None:
+            self.start_new_suspended_row_groups()
+        if self.new_suspended_row_groups is not None:
+            self.new_suspended_row_groups[node1] = row_group
 
     def process_suspended_row_groups(self,
-                                     new_suspended_row_groups: 'PropertyPatternValidator.MAPPED_ROW_GROUPS_TYPE',
                                      okw: typing.Optional[KgtkWriter] = None,
                                      rkw: typing.Optional[KgtkWriter] = None,
     ):
+        if self.new_suspended_row_groups is None:
+            return
+        if len(self.new_suspended_row_groups) == 0:
+            return
         
         row_num: int
         row_group: 'PropertyPatternValidator.ROW_GROUP_TYPE'
@@ -1427,10 +1443,10 @@ class PropertyPatternValidator:
 
         # Stop when we don't have any more suspended row groups, or when the
         # number of suspended row groups stops decreasing.
-        while len(new_suspended_row_groups) > 0 and (old_count is None or old_count > len(new_suspended_row_groups)):
-            old_count = len(new_suspended_row_groups)
-            self.suspended_row_groups = new_suspended_row_groups
-            new_suspended_row_groups = dict()
+        while len(self.new_suspended_row_groups) > 0 and (old_count is None or old_count > len(self.new_suspended_row_groups)):
+            old_count = len(self.new_suspended_row_groups)
+            self.suspended_row_groups = self.new_suspended_row_groups
+            self.start_new_suspended_row_groups()
             for node1 in sorted(self.suspended_row_groups.keys()):
                 row_group = self.suspended_row_groups[node1]
                 # We need to save the distinct scoreboard and restore it
@@ -1443,14 +1459,14 @@ class PropertyPatternValidator:
                 try:
                     self.process_node1_group(row_group, node1, okw, rkw)
                 except PropertyPatternValidator.ChainSuspensionException as e:
-                    new_suspended_row_groups[node1] = row_group
+                    self.suspend_row_group(node1, row_group)
                     self.distinct_scoreboard = save_distinct_scoreboard
 
-        if len(new_suspended_row_groups) > 0:
-            self.grouse("There were %d unprocessed row groups due to unresolved chain requests." % (len(new_suspended_row_groups)), immediately=True)
+        if len(self.new_suspended_row_groups) > 0:
+            self.grouse("There were %d unprocessed row groups due to unresolved chain requests." % (len(self.new_suspended_row_groups)), immediately=True)
 
-            for node1 in sorted(new_suspended_row_groups.keys()):
-                row_group = new_suspended_row_groups[node1]
+            for node1 in sorted(self.new_suspended_row_groups.keys()):
+                row_group = self.new_suspended_row_groups[node1]
                 self.grouse("Node1 '%s': %d rows not processed due to unresolved chain requests." % (node1, len(row_group)), immediately=True)
             
                 if rkw is not None:
