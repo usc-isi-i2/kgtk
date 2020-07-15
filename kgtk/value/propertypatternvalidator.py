@@ -926,8 +926,11 @@ class PropertyPatternValidator:
 
     def validate_isa(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str, new_datatypes: typing.List[str])->bool:
         """
-        If there are multiple datatypes to test, then the current ISA scoreboard is reset
-        after each datatype to prevent false loop detection, either here or in SWITCH.
+        Verify that the current record conforms to one or more datatypes.
+        This introduces datatype inheritance for pattern properties.
+        If multiple datatypes are specified, the row must conform to all of them.
+
+        If you want a row to conform to one of several datatypes, use SWITCH.
         """
         save_isa_current_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_current_scoreboard.copy()
 
@@ -955,6 +958,8 @@ class PropertyPatternValidator:
             valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
             result &= valid
 
+            # The current ISA scoreboard is reset after each datatype to
+            # prevent false loop detection, either here or in SWITCH.
             self.isa_current_scoreboard = save_isa_current_scoreboard.copy()
             
         if build_tree and len(new_datatypes) > 1:
@@ -968,8 +973,8 @@ class PropertyPatternValidator:
                         orig_prop: str,
                         new_datatypes: typing.List[str])->bool:
 
-        # Save the scoreboards to prevent failed cases from having a permanent
-        # affect.
+        # Save the scoreboards to prevent failed cases from permanently
+        # changing the scoreboards.
         #
         # TODO: Can this be made cheaper?
         save_isa_current_scoreboard: PropertyPatternValidator.ISA_SCOREBOARD_TYPE = self.isa_current_scoreboard.copy()
@@ -1505,9 +1510,9 @@ def main():
                               help="Indicate that the input has been presorted (or at least pregrouped) on the node1 column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
-    parser.add_argument(      "--reject-node1-groups", dest="reject_node1_groups",
-                              help="Indicate that when a record is rejected, all records for the same node1 value " +
-                              "should be rejected. (default=%(default)s).",
+    parser.add_argument(      "--process-node1-groups", dest="reject_node1_groups",
+                              help="When True, process all records for the same node1 value " +
+                              "together. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     parser.add_argument(      "--complain-immediately", dest="complain_immediately",
