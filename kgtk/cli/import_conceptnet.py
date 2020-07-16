@@ -95,23 +95,23 @@ def run(input_file: KGTKFiles, english_only):
 
         edge={}
         edge['node1']=row[2]
-        edge['label']=row[1]
+        edge['relation']=row[1]
         edge['node2']=row[3]
         edge['node1_label']=make_node_label(row[2])
         edge['node2_label']=make_node_label(row[3])
-        edge['label_label']=make_rel_label(row[1])
-        edge['label_dimension']=''
+        edge['relation_label']=make_rel_label(row[1])
+        edge['relation_dimension']=''
 
         metadata=json.loads(row[4])
         edge['weight']=str(metadata['weight'])
         edge['source']='CN'
-        edge['creator']=metadata['dataset']
+        edge['origin']=metadata['dataset']
         if 'surfaceText' in metadata.keys():
             edge['sentence']=metadata['surfaceText']
         else:
             edge['sentence']=''
         
-        t=get_template(edge['label_label'])
+        t=get_template(edge['relation_label'])
         if t:
             edge['question']=t.substitute(node1=edge['node1_label'])
         else:
@@ -124,7 +124,7 @@ def run(input_file: KGTKFiles, english_only):
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
         in_columns=['assertion','rel','subj','obj','metadata']
-        out_columns=['node1', 'label', 'node2', 'node1_label', 'label_label', 'node2_label', 'label_dimension', 'source', 'weight', 'creator', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'weight', 'source', 'origin', 'sentence', 'question']
 
         with open(filename, 'r') as f:
             reader = csv.reader(f, delimiter='\t', quotechar='"')
