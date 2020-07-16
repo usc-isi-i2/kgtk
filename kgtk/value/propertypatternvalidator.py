@@ -22,6 +22,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 class PropertyPattern:
     class Action(Enum):
         NODE1_TYPE = "node1_type"
+        NODE1_IS_VALID = "node1_is_valid"
         NODE1_ALLOW_LIST = "node1_allow_list"
         NODE1_VALUES = "node1_values"
         NODE1_PATTERN = "node1_pattern"
@@ -30,6 +31,7 @@ class PropertyPattern:
         NODE2_ALLOW_LIST = "node2_allow_list"
         NODE2_TYPE = "node2_type"
         NODE2_NOT_TYPE = "node2_not_type"
+        NODE2_IS_VALID = "node2_is_valid"
         NODE2_VALUES = "node2_values"
         NODE2_NOT_VALUES = "node2_not_values"
         NODE2_PATTERN = "node2_pattern"
@@ -256,6 +258,8 @@ class PropertyPattern:
                         cls.Action.DATATYPE,
                         cls.Action.GROUPBYPROP,
                         cls.Action.NODE2_NOT_BLANK,
+                        cls.Action.NODE1_IS_VALID,
+                        cls.Action.NODE2_IS_VALID,
         ):
             if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
                 truth = node2_value.fields.truth
@@ -582,6 +586,17 @@ class PropertyPatternValidator:
                         result = False
         return result
 
+    def validate_valid(self, rownum: int, value: KgtkValue, prop_or_datatype: str, truth: bool, who: str)->bool:
+        if truth:
+            if not value.is_valid():
+                self.grouse("Row %d: the %s value '%s' is not a valid KGTK value." % (rownum, who, value.value))
+            return False # regardless of invert flag
+        else:
+            if value.is_valid():
+                self.grouse("Row %d: the %s value '%s' is a valid KGTK value, we expected otherwise." % (rownum, who, value.value))
+            return False # regardless of invert flag
+        return True
+
     def validate_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, type_list: typing.List[str], who: str, invert: bool=False)->bool:
         if value.data_type is None:
             self.grouse("Row %d: the %s value '%s' KGTK type is missing." % (rownum, who, value.value))
@@ -808,6 +823,9 @@ class PropertyPatternValidator:
         if PropertyPattern.Action.NODE1_TYPE in pats:
             result &= self.validate_type(rownum, node1_value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_TYPE].values, "node1")
 
+        if PropertyPattern.Action.NODE1_IS_VALID in pats:
+            result &= self.validate_valid(rownum, node1_value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_IS_VALID].truth, "node1")
+
         if PropertyPattern.Action.NODE1_VALUES in pats:
             result &= self.validate_value(rownum, node1_value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_VALUES].values, "node1")
 
@@ -877,6 +895,9 @@ class PropertyPatternValidator:
 
         if PropertyPattern.Action.NODE2_NOT_TYPE in pats:
             result &= self.validate_type(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_TYPE].values, "node2", invert=True)
+
+        if PropertyPattern.Action.NODE2_IS_VALID in pats:
+            result &= self.validate_valid(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_IS_VALID].truth, "node1")
 
         if PropertyPattern.Action.NODE2_VALUES in pats:
             result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2")
