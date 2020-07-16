@@ -69,7 +69,7 @@ The output (printed to stdout) is as follows:
 
 Essentially, this tells us that there are three paths that connect 'a' and 'e', all of them two hops away:
 
-1. path 0 is comprised of the edges e1 and e5
-2. path 2 one spans e2 and e4
-3. path 3 spans e3 and e5
+1. path p0 is comprised of the edges e1 and e5
+2. path p1 spans e2 and e4
+3. path p2 spans e3 and e5
 
