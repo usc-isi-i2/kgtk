@@ -16,7 +16,9 @@ def add_arguments(parser: KGTKArgumentParser):
     Args:
         parser (argparse.ArgumentParser)
     """
-    parser.add_input_file(positional=True, who='input path file')
+    from kgtk.utils.argparsehelpers import optional_bool
+    
+    parser.add_input_file(positional=True, who='input path file (may be .bz2)')
 
     parser.add_argument(
         '--procs',
@@ -73,8 +75,19 @@ def add_arguments(parser: KGTKArgumentParser):
         dest="deprecated",
         help='option to include deprecated statements, not included by default')
     
+    parser.add_argument(
+        "--explode-values",
+        nargs='?',
+        type=optional_bool,
+        dest="explode_values",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, colums with exploded value information. (default=%(default)s).",
+    )
+
     
-def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,source,deprecated):
+def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,source,deprecated,explode_values):
     # import modules locally
     import bz2
     import simplejson as json
@@ -288,23 +301,34 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                             val['text'].replace("'","\\'") + '\'' + '@' + val['language']
                                     else:
                                         value = '\"' + val.replace('"','\\"') + '\"'
+
                                     if edge_file:
-                                        erows.append([sid,
-                                                     qnode,
-                                                     prop,
-                                                     value,
-                                                     rank,
-                                                     mag,
-                                                     unit,
-                                                     date,
-                                                     item,
-                                                     lower,
-                                                     upper,
-                                                     lat,
-                                                     long,
-                                                     precision,
-                                                     calendar,
-                                                     enttype])
+                                        if explode_values:
+                                            erows.append([sid,
+                                                          qnode,
+                                                          prop,
+                                                          value,
+                                                          rank,
+                                                          mag,
+                                                          unit,
+                                                          date,
+                                                          item,
+                                                          lower,
+                                                          upper,
+                                                          lat,
+                                                          long,
+                                                          precision,
+                                                          calendar,
+                                                          enttype,
+                                            ])
+                                        else:
+                                            erows.append([sid,
+                                                          qnode,
+                                                          prop,
+                                                          value,
+                                                          rank,
+                                            ])
+
                                     seq_no += 1
                                     if qual_file:
                                         if cp.get('qualifiers', None):
@@ -383,8 +407,8 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                                                 val['text'].replace("'","\\'") + '\'' + '@' + val['language']
                                                         else:
                                                             value = '\"' + val.replace('"','\\"') + '\"'
-                                                        qrows.append(
-                                                            [
+                                                        if explode_values:
+                                                            qrows.append([
                                                                 tempid,
                                                                 sid,
                                                                 qual_prop,
@@ -399,7 +423,15 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                                                 long,
                                                                 precision,
                                                                 calendar,
-                                                                enttype])
+                                                                enttype,
+                                                            ])
+                                                        else:
+                                                            qrows.append([
+                                                                tempid,
+                                                                sid,
+                                                                qual_prop,
+                                                                value,
+                                                            ])
             
                         if sitelinks:
                             wikipedia_seq_no = 1
@@ -410,12 +442,19 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     sitelang=link.split('wiki')[0].replace('_','-')
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
-                                    if edge_file:
-                                        erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','','','',
-                                                      '','','','',''])
+                                    if explode_values:
+                                        if edge_file:
+                                            erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','','','',
+                                                          '','','','',''])
+                                        if qual_file:
+                                            tempid=sid+'-language-1'
+                                            qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','',''])
+                                    else:
+                                        if edge_file:
+                                            erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,''])
                                     if qual_file:
                                         tempid=sid+'-language-1'
-                                        qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','',''])
+                                        qrows.append([tempid,sid,'language',sitelang])
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
@@ -465,8 +504,12 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                     escapechar="\n",
                     quotechar='')
                 wr.writerow(header)
-        header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
-              'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type']
+        if explode_values:
+            header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
+                      'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type']
+        else:
+            header = ['id','node1','label','node2', 'rank']
+            
         if edge_file:
             with open(edge_file+'_header', 'w', newline='') as myfile:
                 wr = csv.writer(
@@ -488,12 +531,21 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                 wr.writerow(header)
         pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True)
         pp.start()
-        with bz2.open(inp_path, mode='rb') as file:
-            print('processing wikidata file now...')
-            for cnt, line in enumerate(file):
-                if limit and cnt >= limit:
-                    break
-                pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+        if str(inp_path).endswith(".bz2"):
+            with bz2.open(inp_path, mode='rb') as file:
+                print('decompressing and processing wikidata file %s' % str(inp_path))
+                for cnt, line in enumerate(file):
+                    if limit and cnt >= limit:
+                        break
+                    pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+        else:                             
+            with open(inp_path, mode='rb') as file:
+                print('processing wikidata file %s' % str(inp_path))
+                for cnt, line in enumerate(file):
+                    if limit and cnt >= limit:
+                        break
+                    pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+
         pp.task_done()
         pp.join()
         if node_file:
