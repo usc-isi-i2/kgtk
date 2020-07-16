@@ -43,9 +43,10 @@ Given the file `examples/sample_data/paths/test.tsv`:
 | f | r3 | d | e7 | 3 |
 
 Let's say we want to compute all paths between a set of pairs stored in `examples/sample_data/paths/pairs.tsv`. The file for now has the following data:
+
 | source | target |
-| ------ | ------ |
-|   a    |   e    |
+| -- | -- |
+| a | e |
 
 which means that we are looking for all paths between the nodes 'a' and 'e'. Let's say we restrict the maximum path length to 2. 
 
