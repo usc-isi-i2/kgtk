@@ -21,6 +21,7 @@ import attr
 import bz2
 from enum import Enum
 import gzip
+import io
 import lz4 # type: ignore
 import lzma
 from multiprocessing import Process, Queue
@@ -1082,22 +1083,32 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         validation problems, we might want to emit error messages and we might
         want to ignore the entire row.
 
+        If self.verbose is True, we use StringIO to capture additional error messages
+        from KgtkValue validation.
+
         Returns True to indicate that the row should be ignored (skipped).
 
         """
+        error_file: typing.Optional[io.StringIO] = None
         problems: typing.List[str] = [ ] # Build a list of problems.
         idx: int
         item: str
         for idx, item in enumerate(row):
             if len(item) > 0: # Optimize the common case of empty columns.
-                kv: KgtkValue = KgtkValue(item, options=self.value_options)
+                if self.verbose:
+                    error_file = io.StringIO()
+                kv: KgtkValue = KgtkValue(item, options=self.value_options, error_file=self.error_file, verbose=self.verbose)
                 if not kv.is_valid():
-                    problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], item, kv.describe()))
+                    if error_file is not None:
+                        problems.append("col %d (%s) value %s: %s" % (idx, self.column_names[idx], repr(item), error_file.getvalue().rstrip()))
+                    problems.append("col %d (%s) value %s is an %s" % (idx, self.column_names[idx], repr(item), kv.describe()))
                 if kv.repaired:
                     # If this value was repaired, update the item in the row.
                     #
                     # Warning: We expect this change to be seen by the caller.
                     row[idx] = kv.value
+                if error_file is not None:
+                    error_file.close()
 
         if len(problems) == 0:
             return False
