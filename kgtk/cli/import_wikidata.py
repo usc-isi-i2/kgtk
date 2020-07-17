@@ -298,8 +298,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                         value = pre + \
                                             val['time'][1:] + '/' + str(val['precision'])
                                     elif typ == 'monolingualtext':
+                                        # val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
                                         value = '\'' + \
-                                            val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
+                                            val['text'].replace("|", "\\|") + '\'' + '@' + val['language']
                                     else:
                                         value = '\"' + val.replace('"','\\"').replace("|", "\\|") + '\"'
 
