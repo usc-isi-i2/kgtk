@@ -796,7 +796,7 @@ class KgtkValue(KgtkFormat):
                                           units_node=units_node)
         return True
     
-    def is_number(self, validate: bool=False)->bool:
+    def is_number(self, validate: bool=False, quiet: bool=False)->bool:
         """
         Otherwise, return True if the first character is 0-9,_,-,.
         and it is a Python-compatible number (with optional limited enhancements).
@@ -835,7 +835,7 @@ class KgtkValue(KgtkFormat):
 
         m: typing.Optional[typing.Match] = KgtkValue.number_re.match(self.value)
         if m is None:
-            if self.verbose:
+            if self.verbose and not quiet:
                 print("KgtkValue.number_re.match failed for %s" % (repr(self.value)),
                       file=self.error_file, flush=True)
             return False
@@ -1681,7 +1681,7 @@ class KgtkValue(KgtkFormat):
         elif self.is_number_or_quantity():
             # To determine whether this is a number or a quantity, we have
             # to validate one of them.
-            if not self.is_number():
+            if not self.is_number(quiet=True):
                 # If it isn't a valid number, assume it's a quantity.
                 self.data_type = KgtkFormat.DataType.QUANTITY
 
