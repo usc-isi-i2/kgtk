@@ -279,7 +279,8 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                         if len(val.get('unit')) > 1:
                                             unit = val.get(
                                                 'unit').split('/')[-1]
-                                            value += unit
+                                            if unit not in ["undefined"]:
+                                                value += unit
                                     elif typ == 'globe-coordinate':
                                         lat = str(val['latitude'])
                                         long = str(val['longitude'])
@@ -298,9 +299,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                             val['time'][1:] + '/' + str(val['precision'])
                                     elif typ == 'monolingualtext':
                                         value = '\'' + \
-                                            val['text'].replace("'","\\'") + '\'' + '@' + val['language']
+                                            val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
                                     else:
-                                        value = '\"' + val.replace('"','\\"') + '\"'
+                                        value = '\"' + val.replace('"','\\"').replace("|", "\\|") + '\"'
 
                                     if edge_file:
                                         if explode_values:
