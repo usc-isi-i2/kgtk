@@ -435,6 +435,8 @@ class KgtkWriter(KgtkBase):
             print("header: %s" % header, file=self.error_file, flush=True)
         self.writeline(header)
         if header2 is not None:
+            if self.verbose:
+                print("header2: %s" % header2, file=self.error_file, flush=True)
             self.writeline(header2)
 
     def writeline(self, line: str):
