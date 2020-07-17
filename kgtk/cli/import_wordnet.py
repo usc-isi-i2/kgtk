@@ -102,7 +102,7 @@ def run():
             for node2 in v:
                 node1_preflabel=labels[node1].split('|')[0]
                 node2_preflabel=labels[node2].split('|')[0]
-                sentence=' '.join([node1_preflabel, rel_label, node2_preflabel])
+                sentence=''
                 if rel=='/r/IsA':
                     question=('What is %s?' % node1_preflabel).capitalize()
                 else:

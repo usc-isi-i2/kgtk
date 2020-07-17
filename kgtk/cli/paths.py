@@ -50,8 +50,9 @@ def run(input_file: KGTKFiles, path_file, output_stats, directed, max_hops):
         from graph_tool.all import find_vertex
         from graph_tool.topology import all_paths
         import sys
+        import csv
         from collections import defaultdict
-
+        csv.field_size_limit(sys.maxsize)
         id_col = 'name'
     
         pairs=[]
