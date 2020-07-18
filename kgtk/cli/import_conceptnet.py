@@ -107,7 +107,7 @@ def run(input_file: KGTKFiles, english_only):
         edge['source']='CN'
         edge['origin']=metadata['dataset']
         if 'surfaceText' in metadata.keys():
-            edge['sentence']=metadata['surfaceText']
+            edge['sentence']=metadata['surfaceText'].replace('\\', '')
         else:
             edge['sentence']=''
         

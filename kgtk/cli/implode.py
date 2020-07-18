@@ -147,7 +147,7 @@ def run(input_file: KGTKFiles,
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
-    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file, who="KGTK reject file")
+    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="KGTK reject file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
