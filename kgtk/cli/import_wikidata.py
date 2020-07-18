@@ -95,6 +95,7 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
     import pyrallel
     import time
     import sh
+    from kgtk.kgtkformat import KgtkFormat
     from kgtk.cli_argparse import KGTKArgumentParser
     from kgtk.exceptions import KGTKException
 
@@ -298,11 +299,12 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                         value = pre + \
                                             val['time'][1:] + '/' + str(val['precision'])
                                     elif typ == 'monolingualtext':
+                                        # value = '\'' + \
                                         # val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
-                                        value = '\'' + \
-                                            val['text'].replace("|", "\\|") + '\'' + '@' + val['language']
+                                        value = KgtkFormat.stringify(val['text'], language=val['language'])
                                     else:
-                                        value = '\"' + val.replace('"','\\"').replace("|", "\\|") + '\"'
+                                        # value = '\"' + val.replace('"','\\"').replace("|", "\\|") + '\"'
+                                        value = KgtkFormat.stringify(val)
 
                                     if edge_file:
                                         if explode_values:
