@@ -21,6 +21,7 @@ import attr
 import bz2
 from enum import Enum
 import gzip
+import io
 import lz4 # type: ignore
 import lzma
 from multiprocessing import Process, Queue
@@ -424,6 +425,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     column_name_map: typing.Mapping[str, int] = attr.ib(validator=attr.validators.deep_mapping(key_validator=attr.validators.instance_of(str),
                                                                                                value_validator=attr.validators.instance_of(int)))
 
+    # A copy of the raw header line for use by the reject file.
+    header: str = attr.ib(validator=attr.validators.instance_of(str))
+
     # The actual mode used.
     #
     # TODO: fix the validator.
@@ -445,6 +449,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     # Is this an edge file or a node file?
     is_edge_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     is_node_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Reject file
+    reject_file: typing.Optional[typing.TextIO] = attr.ib(default=None)
+    reject_line_count: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # Feedback and error output:
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
@@ -470,6 +478,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
              file_path: typing.Optional[Path],
              who: str = "input",
              error_file: typing.TextIO = sys.stderr,
+             reject_file: typing.Optional[typing.TextIO] = None,
              mode: typing.Optional[KgtkReaderMode] = None,
              options: typing.Optional[KgtkReaderOptions] = None,
              value_options: typing.Optional[KgtkValueOptions] = None,
@@ -581,12 +590,14 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                    column_names=column_names,
                    column_name_map=column_name_map,
                    column_count=len(column_names),
+                   header=header,
                    mode=mode,
                    node1_column_idx=node1_column_idx,
                    label_column_idx=label_column_idx,
                    node2_column_idx=node2_column_idx,
                    id_column_idx=id_column_idx,
                    error_file=error_file,
+                   reject_file=reject_file,
                    options=options,
                    value_options=value_options,
                    is_edge_file=is_edge_file,
@@ -730,6 +741,22 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             raise ValueError("Too many data errors, exiting.")
         return result
 
+    def reject(self, line):
+        if self.reject_file is None:
+            return
+
+        if self.reject_line_count == 0:
+            if self.header.endswith("\n") or self.header.endswith("\r"):
+                self.reject_file.write(self.header)
+            else:
+                print("%s" % self.header, file=self.reject_file)
+        self.reject_line_count += 1            
+        
+        if line.endswith("\n") or line.endswith("\r"):
+            self.reject_file.write(line)
+        else:
+            print("%s" % line, file=self.reject_file)
+
     # Get the next edge values as a list of strings.
     def nextrow(self)-> typing.List[str]:
         row: typing.List[str]
@@ -789,16 +816,19 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 # Ignore empty lines.
                 if self.options.empty_line_action != ValidationAction.PASS and len(line) == 0:
                     if self.exclude_line(self.options.empty_line_action, "saw an empty line", line):
+                        self.reject(line)
                         continue
 
                 # Ignore comment lines:
                 if self.options.comment_line_action != ValidationAction.PASS  and line[0] == self.COMMENT_INDICATOR:
                     if self.exclude_line(self.options.comment_line_action, "saw a comment line", line):
+                        self.reject(line)
                         continue
 
                 # Ignore whitespace lines
                 if self.options.whitespace_line_action != ValidationAction.PASS and line.isspace():
                     if self.exclude_line(self.options.whitespace_line_action, "saw a whitespace line", line):
+                        self.reject(line)
                         continue
 
             row = line.split(self.options.column_separator)
@@ -822,6 +852,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                 len(row),
                                                                                 line),
                                          line):
+                        self.reject(line)
                         continue
                              
                 if self.options.long_line_action != ValidationAction.PASS and len(row) > self.column_count:
@@ -831,9 +862,11 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                            len(row) - self.column_count,
                                                                                            line),
                                          line):
+                        self.reject(line)
                         continue
 
                 if self._ignore_if_blank_fields(row, line):
+                    self.reject(line)
                     continue
 
             if repair_and_validate_values:
@@ -842,10 +875,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     # so we don't have to create them a second time in the conversion
                     # and iterator methods below.
                     if self._ignore_invalid_values(row, line):
+                        self.reject(line)
                         continue
 
                 if self.options.prohibited_list_action != ValidationAction.PASS:
                     if self._ignore_prohibited_lists(row, line):
+                        self.reject(line)
                         continue
 
             self.data_lines_passed += 1
@@ -1048,22 +1083,32 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         validation problems, we might want to emit error messages and we might
         want to ignore the entire row.
 
+        If self.verbose is True, we use StringIO to capture additional error messages
+        from KgtkValue validation.
+
         Returns True to indicate that the row should be ignored (skipped).
 
         """
+        error_file: typing.Optional[io.StringIO] = None
         problems: typing.List[str] = [ ] # Build a list of problems.
         idx: int
         item: str
         for idx, item in enumerate(row):
             if len(item) > 0: # Optimize the common case of empty columns.
-                kv: KgtkValue = KgtkValue(item, options=self.value_options)
+                if self.verbose:
+                    error_file = io.StringIO()
+                kv: KgtkValue = KgtkValue(item, options=self.value_options, error_file=self.error_file, verbose=self.verbose)
                 if not kv.is_valid():
-                    problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], item, kv.describe()))
+                    if error_file is not None:
+                        problems.append("col %d (%s) value %s: %s" % (idx, self.column_names[idx], repr(item), error_file.getvalue().rstrip()))
+                    problems.append("col %d (%s) value %s is an %s" % (idx, self.column_names[idx], repr(item), kv.describe()))
                 if kv.repaired:
                     # If this value was repaired, update the item in the row.
                     #
                     # Warning: We expect this change to be seen by the caller.
                     row[idx] = kv.value
+                if error_file is not None:
+                    error_file.close()
 
         if len(problems) == 0:
             return False
