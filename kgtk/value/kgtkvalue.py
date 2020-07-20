@@ -730,6 +730,7 @@ class KgtkValue(KgtkFormat):
                 else:
                     print("KgtkValue.is_number_or_quantity.number_or_quantity_re.match failed for %s" % (repr(self.value)),
                           file=self.error_file, flush=True)
+            self.valid = False
             return False
 
         # Extract the number or quantity components:
@@ -749,6 +750,7 @@ class KgtkValue(KgtkFormat):
                 if self.verbose:
                     print("KgtkValue.is_number_or_quantity: low tolerance is not float for %s" % (repr(self.value)),
                           file=self.error_file, flush=True)
+                self.valid = False
                 return False                
 
         high_tolerance: typing.Optional[float]
@@ -761,6 +763,7 @@ class KgtkValue(KgtkFormat):
                 if self.verbose:
                     print("KgtkValue.is_number_or_quantity: high tolerance is not float for %s" % (repr(self.value)),
                           file=self.error_file, flush=True)
+                self.valid = False
                 return False                
 
         # For convenience, convert the numeric part to int or float:
@@ -916,6 +919,7 @@ class KgtkValue(KgtkFormat):
                 if self.verbose:
                     print("KgtkValue.is_quantity: low tolerance is not float for %s" % (repr(self.value)),
                           file=self.error_file, flush=True)
+                self.valid = False
                 return False                
 
         high_tolerance: typing.Optional[float]
@@ -928,6 +932,7 @@ class KgtkValue(KgtkFormat):
                 if self.verbose:
                     print("KgtkValue.is_quantity: high tolerance is not float for %s" % (repr(self.value)),
                           file=self.error_file, flush=True)
+                self.valid = False
                 return False                
 
         # For convenience, convert the numeric part to int or float:
@@ -954,6 +959,7 @@ class KgtkValue(KgtkFormat):
             if self.verbose:
                 print("KgtkValue.is_quantity: actually a number for %s" % (repr(self.value)),
                       file=self.error_file, flush=True)
+            self.valid = False
             return False
 
         # Now we can be certain that this is a quantity.
@@ -1010,6 +1016,7 @@ class KgtkValue(KgtkFormat):
                     print("KgtkValue.lax_string_re.match failed for %s" % self.value, file=self.error_file, flush=True)
                 else:
                     print("KgtkValue.strict_string_re.match failed for %s" % self.value, file=self.error_file, flush=True)
+            self.valid = False
             return False
 
         # We are certain that this is a valid string.
@@ -1106,6 +1113,7 @@ class KgtkValue(KgtkFormat):
                     print("KgtkValue.lax_language_qualified_string_re.match failed for %s" % self.value, file=self.error_file, flush=True)
                 else:
                     print("KgtkValue.strict_language_qualified_string_re.match failed for %s" % self.value, file=self.error_file, flush=True)
+            self.valid = False
             return False
 
         # Extract the combined lang and suffix for use by the LanguageValidator.
@@ -1116,6 +1124,7 @@ class KgtkValue(KgtkFormat):
         if not LanguageValidator.validate(lang_and_suffix.lower(), options=self.options):
             if self.verbose:
                 print("language validation failed for %s" % self.value, file=self.error_file, flush=True)
+            self.valid = False
             return False
 
         # We are certain that this is a valid language qualified string.
@@ -1172,11 +1181,13 @@ class KgtkValue(KgtkFormat):
                 if m is None:
                     if self.verbose:
                         print("KgtkValue.lax_location_coordinates_re.match failed for %s" % self.value, file=self.error_file, flush=True)
+                    self.valid = False
                     return False
                 rewrite_needed = self.options.repair_lax_coordinates
             else:
                 if self.verbose:
                     print("KgtkValue.location_coordinates_re.match failed for %s" % self.value, file=self.error_file, flush=True)
+                self.valid = False
                 return False
 
         latstr: str = m.group("lat")
@@ -1198,6 +1209,7 @@ class KgtkValue(KgtkFormat):
                     if self.verbose:
                         print("KgtkValue.is_location_coordinates: lat less than minimum %f for %s" % (self.options.minimum_valid_lat, repr(self.value)),
                               file=self.error_file, flush=True)
+                    self.valid = False
                     return False
             elif lat > self.options.maximum_valid_lat:
                 if self.options.clamp_maximum_lat:
@@ -1208,6 +1220,7 @@ class KgtkValue(KgtkFormat):
                     if self.verbose:
                         print("KgtkValue.is_location_coordinates: lat greater than maximum %f for %s" % (self.options.maximum_valid_lat, repr(self.value)),
                               file=self.error_file, flush=True)
+                    self.valid = False
                     return False
             elif rewrite_needed:
                 latstr = self.format_degrees(lat)
@@ -1216,6 +1229,7 @@ class KgtkValue(KgtkFormat):
             if self.verbose:
                 print("KgtkValue.is_location_coordinates: lat is not float for %s" % (repr(self.value)),
                       file=self.error_file, flush=True)
+            self.valid = False
             return False
 
         # Longitude normally runs from -180 to +180:
@@ -1234,6 +1248,7 @@ class KgtkValue(KgtkFormat):
                     if self.verbose:
                         print("KgtkValue.is_location_coordinates: lon less than minimum %f for %s" % (self.options.minimum_valid_lat, repr(self.value)),
                               file=self.error_file, flush=True)
+                    self.valid = False
                     return False
             elif lon > self.options.maximum_valid_lon:
                 if self.options.modulo_repair_lon:
@@ -1248,6 +1263,7 @@ class KgtkValue(KgtkFormat):
                     if self.verbose:
                         print("KgtkValue.is_location_coordinates: lon greater than maximum %f for %s" % (self.options.maximum_valid_lat, repr(self.value)),
                               file=self.error_file, flush=True)
+                    self.valid = False
                     return False
             elif rewrite_needed:
                 lonstr = self.format_degrees(lon)
@@ -1256,6 +1272,7 @@ class KgtkValue(KgtkFormat):
             if self.verbose:
                 print("KgtkValue.is_location_coordinates: lon is not float for %s" % (repr(self.value)),
                       file=self.error_file, flush=True)
+            self.valid = False
             return False
 
         if fixup_needed:
@@ -1416,6 +1433,7 @@ class KgtkValue(KgtkFormat):
         if m is None:
             if self.verbose:
                 print("KgtkValue.lax_date_and_times_re.match(%s) failed." % repr(self.value), file=self.error_file, flush=True)
+            self.valid = False
             return False
 
         date: typing.Optional[str] = m.group("date")
@@ -1434,18 +1452,29 @@ class KgtkValue(KgtkFormat):
 
         fixup_needed: bool = False
 
+        if not iso8601extended:
+            if self.options.force_iso8601_extended:
+                fixup_needed = True
+            elif self.options.require_iso8601_extended:
+                if self.verbose:
+                    print("KgtkValue.is_date_and_times: missing hyphen in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
+                return False
+
         # Validate the year:
         if yearstr is None or len(yearstr) == 0:
             if self.verbose:
                 print("KgtkValue.is_date_and_times: no year in %s." % repr(self.value), file=self.error_file, flush=True)
+            self.valid = False
             return False # Years are mandatory
         try:
             year: int = int(yearstr)
         except ValueError:
             if self.verbose:
                 print("KgtkValue.is_date_and_times: year not int in %s." % repr(self.value), file=self.error_file, flush=True)
+            self.valid = False
             return False
-        if year < self.options.minimum_valid_year:
+        if year < self.options.minimum_valid_year and not self.options.ignore_minimum_year:
             if self.options.clamp_minimum_year:
                 year = self.options.minimum_valid_year
                 if year >= 0:
@@ -1458,8 +1487,9 @@ class KgtkValue(KgtkFormat):
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: year less than minimum %d: %s." % (self.options.minimum_valid_year, repr(self.value)),
                           file=self.error_file, flush=True)
+                self.valid = False
                 return False
-        elif year > self.options.maximum_valid_year:
+        elif year > self.options.maximum_valid_year and not self.options.ignore_maximum_year:
             if self.options.clamp_maximum_year:
                 year = self.options.maximum_valid_year
                 if year >= 0:
@@ -1472,6 +1502,7 @@ class KgtkValue(KgtkFormat):
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: year greater than maximum %d: %s." % (self.options.maximum_valid_year, repr(self.value)),
                           file=self.error_file, flush=True)
+                self.valid = False
                 return False
 
         month: typing.Optional[int]
@@ -1483,6 +1514,7 @@ class KgtkValue(KgtkFormat):
             except ValueError:
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: month not int in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
                 return False # shouldn't happen
             if month == 0:
                 if self.options.repair_month_or_day_zero:
@@ -1492,6 +1524,7 @@ class KgtkValue(KgtkFormat):
                 elif not self.options.allow_month_or_day_zero:
                     if self.verbose:
                         print("KgtkValue.is_date_and_times: month 0 disallowed in %s." % repr(self.value), file=self.error_file, flush=True)
+                    self.valid = False
                     return False # month 0 was disallowed.
 
         day: typing.Optional[int]
@@ -1503,6 +1536,7 @@ class KgtkValue(KgtkFormat):
             except ValueError:
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: day not int in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
                 return False # shouldn't happen
             if day == 0:
                 if self.options.repair_month_or_day_zero:
@@ -1512,6 +1546,7 @@ class KgtkValue(KgtkFormat):
                 elif not self.options.allow_month_or_day_zero:
                     if self.verbose:
                         print("KgtkValue.is_date_and_times: day 0 disallowed in %s." % repr(self.value), file=self.error_file, flush=True)
+                    self.valid = False
                     return False # day 0 was disallowed.
 
         # Convert the time fields to ints:
@@ -1524,6 +1559,7 @@ class KgtkValue(KgtkFormat):
             except ValueError:
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: hour not int in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
                 return False # shouldn't happen
 
         minutes: typing.Optional[int]
@@ -1535,6 +1571,7 @@ class KgtkValue(KgtkFormat):
             except ValueError:
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: minutes not int in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
                 return False # shouldn't happen
 
         seconds: typing.Optional[int]
@@ -1546,16 +1583,19 @@ class KgtkValue(KgtkFormat):
             except ValueError:
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: seconds not int in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
                 return False # shouldn't happen
 
         if hour is not None and hour == 24:
             if ((minutes is not None and minutes > 0) or (seconds is not None and seconds > 0)):
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: hour 24 and minutes or seconds not zero in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
                 return False # An invalid time
             if not self.options.allow_end_of_day:
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: end-of-day value disallowed in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
                 return False
 
         precision: typing.Optional[int]
@@ -1567,6 +1607,7 @@ class KgtkValue(KgtkFormat):
             except ValueError:
                 if self.verbose:
                     print("KgtkValue.is_date_and_times: precision not int in %s." % repr(self.value), file=self.error_file, flush=True)
+                self.valid = False
                 return False # shouldn't happen
 
         if fixup_needed:
