@@ -407,10 +407,12 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                                             value = pre + \
                                                                 val['time'][1:] + '/' + str(val['precision'])
                                                         elif typ == 'monolingualtext':
-                                                            value = '\'' + \
-                                                                val['text'].replace("'","\\'") + '\'' + '@' + val['language']
+                                                            # value = '\'' + \
+                                                            #     val['text'].replace("'","\\'") + '\'' + '@' + val['language']
+                                                            value = KgtkFormat.stringify(val['text'], language=val['language'])
                                                         else:
-                                                            value = '\"' + val.replace('"','\\"') + '\"'
+                                                            # value = '\"' + val.replace('"','\\"') + '\"'
+                                                            value = KgtkFormat.stringify(val)
                                                         if explode_values:
                                                             qrows.append([
                                                                 tempid,
