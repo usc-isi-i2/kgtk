@@ -84,8 +84,8 @@ def run(input_file: KGTKFiles):
     def make_question(n1, lbl):
         return f'If {n1}, then {lbl}?' 
 
-    def make_sentence(node_label, rel_label, value_label):
-        return 'If %s, then %s %s.' % (node_label, rel_label, value_label)
+    #def make_sentence(node_label, rel_label, value_label):
+    #    return 'If %s, then %s %s.' % (node_label, rel_label, value_label)
 
     try:
 
@@ -115,7 +115,7 @@ def run(input_file: KGTKFiles):
 
                     rel_label=produce_rel_label(c)
 
-                    sentence=make_sentence(first_event_label, rel_label, first_value_label)
+                    sentence='' #make_sentence(first_event_label, rel_label, first_value_label)
 
                     question=make_question(first_event_label, rel_label)
 
