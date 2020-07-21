@@ -177,9 +177,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                             for lang in languages:
                                 lang_label = labels.get(lang, None)
                                 if lang_label:
-                                    lang_label['value']=lang_label['value'].replace('|','\\|')
-                                    label_list.append(
-                                        '\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                    # lang_label['value']=lang_label['value'].replace('|','\\|')
+                                    # label_list.append('\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                    label_list.append(KgtkFormat.stringify(lang_label['value'], language=lang))
                         if len(label_list)>0:
                             row.append("|".join(label_list))
                         else:
@@ -193,9 +193,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                             for lang in languages:
                                 lang_descr = descriptions.get(lang, None)
                                 if lang_descr:
-                                    lang_descr['value']=lang_descr['value'].replace('|','\\|')
-                                    descr_list.append(
-                                        '\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                    # lang_descr['value']=lang_descr['value'].replace('|','\\|')
+                                    # descr_list.append('\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                    descr_list.append(KgtkFormat.stringify(lang_descr['value'], language=lang))
                         if len(descr_list)>0:
                             row.append("|".join(descr_list))
                         else:
@@ -209,9 +209,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
                                     for item in lang_aliases:
-                                        item['value']=item['value'].replace('|','\\|')
-                                        alias_list.append(
-                                            '\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                        # item['value']=item['value'].replace('|','\\|')
+                                        # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                        alias_list.append(KgtkFormat.stringify(item['value'], language=lang))
                         if len(alias_list)>0:
                             row.append("|".join(alias_list))
                         else:
