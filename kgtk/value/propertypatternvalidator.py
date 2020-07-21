@@ -1337,6 +1337,7 @@ class PropertyPatternValidator:
                 result = False
 
             if self.id_idx >= 0:
+                # TODO: we ought to set result to FALSE if there are ID operators but the ID column is missing.
                 result &= self.validate_id(rownum, row[self.id_idx], prop_or_datatype, orig_prop, pats)
                 
             if PropertyPattern.Action.ISA in pats:
