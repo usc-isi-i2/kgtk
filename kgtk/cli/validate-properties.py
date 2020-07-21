@@ -59,6 +59,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--isa-column-name", dest="isa_column_name", default="isa;node2",
                               help="The name for the ISA column. (default %(default)s)")
 
+    parser.add_argument(      "--autovalidate", dest="autovalidate",
+                              help="When true, validate node1 and node2 values before testing them. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -73,6 +77,7 @@ def run(input_file: KGTKFiles,
         complain_immediately: bool = False,
         add_isa_column: bool = False,
         isa_column_name: str = "isa;node2",
+        autovalidate: bool = True,
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
         show_options: bool = False,
@@ -108,6 +113,7 @@ def run(input_file: KGTKFiles,
         print("--complain-immediately=%s" % str(complain_immediately))
         print("--add-isa-column=%s" % str(add_isa_column))
         print("--isa-column-name=%s" % str(isa_column_name))
+        print("--autovalidate=%s" % str(autovalidate))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -159,6 +165,7 @@ def run(input_file: KGTKFiles,
                                                                      reject_node1_groups=reject_node1_groups,
                                                                      complain_immediately=complain_immediately,
                                                                      isa_column_idx=isa_column_idx,
+                                                                     autovalidate=autovalidate,
                                                                      value_options=value_options,
                                                                      error_file=error_file,
                                                                      verbose=verbose,
