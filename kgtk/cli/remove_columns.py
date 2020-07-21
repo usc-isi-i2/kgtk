@@ -163,7 +163,7 @@ def run(input_file: KGTKFiles,
             kw.write(row, shuffle_list=shuffle_list)
 
         if verbose:
-            print("Processed %d rows." % (input_line_count))
+            print("Processed %d rows." % (input_line_count), file=error_file, flush=True)
 
         kw.close()
 
