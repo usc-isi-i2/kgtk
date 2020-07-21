@@ -17,7 +17,7 @@ def parser():
 def add_arguments(parser: KGTKArgumentParser):
     parser.add_input_file(positional=True, metavar="INPUT",
                           who="Input file to sort.")
-    parser.add_output_file(options=['-o', '--out'],
+    parser.add_output_file(options=['-o', '--out', '--output-file'],
                            who='Output file to write to.')
 
     parser.add_argument('-c', '--column', '--columns', default='1', action='store', dest='columns',
