@@ -83,11 +83,22 @@ def add_arguments(parser: KGTKArgumentParser):
         const=True,
         default=True,
         metavar="True/False",
-        help="If true, colums with exploded value information. (default=%(default)s).",
+        help="If true, create columns with exploded value information. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--use-sendfile",
+        nargs='?',
+        type=optional_bool,
+        dest="use_sendfile",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, use sendfile to combine file fragments. (default=%(default)s).",
     )
 
     
-def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,source,deprecated,explode_values):
+def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,source,deprecated,explode_values, use_sendfile):
     # import modules locally
     import bz2
     import simplejson as json
@@ -152,7 +163,7 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                 write_mode='w'
                 self.first=False
             if self.cnt % 500000 == 0 and self.cnt>0:
-                print("{} lines processed by processor {}".format(self.cnt,self._idx))
+                print("{} lines processed by processor {}".format(self.cnt,self._idx), flush=True)
             self.cnt+=1
             nrows=[]
             erows=[]
@@ -539,59 +550,122 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
         pp.start()
         if str(inp_path).endswith(".bz2"):
             with bz2.open(inp_path, mode='rb') as file:
-                print('decompressing and processing wikidata file %s' % str(inp_path))
+                print('decompressing and processing wikidata file %s' % str(inp_path), flush=True)
                 for cnt, line in enumerate(file):
                     if limit and cnt >= limit:
                         break
                     pp.add_task(line,node_file,edge_file,qual_file,languages,source)
         else:                             
             with open(inp_path, mode='rb') as file:
-                print('processing wikidata file %s' % str(inp_path))
+                print('processing wikidata file %s' % str(inp_path), flush=True)
                 for cnt, line in enumerate(file):
                     if limit and cnt >= limit:
                         break
                     pp.add_task(line,node_file,edge_file,qual_file,languages,source)
 
+        print('Processor {} done'.format(self._idx), flush=True)
         pp.task_done()
         pp.join()
+
+        # We've finished processing the input data, possibly using multiple
+        # server processes.  We need to assemble the final output file(s) with
+        # the header first, then the fragments produced by parallel
+        # processing.
+        #
+        # Unfortunately, the performance of this code is not very good.
+        # Apparently the output from the cat command is read into Python
+        # before being written to the output file. This produces a bottleneck.
+        #
+        # It might be possible that using `sort --output=xxx_file header_file
+        # node_file_fragments...` to sort and merge the fragments will be
+        # significantly faster than routing the output through Python. However,
+        # joining the header line can't be done this way.
+        #
+        # `awk` provides file I/O in its language.  It could be used to
+        # combine the header and fragments.  `perl` could be used, as well, but
+        # `awk` may be more common.
+        #
+        # Another option would be to start a subshell and use it to perform
+        # output redirection for the result of `cat`.  This will be higher
+        # performing than the present implementation.  It may or may not be
+        # the simplest solution, depending upon whether it is necessary to
+        # outwit features such as .login files producing output.
+        #
+        # If we assume that we are on Linux or MacOS, then os.sendfile(...)
+        # should provide the simplest, highest-performing solution.
         if node_file:
+            print('Combining the node file fragments', flush=True)
             cat_command=[node_file+'_header']
             rm_command=[node_file+'_header']
+            # Wouldn't it make sense to move this for loop into the else
+            # clause of the following if statement?  Alternatively, perhaps
+            # the limit==1 special case is pointless.
             for n in range(procs):
                 cat_command.append(node_file+'_'+str(n))
                 rm_command.append(node_file+'_'+str(n))
-            if limit and limit==1:
+            if use_sendfile:
+                sendfile_cat(cat_command, node_file, remove=True)
+                                  
+            elif limit and limit==1:
                 sh.cat(node_file+'_header',node_file+'_0',_out=node_file)
                 sh.rm(node_file+'_header',node_file+'_0') 
+
             else:
                 sh.cat(*cat_command,_out=node_file)
                 sh.rm(*rm_command)
         if edge_file:
+            print('Combining the edge file fragments', flush=True)
             cat_command=[edge_file+'_header']
             rm_command=[edge_file+'_header']
             for n in range(procs):
                 cat_command.append(edge_file+'_'+str(n))
                 rm_command.append(edge_file+'_'+str(n))
-            if limit and limit==1:
+            if use_sendfile:
+                sendfile_cat(cat_command, edge_file, remove=True)
+            elif limit and limit==1:
                 sh.cat(edge_file+'_header',edge_file+'_0',_out=edge_file)
                 sh.rm(edge_file+'_header',edge_file+'_0') 
             else:
                 sh.cat(*cat_command,_out=edge_file)
                 sh.rm(*rm_command)
         if qual_file:
+            print('Combining the qualifier file fragments', flush=True)
             cat_command=[qual_file+'_header']
             rm_command=[qual_file+'_header']
             for n in range(procs):
                 cat_command.append(qual_file+'_'+str(n))
                 rm_command.append(qual_file+'_'+str(n))
-            if limit and limit==1:
+            if use_sendfile:
+                sendfile_cat(cat_command, qual_file, remove=True)
+            elif limit and limit==1:
                 sh.cat(qual_file+'_header',qual_file+'_0',_out=qual_file)
                 sh.rm(qual_file+'_header',qual_file+'_0') 
             else:
                 sh.cat(*cat_command,_out=qual_file)
                 sh.rm(*rm_command)
-        print('import complete')
+        print('import complete', flush=True)
         end=time.time()
-        print('time taken : {}s'.format(end-start))
+        print('time taken : {}s'.format(end-start), flush=True)
     except:
         raise KGTKException
+
+def sendfile_cat(infiles, outfile, remove=False):
+    import os
+    ofd = os.open(node_file, os.O_WRONLY)
+    for filename in infiles:
+        ifd = os.open(filename, os.O_RDONLY)
+        count = 16 * 1024 * 1024
+        offset = 0
+        while True:
+            copycount = os.sendfile(ifd, ofd, offset, count)
+            if copycount == 0:
+                break
+            offset += copycount
+        ifd.close()
+    ofd.close()
+
+    if remove:
+        for filename in infiles:
+            os.remove(filename)
+
+    
