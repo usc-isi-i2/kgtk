@@ -21,6 +21,8 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 @attr.s(slots=True, frozen=True)
 class PropertyPattern:
     class Action(Enum):
+        NOT_IN_COLUMNS = "not_in_columns"
+
         NODE1_TYPE = "node1_type"
         NODE1_IS_VALID = "node1_is_valid"
         NODE1_ALLOW_LIST = "node1_allow_list"
@@ -36,9 +38,17 @@ class PropertyPattern:
         NODE2_NOT_VALUES = "node2_not_values"
         NODE2_PATTERN = "node2_pattern"
         NODE2_NOT_PATTERN = "node2_not_pattern"
+        NODE2_BLANK = "node2_blank"
         NODE2_NOT_BLANK = "node2_not_blank"
 
-        NOT_IN = "not_in"
+        NODE2_FIELD_OP = "node2_field_op" # one or more operation symbols
+        FIELD_NAME = "field_name" # one or more field names
+        FIELD_VALUES = "field_values"
+        FIELD_NOT_VALUES = "field_not_values"
+        FIELD_PATTERN = "field_pattern"
+        FIELD_NOT_PATTERN = "field_not_pattern"
+        FIELD_BLANK = "field_blank"
+        FIELD_NOT_BLANK = "field_not_blank"
 
         # LABEL_COLUM = "label_column"
         MINVAL = "minval" # GE
@@ -47,6 +57,13 @@ class PropertyPattern:
         LESS_THAN = "less_than" # LT
         EQUAL_TO = "equal_to" # EQ, may take a list of numbers
         NOT_EQUAL_TO = "not_equal_to" # NE, may take a list of numbers
+
+        ID_ALLOW_LIST = "node2_allow_list"
+        ID_CHAIN = "id_chain"
+        ID_PATTERN = "id_pattern"
+        ID_NOT_PATTERN = "id_not_pattern"
+        ID_BLANK = "id_blank"
+        ID_NOT_BLANK = "id_not_blank"
 
         MUSTOCCUR = "mustoccur"
         MINOCCURS = "minoccurs"
@@ -71,7 +88,7 @@ class PropertyPattern:
         REQUIRES = "requires"
         PROHIBITS = "prohibits"
 
-        CHAIN = "chain"
+        NODE2_CHAIN = "node2_chain"
 
         MINDATE = "mindate"
         MAXDATE = "maxdate"
@@ -110,6 +127,8 @@ class PropertyPattern:
         if action in (cls.Action.NODE1_PATTERN,
                       cls.Action.NODE2_PATTERN,
                       cls.Action.NODE2_NOT_PATTERN,
+                      cls.Action.FIELD_PATTERN,
+                      cls.Action.FIELD_NOT_PATTERN,
                       cls.Action.LABEL_PATTERN,
                       cls.Action.MATCHES):
             if node2_value.fields is None:
@@ -179,7 +198,7 @@ class PropertyPattern:
                 numbers.extend(old_ppat.numbers)
             numbers = sorted(list(set(numbers)))
 
-        elif action in (cls.Action.NOT_IN,):
+        elif action in (cls.Action.NOT_IN_COLUMNS,):
             # TODO: validate that the column names are valid and get their indexes.
             if node2_value.is_symbol():
                 column_names.append(node2_value.value)
@@ -211,6 +230,8 @@ class PropertyPattern:
         elif action in (cls.Action.NODE1_TYPE,
                         cls.Action.NODE2_TYPE,
                         cls.Action.NODE2_NOT_TYPE,
+                        cls.Action.NODE2_FIELD_OP,
+                        cls.Action.FIELD_NAME,
                         cls.Action.ISA,
                         cls.Action.SWITCH,
                         cls.Action.NEXTCASE,
@@ -236,7 +257,10 @@ class PropertyPattern:
         elif action in (cls.Action.NODE1_VALUES,
                         cls.Action.NODE2_VALUES,
                         cls.Action.NODE2_NOT_VALUES,
-                        cls.Action.CHAIN,
+                        cls.Action.FIELD_VALUES,
+                        cls.Action.FIELD_NOT_VALUES,
+                        cls.Action.NODE2_CHAIN,
+                        cls.Action.ID_CHAIN,
         ):
             if node2_value.is_list():
                 for kv in node2_value.get_list_items():
@@ -257,7 +281,10 @@ class PropertyPattern:
                         cls.Action.PROPERTY,
                         cls.Action.DATATYPE,
                         cls.Action.GROUPBYPROP,
+                        cls.Action.NODE2_BLANK,
                         cls.Action.NODE2_NOT_BLANK,
+                        cls.Action.FIELD_BLANK,
+                        cls.Action.FIELD_NOT_BLANK,
                         cls.Action.NODE1_IS_VALID,
                         cls.Action.NODE2_IS_VALID,
         ):
@@ -387,10 +414,14 @@ class PropertyPatterns:
                 prohibits[prop_or_datatype] = prohibits_set
                 interesting.add(prop_or_datatype)
                 interesting.update(prohibits_set)
-            elif action == PropertyPattern.Action.CHAIN and len(pp.values) > 0:
-                chain_target_set: typing.Set[str] = set(pp.values)
-                chain_targets.update(chain_target_set)
-                interesting.update(chain_target_set)
+            elif action == PropertyPattern.Action.NODE2_CHAIN and len(pp.values) > 0:
+                node2_chain_target_set: typing.Set[str] = set(pp.values)
+                chain_targets.update(node2_chain_target_set)
+                interesting.update(node2_chain_target_set)
+            elif action == PropertyPattern.Action.ID_CHAIN and len(pp.values) > 0:
+                id_chain_target_set: typing.Set[str] = set(pp.values)
+                chain_targets.update(id_chain_target_set)
+                interesting.update(id_chain_target_set)
 
         return cls(patterns=patmap,
                    matches=matches,
@@ -435,6 +466,7 @@ class PropertyPatternValidator:
     node1_idx: int = attr.ib()
     label_idx: int = attr.ib()
     node2_idx: int = attr.ib()
+    id_idx: int =  attr.ib()
 
     value_options: KgtkValueOptions = attr.ib()
 
@@ -442,6 +474,8 @@ class PropertyPatternValidator:
     reject_node1_groups: bool = attr.ib(default=False)
     complain_immediately: bool = attr.ib(default=False) # True is good for debugging.
     isa_column_idx: int = attr.ib(default=-1)
+
+    autovalidate: bool = attr.ib(default=True)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -525,6 +559,7 @@ class PropertyPatternValidator:
             reject_node1_groups: bool,
             complain_immediately: bool,
             isa_column_idx: int,
+            autovalidate: bool,
             value_options: KgtkValueOptions,
             error_file: typing.TextIO,
             verbose: bool,
@@ -535,10 +570,12 @@ class PropertyPatternValidator:
                                         kr.node1_column_idx,
                                         kr.label_column_idx,
                                         kr.node2_column_idx,
+                                        kr.id_column_idx,
                                         grouped_input=grouped_input,
                                         reject_node1_groups=reject_node1_groups,
                                         complain_immediately=complain_immediately,
                                         isa_column_idx=isa_column_idx,
+                                        autovalidate=autovalidate,
                                         value_options=value_options,
                                         error_file=error_file,
                                         verbose=verbose,
@@ -565,7 +602,7 @@ class PropertyPatternValidator:
         self.interesting_scoreboard = None
         self.complaints.clear()
 
-    def validate_not_in(self, rownum: int, row: typing.List[str])->bool:
+    def validate_not_in_columns(self, rownum: int, row: typing.List[str])->bool:
         """
         Check each column of the row to see if the contents violates a not_in relationship.
         """
@@ -578,8 +615,8 @@ class PropertyPatternValidator:
             if thing in self.pps.patterns:
                 thing_patterns: PropertyPatterns.PATTERN_MAP_TYPE = self.pps.patterns[thing]
                 # print("len(thing_patterns) = %d" % len(thing_patterns), file=self.error_file, flush=True)
-                if PropertyPattern.Action.NOT_IN in thing_patterns:
-                    column_names: typing.List[str] = thing_patterns[PropertyPattern.Action.NOT_IN].column_names
+                if PropertyPattern.Action.NOT_IN_COLUMNS in thing_patterns:
+                    column_names: typing.List[str] = thing_patterns[PropertyPattern.Action.NOT_IN_COLUMNS].column_names
                     # print("NOT_IN columns: %s" % " ".join(column_names), file=self.error_file, flush=True)
                     if column_name in column_names:
                         print("Row %d: Found '%s' in column '%s', which is prohibited." % (rownum, thing, column_name), file=self.error_file, flush=True)
@@ -615,16 +652,16 @@ class PropertyPatternValidator:
                 return False
         return True
 
-    def validate_value(self, rownum: int, value: KgtkValue, prop_or_datatype: str, value_list: typing.List[str], who: str, invert: bool=False)->bool:
+    def validate_value(self, rownum: int, item: str, prop_or_datatype: str, value_list: typing.List[str], who: str, invert: bool=False)->bool:
         if not invert:
-            if value.value not in value_list:
-                self.grouse("Row %d: the %s value '%s' is not in the list of allowed %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
+            if item not in value_list:
+                self.grouse("Row %d: the %s value '%s' is not in the list of allowed %s values for %s: %s" % (rownum, who, item, who, prop_or_datatype,
                                                                                                               KgtkFormat.LIST_SEPARATOR.join(value_list)))
                 return False
         else:
-            if value.value in value_list:
-                self.grouse("Row %d: the %s value '%s' is in the list of disallowed %s values for %s: %s" % (rownum, who, value.value, who, prop_or_datatype,
-                                                                                                KgtkFormat.LIST_SEPARATOR.join(value_list)))
+            if item in value_list:
+                self.grouse("Row %d: the %s value '%s' is in the list of disallowed %s values for %s: %s" % (rownum, who, item, who, prop_or_datatype,
+                                                                                                             KgtkFormat.LIST_SEPARATOR.join(value_list)))
                 return False
         return True        
 
@@ -661,6 +698,17 @@ class PropertyPatternValidator:
                 return False
         return True        
 
+    def validate_field_not_blank(self, rownum: int, value: str, prop_or_datatype: str, truth: bool, who: str)->bool:
+        if truth:
+            if len(value) == 0:
+                self.grouse("Row %d: the %s value '%s' is blank for %s" % (rownum, who, value, prop_or_datatype,))
+                return False
+        else:
+            if len(value) != 0:
+                self.grouse("Row %d: the %s value '%s' is not blank for %s" % (rownum, who, value, prop_or_datatype,))
+                return False
+        return True        
+
     def validate_minval(self, rownum: int, prop_or_datatype: str, minval: float, node2_value: KgtkValue)->bool:
         if not node2_value.is_number_or_quantity():
             return False
@@ -672,6 +720,9 @@ class PropertyPatternValidator:
             return False
         number: float = float(node2_value.fields.number)
 
+        return self.validate_minval_number(rownum, prop_or_datatype, minval, number)
+
+    def validate_minval_number(self, rownum: int, prop_or_datatype: str, minval: float, number: float)->bool:
         if number < minval:
             self.grouse("Row: %d: prop_or_datatype %s value %f is less than minval %f." % (rownum, prop_or_datatype, number, minval))
             return False
@@ -688,6 +739,9 @@ class PropertyPatternValidator:
             return False
         number: float = float(node2_value.fields.number)
 
+        return self.validate_maxval_number(rownum, prop_or_datatype, maxval, number)
+    
+    def validate_maxval_number(self, rownum: int, prop_or_datatype: str, maxval: float, number: float)->bool:
         if number > maxval:
             self.grouse("Row: %d: prop_or_datatype %s value %f is greater than maxval %f." % (rownum, prop_or_datatype, number, maxval))
             return False
@@ -703,7 +757,9 @@ class PropertyPatternValidator:
         if node2_value.fields.number is None:
             return False
         number: float = float(node2_value.fields.number)
+        return self.validate_greater_than_number(rownum, prop_or_datatype, minval, number)
 
+    def validate_greater_than_number(self, rownum: int, prop_or_datatype: str, minval: float, number: float)->bool:
         if number <= minval:
             self.grouse("Row: %d: prop_or_datatype %s value %f is not greater than %f." % (rownum, prop_or_datatype, number, minval))
             return False
@@ -719,7 +775,9 @@ class PropertyPatternValidator:
         if node2_value.fields.number is None:
             return True
         number: float = float(node2_value.fields.number)
+        return self.validate_less_than_number(rownum, prop_or_datatype, maxval, number)
 
+    def validate_less_than_number(self, rownum: int, prop_or_datatype: str, maxval: float, number: float)->bool:
         if number >= maxval:
             self.grouse("Row: %d: prop_or_datatype %s value %f is not less than %f." % (rownum, prop_or_datatype, number, maxval))
             return False
@@ -735,7 +793,9 @@ class PropertyPatternValidator:
         if node2_value.fields.number is None:
             return True
         number: float = float(node2_value.fields.number)
+        return self.validate_equal_to_number(rownum, prop_or_datatype, value_list, number)
 
+    def validate_equal_to_number(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], number: float)->bool:
         value: float
         for value in value_list:
             if number == value:
@@ -754,7 +814,9 @@ class PropertyPatternValidator:
         if node2_value.fields.number is None:
             return True
         number: float = float(node2_value.fields.number)
+        return self.validate_not_equal_to_number(rownum, prop_or_datatype, value_list, number)
 
+    def validate_not_equal_to_number(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], number: float)->bool:
         value: float
         for value in value_list:
             if number != value:
@@ -788,6 +850,109 @@ class PropertyPatternValidator:
                                                                                        KgtkFormat.LIST_SEPARATOR.join(remote_datatypes)))
         return False
 
+    def validate_field_op(self,
+                          rownum: int,
+                          prop_or_datatype: str,
+                          new_datatypes: typing.List[str],
+                          node2_value: KgtkValue,
+    )->bool:
+        who: str = "node2_field"
+        node2_value.validate()
+        if node2_value.fields is None:
+            self.grouse("Row %d: no fields for prop/datatype %s op %s: %s" % (rownum, prop_or_datatype, new_datatype, node2_value.value))
+            return False
+        field_value_map: typing.Mapping[str, typing.Union[str, int, float, bool]] = node2_value.fields.to_map()
+
+        result: bool = True
+
+        new_datatype: str
+        for new_datatype in new_datatypes:
+            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[new_datatype]
+            if PropertyPattern.Action.FIELD_NAME not in pats:
+                self.grouse("Row %d: no field name for field op in %s." % (rownum, new_datatype))
+                result = False
+                continue
+            field_names: typing.List[str] = pats[PropertyPattern.Action.FIELD_NAME].values
+            field_name: str
+            for field_name in field_names:
+                if field_name not in field_value_map:
+                    self.grouse("Row %d: no field value for field %s in %s." % (rownum, field_name, new_datatype))
+                    result = False
+                    continue
+                field_value: typing.Union[str, int, float, bool] = field_value_map[field_name]
+            
+                if PropertyPattern.Action.FIELD_VALUES in pats:
+                    result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pats[PropertyPattern.Action.FIELD_VALUES].values, who)
+
+                if PropertyPattern.Action.FIELD_NOT_VALUES in pats:
+                    result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pats[PropertyPattern.Action.FIELD_NOT_VALUES].values, who,
+                                              invert=True)
+
+                if PropertyPattern.Action.FIELD_PATTERN in pats:
+                    result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pats[PropertyPattern.Action.FIELD_PATTERN].patterns, who)
+
+                if PropertyPattern.Action.FIELD_NOT_PATTERN in pats:
+                    result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pats[PropertyPattern.Action.FIELD_NOT_PATTERN].patterns, who,
+                                                    invert=True)
+
+                if PropertyPattern.Action.FIELD_BLANK in pats:
+                    if isinstance(field_value, (str)):
+                        result &= self.validate_field_not_blank(rownum, field_value, prop_or_datatype, not pats[PropertyPattern.Action.FIELD_NOT_BLANK].truth, who)
+                    else:
+                        self.grouse("Row %d: field %s in %s is not a string." % (rownum, field_name, new_datatype))
+                        result = False
+
+                if PropertyPattern.Action.FIELD_NOT_BLANK in pats:
+                    if isinstance(field_value, (str)):
+                        result &= self.validate_field_not_blank(rownum, field_value, prop_or_datatype, pats[PropertyPattern.Action.FIELD_NOT_BLANK].truth, who)
+                    else:
+                        self.grouse("Row %d: field %s in %s is not a string." % (rownum, field_name, new_datatype))
+                        result = False
+
+                if PropertyPattern.Action.MINVAL in pats:
+                    if isinstance(field_value, (int, float)):
+                        result &= self.validate_minval_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.MINVAL].numbers[0], float(field_value))
+                    else:
+                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                        result = False
+
+                if PropertyPattern.Action.MAXVAL in pats:
+                    if isinstance(field_value, (int, float)):
+                        result &= self.validate_maxval_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.MAXVAL].numbers[0], float(field_value))
+                    else:
+                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                        result = False
+
+                if PropertyPattern.Action.GREATER_THAN in pats:
+                    if isinstance(field_value, (int, float)):
+                        result &= self.validate_greater_than_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.GREATER_THAN].numbers[0], float(field_value))
+                    else:
+                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                        result = False
+
+                if PropertyPattern.Action.LESS_THAN in pats:
+                    if isinstance(field_value, (int, float)):
+                        result &= self.validate_less_than_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.LESS_THAN].numbers[0], float(field_value))
+                    else:
+                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                        result = False
+
+                if PropertyPattern.Action.EQUAL_TO in pats:
+                    if isinstance(field_value, (int, float)):
+                        result &= self.validate_equal_to_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.EQUAL_TO].numbers, float(field_value))
+                    else:
+                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                        result = False
+
+                if PropertyPattern.Action.NOT_EQUAL_TO in pats:
+                    if isinstance(field_value, (int, float)):
+                        result &= self.validate_not_equal_to_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.NOT_EQUAL_TO].numbers, float(field_value))
+                    else:
+                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                        result = False
+
+        return result
+
     def validate_node1(self,
                        rownum: int,
                        node1: str,
@@ -795,7 +960,7 @@ class PropertyPatternValidator:
                        orig_prop: str,
                        pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
         node1_value = KgtkValue(node1, options=self.value_options, parse_fields=True)
-        if node1_value.validate():
+        if (not self.autovalidate) or node1_value.validate():
             return self.validate_node1_value(rownum, node1_value, prop_or_datatype, orig_prop, pats)
         else:
             self.grouse("Row %d: the node1 value '%s' is not valid KGTK." % (rownum, node1_value.value))
@@ -827,7 +992,7 @@ class PropertyPatternValidator:
             result &= self.validate_valid(rownum, node1_value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_IS_VALID].truth, "node1")
 
         if PropertyPattern.Action.NODE1_VALUES in pats:
-            result &= self.validate_value(rownum, node1_value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_VALUES].values, "node1")
+            result &= self.validate_value(rownum, node1_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_VALUES].values, "node1")
 
         if PropertyPattern.Action.NODE1_PATTERN in pats:
             result &= self.validate_pattern(rownum, node1_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_PATTERN].patterns, "node1")
@@ -865,7 +1030,7 @@ class PropertyPatternValidator:
                        orig_prop: str,
                        pats: PropertyPatterns.PATTERN_MAP_TYPE)->bool:
         node2_value = KgtkValue(node2, options=self.value_options, parse_fields=True)
-        if node2_value.validate():
+        if (not self.autovalidate) or node2_value.validate():
             return self.validate_node2_value(rownum, node2_value, prop_or_datatype, orig_prop, pats)
         else:
             self.grouse("Row %d: the node2 value '%s' is not valid KGTK." % (rownum, node2_value.value))
@@ -900,16 +1065,19 @@ class PropertyPatternValidator:
             result &= self.validate_valid(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_IS_VALID].truth, "node1")
 
         if PropertyPattern.Action.NODE2_VALUES in pats:
-            result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2")
+            result &= self.validate_value(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_VALUES].values, "node2")
 
         if PropertyPattern.Action.NODE2_NOT_VALUES in pats:
-            result &= self.validate_value(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_VALUES].values, "node2", invert=True)
+            result &= self.validate_value(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_VALUES].values, "node2", invert=True)
 
         if PropertyPattern.Action.NODE2_PATTERN in pats:
             result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_PATTERN].patterns, "node2")
 
         if PropertyPattern.Action.NODE2_NOT_PATTERN in pats:
             result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_PATTERN].patterns, "node2", invert=True)
+
+        if PropertyPattern.Action.NODE2_BLANK in pats:
+            result &= self.validate_not_blank(rownum, node2_value, prop_or_datatype, not pats[PropertyPattern.Action.NODE2_NOT_BLANK].truth, "node2")
 
         if PropertyPattern.Action.NODE2_NOT_BLANK in pats:
             result &= self.validate_not_blank(rownum, node2_value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_NOT_BLANK].truth, "node2")
@@ -932,8 +1100,12 @@ class PropertyPatternValidator:
         if PropertyPattern.Action.NOT_EQUAL_TO in pats:
             result &= self.validate_not_equal_to(rownum, prop_or_datatype, pats[PropertyPattern.Action.NOT_EQUAL_TO].numbers, node2_value)
 
-        if PropertyPattern.Action.CHAIN in pats:
-            result &= self.validate_chain(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.CHAIN].values)
+
+        if PropertyPattern.Action.NODE2_FIELD_OP in pats:
+            result &= self.validate_field_op(rownum, prop_or_datatype, pats[PropertyPattern.Action.NODE2_FIELD_OP].values, node2_value)
+
+        if PropertyPattern.Action.NODE2_CHAIN in pats:
+            result &= self.validate_chain(rownum, node2_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE2_CHAIN].values)
 
         if prop_or_datatype in self.pps.distinct:
             groupby: str = orig_prop if prop_or_datatype in self.pps.groupbyprop else prop_or_datatype
@@ -955,6 +1127,55 @@ class PropertyPatternValidator:
                 self.distinct_scoreboard[groupby] = set()
             self.distinct_scoreboard[groupby].add(node2_value.value)
         
+        return result
+
+    def validate_id(self,
+                    rownum: int,
+                    id_item: str,
+                    prop_or_datatype: str,
+                    orig_prop: str,
+                    pats: PropertyPatterns.PATTERN_MAP_TYPE)->bool:
+        id_value = KgtkValue(id_item, options=self.value_options, parse_fields=True)
+        if (not self.autovalidate) or id_value.validate():
+            return self.validate_id_value(rownum, id_value, prop_or_datatype, orig_prop, pats)
+        else:
+            self.grouse("Row %d: the id value '%s' is not valid KGTK." % (rownum, id_value.value))
+            return False
+
+    def validate_id_value(self,
+                             rownum: int,
+                             id_value: KgtkValue,
+                             prop_or_datatype: str,
+                             orig_prop: str,
+                             pats: PropertyPatterns.PATTERN_MAP_TYPE)->bool:
+        result: bool = True
+
+        if id_value.is_list():
+            if PropertyPattern.Action.ID_ALLOW_LIST in pats and pats[PropertyPattern.Action.ID_ALLOW_LIST].truth:
+                # Validate each item on the list seperately.
+                list_item: KgtkValue
+                for list_item in id_value.get_list_items():
+                    result &= self.validate_id_value(rownum, list_item, prop_or_datatype, orig_prop, pats)
+                return result
+            else:
+                self.grouse("Row %d: The id value '%s' is not allowed to be a list." % (rownum, id_value.value))
+                return False
+
+        if PropertyPattern.Action.ID_CHAIN in pats:
+            result &= self.validate_chain(rownum, id_value.value, prop_or_datatype, pats[PropertyPattern.Action.ID_CHAIN].values)
+
+        if PropertyPattern.Action.ID_PATTERN in pats:
+            result &= self.validate_pattern(rownum, id_value.value, prop_or_datatype, pats[PropertyPattern.Action.ID_PATTERN].patterns, "id")
+
+        if PropertyPattern.Action.ID_NOT_PATTERN in pats:
+            result &= self.validate_pattern(rownum, id_value.value, prop_or_datatype, pats[PropertyPattern.Action.ID_NOT_PATTERN].patterns, "id", invert=True)
+
+        if PropertyPattern.Action.ID_BLANK in pats:
+            result &= self.validate_not_blank(rownum, id_value, prop_or_datatype, not pats[PropertyPattern.Action.ID_NOT_BLANK].truth, "id")
+
+        if PropertyPattern.Action.ID_NOT_BLANK in pats:
+            result &= self.validate_not_blank(rownum, id_value, prop_or_datatype, pats[PropertyPattern.Action.ID_NOT_BLANK].truth, "id")
+
         return result
 
     def validate_isa(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str, new_datatypes: typing.List[str])->bool:
@@ -1027,6 +1248,7 @@ class PropertyPatternValidator:
 
         new_datatype: str
         for new_datatype in new_datatypes:
+
             while True: # Start of NEXTCASE loop
                 if new_datatype in self.isa_current_scoreboard:
                     self.grouse("Row %d: isa loop detected with %s." % (rownum, new_datatype))
@@ -1113,6 +1335,9 @@ class PropertyPatternValidator:
                 result &= self.validate_node2(rownum, row[node2_idx], prop_or_datatype, orig_prop, pats)
             else:
                 result = False
+
+            if self.id_idx >= 0:
+                result &= self.validate_id(rownum, row[self.id_idx], prop_or_datatype, orig_prop, pats)
                 
             if PropertyPattern.Action.ISA in pats:
                 result &= self.validate_isa(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.ISA].values)
@@ -1132,7 +1357,7 @@ class PropertyPatternValidator:
         if len(self.pps.mustoccur) > 0:
             self.setup_mustoccur(rownum, row)
 
-        result &= self.validate_not_in(rownum, row)
+        result &= self.validate_not_in_columns(rownum, row)
 
         prop: str = row[self.label_idx]
 
@@ -1574,6 +1799,10 @@ def main():
     parser.add_argument(      "--isa-column-name", dest="isa_column_name", default="isa;node2",
                               help="The name for the ISA column. (default %(default)s)")
 
+    parser.add_argument(      "--autovalidate", dest="autovalidate",
+                              help="When true, validate node1 and node2 values before testing them. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+
     KgtkReader.add_debug_arguments(parser, expert=True)
     KgtkReaderOptions.add_arguments(parser, expert=True)
     KgtkValueOptions.add_arguments(parser)
@@ -1625,6 +1854,7 @@ def main():
                                                                  reject_node1_groups=args.reject_node1_groups,
                                                                  complain_immediately=args.complain_immediately,
                                                                  isa_column_idx=isa_column_idx,
+                                                                 autovalidate=args.autovalidate,
                                                                  value_options=value_options,
                                                                  error_file=error_file,
                                                                  verbose=args.verbose,
