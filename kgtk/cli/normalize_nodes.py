@@ -36,7 +36,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="Columns to remove as a space-separated list. (default=all columns except id)")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.EDGE, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NODE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
@@ -113,14 +113,14 @@ def run(input_file: KGTKFiles,
             for column_idx, column_name in enumerate(kr.column_names):
                 if column_idx == kr.id_column_idx:
                     continue
-                if columns is not None and columns_name not in columns:
+                if columns is not None and column_name not in columns:
                     continue
 
                 node2_value: str = row[column_idx]
                 if len(node2_value) == 0:
                     continue
 
-                output_row: typing.List[str] = node1_value , column_name, value
+                output_row: typing.List[str] = [ node1_value , column_name, node2_value ]
             
                 kw.write(output_row)
                 output_line_count += 1
