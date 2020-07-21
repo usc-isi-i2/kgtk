@@ -248,6 +248,7 @@ Data value parsing:
 
 ### Default Rules
 By default, the following rules apply:
+
  - errors that occur while processing a KGTK file's column header line cause an immediate exit:
    - An empty column name
    - A duplicate column name
