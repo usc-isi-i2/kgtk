@@ -48,6 +48,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "as a group. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
+    parser.add_argument(      "--no-complaints", dest="no_complaints",
+                              help="When true, do not print complaints (when rejects are expected). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     parser.add_argument(      "--complain-immediately", dest="complain_immediately",
                               help="When true, print complaints immediately (for debugging). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
@@ -74,6 +78,7 @@ def run(input_file: KGTKFiles,
         reject_file: KGTKFiles,
         grouped_input: bool = False,
         reject_node1_groups: bool = False,
+        no_complaints: bool = False,
         complain_immediately: bool = False,
         add_isa_column: bool = False,
         isa_column_name: str = "isa;node2",
@@ -163,6 +168,7 @@ def run(input_file: KGTKFiles,
                                                                      kr,
                                                                      grouped_input=grouped_input,
                                                                      reject_node1_groups=reject_node1_groups,
+                                                                     no_complaints=no_complaints,
                                                                      complain_immediately=complain_immediately,
                                                                      isa_column_idx=isa_column_idx,
                                                                      autovalidate=autovalidate,
