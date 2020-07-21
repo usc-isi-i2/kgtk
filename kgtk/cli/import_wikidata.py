@@ -654,7 +654,11 @@ def sendfile_cat(infiles, outfile, remove=False):
     ofd = os.open(node_file, os.O_WRONLY)
     for filename in infiles:
         ifd = os.open(filename, os.O_RDONLY)
-        count = 16 * 1024 * 1024
+
+        # This is chunk size is chosen to be less than the limit in
+        # the 32-bit system call.
+        count = 1024 * 1024 * 1024
+
         offset = 0
         while True:
             copycount = os.sendfile(ifd, ofd, offset, count)
