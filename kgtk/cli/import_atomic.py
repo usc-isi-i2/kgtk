@@ -61,7 +61,7 @@ def run(input_file: KGTKFiles):
         e2=remove_people_mentions(e1)
         while '  ' in e2:
             e2=e2.replace('  ', ' ')
-        if e1!=e2:
+        if e1!=e2 and e2:
             return '|'.join([e1,e2])
         else:
             return e1
