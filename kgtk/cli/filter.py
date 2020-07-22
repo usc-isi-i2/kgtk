@@ -97,7 +97,7 @@ def run(input_file: KGTKFiles,
 
     UPDATE_VERSION: str = "2020-07-22T22:10:10.985740+00:00#yDr3YHofen2lXSp76a08vgD+mZMF8o1ygD1znhooFqZ+chshJu4O41mrU2pjWP5AUyi/LWCBQhAJDLZBoH3hNw=="
     if show_version or verbose:
-        print("Version: %s" % UPDATE_VERSION)
+        print("kgtk filter version: %s" % UPDATE_VERSION)
 
     # Show the final option structures for debugging and documentation.
     if show_options:
