@@ -61,7 +61,7 @@ def run(input_file: KGTKFiles):
         e2=remove_people_mentions(e1)
         while '  ' in e2:
             e2=e2.replace('  ', ' ')
-        if e1!=e2:
+        if e1!=e2 and e2:
             return '|'.join([e1,e2])
         else:
             return e1
@@ -84,14 +84,14 @@ def run(input_file: KGTKFiles):
     def make_question(n1, lbl):
         return f'If {n1}, then {lbl}?' 
 
-    def make_sentence(node_label, rel_label, value_label):
-        return 'If %s, then %s %s.' % (node_label, rel_label, value_label)
+    #def make_sentence(node_label, rel_label, value_label):
+    #    return 'If %s, then %s %s.' % (node_label, rel_label, value_label)
 
     try:
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
-        out_columns=['node1', 'label', 'node2', 'node1_label', 'label_label', 'node2_label', 'label_dimension', 'source', 'weight', 'creator', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'weight', 'source', 'origin', 'sentence', 'question']
 
         df = pd.read_csv(filename,index_col=0)
         df.iloc[:,:9] = df.iloc[:,:9].apply(lambda col: col.apply(json.loads))
@@ -115,13 +115,13 @@ def run(input_file: KGTKFiles):
 
                     rel_label=produce_rel_label(c)
 
-                    sentence=make_sentence(first_event_label, rel_label, first_value_label)
+                    sentence='' #make_sentence(first_event_label, rel_label, first_value_label)
 
                     question=make_question(first_event_label, rel_label)
 
-                    label=make_node(c)
+                    relation=make_node(c)
 
-                    this_row=[n1, label, n2, event_label, rel_label, value_label, '', 'AT', "1.0", "", sentence, question]
+                    this_row=[n1, relation, n2, event_label, value_label, rel_label, '', '', 'AT', "", sentence, question]
 
                     sys.stdout.write('\t'.join(this_row) + '\n')
 
