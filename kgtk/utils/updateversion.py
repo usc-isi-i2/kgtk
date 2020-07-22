@@ -29,8 +29,9 @@ from kgtk.utils.argparsehelpers import optional_bool
 
 @attr.s(slots=True, frozen=True)
 class UpdateVersion():
-    version_pattern: str = attr.ib(validator=attr.validators.instance_of(str), default=r'^UPDATE_VERSION:\s*str\s*=\s*"(?<version>.*)"$')
-    blake_bloke: str = attr.ib(validator=attr.validators.instance_of(str), default="UpdateVersion File Hash")
+    UPDATE_VERSION: str = "2020-07-22T21:48:54.808610+00:00#YX+QvIV+HEL3b5V3wxSxGVr1MdiTaI8mTw1K4O/DOkCfo7vEF0XE09BB4stu/Qb5ZT5jkz1BlRcUW3T/twgm9w=="
+    version_pattern: str = attr.ib(validator=attr.validators.instance_of(str), default=r'^\s*UPDATE_VERSION\s*:\s*str\s*=\s*"(?P<version>.*)"$')
+    blake_bloke: str = attr.ib(validator=attr.validators.instance_of(str), default="UpdateVersionHsh")
 
     allow_updates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     show_changes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -64,19 +65,20 @@ class UpdateVersion():
             if self.verbose:
                 print("No version mark found in %s" % str(filepath))
             return False
-        current_timestamp: bytes
-        current_digest: bytes
-        current_timestamp, current_digest = current_version.split(b'#', 1)
+        current_timestamp: bytes = b''
+        current_digest: bytes = b''
+        if len(current_version) > 0:
+            current_timestamp, current_digest = current_version.split(b'#', 1)
 
         new_digest: bytes = base64.b64encode(hasher.digest())
         if new_digest == current_digest:
             if self.verbose:
-                print("The file has not changed since %s" % str(current_timestamp), file=self.error_file, flush=True)
+                print("%s has not changed since %s" % (str(filepath), str(current_timestamp, "utf-8")), file=self.error_file, flush=True)
             return False
 
         if not self.allow_updates:
             if self.verbose:
-                print("The file has changed since %s, but updates are disabled." % str(current_timestamp), file=self.error_file, flush=True)
+                print("%s has changed since %s, but updates are disabled." % (str(filepath), str(current_timestamp, "utf-8")), file=self.error_file, flush=True)
             return True
 
         new_timestamp: bytes = dt.datetime.now(dt.timezone.utc).isoformat().encode()
@@ -88,7 +90,7 @@ class UpdateVersion():
             for line in lines:
                 matches = version_pattern_re.match(line)
                 if matches:
-                    line = re.sub(rb'".*"', b'"' + re.escape(new_version) + b'"', line)
+                    line = re.sub(rb'".*"', b'"' + new_version + b'"', line)
                 ofile.write(line)
 
         return True
@@ -127,7 +129,7 @@ def main():
     
     args: Namespace = parser.parse_args()
 
-    updater: UpdateVersino = updateVersion(allow_updates=args.allow_updates,
+    updater: UpdateVersion = UpdateVersion(allow_updates=args.allow_updates,
                                            show_changes=args.show_changes,
                                            verbose=args.verbose)
     updater.process_files(args.filepaths)
