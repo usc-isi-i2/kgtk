@@ -20,12 +20,15 @@ def add_arguments(parser: KGTKArgumentParser):
             parser (argparse.ArgumentParser)
     """
     parser.add_input_file(positional=True)
+    parser.add_input_file(who="KGTK file with path start and end nodes.",
+                          options=["--path_file"], dest="path_file", metavar="PATH_FILE")
+    parser.add_argument('--statistics-only', action='store_true', dest='output_stats',
+                        help='If this flag is set, output only the statistics edges. Else, append the statistics to the original graph.')
+
     parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
     parser.add_argument('--max_hops', action="store", type=int, dest="max_hops", help="Maximum number of hops allowed.")
-    parser.add_argument('--from', action="store", nargs="*", dest="source_nodes", help="List of source nodes")
-    parser.add_argument('--to', action="store", nargs="*", dest="target_nodes", help="List of target nodes")
 
-def run(input_file: KGTKFiles, directed, max_hops, source_nodes, target_nodes):
+def run(input_file: KGTKFiles, path_file, output_stats, directed, max_hops):
     def infer_index(h, options=[]):
         for o in options:
             if o in h:
@@ -47,11 +50,17 @@ def run(input_file: KGTKFiles, directed, max_hops, source_nodes, target_nodes):
         from graph_tool.all import find_vertex
         from graph_tool.topology import all_paths
         import sys
+        import csv
         from collections import defaultdict
-
+        csv.field_size_limit(sys.maxsize)
         id_col = 'name'
-        graph_edge='graph'
     
+        pairs=[]
+        with open(path_file, 'r') as f:
+            header=next(f)
+            for line in f:
+                src, tgt=line.strip().split('\t')
+                pairs.append((src, tgt))
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
         filename=str(filename)
         with open(filename, 'r') as f:
@@ -67,7 +76,7 @@ def run(input_file: KGTKFiles, directed, max_hops, source_nodes, target_nodes):
 
         if 'id' not in p:
             raise KGTKException('Error: no id column found')
-
+        
         G = load_graph_from_csv(filename,
                                  skip_first=True,
                                  directed=directed,
@@ -76,32 +85,35 @@ def run(input_file: KGTKFiles, directed, max_hops, source_nodes, target_nodes):
                                  eprop_names=p,
                                  csv_options={'delimiter': '\t'})
 
-        graph_id=1
-        paths=defaultdict(set)
-        for source_node in source_nodes:
-            source_ids=find_vertex(G, prop=G.properties[('v', id_col)], match=source_node)
-            if len(source_ids)==1:
-                source_id=source_ids[0]
-                for target_node in target_nodes:
-                    target_ids=find_vertex(G, prop=G.properties[('v', id_col)], match=target_node)
-                    if len(target_ids)==1:
-                        target_id=target_ids[0]
-                        for path in all_paths(G, source_id, target_id, cutoff=max_hops, edges=True):
-                            for an_edge in path:
-                                edge_id=G.properties[('e', 'id')][an_edge]
-                                paths[edge_id].add(str(graph_id))
-                            graph_id+=1
+        sys.stdout.write('node1\tlabel\tnode2\tid\n')
+        id_count = 0
+        if not output_stats:
+            for e in G.edges():
+                sid, oid = e
+                lbl = G.ep[predicate][e]
+                sys.stdout.write(
+                    '%s\t%s\t%s\t%s\n' % (G.vp[id_col][sid], lbl, G.vp[id_col][oid],
+                                          '{}-{}-{}'.format(G.vp[id_col][sid], lbl, id_count)))
+                id_count += 1
 
-        sys.stdout.write('node1\tlabel\tnode2\tid\t%s\n' % graph_edge)
-        for e in G.edges():
-            sid, oid = e
-            edge_id=G.properties[('e', 'id')][e]
-            lbl = G.ep[predicate][e]
-            graph_id='|'.join(list(paths[edge_id]))
-            sys.stdout.write(
-                '%s\t%s\t%s\t%s\t%s\n' % (G.vp[id_col][sid], lbl, G.vp[id_col][oid],
-                                      edge_id,  
-                                      graph_id))
+        id_count=0
+        path_id=0
+        paths=defaultdict(set)
+        for pair in pairs:
+            source_node, target_node=pair
+            source_ids=find_vertex(G, prop=G.properties[('v', id_col)], match=source_node)
+            target_ids=find_vertex(G, prop=G.properties[('v', id_col)], match=target_node)
+            if len(source_ids)==1 and len(target_ids)==1:
+                source_id=source_ids[0]
+                target_id=target_ids[0]
+                for path in all_paths(G, source_id, target_id, cutoff=max_hops, edges=True):
+                    for edge_num, an_edge in enumerate(path):
+                        edge_id=G.properties[('e', 'id')][an_edge]
+                        node1='p%d' % path_id
+                        sys.stdout.write(
+                                '%s\t%d\t%s\t%s\n' % (node1, edge_num, edge_id, '{}-{}-{}'.format(node1, edge_num, id_count)))
+                        id_count+=1
+                    path_id+=1
 
     except Exception as e:
         raise KGTKException('Error: ' + str(e))
