@@ -3,6 +3,7 @@ Different methods for concatenating a set of files and sending the result
 to an output file.
 """
 
+import platform
 import os
 import sys
 import time
@@ -124,9 +125,9 @@ def platform_cat(infiles: typing.List[str],
                  error_file: typing.TextIO=sys.stderr,
                  verbose: bool=False):
     """
-    On a POSIX operating system, use sendfile_cat.  Othersise, use a plainer Python version.
+    On Linux, use sendfile_cat.  Otherwise, use a plainer Python version.
     """
-    if os.name == 'posix' and not use_python_cat:
+    if platform.system() == 'Linux' and not use_python_cat:
         sendfile_cat(infiles, outfile, remove=remove, error_file=error_file, verbose=verbose)
     else:
         python_cat(infiles, outfile, remove=remove, error_file=error_file, verbose=verbose)
