@@ -29,7 +29,7 @@ from kgtk.utils.argparsehelpers import optional_bool
 
 @attr.s(slots=True, frozen=True)
 class UpdateVersion():
-    UPDATE_VERSION: str = "2020-07-22T21:48:54.808610+00:00#YX+QvIV+HEL3b5V3wxSxGVr1MdiTaI8mTw1K4O/DOkCfo7vEF0XE09BB4stu/Qb5ZT5jkz1BlRcUW3T/twgm9w=="
+    UPDATE_VERSION: str = "2020-07-22T22:10:11.047901+00:00#uwVDNJhT34iJFhsPf5vafIhNdaD3xcZ0RxgPN9CPRmYY7cfpS5guHbAY7hApoK1aue3W+cz9ftP8kXJIK+budQ=="
     version_pattern: str = attr.ib(validator=attr.validators.instance_of(str), default=r'^\s*UPDATE_VERSION\s*:\s*str\s*=\s*"(?P<version>.*)"$')
     blake_bloke: str = attr.ib(validator=attr.validators.instance_of(str), default="UpdateVersionHsh")
 
@@ -105,12 +105,12 @@ class UpdateVersion():
             if self.process_file(filepath):
                 changes += 1
 
+
         if self.verbose:
             print("%d files updated" % changes, file=self.error_file, flush=True)
 
         return changes
 
-    
 def main():
     """
     Update version marks.
@@ -124,10 +124,16 @@ def main():
     parser.add_argument(       "--show-changes", dest="show_changes", type=optional_bool, nargs='?', const=True, default=True,
                                help="Write a line for each changed file. (default=%(default)s).")
     
+    parser.add_argument(       "--show-version", dest="show_version", type=optional_bool, nargs='?', const=True, default=False,
+                               help="Print the version of this program. (default=%(default)s).")
+
     parser.add_argument("-v", "--verbose", dest="verbose", type=optional_bool, nargs='?', const=True, default=False,
                         help="Print additional progress messages (default=%(default)s).")
     
     args: Namespace = parser.parse_args()
+
+    if args.show_version:
+        print("Version: %s" % UpdateVersion.UPDATE_VERSION)
 
     updater: UpdateVersion = UpdateVersion(allow_updates=args.allow_updates,
                                            show_changes=args.show_changes,
