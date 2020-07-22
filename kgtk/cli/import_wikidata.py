@@ -145,6 +145,7 @@ def run(input_file: KGTKFiles,
         keep_temp_files,
         skip_processing,
         skip_merging):
+
     # import modules locally
     import bz2
     import simplejson as json
@@ -555,6 +556,9 @@ def run(input_file: KGTKFiles,
 
     
     try:
+        UPDATE_VERSION: str = "2020-07-22T22:54:42.511745+00:00#qmAQsZ7Ie4aGCTxahor43xRZAfwCfQ8btAWjuZX87tE/EgqRUw9JZavLW5HZ1jGE34zyYm2DFeaeVBzdwcR6Jw=="
+        print("kgtk import-wikidata version: %s" % UPDATE_VERSION, flush=True)
+
         inp_path = KGTKArgumentParser.get_input_file(input_file)
         
         csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
