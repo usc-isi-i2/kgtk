@@ -12,6 +12,7 @@ class TestTripleGeneration(unittest.TestCase):
         generator = JsonGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliase',
                                     description_set='description', warning=True, n=100,
                                     log_path="data/date_warning.log",
+                                    has_rank=False,
                                     prop_declaration=False, 
                                     output_prefix="data/dates_tmp")
         fp = open(dates_tsv_file)
@@ -44,6 +45,7 @@ class TestTripleGeneration(unittest.TestCase):
         generator = JsonGenerator(prop_file = wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=1000,
                                     log_path="data/P10_warning.log",
+                                    has_rank = False,
                                     prop_declaration=False, 
                                     output_prefix="data/P10_tmp")
         fp = open(property_tsv_file)
@@ -74,6 +76,7 @@ class TestTripleGeneration(unittest.TestCase):
                                     description_set='descriptions', warning=True, n=1000,
                                     log_path="data/Q57160439_warning.log",
                                     prop_declaration=False, 
+                                    has_rank = False,
                                     output_prefix="data/Q57160439_tmp")
         fp = open(qnode_tsv_file)
         for line_num, edge in enumerate(fp):
