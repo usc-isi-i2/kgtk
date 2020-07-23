@@ -472,6 +472,7 @@ class PropertyPatternValidator:
 
     grouped_input: bool = attr.ib(default=False)
     reject_node1_groups: bool = attr.ib(default=False)
+    no_complaints: bool = attr.ib(default=False) # True is good when rejects are expected.
     complain_immediately: bool = attr.ib(default=False) # True is good for debugging.
     isa_column_idx: int = attr.ib(default=-1)
 
@@ -557,6 +558,7 @@ class PropertyPatternValidator:
             kr: KgtkReader,
             grouped_input: bool,
             reject_node1_groups: bool,
+            no_complaints: bool,
             complain_immediately: bool,
             isa_column_idx: int,
             autovalidate: bool,
@@ -573,6 +575,7 @@ class PropertyPatternValidator:
                                         kr.id_column_idx,
                                         grouped_input=grouped_input,
                                         reject_node1_groups=reject_node1_groups,
+                                        no_complaints=no_complaints,
                                         complain_immediately=complain_immediately,
                                         isa_column_idx=isa_column_idx,
                                         autovalidate=autovalidate,
@@ -590,8 +593,9 @@ class PropertyPatternValidator:
 
     def show_complaints(self):
         complaint: str
-        for complaint in self.complaints:
-            print("%s" % complaint, file=self.error_file, flush=True)
+        if not self.no_complaints:
+            for complaint in self.complaints:
+                print("%s" % complaint, file=self.error_file, flush=True)
         self.complaints.clear()
 
     def clear_node1_group(self):
@@ -1789,6 +1793,10 @@ def main():
                               "together. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
+    parser.add_argument(      "--no-complaints", dest="no_complaints",
+                              help="When true, do not print complaints (when rejects are expected). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     parser.add_argument(      "--complain-immediately", dest="complain_immediately",
                               help="When true, print complaints immediately (for debugging). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
@@ -1853,6 +1861,7 @@ def main():
                                                                  ikr,
                                                                  grouped_input=args.grouped_input,
                                                                  reject_node1_groups=args.reject_node1_groups,
+                                                                 no_complaints=args.no_complaints,
                                                                  complain_immediately=args.complain_immediately,
                                                                  isa_column_idx=isa_column_idx,
                                                                  autovalidate=args.autovalidate,
