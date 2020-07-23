@@ -130,6 +130,17 @@ def add_arguments(parser: KGTKArgumentParser):
         help="If true, skip merging temporary files (for debugging). (default=%(default)s).",
     )
 
+    parser.add_argument(
+        "--interleave",
+        nargs='?',
+        type=optional_bool,
+        dest="interleave",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, output the edges and qualifiers in a single file (the edge file). (default=%(default)s).",
+    )
+
     
 def run(input_file: KGTKFiles,
         procs,
@@ -144,7 +155,8 @@ def run(input_file: KGTKFiles,
         use_python_cat,
         keep_temp_files,
         skip_processing,
-        skip_merging):
+        skip_merging,
+        interleave):
 
     # import modules locally
     import bz2
@@ -392,7 +404,7 @@ def run(input_file: KGTKFiles,
                                             ])
 
                                     seq_no += 1
-                                    if qual_file:
+                                    if qual_file or interleave:
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
@@ -471,31 +483,60 @@ def run(input_file: KGTKFiles,
                                                         else:
                                                             # value = '\"' + val.replace('"','\\"') + '\"'
                                                             value = KgtkFormat.stringify(val)
-                                                        if explode_values:
-                                                            qrows.append([
-                                                                tempid,
-                                                                sid,
-                                                                qual_prop,
-                                                                value,
-                                                                mag,
-                                                                unit,
-                                                                date,
-                                                                item,
-                                                                lower,
-                                                                upper,
-                                                                lat,
-                                                                long,
-                                                                precision,
-                                                                calendar,
-                                                                enttype,
-                                                            ])
-                                                        else:
-                                                            qrows.append([
-                                                                tempid,
-                                                                sid,
-                                                                qual_prop,
-                                                                value,
-                                                            ])
+                                                        if qual_file:
+                                                            if explode_values:
+                                                                qrows.append([
+                                                                    tempid,
+                                                                    sid,
+                                                                    qual_prop,
+                                                                    value,
+                                                                    mag,
+                                                                    unit,
+                                                                    date,
+                                                                    item,
+                                                                    lower,
+                                                                    upper,
+                                                                    lat,
+                                                                    long,
+                                                                    precision,
+                                                                    calendar,
+                                                                    enttype,
+                                                                ])
+                                                            else:
+                                                                qrows.append([
+                                                                    tempid,
+                                                                    sid,
+                                                                    qual_prop,
+                                                                    value,
+                                                                ])
+                                                        if interleave:
+                                                            if explode_values:
+                                                                erows.append([
+                                                                    tempid,
+                                                                    sid,
+                                                                    qual_prop,
+                                                                    value,
+                                                                    "",
+                                                                    mag,
+                                                                    unit,
+                                                                    date,
+                                                                    item,
+                                                                    lower,
+                                                                    upper,
+                                                                    lat,
+                                                                    long,
+                                                                    precision,
+                                                                    calendar,
+                                                                    enttype,
+                                                                ])
+                                                            else:
+                                                                erows.append([
+                                                                    tempid,
+                                                                    sid,
+                                                                    qual_prop,
+                                                                    value,
+                                                                    "",
+                                                                ])
             
                         if sitelinks:
                             wikipedia_seq_no = 1
@@ -516,9 +557,9 @@ def run(input_file: KGTKFiles,
                                     else:
                                         if edge_file:
                                             erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,''])
-                                    if qual_file:
-                                        tempid=sid+'-language-1'
-                                        qrows.append([tempid,sid,'language',sitelang])
+                                        if qual_file:
+                                            tempid=sid+'-language-1'
+                                            qrows.append([tempid,sid,'language',sitelang])
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:

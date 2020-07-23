@@ -151,7 +151,7 @@ class KgtkIfExists(KgtkFormat):
                                 rew: typing.Optional[KgtkWriter],
     ):
         if self.verbose:
-            print("Processing by cacheing the filter file's key set.")
+            print("Processing by cacheing the filter file's key set.", file=self.error_file, flush=True)
 
         if self.verbose:
             print("Building the filter key set from %s" % self.filter_file_path, file=self.error_file, flush=True)
