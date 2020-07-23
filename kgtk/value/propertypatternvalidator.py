@@ -180,14 +180,7 @@ class PropertyPattern:
                     raise ValueError("Filter row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
                 numbers.append(float(node2_value.fields.number))
             elif node2_value.is_list():
-                for kv in node2_value.get_list_items():
-                    if not kv.is_number_or_quantity():
-                        raise ValueError("Filter row %d: %s: List value '%s' is not a number or quantity" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no fields" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.number is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no number" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    numbers.append(float(kv.fields.number))
+                raise ValueError("Filter row %d: %s: List value '%s' is not allowed" % (rownum, action.value, node2_value.value)) # TODO: better complaint
             else:
                 raise ValueError("Filter row %d: %s: Value '%s' is not a number or quantity" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
@@ -195,6 +188,8 @@ class PropertyPattern:
             if old_ppat is not None and len(old_ppat.numbers) > 0:
                 numbers.extend(old_ppat.numbers)
             numbers = sorted(list(set(numbers)))
+            if len(numbers) > 1:
+                raise ValueError("Filter row %d: %s: A value already exists, adding value '%s' is not allowed" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
         elif action in (cls.Action.EQUAL_TO,
                         cls.Action.NOT_EQUAL_TO,):
