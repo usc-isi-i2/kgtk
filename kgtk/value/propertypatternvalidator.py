@@ -40,6 +40,7 @@ class PropertyPattern:
         NODE2_NOT_PATTERN = "node2_not_pattern"
         NODE2_BLANK = "node2_blank"
         NODE2_NOT_BLANK = "node2_not_blank"
+        NODE2_CHAIN = "node2_chain"
 
         NODE2_FIELD_OP = "node2_field_op" # one or more operation symbols
         FIELD_NAME = "field_name" # one or more field names
@@ -59,11 +60,11 @@ class PropertyPattern:
         NOT_EQUAL_TO = "not_equal_to" # NE, may take a list of numbers
 
         ID_ALLOW_LIST = "node2_allow_list"
-        ID_CHAIN = "id_chain"
         ID_PATTERN = "id_pattern"
         ID_NOT_PATTERN = "id_not_pattern"
         ID_BLANK = "id_blank"
         ID_NOT_BLANK = "id_not_blank"
+        ID_CHAIN = "id_chain"
 
         MUSTOCCUR = "mustoccur"
         MINOCCURS = "minoccurs"
@@ -88,8 +89,6 @@ class PropertyPattern:
         REQUIRES = "requires"
         PROHIBITS = "prohibits"
 
-        NODE2_CHAIN = "node2_chain"
-
         MINDATE = "mindate"
         MAXDATE = "maxdate"
         
@@ -111,9 +110,14 @@ class PropertyPattern:
             node1_value: KgtkValue,
             label_value: KgtkValue,
             node2_value: KgtkValue,
-            old_ppat: typing.Optional['PropertyPattern'])->'PropertyPattern':
+            old_ppat: typing.Optional['PropertyPattern'],
+            rownum: int = 0,
+    )->'PropertyPattern':
         prop_or_datatype = node1_value.value
-        action: PropertyPattern.Action = cls.Action(label_value.value)
+        try:
+            action: PropertyPattern.Action = cls.Action(label_value.value)
+        except ValueError as e:
+            raise ValueError("Row %d: %s: not a valid Property Pattern action." % (rownum, label_value.value))
 
         kv: KgtkValue
         
@@ -132,9 +136,9 @@ class PropertyPattern:
                       cls.Action.LABEL_PATTERN,
                       cls.Action.MATCHES):
             if node2_value.fields is None:
-                raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
             if node2_value.fields.text is None:
-                raise ValueError("%s: Node2 has no text" % (action.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Node2 has no text" % (rownum, action.value)) # TODO: better complaint
                 
             patterns.append(re.compile(node2_value.fields.text))
 
@@ -148,9 +152,9 @@ class PropertyPattern:
                         cls.Action.MINDISTINCT,
                         cls.Action.MAXDISTINCT):
             if node2_value.fields is None:
-                raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
             if node2_value.fields.number is None:
-                raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
             intval = int(node2_value.fields.number)
 
         elif action in(cls.Action.MINVAL,
@@ -160,12 +164,12 @@ class PropertyPattern:
         ):
             if node2_value.is_number_or_quantity():
                 if node2_value.fields is None:
-                    raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
+                    raise ValueError("Row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.number is None:
-                    raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
+                    raise ValueError("Row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
                 numbers.append(float(node2_value.fields.number))
             else:
-                raise ValueError("%s: Value '%s' is not a number or quantity" % (action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Value '%s' is not a number or quantity" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
             # Merge any existing numbers, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.numbers) > 0:
@@ -176,22 +180,22 @@ class PropertyPattern:
                         cls.Action.NOT_EQUAL_TO,):
             if node2_value.is_number_or_quantity():
                 if node2_value.fields is None:
-                    raise ValueError("%s: Node2 has no fields" % (action.value)) # TODO: better complaint
+                    raise ValueError("Row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.number is None:
-                    raise ValueError("%s: Node2 has no number" % (action.value)) # TODO: better complaint
+                    raise ValueError("Row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
                 numbers.append(float(node2_value.fields.number))
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
                     if kv.is_number_or_quantity():
                         if kv.fields is None:
-                            raise ValueError("%s: Node2  list element has no fields" % (action.value)) # TODO: better complaint
+                            raise ValueError("Row %d: %s: Node2  list element has no fields" % (rownum, action.value)) # TODO: better complaint
                         if kv.fields.number is None:
-                            raise ValueError("%s: Node2 list element has no number" % (action.value)) # TODO: better complaint
+                            raise ValueError("Row %d: %s: Node2 list element has no number" % (rownum, action.value)) # TODO: better complaint
                         numbers.append(float(kv.fields.number))
                     else:
-                        raise ValueError("%s: List value is not a number" % (action.value)) # TODO: better complaint
+                        raise ValueError("Row %d: %s: List value is not a number" % (rownum, action.value)) # TODO: better complaint
             else:
-                raise ValueError("%s: Value '%s' is not a number or list of numbers" % (action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Value '%s' is not a number or list of numbers" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
             # Merge any existing numbers, then removed duplicates and sort:
             if old_ppat is not None and  len(old_ppat.numbers) > 0:
@@ -207,9 +211,9 @@ class PropertyPattern:
                     if kv.is_symbol():
                         column_names.append(kv.value)
                     else:
-                        raise ValueError("%s: List value is not a symbol" % (action.value)) # TODO: better complaint
+                        raise ValueError("Row %d: %s: List value is not a symbol" % (rownum, action.value)) # TODO: better complaint
             else:
-                raise ValueError("%s: Value '%s' is not a symbol or list of symbols" % (action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Value '%s' is not a symbol or list of symbols" % (rownum, action.value, node2_value.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
 
             # Merge any existing column names, then removed duplicates and sort:
@@ -224,7 +228,7 @@ class PropertyPattern:
             if label_value.is_symbol():
                 column_names.append(node2_value.value)
             else:
-                raise ValueError("%s:Value is not a symbol" % (action.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s:Value is not a symbol" % (rownum, action.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
 
         elif action in (cls.Action.NODE1_TYPE,
@@ -245,9 +249,9 @@ class PropertyPattern:
                     if kv.is_symbol():
                         values.append(kv.value)
                     else:
-                        raise ValueError("%s: List value is not a symbol" % (action.value)) # TODO: better complaint
+                        raise ValueError("Row %d: %s: List value is not a symbol" % (rownum, action.value)) # TODO: better complaint
             else:
-                raise ValueError("%s: Value '%s' is not a symbol or list of symbols" % (action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Value '%s' is not a symbol or list of symbols" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
             # Merge any existing values, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.values) > 0:
@@ -291,7 +295,7 @@ class PropertyPattern:
             if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
                 truth = node2_value.fields.truth
             else:
-                raise ValueError("%s: Value '%s' is not a boolean" % (action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Row %d: %s: Value '%s' is not a boolean" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
         return cls(prop_or_datatype, action, intval, patterns, numbers, column_names, values, truth)
 
@@ -308,6 +312,7 @@ class PropertyPatternFactory:
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     def from_row(self,
+                 rownum: int,
                  row: typing.List[str],
                  old_ppat: typing.Optional[PropertyPattern]=None,
     )->PropertyPattern:
@@ -319,7 +324,7 @@ class PropertyPatternFactory:
         label_value.validate()
         node2_value.validate()
 
-        return PropertyPattern.new(node1_value, label_value, node2_value, old_ppat)
+        return PropertyPattern.new(node1_value, label_value, node2_value, old_ppat, rownum=rownum)
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatterns:
@@ -336,6 +341,10 @@ class PropertyPatterns:
     prohibits: typing.Mapping[str, typing.Set[str]] = attr.ib()
     interesting: typing.Set[str] = attr.ib()
     chain_targets: typing.Set[str] = attr.ib()
+
+    node1_actions: bool = attr.ib()
+    id_actions: bool = attr.ib()
+    isa_or_switch_actions: bool = attr.ib()
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -355,6 +364,9 @@ class PropertyPatterns:
         prohibits: typing.MutableMapping[str, typing.Set[str]] = dict()
         interesting: typing.Set[str] = set()
         chain_targets: typing.Set[str] = set()
+        node1_actions: bool = False
+        id_actions: bool = False
+        isa_or_switch_actions: bool = False
         
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
@@ -371,9 +383,10 @@ class PropertyPatterns:
                                                              very_verbose=very_verbose,
         )
 
+        rownum: int
         row: typing.List[str]
-        for row in kr:
-            pp: PropertyPattern = ppf.from_row(row)
+        for rownum, row in enumerate(kr, 1):
+            pp: PropertyPattern = ppf.from_row(rownum, row)
             prop_or_datatype: str = pp.prop_or_datatype
             if prop_or_datatype not in patmap:
                 patmap[prop_or_datatype] = { }
@@ -382,7 +395,7 @@ class PropertyPatterns:
             if action in patmap[prop_or_datatype]:
                 # Rebuild the property pattern, merging lists from the prior property pattern.
                 # Non-list fields will be silently overwritten.
-                pp = ppf.from_row(row, old_ppat=patmap[prop_or_datatype][action])
+                pp = ppf.from_row(rownum, row, old_ppat=patmap[prop_or_datatype][action])
             patmap[prop_or_datatype][action] = pp
             
             if very_verbose:
@@ -422,6 +435,20 @@ class PropertyPatterns:
                 id_chain_target_set: typing.Set[str] = set(pp.values)
                 chain_targets.update(id_chain_target_set)
                 interesting.update(id_chain_target_set)
+            elif action in (PropertyPattern.Action.NODE1_TYPE,
+                            PropertyPattern.Action.NODE1_IS_VALID,
+                            PropertyPattern.Action.NODE1_VALUES,
+                            PropertyPattern.Action.NODE1_PATTERN):
+                node1_actions = True
+            elif action in (PropertyPattern.Action.ID_CHAIN,
+                            PropertyPattern.Action.ID_PATTERN,
+                            PropertyPattern.Action.ID_NOT_PATTERN,
+                            PropertyPattern.Action.ID_BLANK,
+                            PropertyPattern.Action.ID_NOT_BLANK):
+                id_actions = True
+            elif action in (PropertyPattern.Action.ISA,
+                            PropertyPattern.Action.SWITCH):
+                isa_or_switch_actions = True
 
         return cls(patterns=patmap,
                    matches=matches,
@@ -434,6 +461,9 @@ class PropertyPatterns:
                    prohibits=prohibits,
                    interesting=interesting,
                    chain_targets=chain_targets,
+                   node1_actions=node1_actions,
+                   id_actions=id_actions,
+                   isa_or_switch_actions=isa_or_switch_actions,
         )
 
     def lookup(self, prop: str, action: PropertyPattern.Action)->typing.Optional[PropertyPattern]:
@@ -838,9 +868,9 @@ class PropertyPatternValidator:
 
         remote_datatypes: typing.Optional[typing.Set[str]] = self.chain_target_scoreboard[remote_node1]
         if remote_datatypes is None:
-            self.grouse("Row %d: datatype '%s': remote node1 '%s' has not relevant datatypes'" % (rownum,
-                                                                                                  KgtkFormat.LIST_SEPARATOR.join(value_list),
-                                                                                                  remote_node1))
+            self.grouse("Row %d: datatype '%s': remote node1 '%s' has no relevant datatypes'" % (rownum,
+                                                                                                 KgtkFormat.LIST_SEPARATOR.join(value_list),
+                                                                                                 remote_node1))
             return False
 
         test_value: str
@@ -963,6 +993,12 @@ class PropertyPatternValidator:
                        prop_or_datatype: str,
                        orig_prop: str,
                        pats: typing.Mapping[PropertyPattern.Action, PropertyPattern])->bool:
+        if prop_or_datatype in self.pps.occurs:
+            self.process_node1_occurs(rownum, node1, prop_or_datatype, orig_prop, pats)
+
+        if not self.pps.node1_actions:
+            return True
+
         node1_value = KgtkValue(node1, options=self.value_options, parse_fields=True)
         if (not self.autovalidate) or node1_value.validate():
             return self.validate_node1_value(rownum, node1_value, prop_or_datatype, orig_prop, pats)
@@ -1001,31 +1037,36 @@ class PropertyPatternValidator:
         if PropertyPattern.Action.NODE1_PATTERN in pats:
             result &= self.validate_pattern(rownum, node1_value.value, prop_or_datatype, pats[PropertyPattern.Action.NODE1_PATTERN].patterns, "node1")
 
-        if prop_or_datatype in self.pps.occurs:
-            groupby: str = orig_prop if prop_or_datatype in self.pps.groupbyprop else prop_or_datatype
-            if groupby not in self.minoccurs_limits:
-                if PropertyPattern.Action.MINOCCURS in pats and pats[PropertyPattern.Action.MINOCCURS].intval is not None:
-                    self.minoccurs_limits[groupby] = pats[PropertyPattern.Action.MAXOCCURS].intval
-                else:
-                    self.minoccurs_limits[groupby] = None
-                    
-            if groupby not in self.maxoccurs_limits:
-                if PropertyPattern.Action.MAXOCCURS in pats and pats[PropertyPattern.Action.MAXOCCURS].intval is not None:
-                    self.maxoccurs_limits[groupby] = pats[PropertyPattern.Action.MAXOCCURS].intval
-                else:
-                    self.maxoccurs_limits[groupby] = None
-                    
-            if self.occurs_scoreboard is None:
-                self.occurs_scoreboard = dict()
-            item: str = node1_value.value
-            if item not in self.occurs_scoreboard:
-                self.occurs_scoreboard[item] = { }
-            if groupby in self.occurs_scoreboard[item]:
-                self.occurs_scoreboard[item][groupby] += 1
-            else:
-                self.occurs_scoreboard[item][groupby] = 1
-
         return result
+
+    def process_node1_occurs(self,
+                             rownum: int,
+                             node1: str,
+                             prop_or_datatype: str,
+                             orig_prop: str,
+                             pats: typing.Mapping[PropertyPattern.Action, PropertyPattern]):
+        groupby: str = orig_prop if prop_or_datatype in self.pps.groupbyprop else prop_or_datatype
+        if groupby not in self.minoccurs_limits:
+            if PropertyPattern.Action.MINOCCURS in pats and pats[PropertyPattern.Action.MINOCCURS].intval is not None:
+                self.minoccurs_limits[groupby] = pats[PropertyPattern.Action.MAXOCCURS].intval
+            else:
+                self.minoccurs_limits[groupby] = None
+                    
+        if groupby not in self.maxoccurs_limits:
+            if PropertyPattern.Action.MAXOCCURS in pats and pats[PropertyPattern.Action.MAXOCCURS].intval is not None:
+                self.maxoccurs_limits[groupby] = pats[PropertyPattern.Action.MAXOCCURS].intval
+            else:
+                self.maxoccurs_limits[groupby] = None
+                    
+        if self.occurs_scoreboard is None:
+            self.occurs_scoreboard = dict()
+
+        if node1 not in self.occurs_scoreboard:
+            self.occurs_scoreboard[node1] = { }
+        if groupby in self.occurs_scoreboard[node1]:
+            self.occurs_scoreboard[node1][groupby] += 1
+        else:
+            self.occurs_scoreboard[node1][groupby] = 1
 
     def validate_node2(self,
                        rownum: int,
@@ -1139,6 +1180,10 @@ class PropertyPatternValidator:
                     prop_or_datatype: str,
                     orig_prop: str,
                     pats: PropertyPatterns.PATTERN_MAP_TYPE)->bool:
+
+        if not self.pps.id_actions:
+            return True
+
         id_value = KgtkValue(id_item, options=self.value_options, parse_fields=True)
         if (not self.autovalidate) or id_value.validate():
             return self.validate_id_value(rownum, id_value, prop_or_datatype, orig_prop, pats)
@@ -1340,15 +1385,19 @@ class PropertyPatternValidator:
             else:
                 result = False
 
-            if self.id_idx >= 0:
-                # TODO: we ought to set result to FALSE if there are ID operators but the ID column is missing.
-                result &= self.validate_id(rownum, row[self.id_idx], prop_or_datatype, orig_prop, pats)
+            if self.pps.id_actions:
+                if self.id_idx >= 0:
+                    result &= self.validate_id(rownum, row[self.id_idx], prop_or_datatype, orig_prop, pats)
+                else:
+                    # Set result to FALSE if there are ID operators but the ID column is missing.
+                    result = False
                 
-            if PropertyPattern.Action.ISA in pats:
-                result &= self.validate_isa(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.ISA].values)
+            if self.pps.isa_or_switch_actions:
+                if PropertyPattern.Action.ISA in pats:
+                    result &= self.validate_isa(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.ISA].values)
 
-            if PropertyPattern.Action.SWITCH in pats:
-                result &= self.validate_switch(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.SWITCH].values)
+                if PropertyPattern.Action.SWITCH in pats:
+                    result &= self.validate_switch(rownum, row, prop_or_datatype, orig_prop, pats[PropertyPattern.Action.SWITCH].values)
 
         return result, matched
 
