@@ -117,7 +117,7 @@ class PropertyPattern:
         try:
             action: PropertyPattern.Action = cls.Action(label_value.value)
         except ValueError as e:
-            raise ValueError("Row %d: %s: not a valid Property Pattern action." % (rownum, label_value.value))
+            raise ValueError("Filter row %d: %s: not a valid Property Pattern action." % (rownum, label_value.value))
 
         kv: KgtkValue
         
@@ -135,12 +135,23 @@ class PropertyPattern:
                       cls.Action.FIELD_NOT_PATTERN,
                       cls.Action.LABEL_PATTERN,
                       cls.Action.MATCHES):
-            if node2_value.fields is None:
-                raise ValueError("Row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
-            if node2_value.fields.text is None:
-                raise ValueError("Row %d: %s: Node2 has no text" % (rownum, action.value)) # TODO: better complaint
-                
-            patterns.append(re.compile(node2_value.fields.text))
+            if node2_value.is_string():
+                if node2_value.fields is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.text is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no text" % (rownum, action.value)) # TODO: better complaint
+                patterns.append(re.compile(node2_value.fields.text))
+            elif node2_value.is_list():
+                for kv in node2_value.get_list_items():
+                    if not kv.is_string():
+                        raise ValueError("Filter row %d: %s: List value '%s' is not a string" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no fields" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.text is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no text" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    patterns.append(re.compile(kv.fields.text))
+            else:
+                raise ValueError("Filter row %d: %s: Value '%s' is not a string" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
             # Merge any existing patterns, then removed duplicates:
             if old_ppat is not None and len(old_ppat.patterns) > 0:
@@ -152,9 +163,9 @@ class PropertyPattern:
                         cls.Action.MINDISTINCT,
                         cls.Action.MAXDISTINCT):
             if node2_value.fields is None:
-                raise ValueError("Row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
+                raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
             if node2_value.fields.number is None:
-                raise ValueError("Row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
+                raise ValueError("Filter row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
             intval = int(node2_value.fields.number)
 
         elif action in(cls.Action.MINVAL,
@@ -164,12 +175,21 @@ class PropertyPattern:
         ):
             if node2_value.is_number_or_quantity():
                 if node2_value.fields is None:
-                    raise ValueError("Row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
+                    raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.number is None:
-                    raise ValueError("Row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
+                    raise ValueError("Filter row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
                 numbers.append(float(node2_value.fields.number))
+            elif node2_value.is_list():
+                for kv in node2_value.get_list_items():
+                    if not kv.is_number_or_quantity():
+                        raise ValueError("Filter row %d: %s: List value '%s' is not a number or quantity" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no fields" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.number is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no number" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    numbers.append(float(kv.fields.number))
             else:
-                raise ValueError("Row %d: %s: Value '%s' is not a number or quantity" % (rownum, action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Filter row %d: %s: Value '%s' is not a number or quantity" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
             # Merge any existing numbers, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.numbers) > 0:
@@ -180,22 +200,22 @@ class PropertyPattern:
                         cls.Action.NOT_EQUAL_TO,):
             if node2_value.is_number_or_quantity():
                 if node2_value.fields is None:
-                    raise ValueError("Row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
+                    raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.number is None:
-                    raise ValueError("Row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
+                    raise ValueError("Filter row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
                 numbers.append(float(node2_value.fields.number))
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
                     if kv.is_number_or_quantity():
                         if kv.fields is None:
-                            raise ValueError("Row %d: %s: Node2  list element has no fields" % (rownum, action.value)) # TODO: better complaint
+                            raise ValueError("Filter row %d: %s: Node2  list element has no fields" % (rownum, action.value)) # TODO: better complaint
                         if kv.fields.number is None:
-                            raise ValueError("Row %d: %s: Node2 list element has no number" % (rownum, action.value)) # TODO: better complaint
+                            raise ValueError("Filter row %d: %s: Node2 list element has no number" % (rownum, action.value)) # TODO: better complaint
                         numbers.append(float(kv.fields.number))
                     else:
-                        raise ValueError("Row %d: %s: List value is not a number" % (rownum, action.value)) # TODO: better complaint
+                        raise ValueError("Filter row %d: %s: List value is not a number" % (rownum, action.value)) # TODO: better complaint
             else:
-                raise ValueError("Row %d: %s: Value '%s' is not a number or list of numbers" % (rownum, action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Filter row %d: %s: Value '%s' is not a number or list of numbers" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
             # Merge any existing numbers, then removed duplicates and sort:
             if old_ppat is not None and  len(old_ppat.numbers) > 0:
@@ -211,9 +231,9 @@ class PropertyPattern:
                     if kv.is_symbol():
                         column_names.append(kv.value)
                     else:
-                        raise ValueError("Row %d: %s: List value is not a symbol" % (rownum, action.value)) # TODO: better complaint
+                        raise ValueError("Filter row %d: %s: List value is not a symbol" % (rownum, action.value)) # TODO: better complaint
             else:
-                raise ValueError("Row %d: %s: Value '%s' is not a symbol or list of symbols" % (rownum, action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Filter row %d: %s: Value '%s' is not a symbol or list of symbols" % (rownum, action.value, node2_value.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
 
             # Merge any existing column names, then removed duplicates and sort:
@@ -228,7 +248,7 @@ class PropertyPattern:
             if label_value.is_symbol():
                 column_names.append(node2_value.value)
             else:
-                raise ValueError("Row %d: %s:Value is not a symbol" % (rownum, action.value)) # TODO: better complaint
+                raise ValueError("Filter row %d: %s:Value is not a symbol" % (rownum, action.value)) # TODO: better complaint
             # TODO: validate that the column names are valid and get their indexes.
 
         elif action in (cls.Action.NODE1_TYPE,
@@ -249,9 +269,9 @@ class PropertyPattern:
                     if kv.is_symbol():
                         values.append(kv.value)
                     else:
-                        raise ValueError("Row %d: %s: List value is not a symbol" % (rownum, action.value)) # TODO: better complaint
+                        raise ValueError("Filter row %d: %s: List value is not a symbol" % (rownum, action.value)) # TODO: better complaint
             else:
-                raise ValueError("Row %d: %s: Value '%s' is not a symbol or list of symbols" % (rownum, action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Filter row %d: %s: Value '%s' is not a symbol or list of symbols" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
             # Merge any existing values, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.values) > 0:
@@ -295,7 +315,7 @@ class PropertyPattern:
             if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
                 truth = node2_value.fields.truth
             else:
-                raise ValueError("Row %d: %s: Value '%s' is not a boolean" % (rownum, action.value, node2_value.value)) # TODO: better complaint
+                raise ValueError("Filter row %d: %s: Value '%s' is not a boolean" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
         return cls(prop_or_datatype, action, intval, patterns, numbers, column_names, values, truth)
 
@@ -758,7 +778,7 @@ class PropertyPatternValidator:
 
     def validate_minval_number(self, rownum: int, prop_or_datatype: str, minval: float, number: float)->bool:
         if number < minval:
-            self.grouse("Row: %d: prop_or_datatype %s value %f is less than minval %f." % (rownum, prop_or_datatype, number, minval))
+            self.grouse("Row %d: prop_or_datatype %s value %f is less than minval %f." % (rownum, prop_or_datatype, number, minval))
             return False
         return True
 
@@ -777,7 +797,7 @@ class PropertyPatternValidator:
     
     def validate_maxval_number(self, rownum: int, prop_or_datatype: str, maxval: float, number: float)->bool:
         if number > maxval:
-            self.grouse("Row: %d: prop_or_datatype %s value %f is greater than maxval %f." % (rownum, prop_or_datatype, number, maxval))
+            self.grouse("Row %d: prop_or_datatype %s value %f is greater than maxval %f." % (rownum, prop_or_datatype, number, maxval))
             return False
         return True
 
@@ -795,7 +815,7 @@ class PropertyPatternValidator:
 
     def validate_greater_than_number(self, rownum: int, prop_or_datatype: str, minval: float, number: float)->bool:
         if number <= minval:
-            self.grouse("Row: %d: prop_or_datatype %s value %f is not greater than %f." % (rownum, prop_or_datatype, number, minval))
+            self.grouse("Row %d: prop_or_datatype %s value %f is not greater than %f." % (rownum, prop_or_datatype, number, minval))
             return False
         return True
 
@@ -813,7 +833,7 @@ class PropertyPatternValidator:
 
     def validate_less_than_number(self, rownum: int, prop_or_datatype: str, maxval: float, number: float)->bool:
         if number >= maxval:
-            self.grouse("Row: %d: prop_or_datatype %s value %f is not less than %f." % (rownum, prop_or_datatype, number, maxval))
+            self.grouse("Row %d: prop_or_datatype %s value %f is not less than %f." % (rownum, prop_or_datatype, number, maxval))
             return False
         return True
 
@@ -835,7 +855,7 @@ class PropertyPatternValidator:
             if number == value:
                 return True
 
-        self.grouse("Row: %d: prop_or_datatype %s value %f is not equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
+        self.grouse("Row %d: prop_or_datatype %s value %f is not equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
         return False
 
     def validate_not_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
@@ -854,7 +874,7 @@ class PropertyPatternValidator:
         value: float
         for value in value_list:
             if number != value:
-              self.grouse("Row: %d: prop_or_datatype %s value %f is equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
+              self.grouse("Row %d: prop_or_datatype %s value %f is equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
               return False
         return True
 
