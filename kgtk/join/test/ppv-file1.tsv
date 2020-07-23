@@ -11,7 +11,8 @@ color	node2_type	symbol
 color	node2_values	red
 color	node2_values	green
 color	node2_allow_list	True
-predicate	label_pattern	"p.*"|"q.*"
+predicate	label_pattern	"p.*"
+predicate	label_pattern	"q.*"
 prop4	isa	predicate
 quad1	isa	predicate
 xnode	node1_pattern	"x.*"
@@ -43,7 +44,7 @@ babble	datatype	True
 bubble	property	True
 burble	isa	babble
 churble	property	True
-churble	chain	babble
+churble	node2_chain	babble
 swatch	property	True
 swatch	switch	S001
 S001	isa	swatch1
@@ -69,4 +70,3 @@ color2color	switch	color2red
 color2color	switch	color2green
 color2	isa	color2obj
 color2	isa	color2color
-
