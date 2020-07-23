@@ -20,7 +20,199 @@ from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
+class PropertyPatternDate:
+    year: int = attr.ib()
+    month: int = attr.ib()
+    day: int = attr.ib()
+    hour: int = attr.ib()
+    minutes: int = attr.ib()
+    seconds: int = attr.ib()
+    
+    @classmethod
+    def new(cls, year: int, month: int, day: int, hour: int, minutes: int, seconds: int)->'PropertyPatternDate':
+        # Python3 supports bigint
+
+        if month == 0:
+            month = 1
+
+        if day == 0:
+            day = 1
+
+        return cls(year, month, day, hour, minutes, seconds)
+
+    @classmethod
+    def from_kv(cls, kv: KgtkValue)->'PropertyPatternDate':
+        if not kv.is_date_and_times():
+            raise ValueError("Value '%s' is not a date_and_times value" % (kv.value))
+        if kv.fields is None:
+            raise ValueError("Value '%s' has no fields" % (kv.value))
+        if kv.fields.year is None:
+            raise ValueError("Value '%s' has no year" % (kv.value))
+        if kv.fields.month is None:
+            raise ValueError("Value '%s' has no month" % (kv.value))
+        if kv.fields.day is None:
+            raise ValueError("Value '%s' has no day" % (kv.value))
+        if kv.fields.hour is None:
+            raise ValueError("Value '%s' has no hour" % (kv.value))
+        if kv.fields.minutes is None:
+            raise ValueError("Value '%s' has no minutes" % (kv.value))
+        if kv.fields.seconds is None:
+            raise ValueError("Value '%s' has no seconds" % (kv.value))
+        if kv.fields.zonestr is None:
+            raise ValueError("Value '%s' has no timezone" % (kv.value))
+        if kv.fields.zonestr != "Z":
+            raise ValueError("Value '%s' timezone is not Z" % (kv.value))
+        return cls.new(kv.fields.year,
+                       kv.fields.month,
+                       kv.fields.day,
+                       kv.fields.hour,
+                       kv.fields.minutes,
+                       kv.fields.seconds)
+
+    def __repr__(self)->str:
+        return "%04d-%02d-%02dT%02d:%02d:%02dZ" % (self.year, self.month, self.day, self.hour, self.minutes, self.seconds)
+
+    def __lt__(self, other: 'PropertyPatternDate')->bool:
+        if self.year < other.year:
+            return True
+        if self.year > other.year:
+            return False
+        if self.month < other.month:
+            return True
+        if self.month > other.month:
+            return False
+        if self.day < other.day:
+            return True
+        if self.day > other.day:
+            return False
+        if self.hour < other.hour:
+            return True
+        if self.hour > other.hour:
+            return False
+        if self.minutes < other.minutes:
+            return True
+        if self.minutes > other.minutes:
+            return False
+        if self.seconds < other.seconds:
+            return True
+        if self.seconds > other.seconds:
+            return False
+        return False
+
+    def __le__(self, other: 'PropertyPatternDate')->bool:
+        if self.year < other.year:
+            return True
+        if self.year > other.year:
+            return False
+        if self.month < other.month:
+            return True
+        if self.month > other.month:
+            return False
+        if self.day < other.day:
+            return True
+        if self.day > other.day:
+            return False
+        if self.hour < other.hour:
+            return True
+        if self.hour > other.hour:
+            return False
+        if self.minutes < other.minutes:
+            return True
+        if self.minutes > other.minutes:
+            return False
+        if self.seconds < other.seconds:
+            return True
+        if self.seconds > other.seconds:
+            return False
+        return True
+
+    def __eq__(self, other: object)->bool:
+        if not isinstance(other, PropertyPatternDate):
+            return NotImplemented
+        return \
+            self.year == other.year and \
+            self.month == other.month and \
+            self.day == other.day  and \
+            self.hour == other.hour and \
+            self.minutes == other.minutes and \
+            self.seconds == other.seconds
+
+    def __ne__(self, other: object)->bool:
+        if not isinstance(other, PropertyPatternDate):
+            return NotImplemented
+        return \
+            self.year != other.year or \
+            self.month != other.month or \
+            self.day != other.day  or \
+            self.hour != other.hour or \
+            self.minutes != other.minutes or \
+            self.seconds != other.seconds
+
+    def __gt__(self, other: 'PropertyPatternDate')->bool:
+        if self.year > other.year:
+            return True
+        if self.year < other.year:
+            return False
+        if self.month > other.month:
+            return True
+        if self.month < other.month:
+            return False
+        if self.day > other.day:
+            return True
+        if self.day < other.day:
+            return False
+        if self.hour > other.hour:
+            return True
+        if self.hour < other.hour:
+            return False
+        if self.minutes > other.minutes:
+            return True
+        if self.minutes < other.minutes:
+            return False
+        if self.seconds > other.seconds:
+            return True
+        if self.seconds < other.seconds:
+            return False
+        return False
+
+    def __ge__(self, other: 'PropertyPatternDate')->bool:
+        if self.year > other.year:
+            return True
+        if self.year < other.year:
+            return False
+        if self.month > other.month:
+            return True
+        if self.month < other.month:
+            return False
+        if self.day > other.day:
+            return True
+        if self.day < other.day:
+            return False
+        if self.hour > other.hour:
+            return True
+        if self.hour < other.hour:
+            return False
+        if self.minutes > other.minutes:
+            return True
+        if self.minutes < other.minutes:
+            return False
+        if self.seconds > other.seconds:
+            return True
+        if self.seconds < other.seconds:
+            return False
+        return True
+
+
+    def __hash__(self)->int:
+        if self.year >= 0:
+            return ((((self.year * 100 + self.month) * 100 + self.day) *100 + self.hour) * 100 + self.minutes) + self.seconds
+        else:
+            return -((((((-self.year) * 100 + self.month) * 100 + self.day) *100 + self.hour) * 100 + self.minutes) + self.seconds)
+
+@attr.s(slots=True, frozen=True)
 class PropertyPattern:
+        
+
     class Action(Enum):
         NOT_IN_COLUMNS = "not_in_columns"
 
@@ -102,7 +294,7 @@ class PropertyPattern:
     column_names: typing.List[str] = attr.ib()
     values: typing.List[str] = attr.ib()
     truth: bool = attr.ib()
-    datetimes: typing.List[dt.datetime] = attr.ib()
+    datetimes: typing.List[PropertyPatternDate] = attr.ib()
 
     # Even though the object is frozen, we can still alter lists.
     column_idxs: typing.List[int] = attr.ib(factory=list)
@@ -129,7 +321,7 @@ class PropertyPattern:
         column_names: typing.List[str] = [ ]
         values: typing.List[str] = [ ]
         truth: bool = False
-        datetimes: typing.List[dt.datetime] = [ ]
+        datetimes: typing.List[PropertyPatternDate] = [ ]
 
         if action in (cls.Action.NODE1_PATTERN,
                       cls.Action.NODE2_PATTERN,
@@ -226,13 +418,12 @@ class PropertyPattern:
                     raise ValueError("Filter row %d: %s: Node2 has no timezone" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.zonestr != "Z":
                     raise ValueError("Filter row %d: %s: Node2 timezone is not Z" % (rownum, action.value)) # TODO: better complaint
-                datetimes.append(dt.datetime(node2_value.fields.year,
-                                             node2_value.fields.month if node2_value.fields.month > 0 else 1,
-                                             node2_value.fields.day if node2_value.fields.day > 0 else 1,
-                                             hour=node2_value.fields.hour,
-                                             minute=node2_value.fields.minutes,
-                                             second=node2_value.fields.seconds,
-                                             tzinfo=dt.timezone.utc))
+                datetimes.append(PropertyPatternDate.new(node2_value.fields.year,
+                                                         node2_value.fields.month,
+                                                         node2_value.fields.day,
+                                                         node2_value.fields.hour,
+                                                         node2_value.fields.minutes,
+                                                         node2_value.fields.seconds))
 
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
@@ -256,13 +447,12 @@ class PropertyPattern:
                         raise ValueError("Filter row %d: %s: Node2 list value '%s' has no timezone" % (rownum, action.value, kv.value)) # TODO: better complaint
                     if kv.fields.zonestr != "Z":
                         raise ValueError("Filter row %d: %s: Node2 list value '%s' timezone is not Z" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    datetimes.append(dt.datetime(kv.fields.year,
-                                                 kv.fields.month if kv.fields.month > 0 else 1,
-                                                 kv.fields.day if kv.fields.day > 0 else 1,
-                                                 hour=kv.fields.hour,
-                                                 minute=kv.fields.minutes,
-                                                 second=kv.fields.seconds,
-                                                 tzinfo=dt.timezone.utc))
+                    datetimes.append(PropertyPatternDate.new(kv.fields.year,
+                                                             kv.fields.month,
+                                                             kv.fields.day,
+                                                             kv.fields.hour,
+                                                             kv.fields.minutes,
+                                                             kv.fields.seconds))
 
             else:
                 raise ValueError("Filter row %d: %s: Value '%s' is not a date_and_times value" % (rownum, action.value, node2_value.value)) # TODO: better complaint
@@ -979,7 +1169,7 @@ class PropertyPatternValidator:
               return False
         return True
 
-    def convert_date(self, rownum: int, prop_or_datatype: str, node2_value: KgtkValue)->typing.Optional[dt.datetime]:
+    def convert_date(self, rownum: int, prop_or_datatype: str, node2_value: KgtkValue)->typing.Optional[PropertyPatternDate]:
 
         if not node2_value.is_date_and_times():
             self.grouse("Row %d: prop_or_datatype %s value %s is not a date and times" % (rownum, prop_or_datatype, node2_value.value))
@@ -1014,31 +1204,44 @@ class PropertyPatternValidator:
             self.grouse("Row %d: prop_or_datatype %s value %s: the timezone is not 'Z'." % (rownum, prop_or_datatype, node2_value.value))
             return None
 
-        return dt.datetime(node2_value.fields.year,
-                           node2_value.fields.month if node2_value.fields.month > 0 else 1,
-                           node2_value.fields.day if node2_value.fields.day > 0 else 1,
-                           hour=node2_value.fields.hour,
-                           minute=node2_value.fields.minutes,
-                           second=node2_value.fields.seconds,
-                           tzinfo=dt.timezone.utc)
-    
-    def validate_mindate(self, rownum: int, prop_or_datatype: str, minval: dt.datetime, node2_value: KgtkValue)->bool:
-        dtvalue: typing.Optional[dt.datetime] = self.convert_date(rownum, prop_or_datatype, node2_value)
+        return PropertyPatternDate.new(node2_value.fields.year,
+                                       node2_value.fields.month,
+                                       node2_value.fields.day,
+                                       node2_value.fields.hour,
+                                       node2_value.fields.minutes,
+                                       node2_value.fields.seconds)
+
+    def validate_mindate(self,
+                         rownum: int,
+                         prop_or_datatype: str,
+                         minval: PropertyPatternDate,
+                         node2_value: KgtkValue)->bool:
+        dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
         if dtvalue is None:
             return False
 
         if dtvalue < minval:
-            self.grouse("Row %d: prop_or_datatype %s value %s is less than mindate %s." % (rownum, prop_or_datatype, dtvalue.isoformat(), minval.isoformat()))
+            self.grouse("Row %d: prop_or_datatype %s value %s is less than mindate %s." % (rownum,
+                                                                                           prop_or_datatype,
+                                                                                           str(dtvalue),
+                                                                                           str(minval)))
             return False
         return True
 
-    def validate_maxdate(self, rownum: int, prop_or_datatype: str, maxval: dt.datetime, node2_value: KgtkValue)->bool:
-        dtvalue: typing.Optional[dt.datetime] = self.convert_date(rownum, prop_or_datatype, node2_value)
+    def validate_maxdate(self,
+                         rownum: int,
+                         prop_or_datatype: str,
+                         maxval: PropertyPatternDate,
+                         node2_value: KgtkValue)->bool:
+        dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
         if dtvalue is None:
             return False
 
         if dtvalue > maxval:
-            self.grouse("Row %d: prop_or_datatype %s value %s is greater than maxdate %s." % (rownum, prop_or_datatype, dtvalue.isoformat(), maxval.isoformat()))
+            self.grouse("Row %d: prop_or_datatype %s value %s is greater than maxdate %s." % (rownum,
+                                                                                              prop_or_datatype,
+                                                                                              str(dtvalue),
+                                                                                              str(maxval)))
             return False
         return True
 
