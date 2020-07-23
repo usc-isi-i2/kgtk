@@ -5,6 +5,7 @@ Validate property patterns..
 from argparse import ArgumentParser, Namespace
 import attr
 import copy
+import datetime as dt
 from enum import Enum
 from pathlib import Path
 import re
@@ -101,6 +102,7 @@ class PropertyPattern:
     column_names: typing.List[str] = attr.ib()
     values: typing.List[str] = attr.ib()
     truth: bool = attr.ib()
+    datetimes: typing.List[dt.datetime] = attr.ib()
 
     # Even though the object is frozen, we can still alter lists.
     column_idxs: typing.List[int] = attr.ib(factory=list)
@@ -127,6 +129,7 @@ class PropertyPattern:
         column_names: typing.List[str] = [ ]
         values: typing.List[str] = [ ]
         truth: bool = False
+        datetimes: typing.List[dt.datetime] = [ ]
 
         if action in (cls.Action.NODE1_PATTERN,
                       cls.Action.NODE2_PATTERN,
@@ -199,6 +202,77 @@ class PropertyPattern:
             numbers = sorted(list(set(numbers)))
 
             if len(numbers) > 1:
+                raise ValueError("Filter row %d: %s: only one value is allowed: %s" % (rownum, action.value, node2_value.value)) # TODO: better complaint
+
+        elif action in(cls.Action.MINDATE,
+                       cls.Action.MAXDATE,
+        ):
+            if node2_value.is_date_and_times():
+                if node2_value.fields is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.year is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no year" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.month is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no month" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.day is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no day" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.hour is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no hour" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.minutes is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no minutes" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.seconds is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no seconds" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.zonestr is None:
+                    raise ValueError("Filter row %d: %s: Node2 has no timezone" % (rownum, action.value)) # TODO: better complaint
+                if node2_value.fields.zonestr != "Z":
+                    raise ValueError("Filter row %d: %s: Node2 timezone is not Z" % (rownum, action.value)) # TODO: better complaint
+                datetimes.append(dt.datetime(node2_value.fields.year,
+                                             node2_value.fields.month if node2_value.fields.month > 0 else 1,
+                                             node2_value.fields.day if node2_value.fields.day > 0 else 1,
+                                             hour=node2_value.fields.hour,
+                                             minute=node2_value.fields.minutes,
+                                             second=node2_value.fields.seconds,
+                                             tzinfo=dt.timezone.utc))
+
+            elif node2_value.is_list():
+                for kv in node2_value.get_list_items():
+                    if not kv.is_date_and_times():
+                        raise ValueError("Filter row %d: %s: List value '%s' is not a date_and_times value" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no fields" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.year is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no year" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.month is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no month" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.day is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no day" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.hour is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no hour" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.minutes is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no minutes" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.seconds is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no seconds" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.zonestr is None:
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no timezone" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    if kv.fields.zonestr != "Z":
+                        raise ValueError("Filter row %d: %s: Node2 list value '%s' timezone is not Z" % (rownum, action.value, kv.value)) # TODO: better complaint
+                    datetimes.append(dt.datetime(kv.fields.year,
+                                                 kv.fields.month if kv.fields.month > 0 else 1,
+                                                 kv.fields.day if kv.fields.day > 0 else 1,
+                                                 hour=kv.fields.hour,
+                                                 minute=kv.fields.minutes,
+                                                 second=kv.fields.seconds,
+                                                 tzinfo=dt.timezone.utc))
+
+            else:
+                raise ValueError("Filter row %d: %s: Value '%s' is not a date_and_times value" % (rownum, action.value, node2_value.value)) # TODO: better complaint
+
+            # Merge any existing numbers, then removed duplicates and sort:
+            if old_ppat is not None and len(old_ppat.datetimes) > 0:
+                datetimes.extend(old_ppat.datetimes)
+            datetimes = sorted(list(set(datetimes)))
+
+            if len(datetimes) > 1:
                 raise ValueError("Filter row %d: %s: only one value is allowed: %s" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
         elif action in (cls.Action.EQUAL_TO,
@@ -322,7 +396,7 @@ class PropertyPattern:
             else:
                 raise ValueError("Filter row %d: %s: Value '%s' is not a boolean" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
-        return cls(prop_or_datatype, action, intval, patterns, numbers, column_names, values, truth)
+        return cls(prop_or_datatype, action, intval, patterns, numbers, column_names, values, truth, datetimes)
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatternFactory:
@@ -858,13 +932,17 @@ class PropertyPatternValidator:
 
     def validate_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
         if not node2_value.is_number_or_quantity():
-            return True
+            self.grouse("Row %d: prop_or_datatype %s value %f is not a number or quantity." % (rownum, prop_or_datatype, number))
+            return False
         
         if node2_value.fields is None:
-            return True
+            self.grouse("Row %d: prop_or_datatype %s value %f is missing the parsed fields." % (rownum, prop_or_datatype, number))
+            return False
         
         if node2_value.fields.number is None:
-            return True
+            self.grouse("Row %d: prop_or_datatype %s value %f is missing the number field." % (rownum, prop_or_datatype, number))
+            return False
+
         number: float = float(node2_value.fields.number)
         return self.validate_equal_to_number(rownum, prop_or_datatype, value_list, number)
 
@@ -879,13 +957,17 @@ class PropertyPatternValidator:
 
     def validate_not_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
         if not node2_value.is_number_or_quantity():
-            return True
+            self.grouse("Row %d: prop_or_datatype %s value %f is not a number or quantity." % (rownum, prop_or_datatype, number))
+            return False
         
         if node2_value.fields is None:
-            return True
+            self.grouse("Row %d: prop_or_datatype %s value %f is missing the parsed fields." % (rownum, prop_or_datatype, number))
+            return False
         
         if node2_value.fields.number is None:
-            return True
+            self.grouse("Row %d: prop_or_datatype %s value %f is missing the number field." % (rownum, prop_or_datatype, number))
+            return False
+
         number: float = float(node2_value.fields.number)
         return self.validate_not_equal_to_number(rownum, prop_or_datatype, value_list, number)
 
@@ -895,6 +977,69 @@ class PropertyPatternValidator:
             if number != value:
               self.grouse("Row %d: prop_or_datatype %s value %f is equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
               return False
+        return True
+
+    def convert_date(self, rownum: int, prop_or_datatype: str, node2_value: KgtkValue)->typing.Optional[dt.datetime]:
+
+        if not node2_value.is_date_and_times():
+            self.grouse("Row %d: prop_or_datatype %s value %s is not a date and times" % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        
+        if node2_value.fields is None:
+            self.grouse("Row %d: prop_or_datatype %s value %s is missing the parsed fields." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        
+        if node2_value.fields.year is None:
+            self.grouse("Row %d: prop_or_datatype %s value %s is missing the year." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        if node2_value.fields.month is None:
+            self.grouse("Row %d: prop_or_datatype %s value %s is missing the month." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        if node2_value.fields.day is None:
+            self.grouse("Row %d: prop_or_datatype %s value %s is missing the day." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        if node2_value.fields.hour is None:
+            self.grouse("Row %d: prop_or_datatype %s value %s is missing the hour." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        if node2_value.fields.minutes is None:
+            self.grouse("Row %d: prop_or_datatype %s value %s is missing the minutes." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        if node2_value.fields.seconds is None:
+            self.grouse("Row %d: prop_or_datatype %s value %s is missing the seconds." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        if node2_value.fields.zonestr is None:
+            self.grouse("Row %d: prop_or_datatype %s value %s is missing the timezone." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+        if node2_value.fields.zonestr != "Z":
+            self.grouse("Row %d: prop_or_datatype %s value %s: the timezone is not 'Z'." % (rownum, prop_or_datatype, node2_value.value))
+            return None
+
+        return dt.datetime(node2_value.fields.year,
+                           node2_value.fields.month if node2_value.fields.month > 0 else 1,
+                           node2_value.fields.day if node2_value.fields.day > 0 else 1,
+                           hour=node2_value.fields.hour,
+                           minute=node2_value.fields.minutes,
+                           second=node2_value.fields.seconds,
+                           tzinfo=dt.timezone.utc)
+    
+    def validate_mindate(self, rownum: int, prop_or_datatype: str, minval: dt.datetime, node2_value: KgtkValue)->bool:
+        dtvalue: typing.Optional[dt.datetime] = self.convert_date(rownum, prop_or_datatype, node2_value)
+        if dtvalue is None:
+            return False
+
+        if dtvalue < minval:
+            self.grouse("Row %d: prop_or_datatype %s value %s is less than mindate %s." % (rownum, prop_or_datatype, dtvalue.isoformat(), minval.isoformat()))
+            return False
+        return True
+
+    def validate_maxdate(self, rownum: int, prop_or_datatype: str, maxval: dt.datetime, node2_value: KgtkValue)->bool:
+        dtvalue: typing.Optional[dt.datetime] = self.convert_date(rownum, prop_or_datatype, node2_value)
+        if dtvalue is None:
+            return False
+
+        if dtvalue > maxval:
+            self.grouse("Row %d: prop_or_datatype %s value %s is greater than maxdate %s." % (rownum, prop_or_datatype, dtvalue.isoformat(), maxval.isoformat()))
+            return False
         return True
 
     def validate_chain(self, rownum: int, remote_node1: str, prop_or_datatype: str, value_list: typing.List[str])->bool:
@@ -1183,6 +1328,13 @@ class PropertyPatternValidator:
 
         if PropertyPattern.Action.NOT_EQUAL_TO in pats:
             result &= self.validate_not_equal_to(rownum, prop_or_datatype, pats[PropertyPattern.Action.NOT_EQUAL_TO].numbers, node2_value)
+
+
+        if PropertyPattern.Action.MINDATE in pats:
+            result &= self.validate_mindate(rownum, prop_or_datatype, pats[PropertyPattern.Action.MINDATE].datetimes[0], node2_value)
+
+        if PropertyPattern.Action.MAXDATE in pats:
+            result &= self.validate_maxdate(rownum, prop_or_datatype, pats[PropertyPattern.Action.MAXDATE].datetimes[0], node2_value)
 
 
         if PropertyPattern.Action.NODE2_FIELD_OP in pats:
