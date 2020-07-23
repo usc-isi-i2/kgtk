@@ -143,6 +143,16 @@ def add_arguments(parser):
         help="set the path of the input kgtk file if not from standard input",
         dest="input_file",
     )
+    parser.add_argument(
+        "-r",
+        "--rank",
+        action="store",
+        type=bool,
+        required = False,
+        default=False,
+        help="Whether the input file contains a rank column. Please refer to the `import_wikidata` command for the header information. Default to False, then all the ranks will be `normal`, therefore `NormalRank`.",
+        dest="has_rank",
+    )
 
 
 def run(
@@ -157,6 +167,7 @@ def run(
     log_path: str,
     warning: bool,
     input_file: str,
+    has_rank:bool,
 ):
     # import modules locally
     from kgtk.generator import JsonGenerator
@@ -174,6 +185,7 @@ def run(
         log_path = log_path,
         warning = warning,
         prop_declaration = prop_declaration,
+        has_rank = has_rank
     )
     # loop first round
     if use_gz:
