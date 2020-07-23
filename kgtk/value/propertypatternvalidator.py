@@ -422,50 +422,64 @@ class PropertyPatterns:
                 print("loaded %s->%s" % (prop_or_datatype, action.value), file=error_file, flush=True)
             if action == PropertyPattern.Action.MATCHES and len(pp.patterns) > 0:
                 matches[prop_or_datatype] = pp.patterns
+
             elif action == PropertyPattern.Action.MUSTOCCUR and pp.truth:
                 mustoccur.add(prop_or_datatype)
                 occurs.add(prop_or_datatype)
+
             elif action == PropertyPattern.Action.MINOCCURS:
                 occurs.add(prop_or_datatype)
+
             elif action == PropertyPattern.Action.MAXOCCURS:
                 occurs.add(prop_or_datatype)
+
             elif action == PropertyPattern.Action.MINDISTINCT:
                 distinct.add(prop_or_datatype)
+
             elif action == PropertyPattern.Action.MAXDISTINCT:
                 distinct.add(prop_or_datatype)
+
             elif action == PropertyPattern.Action.GROUPBYPROP and pp.truth:
                 groupbyprop.add(prop_or_datatype)
+
             elif action == PropertyPattern.Action.UNKNOWN and pp.truth:
                 unknown.add(prop_or_datatype)
+
             elif action == PropertyPattern.Action.REQUIRES and len(pp.values) > 0:
                 requires_set: typing.Set[str] = set(pp.values)
                 requires[prop_or_datatype] = requires_set
                 interesting.add(prop_or_datatype)
                 interesting.update(requires_set)
+
             elif action == PropertyPattern.Action.PROHIBITS and len(pp.values) > 0:
                 prohibits_set: typing.Set[str] = set(pp.values)
                 prohibits[prop_or_datatype] = prohibits_set
                 interesting.add(prop_or_datatype)
                 interesting.update(prohibits_set)
+
             elif action == PropertyPattern.Action.NODE2_CHAIN and len(pp.values) > 0:
                 node2_chain_target_set: typing.Set[str] = set(pp.values)
                 chain_targets.update(node2_chain_target_set)
                 interesting.update(node2_chain_target_set)
+
             elif action == PropertyPattern.Action.ID_CHAIN and len(pp.values) > 0:
                 id_chain_target_set: typing.Set[str] = set(pp.values)
                 chain_targets.update(id_chain_target_set)
                 interesting.update(id_chain_target_set)
+                id_actions = True
+
             elif action in (PropertyPattern.Action.NODE1_TYPE,
                             PropertyPattern.Action.NODE1_IS_VALID,
                             PropertyPattern.Action.NODE1_VALUES,
                             PropertyPattern.Action.NODE1_PATTERN):
                 node1_actions = True
-            elif action in (PropertyPattern.Action.ID_CHAIN,
-                            PropertyPattern.Action.ID_PATTERN,
+
+            elif action in (PropertyPattern.Action.ID_PATTERN,
                             PropertyPattern.Action.ID_NOT_PATTERN,
                             PropertyPattern.Action.ID_BLANK,
                             PropertyPattern.Action.ID_NOT_BLANK):
                 id_actions = True
+
             elif action in (PropertyPattern.Action.ISA,
                             PropertyPattern.Action.SWITCH):
                 isa_or_switch_actions = True
