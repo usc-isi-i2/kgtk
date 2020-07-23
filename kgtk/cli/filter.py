@@ -52,6 +52,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Invert the result of applying the pattern. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--show-version", dest="show_version", type=optional_bool, nargs='?', const=True, default=False,
+                              help="Print the version of this program. (default=%(default)s).", metavar="True/False")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -67,6 +70,8 @@ def run(input_file: KGTKFiles,
 
         or_pattern: bool,
         invert: bool,
+
+        show_version: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -89,6 +94,10 @@ def run(input_file: KGTKFiles,
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+    UPDATE_VERSION: str = "2020-07-22T22:54:42.421915+00:00#RK1rvNjh7ZARBk7H3l2Hs/rpgh2X7cIfN8kmkNXb6JY+tBsN8YJdsZdMKv3zLA4AzcZG8PKDe+kz+vz1vKuljw=="
+    if show_version or verbose:
+        print("kgtk filter version: %s" % UPDATE_VERSION, file=error_file, flush=True)
 
     # Show the final option structures for debugging and documentation.
     if show_options:

@@ -53,6 +53,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(who="The KGTK file to filter against.",
                           options=["--filter-on"], dest="filter_file", metavar="FILTER_FILE")
     parser.add_output_file()
+    parser.add_output_file(who="The KGTK reject file for records that fail the filter.",
+                           dest="reject_file",
+                           options=["--reject-file"],
+                           metavar="REJECT_FILE",
+                           optional=True)
 
     parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys",
                               help="The key columns in the file being filtered (default=None).", nargs='*')
@@ -81,6 +86,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 def run(input_file: KGTKFiles,
         filter_file: KGTKFiles,
         output_file: KGTKFiles,
+        reject_file: KGTKFiles,
 
         input_keys: typing.Optional[typing.List[str]],
         filter_keys: typing.Optional[typing.List[str]],
@@ -104,6 +110,7 @@ def run(input_file: KGTKFiles,
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     filter_kgtk_file: Path = KGTKArgumentParser.get_input_file(filter_file, who="KGTK filter file")
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="KGTK reject file")
 
     if (str(input_kgtk_file) == "-" and str(filter_kgtk_file) == "-"):
         raise KGTKException("My not use stdin for both --input-file and --filter-on files.")
@@ -120,6 +127,8 @@ def run(input_file: KGTKFiles,
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
+        if reject_kgtk_file is not None:
+            print("--reject-file=%s" % str(reject_kgtk_file), file=error_file)
         print("--filter-on=%s" % str(filter_kgtk_file), file=error_file)
         if input_keys is not None:
             print("--input-keys=%s" % " ".join(input_keys), file=error_file)
@@ -140,6 +149,7 @@ def run(input_file: KGTKFiles,
             filter_file_path=filter_kgtk_file,
             filter_keys=filter_keys,
             output_file_path=output_kgtk_file,
+            reject_file_path=reject_kgtk_file,
             invert=False,
             cache_input=cache_input,
             preserve_order=preserve_order,
