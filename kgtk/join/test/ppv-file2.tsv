@@ -66,3 +66,6 @@ swatch2	swatch	2
 swatch3	swatch	3
 swatch4	swatch	4
 obj20	color2	red
+year2020	post2011	^2020-01-01T00:00:00Z
+year2010	post2011	^2010-01-01T00:00:00Z
+year2015-no-tz	post2011	^2010-01-01T00:00:00

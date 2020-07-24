@@ -69,6 +69,9 @@ class PropertyPatternDate:
                        kv.fields.minutes,
                        kv.fields.seconds)
 
+    def __str__(self)->str:
+        return "%04d-%02d-%02dT%02d:%02d:%02dZ" % (self.year, self.month, self.day, self.hour, self.minutes, self.seconds)
+
     def __repr__(self)->str:
         return "%04d-%02d-%02dT%02d:%02d:%02dZ" % (self.year, self.month, self.day, self.hour, self.minutes, self.seconds)
 
@@ -419,7 +422,7 @@ class PropertyPattern:
                 try: 
                     datetimes.append(PropertyPatternDate.from_kv(node2_value))
                 except ValueError as e:
-                    raise ValueError("Filter row %d: %s: %s" % (rownum, action.value, e.args))
+                    raise ValueError("Filter row %d: %s: %s" % (rownum, action.value, e.args[0]))
 
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
@@ -428,7 +431,7 @@ class PropertyPattern:
                     try: 
                         datetimes.append(PropertyPatternDate.from_kv(kv))
                     except ValueError as e:
-                        raise ValueError("Filter row %d: %s: %s" % (rownum, action.value, e.args))
+                        raise ValueError("Filter row %d: %s: %s" % (rownum, action.value, e.args[0]))
 
             else:
                 raise ValueError("Filter row %d: %s: Value '%s' is not a date_and_times value" % (rownum, action.value, node2_value.value)) # TODO: better complaint
@@ -1125,41 +1128,11 @@ class PropertyPatternValidator:
             self.grouse("Row %d: prop_or_datatype %s value %s is not a date and times" % (rownum, prop_or_datatype, node2_value.value))
             return None
         
-        if node2_value.fields is None:
-            self.grouse("Row %d: prop_or_datatype %s value %s is missing the parsed fields." % (rownum, prop_or_datatype, node2_value.value))
+        try:
+            return PropertyPatternDate.from_kv(node2_value)
+        except ValueError as e:
+            self.grouse("Row %d: prop_or_datatype %s: %s." % (rownum, prop_or_datatype, e.args[0]))
             return None
-        
-        if node2_value.fields.year is None:
-            self.grouse("Row %d: prop_or_datatype %s value %s is missing the year." % (rownum, prop_or_datatype, node2_value.value))
-            return None
-        if node2_value.fields.month is None:
-            self.grouse("Row %d: prop_or_datatype %s value %s is missing the month." % (rownum, prop_or_datatype, node2_value.value))
-            return None
-        if node2_value.fields.day is None:
-            self.grouse("Row %d: prop_or_datatype %s value %s is missing the day." % (rownum, prop_or_datatype, node2_value.value))
-            return None
-        if node2_value.fields.hour is None:
-            self.grouse("Row %d: prop_or_datatype %s value %s is missing the hour." % (rownum, prop_or_datatype, node2_value.value))
-            return None
-        if node2_value.fields.minutes is None:
-            self.grouse("Row %d: prop_or_datatype %s value %s is missing the minutes." % (rownum, prop_or_datatype, node2_value.value))
-            return None
-        if node2_value.fields.seconds is None:
-            self.grouse("Row %d: prop_or_datatype %s value %s is missing the seconds." % (rownum, prop_or_datatype, node2_value.value))
-            return None
-        if node2_value.fields.zonestr is None:
-            self.grouse("Row %d: prop_or_datatype %s value %s is missing the timezone." % (rownum, prop_or_datatype, node2_value.value))
-            return None
-        if node2_value.fields.zonestr != "Z":
-            self.grouse("Row %d: prop_or_datatype %s value %s: the timezone is not 'Z'." % (rownum, prop_or_datatype, node2_value.value))
-            return None
-
-        return PropertyPatternDate.new(node2_value.fields.year,
-                                       node2_value.fields.month,
-                                       node2_value.fields.day,
-                                       node2_value.fields.hour,
-                                       node2_value.fields.minutes,
-                                       node2_value.fields.seconds)
 
     def validate_mindate(self,
                          rownum: int,
