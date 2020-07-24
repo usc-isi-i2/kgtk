@@ -105,7 +105,7 @@ class KgtkNtriples(KgtkFormat):
 
     # This is a guess about what may be in a blank node. It's entirely
     # possible that other characters, sych as hyphen, might be allowed.
-    BLANK_NODE_PAT: str = r'(?:_:[0-9a-zA-Z]+)'
+    BLANK_NODE_PAT: str = r'(?:_:[0-9a-zA-Z_]+)'
 
     # Double quoted strings with backslash escapes.
     STRING_PAT: str = r'"(?:[^\\]|(?:\\.))*"'
