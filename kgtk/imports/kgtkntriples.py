@@ -41,6 +41,58 @@ class KgtkNtriples(KgtkFormat):
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
+    # The following lexical analysis is based on:
+    # https://docs.python.org/3/reference/lexical_analysis.html
+
+    # The long integer suffix was part of Python 2.  It was dropped in Python 3.
+    long_suffix_pat: str = r'[lL]'
+
+    plus_or_minus_pat: str = r'[-+]'
+
+    # Integer literals.
+    #
+    # Decimal integers, allowing leading zeros.
+    digit_pat: str = r'[0-9]'
+    decinteger_pat: str = r'(?:{digit}(?:_?{digit})*{long_suffix}?)'.format(digit=digit_pat,
+                                                                            long_suffix=long_suffix_pat)
+    bindigit_pat: str = r'[01]'
+    bininteger_pat: str = r'(?:0[bB](":_?{bindigit})+{long_suffix})'.format(bindigit=bindigit_pat,
+                                                                            long_suffix=long_suffix_pat)
+    octdigit_pat: str = r'[0-7]'
+    octinteger_pat: str = r'(?:0[oO](":_?{octdigit})+{long_suffix})'.format(octdigit=octdigit_pat,
+                                                                            long_suffix=long_suffix_pat)
+    hexdigit_pat: str = r'[0-7a-fA-F]'
+    hexinteger_pat: str = r'(?:0[xX](":_?{hexdigit})+{long_suffix})'.format(hexdigit=hexdigit_pat,
+                                                                            long_suffix=long_suffix_pat)
+     
+    integer_pat: str = r'(?:{decinteger}|{bininteger}|{octinteger}|{hexinteger})'.format(decinteger=decinteger_pat,
+                                                                                         bininteger=bininteger_pat,
+                                                                                         octinteger=octinteger_pat,
+                                                                                         hexinteger=hexinteger_pat)
+
+    # Floating point literals.
+    digitpart_pat: str = r'(?:{digit}(?:_?{digit})*)'.format(digit=digit_pat)
+    fraction_pat: str = r'(?:\.{digitpart})'.format(digitpart=digitpart_pat)
+    pointfloat_pat: str = r'(?:{digitpart}?{fraction})|(?:{digitpart}\.)'.format(digitpart=digitpart_pat,
+                                                                                 fraction=fraction_pat)
+    exponent_pat: str = r'(?:[eE]{plus_or_minus}?{digitpart})'.format(plus_or_minus=plus_or_minus_pat,
+                                                                      digitpart=digitpart_pat)
+    exponentfloat_pat: str = r'(?:{digitpart}|{pointfloat}){exponent}'.format(digitpart=digitpart_pat,
+                                                                              pointfloat=pointfloat_pat,
+                                                                              exponent=exponent_pat)
+    floatnumber_pat: str = r'(?:{pointfloat}|{exponentfloat})'.format(pointfloat=pointfloat_pat,
+                                                                      exponentfloat=exponentfloat_pat)
+
+    # Imaginary literals.
+    imagnumber_pat: str = r'(?:{floatnumber}|{digitpart})[jJ]'.format(floatnumber=floatnumber_pat,
+                                                                      digitpart=digitpart_pat)
+
+    # Numeric literals.
+    numeric_pat: str = r'(?:{plus_or_minus}?(?:{integer}|{floatnumber}|{imagnumber}))'.format(plus_or_minus=plus_or_minus_pat,
+                                                                                              integer=integer_pat,
+                                                                                              floatnumber=floatnumber_pat,
+                                                                                              imagnumber=imagnumber_pat)
+
     # A URI must begin with a scheme per RFC 3986.
     #
     # We don't use this because ISI was inserting some invalid URIs that did
@@ -59,7 +111,11 @@ class KgtkNtriples(KgtkFormat):
     STRING_PAT: str = r'"(?:[^\\]|(?:\\.))*"'
 
     STRUCTURED_VALUE_PAT: str = r'(?:{string}(?:\^\^{uri})?)'.format(string=STRING_PAT, uri=URI_PAT)
-    FIELD_PAT: str = r'(?:{uri}|{blank_node}|{structured_value})'.format(uri=URI_PAT, blank_node=BLANK_NODE_PAT, structured_value=STRUCTURED_VALUE_PAT)
+    FIELD_PAT: str = r'(?:{uri}|{blank_node}|{structured_value}|{numeric})'.format(uri=URI_PAT,
+                                                                                   blank_node=BLANK_NODE_PAT,
+                                                                                   structured_value=STRUCTURED_VALUE_PAT,
+                                                                                   numeric=numeric_pat,
+    )
     ROW_PAT: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=FIELD_PAT)
     ROW_RE: typing.Pattern = re.compile(r'^' + ROW_PAT + r'$')
 
@@ -310,6 +366,9 @@ class KgtkNtriples(KgtkFormat):
 
         return new_node_symbol, True
 
+    def convert_numeric(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
+        return item, True
+
     def convert(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         """
         Convert an ntriples item to KGTK format.
@@ -324,6 +383,8 @@ class KgtkNtriples(KgtkFormat):
             return self.convert_string(item, line_number)
         elif item.startswith('"') and item.endswith(">"):
             return self.convert_structured_literal(item, line_number, ew)
+        elif item[0] in "+-0123456789.":
+            return self.convert_numeric(item, line_number, ew)
 
         if self.verbose:
             print("Line %d: unrecognized item '%s'" %(line_number, item), file=self.error_file, flush=True)
