@@ -575,9 +575,11 @@ class PropertyPatternLists:
     node2_patterns: typing.List[PropertyPattern] = attr.ib()
     id_patterns: typing.List[PropertyPattern] = attr.ib()
 
+    field_patterns: typing.List[PropertyPattern] = attr.ib()
     isa_or_switch_patterns: typing.List[PropertyPattern] = attr.ib()
 
     node2_column_name: typing.Optional[str] = attr.ib()
+    nextcase: typing.Optional[str] = attr.ib()
 
     node1_allow_list: bool = attr.ib()
     label_allow_list: bool = attr.ib()
@@ -586,18 +588,22 @@ class PropertyPatternLists:
 
     not_in_columns: typing.List[str] = attr.ib()
 
+    field_names: typing.Optional[typing.List[str]] = sttr.ib()
+
     @classmethod
     def new(cls,
             actionmap: typing.Mapping[PropertyPattern.Action, PropertyPattern],
-    )->typing.Mapping[str, PropertyPatternDispatch]:
+    )->PropertyPatternLists:
 
         node1_patterns: typing.List[PropertyPattern] = list()
         label_patterns: typing.List[PropertyPattern] = list()
         node2_patterns: typing.List[PropertyPattern] = list()
         id_patterns: typing.List[PropertyPattern] = list()
 
+        field_patterns: typing.List[PropertyPattern] = list()
         isa_or_switch_patterns: typing.List[PropertyPattern] = list()
         node2_column_name: typing.Optional[str] = None
+        nextcase: typing.Optional[str] = None
         
         node1_allow_list: bool = False
         label_allow_list: bool = False
@@ -606,6 +612,8 @@ class PropertyPatternLists:
 
         not_in_columns: typing.List[str] = list()
         
+        field_names: typing.Optional[typing.List[str]] = None
+
         action: PropertyPattern.Action
         for action in sorted(actionmap.keys()):
             pp: PropertyPattern = actionmap[action]
@@ -632,12 +640,6 @@ class PropertyPatternLists:
                             PropertyPattern.Action.NODE2_NOT_PATTERN,
                             PropertyPattern.Action.NODE2_BLANK,
                             PropertyPattern.Action.NODE2_NOT_BLANK,
-                            PropertyPattern.Action.MINVAL,
-                            PropertyPattern.Action.MAXVAL,
-                            PropertyPattern.Action.GREATER_THAN,
-                            PropertyPattern.Action.LESS_THAN,
-                            PropertyPattern.Action.EQUAL_TO,
-                            PropertyPattern.Action.NOT_EQUAL_TO,
                             PropertyPattern.Action.MINDATE,
                             PropertyPattern.Action.MAXDATE,
                             PropertyPattern.Action.GREATER_THAN_DATE,
@@ -649,6 +651,23 @@ class PropertyPatternLists:
                             PropertyPattern.Action.MAXDISTINCT):
                 node2_patterns.append(pp)
 
+            elif action in (PropertyPattern.Action.MINVAL,
+                            PropertyPattern.Action.MAXVAL,
+                            PropertyPattern.Action.GREATER_THAN,
+                            PropertyPattern.Action.LESS_THAN,
+                            PropertyPattern.Action.EQUAL_TO,
+                            PropertyPattern.Action.NOT_EQUAL_TO):
+                node2_patterns.append(pp)
+                field_patterns.append(pp)
+
+            elif action in (PropertyPattern.Action.FIELD_VALUES,
+                            PropertyPattern.Action.FIELD_NOT_VALUES,
+                            PropertyPattern.Action.FIELD_PATTERN,
+                            PropertyPattern.Action.FIELD_NOT_PATTERN,
+                            PropertyPattern.Action.FIELD_BLANK,
+                            PropertyPattern.Action.FIELD_NOT_BLANK):
+                field_patterns.append(pp)
+
             elif action in (PropertyPattern.Action.ID_CHAIN,
                             PropertyPattern.Action.ID_PATTERN,
                             PropertyPattern.Action.ID_NOT_PATTERN,
@@ -658,6 +677,9 @@ class PropertyPatternLists:
 
             elif action in (PropertyPattern.Action.NODE2_COLUMN):
                 node2_column_name = pp.column_names[0]
+
+            elif action in (PropertyPattern.Action.NEXTCASE):
+                nextcase = pp.values[0]
 
             elif action in (PropertyPattern.Action.ISA,
                             PropertyPattern.Action.SWITCH):
@@ -678,10 +700,13 @@ class PropertyPatternLists:
             elif action in (PropertyPattern.Action.NOT_IN_COLUMNS):
                 not_in_columns = pp.column_names.copy()
 
+            elif action in (PropertyPattern.Action.FIELD_NAMES):
+                field_names = pp.values.copy()
+
         return cls(node1_patterns, label_patterns, node2_patterns, id_patterns,
-                   isa_or_switch_patterns, node2_column_name,
+                   field_patterns, isa_or_switch_patterns, node2_column_name, nextcase,
                    node1_allow_list, label_allow_list, node2_allow_list, id_allow_list,
-                   not_in_columns)
+                   not_in_columns, field_names)
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatterns:
@@ -1354,90 +1379,93 @@ class PropertyPatternValidator:
 
         new_datatype: str
         for new_datatype in new_datatypes:
-            pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[new_datatype]
-            if PropertyPattern.Action.FIELD_NAME not in pats:
+            lists: PropertyPatternLists = self.pps.lists[new_datatype]
+            if lists.field_names is None:
                 self.grouse("Row %d: no field name for field op in %s." % (rownum, new_datatype))
                 result = False
                 continue
             
-            field_names: typing.List[str] = pats[PropertyPattern.Action.FIELD_NAME].values
             field_name: str
-            for field_name in field_names:
+            for field_name in lists.field_names:
                 if field_name not in field_value_map:
                     self.grouse("Row %d: no field value for field %s in %s." % (rownum, field_name, new_datatype))
                     result = False
                     continue
                 field_value: typing.Union[str, int, float, bool] = field_value_map[field_name]
 
-                if PropertyPattern.Action.FIELD_VALUES in pats:
-                    result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pats[PropertyPattern.Action.FIELD_VALUES].values, who)
+                pp: PropertyPattern
+                for pp in lists.field_patterns:
+                    action: PropertyPattern.Action = pp.action
 
-                if PropertyPattern.Action.FIELD_NOT_VALUES in pats:
-                    result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pats[PropertyPattern.Action.FIELD_NOT_VALUES].values, who,
+                    if action == PropertyPattern.Action.FIELD_VALUES:
+                        result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pp.values, who)
+
+                    elif acton == PropertyPattern.Action.FIELD_NOT_VALUES:
+                        result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pp.values, who,
                                                   invert=True)
 
-                if PropertyPattern.Action.FIELD_PATTERN in pats:
-                    result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pats[PropertyPattern.Action.FIELD_PATTERN].patterns, who)
+                    elif action == PropertyPattern.Action.FIELD_PATTERN:
+                        result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pp.patterns, who)
 
-                if PropertyPattern.Action.FIELD_NOT_PATTERN in pats:
-                    result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pats[PropertyPattern.Action.FIELD_NOT_PATTERN].patterns, who,
+                    elif action == PropertyPattern.Action.FIELD_NOT_PATTERN:
+                        result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pp.patterns, who,
                                                     invert=True)
 
-                if PropertyPattern.Action.FIELD_BLANK in pats:
-                    if isinstance(field_value, (str)):
-                        result &= self.validate_field_not_blank(rownum, field_value, prop_or_datatype, not pats[PropertyPattern.Action.FIELD_NOT_BLANK].truth, who)
-                    else:
-                        self.grouse("Row %d: field %s in %s is not a string." % (rownum, field_name, new_datatype))
-                        result = False
+                    elif action ==  PropertyPattern.Action.FIELD_BLANK:
+                        if isinstance(field_value, (str)):
+                            result &= self.validate_field_not_blank(rownum, field_value, prop_or_datatype, not pp.truth, who)
+                        else:
+                            self.grouse("Row %d: field %s in %s is not a string." % (rownum, field_name, new_datatype))
+                            result = False
+                            
+                    elif action == PropertyPattern.Action.FIELD_NOT_BLANK:
+                        if isinstance(field_value, (str)):
+                            result &= self.validate_field_not_blank(rownum, field_value, prop_or_datatype, pp.truth, who)
+                        else:
+                            self.grouse("Row %d: field %s in %s is not a string." % (rownum, field_name, new_datatype))
+                            result = False
 
-                if PropertyPattern.Action.FIELD_NOT_BLANK in pats:
-                    if isinstance(field_value, (str)):
-                        result &= self.validate_field_not_blank(rownum, field_value, prop_or_datatype, pats[PropertyPattern.Action.FIELD_NOT_BLANK].truth, who)
-                    else:
-                        self.grouse("Row %d: field %s in %s is not a string." % (rownum, field_name, new_datatype))
-                        result = False
+                    elif action == PropertyPattern.Action.MINVAL:
+                        if isinstance(field_value, (int, float)):
+                            result &= self.validate_minval_number(rownum, prop_or_datatype, pp.numbers[0], float(field_value))
+                        else:
+                            self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                            result = False
 
-                if PropertyPattern.Action.MINVAL in pats:
-                    if isinstance(field_value, (int, float)):
-                        result &= self.validate_minval_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.MINVAL].numbers[0], float(field_value))
-                    else:
-                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
-                        result = False
+                    elif action == PropertyPattern.Action.MAXVAL:
+                        if isinstance(field_value, (int, float)):
+                            result &= self.validate_maxval_number(rownum, prop_or_datatype, pp.numbers[0], float(field_value))
+                        else:
+                            self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                            result = False
 
-                if PropertyPattern.Action.MAXVAL in pats:
-                    if isinstance(field_value, (int, float)):
-                        result &= self.validate_maxval_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.MAXVAL].numbers[0], float(field_value))
-                    else:
-                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
-                        result = False
+                    elif action == PropertyPattern.Action.GREATER_THAN:
+                        if isinstance(field_value, (int, float)):
+                            result &= self.validate_greater_than_number(rownum, prop_or_datatype, pp.numbers[0], float(field_value))
+                        else:
+                            self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                            result = False
 
-                if PropertyPattern.Action.GREATER_THAN in pats:
-                    if isinstance(field_value, (int, float)):
-                        result &= self.validate_greater_than_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.GREATER_THAN].numbers[0], float(field_value))
-                    else:
-                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
-                        result = False
+                    elif action == PropertyPattern.Action.LESS_THAN:
+                        if isinstance(field_value, (int, float)):
+                            result &= self.validate_less_than_number(rownum, prop_or_datatype, pp.numbers[0], float(field_value))
+                        else:
+                            self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                            result = False
 
-                if PropertyPattern.Action.LESS_THAN in pats:
-                    if isinstance(field_value, (int, float)):
-                        result &= self.validate_less_than_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.LESS_THAN].numbers[0], float(field_value))
-                    else:
-                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
-                        result = False
+                    elif action == PropertyPattern.Action.EQUAL_TO:
+                        if isinstance(field_value, (int, float)):
+                            result &= self.validate_equal_to_number(rownum, prop_or_datatype, pp.numbers, float(field_value))
+                        else:
+                            self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                            result = False
 
-                if PropertyPattern.Action.EQUAL_TO in pats:
-                    if isinstance(field_value, (int, float)):
-                        result &= self.validate_equal_to_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.EQUAL_TO].numbers, float(field_value))
-                    else:
-                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
-                        result = False
-
-                if PropertyPattern.Action.NOT_EQUAL_TO in pats:
-                    if isinstance(field_value, (int, float)):
-                        result &= self.validate_not_equal_to_number(rownum, prop_or_datatype, pats[PropertyPattern.Action.NOT_EQUAL_TO].numbers, float(field_value))
-                    else:
-                        self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
-                        result = False
+                    elif action == PropertyPattern.Action.NOT_EQUAL_TO:
+                        if isinstance(field_value, (int, float)):
+                            result &= self.validate_not_equal_to_number(rownum, prop_or_datatype, pp.numbers, float(field_value))
+                        else:
+                            self.grouse("Row %d: field %s in %s is not a number." % (rownum, field_name, new_datatype))
+                            result = False
 
         return result
 
@@ -1802,6 +1830,8 @@ class PropertyPatternValidator:
                 matched: bool
                 valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
                 if valid:
+                    # TODO: SWITCH and ISA need coorperate on the isa_tree., or we should
+                    # prohibit having both for the same datatype.
                     self.complaints = save_complaints # Forget any complaints on failed cases
                     self.isa_current_scoreboard = save_isa_current_scoreboard.copy()
                     return True
@@ -1820,11 +1850,15 @@ class PropertyPatternValidator:
                 else:
                     self.distinct_scoreboard = copy.deepcopy(save_distinct_scoreboard)
 
-                pats: typing.Mapping[PropertyPattern.Action, PropertyPattern] = self.pps.patterns[new_datatype]
-                if PropertyPattern.Action.NEXTCASE not in pats:
+                newlists: typing.Optional[PropertyPatternLists] = self.pps.lists.get(new_datatype)
+                if newlists is None:
+                    break # no NEXTCASE
+                    
+                nextcase: typing.Optional[str] = newlists.nextcase
+                if nextcase is None:
                     break # no NEXTCASE
 
-                new_datatype = pats[PropertyPattern.Action.NEXTCASE].values[0]
+                new_datatype = nextcase
                 
         save_complaints.extend(self.complaints) # Retain all complaints from failed cases.
         self.complaints = save_complaints
@@ -1849,7 +1883,7 @@ class PropertyPatternValidator:
         result: bool = True # Everying's good until we discover otherwise.
         matched: bool = False
 
-        if prop_or_datatype not in self.pps.patterns:
+        if prop_or_datatype not in self.pps.lists:
             return result, matched
             
         self.isa_current_scoreboard.append(prop_or_datatype)
