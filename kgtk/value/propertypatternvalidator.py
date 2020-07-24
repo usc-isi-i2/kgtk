@@ -21,7 +21,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 # TODO: verify that the automatically created __eq__, __lt__, etc.
 # methods do the same thing a the hand-generated ones.
-@attr.s(slots=True, frozen=True, eq=False, order=False, str=False, repr=False, hash=False, cache_hash=True)
+@attr.s(slots=True, frozen=True, eq=False, order=False, str=False, repr=False, hash=False)
 class PropertyPatternDate:
     year: int = attr.ib()
     month: int = attr.ib()
@@ -293,6 +293,14 @@ class PropertyPattern:
 
         REQUIRES = "requires"
         PROHIBITS = "prohibits"
+
+        def __lt__(self, other)->bool:
+            """
+            THis conceit allow the actions to be sorted, which can simplify debugging.
+            """
+            if self.__class__ is other.__class__:
+                return self.value < other.value
+            return NotImplemented
         
     # TODO: create validators where missing:
     prop_or_datatype: str = attr.ib(validator=attr.validators.instance_of(str))
@@ -595,7 +603,7 @@ class PropertyPatternLists:
     @classmethod
     def new(cls,
             actionmap: typing.Mapping[PropertyPattern.Action, PropertyPattern],
-    )->PropertyPatternLists:
+    )->'PropertyPatternLists':
 
         node1_patterns: typing.List[PropertyPattern] = list()
         label_patterns: typing.List[PropertyPattern] = list()
