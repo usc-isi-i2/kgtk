@@ -42,7 +42,7 @@ class PropertyPatternDate:
 
     @classmethod
     def from_kv(cls, kv: KgtkValue)->'PropertyPatternDate':
-        if not kv.is_date_and_times():
+        if not kv.is_date_and_times(validate=True):
             raise ValueError("Value '%s' is not a date_and_times value" % (kv.value))
         if kv.fields is None:
             raise ValueError("Value '%s' has no fields" % (kv.value))
@@ -334,7 +334,7 @@ class PropertyPattern:
                       cls.Action.FIELD_NOT_PATTERN,
                       cls.Action.LABEL_PATTERN,
                       cls.Action.MATCHES):
-            if node2_value.is_string():
+            if node2_value.is_string(validate=True):
                 if node2_value.fields is None:
                     raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.text is None:
@@ -342,7 +342,7 @@ class PropertyPattern:
                 patterns.append(re.compile(node2_value.fields.text))
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
-                    if not kv.is_string():
+                    if not kv.is_string(validate=True):
                         raise ValueError("Filter row %d: %s: List value '%s' is not a string" % (rownum, action.value, kv.value)) # TODO: better complaint
                     if kv.fields is None:
                         raise ValueError("Filter row %d: %s: Node2 list value '%s' has no fields" % (rownum, action.value, kv.value)) # TODO: better complaint
@@ -361,6 +361,8 @@ class PropertyPattern:
                         cls.Action.MAXOCCURS,
                         cls.Action.MINDISTINCT,
                         cls.Action.MAXDISTINCT):
+            if not node2_value.is_number(validate=True):
+                raise ValueError("Filter row %d: %s: Node2 is not numeric" % (rownum, action.value)) # TODO: better complaint
             if node2_value.fields is None:
                 raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
             if node2_value.fields.number is None:
@@ -374,7 +376,7 @@ class PropertyPattern:
                         cls.Action.EQUAL_TO,
                         cls.Action.NOT_EQUAL_TO,
         ):
-            if node2_value.is_number_or_quantity():
+            if node2_value.is_number_or_quantity(validate=True):
                 if node2_value.fields is None:
                     raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.number is None:
@@ -383,7 +385,7 @@ class PropertyPattern:
 
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
-                    if not kv.is_number_or_quantity():
+                    if not kv.is_number_or_quantity(validate=True):
                         raise ValueError("Filter row %d: %s: List value '%s' is not a number or quantity" % (rownum, action.value, kv.value)) # TODO: better complaint
                     if kv.fields is None:
                         raise ValueError("Filter row %d: %s: Node2 list value '%s' has no fields" % (rownum, action.value, kv.value)) # TODO: better complaint
@@ -413,7 +415,7 @@ class PropertyPattern:
                        cls.Action.EQUAL_TO_DATE,
                        cls.Action.NOT_EQUAL_TO_DATE,
         ):
-            if node2_value.is_date_and_times():
+            if node2_value.is_date_and_times(validate=True):
                 if node2_value.fields is None:
                     raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.year is None:
@@ -441,7 +443,7 @@ class PropertyPattern:
 
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
-                    if not kv.is_date_and_times():
+                    if not kv.is_date_and_times(validate=True):
                         raise ValueError("Filter row %d: %s: List value '%s' is not a date_and_times value" % (rownum, action.value, kv.value)) # TODO: better complaint
                     if kv.fields is None:
                         raise ValueError("Filter row %d: %s: Node2 list value '%s' has no fields" % (rownum, action.value, kv.value)) # TODO: better complaint
@@ -573,7 +575,7 @@ class PropertyPattern:
                         cls.Action.NODE1_IS_VALID,
                         cls.Action.NODE2_IS_VALID,
         ):
-            if node2_value.is_boolean() and node2_value.fields is not None and node2_value.fields.truth is not None:
+            if node2_value.is_boolean(validate=True) and node2_value.fields is not None and node2_value.fields.truth is not None:
                 truth = node2_value.fields.truth
             else:
                 raise ValueError("Filter row %d: %s: Value '%s' is not a boolean" % (rownum, action.value, node2_value.value)) # TODO: better complaint
@@ -964,11 +966,7 @@ class PropertyPatternValidator:
         return True
 
     def validate_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, type_list: typing.List[str], who: str, invert: bool=False)->bool:
-        if value.data_type is None:
-            self.grouse("Row %d: the %s value '%s' KGTK type is missing." % (rownum, who, value.value))
-            return False # regardless of invert flag
-
-        type_name: str = value.data_type.lower()
+        type_name: str = value.classify().lower()
         if not invert:
             if type_name not in type_list:
                 self.grouse("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
@@ -1039,7 +1037,7 @@ class PropertyPatternValidator:
         return True        
 
     def validate_minval(self, rownum: int, prop_or_datatype: str, minval: float, node2_value: KgtkValue)->bool:
-        if not node2_value.is_number_or_quantity():
+        if not node2_value.is_number_or_quantity(validate=True):
             return False
         
         if node2_value.fields is None:
@@ -1058,7 +1056,7 @@ class PropertyPatternValidator:
         return True
 
     def validate_maxval(self, rownum: int, prop_or_datatype: str, maxval: float, node2_value: KgtkValue)->bool:
-        if not node2_value.is_number_or_quantity():
+        if not node2_value.is_number_or_quantity(validate=True):
             return False
         
         if node2_value.fields is None:
@@ -1077,7 +1075,7 @@ class PropertyPatternValidator:
         return True
 
     def validate_greater_than(self, rownum: int, prop_or_datatype: str, minval: float, node2_value: KgtkValue)->bool:
-        if not node2_value.is_number_or_quantity():
+        if not node2_value.is_number_or_quantity(validate=True):
             return False
         
         if node2_value.fields is None:
@@ -1095,7 +1093,7 @@ class PropertyPatternValidator:
         return True
 
     def validate_less_than(self, rownum: int, prop_or_datatype: str, maxval: float, node2_value: KgtkValue)->bool:
-        if not node2_value.is_number_or_quantity():
+        if not node2_value.is_number_or_quantity(validate=True):
             return True
         
         if node2_value.fields is None:
@@ -1113,7 +1111,7 @@ class PropertyPatternValidator:
         return True
 
     def validate_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
-        if not node2_value.is_number_or_quantity():
+        if not node2_value.is_number_or_quantity(validate=True):
             self.grouse("Row %d: prop_or_datatype %s value %f is not a number or quantity." % (rownum, prop_or_datatype, number))
             return False
         
@@ -1138,7 +1136,7 @@ class PropertyPatternValidator:
         return False
 
     def validate_not_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
-        if not node2_value.is_number_or_quantity():
+        if not node2_value.is_number_or_quantity(validate=True):
             self.grouse("Row %d: prop_or_datatype %s value %f is not a number or quantity." % (rownum, prop_or_datatype, number))
             return False
         
@@ -1163,7 +1161,7 @@ class PropertyPatternValidator:
 
     def convert_date(self, rownum: int, prop_or_datatype: str, node2_value: KgtkValue)->typing.Optional[PropertyPatternDate]:
 
-        if not node2_value.is_date_and_times():
+        if not node2_value.is_date_and_times(validate=True):
             self.grouse("Row %d: prop_or_datatype %s value %s is not a date and times" % (rownum, prop_or_datatype, node2_value.value))
             return None
         
