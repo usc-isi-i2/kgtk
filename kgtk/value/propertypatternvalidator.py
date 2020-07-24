@@ -416,59 +416,19 @@ class PropertyPattern:
                        cls.Action.NOT_EQUAL_TO_DATE,
         ):
             if node2_value.is_date_and_times(validate=True):
-                if node2_value.fields is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.year is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no year" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.month is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no month" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.day is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no day" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.hour is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no hour" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.minutes is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no minutes" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.seconds is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no seconds" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.zonestr is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no timezone" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.zonestr != "Z":
-                    raise ValueError("Filter row %d: %s: Node2 timezone is not Z" % (rownum, action.value)) # TODO: better complaint
-                datetimes.append(PropertyPatternDate.new(node2_value.fields.year,
-                                                         node2_value.fields.month,
-                                                         node2_value.fields.day,
-                                                         node2_value.fields.hour,
-                                                         node2_value.fields.minutes,
-                                                         node2_value.fields.seconds))
+                try: 
+                    datetimes.append(PropertyPatternDate.from_kv(node2_value))
+                except ValueError as e:
+                    raise ValueError("Filter row %d: %s: %s" % (rownum, action.value, e.args))
 
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
                     if not kv.is_date_and_times(validate=True):
                         raise ValueError("Filter row %d: %s: List value '%s' is not a date_and_times value" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no fields" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.year is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no year" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.month is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no month" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.day is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no day" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.hour is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no hour" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.minutes is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no minutes" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.seconds is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no seconds" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.zonestr is None:
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' has no timezone" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    if kv.fields.zonestr != "Z":
-                        raise ValueError("Filter row %d: %s: Node2 list value '%s' timezone is not Z" % (rownum, action.value, kv.value)) # TODO: better complaint
-                    datetimes.append(PropertyPatternDate.new(kv.fields.year,
-                                                             kv.fields.month,
-                                                             kv.fields.day,
-                                                             kv.fields.hour,
-                                                             kv.fields.minutes,
-                                                             kv.fields.seconds))
+                    try: 
+                        datetimes.append(PropertyPatternDate.from_kv(kv))
+                    except ValueError as e:
+                        raise ValueError("Filter row %d: %s: %s" % (rownum, action.value, e.args))
 
             else:
                 raise ValueError("Filter row %d: %s: Value '%s' is not a date_and_times value" % (rownum, action.value, node2_value.value)) # TODO: better complaint
