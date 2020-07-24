@@ -1373,11 +1373,11 @@ class PropertyPatternValidator:
             return True
 
         node1_value = KgtkValue(node1, options=self.value_options, parse_fields=True)
-        if (not self.autovalidate) or node1_value.validate():
-            return self.validate_node1_value(rownum, node1_value, prop_or_datatype, orig_prop, pats)
-        else:
-            self.grouse("Row %d: the node1 value '%s' is not valid KGTK." % (rownum, node1_value.value))
-            return False
+        if self.autovalidate:
+            if not node1_value.validate():
+                self.grouse("Row %d: the node1 value '%s' is not valid KGTK." % (rownum, node1_value.value))
+                return False
+        return self.validate_node1_value(rownum, node1_value, prop_or_datatype, orig_prop, pats)
 
     def validate_node1_value(self,
                              rownum: int,
@@ -1448,11 +1448,11 @@ class PropertyPatternValidator:
                        orig_prop: str,
                        pats: PropertyPatterns.PATTERN_MAP_TYPE)->bool:
         node2_value = KgtkValue(node2, options=self.value_options, parse_fields=True)
-        if (not self.autovalidate) or node2_value.validate():
-            return self.validate_node2_value(rownum, node2_value, prop_or_datatype, orig_prop, pats)
-        else:
-            self.grouse("Row %d: the node2 value '%s' is not valid KGTK." % (rownum, node2_value.value))
-            return False
+        if self.autovalidate:
+            if not node2_value.validate():
+                self.grouse("Row %d: the node2 value '%s' is not valid KGTK." % (rownum, node2_value.value))
+                return False
+        return self.validate_node2_value(rownum, node2_value, prop_or_datatype, orig_prop, pats)
 
     def validate_node2_value(self,
                              rownum: int,
@@ -1577,11 +1577,11 @@ class PropertyPatternValidator:
             return True
 
         id_value = KgtkValue(id_item, options=self.value_options, parse_fields=True)
-        if (not self.autovalidate) or id_value.validate():
-            return self.validate_id_value(rownum, id_value, prop_or_datatype, orig_prop, pats)
-        else:
-            self.grouse("Row %d: the id value '%s' is not valid KGTK." % (rownum, id_value.value))
-            return False
+        if self.autovalidate:
+            if not id_value.validate():
+                self.grouse("Row %d: the id value '%s' is not valid KGTK." % (rownum, id_value.value))
+                return False
+        return self.validate_id_value(rownum, id_value, prop_or_datatype, orig_prop, pats)
 
     def validate_id_value(self,
                              rownum: int,
