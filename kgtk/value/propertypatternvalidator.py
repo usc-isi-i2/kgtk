@@ -1117,9 +1117,9 @@ class PropertyPatternValidator:
     def validate_not_equal_to_number(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], number: float)->bool:
         value: float
         for value in value_list:
-            if number != value:
-              self.grouse("Row %d: prop_or_datatype %s value %f is equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
-              return False
+            if number == value:
+                self.grouse("Row %d: prop_or_datatype %s value %f is equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
+                return False
         return True
 
     def convert_date(self, rownum: int, prop_or_datatype: str, node2_value: KgtkValue)->typing.Optional[PropertyPatternDate]:
@@ -1143,13 +1143,11 @@ class PropertyPatternValidator:
         if dtvalue is None:
             return False
 
-        if dtvalue < minval:
-            self.grouse("Row %d: prop_or_datatype %s value %s is less than mindate %s." % (rownum,
-                                                                                           prop_or_datatype,
-                                                                                           str(dtvalue),
-                                                                                           str(minval)))
-            return False
-        return True
+        if dtvalue >= minval:
+            return True
+
+        self.grouse("Row %d: prop_or_datatype %s value %s is less than mindate %s." % (rownum, prop_or_datatype, str(dtvalue), str(minval)))
+        return False
 
     def validate_maxdate(self,
                          rownum: int,
@@ -1160,12 +1158,77 @@ class PropertyPatternValidator:
         if dtvalue is None:
             return False
 
-        if dtvalue > maxval:
-            self.grouse("Row %d: prop_or_datatype %s value %s is greater than maxdate %s." % (rownum,
-                                                                                              prop_or_datatype,
-                                                                                              str(dtvalue),
-                                                                                              str(maxval)))
+        if dtvalue <= maxval:
+            return True
+        
+        self.grouse("Row %d: prop_or_datatype %s value %s is greater than maxdate %s." % (rownum, prop_or_datatype, str(dtvalue), str(maxval)))
+        return False
+
+    def validate_greater_than_date(self,
+                                   rownum: int,
+                                   prop_or_datatype: str,
+                                   minval: PropertyPatternDate,
+                                   node2_value: KgtkValue)->bool:
+        dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
+        if dtvalue is None:
             return False
+
+        if dtvalue > minval:
+            return True
+
+        self.grouse("Row %d: prop_or_datatype %s value %s is not greater than %s." % (rownum, prop_or_datatype, str(dtvalue), str(minval)))
+        return False
+
+    def validate_less_than_date(self,
+                                rownum: int,
+                                prop_or_datatype: str,
+                                maxval: PropertyPatternDate,
+                                node2_value: KgtkValue)->bool:
+        dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
+        if dtvalue is None:
+            return False
+
+        if dtvalue < maxval:
+            return True
+
+        self.grouse("Row %d: prop_or_datatype %s value %s is not less than %s." % (rownum, prop_or_datatype, str(dtvalue), str(maxval)))
+        return False
+
+    def validate_equal_to_date(self,
+                               rownum: int,
+                               prop_or_datatype: str,
+                               dates: typing.List[PropertyPatternDate],
+                               node2_value: KgtkValue)->bool:
+        dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
+        if dtvalue is None:
+            return False
+
+        date: PropertyPatternDate
+        for date in dates:
+            if dtvalue == date:
+                return True
+            
+        self.grouse("Row %d: prop_or_datatype %s value %s is not equal to %s." % (rownum,
+                                                                                  prop_or_datatype,
+                                                                                  str(dtvalue),
+                                                                                  ", ".join([str(date) for date in dates])))
+        return False
+
+    def validate_not_equal_to_date(self,
+                                   rownum: int,
+                                   prop_or_datatype: str,
+                                   dates: typing.List[PropertyPatternDate],
+                                   node2_value: KgtkValue)->bool:
+        dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
+        if dtvalue is None:
+            return False
+
+        date: PropertyPatternDate
+        for date in dates:
+            if dtvalue == date:
+                self.grouse("Row %d: prop_or_datatype %s value %s is equal to %s." % (rownum, prop_or_datatype, str(dtvalue), str(date)))
+                return False
+
         return True
 
     def validate_chain(self, rownum: int, remote_node1: str, prop_or_datatype: str, value_list: typing.List[str])->bool:
@@ -1461,6 +1524,18 @@ class PropertyPatternValidator:
 
         if PropertyPattern.Action.MAXDATE in pats:
             result &= self.validate_maxdate(rownum, prop_or_datatype, pats[PropertyPattern.Action.MAXDATE].datetimes[0], node2_value)
+
+        if PropertyPattern.Action.GREATER_THAN_DATE in pats:
+            result &= self.validate_greater_than_date(rownum, prop_or_datatype, pats[PropertyPattern.Action.GREATER_THAN_DATE].datetimes[0], node2_value)
+
+        if PropertyPattern.Action.LESS_THAN_DATE in pats:
+            result &= self.validate_less_than_date(rownum, prop_or_datatype, pats[PropertyPattern.Action.LESS_THAN_DATE].datetimes[0], node2_value)
+
+        if PropertyPattern.Action.EQUAL_TO_DATE in pats:
+            result &= self.validate_equal_to_date(rownum, prop_or_datatype, pats[PropertyPattern.Action.EQUAL_TO_DATE].datetimes, node2_value)
+
+        if PropertyPattern.Action.NOT_EQUAL_TO_DATE in pats:
+            result &= self.validate_not_equal_to_date(rownum, prop_or_datatype, pats[PropertyPattern.Action.NOT_EQUAL_TO_DATE].datetimes, node2_value)
 
 
         if PropertyPattern.Action.NODE2_FIELD_OP in pats:
