@@ -252,6 +252,13 @@ class PropertyPattern:
         EQUAL_TO = "equal_to" # EQ, may take a list of numbers
         NOT_EQUAL_TO = "not_equal_to" # NE, may take a list of numbers
 
+        MINDATE = "mindate"
+        MAXDATE = "maxdate"
+        GREATER_THAN_DATE = "greater_than_date" # GT
+        LESS_THAN_DATE = "less_than_date" # LT
+        EQUAL_TO_DATE = "equal_to_date" # EQ, may take a list of dates
+        NOT_EQUAL_TO_DATE = "not_equal_to_date" # NE, may take a list of dates
+
         ID_ALLOW_LIST = "node2_allow_list"
         ID_PATTERN = "id_pattern"
         ID_NOT_PATTERN = "id_not_pattern"
@@ -281,9 +288,6 @@ class PropertyPattern:
 
         REQUIRES = "requires"
         PROHIBITS = "prohibits"
-
-        MINDATE = "mindate"
-        MAXDATE = "maxdate"
         
     # TODO: create validators where missing:
     prop_or_datatype: str = attr.ib(validator=attr.validators.instance_of(str))
@@ -363,10 +367,12 @@ class PropertyPattern:
                 raise ValueError("Filter row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
             intval = int(node2_value.fields.number)
 
-        elif action in(cls.Action.MINVAL,
-                       cls.Action.MAXVAL,
-                       cls.Action.GREATER_THAN,
-                       cls.Action.LESS_THAN,
+        elif action in (cls.Action.MINVAL,
+                        cls.Action.MAXVAL,
+                        cls.Action.GREATER_THAN,
+                        cls.Action.LESS_THAN,
+                        cls.Action.EQUAL_TO,
+                        cls.Action.NOT_EQUAL_TO,
         ):
             if node2_value.is_number_or_quantity():
                 if node2_value.fields is None:
@@ -393,11 +399,19 @@ class PropertyPattern:
                 numbers.extend(old_ppat.numbers)
             numbers = sorted(list(set(numbers)))
 
-            if len(numbers) > 1:
+            if action in (cls.Action.MINVAL,
+                          cls.Action.MAXVAL,
+                          cls.Action.GREATER_THAN,
+                          cls.Action.LESS_THAN,
+            ) and len(numbers) > 1:
                 raise ValueError("Filter row %d: %s: only one value is allowed: %s" % (rownum, action.value, node2_value.value)) # TODO: better complaint
 
         elif action in(cls.Action.MINDATE,
                        cls.Action.MAXDATE,
+                       cls.Action.GREATER_THAN_DATE,
+                       cls.Action.LESS_THAN_DATE,
+                       cls.Action.EQUAL_TO_DATE,
+                       cls.Action.NOT_EQUAL_TO_DATE,
         ):
             if node2_value.is_date_and_times():
                 if node2_value.fields is None:
@@ -462,34 +476,12 @@ class PropertyPattern:
                 datetimes.extend(old_ppat.datetimes)
             datetimes = sorted(list(set(datetimes)))
 
-            if len(datetimes) > 1:
+            if action in(cls.Action.MINDATE,
+                         cls.Action.MAXDATE,
+                         cls.Action.GREATER_THAN_DATE,
+                         cls.Action.LESS_THAN_DATE,
+            ) and len(datetimes) > 1:
                 raise ValueError("Filter row %d: %s: only one value is allowed: %s" % (rownum, action.value, node2_value.value)) # TODO: better complaint
-
-        elif action in (cls.Action.EQUAL_TO,
-                        cls.Action.NOT_EQUAL_TO,):
-            if node2_value.is_number_or_quantity():
-                if node2_value.fields is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
-                if node2_value.fields.number is None:
-                    raise ValueError("Filter row %d: %s: Node2 has no number" % (rownum, action.value)) # TODO: better complaint
-                numbers.append(float(node2_value.fields.number))
-            elif node2_value.is_list():
-                for kv in node2_value.get_list_items():
-                    if kv.is_number_or_quantity():
-                        if kv.fields is None:
-                            raise ValueError("Filter row %d: %s: Node2  list element has no fields" % (rownum, action.value)) # TODO: better complaint
-                        if kv.fields.number is None:
-                            raise ValueError("Filter row %d: %s: Node2 list element has no number" % (rownum, action.value)) # TODO: better complaint
-                        numbers.append(float(kv.fields.number))
-                    else:
-                        raise ValueError("Filter row %d: %s: List value is not a number" % (rownum, action.value)) # TODO: better complaint
-            else:
-                raise ValueError("Filter row %d: %s: Value '%s' is not a number or list of numbers" % (rownum, action.value, node2_value.value)) # TODO: better complaint
-
-            # Merge any existing numbers, then removed duplicates and sort:
-            if old_ppat is not None and  len(old_ppat.numbers) > 0:
-                numbers.extend(old_ppat.numbers)
-            numbers = sorted(list(set(numbers)))
 
         elif action in (cls.Action.NOT_IN_COLUMNS,):
             # TODO: validate that the column names are valid and get their indexes.
