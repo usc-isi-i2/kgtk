@@ -19,7 +19,9 @@ from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
-@attr.s(slots=True, frozen=True)
+# TODO: verify that the automatically created __eq__, __lt__, etc.
+# methods do the same thing a the hand-generated ones.
+@attr.s(slots=True, frozen=True, eq=False, order=False, str=False, repr=False, hash=False, cache_hash=True)
 class PropertyPatternDate:
     year: int = attr.ib()
     month: int = attr.ib()
@@ -588,7 +590,7 @@ class PropertyPatternLists:
 
     not_in_columns: typing.List[str] = attr.ib()
 
-    field_names: typing.Optional[typing.List[str]] = sttr.ib()
+    field_names: typing.Optional[typing.List[str]] = attr.ib()
 
     @classmethod
     def new(cls,
@@ -675,32 +677,32 @@ class PropertyPatternLists:
                             PropertyPattern.Action.ID_NOT_BLANK):
                 id_patterns.append(pp)
 
-            elif action in (PropertyPattern.Action.NODE2_COLUMN):
+            elif action  == PropertyPattern.Action.NODE2_COLUMN:
                 node2_column_name = pp.column_names[0]
 
-            elif action in (PropertyPattern.Action.NEXTCASE):
+            elif action == PropertyPattern.Action.NEXTCASE:
                 nextcase = pp.values[0]
 
             elif action in (PropertyPattern.Action.ISA,
                             PropertyPattern.Action.SWITCH):
                 isa_or_switch_patterns.append(pp)
 
-            elif action in (PropertyPattern.Action.NODE1_ALLOW_LIST):
+            elif action == PropertyPattern.Action.NODE1_ALLOW_LIST:
                 node1_allow_list = pp.truth
 
-            elif action in (PropertyPattern.Action.LABEL_ALLOW_LIST):
+            elif action == PropertyPattern.Action.LABEL_ALLOW_LIST:
                 label_allow_list = pp.truth
 
-            elif action in (PropertyPattern.Action.NODE2_ALLOW_LIST):
+            elif action == PropertyPattern.Action.NODE2_ALLOW_LIST:
                 node2_allow_list = pp.truth
 
-            elif action in (PropertyPattern.Action.ID_ALLOW_LIST):
+            elif action == PropertyPattern.Action.ID_ALLOW_LIST:
                 id_allow_list = pp.truth
 
-            elif action in (PropertyPattern.Action.NOT_IN_COLUMNS):
+            elif action == PropertyPattern.Action.NOT_IN_COLUMNS:
                 not_in_columns = pp.column_names.copy()
 
-            elif action in (PropertyPattern.Action.FIELD_NAMES):
+            elif action == PropertyPattern.Action.FIELD_NAME:
                 field_names = pp.values.copy()
 
         return cls(node1_patterns, label_patterns, node2_patterns, id_patterns,
@@ -710,7 +712,7 @@ class PropertyPatternLists:
 
 @attr.s(slots=True, frozen=True)
 class PropertyPatterns:
-    lists: typing.Mapping[str, PropertyPatternLists] = attr.ib
+    lists: typing.Mapping[str, PropertyPatternLists] = attr.ib()
     matches: typing.Mapping[str, typing.List[typing.Pattern]] = attr.ib()
     mustoccur: typing.Set[str] = attr.ib()
     occurs: typing.Set[str] = attr.ib()
@@ -756,11 +758,13 @@ class PropertyPatterns:
                                                              very_verbose=very_verbose,
         )
 
+        prop_or_datatype: str
+
         rownum: int
         row: typing.List[str]
         for rownum, row in enumerate(kr, 1):
             pp: PropertyPattern = ppf.from_row(rownum, row)
-            prop_or_datatype: str = pp.prop_or_datatype
+            prop_or_datatype = pp.prop_or_datatype
             if prop_or_datatype not in patmap:
                 patmap[prop_or_datatype] = { }
 
@@ -821,9 +825,8 @@ class PropertyPatterns:
                 interesting.update(id_chain_target_set)
 
         listmap: typing.MutableMapping[str, PropertyPatternLists] = dict()
-        prop_or_datatype: str
-        for prop_or_datatype in sorted(patterns.keys()):
-            listmap[prop_or_datatype] = PropertyPatternLists(patmap[prop_or_datatype])
+        for prop_or_datatype in sorted(patmap.keys()):
+            listmap[prop_or_datatype] = PropertyPatternLists.new(patmap[prop_or_datatype])
 
         return cls(lists=listmap,
                    matches=matches,
@@ -1012,7 +1015,7 @@ class PropertyPatternValidator:
             thing: str = row[idx]
             # print("Row %d: idx=%d column_name=%s thing=%s" % (rownum, idx, column_name, thing), file=self.error_file, flush=True)
             if thing in self.pps.lists:
-                thing_lists: PropertyPatterns.PATTERN_MAP_TYPE = self.pps.lists[thing]
+                thing_lists: PropertyPatternLists = self.pps.lists[thing]
                 # print("len(thing_patterns) = %d" % len(thing_patterns), file=self.error_file, flush=True)
                 column_names: typing.List[str] = thing_lists.not_in_columns
                 # print("NOT_IN columns: %s" % " ".join(column_names), file=self.error_file, flush=True)
@@ -1400,7 +1403,7 @@ class PropertyPatternValidator:
                     if action == PropertyPattern.Action.FIELD_VALUES:
                         result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pp.values, who)
 
-                    elif acton == PropertyPattern.Action.FIELD_NOT_VALUES:
+                    elif action == PropertyPattern.Action.FIELD_NOT_VALUES:
                         result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pp.values, who,
                                                   invert=True)
 
@@ -1594,7 +1597,7 @@ class PropertyPatternValidator:
         maxdistinct_limit: typing.Optional[int] = None
 
         pp: PropertyPattern
-        for pp in node1_patterns:
+        for pp in node2_patterns:
             action: PropertyPattern.Action = pp.action
 
             if action == PropertyPattern.Action.NODE2_TYPE :
@@ -1613,10 +1616,10 @@ class PropertyPatternValidator:
                 result &= self.validate_value(rownum, node2_value.value, prop_or_datatype, pp.values, "node2", invert=True)
 
             elif action == PropertyPattern.Action.NODE2_PATTERN:
-                result &= self.validate_pattern(rownum, node2_value.value, prop_or_datype, pp.patterns, "node2")
+                result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pp.patterns, "node2")
 
             elif action == PropertyPattern.Action.NODE2_NOT_PATTERN:
-                result &= self.validate_pattern(rownum, node2_value.value, prop_or_datype, pp.patterns, "node2", invert=True)
+                result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pp.patterns, "node2", invert=True)
 
             elif action == PropertyPattern.Action.NODE2_BLANK:
                 result &= self.validate_not_blank(rownum, node2_value, prop_or_datatype, pp.truth, "node2")
@@ -1895,13 +1898,16 @@ class PropertyPatternValidator:
             self.isa_tree_scoreboard.append(prop_or_datatype)
 
         matched = True
-        lists: PropertyPatternsLists = self.pps.lists[prop_or_datatype]
+        lists: PropertyPatternLists = self.pps.lists[prop_or_datatype]
 
+        action: PropertyPattern.Action
+
+        pp: PropertyPattern
         for pp in lists.label_patterns:
             # TODO: Put this is a seperate method.
 
             # TODO: Implement lists.label_allow_list?
-            action: PropertyPattern.Action = pp.action
+            action = pp.action
             
             if action == PropertyPattern.Action.REJECT and pp.truth:
                 result = False
@@ -1926,9 +1932,8 @@ class PropertyPatternValidator:
                 result = False
                 
         if len(lists.isa_or_switch_patterns) > 0:
-            pp: PropertyPattern
             for pp in lists.isa_or_switch_patterns:
-                action: PropertyPattern.Action = pp.action
+                action = pp.action
             
                 if action == PropertyPattern.Action.ISA:
                     result &= self.validate_isa(rownum, row, prop_or_datatype, orig_prop, pp.values)
