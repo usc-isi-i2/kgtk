@@ -731,6 +731,8 @@ class PropertyPatterns:
     prohibits: typing.Mapping[str, typing.Set[str]] = attr.ib()
     interesting: typing.Set[str] = attr.ib()
     chain_targets: typing.Set[str] = attr.ib()
+    not_in_columns: bool = attr.ib()
+    do_occurs: bool = attr.ib()
 
     @classmethod
     def load(cls, kr: KgtkReader,
@@ -750,6 +752,7 @@ class PropertyPatterns:
         prohibits: typing.MutableMapping[str, typing.Set[str]] = dict()
         interesting: typing.Set[str] = set()
         chain_targets: typing.Set[str] = set()
+        not_in_columns: bool = False
 
         if kr.node1_column_idx < 0:
             raise ValueError("node1 column missing from property pattern file")
@@ -831,6 +834,9 @@ class PropertyPatterns:
                 id_chain_target_set: typing.Set[str] = set(pp.values)
                 chain_targets.update(id_chain_target_set)
                 interesting.update(id_chain_target_set)
+                
+            elif action == PropertyPattern.Action.NOT_IN_COLUMNS:
+                not_in_columns = True
 
         listmap: typing.MutableMapping[str, PropertyPatternLists] = dict()
         for prop_or_datatype in sorted(patmap.keys()):
@@ -847,6 +853,8 @@ class PropertyPatterns:
                    prohibits=prohibits,
                    interesting=interesting,
                    chain_targets=chain_targets,
+                   not_in_columns=not_in_columns,
+                   do_occurs=len(occurs) > 0,
         )
 
 @attr.s(slots=True, frozen=False)
@@ -1020,20 +1028,20 @@ class PropertyPatternValidator:
         idx: int
         column_name: str
         for idx, column_name in enumerate(self.column_names):
-            thing: str = row[idx]
-            # print("Row %d: idx=%d column_name=%s thing=%s" % (rownum, idx, column_name, thing), file=self.error_file, flush=True)
-            if thing in self.pps.lists:
-                thing_lists: PropertyPatternLists = self.pps.lists[thing]
-                # print("len(thing_patterns) = %d" % len(thing_patterns), file=self.error_file, flush=True)
-                column_names: typing.List[str] = thing_lists.not_in_columns
+            cell_value: str = row[idx]
+            # print("Row %d: idx=%d column_name=%s cell_value=%s" % (rownum, idx, column_name, cell_value), file=self.error_file, flush=True)
+            cell_value_lists: typing.Optional[PropertyPatternLists] = self.pps.lists.get(cell_value)
+            if cell_value_lists is not None:
+                # print("len(cell_value_patterns) = %d" % len(cell_value_patterns), file=self.error_file, flush=True)
+                column_names: typing.List[str] = cell_value_lists.not_in_columns
                 # print("NOT_IN columns: %s" % " ".join(column_names), file=self.error_file, flush=True)
                 if column_name in column_names:
-                    print("Row %d: Found '%s' in column '%s', which is prohibited." % (rownum, thing, column_name), file=self.error_file, flush=True)
+                    print("Row %d: Found '%s' in column '%s', which is prohibited." % (rownum, cell_value, column_name), file=self.error_file, flush=True)
                     result = False
         return result
 
-    def validate_valid(self, rownum: int, value: KgtkValue, prop_or_datatype: str, truth: bool, who: str)->bool:
-        if truth:
+    def validate_valid(self, rownum: int, value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        if pp.truth:
             if not value.is_valid():
                 self.grouse("Row %d: the %s value '%s' is not a valid KGTK value." % (rownum, who, value.value))
                 return False
@@ -1043,54 +1051,72 @@ class PropertyPatternValidator:
                 return False
         return True
 
-    def validate_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, type_list: typing.List[str], who: str, invert: bool=False)->bool:
+    def validate_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        type_list: typing.List[str] = pp.values
         type_name: str = value.classify().lower()
-        if not invert:
-            if type_name not in type_list:
-                self.grouse("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
-                                                                                                                     KgtkFormat.LIST_SEPARATOR.join(type_list)))
-                return False
-        else:
-            if type_name in type_list:
-                self.grouse("Row %d: the %s KGTK datatype '%s' is in the list of disallowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
-                                                                                                                    KgtkFormat.LIST_SEPARATOR.join(type_list)))
-                return False
+        if type_name not in type_list:
+            self.grouse("Row %d: the %s KGTK datatype '%s' is not in the list of allowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
+                                                                                                                 KgtkFormat.LIST_SEPARATOR.join(type_list)))
+            return False
         return True
 
-    def validate_value(self, rownum: int, item: str, prop_or_datatype: str, value_list: typing.List[str], who: str, invert: bool=False)->bool:
-        if not invert:
-            if item not in value_list:
-                self.grouse("Row %d: the %s value '%s' is not in the list of allowed %s values for %s: %s" % (rownum, who, item, who, prop_or_datatype,
-                                                                                                              KgtkFormat.LIST_SEPARATOR.join(value_list)))
-                return False
-        else:
-            if item in value_list:
-                self.grouse("Row %d: the %s value '%s' is in the list of disallowed %s values for %s: %s" % (rownum, who, item, who, prop_or_datatype,
-                                                                                                             KgtkFormat.LIST_SEPARATOR.join(value_list)))
-                return False
+    def validate_not_type(self, rownum: int, value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        type_list: typing.List[str] = pp.values
+        type_name: str = value.classify().lower()
+        if type_name in type_list:
+            self.grouse("Row %d: the %s KGTK datatype '%s' is in the list of disallowed %s types for %s: %s" % (rownum, who, type_name, who, prop_or_datatype,
+                                                                                                                KgtkFormat.LIST_SEPARATOR.join(type_list)))
+            return False
+        return True
+
+    def validate_value(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        if item not in pp.values:
+            self.grouse("Row %d: the %s value '%s' is not in the list of allowed %s values for %s: %s" % (rownum, who, item, who, prop_or_datatype,
+                                                                                                          KgtkFormat.LIST_SEPARATOR.join(pp.values)))
+            return False
         return True        
 
-    def validate_pattern(self, rownum: int, item: str, prop_or_datatype: str, patterns: typing.List[typing.Pattern], who: str, invert: bool=False)->bool:
-        if len(patterns) == 0:
+    def validate_not_value(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        if item in pp.values:
+            self.grouse("Row %d: the %s value '%s' is in the list of disallowed %s values for %s: %s" % (rownum, who, item, who, prop_or_datatype,
+                                                                                                         KgtkFormat.LIST_SEPARATOR.join(pp.values)))
+            return False
+        return True        
+
+    def validate_pattern(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        if len(pp.patterns) == 0:
             raise ValueError("Missing %s pattern for %s" % (who, prop_or_datatype))
 
         success: bool = False
         pattern: typing.Pattern
-        for pattern in patterns:
+        for pattern in pp.patterns:
+            match: typing.Optional[typing.Match] = pattern.fullmatch(item)
+            if match:
+                success = True
+                break
+        if success:
+            return True
+
+        self.grouse("Row %d: the %s value '%s' does not match the inclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype))
+        return False
+
+    def validate_not_pattern(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        if len(pp.patterns) == 0:
+            raise ValueError("Missing %s pattern for %s" % (who, prop_or_datatype))
+
+        success: bool = False
+        pattern: typing.Pattern
+        for pattern in pp.patterns:
             match: typing.Optional[typing.Match] = pattern.fullmatch(item)
             if match:
                 success = True
                 break
 
-        if not invert:
-            if not success:
-                self.grouse("Row %d: the %s value '%s' does not match the inclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype))
-                return False
-        else:
-            if success:
-                self.grouse("Row %d: the %s value '%s' matches the exclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype))
-                return False
-        return True
+        if not success:
+            return True
+
+        self.grouse("Row %d: the %s value '%s' matches the exclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype))
+        return False
 
     def validate_not_blank(self, rownum: int, value: KgtkValue, prop_or_datatype: str, truth: bool, who: str)->bool:
         if truth:
@@ -1409,18 +1435,16 @@ class PropertyPatternValidator:
                     action: PropertyPattern.Action = pp.action
 
                     if action == PropertyPattern.Action.FIELD_VALUES:
-                        result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pp.values, who)
+                        result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pp, who)
 
                     elif action == PropertyPattern.Action.FIELD_NOT_VALUES:
-                        result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pp.values, who,
-                                                  invert=True)
+                        result &= self.validate_not_value(rownum, str(field_value), prop_or_datatype, pp, who)
 
                     elif action == PropertyPattern.Action.FIELD_PATTERN:
-                        result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pp.patterns, who)
+                        result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pp, who)
 
                     elif action == PropertyPattern.Action.FIELD_NOT_PATTERN:
-                        result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pp.patterns, who,
-                                                    invert=True)
+                        result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pp, who)
 
                     elif action ==  PropertyPattern.Action.FIELD_BLANK:
                         if isinstance(field_value, (str)):
@@ -1528,16 +1552,16 @@ class PropertyPatternValidator:
             action: PropertyPattern.Action = pp.action
 
             if action == PropertyPattern.Action.NODE1_TYPE:
-                result &= self.validate_type(rownum, node1_value, prop_or_datatype, pp.values, "node1")
+                result &= self.validate_type(rownum, node1_value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.NODE1_IS_VALID:
-                result &= self.validate_valid(rownum, node1_value, prop_or_datatype, pp.truth, "node1")
+                result &= self.validate_valid(rownum, node1_value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.NODE1_VALUES:
-                result &= self.validate_value(rownum, node1_value.value, prop_or_datatype, pp.values, "node1")
+                result &= self.validate_value(rownum, node1_value.value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.NODE1_PATTERN:
-                result &= self.validate_pattern(rownum, node1_value.value, prop_or_datatype, pp.patterns, "node1")
+                result &= self.validate_pattern(rownum, node1_value.value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.MINOCCURS:
                 minoccurs_limit = pp.intval
@@ -1608,26 +1632,26 @@ class PropertyPatternValidator:
         for pp in node2_patterns:
             action: PropertyPattern.Action = pp.action
 
-            if action == PropertyPattern.Action.NODE2_TYPE :
-                result &= self.validate_type(rownum, node2_value, prop_or_datatype, pp.values, "node2")
+            if action == PropertyPattern.Action.NODE2_TYPE:
+                result &= self.validate_type(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_NOT_TYPE:
-                result &= self.validate_type(rownum, node2_value, prop_or_datatype, pp.values, "node2", invert=True)
+                result &= self.validate_not_type(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_IS_VALID:
-                result &= self.validate_valid(rownum, node2_value, prop_or_datatype, pp.truth, "node1")
+                result &= self.validate_valid(rownum, node2_value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.NODE2_VALUES:
-                result &= self.validate_value(rownum, node2_value.value, prop_or_datatype, pp.values, "node2")
+                result &= self.validate_value(rownum, node2_value.value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_NOT_VALUES:
-                result &= self.validate_value(rownum, node2_value.value, prop_or_datatype, pp.values, "node2", invert=True)
+                result &= self.validate_not_value(rownum, node2_value.value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_PATTERN:
-                result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pp.patterns, "node2")
+                result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_NOT_PATTERN:
-                result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pp.patterns, "node2", invert=True)
+                result &= self.validate_not_pattern(rownum, node2_value.value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_BLANK:
                 result &= self.validate_not_blank(rownum, node2_value, prop_or_datatype, pp.truth, "node2")
@@ -1749,10 +1773,10 @@ class PropertyPatternValidator:
                 result &= self.validate_chain(rownum, id_value.value, prop_or_datatype, pp.values)
 
             elif action == PropertyPattern.Action.ID_PATTERN:
-                result &= self.validate_pattern(rownum, id_value.value, prop_or_datatype, pp.patterns, "id")
+                result &= self.validate_pattern(rownum, id_value.value, prop_or_datatype, pp, "id")
 
             elif action == PropertyPattern.Action.ID_NOT_PATTERN:
-                result &= self.validate_pattern(rownum, id_value.value, prop_or_datatype, pp.patterns, "id", invert=True)
+                result &= self.validate_not_pattern(rownum, id_value.value, prop_or_datatype, pp, "id")
 
             elif action == PropertyPattern.Action.ID_BLANK:
                 result &= self.validate_not_blank(rownum, id_value, prop_or_datatype, not pp.truth, "id")
@@ -1891,11 +1915,12 @@ class PropertyPatternValidator:
             return -1
 
     def validate_prop_or_datatype(self, rownum: int, row: typing.List[str], prop_or_datatype: str, orig_prop: str)->typing.Tuple[bool, bool]:
+        # returns result, matched
         result: bool = True # Everying's good until we discover otherwise.
-        matched: bool = False
 
-        if prop_or_datatype not in self.pps.lists:
-            return result, matched
+        lists: typing.Optional[PropertyPatternLists] = self.pps.lists.get(prop_or_datatype)
+        if lists is None:
+            return result, False
             
         self.isa_current_scoreboard.append(prop_or_datatype)
         self.isa_full_scoreboard.append(prop_or_datatype)
@@ -1905,26 +1930,25 @@ class PropertyPatternValidator:
                 self.isa_tree_scoreboard.append("->")
             self.isa_tree_scoreboard.append(prop_or_datatype)
 
-        matched = True
-        lists: PropertyPatternLists = self.pps.lists[prop_or_datatype]
-
         action: PropertyPattern.Action
 
-        pp: PropertyPattern
-        for pp in lists.label_patterns:
-            # TODO: Put this is a seperate method.
+        if len(lists.label_patterns) > 0:
+            pp: PropertyPattern
+            for pp in lists.label_patterns:
+                # TODO: Put this is a seperate method.
 
-            # TODO: Implement lists.label_allow_list?
-            action = pp.action
+                # TODO: Implement lists.label_allow_list?
+                action = pp.action
             
-            if action == PropertyPattern.Action.REJECT and pp.truth:
-                result = False
-                self.grouse("Row %d: rejecting property '%s' based on '%s'." % (rownum, row[self.label_idx], prop_or_datatype))
+                if action == PropertyPattern.Action.REJECT and pp.truth:
+                    result = False
+                    self.grouse("Row %d: rejecting property '%s' based on '%s'." % (rownum, row[self.label_idx], prop_or_datatype))
 
-            elif action == PropertyPattern.Action.LABEL_PATTERN:
-                result &= self.validate_pattern(rownum, row[self.label_idx], prop_or_datatype, pp.patterns, "label")
+                elif action == PropertyPattern.Action.LABEL_PATTERN:
+                    result &= self.validate_pattern(rownum, row[self.label_idx], prop_or_datatype, pp, "label")
 
-        result &= self.validate_node1(rownum, row[self.node1_idx], prop_or_datatype, orig_prop, lists.node1_patterns, lists.node1_allow_list)
+        if self.pps.do_occurs or len(lists.node1_patterns) > 0:
+            result &= self.validate_node1(rownum, row[self.node1_idx], prop_or_datatype, orig_prop, lists.node1_patterns, lists.node1_allow_list)
 
         node2_idx: int = self.get_node2_idx(rownum, prop_or_datatype, lists.node2_column_name)
         if node2_idx >= 0:
@@ -1949,7 +1973,7 @@ class PropertyPatternValidator:
                 elif action == PropertyPattern.Action.SWITCH:
                     result &= self.validate_switch(rownum, row, prop_or_datatype, orig_prop, pp.values)
 
-        return result, matched
+        return result, True
 
     def validate_row(self, rownum: int, row: 'PropertyPatternValidator.ROW_TYPE')->bool:
         result: bool = True # Everying's good until we discover otherwise.
@@ -1961,7 +1985,8 @@ class PropertyPatternValidator:
         if len(self.pps.mustoccur) > 0:
             self.setup_mustoccur(rownum, row)
 
-        result &= self.validate_not_in_columns(rownum, row)
+        if self.pps.not_in_columns:
+            result &= self.validate_not_in_columns(rownum, row)
 
         prop: str = row[self.label_idx]
 
@@ -1971,14 +1996,16 @@ class PropertyPatternValidator:
         result &= valid
         matched_any |= matched
 
-        datatype: str
-        for datatype in sorted(self.pps.matches.keys()):
-            matches_pattern: typing.Pattern
-            for matches_pattern in self.pps.matches[datatype]:
-                if matches_pattern.fullmatch(prop):
-                    valid, matched = self.validate_prop_or_datatype(rownum, row, datatype, prop)
-                    result &= valid
-                    matched_any |= matched
+    
+        if len(self.pps.matches) > 0:
+            datatype: str
+            for datatype in sorted(self.pps.matches.keys()):
+                matches_pattern: typing.Pattern
+                for matches_pattern in self.pps.matches[datatype]:
+                    if matches_pattern.fullmatch(prop):
+                        valid, matched = self.validate_prop_or_datatype(rownum, row, datatype, prop)
+                        result &= valid
+                        matched_any |= matched
 
         if not matched_any:
             unknown_datatype: str
