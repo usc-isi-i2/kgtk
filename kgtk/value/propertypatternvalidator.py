@@ -1069,21 +1069,30 @@ class PropertyPatternValidator:
             return False
         return True
 
-    def validate_value(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+    def validate_value(self, rownum: int, kgtk_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        return self.validate_value_string(rownum, kgtk_value.value, prop_or_datatype, pp, who)
+
+    def validate_value_string(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if item not in pp.values:
             self.grouse("Row %d: the %s value '%s' is not in the list of allowed %s values for %s: %s" % (rownum, who, item, who, prop_or_datatype,
                                                                                                           KgtkFormat.LIST_SEPARATOR.join(pp.values)))
             return False
         return True        
 
-    def validate_not_value(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+    def validate_not_value(self, rownum: int, kgtk_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        return self.validate_not_value_string(rownum, kgtk_value.value, prop_or_datatype, pp, who)
+
+    def validate_not_value_string(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if item in pp.values:
             self.grouse("Row %d: the %s value '%s' is in the list of disallowed %s values for %s: %s" % (rownum, who, item, who, prop_or_datatype,
                                                                                                          KgtkFormat.LIST_SEPARATOR.join(pp.values)))
             return False
         return True        
 
-    def validate_pattern(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+    def validate_pattern(self, rownum: int, kgtk_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        return self.validate_pattern_string(rownum, kgtk_value.value, prop_or_datatype, pp, who)
+
+    def validate_pattern_string(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if len(pp.patterns) == 0:
             raise ValueError("Missing %s pattern for %s" % (who, prop_or_datatype))
 
@@ -1100,7 +1109,10 @@ class PropertyPatternValidator:
         self.grouse("Row %d: the %s value '%s' does not match the inclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype))
         return False
 
-    def validate_not_pattern(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+    def validate_not_pattern(self, rownum: int, kgtk_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        return self.validate_not_pattern_string(rownum, kgtk_value.value, prop_or_datatype, pp, who)
+
+    def validate_not_pattern_string(self, rownum: int, item: str, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if len(pp.patterns) == 0:
             raise ValueError("Missing %s pattern for %s" % (who, prop_or_datatype))
 
@@ -1289,102 +1301,115 @@ class PropertyPatternValidator:
 
     def validate_mindate(self,
                          rownum: int,
+                         node2_value: KgtkValue,
                          prop_or_datatype: str,
-                         minval: PropertyPatternDate,
-                         node2_value: KgtkValue)->bool:
+                         pp: PropertyPattern,
+                         who: str,
+        )->bool:
         dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
         if dtvalue is None:
             return False
 
-        if dtvalue >= minval:
+        if dtvalue >= pp.datetimes[0]:
             return True
 
-        self.grouse("Row %d: prop_or_datatype %s value %s is less than mindate %s." % (rownum, prop_or_datatype, str(dtvalue), str(minval)))
+        self.grouse("Row %d: prop_or_datatype %s value %s is less than mindate %s." % (rownum, prop_or_datatype, str(dtvalue), str(pp.datetimes[0])))
         return False
 
     def validate_maxdate(self,
                          rownum: int,
+                         node2_value: KgtkValue,
                          prop_or_datatype: str,
-                         maxval: PropertyPatternDate,
-                         node2_value: KgtkValue)->bool:
+                         pp: PropertyPattern,
+                         who: str,
+        )->bool:
         dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
         if dtvalue is None:
             return False
 
-        if dtvalue <= maxval:
+        if dtvalue <= pp.datetimes[0]:
             return True
                 
-        self.grouse("Row %d: prop_or_datatype %s value %s is greater than maxdate %s." % (rownum, prop_or_datatype, str(dtvalue), str(maxval)))
+        self.grouse("Row %d: prop_or_datatype %s value %s is greater than maxdate %s." % (rownum, prop_or_datatype, str(dtvalue), str(pp.datetimes[0])))
         return False
 
     def validate_greater_than_date(self,
                                    rownum: int,
+                                   node2_value: KgtkValue,
                                    prop_or_datatype: str,
-                                   minval: PropertyPatternDate,
-                                   node2_value: KgtkValue)->bool:
+                                   pp: PropertyPattern,
+                                   who: str,
+        )->bool:
         dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
         if dtvalue is None:
             return False
 
-        if dtvalue > minval:
+        if dtvalue > pp.datetimes[0]:
             return True
 
-        self.grouse("Row %d: prop_or_datatype %s value %s is not greater than %s." % (rownum, prop_or_datatype, str(dtvalue), str(minval)))
+        self.grouse("Row %d: prop_or_datatype %s value %s is not greater than %s." % (rownum, prop_or_datatype, str(dtvalue), str(pp.datetimes[0])))
         return False
 
     def validate_less_than_date(self,
                                 rownum: int,
+                                node2_value: KgtkValue,
                                 prop_or_datatype: str,
-                                maxval: PropertyPatternDate,
-                                node2_value: KgtkValue)->bool:
+                                pp: PropertyPattern,
+                                who: str,
+    )->bool:
         dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
         if dtvalue is None:
             return False
 
-        if dtvalue < maxval:
+        if dtvalue < pp.datetimes[0]:
             return True
 
-        self.grouse("Row %d: prop_or_datatype %s value %s is not less than %s." % (rownum, prop_or_datatype, str(dtvalue), str(maxval)))
+        self.grouse("Row %d: prop_or_datatype %s value %s is not less than %s." % (rownum, prop_or_datatype, str(dtvalue), str(pp.datetimes[0])))
         return False
 
     def validate_equal_to_date(self,
                                rownum: int,
+                               node2_value: KgtkValue,
                                prop_or_datatype: str,
-                               dates: typing.List[PropertyPatternDate],
-                               node2_value: KgtkValue)->bool:
+                               pp: PropertyPattern,
+                               who: str,
+        )->bool:
         dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
         if dtvalue is None:
             return False
 
         date: PropertyPatternDate
-        for date in dates:
+        for date in pp.datetimes:
             if dtvalue == date:
                 return True
                 
         self.grouse("Row %d: prop_or_datatype %s value %s is not equal to %s." % (rownum,
                                                                                   prop_or_datatype,
                                                                                   str(dtvalue),
-                                                                                  ", ".join([str(date) for date in dates])))
+                                                                                  ", ".join([str(date) for date in pp.datetimes])))
         return False
 
     def validate_not_equal_to_date(self,
                                    rownum: int,
+                                   node2_value: KgtkValue,
                                    prop_or_datatype: str,
-                                   dates: typing.List[PropertyPatternDate],
-                                   node2_value: KgtkValue)->bool:
+                                   pp: PropertyPattern,
+                                   who: str,
+    )->bool:
         dtvalue: typing.Optional[PropertyPatternDate] = self.convert_date(rownum, prop_or_datatype, node2_value)
         if dtvalue is None:
             return False
 
         date: PropertyPatternDate
-        for date in dates:
+        for date in pp.datetimes:
             if dtvalue == date:
                 self.grouse("Row %d: prop_or_datatype %s value %s is equal to %s." % (rownum, prop_or_datatype, str(dtvalue), str(date)))
                 return False
 
         return True
 
-    def validate_chain(self, rownum: int, remote_node1: str, prop_or_datatype: str, value_list: typing.List[str])->bool:
+    def validate_chain(self, rownum: int, node2_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        remote_node1: str = node2_value.value
         if remote_node1 not in self.chain_target_scoreboard:
             if self.suspended_row_groups is not None:
                 if remote_node1 not in self.suspended_row_groups:
@@ -1395,38 +1420,39 @@ class PropertyPatternValidator:
         remote_datatypes: typing.Optional[typing.Set[str]] = self.chain_target_scoreboard[remote_node1]
         if remote_datatypes is None:
             self.grouse("Row %d: datatype '%s': remote node1 '%s' has no relevant datatypes'" % (rownum,
-                                                                                                 KgtkFormat.LIST_SEPARATOR.join(value_list),
+                                                                                                 KgtkFormat.LIST_SEPARATOR.join(pp.values),
                                                                                                  remote_node1))
             return False
 
         test_value: str
-        for test_value in value_list:
+        for test_value in pp.values:
             if test_value in remote_datatypes:
                 return True
 
         self.grouse("Row %d: datatype '%s' not in remote node1 '%s' datatypes '%s'" % (rownum,
-                                                                                       KgtkFormat.LIST_SEPARATOR.join(value_list),
+                                                                                       KgtkFormat.LIST_SEPARATOR.join(pp.values),
                                                                                        remote_node1,
                                                                                        KgtkFormat.LIST_SEPARATOR.join(remote_datatypes)))
         return False
 
     def validate_field_op(self,
                           rownum: int,
-                          prop_or_datatype: str,
-                          new_datatypes: typing.List[str],
                           node2_value: KgtkValue,
+                          prop_or_datatype: str,
+                          pp1: PropertyPattern,
+                          who: str,
     )->bool:
-        who: str = "node2_field"
+        whor = who + "_field"
         node2_value.validate()
         if node2_value.fields is None:
-            self.grouse("Row %d: no fields for prop/datatype %s op %s: %s" % (rownum, prop_or_datatype, new_datatype, node2_value.value))
+            self.grouse("Row %d: no fields for prop/datatype %s op %s: %s" % (rownum, prop_or_datatype, ", ".join(pp1.values), node2_value.value))
             return False
         field_value_map: typing.Mapping[str, typing.Union[str, int, float, bool]] = node2_value.fields.to_map()
 
         result: bool = True
 
         new_datatype: str
-        for new_datatype in new_datatypes:
+        for new_datatype in pp1.values:
             lists: PropertyPatternLists = self.pps.lists[new_datatype]
             if lists.field_names is None:
                 self.grouse("Row %d: no field name for field op in %s." % (rownum, new_datatype))
@@ -1446,16 +1472,16 @@ class PropertyPatternValidator:
                     action: PropertyPattern.Action = pp.action
 
                     if action == PropertyPattern.Action.FIELD_VALUES:
-                        result &= self.validate_value(rownum, str(field_value), prop_or_datatype, pp, who)
+                        result &= self.validate_value_string(rownum, str(field_value), prop_or_datatype, pp, who)
 
                     elif action == PropertyPattern.Action.FIELD_NOT_VALUES:
-                        result &= self.validate_not_value(rownum, str(field_value), prop_or_datatype, pp, who)
+                        result &= self.validate_not_value_string(rownum, str(field_value), prop_or_datatype, pp, who)
 
                     elif action == PropertyPattern.Action.FIELD_PATTERN:
-                        result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pp, who)
+                        result &= self.validate_pattern_string(rownum, str(field_value), prop_or_datatype, pp, who)
 
                     elif action == PropertyPattern.Action.FIELD_NOT_PATTERN:
-                        result &= self.validate_pattern(rownum, str(field_value), prop_or_datatype, pp, who)
+                        result &= self.validate_not_pattern_string(rownum, str(field_value), prop_or_datatype, pp, who)
 
                     elif action ==  PropertyPattern.Action.FIELD_BLANK:
                         if isinstance(field_value, (str)):
@@ -1569,10 +1595,10 @@ class PropertyPatternValidator:
                 result &= self.validate_valid(rownum, node1_value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.NODE1_VALUES:
-                result &= self.validate_value(rownum, node1_value.value, prop_or_datatype, pp, "node1")
+                result &= self.validate_value(rownum, node1_value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.NODE1_PATTERN:
-                result &= self.validate_pattern(rownum, node1_value.value, prop_or_datatype, pp, "node1")
+                result &= self.validate_pattern(rownum, node1_value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.MINOCCURS:
                 minoccurs_limit = pp.intval
@@ -1653,16 +1679,16 @@ class PropertyPatternValidator:
                 result &= self.validate_valid(rownum, node2_value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.NODE2_VALUES:
-                result &= self.validate_value(rownum, node2_value.value, prop_or_datatype, pp, "node2")
+                result &= self.validate_value(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_NOT_VALUES:
-                result &= self.validate_not_value(rownum, node2_value.value, prop_or_datatype, pp, "node2")
+                result &= self.validate_not_value(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_PATTERN:
-                result &= self.validate_pattern(rownum, node2_value.value, prop_or_datatype, pp, "node2")
+                result &= self.validate_pattern(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_NOT_PATTERN:
-                result &= self.validate_not_pattern(rownum, node2_value.value, prop_or_datatype, pp, "node2")
+                result &= self.validate_not_pattern(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_BLANK:
                 result &= self.validate_blank(rownum, node2_value, prop_or_datatype, pp, "node2")
@@ -1690,29 +1716,29 @@ class PropertyPatternValidator:
 
 
             elif action == PropertyPattern.Action.MINDATE:
-                result &= self.validate_mindate(rownum, prop_or_datatype, pp.datetimes[0], node2_value)
+                result &= self.validate_mindate(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.MAXDATE:
-                result &= self.validate_maxdate(rownum, prop_or_datatype, pp.datetimes[0], node2_value)
+                result &= self.validate_maxdate(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.GREATER_THAN_DATE:
-                result &= self.validate_greater_than_date(rownum, prop_or_datatype, pp.datetimes[0], node2_value)
+                result &= self.validate_greater_than_date(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.LESS_THAN_DATE:
-                result &= self.validate_less_than_date(rownum, prop_or_datatype, pp.datetimes[0], node2_value)
+                result &= self.validate_less_than_date(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.EQUAL_TO_DATE:
-                result &= self.validate_equal_to_date(rownum, prop_or_datatype, pp.datetimes, node2_value)
+                result &= self.validate_equal_to_date(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NOT_EQUAL_TO_DATE:
-                result &= self.validate_not_equal_to_date(rownum, prop_or_datatype, pp.datetimes, node2_value)
+                result &= self.validate_not_equal_to_date(rownum, node2_value, prop_or_datatype, pp, "node2")
 
 
             elif action == PropertyPattern.Action.NODE2_FIELD_OP:
-                result &= self.validate_field_op(rownum, prop_or_datatype, pp.values, node2_value)
+                result &= self.validate_field_op(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_CHAIN:
-                result &= self.validate_chain(rownum, node2_value.value, prop_or_datatype, pp.values)
+                result &= self.validate_chain(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.MINDISTINCT:
                 mindistinct_limit = pp.intval
@@ -1781,13 +1807,13 @@ class PropertyPatternValidator:
             action: PropertyPattern.Action = pp.action
 
             if action == PropertyPattern.Action.ID_CHAIN:
-                result &= self.validate_chain(rownum, id_value.value, prop_or_datatype, pp.values)
+                result &= self.validate_chain(rownum, id_value, prop_or_datatype, pp, "id")
 
             elif action == PropertyPattern.Action.ID_PATTERN:
-                result &= self.validate_pattern(rownum, id_value.value, prop_or_datatype, pp, "id")
+                result &= self.validate_pattern(rownum, id_value, prop_or_datatype, pp, "id")
 
             elif action == PropertyPattern.Action.ID_NOT_PATTERN:
-                result &= self.validate_not_pattern(rownum, id_value.value, prop_or_datatype, pp, "id")
+                result &= self.validate_not_pattern(rownum, id_value, prop_or_datatype, pp, "id")
 
             elif action == PropertyPattern.Action.ID_BLANK:
                 result &= self.validate_blank(rownum, id_value, prop_or_datatype, pp, "id")
@@ -1956,7 +1982,7 @@ class PropertyPatternValidator:
                     self.grouse("Row %d: rejecting property '%s' based on '%s'." % (rownum, row[self.label_idx], prop_or_datatype))
 
                 elif action == PropertyPattern.Action.LABEL_PATTERN:
-                    result &= self.validate_pattern(rownum, row[self.label_idx], prop_or_datatype, pp, "label")
+                    result &= self.validate_pattern_string(rownum, row[self.label_idx], prop_or_datatype, pp, "label")
 
         if self.pps.do_occurs or len(lists.node1_patterns) > 0:
             result &= self.validate_node1(rownum, row[self.node1_idx], prop_or_datatype, orig_prop, lists.node1_patterns, lists.node1_allow_list)
