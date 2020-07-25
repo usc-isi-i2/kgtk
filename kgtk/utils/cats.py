@@ -3,6 +3,7 @@ Different methods for concatenating a set of files and sending the result
 to an output file.
 """
 
+import platform
 import os
 import sys
 import time
@@ -13,6 +14,9 @@ def python_cat(infiles: typing.List[str],
                remove: bool=False,
                error_file: typing.TextIO=sys.stderr,
                verbose: bool=False):
+    """
+    This is very plain Python, except for the os.remove() call.
+    """
     start_time: float = 0
     if verbose:
         print('Using python_cat.', file=error_file, flush=True)
@@ -74,6 +78,11 @@ def sendfile_cat(infiles: typing.List[str],
                  preremove: bool=True,
                  error_file: typing.TextIO=sys.stderr,
                  verbose: bool=False):
+    """
+    Use the superfast sendfile method to copy file data. This works on Linux.
+    It won't work on MacOS because sendfile will send only to a socket on that
+    operating system. Sendfile isn't implemented at all on Python for Windows.
+    """
     start_time: float = 0
     if verbose:
         print('Using sendfile_cat.', file=error_file, flush=True)
@@ -82,6 +91,11 @@ def sendfile_cat(infiles: typing.List[str],
     if preremove:
         try:
             # This can be faster then truncating an existing file.
+            #
+            # TODO: We might get even better performance if we
+            # removed existing output files on a thread before the start of
+            # whatever we are doing. We'd have to wait for the thread to
+            # complete before we start to write the new files.
             os.remove(outfile)
         except FileNotFoundError:
             pass
@@ -124,9 +138,9 @@ def platform_cat(infiles: typing.List[str],
                  error_file: typing.TextIO=sys.stderr,
                  verbose: bool=False):
     """
-    On a POSIX operating system, use sendfile_cat.  Othersise, use a plainer Python version.
+    On Linux, use sendfile_cat.  Otherwise, use a plainer Python version.
     """
-    if os.name == 'posix' and not use_python_cat:
+    if platform.system() == 'Linux' and not use_python_cat:
         sendfile_cat(infiles, outfile, remove=remove, error_file=error_file, verbose=verbose)
     else:
         python_cat(infiles, outfile, remove=remove, error_file=error_file, verbose=verbose)
