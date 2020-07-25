@@ -19,3 +19,6 @@ precommit:
 clean-build:
 	rm -rf kgtk*.egg-info
 	python setup.py clean --all
+
+update-version:
+	python3 kgtk/utils/updateversion.py --show-changes=True $(FILES)
