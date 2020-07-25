@@ -967,7 +967,7 @@ class PropertyPatternValidator:
     complaints: 'PropertyPatternValidator.COMPLAINT_LIST_TYPE' = attr.ib(factory=list)
 
     action_dispatcher: typing.MutableMapping[PropertyPattern.Action,
-                                             typing.Callable[[int, KgtkValue, str, PropertyPattern, str], None]] = attr.ib(factory=dict)
+                                             typing.Callable[[int, KgtkValue, str, PropertyPattern, str], bool]] = attr.ib(factory=dict)
 
     @classmethod
     def new(cls,
@@ -1565,37 +1565,6 @@ class PropertyPatternValidator:
 
         return self.validate_node1_value(rownum, node1_value, prop_or_datatype, orig_prop, node1_patterns, node1_allow_list)
 
-    def setup_action_dispatch(self):
-        self.action_dispatcher[PropertyPattern.Action.NODE1_TYPE] = self.validate_type
-        self.action_dispatcher[PropertyPattern.Action.NODE1_IS_VALID] = self.validate_valid
-        self.action_dispatcher[PropertyPattern.Action.NODE1_VALUES] = self.validate_value
-        self.action_dispatcher[PropertyPattern.Action.NODE1_PATTERN] = self.validate_pattern
-
-        self.action_dispatcher[PropertyPattern.Action.NODE2_TYPE] = self.validate_type
-        self.action_dispatcher[PropertyPattern.Action.NODE2_NOT_TYPE] = self.validate_not_type
-        self.action_dispatcher[PropertyPattern.Action.NODE2_IS_VALID] = self.validate_valid
-        self.action_dispatcher[PropertyPattern.Action.NODE2_VALUES] = self.validate_value
-        self.action_dispatcher[PropertyPattern.Action.NODE2_NOT_VALUES] = self.validate_not_value
-        self.action_dispatcher[PropertyPattern.Action.NODE2_PATTERN] = self.validate_pattern
-        self.action_dispatcher[PropertyPattern.Action.NODE2_NOT_PATTERN] = self.validate_not_pattern
-        self.action_dispatcher[PropertyPattern.Action.NODE2_BLANK] = self.validate_blank
-        self.action_dispatcher[PropertyPattern.Action.NODE2_NOT_BLANK] = self.validate_not_blank
-        self.action_dispatcher[PropertyPattern.Action.MINVAL] = self.validate_minval
-        self.action_dispatcher[PropertyPattern.Action.MAXVAL] = self.validate_maxval
-        self.action_dispatcher[PropertyPattern.Action.GREATER_THAN] = self.validate_greater_than
-        self.action_dispatcher[PropertyPattern.Action.LESS_THAN] = self.validate_less_than
-        self.action_dispatcher[PropertyPattern.Action.EQUAL_TO] = self.validate_equal_to
-        self.action_dispatcher[PropertyPattern.Action.NOT_EQUAL_TO] = self.validate_not_equal_to
-        self.action_dispatcher[PropertyPattern.Action.MINDATE] = self.validate_mindate
-        self.action_dispatcher[PropertyPattern.Action.MAXDATE] = self.validate_maxdate
-        self.action_dispatcher[PropertyPattern.Action.GREATER_THAN_DATE] = self.validate_greater_than_date
-        self.action_dispatcher[PropertyPattern.Action.LESS_THAN_DATE] = self.validate_less_than_date
-        self.action_dispatcher[PropertyPattern.Action.EQUAL_TO_DATE] = self.validate_equal_to_date
-        self.action_dispatcher[PropertyPattern.Action.NOT_EQUAL_TO_DATE] = self.validate_not_equal_to_date
-        self.action_dispatcher[PropertyPattern.Action.NODE2_FIELD_OP] = self.validate_field_op
-        self.action_dispatcher[PropertyPattern.Action.NODE2_CHAIN] = self.validate_chain
-        
-
     def validate_node1_value(self,
                              rownum: int,
                              node1_value: KgtkValue,
@@ -1623,9 +1592,9 @@ class PropertyPatternValidator:
         pp: PropertyPattern
         for pp in node1_patterns:
             action: PropertyPattern.Action = pp.action
-            action_method:  typing.Optional[typing.Callable[[int, KgtkValue, str, PropertyPattern, str], None]] = self.action_dispatcher.get(action)
+            action_method:  typing.Optional[typing.Callable[[int, KgtkValue, str, PropertyPattern, str], bool]] = self.action_dispatcher.get(action)
             if action_method is not None:
-                action_method(rownum, node2_value, prop_or_datatype, pp, "node2")
+                result &= action_method(rownum, node1_value, prop_or_datatype, pp, "node1")
 
             elif action == PropertyPattern.Action.MINOCCURS:
                 minoccurs_limit = pp.intval
@@ -1695,9 +1664,9 @@ class PropertyPatternValidator:
         pp: PropertyPattern
         for pp in node2_patterns:
             action: PropertyPattern.Action = pp.action
-            action_method:  typing.Optional[typing.Callable[[int, KgtkValue, str, PropertyPattern, str], None]] = self.action_dispatcher.get(action)
+            action_method:  typing.Optional[typing.Callable[[int, KgtkValue, str, PropertyPattern, str], bool]] = self.action_dispatcher.get(action)
             if action_method is not None:
-                action_method(rownum, node2_value, prop_or_datatype, pp, "node2")
+                result &= action_method(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.MINDISTINCT:
                 mindistinct_limit = pp.intval
@@ -1801,9 +1770,9 @@ class PropertyPatternValidator:
         pp: PropertyPattern
         for pp in id_patterns:
             action: PropertyPattern.Action = pp.action
-            action_method:  typing.Optional[typing.Callable[[int, KgtkValue, str, PropertyPattern, str], None]] = self.action_dispatcher.get(action)
+            action_method:  typing.Optional[typing.Callable[[int, KgtkValue, str, PropertyPattern, str], bool]] = self.action_dispatcher.get(action)
             if action_method is not None:
-                action_method(rownum, node2_value, prop_or_datatype, pp, "node2")
+                result &= action_method(rownum, id_value, prop_or_datatype, pp, "id")
 
         return result
 
