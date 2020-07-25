@@ -1118,8 +1118,19 @@ class PropertyPatternValidator:
         self.grouse("Row %d: the %s value '%s' matches the exclusion %s pattern(s) for %s" % (rownum, who, item, who, prop_or_datatype))
         return False
 
-    def validate_not_blank(self, rownum: int, value: KgtkValue, prop_or_datatype: str, truth: bool, who: str)->bool:
-        if truth:
+    def validate_blank(self, rownum: int, value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        if pp.truth:
+            if not value.is_empty():
+                self.grouse("Row %d: the %s value '%s' is not blank for %s" % (rownum, who, value.value, prop_or_datatype,))
+                return False
+        else:
+            if value.is_empty():
+                self.grouse("Row %d: the %s value '%s' is blank for %s" % (rownum, who, value.value, prop_or_datatype,))
+                return False
+        return True        
+
+    def validate_not_blank(self, rownum: int, value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
+        if pp.truth:
             if value.is_empty():
                 self.grouse("Row %d: the %s value '%s' is blank for %s" % (rownum, who, value.value, prop_or_datatype,))
                 return False
@@ -1140,7 +1151,7 @@ class PropertyPatternValidator:
                 return False
         return True        
 
-    def validate_minval(self, rownum: int, prop_or_datatype: str, minval: float, node2_value: KgtkValue)->bool:
+    def validate_minval(self, rownum: int,  node2_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if not node2_value.is_number_or_quantity(validate=True):
             return False
 
@@ -1151,7 +1162,7 @@ class PropertyPatternValidator:
             return False
         number: float = float(node2_value.fields.number)
 
-        return self.validate_minval_number(rownum, prop_or_datatype, minval, number)
+        return self.validate_minval_number(rownum, prop_or_datatype, pp.numbers[0], number)
 
     def validate_minval_number(self, rownum: int, prop_or_datatype: str, minval: float, number: float)->bool:
         if number < minval:
@@ -1159,7 +1170,7 @@ class PropertyPatternValidator:
             return False
         return True
 
-    def validate_maxval(self, rownum: int, prop_or_datatype: str, maxval: float, node2_value: KgtkValue)->bool:
+    def validate_maxval(self, rownum: int, node2_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if not node2_value.is_number_or_quantity(validate=True):
             return False
 
@@ -1170,7 +1181,7 @@ class PropertyPatternValidator:
             return False
         number: float = float(node2_value.fields.number)
 
-        return self.validate_maxval_number(rownum, prop_or_datatype, maxval, number)
+        return self.validate_maxval_number(rownum, prop_or_datatype, pp.numbers[0], number)
 
     def validate_maxval_number(self, rownum: int, prop_or_datatype: str, maxval: float, number: float)->bool:
         if number > maxval:
@@ -1178,7 +1189,7 @@ class PropertyPatternValidator:
             return False
         return True
 
-    def validate_greater_than(self, rownum: int, prop_or_datatype: str, minval: float, node2_value: KgtkValue)->bool:
+    def validate_greater_than(self, rownum: int, node2_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if not node2_value.is_number_or_quantity(validate=True):
             return False
 
@@ -1188,7 +1199,7 @@ class PropertyPatternValidator:
         if node2_value.fields.number is None:
             return False
         number: float = float(node2_value.fields.number)
-        return self.validate_greater_than_number(rownum, prop_or_datatype, minval, number)
+        return self.validate_greater_than_number(rownum, prop_or_datatype, pp.numbers[0], number)
 
     def validate_greater_than_number(self, rownum: int, prop_or_datatype: str, minval: float, number: float)->bool:
         if number <= minval:
@@ -1196,7 +1207,7 @@ class PropertyPatternValidator:
             return False
         return True
 
-    def validate_less_than(self, rownum: int, prop_or_datatype: str, maxval: float, node2_value: KgtkValue)->bool:
+    def validate_less_than(self, rownum: int, node2_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if not node2_value.is_number_or_quantity(validate=True):
             return True
 
@@ -1207,7 +1218,7 @@ class PropertyPatternValidator:
             return True
 
         number: float = float(node2_value.fields.number)
-        return self.validate_less_than_number(rownum, prop_or_datatype, maxval, number)
+        return self.validate_less_than_number(rownum, prop_or_datatype, pp.numbers[0], number)
 
     def validate_less_than_number(self, rownum: int, prop_or_datatype: str, maxval: float, number: float)->bool:
         if number >= maxval:
@@ -1215,7 +1226,7 @@ class PropertyPatternValidator:
             return False
         return True
 
-    def validate_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
+    def validate_equal_to(self, rownum: int, node2_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if not node2_value.is_number_or_quantity(validate=True):
             self.grouse("Row %d: prop_or_datatype %s value %f is not a number or quantity." % (rownum, prop_or_datatype, number))
             return False
@@ -1229,7 +1240,7 @@ class PropertyPatternValidator:
             return False
 
         number: float = float(node2_value.fields.number)
-        return self.validate_equal_to_number(rownum, prop_or_datatype, value_list, number)
+        return self.validate_equal_to_number(rownum, prop_or_datatype, pp.numbers, number)
 
     def validate_equal_to_number(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], number: float)->bool:
         value: float
@@ -1240,7 +1251,7 @@ class PropertyPatternValidator:
         self.grouse("Row %d: prop_or_datatype %s value %f is not equal to %s." % (rownum, prop_or_datatype, number, ", ".join(["%f" % a for a in value_list])))
         return False
 
-    def validate_not_equal_to(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], node2_value: KgtkValue)->bool:
+    def validate_not_equal_to(self, rownum: int, node2_value: KgtkValue, prop_or_datatype: str, pp: PropertyPattern, who: str)->bool:
         if not node2_value.is_number_or_quantity(validate=True):
             self.grouse("Row %d: prop_or_datatype %s value %f is not a number or quantity." % (rownum, prop_or_datatype, number))
             return False
@@ -1254,7 +1265,7 @@ class PropertyPatternValidator:
             return False
 
         number: float = float(node2_value.fields.number)
-        return self.validate_not_equal_to_number(rownum, prop_or_datatype, value_list, number)
+        return self.validate_not_equal_to_number(rownum, prop_or_datatype, pp.numbers, number)
 
     def validate_not_equal_to_number(self, rownum: int, prop_or_datatype: str, value_list: typing.List[float], number: float)->bool:
         value: float
@@ -1654,28 +1665,28 @@ class PropertyPatternValidator:
                 result &= self.validate_not_pattern(rownum, node2_value.value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_BLANK:
-                result &= self.validate_not_blank(rownum, node2_value, prop_or_datatype, pp.truth, "node2")
+                result &= self.validate_blank(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NODE2_NOT_BLANK:
-                result &= self.validate_not_blank(rownum, node2_value, prop_or_datatype, pp.truth, "node2")
+                result &= self.validate_not_blank(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.MINVAL:
-                result &= self.validate_minval(rownum, prop_or_datatype, pp.numbers[0], node2_value)
+                result &= self.validate_minval(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.MAXVAL:
-                result &= self.validate_maxval(rownum, prop_or_datatype, pp.numbers[0], node2_value)
+                result &= self.validate_maxval(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.GREATER_THAN:
-                result &= self.validate_greater_than(rownum, prop_or_datatype, pp.numbers[0], node2_value)
+                result &= self.validate_greater_than(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.LESS_THAN:
-                result &= self.validate_less_than(rownum, prop_or_datatype, pp.numbers[0], node2_value)
+                result &= self.validate_less_than(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.EQUAL_TO:
-                result &= self.validate_equal_to(rownum, prop_or_datatype, pp.numbers, node2_value)
+                result &= self.validate_equal_to(rownum, node2_value, prop_or_datatype, pp, "node2")
 
             elif action == PropertyPattern.Action.NOT_EQUAL_TO:
-                result &= self.validate_not_equal_to(rownum, prop_or_datatype, pp.numbers, node2_value)
+                result &= self.validate_not_equal_to(rownum, node2_value, prop_or_datatype, pp, "node2")
 
 
             elif action == PropertyPattern.Action.MINDATE:
@@ -1779,10 +1790,10 @@ class PropertyPatternValidator:
                 result &= self.validate_not_pattern(rownum, id_value.value, prop_or_datatype, pp, "id")
 
             elif action == PropertyPattern.Action.ID_BLANK:
-                result &= self.validate_not_blank(rownum, id_value, prop_or_datatype, not pp.truth, "id")
+                result &= self.validate_blank(rownum, id_value, prop_or_datatype, pp, "id")
 
             elif action == PropertyPattern.Action.ID_NOT_BLANK:
-                result &= self.validate_not_blank(rownum, id_value, prop_or_datatype, pp.truth, "id")
+                result &= self.validate_not_blank(rownum, id_value, prop_or_datatype, pp, "id")
 
         return result
 
