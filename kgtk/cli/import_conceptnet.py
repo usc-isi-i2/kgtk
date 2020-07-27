@@ -80,12 +80,16 @@ def run(input_file: KGTKFiles, english_only):
             'has a': Template('What belongs to $node1?'),
             'is a': Template('What is a $node1?'),
             'form of': Template('What is $node1 a form of?'),
-            'related to': Template('What is $node1 related to?')
+            'related to': Template('What is $node1 related to?'),
+            'entails': Template('What is entailed by $node1?'),
+            'part of': Template('What is $node1 a part of?'),
+            'instance of': Template('What is a $node1?')
             }
         if label in t.keys():
             return t[label]
         else:
-            return None
+            return Template('What is the %s of $node1?' % label)
+            #return None
 
     def make_question(node1, label, node2):
         t=get_template(label)
