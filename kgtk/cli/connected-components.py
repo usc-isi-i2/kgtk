@@ -48,7 +48,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         default=ConnectedComponents.DEFAULT_CLUSTER_NAME_SEPARATOR)
 
     parser.add_argument("--cluster-name-prefix", dest="cluster_name_prefix",
-                        help="Specify the prefix to be used in the prefixed cluster name methods. (default=%(default)s)",
+                        help="Specify the prefix to be used in the prefixed and hash cluster name methods. (default=%(default)s)",
                         default=ConnectedComponents.DEFAULT_CLUSTER_NAME_PREFIX)
 
     parser.add_argument("--cluster-name-zfill", dest="cluster_name_zfill",
