@@ -4,8 +4,7 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-
+from kgtk.gt.connected_components import ConnectedComponents
 
 def parser():
     return {
@@ -21,13 +20,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.enumnameaction import EnumNameAction
+
     _expert: bool = parsed_shared_args._expert
 
     parser.add_input_file(positional=True, who="The KGTK file to find connected components in.")
     parser.add_output_file()
 
-    parser.add_argument("--no-header", action="store_true", dest="no_header",
-                        help="Specify if the input file does not have a header, default FALSE")
     parser.add_argument("--properties", action="store", type=str, dest="properties",
                         help=' A comma separated list of properties to traverse while finding connected components, '
                              'by default all properties will be considered',
@@ -38,8 +38,29 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="Treat graph as directed or not, independent of its actual directionality.")
 
 
-    # CMR: The folowing options aren't used.  Is the intent to support them, or
-    # was this cut-and-paste overkill?
+    parser.add_argument("--cluster-name-method", dest="cluster_name_method",
+                        help="Determine the naming method for clusters. (default=%(default)s)",
+                        type=ConnectedComponents.Method, action=EnumNameAction,
+                        default=ConnectedComponents.DEFAULT_CLUSTER_NAME_METHOD)
+    
+    parser.add_argument("--cluster-name-separator", dest="cluster_name_separator",
+                        help="Specify the separator to be used in cat and hash cluster name methods. (default=%(default)s)",
+                        default=ConnectedComponents.DEFAULT_CLUSTER_NAME_SEPARATOR)
+
+    parser.add_argument("--cluster-name-prefix", dest="cluster_name_prefix",
+                        help="Specify the prefix to be used in the prefixed cluster name methods. (default=%(default)s)",
+                        default=ConnectedComponents.DEFAULT_CLUSTER_NAME_PREFIX)
+
+    parser.add_argument("--cluster-name-zfill", dest="cluster_name_zfill",
+                        help="Specify the zfill to be used in the numbered and prefixed cluster name methods. (default=%(default)s)",
+                        default=ConnectedComponents.DEFAULT_CLUSTER_NAME_ZFILL)
+
+    parser.add_argument("--minimum-cluster-size", dest="minimum_cluster_size",
+                        help="Specify the minimum cluster size. (default=%(default)s)",
+                        default=ConnectedComponents.DEFAULT_MINIMUM_CLUSTER_SIZE)
+
+
+    # CMR: The folowing options aren't used.  Is the intent to support them?
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
@@ -48,13 +69,19 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
-        no_header: bool = False,
+
         properties: str = '',
         undirected: bool = False,
         strong: bool = False,
+
+        cluster_name_method: ConnectedComponents.Method = ConnectedComponents.DEFAULT_CLUSTER_NAME_METHOD,
+        cluster_name_separator: str = ConnectedComponents.DEFAULT_CLUSTER_NAME_SEPARATOR,
+        cluster_name_prefix: str = ConnectedComponents.DEFAULT_CLUSTER_NAME_PREFIX,
+        cluster_name_zfill: int = ConnectedComponents.DEFAULT_CLUSTER_NAME_ZFILL,
+        minimum_cluster_size: int = ConnectedComponents.DEFAULT_MINIMUM_CLUSTER_SIZE,
+
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
-    from kgtk.gt.connected_components import ConnectedComponents
     from kgtk.exceptions import KGTKException
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
@@ -62,10 +89,15 @@ def run(input_file: KGTKFiles,
 
     cc: ConnectedComponents = ConnectedComponents(input_file_path=input_kgtk_file,
                                                   output_file_path=output_kgtk_file,
-                                                  no_header=no_header,
                                                   properties=properties,
                                                   undirected=undirected,
-                                                  strong=strong)
+                                                  strong=strong,
+                                                  cluster_name_method=cluster_name_method,
+                                                  cluster_name_separator=cluster_name_separator,
+                                                  cluster_name_prefix=cluster_name_prefix,
+                                                  cluster_name_zfill=cluster_name_zfill,
+                                                  minimum_cluster_size=minimum_cluster_size,
+    )
 
     try:
         cc.process()
