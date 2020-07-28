@@ -47,12 +47,6 @@ class ConnectedComponents(KgtkFormat):
         return self.get_edge_key_columns(kr, who)
 
     def process(self):
-        if str(self.input_file_path) == "-":
-            # TODO: Copy stdin to a temporary file, then pass the temporary
-            # file to KgtkReader and graph_tool.load_graph_from_csv(...).
-            # When done, delete the temporary file.
-            raise ValueError("connected_components: stdin is not supported.")
-
         input_kr: KgtkReader = KgtkReader.open(self.input_file_path,
                                                error_file=self.error_file,
                                                who="input",
