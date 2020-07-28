@@ -1,8 +1,11 @@
-import sys
 import attr
-import typing
+from enum import Enum
 from pathlib import Path
+import sys
+import typing
+
 from graph_tool.util import find_edge
+
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkwriter import KgtkWriter
 from graph_tool.topology import label_components
@@ -12,15 +15,36 @@ from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 
 @attr.s(slots=True, frozen=True)
 class ConnectedComponents(KgtkFormat):
-    input_file_path: typing.Optional[Path] = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    class Method(Enum):
+        CAT = "cat"              # Concatenate all entity names
+        HASH = "hash"            # shortuuid of the concatenated value
+        FIRST = "first"          # first value seen (unstable)
+        LAST = "last"            # last value seen (unstable)
+        SHORTEST = "shortest"    # shortest value seen, then lowest
+        LONGEST = "longest"      # longest value seen, then highest
+        NUMBERED = "numbered"    # numberd value produced by gtaph_tool (may not be dense)
+        PREFIXED = "prefixed"    # prefixed numbered value
+        LOWEST = "lowest"        # lowest value alphabetically
+        HIGHEST = "highest"      # highest value alphabetically
 
-    output_file_path: typing.Optional[Path] = attr.ib(
-        validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
-    no_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    DEFAULT_CLUSTER_NAME_METHOD: Method = Method.HASH
+    DEFAULT_CLUSTER_NAME_SEPARATOR: str = "+"
+    DEFAULT_CLUSTER_NAME_PREFIX: str = "CLUS"
+    DEFAULT_CLUSTER_NAME_ZFILL: int = 4
+    DEFAULT_MINIMUM_CLUSTER_SIZE: int = 2
+
+    input_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
+    
     undirected: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     strong: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     properties: str = attr.ib(validator=attr.validators.instance_of(str), default='')
+
+    cluster_name_method: Method = attr.ib(default=DEFAULT_CLUSTER_NAME_METHOD)
+    cluster_name_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_CLUSTER_NAME_SEPARATOR)
+    cluster_name_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_CLUSTER_NAME_PREFIX)
+    cluster_name_zfill: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_CLUSTER_NAME_ZFILL)
+    minimum_cluster_size: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_MINIMUM_CLUSTER_SIZE)
 
     input_reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
     filter_reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
