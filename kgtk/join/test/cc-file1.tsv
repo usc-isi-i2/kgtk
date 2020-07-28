@@ -4,6 +4,5 @@ Q1	P00_prop1	Q00Albert
 Q1	P00_prop2	Q00A_Einstein
 Q00A_Einstein	label	"Albert Einstein"
 Q00Albert	label	"Albert Einstein"
-Q123	label	"AE"
 Q00A_Einstein	mw:SameAs	Q00Albert
 Q123	mw:SameAs	Q00Albert

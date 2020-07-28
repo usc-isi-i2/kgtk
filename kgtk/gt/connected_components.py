@@ -1,6 +1,9 @@
 import attr
+import base64
 from enum import Enum
+import hashlib
 from pathlib import Path
+import shortuuid # type: ignore
 import sys
 import typing
 
@@ -12,12 +15,11 @@ from graph_tool.topology import label_components
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 
-
 @attr.s(slots=True, frozen=True)
 class ConnectedComponents(KgtkFormat):
     class Method(Enum):
         CAT = "cat"              # Concatenate all entity names
-        HASH = "hash"            # shortuuid of the concatenated value
+        HASH = "hash"            # short hash of the concatenated value
         FIRST = "first"          # first value seen (unstable)
         LAST = "last"            # last value seen (unstable)
         SHORTEST = "shortest"    # shortest value seen, then lowest
@@ -108,8 +110,89 @@ class ConnectedComponents(KgtkFormat):
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
+
+        clusters: typing.MutableMapping[str, typing.List[str]] = dict()
+        cluster_id: str
+        name: str
+
+        v: int
         for v, c in enumerate(comp):
-            ew.write([g.vertex_properties['name'][v], 'connected_component', str(c)])
+            name = g.vertex_properties['name'][v]
+            cluster_id = str(c)
+            if cluster_id not in clusters:
+                clusters[cluster_id] = [ name ]
+            else:
+                clusters[cluster_id].append(name)
+
+        trimmed_clusters: typing.MutableMapping[str, typing.List[str]] = dict()
+        for cluster_id in clusters.keys():
+            if len(clusters[cluster_id]) >= self.minimum_cluster_size:
+                trimmed_clusters[cluster_id] = clusters[cluster_id]
+        
+        named_clusters: typing.MutableMapping[str, typing.List[str]] = self.name_clusters(trimmed_clusters)
+        for cluster_id in sorted(named_clusters.keys()):
+            for name in sorted(named_clusters[cluster_id]):
+                ew.write([name, 'connected_component', cluster_id])
+
+        ew.close()
+
+    def name_clusters(self, clusters: typing.Mapping[str, typing.List[str]],
+    )->typing.Mapping[str, typing.List[str]]:
+        if self.cluster_name_method == ConnectedComponents.Method.NUMBERED:
+            return clusters
+
+        renamed_clusters: typing.MutableMapping[str, typing.List[str]] = dict()
+
+        cluster_id: str
+        for cluster_id in clusters.keys():
+            cluster_names: typing.List[str] = clusters[cluster_id]
+            new_cluster_id: str
+            name: str
+            if self.cluster_name_method == ConnectedComponents.Method.PREFIXED:
+                new_cluster_id = self.cluster_name_prefix + cluster_id.zfill(self.cluster_name_zfill)
+
+            elif self.cluster_name_method == ConnectedComponents.Method.FIRST:
+                new_cluster_id = cluster_names[0]
+
+            elif self.cluster_name_method == ConnectedComponents.Method.LAST:
+                new_cluster_id = cluster_names[-1]
+
+            elif self.cluster_name_method == ConnectedComponents.Method.LOWEST:
+                new_cluster_id = sorted(cluster_names)[0]
+
+            elif self.cluster_name_method == ConnectedComponents.Method.HIGHEST:
+                new_cluster_id = sorted(cluster_names)[-1]
+
+            elif self.cluster_name_method == ConnectedComponents.Method.SHORTEST:
+                new_cluster_id = cluster_names[0]
+                for name in cluster_names:
+                    if len(name) < len(new_cluster_id):
+                        new_cluster_id = name
+                    elif len(name) == len(new_cluster_id):
+                        if name < new_cluster_id:
+                            new_cluster_id = name
+                
+            elif self.cluster_name_method == ConnectedComponents.Method.LONGEST:
+                new_cluster_id = cluster_names[0]
+                for name in cluster_names:
+                    if len(name) > len(new_cluster_id):
+                        new_cluster_id = name
+                    elif len(name) == len(new_cluster_id):
+                        if name > new_cluster_id:
+                            new_cluster_id = name
+
+            elif self.cluster_name_method == ConnectedComponents.Method.CAT:
+                new_cluster_id = self.cluster_name_separator.join(sorted(cluster_names))
+
+            elif self.cluster_name_method == ConnectedComponents.Method.HASH:
+                cat_id: str = self.cluster_name_separator.join(sorted(cluster_names))
+                new_cluster_id = self.cluster_name_prefix + base64.b64encode(hashlib.md5(cat_id.encode()).digest()).decode('utf-8')
+
+            renamed_clusters[new_cluster_id] = cluster_names
+
+        return renamed_clusters
+        
+
 
 def load_graph_from_kgtk(kr, directed=False, eprop_types=None,
                          eprop_names=None, hashed=True, hash_type="string",
