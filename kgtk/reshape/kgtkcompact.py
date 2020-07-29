@@ -329,7 +329,7 @@ class KgtkCompact(KgtkFormat):
             # Add the KGTK node file required column:
             key_idx_list.append(kr.id_column_idx)
 
-        # Append additinal columns to the list of key column indices,
+        # Append additional columns to the list of key column indices,
         # silently removing duplicates, but complaining about unknown names.
         #
         # TODO: warn about duplicates?
