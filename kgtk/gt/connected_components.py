@@ -267,8 +267,10 @@ XSA        List of edge property types to be read from remaining columns (if thi
     else:
         eprops = [g.new_ep(t) for t in eprop_types]
 
+    # name = g.add_edge_list(itertools.chain([line], r), hashed=hashed,
+    #                       hash_type=hash_type, eprops=eprops)
     name = g.add_edge_list(itertools.chain([line], r), hashed=hashed,
-                           hash_type=hash_type, eprops=eprops)
+                           eprops=eprops)
 
     if eprop_names is None and len(first_line) == len(line):
         eprop_names = list(first_line)
