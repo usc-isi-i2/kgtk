@@ -21,7 +21,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-    from kgtk.utils.enumnameaction import EnumNameAction
+    from kgtk.utils.enumnameaction import EnumLowerNameAction
 
     _expert: bool = parsed_shared_args._expert
 
@@ -40,7 +40,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument("--cluster-name-method", dest="cluster_name_method",
                         help="Determine the naming method for clusters. (default=%(default)s)",
-                        type=ConnectedComponents.Method, action=EnumNameAction,
+                        type=ConnectedComponents.Method, action=EnumLowerNameAction,
                         default=ConnectedComponents.DEFAULT_CLUSTER_NAME_METHOD)
     
     parser.add_argument("--cluster-name-separator", dest="cluster_name_separator",
@@ -51,11 +51,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="Specify the prefix to be used in the prefixed and hash cluster name methods. (default=%(default)s)",
                         default=ConnectedComponents.DEFAULT_CLUSTER_NAME_PREFIX)
 
-    parser.add_argument("--cluster-name-zfill", dest="cluster_name_zfill",
+    parser.add_argument("--cluster-name-zfill", dest="cluster_name_zfill", type=int,
                         help="Specify the zfill to be used in the numbered and prefixed cluster name methods. (default=%(default)s)",
                         default=ConnectedComponents.DEFAULT_CLUSTER_NAME_ZFILL)
 
-    parser.add_argument("--minimum-cluster-size", dest="minimum_cluster_size",
+    parser.add_argument("--minimum-cluster-size", dest="minimum_cluster_size", type=int,
                         help="Specify the minimum cluster size. (default=%(default)s)",
                         default=ConnectedComponents.DEFAULT_MINIMUM_CLUSTER_SIZE)
 
