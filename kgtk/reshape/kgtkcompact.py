@@ -1,3 +1,88 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """Copy records from the first KGTK file to the output file,
 compacting lists.
 
@@ -37,6 +122,7 @@ class KgtkCompact(KgtkFormat):
 
     sorted_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     verify_sort: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    lists_in_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
@@ -57,7 +143,7 @@ class KgtkCompact(KgtkFormat):
     output_line_count: int = 0
     current_key: typing.Optional[str] = None
     current_row: typing.Optional[typing.List[str]] = None
-    current_row_lists: typing.Optional[typing.List[typing.List[str]]] = None
+    current_row_lists: typing.Optional[typing.List[typing.Optional[typing.List[str]]]] = None
 
     FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
 
@@ -80,37 +166,91 @@ class KgtkCompact(KgtkFormat):
         # Preallocate the list, this might be more efficient than appending to it..
         self.current_row = [None] * len(self.current_row_lists)
         idx: int
-        item_list: typing.list[str]
+        item_list: typing.Optional[typing.List[str]]
         for idx, item_list in enumerate(self.current_row_lists):
-            self.current_row[idx] = KgtkValue.join_unique_list(item_list)
+            if item_list is None:
+                self.current_row[idx] = ""
+            else:
+                # We don't need to use KgtkValue.join_unique_list(item_list)
+                # because self.merge_row(...) and self.expand_row(...) ensure that
+                # there are no duplicates.
+                #
+                # TODO: run timing studies to determine which approach is more efficient.
+                self.current_row[idx] = KgtkValue.join_sorted_list(item_list)
         self.current_row_lists = None
 
-    def expand_row(self):
-        # Expand the current row to row_lists.
-        if self.current_row is None:
+    def expand_row(self, row: typing.List[str], force: bool = False):
+        if not self.lists_in_input and not force:
+            self.current_row = row # Optimization: leave the row alone if possible.
             return
         
-        self.current_row_lists = [None] * len(self.current_row)
+        # Preallocate the list, this might be more efficient than appending to it..
+        self.current_row_lists = [None] * len(row)
         idx: int
         item: str
-        for idx, item in enumerate(self.current_row):
-            self.current_row_lists[idx] = KgtkValue.split_list(item)
+        for idx, item in enumerate(row):
+            if len(item) == 0:
+                continue # Ignore empty items.
+
+            # Start the new current item list:
+            current_item_list: typing.Optional[typing.List[str]] = None
+
+            # The row item might itself be a list.
+            item2: str
+            for item2 in KgtkValue.split_list(item):
+                if len(item2) == 0:
+                    continue # Ignore empty items
+                
+                if current_item_list is None:
+                    # This is the first item.
+                    current_item_list = [ item2 ]
+                    continue
+                
+                # There might be duplicate items in the row item's list.
+                if item2 not in current_item_list:
+                    current_item_list.append(item2) # Add unique items.
+                    
+            self.current_row_lists[idx] = current_item_list
 
     def merge_row(self,  row: typing.List[str]):
         if self.current_row_lists is None:
-            return
+            if self.current_row is None:
+                # TODO: raise a better error
+                raise ValueError("Inconsistent state 31 in merge_row.")
+            else:
+                # We deferred expanding the previous row, but we must do so
+                # now:
+                self.expand_row(self.current_row, force=True)
+                if self.current_row_lists is None:
+                    # Keep mypy happy by ensuring that self.current_row_lists is not None.
+                    #
+                    # TODO: raise a better error.
+                    raise ValueError("Inconsistent state #2 in merge_row.")
+
         idx: int
         item: str
         for idx, item in enumerate(row):
             if len(item) == 0:
                 continue # Ignore empty items
-            current_item_list: typing.List[str] = self.current_row_lists[idx]
-            if len(current_item_list[0]) == 0:
-                current_item_list[0] = item
-                continue # Replace empty items in the row list.
-            if item in current_item_list:
-                continue # Ignore duplicate items
-            self.current_row_lists[idx].append(item)
+
+            # We will modify the current item list in place!
+            current_item_list: typing.Optional[typing.List[str]] = self.current_row_lists[idx]
+
+            # The row item might itself be a list.
+            item2: str
+            for item2 in KgtkValue.split_list(item):
+                if len(item2) == 0:
+                    continue # Ignore empty items.
+
+                if current_item_list is None:
+                    # This is the first item.
+                    current_item_list = [ item2 ]
+                    self.current_row_lists[idx] = current_item_list
+                    continue
+
+                # There might be duplicate items in the row item's list.
+                if item2 not in current_item_list:
+                    current_item_list.append(item2) # Add unique items.
 
     def process_row(self,
                     input_key: str,
@@ -139,16 +279,12 @@ class KgtkCompact(KgtkFormat):
 
         # Are we starting a new key?
         if self.current_key is None:
-            # Save the new row as the current row.  If the next row
-            # doesn't have the same input key, we'll write this
-            # row out with a minimum of handling.
+            # Save the new row.
             self.current_key = input_key
-            self.current_row = row
-            return
-
-        if self.current_row_lists is None:
-            self.expand_row()
-        self.merge_row(row)
+            self.expand_row(row)
+        else:
+            # Merge into an existing row.
+            self.merge_row(row)
 
     def process(self):
 
@@ -193,7 +329,7 @@ class KgtkCompact(KgtkFormat):
             # Add the KGTK node file required column:
             key_idx_list.append(kr.id_column_idx)
 
-        # Append additinal columns to the list of key column indixes,
+        # Append additinal columns to the list of key column indices,
         # silently removing duplicates, but complaining about unknown names.
         #
         # TODO: warn about duplicates?
@@ -320,6 +456,10 @@ def main():
                               help="If the input has been presorted, verify its consistency (disable if only pregrouped). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--lists-in-input", dest="lists_in_input",
+                              help="Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
     parser.add_argument(      "--build-id", dest="build_id",
@@ -343,11 +483,12 @@ def main():
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
+        print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
         print("--columns %s" % " ".join(args.key_column_names), file=error_file, flush=True)
         print("--compact-id=%s" % str(args.compact_id), file=error_file, flush=True)
         print("--presorted=%s" % str(args.sorted_input), file=error_file, flush=True)
         print("--verify-sort=%s" % str(args.verify_sort), file=error_file, flush=True)
-        print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
+        print("--lists-in-input=%s" % str(args.lists_in_input), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -359,6 +500,7 @@ def main():
         compact_id=args.compact_id,
         sorted_input=args.sorted_input,
         verify_sort=args.verify_sort,
+        lists_in_input=args.lists_in_input,
         output_file_path=args.output_file_path,
         build_id=args.build_id,
         idbuilder_options=idbuilder_options,

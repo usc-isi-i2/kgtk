@@ -69,6 +69,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="If the input has been presorted, verify its consistency (disable if only pregrouped). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
+    parser.add_argument(      "--lists-in-input", dest="lists_in_input",
+                              help="Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     parser.add_argument(      "--build-id", dest="build_id",
                               help="Build id values in an id column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
@@ -84,6 +88,7 @@ def run(input_file: KGTKFiles,
         compact_id: bool,
         sorted_input: bool,
         verify_sort: bool,
+        lists_in_input: bool,
         build_id: bool,
 
         errors_to_stdout: bool = False,
@@ -116,6 +121,7 @@ def run(input_file: KGTKFiles,
         print("--compact-id=%s" % str(compact_id), file=error_file, flush=True)
         print("--presorted=%s" % str(sorted_input))
         print("--verify-sort=%s" % str(verify_sort), file=error_file, flush=True)
+        print("--lists-in-input=%s" % str(lists_in_input), file=error_file, flush=True)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -129,6 +135,7 @@ def run(input_file: KGTKFiles,
             compact_id=compact_id,
             sorted_input=sorted_input,
             verify_sort=verify_sort,
+            lists_in_input=lists_in_input,
             output_file_path=output_kgtk_file,
             build_id=build_id,
             idbuilder_options=idbuilder_options,
