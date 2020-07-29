@@ -182,10 +182,10 @@ class ConnectedComponents(KgtkFormat):
                             new_cluster_id = name
 
             elif self.cluster_name_method == ConnectedComponents.Method.CAT:
-                new_cluster_id = self.cluster_name_separator.join(sorted(cluster_names))
+                new_cluster_id = self.cluster_name_separator.join(sorted(list(set(cluster_names))))
 
             elif self.cluster_name_method == ConnectedComponents.Method.HASH:
-                cat_id: str = self.cluster_name_separator.join(sorted(cluster_names))
+                cat_id: str = self.cluster_name_separator.join(sorted(list(set(cluster_names))))
                 new_cluster_id = self.cluster_name_prefix + base64.b64encode(hashlib.md5(cat_id.encode()).digest()).decode('utf-8')
 
             renamed_clusters[new_cluster_id] = cluster_names
