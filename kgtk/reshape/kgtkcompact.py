@@ -94,7 +94,7 @@ class KgtkCompact(KgtkFormat):
         idx: int
         item: str
         for idx, item in enumerate(self.current_row):
-            self.current_row_lists[idx] = [item]
+            self.current_row_lists[idx] = KgtkValue.split_list(item)
 
     def merge_row(self,  row: typing.List[str]):
         if self.current_row_lists is None:
