@@ -82,7 +82,7 @@ class KgtkCompact(KgtkFormat):
         idx: int
         item_list: typing.list[str]
         for idx, item_list in enumerate(self.current_row_lists):
-            self.current_row[idx] = KgtkValue.join_sorted_list(item_list)
+            self.current_row[idx] = KgtkValue.join_unique_list(item_list)
         self.current_row_lists = None
 
     def expand_row(self):
