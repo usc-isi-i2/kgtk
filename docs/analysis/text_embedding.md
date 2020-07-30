@@ -142,7 +142,7 @@ If not given, the program will use all of the found properties found for the nod
 ##### --property-value
 If the properties in `has-properties` is a property which need to check for details, specify the edge name here and the system will go further to get the property values of this node instead of use the name of this edge (using template `{property} {value}`) instead of `{property}` to represent this has-property). Default is empty `[]`
 
-For example: For wikidata node `Q41421` (Michael Jordan) `P544` (member of sports team), if specified here, the generated sentence will be `Michael Jordan, ..., has member of sports team Chicago Bulls` instead of `Michael Jordan,..., has member of sports team`. 
+For example: For wikidata node `Q41421` (Michael Jordan) `P54` (member of sports team), if specified here, the generated sentence will be `Michael Jordan, ..., has member of sports team Chicago Bulls` instead of `Michael Jordan,..., has member of sports team`. 
 
 ##### --out-properties
 the property used to record the embedding. If not given, the program will use the edge(property) name as `text_embedding`.

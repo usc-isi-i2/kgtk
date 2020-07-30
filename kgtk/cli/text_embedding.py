@@ -135,6 +135,7 @@ def main(**kwargs):
         import pickle
         from collections import defaultdict
         from kgtk.gt.embedding_utils import EmbeddingVector
+        from pathlib import Path
 
         # get input parameters from kwargs
         output_uri = kwargs.get("output_uri", "")
@@ -226,8 +227,7 @@ def parser():
 
 def add_arguments(parser: KGTKArgumentParser):
     from kgtk.utils.argparsehelpers import optional_bool
-    import sys
-    import argparse
+
     parser.accept_shared_argument('_debug')
 
     # input file
@@ -323,7 +323,7 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument("--query-server", nargs='?', action='store',
                         default="", dest="query_server",
                         help="sparql query endpoint used for test_format input files, default is "
-                             "https://query.wikidata.org/sparql "
+                             "https://query.wikidata.org/sparql"
                         )
 
 
