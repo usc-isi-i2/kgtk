@@ -147,6 +147,7 @@ def main(**kwargs):
         property_labels_files = kwargs.get("property_labels_file_uri", [])
         query_server = kwargs.get("query_server")
         save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
+        need_produce_vector = kwargs.get("need_produce_vector", True)
 
         filename: Path = KGTKArgumentParser.get_input_file(kwargs.get("input_file"))
         input_file = open(filename, "r") if str(filename) != "-" else sys.stdin
@@ -203,7 +204,7 @@ def main(**kwargs):
             # _logger.info("Running {} model on {}".format(each_model_name, input_file_name))
             _logger.info("Running {} model on {}".format(each_model_name, str(filename)))
             process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
-                                      parallel_count=parallel_count)
+                                      parallel_count=parallel_count, need_produce_vector=need_produce_vector)
             process.read_input(input_file=input_file, skip_nodes_set=black_list_set,
                                input_format=input_format, target_properties=sentence_properties,
                                property_labels_dict=property_labels_dict)
@@ -322,8 +323,8 @@ def add_arguments(parser: KGTKArgumentParser):
     # query server
     parser.add_argument("--query-server", nargs='?', action='store',
                         default="", dest="query_server",
-                        help="sparql query endpoint used for test_format input files, default is "
-                             "https://query.wikidata.org/sparql"
+                        help="sparql query endpoint used for test_format input files ONLY, "
+                             "default is https://query.wikidata.org/sparql"
                         )
 
 

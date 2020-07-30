@@ -7,9 +7,15 @@ The input is an edge file sorted by subject.
 ```
 kgtk text-embedding OPTIONS
 ```
+or 
+
+```
+kgtk text-embedding-sentence OPTIONS
+```
+
 Computes embeddings of nodes using properties of nodes. The values are concatenated into sentences defined by a template, and embedded using a pre-trained language model.
 
-The output is an edge file where each node appears once; a user defined property is used to store the embedding, and the value is a string containing the embedding. For example:
+The output is an edge file where each node appears once; a user defined property is used to store the embedding, and the value is a string containing the embedding.
 
 To generate the embeddings, the command first generates a sentence for each node using the properties listed in the label-properties, description-properties, isa-properties and has-properties options. Each sentence is generated using the following template:
 
@@ -18,6 +24,10 @@ To generate the embeddings, the command first generates a sentence for each node
 ```
 
 An example sentence is “Saint David, patron saint of Wales is a human, Catholic priest, Catholic bishop, and has date of death, religion and canonization status”
+
+The function `text-embedding` and `text-embedding-sentence` have the exact same args support. The only difference is `text-embedding` will produce the vectors while `text-embedding-sentence` will produce only the generated sentence which usually it will be faster. 
+
+For embedding sentence quality checking puprose, it will be a good choice to run `text-embedding-sentence` first befor doing further vector experiments.
 
 ```
 subject        predicate        object

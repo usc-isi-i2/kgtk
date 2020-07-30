@@ -21,7 +21,8 @@ from kgtk.exceptions import KGTKException
 
 
 class EmbeddingVector:
-    def __init__(self, model_name=None, query_server=None, cache_config: dict = None, parallel_count=1):
+    def __init__(self, model_name=None, query_server=None, cache_config: dict = None,
+                 parallel_count=1, need_produce_vector: bool = True):
         self._logger = logging.getLogger(__name__)
         if not model_name:
             self.model_name = 'bert-base-nli-mean-tokens'
@@ -51,6 +52,7 @@ class EmbeddingVector:
             self.redis_server = None
         self._parallel_count = int(parallel_count)
         self._logger.debug("Running with {} processes.".format(parallel_count))
+        self.need_produce_vector = need_produce_vector
         self.vectors_map = dict()
         self.node_labels = dict()  # this is used to store {node:label} pairs
         self.candidates = defaultdict(dict)  # this is used to store all node {node:dict()} information
@@ -71,12 +73,11 @@ class EmbeddingVector:
             sentence_embeddings = []
             for each_node, each_sentence in zip(qnodes, sentences):
                 query_cache_key = each_node + each_sentence
-                if self.model_name != "bert-base-wikipedia-sections-mean-tokens":
-                    query_cache_key += self.model_name
+                query_cache_key += self.model_name
                 cache_res = self.redis_server.get(query_cache_key)
                 if cache_res is not None:
                     sentence_embeddings.append(literal_eval(cache_res.decode("utf-8")))
-                    # self._logger.error("{} hit!".format(each_node+each_sentence))
+                    self._logger.debug("{} hit!".format(each_node+each_sentence))
                 else:
                     each_embedding = self.model.encode([each_sentence], show_progress_bar=False)
                     sentence_embeddings.extend(each_embedding)
@@ -299,7 +300,10 @@ class EmbeddingVector:
         node_id = args["node_id"]
         each_node_attributes = args["attribute"]
         concat_sentence = self.attribute_to_sentence(each_node_attributes, node_id)
-        vectors = self.get_sentences_embedding([concat_sentence], [node_id])[0]
+        if self.need_produce_vector:
+            vectors = self.get_sentences_embedding([concat_sentence], [node_id])[0]
+        else:
+            vectors = None
         return {"v_" + node_id: vectors, "c_" + node_id: each_node_attributes}
 
     def _multiprocess_collector(self, data):
@@ -450,7 +454,9 @@ class EmbeddingVector:
 
                         # for multi process
                         if self._parallel_count > 1:
-                            each_arg = {"node_id": current_process_node_id, "attribute": each_node_attributes}
+                            each_arg = {"node_id": current_process_node_id,
+                                        "attribute": each_node_attributes,
+                                        "produce_vector": self.need_produce_vector}
                             pp.add_task(each_arg)
                         # for single process
                         else:
@@ -488,6 +494,7 @@ class EmbeddingVector:
             raise KGTKException("Unknown input format {}".format(input_format))
 
         self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
+
         try:
             file_path = input_file.name
             file_name = file_path[:file_path.rfind(".")]
@@ -560,7 +567,11 @@ class EmbeddingVector:
         """
             main function to get the vector representations of the descriptions
         """
-        if self._parallel_count == 1:
+        if self._parallel_count > 1 or not self.need_produce_vector:
+            # Skip get vector function because we already get them or not needed to do that
+            pass
+
+        else:
             start_all = time.time()
             self._logger.info("Now generating embedding vector.")
             for q_node, each_item in tqdm(self.candidates.items()):
@@ -571,9 +582,6 @@ class EmbeddingVector:
                 vectors = self.get_sentences_embedding([sentence], [q_node])
                 self.vectors_map[q_node] = vectors[0]
             self._logger.info("Totally used {} seconds.".format(str(time.time() - start_all)))
-        else:
-            # Skip get vector function because we already get them
-            pass
 
     def dump_vectors(self, file_name, type_=None):
         if file_name.endswith(".pkl"):
@@ -607,16 +615,21 @@ class EmbeddingVector:
         self._logger.debug("START printing the vectors")
         if output_format == "kgtk_format":
             print("node\tproperty\tvalue\n", end="")
-            all_nodes = list(self.vectors_map.keys())
-            ten_percent_len = math.ceil(len(vectors) / 10)
-            for i, each_vector in enumerate(vectors):
+            all_nodes = list(self.candidates.keys())
+            ten_percent_len = math.ceil(len(self.candidates) / 10)
+
+            for i, each_node in enumerate(self.candidates.keys()):
                 if i % ten_percent_len == 0:
                     percent = i / ten_percent_len * 10
                     self._logger.debug("Finished {}%".format(percent))
-                print("{}\t{}\t".format(all_nodes[i], output_properties), end="")
-                for each_dimension in each_vector[:-1]:
-                    print(str(each_dimension) + ",", end="")
-                print(str(each_vector[-1]))
+
+                if self.need_produce_vector:
+                    each_vector = vectors[i]
+                    print("{}\t{}\t".format(all_nodes[i], output_properties), end="")
+                    for each_dimension in each_vector[:-1]:
+                        print(str(each_dimension) + ",", end="")
+                    print(str(each_vector[-1]))
+
                 if save_embedding_sentence:
                     print("{}\t{}\t{}".format(all_nodes[i], "embedding_sentence", self.candidates[all_nodes[i]]["sentence"]))
 
