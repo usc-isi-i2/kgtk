@@ -55,6 +55,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="The suffix used for lifts. (default=%(default)s).",
                               default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
 
+    parser.add_argument(      "--deduplicate-labels", dest="deduplicate_labels",
+                              help="When True, deduplicate the labels. " +
+                              "Note: When new labels are written to a new label file, only theose labels labels will be deduplicated. " +
+                              "When labels are written to the output file, existing labels in the input file are deduplicated as well. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NODE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -67,6 +73,7 @@ def run(input_file: KGTKFiles,
         columns_to_remove: typing.Optional[typing.List[str]] = None,
         label_value: str = KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE,
         lift_suffix: str = KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX,
+        deduplicate_labels: bool = True,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -103,6 +110,7 @@ def run(input_file: KGTKFiles,
             print("--columns-to-lower=%s" % " ".join(columns_to_remove), file=error_file)
         print("--label-value=%s" % label_value, file=error_file)
         print("--lift-suffix=%s" % lift_suffix, file=error_file)
+        print("--deduplicate-labels=%s" % deduplicate_labels, file=error_file)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -123,6 +131,14 @@ def run(input_file: KGTKFiles,
         # Map the index of a column being removed to the index of the base column that supplies its node1 value.
         lower_map: typing.MutableMapping[int, int] = dict()
 
+        # These columns will never be removed:
+        key_column_idxs: typing.Set[int] = set((kr.node1_column_idx,
+                                                kr.label_column_idx,
+                                                kr.node2_column_idx,
+                                                kr.id_column_idx))
+        key_column_idxs.discard(-1)
+        key_column_names: typing.Set[str] = set((kr.column_names[idx] for idx in key_column_idxs))
+
         base_name: str
         column_name: str
         idx: int
@@ -137,42 +153,51 @@ def run(input_file: KGTKFiles,
             for idx, column_name in enumerate(columns_to_remove):
                 base_name = base_columns[idx]
                 if column_name not in kr.column_names:
-                    raise KGTKException("COlumn %s is an unknown column, cannot remove it." % repr(column_name))
+                    raise KGTKException("Column %s is an unknown column, cannot remove it." % repr(column_name))
+
+                if column_name in key_column_names:
+                    raise KGTKException("Column %s is a key column, cannot remove it." % repr(column_name))
+
                 if base_name not in kr.column_names:
                     raise KGTKException("For column name %s, base name %s is unknown" % (repr(column_name), repr(base_name)))
+
                 lower_map[kr.column_name_map[column_name]] = kr.column_name_map[base_name]
 
         elif columns_to_remove is not None and len(columns_to_remove) > 0 and (base_columns is None or len(base_columns) == 0):
             # Pattern 2: len(columns_to_remove) > 0 and len(base_columns) == 0
             # Each column name is stripped of the lift suffix to determine the base name.
+            if len(lift_suffix) == 0:
+                raise KGTKException("The --lift-suffix must not be empty.")
+
             for idx, column_name in enumerate(columns_to_remove):
                 if column_name not in kr.column_names:
-                    raise KGTKException("COlumn %s is an unknown column, cannot remove it." % repr(column_name))
+                    raise KGTKException("Column %s is an unknown column, cannot remove it." % repr(column_name))
+
+                if column_name in key_column_names:
+                    raise KGTKException("Column %s is a key column, cannot remove it." % repr(column_name))
+
                 if not column_name.endswith(lift_suffix):
-                    raise KGTKException("Unable to parse column name %s." % repr(column_name))
+                   raise KGTKException("Unable to parse column name %s." % repr(column_name))
+
                 base_name = column_name[:-len(lift_suffix)]
+
                 if base_name not in kr.column_names:
                     raise KGTKException("For column name %s, base name %s is not known" % (repr(column_name), repr(base_name)))
+
                 lower_map[kr.column_name_map[column_name]] = kr.column_name_map[base_name]
 
         elif columns_to_remove is None or len(columns_to_remove) == 0:
             # Pattern 3: len(columns_to_remove) == 0.
+            if len(lift_suffix) == 0:
+                raise KGTKException("The --lift-suffix must not be empty.")
+
             if base_columns is None or len(base_columns) == 0:
-                # The base name list wasn't supplied.  Use [node1, label, node2]
-                base_columns = list()
-                base_columns.append(kr.get_node1_column_actual_name())
-                base_columns.append(kr.get_label_column_actual_name())
-                base_columns.append(kr.get_node2_column_actual_name())
+                # The base name list wasn't supplied.  Use [node1, label, node2, id]
+                base_columns = list(key_column_names)
 
             for idx, column_name in enumerate(kr.column_names):
                 # Skip the node1, label, node12, and id columns
-                if idx == kr.node1_column_idx:
-                    continue
-                if idx == kr.label_column_idx:
-                    continue
-                if idx == kr.node2_column_idx:
-                    continue
-                if idx == kr.id_column_idx:
+                if idx in key_column_idxs:
                     continue
 
                 # Does this column match a lifting pattern?
@@ -222,6 +247,19 @@ def run(input_file: KGTKFiles,
                                   very_verbose=very_verbose)
                       
 
+        # Optionally deduplicate the labels
+        #  set(node1_value + KgtkFormat.SEPARATOR + node2_value)
+        label_set: typing.Set[str] = set()
+        label_key: str
+
+        # If labels will be written to the output file and deduplication is enabled:
+        check_existing_labels: bool = \
+            deduplicate_labels and \
+            lkw is None and \
+            kr.node1_column_idx >= 0 and \
+            kr.label_column_idx >= 0 and \
+            kr.node2_column_idx >= 0
+
         input_line_count: int = 0
         output_line_count: int = 0
         label_line_count: int = 0
@@ -229,37 +267,52 @@ def run(input_file: KGTKFiles,
         for row in kr:
             input_line_count += 1
 
+            if check_existing_labels and row[kr.label_column_idx] == label_value:
+                label_key = row[kr.node1_column_idx] + KgtkFormat.COLUMN_SEPARATOR + row[kr.node2_column_idx]
+                if label_key in label_set:
+                    continue
+                else:
+                    label_set.add(label_key)
+
             kw.write(row, shuffle_list=shuffle_list)
             output_line_count += 1
 
             column_idx: int
             for column_idx in lower_map.keys():
                 node1_value: str = row[lower_map[column_idx]]
-                node2_value: str = row[column_idx]
-
                 if len(node1_value) == 0:
                     continue # TODO: raise an exception
 
-                if len(node2_value) == 0:
-                    continue
+                item: str = row[column_idx]
+                if len(item) == 0:
+                    continue # Ignore empty node2 values.
 
-                # 1) node2_value might be a list, so we'd better split it.
+                # Ths item might be a KGTK list.  Let's split it, because
+                # lists aren't allow in the node2 values we'll generate.
+                node2_value: str
+                for node2_value in KgtkValue.split_list(item):
+                    if len(node2_value) == 0:
+                        continue # Ignore empty node2 values.
 
-                # 2) Optionally deduplicate the labels
-                #   set(node1_value + KgtkFormat.SEPARATOR + node2_value)
+                    if deduplicate_labels:
+                        label_key = node1_value + KgtkFormat.COLUMN_SEPARATOR + node2_value
+                        if label_key in label_set:
+                            continue
+                        else:
+                            label_set.add(label_key)
 
-                output_map: typing.Mapping[str, str] = {
-                    KgtkFormat.NODE1: node1_value,
-                    KgtkFormat.LABEL: label_value,
-                    KgtkFormat.NODE2: node2_value,
-                }
-                if lkw is None:
-                    kw.writemap(output_map)
-                    label_line_count += 1
-                    output_line_count += 1
-                else:
-                    lkw.writemap(output_map)
-                    label_line_count += 1
+                    output_map: typing.Mapping[str, str] = {
+                        KgtkFormat.NODE1: node1_value,
+                        KgtkFormat.LABEL: label_value,
+                        KgtkFormat.NODE2: node2_value,
+                    }
+                    if lkw is None:
+                        kw.writemap(output_map)
+                        label_line_count += 1
+                        output_line_count += 1
+                    else:
+                        lkw.writemap(output_map)
+                        label_line_count += 1
 
         if verbose:
             print("Read %d rows, wrote %d rows with %d labels." % (input_line_count, output_line_count, label_line_count), file=error_file, flush=True)
