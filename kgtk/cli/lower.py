@@ -234,10 +234,18 @@ def run(input_file: KGTKFiles,
 
             column_idx: int
             for column_idx in lower_map.keys():
+                node1_value: str = row[lower_map[column_idx]]
+                node2_value: str = row[column_idx]
+
+                # 1) node2_value might be a list, so we'd better split it.
+
+                # 2) Optionally deduplicate the labels
+                #   set(node1_value + KgtkFormat.SEPARATOR + node2_value)
+
                 output_map: typing.Mapping[str, str] = {
-                    KgtkFormat.NODE1: row[lower_map[column_idx]],
+                    KgtkFormat.NODE1: node1_value,
                     KgtkFormat.LABEL: label_value,
-                    KgtkFormat.NODE2: row[column_idx],
+                    KgtkFormat.NODE2: node2_value,
                 }
                 if lkw is None:
                     kw.writemap(output_map)
