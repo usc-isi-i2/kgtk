@@ -17,9 +17,9 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.lift.kgtklift import KgtkLift
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.lift.kgtklift import KgtkLift
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
