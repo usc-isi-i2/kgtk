@@ -237,6 +237,12 @@ def run(input_file: KGTKFiles,
                 node1_value: str = row[lower_map[column_idx]]
                 node2_value: str = row[column_idx]
 
+                if len(node1_value) == 0:
+                    continue # TODO: raise an exception
+
+                if len(node2_value) == 0:
+                    continue
+
                 # 1) node2_value might be a list, so we'd better split it.
 
                 # 2) Optionally deduplicate the labels
