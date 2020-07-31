@@ -1,11 +1,6 @@
 from argparse import Namespace, SUPPRESS
-from pathlib import Path
-import sys
-import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-
 
 def parser():
     return {
@@ -21,6 +16,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    
     _expert: bool = parsed_shared_args._expert
 
     parser.add_input_file(positional=True, who="The KGTK file to find connected components in.")
@@ -54,8 +51,11 @@ def run(input_file: KGTKFiles,
         strong: bool = False,
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
-    from kgtk.gt.connected_components import ConnectedComponents
+    from pathlib import Path
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.gt.connected_components import ConnectedComponents
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
