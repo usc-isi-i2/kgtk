@@ -1,6 +1,8 @@
 from argparse import Namespace, SUPPRESS
+import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
+
 
 def parser():
     return {
