@@ -19,4 +19,6 @@
 # Of course, it might be easier to avoid messing with envars by just
 # editing the script before executing it.
 #
+# https://amoffat.github.io/sh/sections/special_arguments.html
+#
 { IFS= read -r header ; { printf "%s\n" "$header" >&${FS1} ; } ; IFS= read -r -u${FS2} options; printf "%s\n" "$header" ; sort $options ;  } 
