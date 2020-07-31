@@ -1,0 +1,5 @@
+id	node1	relation	node2	node1;label	node2;label	relation;label	relation;dimension	weight	source	origin	sentence	question
+E1492529	/c/en/impatience/n/wn/feeling	/r/IsA	/c/en/fidget/n/wn/feeling	impatience	fidget	is a		2.0	CN	/d/wordnet/3.1	[[impatience]] is a type of [[fidget]]	What is a impatience?
+E5709760	wn:impatience.n.02	/r/IsA	wn:fidget.n.01	impatience	fidget|fidgetiness|restlessness	is a			WN			What is impatience?
+/c/en/fidget/n/wn/feeling-mw:SameAs-wn:fidget.n.01	/c/en/fidget/n/wn/feeling	mw:SameAs	wn:fidget.n.01									
+/c/en/impatience/n/wn/feeling-mw:SameAs-wn:impatience.n.02	/c/en/impatience/n/wn/feeling	mw:SameAs	wn:impatience.n.02									
