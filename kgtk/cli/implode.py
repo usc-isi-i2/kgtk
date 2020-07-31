@@ -106,6 +106,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Print the list of data types and exit. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--quiet", dest="quiet",
+                              help="When true, suppress certain complaints unless verbose. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -129,6 +133,7 @@ def run(input_file: KGTKFiles,
         retain_unselected_types: bool,
         build_id: bool,
         show_data_types: bool,
+        quiet: bool,
         
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -152,7 +157,7 @@ def run(input_file: KGTKFiles,
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
-    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file, who="KGTK reject file")
+    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="KGTK reject file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -184,6 +189,7 @@ def run(input_file: KGTKFiles,
         if without_fields is not None:
             print("--without %s" % " ".join(without_fields), file=error_file, flush=True)
         print("--show-data-types %s" % str(show_data_types), file=error_file, flush=True)
+        print("--quiet %s" % str(quiet), file=error_file, flush=True)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -214,6 +220,7 @@ def run(input_file: KGTKFiles,
             remove_prefixed_columns=remove_prefixed_columns,
             ignore_unselected_types=ignore_unselected_types,
             retain_unselected_types=retain_unselected_types,
+            quiet=quiet,
             build_id=build_id,
             idbuilder_options=idbuilder_options,
             reader_options=reader_options,

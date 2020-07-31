@@ -123,7 +123,7 @@ def run(input_file: KGTKFiles,
     # Select where to send error messages, defaulting to stderr.
     input_file_paths: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
-    reject_file_path: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file, who="KGTK reject file")
+    reject_file_path: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="KGTK reject file")
 
     namespace_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_input_file(namespace_file, who="KGTK namespace file")
     updated_namespace_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(updated_namespace_file, who="KGTK updated namespace file")

@@ -16,7 +16,9 @@ def add_arguments(parser: KGTKArgumentParser):
     Args:
         parser (argparse.ArgumentParser)
     """
-    parser.add_input_file(positional=True, who='input path file')
+    from kgtk.utils.argparsehelpers import optional_bool
+    
+    parser.add_input_file(positional=True, who='input path file (may be .bz2)')
 
     parser.add_argument(
         '--procs',
@@ -73,19 +75,100 @@ def add_arguments(parser: KGTKArgumentParser):
         dest="deprecated",
         help='option to include deprecated statements, not included by default')
     
+    parser.add_argument(
+        "--explode-values",
+        nargs='?',
+        type=optional_bool,
+        dest="explode_values",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, create columns with exploded value information. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--use-python-cat",
+        nargs='?',
+        type=optional_bool,
+        dest="use_python_cat",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, use portable code to combine file fragments. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--keep-temp-files",
+        nargs='?',
+        type=optional_bool,
+        dest="keep_temp_files",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, keep temporary files (for debugging). (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--skip-processing",
+        nargs='?',
+        type=optional_bool,
+        dest="skip_processing",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, skip processing the input file (for debugging). (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--skip-merging",
+        nargs='?',
+        type=optional_bool,
+        dest="skip_merging",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, skip merging temporary files (for debugging). (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--interleave",
+        nargs='?',
+        type=optional_bool,
+        dest="interleave",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, output the edges and qualifiers in a single file (the edge file). (default=%(default)s).",
+    )
+
     
-def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,source,deprecated):
+def run(input_file: KGTKFiles,
+        procs,
+        node_file,
+        edge_file,
+        qual_file,
+        limit,
+        lang,
+        source,
+        deprecated,
+        explode_values,
+        use_python_cat,
+        keep_temp_files,
+        skip_processing,
+        skip_merging,
+        interleave):
+
     # import modules locally
     import bz2
     import simplejson as json
     import csv
+    import os
     import pyrallel
     import time
-    import sh
+    from kgtk.kgtkformat import KgtkFormat
     from kgtk.cli_argparse import KGTKArgumentParser
     from kgtk.exceptions import KGTKException
-
-    
+    from kgtk.utils.cats import platform_cat
 
     class MyMapper(pyrallel.Mapper):
 
@@ -138,8 +221,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                 write_mode='w'
                 self.first=False
             if self.cnt % 500000 == 0 and self.cnt>0:
-                print("{} lines processed by processor {}".format(self.cnt,self._idx))
+                print("{} lines processed by processor {}".format(self.cnt,self._idx), flush=True)
             self.cnt+=1
+            csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
             nrows=[]
             erows=[]
             qrows=[]
@@ -163,9 +247,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                             for lang in languages:
                                 lang_label = labels.get(lang, None)
                                 if lang_label:
-                                    lang_label['value']=lang_label['value'].replace('|','\\|')
-                                    label_list.append(
-                                        '\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                    # lang_label['value']=lang_label['value'].replace('|','\\|')
+                                    # label_list.append('\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                    label_list.append(KgtkFormat.stringify(lang_label['value'], language=lang))
                         if len(label_list)>0:
                             row.append("|".join(label_list))
                         else:
@@ -179,9 +263,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                             for lang in languages:
                                 lang_descr = descriptions.get(lang, None)
                                 if lang_descr:
-                                    lang_descr['value']=lang_descr['value'].replace('|','\\|')
-                                    descr_list.append(
-                                        '\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                    # lang_descr['value']=lang_descr['value'].replace('|','\\|')
+                                    # descr_list.append('\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                    descr_list.append(KgtkFormat.stringify(lang_descr['value'], language=lang))
                         if len(descr_list)>0:
                             row.append("|".join(descr_list))
                         else:
@@ -195,9 +279,9 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
                                     for item in lang_aliases:
-                                        item['value']=item['value'].replace('|','\\|')
-                                        alias_list.append(
-                                            '\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                        # item['value']=item['value'].replace('|','\\|')
+                                        # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
+                                        alias_list.append(KgtkFormat.stringify(item['value'], language=lang))
                         if len(alias_list)>0:
                             row.append("|".join(alias_list))
                         else:
@@ -266,7 +350,8 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                         if len(val.get('unit')) > 1:
                                             unit = val.get(
                                                 'unit').split('/')[-1]
-                                            value += unit
+                                            if unit not in ["undefined"]:
+                                                value += unit
                                     elif typ == 'globe-coordinate':
                                         lat = str(val['latitude'])
                                         long = str(val['longitude'])
@@ -284,29 +369,42 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                         value = pre + \
                                             val['time'][1:] + '/' + str(val['precision'])
                                     elif typ == 'monolingualtext':
-                                        value = '\'' + \
-                                            val['text'].replace("'","\\'") + '\'' + '@' + val['language']
+                                        # value = '\'' + \
+                                        # val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
+                                        value = KgtkFormat.stringify(val['text'], language=val['language'])
                                     else:
-                                        value = '\"' + val.replace('"','\\"') + '\"'
+                                        # value = '\"' + val.replace('"','\\"').replace("|", "\\|") + '\"'
+                                        value = KgtkFormat.stringify(val)
+
                                     if edge_file:
-                                        erows.append([sid,
-                                                     qnode,
-                                                     prop,
-                                                     value,
-                                                     rank,
-                                                     mag,
-                                                     unit,
-                                                     date,
-                                                     item,
-                                                     lower,
-                                                     upper,
-                                                     lat,
-                                                     long,
-                                                     precision,
-                                                     calendar,
-                                                     enttype])
+                                        if explode_values:
+                                            erows.append([sid,
+                                                          qnode,
+                                                          prop,
+                                                          value,
+                                                          rank,
+                                                          mag,
+                                                          unit,
+                                                          date,
+                                                          item,
+                                                          lower,
+                                                          upper,
+                                                          lat,
+                                                          long,
+                                                          precision,
+                                                          calendar,
+                                                          enttype,
+                                            ])
+                                        else:
+                                            erows.append([sid,
+                                                          qnode,
+                                                          prop,
+                                                          value,
+                                                          rank,
+                                            ])
+
                                     seq_no += 1
-                                    if qual_file:
+                                    if qual_file or interleave:
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
@@ -379,27 +477,66 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                                             value = pre + \
                                                                 val['time'][1:] + '/' + str(val['precision'])
                                                         elif typ == 'monolingualtext':
-                                                            value = '\'' + \
-                                                                val['text'].replace("'","\\'") + '\'' + '@' + val['language']
+                                                            # value = '\'' + \
+                                                            #     val['text'].replace("'","\\'") + '\'' + '@' + val['language']
+                                                            value = KgtkFormat.stringify(val['text'], language=val['language'])
                                                         else:
-                                                            value = '\"' + val.replace('"','\\"') + '\"'
-                                                        qrows.append(
-                                                            [
-                                                                tempid,
-                                                                sid,
-                                                                qual_prop,
-                                                                value,
-                                                                mag,
-                                                                unit,
-                                                                date,
-                                                                item,
-                                                                lower,
-                                                                upper,
-                                                                lat,
-                                                                long,
-                                                                precision,
-                                                                calendar,
-                                                                enttype])
+                                                            # value = '\"' + val.replace('"','\\"') + '\"'
+                                                            value = KgtkFormat.stringify(val)
+                                                        if qual_file:
+                                                            if explode_values:
+                                                                qrows.append([
+                                                                    tempid,
+                                                                    sid,
+                                                                    qual_prop,
+                                                                    value,
+                                                                    mag,
+                                                                    unit,
+                                                                    date,
+                                                                    item,
+                                                                    lower,
+                                                                    upper,
+                                                                    lat,
+                                                                    long,
+                                                                    precision,
+                                                                    calendar,
+                                                                    enttype,
+                                                                ])
+                                                            else:
+                                                                qrows.append([
+                                                                    tempid,
+                                                                    sid,
+                                                                    qual_prop,
+                                                                    value,
+                                                                ])
+                                                        if interleave:
+                                                            if explode_values:
+                                                                erows.append([
+                                                                    tempid,
+                                                                    sid,
+                                                                    qual_prop,
+                                                                    value,
+                                                                    "",
+                                                                    mag,
+                                                                    unit,
+                                                                    date,
+                                                                    item,
+                                                                    lower,
+                                                                    upper,
+                                                                    lat,
+                                                                    long,
+                                                                    precision,
+                                                                    calendar,
+                                                                    enttype,
+                                                                ])
+                                                            else:
+                                                                erows.append([
+                                                                    tempid,
+                                                                    sid,
+                                                                    qual_prop,
+                                                                    value,
+                                                                    "",
+                                                                ])
             
                         if sitelinks:
                             wikipedia_seq_no = 1
@@ -410,12 +547,19 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     sitelang=link.split('wiki')[0].replace('_','-')
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
-                                    if edge_file:
-                                        erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','','','',
-                                                      '','','','',''])
-                                    if qual_file:
-                                        tempid=sid+'-language-1'
-                                        qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','',''])
+                                    if explode_values:
+                                        if edge_file:
+                                            erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','','','',
+                                                          '','','','',''])
+                                        if qual_file:
+                                            tempid=sid+'-language-1'
+                                            qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','',''])
+                                    else:
+                                        if edge_file:
+                                            erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,''])
+                                        if qual_file:
+                                            tempid=sid+'-language-1'
+                                            qrows.append([tempid,sid,'language',sitelang])
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
@@ -425,7 +569,8 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                             quoting=csv.QUOTE_NONE,
                             delimiter="\t",
                             escapechar="\n",
-                            quotechar='')
+                            quotechar='',
+                            lineterminator=csv_line_terminator)
                         wr.writerow(row)
             if edge_file:
                 with open(edge_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
@@ -435,7 +580,8 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                             quoting=csv.QUOTE_NONE,
                             delimiter="\t",
                             escapechar="\n",
-                            quotechar='')
+                            quotechar='',
+                            lineterminator=csv_line_terminator)
                         wr.writerow(row)
             if qual_file:
                 with open(qual_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
@@ -445,95 +591,115 @@ def run(input_file: KGTKFiles,procs,node_file,edge_file,qual_file,limit,lang,sou
                             quoting=csv.QUOTE_NONE,
                             delimiter="\t",
                             escapechar="\n",
-                            quotechar='')
+                            quotechar='',
+                            lineterminator=csv_line_terminator)
                         wr.writerow(row)
-    
 
     
     try:
+        UPDATE_VERSION: str = "2020-07-23T02:02:15.389869+00:00#TN1Bg8DKAzP7+I3bjT+HJHkauAxEWg73CNCjkdY1eLw716rcAe/Lv34DJwkeSoI115UxEQnBwAlqqv6cCsx3Nw=="
+        print("kgtk import-wikidata version: %s" % UPDATE_VERSION, flush=True)
+
         inp_path = KGTKArgumentParser.get_input_file(input_file)
         
+        csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
+        
         start=time.time()
-        languages=lang.split(',')
-        if node_file:
-            header = ['id','label','type','description','alias']
-            with open(node_file+'_header', 'w', newline='') as myfile:
-                wr = csv.writer(
-                    myfile,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='')
-                wr.writerow(header)
-        header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
-              'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type']
-        if edge_file:
-            with open(edge_file+'_header', 'w', newline='') as myfile:
-                wr = csv.writer(
-                    myfile,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='')
-                wr.writerow(header)
-        if qual_file:
-            header.remove('rank')
-            with open(qual_file+'_header', 'w', newline='') as myfile:
-                wr = csv.writer(
-                    myfile,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='')
-                wr.writerow(header)
-        pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True)
-        pp.start()
-        with bz2.open(inp_path, mode='rb') as file:
-            print('processing wikidata file now...')
-            for cnt, line in enumerate(file):
-                if limit and cnt >= limit:
-                    break
-                pp.add_task(line,node_file,edge_file,qual_file,languages,source)
-        pp.task_done()
-        pp.join()
-        if node_file:
-            cat_command=[node_file+'_header']
-            rm_command=[node_file+'_header']
-            for n in range(procs):
-                cat_command.append(node_file+'_'+str(n))
-                rm_command.append(node_file+'_'+str(n))
-            if limit and limit==1:
-                sh.cat(node_file+'_header',node_file+'_0',_out=node_file)
-                sh.rm(node_file+'_header',node_file+'_0') 
+
+        if not skip_processing:
+            languages=lang.split(',')
+            if node_file:
+                header = ['id','label','type','description','alias']
+                with open(node_file+'_header', 'w', newline='') as myfile:
+                    wr = csv.writer(
+                        myfile,
+                        quoting=csv.QUOTE_NONE,
+                        delimiter="\t",
+                        escapechar="\n",
+                        quotechar='',
+                        lineterminator=csv_line_terminator)
+                    wr.writerow(header)
+            if explode_values:
+                header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
+                          'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type']
             else:
-                sh.cat(*cat_command,_out=node_file)
-                sh.rm(*rm_command)
-        if edge_file:
-            cat_command=[edge_file+'_header']
-            rm_command=[edge_file+'_header']
-            for n in range(procs):
-                cat_command.append(edge_file+'_'+str(n))
-                rm_command.append(edge_file+'_'+str(n))
-            if limit and limit==1:
-                sh.cat(edge_file+'_header',edge_file+'_0',_out=edge_file)
-                sh.rm(edge_file+'_header',edge_file+'_0') 
-            else:
-                sh.cat(*cat_command,_out=edge_file)
-                sh.rm(*rm_command)
-        if qual_file:
-            cat_command=[qual_file+'_header']
-            rm_command=[qual_file+'_header']
-            for n in range(procs):
-                cat_command.append(qual_file+'_'+str(n))
-                rm_command.append(qual_file+'_'+str(n))
-            if limit and limit==1:
-                sh.cat(qual_file+'_header',qual_file+'_0',_out=qual_file)
-                sh.rm(qual_file+'_header',qual_file+'_0') 
-            else:
-                sh.cat(*cat_command,_out=qual_file)
-                sh.rm(*rm_command)
-        print('import complete')
+                header = ['id','node1','label','node2', 'rank']
+
+            if edge_file:
+                with open(edge_file+'_header', 'w', newline='') as myfile:
+                    wr = csv.writer(
+                        myfile,
+                        quoting=csv.QUOTE_NONE,
+                        delimiter="\t",
+                        escapechar="\n",
+                        quotechar='',
+                        lineterminator=csv_line_terminator)
+                    wr.writerow(header)
+            if qual_file:
+                header.remove('rank')
+                with open(qual_file+'_header', 'w', newline='') as myfile:
+                    wr = csv.writer(
+                        myfile,
+                        quoting=csv.QUOTE_NONE,
+                        delimiter="\t",
+                        escapechar="\n",
+                        quotechar='',
+                        lineterminator=csv_line_terminator)
+                    wr.writerow(header)
+            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True)
+            pp.start()
+            if str(inp_path).endswith(".bz2"):
+                with bz2.open(inp_path, mode='rb') as file:
+                    print('Decompressing and processing wikidata file %s' % str(inp_path), flush=True)
+                    for cnt, line in enumerate(file):
+                        if limit and cnt >= limit:
+                            break
+                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+            else:                             
+                with open(inp_path, mode='rb') as file:
+                    print('Processing wikidata file %s' % str(inp_path), flush=True)
+                    for cnt, line in enumerate(file):
+                        if limit and cnt >= limit:
+                            break
+                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+
+            print('Done processing {}'.format(str(inp_path)), flush=True)
+            pp.task_done()
+            print('Tasks done.', flush=True)
+            pp.join()
+            print('Join complete.', flush=True)
+
+        if not skip_merging:
+            # We've finished processing the input data, possibly using multiple
+            # server processes.  We need to assemble the final output file(s) with
+            # the header first, then the fragments produced by parallel
+            # processing.
+            #
+            # If we assume that we are on Linux or MacOS, then os.sendfile(...)
+            # should provide the simplest, highest-performing solution.
+            if node_file:
+                print('Combining the node file fragments', flush=True)
+                node_file_fragments=[node_file+'_header']
+                for n in range(procs):
+                    node_file_fragments.append(node_file+'_'+str(n))
+                platform_cat(node_file_fragments, node_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
+
+            if edge_file:
+                print('Combining the edge file fragments', flush=True)
+                edge_file_fragments=[edge_file+'_header']
+                for n in range(procs):
+                    edge_file_fragments.append(edge_file+'_'+str(n))
+                platform_cat(edge_file_fragments, edge_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
+
+            if qual_file:
+                print('Combining the qualifier file fragments', flush=True)
+                qual_file_fragments=[qual_file+'_header']
+                for n in range(procs):
+                    qual_file_fragments.append(qual_file+'_'+str(n))
+                platform_cat(qual_file_fragments, qual_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
+
+        print('import complete', flush=True)
         end=time.time()
-        print('time taken : {}s'.format(end-start))
+        print('time taken : {}s'.format(end-start), flush=True)
     except:
         raise KGTKException
