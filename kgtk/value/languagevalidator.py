@@ -1,7 +1,7 @@
 """
 Validate language qualifiers.
 
-TODO: Extend pour language tag recognition to RFC 3066.
+TODO: Extend our language tag recognition to RFC 3066.
 https://tools.ietf.org/html/rfc3066
 
 TODO: Cite RDF compliance:  BCP46 Section 2-2-9.

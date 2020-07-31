@@ -6,6 +6,7 @@ nav:
   - 'Import commands':
       - 'import-atomic': 'import/import_atomic.md'
       - 'import-conceptnet': 'import/import_conceptnet.md'
+      - 'import-concept-pairs': 'import/import_concept_pairs.md'
       - 'import-ntriples': 'import/import_ntriples.md'
       - 'import-visualgenome': 'import/import_visualgenome.md'
       - 'import-wikidata': 'import/import_wikidata.md'
@@ -42,9 +43,9 @@ nav:
   - 'Analysis commands':
       - 'connected-components': 'analysis/connected_components.md'
       - 'graph-statistics': 'analysis/graph_statistics.md'
+      - 'paths': 'analysis/paths.md'
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
       - 'text-embeddings': 'analysis/text_embedding.md'         
-      - 'paths': 'analysis/paths.md'
 
 theme:
   name: material

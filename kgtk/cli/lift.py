@@ -71,6 +71,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The columns for which matching labels are to be lifted. " +
                               "The default is [node1, label, node2] or their aliases."), nargs='*')
 
+    parser.add_argument(      "--columns-to-write", dest="output_lifted_column_names",
+                              help="The columns into which to store the lifted values. " +
+                              "The default is [node1;label, label;label, node2;label] or their aliases.", nargs='*')
+
     parser.add_argument(      "--lift-suffix", dest="output_lifted_column_suffix",
                               help=h("The suffix used for newly created output columns. (default=%(default)s)."),
                               default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
@@ -152,6 +156,7 @@ def run(input_file: KGTKFiles,
         input_select_column_value: typing.Optional[str],
         input_lifting_column_names: typing.List[str],
 
+        output_lifted_column_names: typing.List[str],
         output_lifted_column_suffix: str,
         output_select_column_value: str,
 
@@ -211,7 +216,8 @@ def run(input_file: KGTKFiles,
             print("--input-select-value=%s" % input_select_column_value, file=error_file, flush=True)
         if input_lifting_column_names is not None and len(input_lifting_column_names) > 0:
             print("--columns-to-lift %s" % " ".join(input_lifting_column_names), file=error_file, flush=True)
-
+        if output_lifted_column_names is not None and len(output_lifted_column_names) > 0:
+            print("--columns-to-write %s" % " ".join(output_lifted_column_names), file=error_file, flush=True)
 
         print("--lift-suffix=%s" % output_lifted_column_suffix, file=error_file, flush=True)
         if output_select_column_value is not None:
@@ -250,6 +256,7 @@ def run(input_file: KGTKFiles,
 
             output_lifted_column_suffix=output_lifted_column_suffix,
             output_select_column_value=output_select_column_value,
+            output_lifted_column_names=output_lifted_column_names,
 
             label_select_column_name=label_select_column_name,
             label_select_column_value=label_select_column_value,

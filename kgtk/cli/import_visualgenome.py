@@ -35,17 +35,17 @@ def run(input_file: KGTKFiles,
     from pathlib import Path
     from collections import defaultdict
 
-    out_columns=['node1', 'label', 'node2', 'node1_label', 'label_label', 'node2_label', 'label_dimension', 'source', 'weight', 'creator', 'sentence', 'question']
+    out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'weight', 'source', 'origin', 'sentence', 'question']
 
     proximity_relation='/r/LocatedNear'
-    property_relation='/r/HasProperty'
-    property_relation_label='has property'
+    property_relation='mw:MayHaveProperty'
+    property_relation_label='may have property'
     capableof_relation='/r/CapableOf'
     capableof_relation_label='capable of'
 
 
     def create_edge(node1, node1_lbl, node2, node2_lbl, rel, rel_lbl, image_id):
-        my_row=node1, rel, node2, '|'.join(node1_lbl), rel_lbl, '|'.join(node2_lbl), '', 'VG', '1.0', 'I' + image_id, '', ''
+        my_row=[node1, rel, node2, '|'.join(node1_lbl), '|'.join(node2_lbl), rel_lbl, '', '', 'VG', 'I' + image_id, '', '']
         return '\t'.join(my_row) + '\n'
 
     def header_to_edge(row):
@@ -70,7 +70,6 @@ def run(input_file: KGTKFiles,
         for counter, an_image in enumerate(images_data):
 
             image_id=str(an_image['image_id'])
-            #image_node=create_uri('vg', 'I' + image_id)
             
             # OBJECTS
             objid2names=defaultdict(list)
@@ -96,13 +95,13 @@ def run(input_file: KGTKFiles,
                                 if apos=='v': # verb
                                     for osyn in o_synset:
                                         if osyn!=asyn:
-                                            edge_row=create_edge(osyn, objid2names[obj_id], asyn, [attr], capableof_relation, capableof_relation_label, image_id)
+                                            edge_row=create_edge('wn:' + osyn, objid2names[obj_id], 'wn:' + asyn, [attr], capableof_relation, capableof_relation_label, image_id)
                                             if edge_row not in rows:
                                                 rows.append(edge_row)
                                 else: #adjective
                                     for osyn in o_synset:
                                         if osyn!=asyn:
-                                            edge_row=create_edge(osyn, objid2names[obj_id], asyn, [attr], property_relation, property_relation_label, image_id)
+                                            edge_row=create_edge('wn:' + osyn, objid2names[obj_id], 'wn:' + asyn, [attr], property_relation, property_relation_label, image_id)
                                             if edge_row not in rows:
                                                 rows.append(edge_row)
                    
@@ -120,7 +119,7 @@ def run(input_file: KGTKFiles,
                 for ssyn in sub_syns:
                     for osyn in obj_syns:
                         if osyn!=ssyn:
-                            edge_row=create_edge(ssyn, sub_names, osyn, obj_names, proximity_relation, relation_label, image_id)
+                            edge_row=create_edge('wn:' + ssyn, sub_names, 'wn:' + osyn, obj_names, proximity_relation, relation_label, image_id)
                             if edge_row not in rows:
                                 rows.append(edge_row)
             for a_row in rows:

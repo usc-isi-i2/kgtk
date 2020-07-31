@@ -404,16 +404,16 @@ unexpected import conversion failures.
 Import the entire given ntriple file into kgtk forma, using default settings.
 
 ```
-kgtk import-ntriples -i dbpedia_wikipedia_links.ttl -o DbpediaWikipediaLinks.tsv
+kgtk import-ntriples -i dbpedia_wikipedia_links.nt -o DbpediaWikipediaLinks.tsv
 ```
 
 Import the HC00001DO file, using UUIDs extensively:
 
 ```
 kgtk import-ntriples \
-     -i ../../HC00001DO.ttl.nt \
+     -i ../../HC00001DO.nt \
      -o HC00001DO.tsv \
-     --reject-file HC00001DO-rejects.ttl.nt \
+     --reject-file HC00001DO-rejects.nt \
      --namespace-file kgtk/join/test/initial-ntriple-namespaces.tsv \
      --updated-namespace-file HC00001DO-namespaces.tsv \
      --namespace-id-use-uuid True \

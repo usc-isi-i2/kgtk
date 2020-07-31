@@ -145,6 +145,9 @@ class Unique(KgtkFormat):
         else:
             raise ValueError("Unknown output format %s" % str(self.output_format))
 
+        if self.verbose:
+            print("There were %d unique values." % len(value_counts), file=self.error_file, flush=True)
+
         ew.close()
        
 def main():
