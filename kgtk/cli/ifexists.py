@@ -13,16 +13,9 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import Namespace, SUPPRESS
-from pathlib import Path
-import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.iff.kgtkifexists import KgtkIfExists
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -38,6 +31,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.iff.kgtkifexists import KgtkIfExists
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
     _expert: bool = parsed_shared_args._expert
 
     # This helper function makes it easy to suppress options from
@@ -94,7 +92,7 @@ def run(input_file: KGTKFiles,
         cache_input: bool = False,
         preserve_order: bool = False,
 
-        field_separator: str = KgtkIfExists.FIELD_SEPARATOR_DEFAULT,
+        field_separator: typing.Optional[str] = None,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -105,7 +103,14 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.iff.kgtkifexists import KgtkIfExists
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     filter_kgtk_file: Path = KGTKArgumentParser.get_input_file(filter_file, who="KGTK filter file")
@@ -114,6 +119,8 @@ def run(input_file: KGTKFiles,
 
     if (str(input_kgtk_file) == "-" and str(filter_kgtk_file) == "-"):
         raise KGTKException("My not use stdin for both --input-file and --filter-on files.")
+
+    field_separator = KgtkIfExists.FIELD_SEPARATOR_DEFAULT if field_separator is None else field_separator
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr

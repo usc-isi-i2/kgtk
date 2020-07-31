@@ -1,10 +1,8 @@
 from argparse import Namespace, SUPPRESS
-from pathlib import Path
-import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.gt.connected_components import ConnectedComponents
+
 
 def parser():
     return {
@@ -20,6 +18,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.gt.connected_components import ConnectedComponents
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.utils.enumnameaction import EnumLowerNameAction
 
@@ -74,25 +73,39 @@ def run(input_file: KGTKFiles,
         undirected: bool = False,
         strong: bool = False,
 
-        cluster_name_method: ConnectedComponents.Method = ConnectedComponents.DEFAULT_CLUSTER_NAME_METHOD,
-        cluster_name_separator: str = ConnectedComponents.DEFAULT_CLUSTER_NAME_SEPARATOR,
-        cluster_name_prefix: str = ConnectedComponents.DEFAULT_CLUSTER_NAME_PREFIX,
-        cluster_name_zfill: int = ConnectedComponents.DEFAULT_CLUSTER_NAME_ZFILL,
-        minimum_cluster_size: int = ConnectedComponents.DEFAULT_MINIMUM_CLUSTER_SIZE,
+        # The following have been modified to postpone importing gtaph_tools.
+        # ClusterComponents cann't be referenced here.
+        cluster_name_method: typing.Optional[typing.Any] = None,
+        cluster_name_separator: typing.Optional[str] = None,
+        cluster_name_prefix: typing.Optional[str] = None,
+        cluster_name_zfill: typing.Optional[int] = None,
+        minimum_cluster_size: typing.Optional[int] = None,
 
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
+    from pathlib import Path
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.gt.connected_components import ConnectedComponents
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+
+    # It's OK to mention ClusterComponents here.
+    cluster_name_method_x: ConnectedComponents.Method = \
+        cluster_name_method if cluster_name_method is not None else ConnectedComponents.DEFAULT_CLUSTER_NAME_METHOD
+    cluster_name_separator = ConnectedComponents.DEFAULT_CLUSTER_NAME_SEPARATOR if cluster_name_separator is None else cluster_name_separator
+    cluster_name_prefix = ConnectedComponents.DEFAULT_CLUSTER_NAME_PREFIX if cluster_name_prefix is None else cluster_name_prefix
+    cluster_name_zfill = ConnectedComponents.DEFAULT_CLUSTER_NAME_ZFILL if cluster_name_zfill is None else cluster_name_zfill
+    minimum_cluster_size = ConnectedComponents.DEFAULT_MINIMUM_CLUSTER_SIZE if minimum_cluster_size is None else minimum_cluster_size
 
     cc: ConnectedComponents = ConnectedComponents(input_file_path=input_kgtk_file,
                                                   output_file_path=output_kgtk_file,
                                                   properties=properties,
                                                   undirected=undirected,
                                                   strong=strong,
-                                                  cluster_name_method=cluster_name_method,
+                                                  cluster_name_method=cluster_name_method_x,
                                                   cluster_name_separator=cluster_name_separator,
                                                   cluster_name_prefix=cluster_name_prefix,
                                                   cluster_name_zfill=cluster_name_zfill,

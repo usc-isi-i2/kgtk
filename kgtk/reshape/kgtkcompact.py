@@ -1,88 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """Copy records from the first KGTK file to the output file,
 compacting lists.
 
@@ -270,6 +185,7 @@ class KgtkCompact(KgtkFormat):
                         ew.write(self.current_row)
                     else:
                         ew.write(idb.build(self.current_row, line_number))
+                    self.output_line_count += 1
                 self.current_key = None
                 self.current_row = None
 

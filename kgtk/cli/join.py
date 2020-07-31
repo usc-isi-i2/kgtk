@@ -5,16 +5,9 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import Namespace, SUPPRESS
-from pathlib import Path
-import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.join.kgtkjoiner import KgtkJoiner
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -54,6 +47,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.join.kgtkjoiner import KgtkJoiner
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -125,7 +122,7 @@ def run(left_file: KGTKFiles,
         right_join_columns: typing.Optional[typing.List[str]],
         prefix: typing.Optional[str] = None,
 
-        field_separator: str = KgtkJoiner.FIELD_SEPARATOR_DEFAULT,
+        field_separator: typing.Optional[str] = None,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -136,11 +133,20 @@ def run(left_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+
     from kgtk.exceptions import KGTKException
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.join.kgtkjoiner import KgtkJoiner
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     left_file_path: Path = KGTKArgumentParser.get_input_file(left_file, who="KGTK left file")
     right_file_path: Path = KGTKArgumentParser.get_input_file(right_file, who="KGTK right file")
     output_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
+
+    field_separator = KgtkJoiner.FIELD_SEPARATOR_DEFAULT if field_separator is None else field_separator
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
