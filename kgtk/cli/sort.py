@@ -6,8 +6,6 @@ import sh # type: ignore
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.exceptions import KGTKException
-import kgtk.cli.zconcat as zcat
-
 
 def parser():
     return {
@@ -87,6 +85,8 @@ def build_command(input=None, output=None, columns='1', colsep='\t', options='',
     in which case this can be used to feed into the input of another command.
     `_out_mode' controls whether an `output' file will be truncated or appened to.
     """
+    import kgtk.cli.zconcat as zcat
+    
     input = input or '-'
     output = (not _piped and (output or sys.stdout.buffer)) or None
     outfile = None
@@ -177,6 +177,9 @@ def run(input_file,
         output_file,
         columns='1', reverse=False, space=False, speed=False, extra='', tsv=False, csv=False, _dt=None, naptime=1):
     import time
+
+    import kgtk.cli.zconcat as zcat
+    
     time.sleep(int(naptime))
     # print("Sort running.", file=sys.stderr, flush=True) # ***
 
