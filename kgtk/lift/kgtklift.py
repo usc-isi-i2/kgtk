@@ -47,6 +47,10 @@ class KgtkLift(KgtkFormat):
 
     output_select_column_value: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     output_lifted_column_suffix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
+    output_lifted_column_names: typing.Optional[typing.List[str]] = \
+        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                 iterable_validator=attr.validators.instance_of(list))),
+                default=None)
 
     label_select_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     label_select_column_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LABEL_SELECT_COLUMN_VALUE)
@@ -355,7 +359,12 @@ class KgtkLift(KgtkFormat):
         output_column_names: typing.List[str] = ikr.column_names.copy()
         lifted_output_column_idxs: typing.List[int] = [ ]
         for idx in lifted_column_idxs:
-            lifted_column_name: str = ikr.column_names[idx] + self.output_lifted_column_suffix
+            lifted_column_name: str
+            if self.output_lifted_column_names is not None and idx < len(self.output_lifted_column_names):
+                lifted_column_name = self.output_lifted_column_names[idx]
+            else:
+                lifted_column_name = ikr.column_names[idx] + self.output_lifted_column_suffix
+
             if lifted_column_name in ikr.column_name_map:
                 # Overwrite an existing lifted output column.
                 #
@@ -709,6 +718,10 @@ def main():
                               help="The columns for which matching labels are to be lifted. " +
                               "The default is [node1, label, node2] or their aliases.", nargs='*')
 
+    parser.add_argument(      "--columns-to-write", dest="output_lifted_column_names",
+                              help="The columns into which to store the lifted values. " +
+                              "The default is [node1;label, label;label, node2;label] or their aliases.", nargs='*')
+
     parser.add_argument(      "--lift-suffix", dest="output_lifted_column_suffix",
                               help="The suffix used for newly created output columns. (default=%(default)s).",
                               default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
@@ -784,7 +797,7 @@ def main():
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
-   # Show the final option structures for debugging and documentation.                                                                                             
+    # Show the final option structures for debugging and documentation.   
     if args.show_options:
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
         if args.label_file_path is not None:
@@ -797,6 +810,8 @@ def main():
             print("--input-select-value=%s" % args.input_select_column_value, file=error_file, flush=True)
         if args.input_lifting_column_names is not None and len(args.input_lifting_column_names) > 0:
             print("--columns-to-lift %s" % " ".join(args.input_lifting_column_names), file=error_file, flush=True)
+        if args.output_lifted_column_names is not None and len(args.output_lifted_column_names) > 0:
+            print("--columns-to-write %s" % " ".join(args.output_lifted_column_names), file=error_file, flush=True)
 
         print("--lift-suffix=%s" % args.output_lifted_column_suffix, file=error_file, flush=True)
         if args.output_select_column_value is not None:
@@ -834,6 +849,7 @@ def main():
 
         output_select_column_value=args.output_select_column_value, 
         output_lifted_column_suffix=args.output_lifted_column_suffix,
+        output_lifted_column_names=args.output_lifted_column_names,
 
         label_select_column_name=args.label_select_column_name,
         label_select_column_value=args.label_select_column_value,

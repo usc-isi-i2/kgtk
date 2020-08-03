@@ -95,13 +95,13 @@ def run(input_file: KGTKFiles,
                                 if apos=='v': # verb
                                     for osyn in o_synset:
                                         if osyn!=asyn:
-                                            edge_row=create_edge(osyn, objid2names[obj_id], asyn, [attr], capableof_relation, capableof_relation_label, image_id)
+                                            edge_row=create_edge('wn:' + osyn, objid2names[obj_id], 'wn:' + asyn, [attr], capableof_relation, capableof_relation_label, image_id)
                                             if edge_row not in rows:
                                                 rows.append(edge_row)
                                 else: #adjective
                                     for osyn in o_synset:
                                         if osyn!=asyn:
-                                            edge_row=create_edge(osyn, objid2names[obj_id], asyn, [attr], property_relation, property_relation_label, image_id)
+                                            edge_row=create_edge('wn:' + osyn, objid2names[obj_id], 'wn:' + asyn, [attr], property_relation, property_relation_label, image_id)
                                             if edge_row not in rows:
                                                 rows.append(edge_row)
                    
@@ -119,7 +119,7 @@ def run(input_file: KGTKFiles,
                 for ssyn in sub_syns:
                     for osyn in obj_syns:
                         if osyn!=ssyn:
-                            edge_row=create_edge(ssyn, sub_names, osyn, obj_names, proximity_relation, relation_label, image_id)
+                            edge_row=create_edge('wn:' + ssyn, sub_names, 'wn:' + osyn, obj_names, proximity_relation, relation_label, image_id)
                             if edge_row not in rows:
                                 rows.append(edge_row)
             for a_row in rows:

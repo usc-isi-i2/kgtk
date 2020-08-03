@@ -62,9 +62,8 @@ def run(input_file: KGTKFiles, path_file, output_stats, directed, max_hops):
                 src, tgt=line.strip().split('\t')
                 pairs.append((src, tgt))
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
-        filename=str(filename)
         with open(filename, 'r') as f:
-            header = next(f).split('\t')
+            header = next(f).strip().split('\t')
             subj_index = infer_index(header, options=['node1', 'subject'])
             obj_index = infer_index(header, options=['node2', 'object', 'value'])
             predicate = infer_predicate(header, options=['property', 'predicate', 'label'])
@@ -76,8 +75,7 @@ def run(input_file: KGTKFiles, path_file, output_stats, directed, max_hops):
 
         if 'id' not in p:
             raise KGTKException('Error: no id column found')
-        
-        G = load_graph_from_csv(filename,
+        G = load_graph_from_csv(str(filename),
                                  skip_first=True,
                                  directed=directed,
                                  hashed=True,

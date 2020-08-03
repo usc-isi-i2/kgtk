@@ -11,6 +11,7 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
+from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
@@ -143,14 +144,20 @@ def run(input_file: KGTKFiles,
 
                 label_value: str = label_map.get(column_name, column_name)
 
-                node2_value: str = row[column_idx]
-                if len(node2_value) == 0:
-                    continue
+                new_value: str = row[column_idx]
+                if len(new_value) == 0:
+                    continue # ignore empty values.
 
-                output_row: typing.List[str] = [ node1_value , label_value, node2_value ]
-            
-                kw.write(output_row)
-                output_line_count += 1
+                # The column value might contain a KGTK list.  Since node2 isn't supposed
+                # to contain lists, we'll split it.
+                node2_value: str
+                for node2_value in KgtkValue.split_list(new_value):
+                    if len(node2_value) == 0:
+                        continue # node2 shouldn't contain empty values
+
+                    output_row: typing.List[str] = [ node1_value , label_value, node2_value ]
+                    kw.write(output_row)
+                    output_line_count += 1
 
         if verbose:
             print("Read %d node rows, wrote %d edge rows." % (input_line_count, output_line_count), file=error_file, flush=True)
