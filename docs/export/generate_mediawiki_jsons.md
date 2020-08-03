@@ -5,6 +5,9 @@ The motivation of this command is to build a [SQID](https://tools.wmflabs.org/sq
 
 The JSON generator reads a tab-separated kgtk file from standard input, by default, or from a given file. The kgtk file is required to have at least the following 4 fields: `node1`, `label`, `node2` and `id`. The `node1` field is the subject; `label` is the predicate and `node2` is the object. 
 
+The JSON generator can also optionally accept a `rank` column which specifies the rank of the statement. Please be aware that if the kgtk file is created from tranforming a wikidata dump, the sitelink information will be **lost** since this there is no official property about the `sitelink` property.
+
+
 ## Usage
 ```
 usage: kgtk generate-mediawiki-jsons [-h] [-lp LABELS] [-ap ALIASES] [-dp DESCRIPTIONS]
@@ -14,7 +17,8 @@ usage: kgtk generate-mediawiki-jsons [-h] [-lp LABELS] [-ap ALIASES] [-dp DESCRI
 Generating json files that mimic mediawiki *wbgetentities* api call response. This tool assumes statements and qualifiers related to one entity will be bundled close as the `generate-wikidata-triples` function assumes. If this requirement is not met, please set `n` to a number LARGER than the total number of entities in the kgtk file
 
 optional arguments:
-  -h, --help            show this help message and exit
+  -h  --help,  show this help message and exit
+  -r --rank,  if the input file contains a rank column. Default to False.
   -lp LABELS, --label-property LABELS
                         property identifiers which will create labels, separated by
                         comma','.
