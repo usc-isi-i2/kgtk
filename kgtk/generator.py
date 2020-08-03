@@ -52,6 +52,7 @@ class Generator:
         self.to_append_statement_id = None
         self.corrupted_statement_id = None
         self.to_append_statement = None # for Json generator
+        self.wiki_import_prop_types = set(["wikipedia_sitelink","language"])
     def serialize(self):
         raise NotImplemented
     def finalize(self):
@@ -734,7 +735,12 @@ class JsonGenerator(Generator):
             is_qualifier_edge = True
         
         if prop not in self.prop_types:
-            raise KGTKException("property {} at line {} is not defined.".format(prop,line_number))
+            if prop in self.wiki_import_prop_types:
+                if self.warning:
+                    self.warn_log.write("Property {} created by wikidata json dump at line {} is skipped.\n".format(prop,line_number))
+                return True
+            else:
+                raise KGTKException("property {} at line {} is not defined.".format(prop,line_number))
         
         if not is_qualifier_edge:
             if prop not in self.misc_json_dict[node1]["claims"]:
