@@ -107,7 +107,7 @@ def run():
                     question=('What is %s?' % node1_preflabel).capitalize()
                 else:
                     question=('%s %s what?' % (node1_preflabel, rel_label)).capitalize()
-                a_row=[node1, rel, node2, labels[node1], labels[node2], rel_label, "", "", "WN", "", sentence, question]
+                a_row=['wn:' + node1, rel, 'wn:' + node2, labels[node1], labels[node2], rel_label, "", "", "WN", "", sentence, question]
                 all_rows.append(a_row)
         return all_rows
 

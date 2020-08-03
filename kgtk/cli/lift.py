@@ -12,16 +12,9 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import Namespace, SUPPRESS
-from pathlib import Path
-import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.lift.kgtklift import KgtkLift
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -39,6 +32,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.lift.kgtklift import KgtkLift
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -73,6 +70,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
                               help=h("The columns for which matching labels are to be lifted. " +
                               "The default is [node1, label, node2] or their aliases."), nargs='*')
+
+    parser.add_argument(      "--columns-to-write", dest="output_lifted_column_names",
+                              help="The columns into which to store the lifted values. " +
+                              "The default is [node1;label, label;label, node2;label] or their aliases.", nargs='*')
 
     parser.add_argument(      "--lift-suffix", dest="output_lifted_column_suffix",
                               help=h("The suffix used for newly created output columns. (default=%(default)s)."),
@@ -155,6 +156,7 @@ def run(input_file: KGTKFiles,
         input_select_column_value: typing.Optional[str],
         input_lifting_column_names: typing.List[str],
 
+        output_lifted_column_names: typing.List[str],
         output_lifted_column_suffix: str,
         output_select_column_value: str,
 
@@ -181,7 +183,14 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.lift.kgtklift import KgtkLift
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
@@ -207,7 +216,8 @@ def run(input_file: KGTKFiles,
             print("--input-select-value=%s" % input_select_column_value, file=error_file, flush=True)
         if input_lifting_column_names is not None and len(input_lifting_column_names) > 0:
             print("--columns-to-lift %s" % " ".join(input_lifting_column_names), file=error_file, flush=True)
-
+        if output_lifted_column_names is not None and len(output_lifted_column_names) > 0:
+            print("--columns-to-write %s" % " ".join(output_lifted_column_names), file=error_file, flush=True)
 
         print("--lift-suffix=%s" % output_lifted_column_suffix, file=error_file, flush=True)
         if output_select_column_value is not None:
@@ -246,6 +256,7 @@ def run(input_file: KGTKFiles,
 
             output_lifted_column_suffix=output_lifted_column_suffix,
             output_select_column_value=output_select_column_value,
+            output_lifted_column_names=output_lifted_column_names,
 
             label_select_column_name=label_select_column_name,
             label_select_column_value=label_select_column_value,

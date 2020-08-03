@@ -80,6 +80,8 @@ def run(input_file: KGTKFiles, directed, compute_degrees, compute_pagerank, comp
         import kgtk.gt.analysis_utils as gtanalysis
         from pathlib import Path
         import sys
+        import csv
+        csv.field_size_limit(sys.maxsize)
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 

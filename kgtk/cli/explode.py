@@ -5,18 +5,9 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import _MutuallyExclusiveGroup, Namespace, SUPPRESS
-from pathlib import Path
-import sys
 import typing
 
-from kgtk.kgtkformat import KgtkFormat
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.reshape.kgtkexplode import KgtkExplode
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalue import KgtkValueFields
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -35,6 +26,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.kgtkformat import KgtkFormat
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalue import KgtkValueFields
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -100,7 +96,15 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.kgtkformat import KgtkFormat
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.reshape.kgtkexplode import KgtkExplode
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
