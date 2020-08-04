@@ -1,0 +1,10 @@
+node1	label	node2
+tn	prefix_expansion	"https://www.tablenet.l3s.uni-hannover.de/TableNet/table/"
+tn	prefix_expansion	"https://www.tablenet.l3s.uni-hannover.de/TableNet/table/"
+rdf	prefix_expansion	"http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+tn	prefix_expansion	"https://www.tablenet.l3s.uni-hannover.de/TableNet#"
+wiki	prefix_expansion	"http://en.wikipedia.org/wiki/"
+dc	prefix_expansion	"http://purl.org/dc/terms/"
+db	prefix_expansion	"http://dbepdia.org/resource/"
+tn-json	prefix_expansion	"http://www.tablenet.l3s.uni-hannover.de/TableNet/json/"
+tn-col	prefix_expansion	"https://www.tablenet.l3s.uni-hannover.de/TableNet/column/"
