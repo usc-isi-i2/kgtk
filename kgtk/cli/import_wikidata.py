@@ -368,12 +368,14 @@ def run(input_file: KGTKFiles,
                                                           '',
                                                           '',
                                                           '',
+                                                          '',
                                             ])
                                         else:
                                             erows.append([sid,
                                                           qnode,
                                                           "label",
                                                           value,
+                                                          '',
                                                           '',
                                             ])
 
@@ -417,12 +419,14 @@ def run(input_file: KGTKFiles,
                                                           '',
                                                           '',
                                                           '',
+                                                          '',
                                             ])
                                         else:
                                             erows.append([sid,
                                                           qnode,
                                                           "description",
                                                           value,
+                                                          '',
                                                           '',
                                             ])
 
@@ -466,12 +470,14 @@ def run(input_file: KGTKFiles,
                                                               '',
                                                               '',
                                                               '',
+                                                              '',
                                                 ])
                                             else:
                                                 erows.append([sid,
                                                               qnode,
                                                               "alias",
                                                               value,
+                                                              '',
                                                               '',
                                                 ])
 
@@ -593,6 +599,7 @@ def run(input_file: KGTKFiles,
                                                           precision,
                                                           calendar,
                                                           enttype,
+                                                          typ,
                                             ])
                                         else:
                                             erows.append([sid,
@@ -600,6 +607,7 @@ def run(input_file: KGTKFiles,
                                                           prop,
                                                           value,
                                                           rank,
+                                                          typ,
                                             ])
 
                                     seq_no += 1
@@ -700,6 +708,7 @@ def run(input_file: KGTKFiles,
                                                                     precision,
                                                                     calendar,
                                                                     enttype,
+                                                                    typ,
                                                                 ])
                                                             else:
                                                                 qrows.append([
@@ -707,6 +716,7 @@ def run(input_file: KGTKFiles,
                                                                     sid,
                                                                     qual_prop,
                                                                     value,
+                                                                    typ,
                                                                 ])
                                                         if interleave:
                                                             if explode_values:
@@ -727,6 +737,7 @@ def run(input_file: KGTKFiles,
                                                                     precision,
                                                                     calendar,
                                                                     enttype,
+                                                                    typ,
                                                                 ])
                                                             else:
                                                                 erows.append([
@@ -735,6 +746,7 @@ def run(input_file: KGTKFiles,
                                                                     qual_prop,
                                                                     value,
                                                                     "",
+                                                                    typ,
                                                                 ])
             
                         if sitelinks:
@@ -749,16 +761,16 @@ def run(input_file: KGTKFiles,
                                     if explode_values:
                                         if edge_file:
                                             erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','','','',
-                                                          '','','','',''])
+                                                          '','','','','',''])
                                         if qual_file:
                                             tempid=sid+'-language-1'
-                                            qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','',''])
+                                            qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','','',''])
                                     else:
                                         if edge_file:
-                                            erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,''])
+                                            erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'',''])
                                         if qual_file:
                                             tempid=sid+'-language-1'
-                                            qrows.append([tempid,sid,'language',sitelang])
+                                            qrows.append([tempid,sid,'language',sitelang,''])
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
@@ -820,9 +832,9 @@ def run(input_file: KGTKFiles,
                     wr.writerow(header)
             if explode_values:
                 header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
-                          'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type']
+                          'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype']
             else:
-                header = ['id','node1','label','node2', 'rank']
+                header = ['id','node1','label','node2', 'rank', 'node2;wikidatatype']
 
             if edge_file:
                 with open(edge_file+'_header', 'w', newline='') as myfile:
