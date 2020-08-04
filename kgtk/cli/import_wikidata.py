@@ -141,6 +141,76 @@ def add_arguments(parser: KGTKArgumentParser):
         help="If true, output the edges and qualifiers in a single file (the edge file). (default=%(default)s).",
     )
 
+    parser.add_argument(
+       "--alias-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="alias_edges",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, create edge records for aliases. (default=%(default)s).",
+    )
+
+    
+    parser.add_argument(
+       "--description-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="descr_edges",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, create edge records for descriptions. (default=%(default)s).",
+    )
+
+    
+    parser.add_argument(
+        "--label-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="label_edges",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, create edge records for labels. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--parse-aliases",
+        nargs='?',
+        type=optional_bool,
+        dest="parse_aliases",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, parse aliases. (default=%(default)s).",
+    )
+
+    
+    parser.add_argument(
+        "--parse-descriptions",
+        nargs='?',
+        type=optional_bool,
+        dest="parse_descr",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, parse descriptions. (default=%(default)s).",
+    )
+
+    
+    parser.add_argument(
+        "--parse-labels",
+        nargs='?',
+        type=optional_bool,
+        dest="parse_labels",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, parse labels. (default=%(default)s).",
+    )
+
     
 def run(input_file: KGTKFiles,
         procs,
@@ -156,7 +226,13 @@ def run(input_file: KGTKFiles,
         keep_temp_files,
         skip_processing,
         skip_merging,
-        interleave):
+        interleave,
+        alias_edges,
+        descr_edges,
+        label_edges,
+        parse_aliases,
+        parse_descr,
+        parse_labels):
 
     # import modules locally
     import bz2
@@ -208,9 +284,6 @@ def run(input_file: KGTKFiles,
                 'P31': exclude_list,    # instance of
                 'P279': exclude_list    # subclass
             }
-            self.parse_labels=True
-            self.parse_aliases=True
-            self.parse_descr=True
             self.first=True
             self.cnt=0
             self.write_mode='w'
@@ -235,12 +308,12 @@ def run(input_file: KGTKFiles,
                 entry_type = obj["type"]
                 if entry_type == "item" or entry_type == "property":
                     keep = True
-                if node_file and keep:
+                if (node_file or label_edges or alias_edges or descr_edges) and keep:
                     row = []
                     qnode = obj["id"]
                     row.append(qnode)
 
-                    if self.parse_labels:
+                    if parse_labels and "labels" in obj:
                         labels = obj["labels"]
                         label_list=[]
                         if labels:
@@ -249,14 +322,46 @@ def run(input_file: KGTKFiles,
                                 if lang_label:
                                     # lang_label['value']=lang_label['value'].replace('|','\\|')
                                     # label_list.append('\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
-                                    label_list.append(KgtkFormat.stringify(lang_label['value'], language=lang))
+                                    value = KgtkFormat.stringify(lang_label['value'], language=lang)
+                                    label_list.append(value)
+
+                                    if label_edges and edge_file:
+                                        sid = qnode + '-' + "label" + '-' + lang
+                                        if explode_values:
+                                            erows.append([sid,
+                                                          qnode,
+                                                          "label",
+                                                          value,
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                            ])
+                                        else:
+                                            erows.append([sid,
+                                                          qnode,
+                                                          "label",
+                                                          value,
+                                                          '',
+                                            ])
+
+
+
                         if len(label_list)>0:
                             row.append("|".join(label_list))
                         else:
                             row.append("")
                     row.append(entry_type)
 
-                    if self.parse_descr:
+                    if parse_descr and "descriptions" in obj:
                         descriptions = obj["descriptions"]
                         descr_list=[]
                         if descriptions:
@@ -265,23 +370,85 @@ def run(input_file: KGTKFiles,
                                 if lang_descr:
                                     # lang_descr['value']=lang_descr['value'].replace('|','\\|')
                                     # descr_list.append('\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
-                                    descr_list.append(KgtkFormat.stringify(lang_descr['value'], language=lang))
+                                    value = KgtkFormat.stringify(lang_descr['value'], language=lang)
+                                    descr_list.append(value)
+                                    if descr_edges and edge_file:
+                                        sid = qnode + '-' + "description" + '-' + lang
+                                        if explode_values:
+                                            erows.append([sid,
+                                                          qnode,
+                                                          "description",
+                                                          value,
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                                          '',
+                                            ])
+                                        else:
+                                            erows.append([sid,
+                                                          qnode,
+                                                          "description",
+                                                          value,
+                                                          '',
+                                            ])
+
                         if len(descr_list)>0:
                             row.append("|".join(descr_list))
                         else:
                             row.append("")
 
-                    if self.parse_aliases:
+                    if parse_aliases and "aliases" in obj:
                         aliases = obj["aliases"]
                         alias_list = []
                         if aliases:
                             for lang in languages:
+                                seq_no = 1
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
                                     for item in lang_aliases:
                                         # item['value']=item['value'].replace('|','\\|')
                                         # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
-                                        alias_list.append(KgtkFormat.stringify(item['value'], language=lang))
+                                        value = KgtkFormat.stringify(item['value'], language=lang)
+                                        alias_list.append(value)
+                                        if alias_edges and edge_file:
+                                            sid = qnode + '-' + "alias" + "-" + lang + '-' + str(seq_no)
+                                            seq_no += 1
+                                            if explode_values:
+                                                erows.append([sid,
+                                                              qnode,
+                                                              "alias",
+                                                              value,
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                              '',
+                                                ])
+                                            else:
+                                                erows.append([sid,
+                                                              qnode,
+                                                              "alias",
+                                                              value,
+                                                              '',
+                                                ])
+
+
+
                         if len(alias_list)>0:
                             row.append("|".join(alias_list))
                         else:
@@ -291,7 +458,7 @@ def run(input_file: KGTKFiles,
                     if node_file:
                         nrows.append(row)
 
-                if edge_file or qual_file:
+                if (edge_file or qual_file) and "claims" in obj:
                     claims = obj["claims"]
                     for prop, value_set in self.neg_prop_filter.items():
                         claim_property = claims.get(prop, None)
