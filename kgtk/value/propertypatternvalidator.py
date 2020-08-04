@@ -1466,11 +1466,14 @@ class PropertyPatternValidator:
             
             field_name: str
             for field_name in lists.field_names:
+                field_value: typing.Union[str, int, float, bool]
                 if field_name not in field_value_map:
-                    self.grouse("Row %d: no field value for field %s in %s." % (rownum, field_name, new_datatype))
-                    result = False
-                    continue
-                field_value: typing.Union[str, int, float, bool] = field_value_map[field_name]
+                    # self.grouse("Row %d: no field value for field %s in %s." % (rownum, field_name, new_datatype))
+                    # result = False
+                    # continue
+                    field_value = "" # We can test with field_blank
+                else:
+                    field_value = field_value_map[field_name]
 
                 pp: PropertyPattern
                 for pp in lists.field_patterns:
