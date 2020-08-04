@@ -56,6 +56,9 @@ class KgtkImplode(KgtkFormat):
 
     retain_unselected_types: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # Some messages are noisy unless asked to be quiet. Verbose overrides this.
+    quiet: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # attr.converters.default_if_none(...) does not seem to work.
     # value_options: KgtkValueOptions = attr.ib(default=None,
     #                                           converter=attr.converters.default_if_none(DEFAULT_KGTK_VALUE_OPTIONS),
@@ -114,7 +117,7 @@ class KgtkImplode(KgtkFormat):
                      implosion: typing.Mapping[str, int],
                      type_name: str,                      
     )->typing.Tuple[str, bool]:
-        if self.verbose:
+        if self.verbose or not self.quiet:
             print("Input line %d: data type '%s' is not supported for implode." % (input_line_count, type_name),
                   file=self.error_file, flush=True)
         return "", False
@@ -130,7 +133,7 @@ class KgtkImplode(KgtkFormat):
         num_val: str = self.unwrap(row[num_idx])
         if len(num_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.NUMBER_FIELD_NAME),
                       file=self.error_file, flush=True)
         value: str = num_val
@@ -139,7 +142,7 @@ class KgtkImplode(KgtkFormat):
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
             valid = kv.is_number(validate=True)
             if not valid:
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': imploded value '%s' is not a valid number." % (input_line_count, type_name, value),
                           file=self.error_file, flush=True)
         return value, valid
@@ -155,7 +158,7 @@ class KgtkImplode(KgtkFormat):
         num_val: str = self.unwrap(row[num_idx])
         if len(num_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.NUMBER_FIELD_NAME),
                       file=self.error_file, flush=True)
 
@@ -167,7 +170,7 @@ class KgtkImplode(KgtkFormat):
 
         if len(lt) > 0 ^ len(ht) > 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': low and high tolerance must both be present or absent." % (input_line_count, type_name),
                       file=self.error_file, flush=True)
 
@@ -187,13 +190,13 @@ class KgtkImplode(KgtkFormat):
             if self.quantities_include_numbers:
                 valid = kv.is_number_or_quantity(validate=True)
                 if not valid:
-                    if self.verbose:
+                    if self.verbose or not self.quiet:
                         print("Input line %d: data type '%s': imploded value '%s' is not a valid quantity or number." % (input_line_count, type_name, value),
                               file=self.error_file, flush=True)
             else:
                 valid = kv.is_quantity(validate=True)
                 if not valid:
-                    if self.verbose:
+                    if self.verbose or not self.quiet:
                         print("Input line %d: data type '%s': imploded value '%s' is not a valid quantity." % (input_line_count, type_name, value),
                               file=self.error_file, flush=True)
         return value, valid
@@ -214,7 +217,7 @@ class KgtkImplode(KgtkFormat):
                         return self.implode_language_qualified_string(input_line_count, row, implosion, type_name)
                     else:
                         valid = False
-                        if self.verbose:
+                        if self.verbose or not self.quiet:
                             print("Input line %d: data type '%s': %s field is not empty" % (input_line_count, type_name, KgtkValueFields.LANGUAGE_FIELD_NAME),
                                   file=self.error_file, flush=True)
         
@@ -222,23 +225,23 @@ class KgtkImplode(KgtkFormat):
         text_val: str = row[text_idx]
         if len(text_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                       file=self.error_file, flush=True)
         elif len(text_val) == 1:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is too short" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                       file=self.error_file, flush=True)
         else:
             if not text_val.startswith('"'):
                 valid = False
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': %s field does not start with a double quote" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                           file=self.error_file, flush=True)
             if not text_val.endswith('"'):
                 valid = False
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': %s field does not end with a double quote" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                           file=self.error_file, flush=True)
 
@@ -255,7 +258,7 @@ class KgtkImplode(KgtkFormat):
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
             valid = kv.is_string(validate=True)
             if not valid:
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': imploded value '%s' is not a valid string." % (input_line_count, type_name, value),
                           file=self.error_file, flush=True)
         return value, valid
@@ -271,24 +274,24 @@ class KgtkImplode(KgtkFormat):
         text_val: str = row[text_idx]
         if len(text_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                       file=self.error_file, flush=True)
 
         elif len(text_val) == 1:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is too short" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                       file=self.error_file, flush=True)
         else:
             if not text_val.startswith('"'):
                 valid = False
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': %s field does not start with a double quote" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                           file=self.error_file, flush=True)
             if not text_val.endswith('"'):
                 valid = False
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': %s field does not end with a double quote" % (input_line_count, type_name, KgtkValueFields.TEXT_FIELD_NAME),
                           file=self.error_file, flush=True)
 
@@ -296,7 +299,7 @@ class KgtkImplode(KgtkFormat):
         language_val: str = self.unwrap(row[language_idx])
         if len(language_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.LANGUAGE_FIELD_NAME),
                       file=self.error_file, flush=True)
 
@@ -320,7 +323,7 @@ class KgtkImplode(KgtkFormat):
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
             valid =  kv.is_language_qualified_string(validate=True)
             if not valid:
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': imploded value '%s' is not a valid language qualified string." % (input_line_count, type_name, value),
                           file=self.error_file, flush=True)
         return value, valid
@@ -336,7 +339,7 @@ class KgtkImplode(KgtkFormat):
         latitude_val: str = self.unwrap(row[latitude_idx])
         if len(latitude_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.LATITUDE_FIELD_NAME),
                       file=self.error_file, flush=True)
 
@@ -344,7 +347,7 @@ class KgtkImplode(KgtkFormat):
         longitude_val: str = self.unwrap(row[longitude_idx])
         if len(longitude_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.LONGITUDE_FIELD_NAME),
                       file=self.error_file, flush=True)
 
@@ -354,7 +357,7 @@ class KgtkImplode(KgtkFormat):
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
             valid =  kv.is_location_coordinates(validate=True)
             if not valid:
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': imploded value '%s' is not a valid location coordinates." % (input_line_count, type_name, value),
                           file=self.error_file, flush=True)
         return value, valid
@@ -371,7 +374,7 @@ class KgtkImplode(KgtkFormat):
         date_and_times_val: str = self.unwrap(row[date_and_times_idx])
         if len(date_and_times_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.DATE_AND_TIMES_FIELD_NAME),
                       file=self.error_file, flush=True)
 
@@ -386,7 +389,7 @@ class KgtkImplode(KgtkFormat):
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
             valid = kv.is_date_and_times(validate=True)
             if not valid:
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': imploded value '%s' is not a valid date and time." % (input_line_count, type_name, value),
                           file=self.error_file, flush=True)
         return value, valid
@@ -397,7 +400,7 @@ class KgtkImplode(KgtkFormat):
                           implosion: typing.Mapping[str, int],
                           type_name: str,                      
     )->typing.Tuple[str, bool]:
-        if self.verbose:
+        if self.verbose or not self.quiet:
             print("Input line %d: data type '%s': extensions are not supported." % (input_line_count, type_name))
         return "", False
 
@@ -412,7 +415,7 @@ class KgtkImplode(KgtkFormat):
         truth_val: str = self.unwrap(row[truth_idx])
         if len(truth_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.TRUTH_FIELD_NAME),
                       file=self.error_file, flush=True)
 
@@ -422,7 +425,7 @@ class KgtkImplode(KgtkFormat):
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
             valid = kv.is_boolean(validate=True)
             if not valid:
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': imploded value '%s' is not a valid boolean." % (input_line_count, type_name, value),
                           file=self.error_file, flush=True)
 
@@ -439,7 +442,7 @@ class KgtkImplode(KgtkFormat):
         symbol_val: str = self.unwrap(row[symbol_idx])
         if len(symbol_val) == 0:
             valid = False
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: data type '%s': %s field is empty" % (input_line_count, type_name, KgtkValueFields.SYMBOL_FIELD_NAME),
                       file=self.error_file, flush=True)
 
@@ -452,7 +455,7 @@ class KgtkImplode(KgtkFormat):
             kv: KgtkValue = KgtkValue(value, options=self.value_options)
             valid = kv.is_symbol(validate=True)
             if not valid:
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: data type '%s': imploded value '%s' is not a valid symbol." % (input_line_count, type_name, value),
                           file=self.error_file, flush=True)
 
@@ -488,8 +491,7 @@ class KgtkImplode(KgtkFormat):
     )->typing.Tuple[str, bool]:
         type_name: str = row[data_type_idx]
         if type_name.upper() not in KgtkFormat.DataType.__members__:
-            # TODO:  Need warnings.
-            if self.verbose:
+            if self.verbose or not self.quiet:
                 print("Input line %d: unrecognized data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
             return "", False
 
@@ -499,7 +501,7 @@ class KgtkImplode(KgtkFormat):
             elif self.ignore_unselected_types:
                 return "", True
             else:
-                if self.verbose:
+                if self.verbose or not self.quiet:
                     print("Input line %d: unselected data type '%s'." % (input_line_count, type_name), file=self.error_file, flush=True)
                 return "", False
 
@@ -759,6 +761,10 @@ def main():
     parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file into which to write rejected records (default=%(default)s).",
                               type=Path, default=None)
     
+    parser.add_argument(      "--quiet", dest="quiet",
+                              help="When true, suppress certain complaints unless verbose. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
@@ -787,6 +793,7 @@ def main():
         print("--remove-prefixed-columns %s" % str(args.remove_prefixed_columns), file=error_file, flush=True)
         print("--ignore-unselected-types %s" % str(args.ignore_unselected_types), file=error_file, flush=True)
         print("--retain-unselected-types %s" % str(args.retain_unselected_types), file=error_file, flush=True)
+        print("--quiets %s" % str(args.quiet), file=error_file, flush=True)
         if args.type_names is not None:
             print("--types %s" % " ".join(args.type_names), file=error_file, flush=True)
         if args.without_fields is not None:
@@ -817,6 +824,7 @@ def main():
         retain_unselected_types=args.retain_unselected_types,
         output_file_path=args.output_file_path,
         reject_file_path=args.reject_file_path,
+        quiet=args.quiet,
         build_id=args.build_id,
         idbuilder_options=idbuilder_options,
         reader_options=reader_options,

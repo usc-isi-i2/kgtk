@@ -5,7 +5,6 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import Namespace, SUPPRESS
-from pathlib import Path
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -78,7 +77,9 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
     import sys
+    
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter

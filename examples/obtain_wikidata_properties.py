@@ -45,4 +45,4 @@ with open("wikidata_props.tsv", "w") as fp:
         p_id = prop["property"]["value"].split("/")[-1]
         p_type = prop["propertyType"]["value"].split("#")[-1]
         p_type = dataTypeMappings.get(p_type,"string")
-        fp.write(p_id + "\tproperty_type\t" + p_type+"\n")
+        fp.write(p_id + "\tdata_type\t" + p_type+"\n")
