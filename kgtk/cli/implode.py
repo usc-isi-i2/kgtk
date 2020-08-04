@@ -5,19 +5,9 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import _MutuallyExclusiveGroup, Namespace, SUPPRESS
-from pathlib import Path
-import sys
 import typing
 
-from kgtk.kgtkformat import KgtkFormat
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
-from kgtk.reshape.kgtkimplode import KgtkImplode
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalue import KgtkValueFields
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -35,6 +25,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.kgtkformat import KgtkFormat
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalue import KgtkValueFields
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -110,6 +106,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Print the list of data types and exit. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--quiet", dest="quiet",
+                              help="When true, suppress certain complaints unless verbose. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkIdBuilderOptions.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -133,6 +133,7 @@ def run(input_file: KGTKFiles,
         retain_unselected_types: bool,
         build_id: bool,
         show_data_types: bool,
+        quiet: bool,
         
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -143,7 +144,16 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.kgtkformat import KgtkFormat
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
+    from kgtk.reshape.kgtkimplode import KgtkImplode
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
@@ -179,6 +189,7 @@ def run(input_file: KGTKFiles,
         if without_fields is not None:
             print("--without %s" % " ".join(without_fields), file=error_file, flush=True)
         print("--show-data-types %s" % str(show_data_types), file=error_file, flush=True)
+        print("--quiet %s" % str(quiet), file=error_file, flush=True)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -209,6 +220,7 @@ def run(input_file: KGTKFiles,
             remove_prefixed_columns=remove_prefixed_columns,
             ignore_unselected_types=ignore_unselected_types,
             retain_unselected_types=retain_unselected_types,
+            quiet=quiet,
             build_id=build_id,
             idbuilder_options=idbuilder_options,
             reader_options=reader_options,

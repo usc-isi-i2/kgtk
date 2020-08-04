@@ -70,3 +70,4 @@ color2color	switch	color2red
 color2color	switch	color2green
 color2	isa	color2obj
 color2	isa	color2color
+post2011	mindate	^2012-01-01T00:00:00Z

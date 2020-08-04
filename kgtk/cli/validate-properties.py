@@ -5,16 +5,9 @@ TODO: Need KgtkWriterOptions.
 """
 
 from argparse import Namespace, SUPPRESS
-from pathlib import Path
-import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.propertypatternvalidator import PropertyPatterns, PropertyPatternValidator
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -30,6 +23,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
     _expert: bool = parsed_shared_args._expert
 
     parser.add_input_file()
@@ -91,7 +88,14 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkReaderOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.propertypatternvalidator import PropertyPatterns, PropertyPatternValidator
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     pattern_kgtk_file: Path = KGTKArgumentParser.get_input_file(pattern_file, default_stdin=False)
