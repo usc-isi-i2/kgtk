@@ -187,7 +187,6 @@ def add_arguments(parser: KGTKArgumentParser):
         help="If true, parse aliases. (default=%(default)s).",
     )
 
-    
     parser.add_argument(
         "--parse-descriptions",
         nargs='?',
@@ -198,7 +197,6 @@ def add_arguments(parser: KGTKArgumentParser):
         metavar="True/False",
         help="If true, parse descriptions. (default=%(default)s).",
     )
-
     
     parser.add_argument(
         "--parse-labels",
@@ -209,6 +207,28 @@ def add_arguments(parser: KGTKArgumentParser):
         default=True,
         metavar="True/False",
         help="If true, parse labels. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--parse-claims",
+        nargs='?',
+        type=optional_bool,
+        dest="parse_claims",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, parse claims. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--fail-if-missing",
+        nargs='?',
+        type=optional_bool,
+        dest="fail_if_missing",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, fail if expected data is missing. (default=%(default)s).",
     )
 
     
@@ -232,7 +252,9 @@ def run(input_file: KGTKFiles,
         label_edges,
         parse_aliases,
         parse_descr,
-        parse_labels):
+        parse_labels,
+        parse_claims,
+        fail_if_missing):
 
     # import modules locally
     import bz2
@@ -313,8 +335,10 @@ def run(input_file: KGTKFiles,
                     qnode = obj["id"]
                     row.append(qnode)
 
-                    if parse_labels and "labels" in obj:
-                        labels = obj["labels"]
+                    if parse_labels:
+                        labels = obj.get("labels")
+                        if fail_if_missing and labels is None:
+                            raise KGTKException("Qnode %s is missing its labels" % qnode)
                         label_list=[]
                         if labels:
                             for lang in languages:
@@ -361,8 +385,10 @@ def run(input_file: KGTKFiles,
                             row.append("")
                     row.append(entry_type)
 
-                    if parse_descr and "descriptions" in obj:
-                        descriptions = obj["descriptions"]
+                    if parse_descr:
+                        descriptions = obj.get("descriptions")
+                        if fail_if_missing and descriptions is None:
+                            raise KGTKException("Qnode %s is missing its descriptions" % qnode)
                         descr_list=[]
                         if descriptions:
                             for lang in languages:
@@ -405,8 +431,10 @@ def run(input_file: KGTKFiles,
                         else:
                             row.append("")
 
-                    if parse_aliases and "aliases" in obj:
-                        aliases = obj["aliases"]
+                    if parse_aliases:
+                        aliases = obj.get("aliases")
+                        if fail_if_missing and aliases is None:
+                            raise KGTKException("Qnode %s is missing its aliases" % qnode)
                         alias_list = []
                         if aliases:
                             for lang in languages:
@@ -458,7 +486,11 @@ def run(input_file: KGTKFiles,
                     if node_file:
                         nrows.append(row)
 
-                if (edge_file or qual_file) and "claims" in obj:
+                if (edge_file or qual_file) and parse_claims and "claims" not in obj:
+                    if fail_if_missing:
+                            raise KGTKException("Qnode %s is missing its claims" % qnode)
+                    
+                if (edge_file or qual_file) and parse_claims and "claims" in obj:
                     claims = obj["claims"]
                     for prop, value_set in self.neg_prop_filter.items():
                         claim_property = claims.get(prop, None)
