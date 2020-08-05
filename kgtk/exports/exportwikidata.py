@@ -51,7 +51,7 @@ class GroupedReader:
             self.current_row = None
     
 
-@attr.s(slots=True, frozen=True)
+@attr.s(slots=True, frozen=False)
 class ExportWikidata(KgtkFormat):
     # TODO: write a validator:
     node_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
@@ -66,6 +66,178 @@ class ExportWikidata(KgtkFormat):
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    node_alias_idx: int = attr.ib(default=-1)
+    node_description_idx: int = attr.ib(default=-1)
+    node_label_idx: int = attr.ib(default=-1)
+    node_qnode_idx: int = attr.ib(default=-1)
+    node_type_idx: int = attr.ib(default=-1)
+
+    edge_id_idx: int = attr.ib(default=-1)
+    edge_node1_idx: int = attr.ib(default=-1)
+    edge_label_idx: int = attr.ib(default=-1)
+    edge_node2_idx: int = attr.ib(default=-1)
+    edge_wikidatatype_idx: int = attr.ib(default=-1)
+
+    qual_node1_idx: int = attr.ib(default=-1)
+    qual_label_idx: int = attr.ib(default=-1)
+    qual_node2_idx: int = attr.ib(default=-1)
+    qual_wikidatatype_idx: int = attr.ib(default=-1)
+
+    def add_attr_to_map(self,
+                        attr_map: typing.MutableMapping[str, typing.Mapping[str, str]],
+                        attr: str,
+                        who: str,
+    ):
+        kv: KgtkValue = KgtkValue(attr, options=self.value_options, parse_fields=False, error_file=self.error_file, verbose=self.verbose)
+        if not kv.is_language_qualified_string(validate=True):
+            raise ValueError("Invald attr %s for %s" % (attr, who))
+
+        text: str
+        language: str
+        language_suffix: str
+        text, language, language_suffix = KgtkFormat.destringify(kv.value)
+        if len(language) == 0:
+            raise ValueError("No attr language in %s for %s" % (attr, who))
+        lang: str = language + language_suffix
+        attr_map[lang] = {
+                "language" : lang,
+                "value": text
+        }
+            
+
+    def add_attr(self,
+                 result: typing.MutableMapping[str, typing.Any],
+                 attr: str,
+                 who: str,
+    ):
+        attr_map: typing.MutableMapping[str, typing.Mapping[str, str]]
+        if who in result:
+            attr_map = result[who]
+        else:
+            attr_map = dict()
+            result[who] = attr_map
+
+        self.add_attr_to_map(attr_map, attr, who)
+
+    def build_attr_map(self,
+                       result: typing.MutableMapping[str, typing.Any],
+                       attr_list: str,
+                       who: str,
+    ):
+        if len(attr_list) == 0:
+            return
+        
+        attr_map: typing.MutableMapping[str, typing.Mapping[str, str]] = { }
+        attr: str
+        for attr in KgtkValue.split_list(attr_list):
+            self.add_attr_to_map(attr_map, attr, who)
+
+        if len(attr_map) > 0:
+            result[who] = attr_map
+
+    def process_qnode_info(self,
+                           qnode: str,
+                           qnode_info: typing.List[str],
+    )->typing.MutableMapping[str, typing.Any]:
+        result: typing.MutableMapping[str, typing.Any] = {
+            "type": qnode_info[self.node_type_idx],
+            "id": qnode,
+        }
+
+        self.build_attr_map(result, qnode_info[self.node_label_idx], "labels")
+        self.build_attr_map(result, qnode_info[self.node_description_idx], "descriptions")
+        self.build_attr_map(result, qnode_info[self.node_alias_idx], "aliases")
+        
+        return result
+
+    def build_qualifier_dict(self, qnode: str, qgr: GroupedReader)->typing.Mapping[str, typing.List[typing.List[str]]]:
+        result: typing.MutableMapping[str, typing.List[typing.List[str]]] = dict()
+
+        qualifiers: typing.List[typing.List[str]] = qgr.fetch(qnode)
+        qualifier: typing.List[str]
+        for qualifier in qualifiers:
+            edge_id: str = qualifier[self.qual_node1_idx]
+            if edge_id not in result:
+                result[edge_id] = list()
+            result[edge_id].append(qualifier)
+
+        return result
+
+    def process_qnode(self,
+                      qnode_info: typing.List[str],
+                      egr: GroupedReader,
+                      qgr: GroupedReader,
+    )->typing.Mapping[str, typing.Any]:
+        qnode: str = qnode_info[self.node_qnode_idx]
+        if self.verbose:
+            print("Processing qnode %s" % qnode)
+
+        result: typing.MutableMapping[str, typing.Any] =  self.process_qnode_info(qnode, qnode_info)
+
+        edges: typing.List[typing.List[str]] = egr.fetch(qnode)
+        qualifier_dict: typing.Mapping[str, typing.List[typing.List[str]]] = self.build_qualifier_dict(qnode, qgr)
+        
+        return result
+            
+    def get_required_columns(self, nr: KgtkReader, er: KgtkReader, qr: KgtkReader):
+        self.node_qnode_idx = nr.id_column_idx
+        if self.node_qnode_idx < 0:
+            raise ValueError("The node file is missing an ID column.")
+
+        self.node_label_idx = nr.column_name_map.get("label", -1)
+        if self.node_label_idx < 0:
+            raise ValueError("The node file is missing a label column.")
+
+        self.node_type_idx = nr.column_name_map.get("type", -1)
+        if self.node_type_idx < 0:
+            raise ValueError("The node file is missing a type column.")
+
+        self.node_description_idx = nr.column_name_map.get("description", -1)
+        if self.node_description_idx < 0:
+            raise ValueError("The node file is missing a description column.")
+
+        self.node_alias_idx = nr.column_name_map.get("alias", -1)
+        if self.node_alias_idx < 0:
+            raise ValueError("The node file is missing a alias column.")
+
+
+        self.edge_id_idx = er.id_column_idx
+        if self.edge_id_idx < 0:
+            raise ValueError("The edge file does not have a id column.")
+
+        self.edge_node1_idx = er.node1_column_idx
+        if self.edge_node1_idx < 0:
+            raise ValueError("The edge file does not have a node1 column.")
+
+        self.edge_label_idx = er.label_column_idx
+        if self.edge_label_idx < 0:
+            raise ValueError("The edge file does not have a label column.")
+
+        self.edge_node2_idx = er.node2_column_idx
+        if self.edge_node2_idx < 0:
+            raise ValueError("The edge file does not have a node2 column.")
+
+        self.edge_wikidatatype_idx = er.column_name_map.get("node2;wikidatatype", -1)
+        if self.edge_wikidatatype_idx < 0:
+            raise ValueError("The edge file does not have a node2:wikidatatype column.")
+
+
+        self.qual_node1_idx = qr.node1_column_idx
+        if self.qual_node1_idx < 0:
+            raise ValueError("The qualifier file does not have a node1 column.")
+
+        self.qual_label_idx = qr.label_column_idx
+        if self.qual_label_idx < 0:
+            raise ValueError("The qualifier file does not have a label column.")
+
+        self.qual_node2_idx = qr.node2_column_idx
+        if self.qual_node2_idx < 0:
+            raise ValueError("The qualifier file does not have a node2 column.")
+
+        self.qual_wikidatatype_idx = qr.column_name_map.get("node2;wikidatatype", -1)
+        if self.qual_wikidatatype_idx < 0:
+            raise ValueError("The qualifier file does not have a node2:wikidatatype column.")
 
     def process(self):
 
@@ -106,35 +278,13 @@ class ExportWikidata(KgtkFormat):
         )
         qgr: GroupedReader = GroupedReader(reader=qr)
 
-        qnode_idx: int = nr.id_column_idx
-        if qnode_idx < 0:
-            raise ValueError("The node file is missing an ID column.")
-
-        label_idx: int = nr.column_name_map.get("label", -1)
-        if label_idx < 0:
-            raise ValueError("The node file is missing a label column.")
-
-        type_idx: int = nr.column_name_map.get("type", -1)
-        if type_idx < 0:
-            raise ValueError("The node file is missing a type column.")
-
-        description_idx: int = nr.column_name_map.get("description", -1)
-        if description_idx < 0:
-            raise ValueError("The node file is missing a description column.")
-
-        alias_idx: int = nr.column_name_map.get("alias", -1)
-        if alias_idx < 0:
-            raise ValueError("The node file is missing a alias column.")
+        self.get_required_columns(nr, er, qr)
 
         qnode_count: int = 0
         first: bool = True
         qnode_info: typing.List[str]
         for qnode_info in nr:
-            result: typing.Mapping[str, typing.Any] = self.process_qnode(qnode=qnode_info[qnode_idx],
-                                                                         label_list=qnode_info[label_idx],
-                                                                         qnode_type=qnode_info[type_idx],
-                                                                         description_list=qnode_info[description_idx],
-                                                                         alias_list=qnode_info[alias_idx],
+            result: typing.Mapping[str, typing.Any] = self.process_qnode(qnode_info,
                                                                          egr=egr,
                                                                          qgr=qgr)
             if first:
@@ -147,57 +297,6 @@ class ExportWikidata(KgtkFormat):
         outfile.write("\n]\n")
         outfile.close()
 
-    def build_attr_map(self, attr_list: str, who: str)->typing.Mapping[str, typing.Mapping[str, str]]:
-        attr_map: typing.MutableMapping[str, typing.Mapping[str, str]] = { }
-
-        if len(attr_list) == 0:
-            return attr_map
-
-        attr: str
-        for attr in KgtkValue.split_list(attr_list):
-            kv: KgtkValue = KgtkValue(attr, options=self.value_options, parse_fields=True, error_file=self.error_file, verbose=self.verbose)
-            if not kv.is_language_qualified_string(validate=True):
-                raise ValueError("Invald attr %s in %s" % (attr, who))
-            if kv.fields is None:
-                raise ValueError("No attr fields in %s in 5s" % (attr, who))
-            if kv.fields.text is None:
-                raise ValueError("No attr text in %s in %s" % (attr, who))
-            text: str = kv.fields.text
-            # TODO: destringify the text
-            if kv.fields.language is None:
-                raise ValueError("No attr language in %s in %s" % (attr, who))
-            language: str = kv.fields.language
-            if kv.fields.language_suffix is not None:
-                language += kv.fields.language_suffix
-            attr_map[language] = {
-                "language" : language,
-                "value": text
-            }
-        return attr_map
-        
-
-    def process_qnode(self,
-                      qnode: str,
-                      label_list: str,
-                      qnode_type: str,
-                      description_list: str,
-                      alias_list: str,
-                      egr: GroupedReader,
-                      qgr: GroupedReader)->typing.Mapping[str, typing.Any]:
-        if self.verbose:
-            print("Processing qnode %s" % qnode)
-
-        result: typing.MutableMapping[str, typing.Any] = {
-            "type": qnode_type,
-            "id": qnode,
-        }
-
-        result["labels"] = self.build_attr_map(label_list, "labels")
-        result["descriptions"] = self.build_attr_map(description_list, "descriptions")
-        result["aliases"] = self.build_attr_map(alias_list, "aliases")
-        
-        return result
-            
 def main():
     """
     Test the Wikidata Exporter.
