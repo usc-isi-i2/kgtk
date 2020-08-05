@@ -136,14 +136,19 @@ class ExportWikidata(KgtkFormat):
         if len(attr_map) > 0:
             result[who] = attr_map
 
+    def add_type(self,
+                 result: typing.MutableMapping[str, typing.Any],
+                 qnode: str,
+                 node_type: str):
+        result["id"] = qnode
+        result["type"] = node_type
+
     def process_qnode_info(self,
                            qnode: str,
                            qnode_info: typing.List[str],
     )->typing.MutableMapping[str, typing.Any]:
-        result: typing.MutableMapping[str, typing.Any] = {
-            "type": qnode_info[self.node_type_idx],
-            "id": qnode,
-        }
+        result: typing.MutableMapping[str, typing.Any] = dict()
+        self.add_type(result, qnode, qnode_info[self.node_type_idx])
 
         self.build_attr_map(result, qnode_info[self.node_label_idx], "labels")
         self.build_attr_map(result, qnode_info[self.node_description_idx], "descriptions")
@@ -164,6 +169,41 @@ class ExportWikidata(KgtkFormat):
 
         return result
 
+    def process_qnode_edge(self,
+                           result: typing.MutableMapping[str, typing.Any],
+                           qnode: str,
+                           edge_row: typing.List[str],
+                           qualifiers: typing.Optional[typing.List[typing.List[str]]]):
+        pass
+                          
+
+    def process_qnode_edges(self,
+                            result: typing.MutableMapping[str, typing.Any],
+                            qnode: str,
+                            edges: typing.List[typing.List[str]],
+                            qualifier_dict: typing.Mapping[str, typing.List[typing.List[str]]]):
+        edge_row: typing.List[str]
+        for edge_row in edges:
+            edge_label: str = edge_row[self.edge_label_idx]
+
+            if edge_label == "alias":
+                self.add_attr(result, edge_row[self.edge_node2_idx], "alias")
+
+            elif edge_label == "description":
+                self.add_attr(result, edge_row[self.edge_node2_idx], "description")
+            
+            elif edge_label == "label":
+                self.add_attr(result, edge_row[self.edge_node2_idx], "label")
+            
+            elif edge_label == "type":
+                self.add_type(result, qnode, edge_row[self.edge_node2_idx])
+
+            else:
+                edge_id: str = edge_row[self.edge_id_idx]
+                qualifiers: typing.Optional[typing.List[typing.List[str]]] = qualifier_dict.get(edge_id)
+                self.process_qnode_edge(result, qnode, edge_row, qualifiers)
+                            
+
     def process_qnode(self,
                       qnode_info: typing.List[str],
                       egr: GroupedReader,
@@ -177,6 +217,8 @@ class ExportWikidata(KgtkFormat):
 
         edges: typing.List[typing.List[str]] = egr.fetch(qnode)
         qualifier_dict: typing.Mapping[str, typing.List[typing.List[str]]] = self.build_qualifier_dict(qnode, qgr)
+
+        self.process_qnode_edges(result, qnode, edges, qualifier_dict)
         
         return result
             
