@@ -118,9 +118,17 @@ class KgtkLift(KgtkFormat):
     def lookup_label_match_column_idx(self, kr: KgtkReader)->int:
         label_match_column_idx: int
         if self.label_match_column_name is None:
-            if kr.node1_column_idx < 0:
-                raise ValueError("No label match column index.")
-            label_match_column_idx = kr.node1_column_idx
+            if kr.is_edge_file:
+                if kr.node1_column_idx < 0:
+                    raise ValueError("No label match node1 column index.")
+                label_match_column_idx = kr.node1_column_idx
+            elif kr.is_node_file:
+                if kr.id_column_idx < 0:
+                    raise ValueError("No label match id column index.")
+                label_match_column_idx = kr.id_column_idx
+            else:
+                raise ValueError("No label match column specified and not an edge or node file.")
+
         else:
             if self.label_match_column_name not in kr.column_name_map:
                 raise ValueError("Label match column `%s` not found." % self.label_match_column_name)
