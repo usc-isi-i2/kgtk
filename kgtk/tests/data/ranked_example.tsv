@@ -1,0 +1,472 @@
+id	node1	label	node2	rank
+Q42-P1005-1	Q42	P1005	"68537"	normal
+Q42-P1006-1	Q42	P1006	"068744307"	normal
+Q42-P1015-1	Q42	P1015	"90196888"	normal
+Q42-P103-1	Q42	P103	Q7979	normal
+Q42-P106-1	Q42	P106	Q214917	normal
+Q42-P106-2	Q42	P106	Q28389	normal
+Q42-P106-3	Q42	P106	Q6625963	normal
+Q42-P106-4	Q42	P106	Q4853732	normal
+Q42-P106-5	Q42	P106	Q18844224	normal
+Q42-P106-6	Q42	P106	Q245068	normal
+Q42-P106-7	Q42	P106	Q36180	normal
+Q42-P108-1	Q42	P108	Q9531	normal
+Q42-P109-1	Q42	P109	"Douglas Adams signature.svg"	normal
+Q42-P119-1	Q42	P119	Q533697	normal
+Q42-P119-1-P625-1	Q42-P119-1	P625	@51.566516666667/-0.14549722222222	
+Q42-P119-1-P625-1	Q42-P119-1	P625	@51.566516666667/-0.14549722222222	
+Q42-P1196-1	Q42	P1196	Q3739104	normal
+Q42-P1207-1	Q42	P1207	"n94004172"	normal
+Q42-P1233-1	Q42	P1233	"122"	normal
+Q42-P1258-1	Q42	P1258	"celebrity/douglas_adams"	normal
+Q42-P1263-1	Q42	P1263	"731/000023662"	normal
+Q42-P1266-1	Q42	P1266	"97049"	normal
+Q42-P1273-1	Q42	P1273	"a10667040"	normal
+Q42-P1280-1	Q42	P1280	"6050147"	normal
+Q42-P1284-1	Q42	P1284	"00000020676"	normal
+Q42-P1303-1	Q42	P1303	Q6607	normal
+Q42-P1315-1	Q42	P1315	"847711"	normal
+Q42-P1343-1	Q42	P1343	Q67311526	normal
+Q42-P1343-1-P2699-1	Q42-P1343-1	P2699	"https://www.obalkyknih.cz/view_auth?auth_id=jn19990000029"	
+Q42-P1343-1-P2699-1	Q42-P1343-1	P2699	"https://www.obalkyknih.cz/view_auth?auth_id=jn19990000029"	
+Q42-P136-1	Q42	P136	Q24925	normal
+Q42-P136-2	Q42	P136	Q40831	normal
+Q42-P136-3	Q42	P136	Q128758	normal
+Q42-P1368-1	Q42	P1368	"000057405"	normal
+Q42-P1375-1	Q42	P1375	"000010283"	normal
+Q42-P1411-1	Q42	P1411	Q3414212	normal
+Q42-P1411-1-P1686-1	Q42-P1411-1	P1686	Q3521267	
+Q42-P1411-1-P1686-1	Q42-P1411-1	P1686	Q3521267	
+Q42-P1411-1-P585-1	Q42-P1411-1	P585	^1979-00-00T00:00:00Z/9	
+Q42-P1411-1-P585-1	Q42-P1411-1	P585	^1979-00-00T00:00:00Z/9	
+Q42-P1411-2	Q42	P1411	Q2576795	normal
+Q42-P1411-2-P1686-1	Q42-P1411-2	P1686	Q721	
+Q42-P1411-2-P1686-1	Q42-P1411-2	P1686	Q721	
+Q42-P1411-2-P585-1	Q42-P1411-2	P585	^1983-00-00T00:00:00Z/9	
+Q42-P1411-2-P585-1	Q42-P1411-2	P585	^1983-00-00T00:00:00Z/9	
+Q42-P1412-1	Q42	P1412	Q7979	normal
+Q42-P1415-1	Q42	P1415	"75853"	normal
+Q42-P1417-1	Q42	P1417	"biography/Douglas-Adams"	normal
+Q42-P1424-1	Q42	P1424	Q22898962	normal
+Q42-P1442-1	Q42	P1442	"Douglas Adams\' gravestone.jpg"	normal
+Q42-P1477-1	Q42	P1477	'Douglas Noël Adams'@en-gb	normal
+Q42-P1559-1	Q42	P1559	'Douglas Adams'@en-gb	normal
+Q42-P1580-1	Q42	P1580	"a1221374"	normal
+Q42-P1617-1	Q42	P1617	"aa075cb6-75bf-46d8-b0bf-9751d6c04c93"	normal
+Q42-P1670-1	Q42	P1670	"0052C2705"	normal
+Q42-P1712-1	Q42	P1712	"person/douglas-adams"	normal
+Q42-P172-1	Q42	P172	Q42406	normal
+Q42-P1728-1	Q42	P1728	"mn0000803382"	normal
+Q42-P18-1	Q42	P18	"Douglas adams portrait cropped.jpg"	normal
+Q42-P18-1-P2096-1	Q42-P18-1	P2096	'Porträtt av Douglas Adams.'@sv	
+Q42-P18-1-P2096-1	Q42-P18-1	P2096	'Porträtt av Douglas Adams.'@sv	
+Q42-P18-1-P2096-2	Q42-P18-1	P2096	'Douglas Adams portresi'@tr	
+Q42-P18-1-P2096-2	Q42-P18-1	P2096	'Douglas Adams portresi'@tr	
+Q42-P18-1-P2096-3	Q42-P18-1	P2096	'Douglas Adams ååʹbleǩkartt'@sms	
+Q42-P18-1-P2096-3	Q42-P18-1	P2096	'Douglas Adams ååʹbleǩkartt'@sms	
+Q42-P18-1-P2096-4	Q42-P18-1	P2096	'Douglas Adamsin muotokuva'@fi	
+Q42-P18-1-P2096-4	Q42-P18-1	P2096	'Douglas Adamsin muotokuva'@fi	
+Q42-P18-1-P2096-5	Q42-P18-1	P2096	'Portrait of Douglas Adams'@en	
+Q42-P18-1-P2096-5	Q42-P18-1	P2096	'Portrait of Douglas Adams'@en	
+Q42-P18-1-P2096-6	Q42-P18-1	P2096	'פורטרט של דאגלס אדמס'@he	
+Q42-P18-1-P2096-6	Q42-P18-1	P2096	'פורטרט של דאגלס אדמס'@he	
+Q42-P1816-1	Q42	P1816	"mp60152"	normal
+Q42-P1828-1	Q42	P1828	"00218511589"	normal
+Q42-P1828-1-P1810-1	Q42-P1828-1	P1810	"ADAMS DOUGLAS"	
+Q42-P1828-1-P1810-1	Q42-P1828-1	P1810	"ADAMS DOUGLAS"	
+Q42-P1890-1	Q42	P1890	"000750942"	normal
+Q42-P19-1	Q42	P19	Q350	normal
+Q42-P1953-1	Q42	P1953	"134923"	normal
+Q42-P20-1	Q42	P20	Q159288	normal
+Q42-P2019-1	Q42	P2019	"p279442"	normal
+Q42-P2048-1	Q42	P2048	+1.96Q11573	normal
+Q42-P2087-1	Q42	P2087	"douglas-adams"	normal
+Q42-P21-1	Q42	P21	Q6581097	normal
+Q42-P213-1	Q42	P213	"0000 0000 8045 6315"	normal
+Q42-P214-1	Q42	P214	"113230702"	normal
+Q42-P2163-1	Q42	P2163	"56544"	normal
+Q42-P2168-1	Q42	P2168	"271209"	normal
+Q42-P2188-1	Q42	P2188	"45993"	normal
+Q42-P2191-1	Q42	P2191	"10014"	normal
+Q42-P22-1	Q42	P22	Q14623675	normal
+Q42-P227-1	Q42	P227	"119033364"	normal
+Q42-P2373-1	Q42	P2373	"Douglas-adams"	normal
+Q42-P2387-1	Q42	P2387	"1289170"	normal
+Q42-P2435-1	Q42	P2435	"208947"	normal
+Q42-P244-1	Q42	P244	"n80076765"	normal
+Q42-P2469-1	Q42	P2469	"238p"	normal
+Q42-P25-1	Q42	P25	Q14623678	normal
+Q42-P2581-1	Q42	P2581	"03688580n"	normal
+Q42-P26-1	Q42	P26	Q14623681	normal
+Q42-P26-1-P580-1	Q42-P26-1	P580	^1991-11-25T00:00:00Z/11	
+Q42-P26-1-P580-1	Q42-P26-1	P580	^1991-11-25T00:00:00Z/11	
+Q42-P26-1-P582-1	Q42-P26-1	P582	^2001-05-11T00:00:00Z/11	
+Q42-P26-1-P582-1	Q42-P26-1	P582	^2001-05-11T00:00:00Z/11	
+Q42-P2600-1	Q42	P2600	"6000000050650155828"	normal
+Q42-P2604-1	Q42	P2604	"246164"	normal
+Q42-P2605-1	Q42	P2605	"39534"	normal
+Q42-P2607-1	Q42	P2607	"307812da-da11-4ee5-a906-31e5ce9694bb"	normal
+Q42-P2611-1	Q42	P2611	"douglas_adams"	normal
+Q42-P2611-2	Q42	P2611	"680"	normal
+Q42-P2626-1	Q42	P2626	"159696"	normal
+Q42-P2638-1	Q42	P2638	"people/douglas-adams"	normal
+Q42-P2650-1	Q42	P2650	Q662893	normal
+Q42-P268-1	Q42	P268	"11888092r"	normal
+Q42-P269-1	Q42	P269	"026677636"	normal
+Q42-P27-1	Q42	P27	Q145	normal
+Q42-P271-1	Q42	P271	"DA07517784"	normal
+Q42-P2722-1	Q42	P2722	"4468812"	normal
+Q42-P2734-1	Q42	P2734	"AdamsDouglas"	normal
+Q42-P2850-1	Q42	P2850	"2080713"	normal
+Q42-P2889-1	Q42	P2889	"9XLD-SZS"	normal
+Q42-P2949-1	Q42	P2949	"Adams-32825"	normal
+Q42-P2963-1	Q42	P2963	"4"	normal
+Q42-P3065-1	Q42	P3065	"02-A002907983"	normal
+Q42-P31-1	Q42	P31	Q5	normal
+Q42-P3106-1	Q42	P3106	"books/douglasadams"	normal
+Q42-P3136-1	Q42	P3136	"2000059"	normal
+Q42-P3142-1	Q42	P3142	"n0008574"	normal
+Q42-P3145-1	Q42	P3145	"nm96558"	normal
+Q42-P3154-1	Q42	P3154	"adamsdou"	normal
+Q42-P3192-1	Q42	P3192	"Douglas+Adams"	normal
+Q42-P3222-1	Q42	P3222	"douglas-adams"	normal
+Q42-P3305-1	Q42	P3305	"199918"	normal
+Q42-P3341-1	Q42	P3341	"21019"	normal
+Q42-P3348-1	Q42	P3348	"202604"	normal
+Q42-P3365-1	Q42	P3365	"douglas-noel-adams"	normal
+Q42-P3373-1	Q42	P3373	Q14623673	normal
+Q42-P3373-1-P1039-1	Q42-P3373-1	P1039	Q10943095	
+Q42-P3373-1-P1039-1	Q42-P3373-1	P1039	Q10943095	
+Q42-P3388-1	Q42	P3388	"168761"	normal
+Q42-P3417-1	Q42	P3417	"Douglas-Adams-4"	normal
+Q42-P3430-1	Q42	P3430	"w65h7md1"	normal
+Q42-P345-1	Q42	P345	"nm0010930"	normal
+Q42-P3479-1	Q42	P3479	"39a33dc4-5a81-4d67-91d6-1daecdb854e3"	normal
+Q42-P349-1	Q42	P349	"00430962"	normal
+Q42-P3630-1	Q42	P3630	"2627"	normal
+Q42-P373-1	Q42	P373	"Douglas Adams"	normal
+Q42-P3762-1	Q42	P3762	"140290"	normal
+Q42-P3845-1	Q42	P3845	"665243"	normal
+Q42-P3846-1	Q42	P3846	"87097968038642"	normal
+Q42-P3913-1	Q42	P3913	"337"	normal
+Q42-P396-1	Q42	P396	"IT\\ICCU\\RAVV\\034417"	normal
+Q42-P3984-1	Q42	P3984	"douglasadams"	normal
+Q42-P3984-1-P1810-1	Q42-P3984-1	P1810	"Douglas Adams: From Hitchhikers to Holistic Detectives"	
+Q42-P3984-1-P1810-1	Q42-P3984-1	P1810	"Douglas Adams: From Hitchhikers to Holistic Detectives"	
+Q42-P3984-1-P407-1	Q42-P3984-1	P407	Q1860	
+Q42-P3984-1-P407-1	Q42-P3984-1	P407	Q1860	
+Q42-P3984-1-P580-1	Q42-P3984-1	P580	^2011-02-06T00:00:00Z/11	
+Q42-P3984-1-P580-1	Q42-P3984-1	P580	^2011-02-06T00:00:00Z/11	
+Q42-P40-1	Q42	P40	Q14623683	normal
+Q42-P409-1	Q42	P409	"35163268"	normal
+Q42-P4193-1	Q42	P4193	"Douglas_Noel_Adams_(1952-2001)"	normal
+Q42-P4198-1	Q42	P4198	"Acv2pnc5mj2oxjxych7atdfljky"	normal
+Q42-P4204-1	Q42	P4204	"Douglas-Adams"	normal
+Q42-P4326-1	Q42	P4326	"215853"	normal
+Q42-P434-1	Q42	P434	"e9ed318d-8cc5-4cf8-ab77-505e39ab6ea4"	normal
+Q42-P4342-1	Q42	P4342	"Douglas_Adams"	normal
+Q42-P4359-1	Q42	P4359	"douglasadams"	normal
+Q42-P4431-1	Q42	P4431	"douglas-adams-61st-birthday"	normal
+Q42-P4431-1-P585-1	Q42-P4431-1	P585	^2013-03-11T00:00:00Z/11	
+Q42-P4431-1-P585-1	Q42-P4431-1	P585	^2013-03-11T00:00:00Z/11	
+Q42-P4438-1	Q42	P4438	"4ce2ba117755a"	normal
+Q42-P4619-1	Q42	P4619	"000592321"	normal
+Q42-P463-1	Q42	P463	Q857679	normal
+Q42-P4657-1	Q42	P4657	"432740401"	normal
+Q42-P4666-1	Q42	P4666	"23878"	normal
+Q42-P4768-1	Q42	P4768	"212786"	normal
+Q42-P4782-1	Q42	P4782	"26898"	normal
+Q42-P4785-1	Q42	P4785	"47671"	normal
+Q42-P4839-1	Q42	P4839	"Entity[\"Person\", \"DouglasAdams::gh8qf\"]"	normal
+Q42-P485-1	Q42	P485	Q67074906	normal
+Q42-P485-1-P973-1	Q42-P485-1	P973	"https://www.sjcarchives.org.uk/personal/index.php/papers-of-douglas-noel-adams"	
+Q42-P485-1-P973-1	Q42-P485-1	P973	"https://www.sjcarchives.org.uk/personal/index.php/papers-of-douglas-noel-adams"	
+Q42-P4862-1	Q42	P4862	"B000AQ2A84"	normal
+Q42-P4985-1	Q42	P4985	"52843"	normal
+Q42-P5019-1	Q42	P5019	"adams-douglas-noel"	normal
+Q42-P5033-1	Q42	P5033	"160192"	normal
+Q42-P5034-1	Q42	P5034	"KAC200300379"	normal
+Q42-P509-1	Q42	P509	Q12152	normal
+Q42-P5233-1	Q42	P5233	"douglas-adams-a38"	normal
+Q42-P5247-1	Q42	P5247	"3040-1126"	normal
+Q42-P5284-1	Q42	P5284	"1032346"	normal
+Q42-P5337-1	Q42	P5337	"CAAqJQgKIh9DQkFTRVFvSUwyMHZNREk0TW5nU0JXVnVMVWRDS0FBUAE"	normal
+Q42-P5340-1	Q42	P5340	"278771"	normal
+Q42-P535-1	Q42	P535	"22814"	normal
+Q42-P5357-1	Q42	P5357	"adams_douglas"	normal
+Q42-P5361-1	Q42	P5361	"AdamsDouglas1952-2001"	normal
+Q42-P5365-1	Q42	P5365	"42"	normal
+Q42-P5404-1	Q42	P5404	"douglas_adams"	normal
+Q42-P5408-1	Q42	P5408	"a/douglas-adams"	normal
+Q42-P551-1	Q42	P551	Q159288	normal
+Q42-P551-1-P582-1	Q42-P551-1	P582	^2001-05-11T00:00:00Z/11	
+Q42-P551-1-P582-1	Q42-P551-1	P582	^2001-05-11T00:00:00Z/11	
+Q42-P551-2	Q42	P551	Q84	preferred
+Q42-P551-3	Q42	P551	Q909993	preferred
+Q42-P551-3-P580-1	Q42-P551-3	P580	^1957-00-00T00:00:00Z/9	
+Q42-P551-3-P580-1	Q42-P551-3	P580	^1957-00-00T00:00:00Z/9	
+Q42-P5534-1	Q42	P5534	"52843"	normal
+Q42-P5570-1	Q42	P5570	"143"	normal
+Q42-P5587-1	Q42	P5587	"1zcfh30k0gr4zxt"	normal
+Q42-P569-1	Q42	P569	^1952-03-11T00:00:00Z/11	normal
+Q42-P570-1	Q42	P570	^2001-05-11T00:00:00Z/11	normal
+Q42-P5882-1	Q42	P5882	"M00000364497"	normal
+Q42-P5905-1	Q42	P5905	"4040-45935"	normal
+Q42-P6119-1	Q42	P6119	"douglas-adams"	normal
+Q42-P6298-1	Q42	P6298	"16115"	normal
+Q42-P6327-1	Q42	P6327	"55720"	normal
+Q42-P6351-1	Q42	P6351	"41236"	normal
+Q42-P6394-1	Q42	P6394	"a1112474x"	normal
+Q42-P646-1	Q42	P646	"/m/0282x"	normal
+Q42-P6464-1	Q42	P6464	"898203"	normal
+Q42-P648-1	Q42	P648	"OL272947A"	normal
+Q42-P6517-1	Q42	P6517	"Douglas-Adams"	normal
+Q42-P6620-1	Q42	P6620	"douglas-adams"	normal
+Q42-P6839-1	Q42	P6839	"Creator/DouglasAdams"	normal
+Q42-P6874-1	Q42	P6874	"Douglas-Adams"	normal
+Q42-P6886-1	Q42	P6886	Q1860	normal
+Q42-P69-1	Q42	P69	Q691283	normal
+Q42-P69-1-P512-1	Q42-P69-1	P512	Q1765120	
+Q42-P69-1-P512-1	Q42-P69-1	P512	Q1765120	
+Q42-P69-1-P580-1	Q42-P69-1	P580	^1971-00-00T00:00:00Z/9	
+Q42-P69-1-P580-1	Q42-P69-1	P580	^1971-00-00T00:00:00Z/9	
+Q42-P69-1-P582-1	Q42-P69-1	P582	^1974-01-01T00:00:00Z/9	
+Q42-P69-1-P582-1	Q42-P69-1	P582	^1974-01-01T00:00:00Z/9	
+Q42-P69-1-P812-1	Q42-P69-1	P812	Q186579	
+Q42-P69-1-P812-1	Q42-P69-1	P812	Q186579	
+Q42-P69-2	Q42	P69	Q4961791	normal
+Q42-P69-2-P580-1	Q42-P69-2	P580	^1959-00-00T00:00:00Z/9	
+Q42-P69-2-P580-1	Q42-P69-2	P580	^1959-00-00T00:00:00Z/9	
+Q42-P69-2-P582-1	Q42-P69-2	P582	^1970-00-00T00:00:00Z/9	
+Q42-P69-2-P582-1	Q42-P69-2	P582	^1970-00-00T00:00:00Z/9	
+Q42-P691-1	Q42	P691	"jn19990000029"	normal
+Q42-P691-1-P1810-1	Q42-P691-1	P1810	"Adams, Douglas"	
+Q42-P691-1-P1810-1	Q42-P691-1	P1810	"Adams, Douglas"	
+Q42-P6972-1	Q42	P6972	"douglas-adams"	normal
+Q42-P7029-1	Q42	P7029	"770139179"	normal
+Q42-P7029-2	Q42	P7029	"770139180"	normal
+Q42-P7071-1	Q42	P7071	"douglas-adams"	normal
+Q42-P7154-1	Q42	P7154	"adams+douglas"	normal
+Q42-P7195-1	Q42	P7195	"201077"	normal
+Q42-P7214-1	Q42	P7214	"753186"	normal
+Q42-P7215-1	Q42	P7215	"46398"	normal
+Q42-P7284-1	Q42	P7284	"douglas-adams"	normal
+Q42-P7293-1	Q42	P7293	"9810669145205606"	normal
+Q42-P7300-1	Q42	P7300	"59932"	normal
+Q42-P734-1	Q42	P734	Q351735	normal
+Q42-P735-1	Q42	P735	Q463035	preferred
+Q42-P735-1-P1545-1	Q42-P735-1	P1545	"1"	
+Q42-P735-1-P1545-1	Q42-P735-1	P1545	"1"	
+Q42-P735-2	Q42	P735	Q19688263	normal
+Q42-P735-2-P1545-1	Q42-P735-2	P1545	"2"	
+Q42-P735-2-P1545-1	Q42-P735-2	P1545	"2"	
+Q42-P7369-1	Q42	P7369	"000263040"	normal
+Q42-P7400-1	Q42	P7400	"adamsdouglas-1"	normal
+Q42-P7433-1	Q42	P7433	"25"	normal
+Q42-P7506-1	Q42	P7506	"2078791"	normal
+Q42-P7661-1	Q42	P7661	"74033"	normal
+Q42-P7699-1	Q42	P7699	"LNB:Mr+;=Bf"	normal
+Q42-P7700-1	Q42	P7700	"18852"	normal
+Q42-P7704-1	Q42	P7704	"agent/base/59925"	normal
+Q42-P7745-1	Q42	P7745	"183956"	normal
+Q42-P7803-1	Q42	P7803	"40761"	normal
+Q42-P7859-1	Q42	P7859	"lccn-n80076765"	normal
+Q42-P7902-1	Q42	P7902	"119033364"	normal
+Q42-P800-1	Q42	P800	Q25169	normal
+Q42-P800-2	Q42	P800	Q20736364	normal
+Q42-P800-3	Q42	P800	Q7758404	normal
+Q42-P800-4	Q42	P800	Q578895	normal
+Q42-P800-5	Q42	P800	Q721	normal
+Q42-P800-6	Q42	P800	Q1042294	normal
+Q42-P800-7	Q42	P800	Q187655	normal
+Q42-P856-1	Q42	P856	"https://douglasadams.com/"	normal
+Q42-P856-1-P407-1	Q42-P856-1	P407	Q1860	
+Q42-P856-1-P407-1	Q42-P856-1	P407	Q1860	
+Q42-P866-1	Q42	P866	"douglas-adams"	normal
+Q42-P906-1	Q42	P906	"230807"	normal
+Q42-P910-1	Q42	P910	Q8935487	normal
+Q42-P947-1	Q42	P947	"000002833"	normal
+Q42-P949-1	Q42	P949	"000163846"	normal
+Q42-P950-1	Q42	P950	"XX1149955"	normal
+Q42-P998-1	Q42	P998	"Arts/Literature/Authors/A/Adams,_Douglas/"	preferred
+Q42-P998-1-P407-1	Q42-P998-1	P407	Q1860	
+Q42-P998-1-P407-1	Q42-P998-1	P407	Q1860	
+Q42-P998-2	Q42	P998	"World/Dansk/Kultur/Litteratur/Forfattere/A/Adams,_Douglas/"	normal
+Q42-P998-2-P407-1	Q42-P998-2	P407	Q9035	
+Q42-P998-2-P407-1	Q42-P998-2	P407	Q9035	
+Q42-P998-3	Q42	P998	"World/Français/Arts/Littérature/Genres/Science-fiction_et_fantastique/Auteurs/Adams,_Douglas/"	normal
+Q42-P998-3-P407-1	Q42-P998-3	P407	Q150	
+Q42-P998-3-P407-1	Q42-P998-3	P407	Q150	
+Q42-P998-4	Q42	P998	"World/Deutsch/Kultur/Literatur/Autoren_und_Autorinnen/A/Adams,_Douglas/"	normal
+Q42-P998-4-P407-1	Q42-P998-4	P407	Q188	
+Q42-P998-4-P407-1	Q42-P998-4	P407	Q188	
+Q42-P998-5	Q42	P998	"World/Italiano/Arte/Letteratura/Autori/A/Adams,_Douglas/"	normal
+Q42-P998-5-P407-1	Q42-P998-5	P407	Q652	
+Q42-P998-5-P407-1	Q42-P998-5	P407	Q652	
+Q42-P998-6	Q42	P998	"World/Svenska/Kultur/Litteratur/Genre/Science_fiction_och_fantasy/Författare/Adams,_Douglas/"	normal
+Q42-P998-6-P407-1	Q42-P998-6	P407	Q9027	
+Q42-P998-6-P407-1	Q42-P998-6	P407	Q9027	
+Q42-wikipedia_sitelink-1	Q42	wikipedia_sitelink	http://af.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-1-language-1	Q42-wikipedia_sitelink-1	language	af	
+Q42-wikipedia_sitelink-10	Q42	wikipedia_sitelink	http://bg.wikipedia.org/wiki/Дъглас_Адамс	
+Q42-wikipedia_sitelink-10-language-1	Q42-wikipedia_sitelink-10	language	bg	
+Q42-wikipedia_sitelink-11	Q42	wikipedia_sitelink	http://bn.wikipedia.org/wiki/ডগলাস_অ্যাডামস	
+Q42-wikipedia_sitelink-11-language-1	Q42-wikipedia_sitelink-11	language	bn	
+Q42-wikipedia_sitelink-12	Q42	wikipedia_sitelink	http://bs.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-12-language-1	Q42-wikipedia_sitelink-12	language	bs	
+Q42-wikipedia_sitelink-13	Q42	wikipedia_sitelink	http://ca.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-13-language-1	Q42-wikipedia_sitelink-13	language	ca	
+Q42-wikipedia_sitelink-14	Q42	wikipedia_sitelink	http://cs.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-14-language-1	Q42-wikipedia_sitelink-14	language	cs	
+Q42-wikipedia_sitelink-15	Q42	wikipedia_sitelink	http://cy.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-15-language-1	Q42-wikipedia_sitelink-15	language	cy	
+Q42-wikipedia_sitelink-16	Q42	wikipedia_sitelink	http://da.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-16-language-1	Q42-wikipedia_sitelink-16	language	da	
+Q42-wikipedia_sitelink-17	Q42	wikipedia_sitelink	http://de.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-17-language-1	Q42-wikipedia_sitelink-17	language	de	
+Q42-wikipedia_sitelink-18	Q42	wikipedia_sitelink	http://el.wikipedia.org/wiki/Ντάγκλας_Άνταμς	
+Q42-wikipedia_sitelink-18-language-1	Q42-wikipedia_sitelink-18	language	el	
+Q42-wikipedia_sitelink-19	Q42	wikipedia_sitelink	http://en.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-19-language-1	Q42-wikipedia_sitelink-19	language	en	
+Q42-wikipedia_sitelink-2	Q42	wikipedia_sitelink	http://ar.wikipedia.org/wiki/دوغلاس_آدمز	
+Q42-wikipedia_sitelink-2-language-1	Q42-wikipedia_sitelink-2	language	ar	
+Q42-wikipedia_sitelink-20	Q42	wikipedia_sitelink	http://eo.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-20-language-1	Q42-wikipedia_sitelink-20	language	eo	
+Q42-wikipedia_sitelink-21	Q42	wikipedia_sitelink	http://es.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-21-language-1	Q42-wikipedia_sitelink-21	language	es	
+Q42-wikipedia_sitelink-22	Q42	wikipedia_sitelink	http://et.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-22-language-1	Q42-wikipedia_sitelink-22	language	et	
+Q42-wikipedia_sitelink-23	Q42	wikipedia_sitelink	http://eu.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-23-language-1	Q42-wikipedia_sitelink-23	language	eu	
+Q42-wikipedia_sitelink-24	Q42	wikipedia_sitelink	http://fa.wikipedia.org/wiki/داگلاس_آدامز	
+Q42-wikipedia_sitelink-24-language-1	Q42-wikipedia_sitelink-24	language	fa	
+Q42-wikipedia_sitelink-25	Q42	wikipedia_sitelink	http://fi.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-25-language-1	Q42-wikipedia_sitelink-25	language	fi	
+Q42-wikipedia_sitelink-26	Q42	wikipedia_sitelink	http://fr.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-26-language-1	Q42-wikipedia_sitelink-26	language	fr	
+Q42-wikipedia_sitelink-27	Q42	wikipedia_sitelink	http://ga.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-27-language-1	Q42-wikipedia_sitelink-27	language	ga	
+Q42-wikipedia_sitelink-28	Q42	wikipedia_sitelink	http://gl.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-28-language-1	Q42-wikipedia_sitelink-28	language	gl	
+Q42-wikipedia_sitelink-29	Q42	wikipedia_sitelink	http://he.wikipedia.org/wiki/דאגלס_אדמס	
+Q42-wikipedia_sitelink-29-language-1	Q42-wikipedia_sitelink-29	language	he	
+Q42-wikipedia_sitelink-3	Q42	wikipedia_sitelink	http://arz.wikipedia.org/wiki/دوجلاس_ادامز	
+Q42-wikipedia_sitelink-3-language-1	Q42-wikipedia_sitelink-3	language	arz	
+Q42-wikipedia_sitelink-30	Q42	wikipedia_sitelink	http://hr.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-30-language-1	Q42-wikipedia_sitelink-30	language	hr	
+Q42-wikipedia_sitelink-31	Q42	wikipedia_sitelink	http://hu.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-31-language-1	Q42-wikipedia_sitelink-31	language	hu	
+Q42-wikipedia_sitelink-32	Q42	wikipedia_sitelink	http://hy.wikipedia.org/wiki/Դուգլաս_Ադամս	
+Q42-wikipedia_sitelink-32-language-1	Q42-wikipedia_sitelink-32	language	hy	
+Q42-wikipedia_sitelink-33	Q42	wikipedia_sitelink	http://ia.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-33-language-1	Q42-wikipedia_sitelink-33	language	ia	
+Q42-wikipedia_sitelink-34	Q42	wikipedia_sitelink	http://id.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-34-language-1	Q42-wikipedia_sitelink-34	language	id	
+Q42-wikipedia_sitelink-35	Q42	wikipedia_sitelink	http://io.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-35-language-1	Q42-wikipedia_sitelink-35	language	io	
+Q42-wikipedia_sitelink-36	Q42	wikipedia_sitelink	http://is.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-36-language-1	Q42-wikipedia_sitelink-36	language	is	
+Q42-wikipedia_sitelink-37	Q42	wikipedia_sitelink	http://it.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-37-language-1	Q42-wikipedia_sitelink-37	language	it	
+Q42-wikipedia_sitelink-38	Q42	wikipedia_sitelink	http://ja.wikipedia.org/wiki/ダグラス・アダムズ	
+Q42-wikipedia_sitelink-38-language-1	Q42-wikipedia_sitelink-38	language	ja	
+Q42-wikipedia_sitelink-39	Q42	wikipedia_sitelink	http://jv.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-39-language-1	Q42-wikipedia_sitelink-39	language	jv	
+Q42-wikipedia_sitelink-4	Q42	wikipedia_sitelink	http://ast.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-4-language-1	Q42-wikipedia_sitelink-4	language	ast	
+Q42-wikipedia_sitelink-40	Q42	wikipedia_sitelink	http://ka.wikipedia.org/wiki/დაგლას_ადამსი	
+Q42-wikipedia_sitelink-40-language-1	Q42-wikipedia_sitelink-40	language	ka	
+Q42-wikipedia_sitelink-41	Q42	wikipedia_sitelink	http://ko.wikipedia.org/wiki/더글러스_애덤스	
+Q42-wikipedia_sitelink-41-language-1	Q42-wikipedia_sitelink-41	language	ko	
+Q42-wikipedia_sitelink-42	Q42	wikipedia_sitelink	http://kw.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-42-language-1	Q42-wikipedia_sitelink-42	language	kw	
+Q42-wikipedia_sitelink-43	Q42	wikipedia_sitelink	http://ky.wikipedia.org/wiki/Дуглас_Адамс	
+Q42-wikipedia_sitelink-43-language-1	Q42-wikipedia_sitelink-43	language	ky	
+Q42-wikipedia_sitelink-44	Q42	wikipedia_sitelink	http://la.wikipedia.org/wiki/Duglassius_Adams	
+Q42-wikipedia_sitelink-44-language-1	Q42-wikipedia_sitelink-44	language	la	
+Q42-wikipedia_sitelink-45	Q42	wikipedia_sitelink	http://lfn.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-45-language-1	Q42-wikipedia_sitelink-45	language	lfn	
+Q42-wikipedia_sitelink-46	Q42	wikipedia_sitelink	http://lt.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-46-language-1	Q42-wikipedia_sitelink-46	language	lt	
+Q42-wikipedia_sitelink-47	Q42	wikipedia_sitelink	http://lv.wikipedia.org/wiki/Duglass_Adamss	
+Q42-wikipedia_sitelink-47-language-1	Q42-wikipedia_sitelink-47	language	lv	
+Q42-wikipedia_sitelink-48	Q42	wikipedia_sitelink	http://mg.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-48-language-1	Q42-wikipedia_sitelink-48	language	mg	
+Q42-wikipedia_sitelink-49	Q42	wikipedia_sitelink	http://mk.wikipedia.org/wiki/Даглас_Адамс	
+Q42-wikipedia_sitelink-49-language-1	Q42-wikipedia_sitelink-49	language	mk	
+Q42-wikipedia_sitelink-5	Q42	wikipedia_sitelink	http://azb.wikipedia.org/wiki/داقلاس_آدامز	
+Q42-wikipedia_sitelink-5-language-1	Q42-wikipedia_sitelink-5	language	azb	
+Q42-wikipedia_sitelink-50	Q42	wikipedia_sitelink	http://ml.wikipedia.org/wiki/ഡഗ്ലസ്_ആഡംസ്	
+Q42-wikipedia_sitelink-50-language-1	Q42-wikipedia_sitelink-50	language	ml	
+Q42-wikipedia_sitelink-51	Q42	wikipedia_sitelink	http://mrj.wikipedia.org/wiki/Адамс,_Дуглас	
+Q42-wikipedia_sitelink-51-language-1	Q42-wikipedia_sitelink-51	language	mrj	
+Q42-wikipedia_sitelink-52	Q42	wikipedia_sitelink	http://mr.wikipedia.org/wiki/डग्लस_अ‍ॅडम्स	
+Q42-wikipedia_sitelink-52-language-1	Q42-wikipedia_sitelink-52	language	mr	
+Q42-wikipedia_sitelink-53	Q42	wikipedia_sitelink	http://nl.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-53-language-1	Q42-wikipedia_sitelink-53	language	nl	
+Q42-wikipedia_sitelink-54	Q42	wikipedia_sitelink	http://nn.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-54-language-1	Q42-wikipedia_sitelink-54	language	nn	
+Q42-wikipedia_sitelink-55	Q42	wikipedia_sitelink	http://no.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-55-language-1	Q42-wikipedia_sitelink-55	language	no	
+Q42-wikipedia_sitelink-56	Q42	wikipedia_sitelink	http://oc.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-56-language-1	Q42-wikipedia_sitelink-56	language	oc	
+Q42-wikipedia_sitelink-57	Q42	wikipedia_sitelink	http://pa.wikipedia.org/wiki/ਡਗਲਸ_ਐਡਮਸ	
+Q42-wikipedia_sitelink-57-language-1	Q42-wikipedia_sitelink-57	language	pa	
+Q42-wikipedia_sitelink-58	Q42	wikipedia_sitelink	http://pl.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-58-language-1	Q42-wikipedia_sitelink-58	language	pl	
+Q42-wikipedia_sitelink-59	Q42	wikipedia_sitelink	http://pnb.wikipedia.org/wiki/ڈگلس_ایڈمس	
+Q42-wikipedia_sitelink-59-language-1	Q42-wikipedia_sitelink-59	language	pnb	
+Q42-wikipedia_sitelink-6	Q42	wikipedia_sitelink	http://az.wikipedia.org/wiki/Duqlas_Adams	
+Q42-wikipedia_sitelink-6-language-1	Q42-wikipedia_sitelink-6	language	az	
+Q42-wikipedia_sitelink-60	Q42	wikipedia_sitelink	http://pt.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-60-language-1	Q42-wikipedia_sitelink-60	language	pt	
+Q42-wikipedia_sitelink-61	Q42	wikipedia_sitelink	http://ro.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-61-language-1	Q42-wikipedia_sitelink-61	language	ro	
+Q42-wikipedia_sitelink-62	Q42	wikipedia_sitelink	http://ru.wikipedia.org/wiki/Адамс,_Дуглас	
+Q42-wikipedia_sitelink-62-language-1	Q42-wikipedia_sitelink-62	language	ru	
+Q42-wikipedia_sitelink-63	Q42	wikipedia_sitelink	http://sco.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-63-language-1	Q42-wikipedia_sitelink-63	language	sco	
+Q42-wikipedia_sitelink-64	Q42	wikipedia_sitelink	http://sc.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-64-language-1	Q42-wikipedia_sitelink-64	language	sc	
+Q42-wikipedia_sitelink-65	Q42	wikipedia_sitelink	http://sh.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-65-language-1	Q42-wikipedia_sitelink-65	language	sh	
+Q42-wikipedia_sitelink-66	Q42	wikipedia_sitelink	http://simple.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-66-language-1	Q42-wikipedia_sitelink-66	language	simple	
+Q42-wikipedia_sitelink-67	Q42	wikipedia_sitelink	http://sk.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-67-language-1	Q42-wikipedia_sitelink-67	language	sk	
+Q42-wikipedia_sitelink-68	Q42	wikipedia_sitelink	http://sl.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-68-language-1	Q42-wikipedia_sitelink-68	language	sl	
+Q42-wikipedia_sitelink-69	Q42	wikipedia_sitelink	http://sq.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-69-language-1	Q42-wikipedia_sitelink-69	language	sq	
+Q42-wikipedia_sitelink-7	Q42	wikipedia_sitelink	http://bar.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-7-language-1	Q42-wikipedia_sitelink-7	language	bar	
+Q42-wikipedia_sitelink-70	Q42	wikipedia_sitelink	http://sr.wikipedia.org/wiki/Даглас_Адамс	
+Q42-wikipedia_sitelink-70-language-1	Q42-wikipedia_sitelink-70	language	sr	
+Q42-wikipedia_sitelink-71	Q42	wikipedia_sitelink	http://sv.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-71-language-1	Q42-wikipedia_sitelink-71	language	sv	
+Q42-wikipedia_sitelink-72	Q42	wikipedia_sitelink	http://ta.wikipedia.org/wiki/டக்ளஸ்_ஆடம்ஸ்	
+Q42-wikipedia_sitelink-72-language-1	Q42-wikipedia_sitelink-72	language	ta	
+Q42-wikipedia_sitelink-73	Q42	wikipedia_sitelink	http://tr.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-73-language-1	Q42-wikipedia_sitelink-73	language	tr	
+Q42-wikipedia_sitelink-74	Q42	wikipedia_sitelink	http://uk.wikipedia.org/wiki/Дуглас_Адамс	
+Q42-wikipedia_sitelink-74-language-1	Q42-wikipedia_sitelink-74	language	uk	
+Q42-wikipedia_sitelink-75	Q42	wikipedia_sitelink	http://ur.wikipedia.org/wiki/ڈگلس_ایڈمس	
+Q42-wikipedia_sitelink-75-language-1	Q42-wikipedia_sitelink-75	language	ur	
+Q42-wikipedia_sitelink-76	Q42	wikipedia_sitelink	http://vep.wikipedia.org/wiki/Adams_Duglas	
+Q42-wikipedia_sitelink-76-language-1	Q42-wikipedia_sitelink-76	language	vep	
+Q42-wikipedia_sitelink-77	Q42	wikipedia_sitelink	http://vi.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-77-language-1	Q42-wikipedia_sitelink-77	language	vi	
+Q42-wikipedia_sitelink-78	Q42	wikipedia_sitelink	http://war.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-78-language-1	Q42-wikipedia_sitelink-78	language	war	
+Q42-wikipedia_sitelink-79	Q42	wikipedia_sitelink	http://wuu.wikipedia.org/wiki/道格拉斯·亚当斯	
+Q42-wikipedia_sitelink-79-language-1	Q42-wikipedia_sitelink-79	language	wuu	
+Q42-wikipedia_sitelink-8	Q42	wikipedia_sitelink	http://be-x-old.wikipedia.org/wiki/Дуглас_Адамз	
+Q42-wikipedia_sitelink-8-language-1	Q42-wikipedia_sitelink-8	language	be-x-old	
+Q42-wikipedia_sitelink-80	Q42	wikipedia_sitelink	http://zh-min-nan.wikipedia.org/wiki/Douglas_Adams	
+Q42-wikipedia_sitelink-80-language-1	Q42-wikipedia_sitelink-80	language	zh-min-nan	
+Q42-wikipedia_sitelink-81	Q42	wikipedia_sitelink	http://zh-yue.wikipedia.org/wiki/道格拉斯亞當斯	
+Q42-wikipedia_sitelink-81-language-1	Q42-wikipedia_sitelink-81	language	zh-yue	
+Q42-wikipedia_sitelink-82	Q42	wikipedia_sitelink	http://zh.wikipedia.org/wiki/道格拉斯·亚当斯	
+Q42-wikipedia_sitelink-82-language-1	Q42-wikipedia_sitelink-82	language	zh	
+Q42-wikipedia_sitelink-9	Q42	wikipedia_sitelink	http://be.wikipedia.org/wiki/Дуглас_Адамс	
+Q42-wikipedia_sitelink-9-language-1	Q42-wikipedia_sitelink-9	language	be	
