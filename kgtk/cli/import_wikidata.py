@@ -316,7 +316,10 @@ def run(input_file: KGTKFiles,
                          typ="",
                          claim_id="",
                          claim_type="",
-                         val_type=""
+                         val_type="",
+                         entity_type="",
+                         datahash="",
+                         calendar="",
         ):
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
@@ -330,6 +333,28 @@ def run(input_file: KGTKFiles,
                           claim_id,
                           # claim_type,
                           val_type,
+                          entity_type,
+                          datahash,
+                          calendar,
+            ])
+
+        def qrows_append(self, qrows, edge_id, node1, label, node2,
+                         typ="",
+                         val_type="",
+                         entity_type="",
+                         datahash="",
+                         calendar="",
+        ):
+
+            qrows.append([edge_id,
+                          node1,
+                          label,
+                          node2,
+                          typ,
+                          val_type,
+                          entity_type,
+                          datahash,
+                          calendar,
             ])
 
         def process(self,line,node_file,edge_file,qual_file,languages,doc_id):
@@ -645,7 +670,9 @@ def run(input_file: KGTKFiles,
                                                               typ=typ,
                                                               claim_id=claim_id,
                                                               claim_type=claim_type,
-                                                              val_type=val_type)
+                                                              val_type=val_type,
+                                                              entity_type=enttype,
+                                                              calendar=calendar)
 
                                     seq_no += 1
                                     if qual_file or interleave:
@@ -667,8 +694,10 @@ def run(input_file: KGTKFiles,
                                                         lat = ''
                                                         long = ''
                                                         enttype = ''
-                                                        val = qcp['datavalue'].get(
-                                                            'value')
+                                                        datahash = qcp['hash']
+                                                        datavalue = qcp['datavalue']
+                                                        val = datavalue.get('value')
+                                                        val_type = datavalue.get("type", "")
                                                         typ = qcp['datatype']
                                                         tempid = sid + '-' + qual_prop + \
                                                             '-' + str(qual_seq_no)
@@ -748,13 +777,16 @@ def run(input_file: KGTKFiles,
                                                                     typ,
                                                                 ])
                                                             else:
-                                                                qrows.append([
-                                                                    tempid,
-                                                                    sid,
-                                                                    qual_prop,
-                                                                    value,
-                                                                    typ,
-                                                                ])
+                                                                self.qrows_append(qrows,
+                                                                                  edge_id=tempid,
+                                                                                  node1=sid,
+                                                                                  label=qual_prop,
+                                                                                  node2=value,
+                                                                                  typ=typ,
+                                                                                  entity_type=enttype,
+                                                                                  datahash=datahash,
+                                                                                  calendar=calendar)
+
                                                         if interleave:
                                                             if explode_values:
                                                                 erows.append([
@@ -782,7 +814,10 @@ def run(input_file: KGTKFiles,
                                                                                   node1=sid,
                                                                                   label=qual_prop,
                                                                                   node2=value,
-                                                                                  typ=typ)
+                                                                                  typ=typ,
+                                                                                  entity_type=enttype,
+                                                                                  datahash=datahash,
+                                                                                  calendar=calendar)
             
                         if sitelinks:
                             wikipedia_seq_no = 1
@@ -838,16 +873,34 @@ def run(input_file: KGTKFiles,
                                         if qual_file:
                                             if len(sitelang) > 0:
                                                 tempid=sid+'-language-1'
-                                                qrows.append([tempid,sid,'language',sitelang,''])
+                                                self.qrows_append(qrows,
+                                                                  edge_id=tempid,
+                                                                  node1=sid,
+                                                                  label='language',
+                                                                  node2=sitelang)
+
                                             tempid=sid+'-site-1'
-                                            qrows.append([tempid,sid,'site',link,''])
+                                            self.qrows_append(qrows,
+                                                              edge_id=tempid,
+                                                              node1=sid,
+                                                              label='site',
+                                                              node2=link)
+
                                             tempid=sid+'-title-1'
-                                            qrows.append([tempid,sid,'title',KgtkFormat.stringify(sitelinks[link]['title']),''])
+                                            self.qrows_append(qrows,
+                                                              edge_id=tempid,
+                                                              node1=sid,
+                                                              label='title',
+                                                              node2=KgtkFormat.stringify(sitelinks[link]['title']))
 
                                             badge_num: int = 0
                                             for badge in sitelinks[link]['badges']:
                                                 tempid=sid+'-badge-'+str(badge_num + 1)
-                                                qrows.append([tempid,sid,'badge',sitelinks[link]['badges'][badge_num],''])
+                                                self.qrows_append(qrows,
+                                                                  edge_id=tempid,
+                                                                  node1=sid,
+                                                                  label='badge',
+                                                                  node2=sitelinks[link]['badges'][badge_num])
                                                 badge_num += 1
 
             if node_file:
@@ -912,7 +965,7 @@ def run(input_file: KGTKFiles,
                 header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
                           'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype']
             else:
-                header = ['id','node1','label','node2', 'rank', 'node2;wikidatatype', 'claim_id', 'val_type']
+                header = ['id','node1','label','node2', 'rank', 'node2;wikidatatype', 'claim_id', 'val_type', 'entity_type', 'datahash', 'calendar']
 
             if edge_file:
                 with open(edge_file+'_header', 'w', newline='') as myfile:
@@ -926,6 +979,7 @@ def run(input_file: KGTKFiles,
                     wr.writerow(header)
             if qual_file:
                 header.remove('rank')
+                header.remove('claim_id')
                 with open(qual_file+'_header', 'w', newline='') as myfile:
                     wr = csv.writer(
                         myfile,
