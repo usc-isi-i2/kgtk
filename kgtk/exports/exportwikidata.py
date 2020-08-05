@@ -49,8 +49,7 @@ class GroupedReader:
 
             result.append(self.current_row)
             self.current_row = None
-    
-
+                
 @attr.s(slots=True, frozen=False)
 class ExportWikidata(KgtkFormat):
     # TODO: write a validator:
@@ -77,12 +76,24 @@ class ExportWikidata(KgtkFormat):
     edge_node1_idx: int = attr.ib(default=-1)
     edge_label_idx: int = attr.ib(default=-1)
     edge_node2_idx: int = attr.ib(default=-1)
+    edge_rank_idx: int = attr.ib(default=-1)
     edge_wikidatatype_idx: int = attr.ib(default=-1)
+    edge_claim_id_idx: int = attr.ib(default=-1)
+    edge_val_type_idx: int = attr.ib(default=-1)
+    edge_entity_type_idx: int = attr.ib(default=-1)
+    edge_datahash_idx: int = attr.ib(default=-1)
+    edge_precision_idx: int = attr.ib(default=-1)
+    edge_calendar_idx: int = attr.ib(default=-1)
 
     qual_node1_idx: int = attr.ib(default=-1)
     qual_label_idx: int = attr.ib(default=-1)
     qual_node2_idx: int = attr.ib(default=-1)
     qual_wikidatatype_idx: int = attr.ib(default=-1)
+    qual_val_type_idx: int = attr.ib(default=-1)
+    qual_entity_type_idx: int = attr.ib(default=-1)
+    qual_datahash_idx: int = attr.ib(default=-1)
+    qual_precision_idx: int = attr.ib(default=-1)
+    qual_calendar_idx: int = attr.ib(default=-1)
 
     def add_attr_to_map(self,
                         attr_map: typing.MutableMapping[str, typing.Mapping[str, str]],
@@ -173,14 +184,6 @@ class ExportWikidata(KgtkFormat):
 
         return result
 
-    def process_qnode_edge(self,
-                           result: typing.MutableMapping[str, typing.Any],
-                           qnode: str,
-                           edge_row: typing.List[str],
-                           qualifiers: typing.Optional[typing.List[typing.List[str]]]):
-        pass
-                          
-
     def add_sitelink(self,
                      result: typing.MutableMapping[str, typing.Any],
                      edge_id: str,
@@ -219,6 +222,62 @@ class ExportWikidata(KgtkFormat):
             "title": title,
             "badges": badges
         }
+            
+
+    def process_edge_datavalue(self,
+                           value: str,
+                           edge_row: typing.List[str]):
+        datavalue: typing.MutableMapping[str, typing.Union[str, typing.Mapping[str, typing.Union[str, int]]]] = dict()
+        datavalue["type"] = edge_row[self.edge_val_type_idx]
+
+        valuemap: typing.MutableMapping[str, typing.Union[str, int]] = dict()
+        datavalue["value"] = valuemap
+
+        entity_type: str = edge_row[self.edge_entity_type_idx]
+        if len(entity_type) > 0:
+            valuemap["entity-type"] = entity_type
+            valuemap["id"] = value
+            valuemap["numeric-id"] = int(value[1:])
+            return datavalue
+
+        
+
+        return datavalue
+
+    def process_qnode_edge(self,
+                           result: typing.MutableMapping[str, typing.Any],
+                           qnode: str,
+                           prop: str,
+                           edge_row: typing.List[str],
+                           qualifiers: typing.Optional[typing.List[typing.List[str]]]):
+        if "claims" not in result:
+            result["claims"] = dict()
+        claims = result["claims"]
+
+        if prop not in claims:
+            claims[prop] = list()
+        proplist: typing.List[typing.Mapping[str, typing.Any]] = claims[prop]
+
+        statement: typing.MutableMapping[str, typing.Any] = dict()
+        proplist.append(statement)
+
+        # Fill in the top-level attributes:
+        statement["type"] = "statement" # We hope this is correct.
+        statement["id"] = edge_row[self.edge_claim_id_idx]
+        statement["rank"] = edge_row[self.edge_rank_idx]
+
+        mainsnak: typing.MutableMapping[str, typing.Any] = dict()
+        statement["mainsnak"] = mainsnak
+
+        mainsnak["property"] = prop
+        mainsnak["datatype"] = edge_row[self.edge_wikidatatype_idx]
+
+        value: str = edge_row[self.edge_node2_idx]
+        if value == "somevalue":
+            mainsnak["snaktype"] = "somevalue"
+        else:
+            mainsnak["snaktype"] = "value"
+            mainsnak["datavalue"] = self.process_edge_datavalue(value, edge_row)
             
 
     def process_qnode_edges(self,
@@ -261,7 +320,7 @@ class ExportWikidata(KgtkFormat):
             else:
                 edge_id = edge_row[self.edge_id_idx]
                 qualifiers = qualifier_dict.get(edge_id)
-                self.process_qnode_edge(result, qnode, edge_row, qualifiers)
+                self.process_qnode_edge(result, qnode, edge_label, edge_row, qualifiers)
                             
 
     def process_qnode(self,
@@ -320,9 +379,37 @@ class ExportWikidata(KgtkFormat):
         if self.edge_node2_idx < 0:
             raise ValueError("The edge file does not have a node2 column.")
 
+        self.edge_rank_idx = er.column_name_map.get("rank", -1)
+        if self.edge_rank_idx < 0:
+            raise ValueError("The edge file does not have a rank column.")
+
         self.edge_wikidatatype_idx = er.column_name_map.get("node2;wikidatatype", -1)
         if self.edge_wikidatatype_idx < 0:
             raise ValueError("The edge file does not have a node2:wikidatatype column.")
+
+        self.edge_claim_id_idx = er.column_name_map.get("claim_id", -1)
+        if self.edge_claim_id_idx < 0:
+            raise ValueError("The edge file does not have a claim_id column.")
+
+        self.edge_val_type_idx = er.column_name_map.get("val_type", -1)
+        if self.edge_val_type_idx < 0:
+            raise ValueError("The edge file does not have a val_type column.")
+
+        self.edge_entity_type_idx = er.column_name_map.get("entity_type", -1)
+        if self.edge_entity_type_idx < 0:
+            raise ValueError("The edge file does not have a entity_type column.")
+
+        self.edge_datahash_idx = er.column_name_map.get("datahash", -1)
+        if self.edge_datahash_idx < 0:
+            raise ValueError("The edge file does not have a datahash column.")
+
+        self.edge_precision_idx = er.column_name_map.get("precision", -1)
+        if self.edge_precision_idx < 0:
+            raise ValueError("The edge file does not have a precision column.")
+
+        self.edge_calendar_idx = er.column_name_map.get("calendar", -1)
+        if self.edge_calendar_idx < 0:
+            raise ValueError("The edge file does not have a calendar column.")
 
 
         self.qual_node1_idx = qr.node1_column_idx
@@ -340,6 +427,26 @@ class ExportWikidata(KgtkFormat):
         self.qual_wikidatatype_idx = qr.column_name_map.get("node2;wikidatatype", -1)
         if self.qual_wikidatatype_idx < 0:
             raise ValueError("The qualifier file does not have a node2:wikidatatype column.")
+
+        self.qual_val_type_idx = er.column_name_map.get("val_type", -1)
+        if self.qual_val_type_idx < 0:
+            raise ValueError("The qual file does not have a val_type column.")
+
+        self.qual_entity_type_idx = er.column_name_map.get("entity_type", -1)
+        if self.qual_entity_type_idx < 0:
+            raise ValueError("The qual file does not have a entity_type column.")
+
+        self.qual_datahash_idx = er.column_name_map.get("datahash", -1)
+        if self.qual_datahash_idx < 0:
+            raise ValueError("The qual file does not have a datahash column.")
+
+        self.qual_precision_idx = er.column_name_map.get("precision", -1)
+        if self.qual_precision_idx < 0:
+            raise ValueError("The qual file does not have a precision column.")
+
+        self.qual_calendar_idx = er.column_name_map.get("calendar", -1)
+        if self.qual_calendar_idx < 0:
+            raise ValueError("The qual file does not have a calendar column.")
 
     def process(self):
 

@@ -319,6 +319,7 @@ def run(input_file: KGTKFiles,
                          val_type="",
                          entity_type="",
                          datahash="",
+                         precision="",
                          calendar="",
         ):
             if len(claim_type) > 0 and claim_type != "statement":
@@ -335,6 +336,7 @@ def run(input_file: KGTKFiles,
                           val_type,
                           entity_type,
                           datahash,
+                          precision,
                           calendar,
             ])
 
@@ -343,6 +345,7 @@ def run(input_file: KGTKFiles,
                          val_type="",
                          entity_type="",
                          datahash="",
+                         precision="",
                          calendar="",
         ):
 
@@ -354,6 +357,7 @@ def run(input_file: KGTKFiles,
                           val_type,
                           entity_type,
                           datahash,
+                          precision,
                           calendar,
             ])
 
@@ -672,6 +676,7 @@ def run(input_file: KGTKFiles,
                                                               claim_type=claim_type,
                                                               val_type=val_type,
                                                               entity_type=enttype,
+                                                              precision=precision,
                                                               calendar=calendar)
 
                                     seq_no += 1
@@ -785,6 +790,7 @@ def run(input_file: KGTKFiles,
                                                                                   typ=typ,
                                                                                   entity_type=enttype,
                                                                                   datahash=datahash,
+                                                                                  precision=precision,
                                                                                   calendar=calendar)
 
                                                         if interleave:
@@ -817,6 +823,7 @@ def run(input_file: KGTKFiles,
                                                                                   typ=typ,
                                                                                   entity_type=enttype,
                                                                                   datahash=datahash,
+                                                                                  precision=precision,
                                                                                   calendar=calendar)
             
                         if sitelinks:
@@ -965,7 +972,9 @@ def run(input_file: KGTKFiles,
                 header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
                           'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype']
             else:
-                header = ['id','node1','label','node2', 'rank', 'node2;wikidatatype', 'claim_id', 'val_type', 'entity_type', 'datahash', 'calendar']
+                header = ['id','node1','label','node2',
+                          'rank', 'node2;wikidatatype',
+                          'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar']
 
             if edge_file:
                 with open(edge_file+'_header', 'w', newline='') as myfile:
