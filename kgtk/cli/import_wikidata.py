@@ -262,6 +262,7 @@ def run(input_file: KGTKFiles,
     import csv
     import os
     import pyrallel
+    import sys
     import time
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.cli_argparse import KGTKArgumentParser
@@ -309,6 +310,27 @@ def run(input_file: KGTKFiles,
             self.first=True
             self.cnt=0
             self.write_mode='w'
+
+        def erows_append(self, erows, edge_id, node1, label, node2,
+                         rank="",
+                         typ="",
+                         claim_id="",
+                         claim_type="",
+                         val_type=""
+        ):
+            if len(claim_type) > 0 and claim_type != "statement":
+                raise ValueError("Unexpected claim type %s" % claim_type)
+
+            erows.append([edge_id,
+                          node1,
+                          label,
+                          node2,
+                          rank,
+                          typ,
+                          claim_id,
+                          # claim_type,
+                          val_type,
+            ])
 
         def process(self,line,node_file,edge_file,qual_file,languages,doc_id):
             write_mode='a'
@@ -371,14 +393,11 @@ def run(input_file: KGTKFiles,
                                                           '',
                                             ])
                                         else:
-                                            erows.append([sid,
-                                                          qnode,
-                                                          "label",
-                                                          value,
-                                                          '',
-                                                          '',
-                                            ])
-
+                                            self.erows_append(erows,
+                                                              edge_id=sid,
+                                                              node1=qnode,
+                                                              label="label",
+                                                              node2=value)
 
 
                         if len(label_list)>0:
@@ -422,13 +441,11 @@ def run(input_file: KGTKFiles,
                                                           '',
                                             ])
                                         else:
-                                            erows.append([sid,
-                                                          qnode,
-                                                          "description",
-                                                          value,
-                                                          '',
-                                                          '',
-                                            ])
+                                            self.erows_append(erows,
+                                                              edge_id=sid,
+                                                              node1=qnode,
+                                                              label="description",
+                                                              node2=value)
 
                         if len(descr_list)>0:
                             row.append("|".join(descr_list))
@@ -473,14 +490,11 @@ def run(input_file: KGTKFiles,
                                                               '',
                                                 ])
                                             else:
-                                                erows.append([sid,
-                                                              qnode,
-                                                              "alias",
-                                                              value,
-                                                              '',
-                                                              '',
-                                                ])
-
+                                                self.erows_append(erows,
+                                                                  edge_id=sid,
+                                                                  node1=qnode,
+                                                                  label="alias",
+                                                                  node2=value)
 
 
                         if len(alias_list)>0:
@@ -517,11 +531,28 @@ def run(input_file: KGTKFiles,
                         for prop, claim_property in claims.items():
                             seq_no = 1
                             for cp in claim_property:
-                                if (deprecated or cp['rank'] != 'deprecated') and cp['mainsnak']['snaktype'] == 'value':
+                                if (deprecated or cp['rank'] != 'deprecated'):
+                                    snaktype = cp['mainsnak']['snaktype']
                                     rank=cp['rank']
-                                    val = cp['mainsnak']['datavalue'].get(
-                                        'value')
+                                    claim_id = cp['id']
+                                    claim_type = cp['type']
+                                    if claim_type != "statement":
+                                        print("Unknown claim type %s" % claim_type, file=sys.stderr, flush=True)
+
+                                    if snaktype == 'value':
+                                        datavalue = cp['mainsnak']['datavalue']
+                                        val = datavalue.get('value')
+                                        val_type = datavalue.get("type", "")
+                                    elif snaktype == 'somevalue':
+                                        val = None
+                                        val_type = ""
+                                    else:
+                                        raise ValueError("Unknown snaktype %s" % snaktype)
+
                                     typ = cp['mainsnak']['datatype']
+                                    # if typ != val_type:
+                                    #     print("typ %s != val_type %s" % (typ, val_type), file=sys.stderr, flush=True)
+
                                     sid = qnode + '-' + \
                                         prop + '-' + str(seq_no)                             
                                     value = ''
@@ -536,7 +567,10 @@ def run(input_file: KGTKFiles,
                                     lat = ''
                                     long = ''
                                     enttype = ''
-                                    if typ.startswith('wikibase'):
+
+                                    if val is None:
+                                        value = "somevalue"
+                                    elif typ.startswith('wikibase'):
                                         enttype = val.get('entity-type')
                                         value = val.get('id', '')
                                         item=value
@@ -602,13 +636,16 @@ def run(input_file: KGTKFiles,
                                                           typ,
                                             ])
                                         else:
-                                            erows.append([sid,
-                                                          qnode,
-                                                          prop,
-                                                          value,
-                                                          rank,
-                                                          typ,
-                                            ])
+                                            self.erows_append(erows,
+                                                              edge_id=sid,
+                                                              node1=qnode,
+                                                              label=prop,
+                                                              node2=value,
+                                                              rank=rank,
+                                                              typ=typ,
+                                                              claim_id=claim_id,
+                                                              claim_type=claim_type,
+                                                              val_type=val_type)
 
                                     seq_no += 1
                                     if qual_file or interleave:
@@ -740,14 +777,12 @@ def run(input_file: KGTKFiles,
                                                                     typ,
                                                                 ])
                                                             else:
-                                                                erows.append([
-                                                                    tempid,
-                                                                    sid,
-                                                                    qual_prop,
-                                                                    value,
-                                                                    "",
-                                                                    typ,
-                                                                ])
+                                                                self.erows_append(erows,
+                                                                                  edge_id=tempid,
+                                                                                  node1=sid,
+                                                                                  label=qual_prop,
+                                                                                  node2=value,
+                                                                                  typ=typ)
             
                         if sitelinks:
                             wikipedia_seq_no = 1
@@ -795,7 +830,11 @@ def run(input_file: KGTKFiles,
 
                                     else:
                                         if edge_file:
-                                            erows.append([sid, qnode, linklabel, sitelink,'',''])
+                                            self.erows_append(erows,
+                                                              edge_id=sid,
+                                                              node1=qnode,
+                                                              label=linklabel,
+                                                              node2=sitelink)
                                         if qual_file:
                                             if len(sitelang) > 0:
                                                 tempid=sid+'-language-1'
@@ -873,7 +912,7 @@ def run(input_file: KGTKFiles,
                 header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
                           'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype']
             else:
-                header = ['id','node1','label','node2', 'rank', 'node2;wikidatatype']
+                header = ['id','node1','label','node2', 'rank', 'node2;wikidatatype', 'claim_id', 'val_type']
 
             if edge_file:
                 with open(edge_file+'_header', 'w', newline='') as myfile:
