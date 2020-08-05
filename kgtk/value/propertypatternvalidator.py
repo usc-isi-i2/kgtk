@@ -16,7 +16,7 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalue import KgtkValue
+from kgtk.value.kgtkvalue import KgtkValue, KgtkValueFields
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 # TODO: verify that the automatically created __eq__, __lt__, etc.
@@ -488,7 +488,6 @@ class PropertyPattern:
                         cls.Action.NODE2_TYPE,
                         cls.Action.NODE2_NOT_TYPE,
                         cls.Action.NODE2_FIELD_OP,
-                        cls.Action.FIELD_NAME,
                         cls.Action.ISA,
                         cls.Action.SWITCH,
                         cls.Action.NEXTCASE,
@@ -510,11 +509,32 @@ class PropertyPattern:
                 values.extend(old_ppat.values)
             values = sorted(list(set(values)))
 
+        elif action in (cls.Action.FIELD_NAME,):
+            if node2_value.is_symbol():
+                if node2_value.value not in KgtkValueFields.FIELD_NAMES:
+                    raise ValueError("Filter row %d: %s: %s is not a known field name." % (rownum, action.value, node2_value.value))
+
+                values.append(node2_value.value)
+            elif node2_value.is_list():
+                for kv in node2_value.get_list_items():
+                    if kv.is_symbol():
+                        if kv.value not in KgtkValueFields.FIELD_NAMES:
+                            raise ValueError("Filter row %d: %s: %s is not a known field name." % (rownum, action.value, kv.value))
+                        values.append(kv.value)
+                    else:
+                        raise ValueError("Filter row %d: %s: List value is not a symbol" % (rownum, action.value)) # TODO: better complaint
+            else:
+                raise ValueError("Filter row %d: %s: Value '%s' is not a symbol or list of symbols" % (rownum, action.value, node2_value.value)) # TODO: better complaint
+
+            # Merge any existing values, then removed duplicates and sort:
+            if old_ppat is not None and len(old_ppat.values) > 0:
+                values.extend(old_ppat.values)
+            values = sorted(list(set(values)))
+
+                        
         elif action in (cls.Action.NODE1_VALUES,
                         cls.Action.NODE2_VALUES,
                         cls.Action.NODE2_NOT_VALUES,
-                        cls.Action.FIELD_VALUES,
-                        cls.Action.FIELD_NOT_VALUES,
                         cls.Action.NODE2_CHAIN,
                         cls.Action.ID_CHAIN):
             if node2_value.is_list():
@@ -522,6 +542,33 @@ class PropertyPattern:
                     values.append(kv.value)
             else:
                 values.append(node2_value.value)
+
+            # Merge any existing values, then removed duplicates and sort:
+            if old_ppat is not None and len(old_ppat.values) > 0:
+                values.extend(old_ppat.values)
+            values = sorted(list(set(values)))
+
+        elif action in (cls.Action.FIELD_VALUES,
+                        cls.Action.FIELD_NOT_VALUES):
+            if node2_value.is_list():
+                for kv in node2_value.get_list_items():
+                    if kv.is_string(validate=True):
+                        if kv.fields is None:
+                            raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
+                        if kv.fields.text is None:
+                            raise ValueError("Filter row %d: %s: Node2 has no text" % (rownum, action.value)) # TODO: better complaint
+                        values.append(kv.fields.text)
+                    else:
+                        values.append(kv.value)
+            else:
+                if node2_value.is_string(validate=True):
+                    if node2_value.fields is None:
+                        raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
+                    if node2_value.fields.text is None:
+                        raise ValueError("Filter row %d: %s: Node2 has no text" % (rownum, action.value)) # TODO: better complaint
+                    values.append(node2_value.fields.text)
+                else:
+                    values.append(node2_value.value)
 
             # Merge any existing values, then removed duplicates and sort:
             if old_ppat is not None and len(old_ppat.values) > 0:
