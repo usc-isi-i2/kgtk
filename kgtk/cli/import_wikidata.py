@@ -752,25 +752,64 @@ def run(input_file: KGTKFiles,
                         if sitelinks:
                             wikipedia_seq_no = 1
                             for link in sitelinks:
-                                if link.endswith('wiki') and link!='commonswiki':
-                                    sid=qnode + '-wikipedia_sitelink-'+str(wikipedia_seq_no)
+                                # TODO: If the title might contain vertical bar, more work is needed
+                                # to make the sitetitle safe for KGTK.
+                                if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
+                                    linklabel = 'wikipedia_sitelink'
+                                    sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
                                     wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     sitelang=link.split('wiki')[0].replace('_','-')
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
+                                else:
+                                    linklabel = 'addl_wikipedia_sitelink'
+                                    sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
+                                    wikipedia_seq_no+=1
+                                    sitetitle='_'.join(sitelinks[link]['title'].split())
+                                    if "wiki" in link:
+                                        sitelang=link.split("wiki")[0]
+                                        if sitelang in ("commons", "simple"):
+                                            sitelang = "en"
+                                    else:
+                                        sitelang=""
+                                    sitehost=link+'.org' # TODO: Needs more work here
+                                    sitelink = 'http://'+sitehost+'/wiki/'+sitetitle
+                                if sitelink is not None:
                                     if explode_values:
                                         if edge_file:
-                                            erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'','','','','','','',
+                                            erows.append([sid, qnode, linklabel, sitelink,'','','','','','','',
                                                           '','','','','',''])
                                         if qual_file:
-                                            tempid=sid+'-language-1'
-                                            qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','','',''])
+                                            if len(sitelang) > 0:
+                                                tempid=sid+'-language-1'
+                                                qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','','',''])
+                                            tempid=sid+'-site-1'
+                                            qrows.append([tempid,sid,'site',link,'','','','','','','','','','','',''])
+                                            tempid=sid+'-title-1'
+                                            qrows.append([tempid,sid,'title',KgtkFormat.stringify(sitelinks[link]['title']),'','','','','','','','','','','',''])
+                                            badge_num: int = 0
+                                            for badge in sitelinks[link]['badges']:
+                                                tempid=sid+'-badge-'+str(badge_num + 1)
+                                                qrows.append([tempid,sid,'badge',sitelinks[link]['badges'][badge_num],'','','','','','','','','','','',''])
+                                                badge_num += 1
+
                                     else:
                                         if edge_file:
-                                            erows.append([sid, qnode, 'wikipedia_sitelink', sitelink,'',''])
+                                            erows.append([sid, qnode, linklabel, sitelink,'',''])
                                         if qual_file:
-                                            tempid=sid+'-language-1'
-                                            qrows.append([tempid,sid,'language',sitelang,''])
+                                            if len(sitelang) > 0:
+                                                tempid=sid+'-language-1'
+                                                qrows.append([tempid,sid,'language',sitelang,''])
+                                            tempid=sid+'-site-1'
+                                            qrows.append([tempid,sid,'site',link,''])
+                                            tempid=sid+'-title-1'
+                                            qrows.append([tempid,sid,'title',KgtkFormat.stringify(sitelinks[link]['title']),''])
+
+                                            badge_num: int = 0
+                                            for badge in sitelinks[link]['badges']:
+                                                tempid=sid+'-badge-'+str(badge_num + 1)
+                                                qrows.append([tempid,sid,'badge',sitelinks[link]['badges'][badge_num],''])
+                                                badge_num += 1
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
