@@ -3,6 +3,7 @@ Constants and helpers for the KGTK file format.
 
 """
 
+import ast
 from enum import Enum, unique
 import sys
 import typing
@@ -97,3 +98,34 @@ class KgtkFormat:
             return '"' + s.translate(KgtkFormat.stringify_translate) + '"'
         else:
             return "'" + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
+
+    @classmethod
+    def unstringify(cls, s: str)->str:
+        """Convert a KGTK formatted string into an internal string.  The language
+        code and suffix are not returned.
+        """
+        if s.startswith("'"):
+            language: str
+            s, language = s.rsplit("@", 1)
+        s = s.replace('\\|', '|')
+        return ast.literal_eval(s)
+
+    @classmethod
+    def destringify(cls, s: str)->typing.Tuple[str, str, str]:
+        """Convert a KGTK formatted string into an internal string.  The language
+        code and suffix are returned.  Language and language_suffix are returned as empty
+        strings when they are not present.
+
+        For the moment, we'll assume that the language and language suffix don't
+        conatain any escape sequences.
+        """
+        language: str = ""
+        language_suffix: str = ""
+        if s.startswith("'"):
+            s, language = s.rsplit("@", 1)
+            if "-" in language:
+                language, language_suffix = language.split("-", 1)
+                language_suffix = "-" + language_suffix
+        s = s.replace('\\|', '|')
+        return (ast.literal_eval(s), language, language_suffix)
+    
