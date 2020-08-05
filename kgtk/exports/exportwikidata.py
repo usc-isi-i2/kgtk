@@ -181,6 +181,46 @@ class ExportWikidata(KgtkFormat):
         pass
                           
 
+    def add_sitelink(self,
+                     result: typing.MutableMapping[str, typing.Any],
+                     edge_id: str,
+                     qualifiers: typing.List[typing.List[str]]):
+        if "sitelinks" not in result:
+            result["sitelinks"] = dict()
+        sitelinks: typing.MutableMapping[str, typing.Mapping[str, typing.Union[str, typing.List[str]]]] = result["sitelinks"]
+
+        site: str = ""
+        title: str = ""
+        badges: typing.List[str] = list()
+
+        qualifier: typing.List[str]
+        for qualifier in qualifiers:
+            label: str = qualifier[self.qual_label_idx]
+
+            if label == "site":
+                site = qualifier[self.qual_node2_idx]
+
+            elif label == "title":
+                title = KgtkFormat.unstringify(qualifier[self.qual_node2_idx])
+
+            elif label == "badge":
+                badges.append(qualifier[self.qual_node2_idx])
+
+        if len(site) == 0:
+            # TODO: give a better error message.
+            raise ValueError("Missing sitelink site for %s" % edge_id)
+
+        if len(title) == 0:
+            # TODO: give a better error message.
+            raise ValueError("Missing sitelink title for %s" % edge_id)
+
+        sitelinks[site] = {
+            "site": site,
+            "title": title,
+            "badges": badges
+        }
+            
+
     def process_qnode_edges(self,
                             result: typing.MutableMapping[str, typing.Any],
                             qnode: str,
@@ -189,6 +229,9 @@ class ExportWikidata(KgtkFormat):
 
         # In case we're not using a node file.
         self.add_qnode(result, qnode)
+
+        edge_id: str
+        qualifiers: typing.Optional[typing.List[typing.List[str]]]
 
         edge_row: typing.List[str]
         for edge_row in edges:
@@ -206,9 +249,18 @@ class ExportWikidata(KgtkFormat):
             elif edge_label == "type":
                 self.add_type(result, edge_row[self.edge_node2_idx])
 
+            elif edge_label == "type":
+                self.add_type(result, edge_row[self.edge_node2_idx])
+
+            elif edge_label in ("wikipedia_sitelink", "addl_wikipedia_sitelink"):
+                edge_id = edge_row[self.edge_id_idx]
+                qualifiers = qualifier_dict.get(edge_id)
+                if qualifiers is not None and len(qualifiers) > 0:
+                    self.add_sitelink(result, edge_id, qualifiers)
+
             else:
-                edge_id: str = edge_row[self.edge_id_idx]
-                qualifiers: typing.Optional[typing.List[typing.List[str]]] = qualifier_dict.get(edge_id)
+                edge_id = edge_row[self.edge_id_idx]
+                qualifiers = qualifier_dict.get(edge_id)
                 self.process_qnode_edge(result, qnode, edge_row, qualifiers)
                             
 
