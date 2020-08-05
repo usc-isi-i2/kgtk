@@ -571,7 +571,7 @@ class KgtkNtriples(KgtkFormat):
             # Open the input file.
             if self.verbose:
                 print("Opening the input file: %s" % input_file_path, file=self.error_file, flush=True)
-            infile: typing.TestIO
+            infile: typing.TextIO
             if str(input_file_path) == "-":
                 infile = sys.stdin
             else:
