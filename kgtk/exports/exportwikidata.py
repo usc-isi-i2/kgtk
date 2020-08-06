@@ -225,8 +225,9 @@ class ExportWikidata(KgtkFormat):
             
 
     def process_edge_datavalue(self,
-                           value: str,
-                           edge_row: typing.List[str]):
+                               value: str,
+                               edge_row: typing.List[str],
+                               datatype: str):
         datavalue: typing.MutableMapping[str, typing.Union[str, typing.Mapping[str, typing.Union[str, int]]]] = dict()
         datavalue["type"] = edge_row[self.edge_val_type_idx]
 
@@ -240,8 +241,91 @@ class ExportWikidata(KgtkFormat):
             valuemap["numeric-id"] = int(value[1:])
             return datavalue
 
-        
+        kv = KgtkValue(value, options=self.value_options, parse_fields=True, error_file=self.error_file, verbose=self.verbose)
+        if not kv.validate():
+            raise ValueError("Invalide KGTK value %s" % value)
+        if kv.fields is None:
+            raise ValueError("KGTK valueis missing fields.")
 
+        if kv.is_number():
+            if kv.fields.numberstr is None:
+                raise ValueError("number is missing numberstr.")
+                
+            valuemap["amount"] = kv.fields.numberstr # TODO: add plus sign
+            valuemap["unit"] = "1"
+            return datavalue
+
+        if kv.is_quantity():
+            if kv.fields.numberstr is None:
+                raise ValueError("quantity is missing numberstr.")
+            valuemap["amount"] = kv.fields.numberstr # TODO: add plus sign
+
+            if kv.fields.units_node is None:
+                raise ValueError("quantity is missing unitsnode.")
+            valuemap["unit"] = "http://www.wikidata.org/entity/" + kv.fields.units_node
+
+            if kv.fields.low_tolerancestr is not None and len(kv.fields.low_tolerancestr) > 0:
+                valuemap["lowerBound"] = kv.fields.low_tolerancestr # TODO: add plus sign
+
+            if kv.fields.high_tolerancestr is not None and len(kv.fields.high_tolerancestr) > 0:
+                valuemap["higherBound"] = kv.fields.high_tolerancestr # TODO: add plus sign
+            return datavalue
+
+        if kv.is_language_qualified_string():
+            text: str
+            language: str
+            language_suffix: str
+            text, language, language_suffix = KgtkFormat.destringify(value) # TODO: KgtkValue should do this to text
+            language += language_suffix
+            valuemap["text"] = text
+            valuemap["language"] = language
+            return datavalue
+        
+        if kv.is_string():
+            valuemap["type"] = "string"
+            valuemap["value"] = KgtkFormat.unstringify(value) # TODO: KgtkValue should do this to text
+            return datavalue
+
+        if kv.is_date_and_times():
+            if kv.fields.zonestr is None:
+                raise ValueError("timezone is missing.")
+            if kv.fields.zonestr != "Z":
+                raise ValueError("Only Z-time is supported.")
+
+            if kv.fields.date_and_time is None:
+                raise ValueError("date_and_time is missing.")
+            valuemap["time"] = kv.fields.date_and_time
+            valuemap["timezone"] = 0
+            valuemap["before"] = 0
+            valuemap["after"] = 0
+        
+            if kv.fields.precision is None:
+                raise ValueError("date_and_time precision is missing.")
+            valuemap["precision"] = kv.fields.precision
+
+            valuemap["calendarmodel"] = "http://www.wikidata.org/entity/" + edge_row[self.edge_calendar_idx]
+            return datavalue
+
+        if kv.is_location_coordinates:
+            if kv.fields.latitude is None:
+                raise ValueError("latitude is missing")
+            valuemap["latitude"] = kv.fields.latitude
+
+            if kv.fields.longitude is None:
+                raise ValueError("longitude is missing")
+            valuemap["longitude"] = kv.fields.longitude
+
+            valuemap["altitide"] = None # deprecated
+
+            valuemap["precision"] = float(edge_row[self.edge_precision_idx])
+
+            valuemap["globe"] = "http://www.wikidata.org/entity/Q2"
+            return datavalue
+
+
+        # Default: treat as string.
+        valuemap["type"] = "string"
+        valuemap["value"] = KgtkFormat.unstringify(value) # TODO: KgtkValue should do this to text
         return datavalue
 
     def process_qnode_edge(self,
@@ -270,14 +354,16 @@ class ExportWikidata(KgtkFormat):
         statement["mainsnak"] = mainsnak
 
         mainsnak["property"] = prop
-        mainsnak["datatype"] = edge_row[self.edge_wikidatatype_idx]
+
+        datatype: str = edge_row[self.edge_wikidatatype_idx]
+        mainsnak["datatype"] = datatype
 
         value: str = edge_row[self.edge_node2_idx]
         if value == "somevalue":
             mainsnak["snaktype"] = "somevalue"
         else:
             mainsnak["snaktype"] = "value"
-            mainsnak["datavalue"] = self.process_edge_datavalue(value, edge_row)
+            mainsnak["datavalue"] = self.process_edge_datavalue(value, edge_row, datatype)
             
 
     def process_qnode_edges(self,
@@ -305,9 +391,6 @@ class ExportWikidata(KgtkFormat):
             elif edge_label == "label":
                 self.add_attr(result, edge_row[self.edge_node2_idx], "label")
             
-            elif edge_label == "type":
-                self.add_type(result, edge_row[self.edge_node2_idx])
-
             elif edge_label == "type":
                 self.add_type(result, edge_row[self.edge_node2_idx])
 

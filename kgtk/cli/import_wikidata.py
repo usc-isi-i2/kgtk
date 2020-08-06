@@ -1,5 +1,20 @@
 """
 Import an wikidata file into KGTK file
+
+TODO: references
+
+TODO: qualifiers-order
+
+TODO: incorporate calendar into the KGTK data model.
+
+TODO: Incorporate geographic precision into the KGTK data model.
+
+TODO: Incorporate URLs into the KGTK data model.
+
+TODO: Optionally select all languages for aliases, descriptions, etc.
+
+TODO: Node type needs to be optionall in the edge file.
+
 """
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -625,6 +640,7 @@ def run(input_file: KGTKFiles,
                                         long = str(val['longitude'])
                                         precision = val.get('precision', '')
                                         value = '@' + lat + '/' + long
+                                        # TODO: what about "globe"?
                                     elif typ == 'time':
                                         if val['time'][0]=='-':
                                             pre="^-"
