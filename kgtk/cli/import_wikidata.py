@@ -157,6 +157,17 @@ def add_arguments(parser: KGTKArgumentParser):
     )
 
     parser.add_argument(
+        "--entry-type-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="entry_type_edges",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, create edge records for the entry type field. (default=%(default)s).",
+    )
+
+    parser.add_argument(
        "--alias-edges",
         nargs='?',
         type=optional_bool,
@@ -262,6 +273,7 @@ def run(input_file: KGTKFiles,
         skip_processing,
         skip_merging,
         interleave,
+        entry_type_edges,
         alias_edges,
         descr_edges,
         label_edges,
@@ -474,7 +486,7 @@ def run(input_file: KGTKFiles,
                 entry_type = obj["type"]
                 if entry_type == "item" or entry_type == "property":
                     keep = True
-                if (node_file or label_edges or alias_edges or descr_edges) and keep:
+                if (node_file or entry_type_edges or label_edges or alias_edges or descr_edges) and keep:
                     row = []
                     qnode = obj["id"]
                     row.append(qnode)
@@ -506,7 +518,15 @@ def run(input_file: KGTKFiles,
                             row.append("|".join(label_list))
                         else:
                             row.append("")
+
                     row.append(entry_type)
+                    if entry_type_edges and edge_file:
+                        sid = qnode + '-' + "type"
+                        self.erows_append(erows,
+                                          edge_id=sid,
+                                          node1=qnode,
+                                          label="type",
+                                          node2=entry_type)
 
                     if parse_descr:
                         descriptions = obj.get("descriptions")
