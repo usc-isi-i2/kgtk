@@ -151,7 +151,7 @@ class KgtkLift(KgtkFormat):
         label_value_column_idx: int
         if self.label_value_column_name is None:
             if kr.node2_column_idx < 0:
-                raise ValueError("No label valuecolumn index.")
+                raise ValueError("No label value column index.")
             label_value_column_idx = kr.node2_column_idx
         else:
             if self.label_value_column_name not in kr.column_name_map:
