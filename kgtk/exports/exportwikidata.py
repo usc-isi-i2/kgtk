@@ -364,6 +364,8 @@ class ExportWikidata(KgtkFormat):
         else:
             mainsnak["snaktype"] = "value"
             mainsnak["datavalue"] = self.process_edge_datavalue(value, edge_row, datatype)
+
+        # TODO: process qualifiers
             
 
     def process_qnode_edges(self,
