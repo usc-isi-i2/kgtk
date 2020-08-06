@@ -187,7 +187,7 @@ class ExportWikidata(KgtkFormat):
     def add_sitelink(self,
                      result: typing.MutableMapping[str, typing.Any],
                      edge_id: str,
-                     qualifiers: typing.List[typing.List[str]]):
+                     qualifier_rows: typing.List[typing.List[str]]):
         if "sitelinks" not in result:
             result["sitelinks"] = dict()
         sitelinks: typing.MutableMapping[str, typing.Mapping[str, typing.Union[str, typing.List[str]]]] = result["sitelinks"]
@@ -196,18 +196,18 @@ class ExportWikidata(KgtkFormat):
         title: str = ""
         badges: typing.List[str] = list()
 
-        qualifier: typing.List[str]
-        for qualifier in qualifiers:
-            label: str = qualifier[self.qual_label_idx]
+        qualifier_row: typing.List[str]
+        for qualifier_row in qualifier_rows:
+            label: str = qualifier_row[self.qual_label_idx]
 
             if label == "site":
-                site = qualifier[self.qual_node2_idx]
+                site = qualifier_row[self.qual_node2_idx]
 
             elif label == "title":
-                title = KgtkFormat.unstringify(qualifier[self.qual_node2_idx])
+                title = KgtkFormat.unstringify(qualifier_row[self.qual_node2_idx])
 
             elif label == "badge":
-                badges.append(qualifier[self.qual_node2_idx])
+                badges.append(qualifier_row[self.qual_node2_idx])
 
         if len(site) == 0:
             # TODO: give a better error message.
@@ -228,10 +228,10 @@ class ExportWikidata(KgtkFormat):
                                value: str,
                                edge_row: typing.List[str],
                                datatype: str):
-        datavalue: typing.MutableMapping[str, typing.Union[str, typing.Mapping[str, typing.Union[str, int]]]] = dict()
+        datavalue: typing.MutableMapping[str, typing.Union[str, typing.Mapping[str, typing.Optional[typing.Union[str, int, float]]]]] = dict()
         datavalue["type"] = edge_row[self.edge_val_type_idx]
 
-        valuemap: typing.MutableMapping[str, typing.Union[str, int]] = dict()
+        valuemap: typing.MutableMapping[str, typing.Optional[typing.Union[str, int, float]]] = dict()
         datavalue["value"] = valuemap
 
         entity_type: str = edge_row[self.edge_entity_type_idx]
@@ -328,12 +328,156 @@ class ExportWikidata(KgtkFormat):
         valuemap["value"] = KgtkFormat.unstringify(value) # TODO: KgtkValue should do this to text
         return datavalue
 
+    def process_qual_datavalue(self,
+                               value: str,
+                               qual_row: typing.List[str],
+                               datatype: str):
+        datavalue: typing.MutableMapping[str, typing.Union[str, typing.Mapping[str, typing.Optional[typing.Union[str, int, float]]]]] = dict()
+        datavalue["type"] = qual_row[self.qual_val_type_idx]
+
+        valuemap: typing.MutableMapping[str, typing.Optional[typing.Union[str, int, float]]] = dict()
+        datavalue["value"] = valuemap
+
+        entity_type: str = qual_row[self.qual_entity_type_idx]
+        if len(entity_type) > 0:
+            valuemap["entity-type"] = entity_type
+            valuemap["id"] = value
+            valuemap["numeric-id"] = int(value[1:])
+            return datavalue
+
+        kv = KgtkValue(value, options=self.value_options, parse_fields=True, error_file=self.error_file, verbose=self.verbose)
+        if not kv.validate():
+            raise ValueError("Invalide KGTK value %s" % value)
+        if kv.fields is None:
+            raise ValueError("KGTK value %s is missing fields." % value)
+
+        if kv.is_number():
+            if kv.fields.numberstr is None:
+                raise ValueError("number is missing numberstr for %s." % value)
+                
+            valuemap["amount"] = kv.fields.numberstr # TODO: add plus sign
+            valuemap["unit"] = "1"
+            return datavalue
+
+        if kv.is_quantity():
+            if kv.fields.numberstr is None:
+                raise ValueError("quantity is missing numberstr for %s." % value)
+            valuemap["amount"] = kv.fields.numberstr # TODO: add plus sign
+
+            if kv.fields.units_node is None:
+                raise ValueError("quantity is missing units_node for %s." % value)
+            valuemap["unit"] = "http://www.wikidata.org/entity/" + kv.fields.units_node
+
+            if kv.fields.low_tolerancestr is not None and len(kv.fields.low_tolerancestr) > 0:
+                valuemap["lowerBound"] = kv.fields.low_tolerancestr # TODO: add plus sign
+
+            if kv.fields.high_tolerancestr is not None and len(kv.fields.high_tolerancestr) > 0:
+                valuemap["higherBound"] = kv.fields.high_tolerancestr # TODO: add plus sign
+            return datavalue
+
+        if kv.is_language_qualified_string():
+            text: str
+            language: str
+            language_suffix: str
+            text, language, language_suffix = KgtkFormat.destringify(value) # TODO: KgtkValue should do this to text
+            language += language_suffix
+            valuemap["text"] = text
+            valuemap["language"] = language
+            return datavalue
+        
+        if kv.is_string():
+            valuemap["type"] = "string"
+            valuemap["value"] = KgtkFormat.unstringify(value) # TODO: KgtkValue should do this to text
+            return datavalue
+
+        if kv.is_date_and_times():
+            if kv.fields.zonestr is None:
+                raise ValueError("timezone is missing from %s." % value)
+            if kv.fields.zonestr != "Z":
+                raise ValueError("Only Z-time is supported, error in %s." % value)
+
+            if kv.fields.date_and_time is None:
+                raise ValueError("date_and_time is missing from %s." % value)
+            valuemap["time"] = kv.fields.date_and_time
+            valuemap["timezone"] = 0
+            valuemap["before"] = 0
+            valuemap["after"] = 0
+        
+            if kv.fields.precision is None:
+                raise ValueError("date_and_time precision is missing from %s." % value)
+            valuemap["precision"] = kv.fields.precision
+
+            valuemap["calendarmodel"] = "http://www.wikidata.org/entity/" + qual_row[self.qual_calendar_idx]
+            return datavalue
+
+        if kv.is_location_coordinates():
+            if kv.fields.latitude is None:
+                raise ValueError("latitude is missing from %s" % value)
+            valuemap["latitude"] = kv.fields.latitude
+
+            if kv.fields.longitude is None:
+                raise ValueError("longitude is missing from %s" % value)
+            valuemap["longitude"] = kv.fields.longitude
+
+            valuemap["altitide"] = None # deprecated
+
+            valuemap["precision"] = float(qual_row[self.qual_precision_idx])
+
+            valuemap["globe"] = "http://www.wikidata.org/entity/Q2"
+            return datavalue
+
+
+        # Default: convert the symbol to a string.
+        valuemap["type"] = "string"
+        valuemap["value"] = KgtkFormat.unstringify('"' + value + '"') # TODO: KgtkValue should do this to text
+        return datavalue
+
+    def process_qnode_edge_qualifier(self,
+                           statement: typing.MutableMapping[str, typing.Any],
+                           edge_id: str,
+                           qualifier_row: typing.List[str]):
+        if "qualifiers" not in statement:
+            statement["qualifiers"] = dict()
+        qualifiers = statement["qualifiers"]
+
+        prop: str = qualifier_row[self.qual_label_idx]
+        if prop not in qualifiers:
+            qualifiers[prop] = list()
+        proplist: typing.List[typing.Mapping[str, typing.Any]] = qualifiers[prop]
+
+        qualifier: typing.MutableMapping[str, typing.Any] = dict()
+        proplist.append(qualifier)
+
+        qualifier["property"] = prop
+
+        datatype: str = qualifier_row[self.qual_wikidatatype_idx]
+        qualifier["datatype"] = datatype
+
+        datahash: str = qualifier_row[self.qual_datahash_idx]
+        if len(datahash) > 0:
+            qualifier["hash"] = datahash
+
+        value: str = qualifier_row[self.qual_node2_idx]
+        if value == "somevalue":
+            qualifier["snaktype"] = "somevalue"
+        else:
+            qualifier["datavalue"] = self.process_qual_datavalue(value, qualifier_row, datatype)
+
+    def process_qnode_edge_qualifiers(self,
+                                      statement: typing.MutableMapping[str, typing.Any],
+                                      edge_id: str,
+                                      qualifier_rows: typing.List[typing.List[str]]):
+        qualifier_row: typing.List[str]
+        for qualifier_row in qualifier_rows:
+            self.process_qnode_edge_qualifier(statement, edge_id, qualifier_row)
+
     def process_qnode_edge(self,
                            result: typing.MutableMapping[str, typing.Any],
                            qnode: str,
                            prop: str,
+                           edge_id: str,
                            edge_row: typing.List[str],
-                           qualifiers: typing.Optional[typing.List[typing.List[str]]]):
+                           qualifier_rows: typing.Optional[typing.List[typing.List[str]]]):
         if "claims" not in result:
             result["claims"] = dict()
         claims = result["claims"]
@@ -365,7 +509,8 @@ class ExportWikidata(KgtkFormat):
             mainsnak["snaktype"] = "value"
             mainsnak["datavalue"] = self.process_edge_datavalue(value, edge_row, datatype)
 
-        # TODO: process qualifiers
+        if qualifier_rows is not None and len(qualifier_rows) > 0:
+            self.process_qnode_edge_qualifiers(result, edge_id, qualifier_rows)
             
 
     def process_qnode_edges(self,
@@ -378,7 +523,7 @@ class ExportWikidata(KgtkFormat):
         self.add_qnode(result, qnode)
 
         edge_id: str
-        qualifiers: typing.Optional[typing.List[typing.List[str]]]
+        qualifier_rows: typing.Optional[typing.List[typing.List[str]]]
 
         edge_row: typing.List[str]
         for edge_row in edges:
@@ -398,14 +543,14 @@ class ExportWikidata(KgtkFormat):
 
             elif edge_label in ("wikipedia_sitelink", "addl_wikipedia_sitelink"):
                 edge_id = edge_row[self.edge_id_idx]
-                qualifiers = qualifier_dict.get(edge_id)
-                if qualifiers is not None and len(qualifiers) > 0:
-                    self.add_sitelink(result, edge_id, qualifiers)
+                qualifier_rows = qualifier_dict.get(edge_id)
+                if qualifier_rows is not None and len(qualifier_rows) > 0:
+                    self.add_sitelink(result, edge_id, qualifier_rows)
 
             else:
                 edge_id = edge_row[self.edge_id_idx]
-                qualifiers = qualifier_dict.get(edge_id)
-                self.process_qnode_edge(result, qnode, edge_label, edge_row, qualifiers)
+                qualifier_rows = qualifier_dict.get(edge_id)
+                self.process_qnode_edge(result, qnode, edge_label, edge_id, edge_row, qualifier_rows)
                             
 
     def process_qnode(self,
@@ -482,7 +627,7 @@ class ExportWikidata(KgtkFormat):
 
         self.edge_entity_type_idx = er.column_name_map.get("entity_type", -1)
         if self.edge_entity_type_idx < 0:
-            raise ValueError("The edge file does not have a entity_type column.")
+            raise ValueError("The edge file does not have an entity_type column.")
 
         self.edge_datahash_idx = er.column_name_map.get("datahash", -1)
         if self.edge_datahash_idx < 0:
@@ -513,23 +658,23 @@ class ExportWikidata(KgtkFormat):
         if self.qual_wikidatatype_idx < 0:
             raise ValueError("The qualifier file does not have a node2:wikidatatype column.")
 
-        self.qual_val_type_idx = er.column_name_map.get("val_type", -1)
+        self.qual_val_type_idx = qr.column_name_map.get("val_type", -1)
         if self.qual_val_type_idx < 0:
             raise ValueError("The qual file does not have a val_type column.")
 
-        self.qual_entity_type_idx = er.column_name_map.get("entity_type", -1)
+        self.qual_entity_type_idx = qr.column_name_map.get("entity_type", -1)
         if self.qual_entity_type_idx < 0:
-            raise ValueError("The qual file does not have a entity_type column.")
+            raise ValueError("The qual file does not have an entity_type column.")
 
-        self.qual_datahash_idx = er.column_name_map.get("datahash", -1)
+        self.qual_datahash_idx = qr.column_name_map.get("datahash", -1)
         if self.qual_datahash_idx < 0:
             raise ValueError("The qual file does not have a datahash column.")
 
-        self.qual_precision_idx = er.column_name_map.get("precision", -1)
+        self.qual_precision_idx = qr.column_name_map.get("precision", -1)
         if self.qual_precision_idx < 0:
             raise ValueError("The qual file does not have a precision column.")
 
-        self.qual_calendar_idx = er.column_name_map.get("calendar", -1)
+        self.qual_calendar_idx = qr.column_name_map.get("calendar", -1)
         if self.qual_calendar_idx < 0:
             raise ValueError("The qual file does not have a calendar column.")
 
