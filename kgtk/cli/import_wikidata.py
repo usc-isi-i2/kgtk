@@ -328,7 +328,15 @@ def run(input_file: KGTKFiles,
 
         def erows_append(self, erows, edge_id, node1, label, node2,
                          rank="",
-                         typ="",
+                         magnitude="",
+                         unit="",
+                         date="",
+                         item="",
+                         lower="",
+                         upper="",
+                         latitude="",
+                         longitude="",
+                         wikidatatype="",
                          claim_id="",
                          claim_type="",
                          val_type="",
@@ -340,23 +348,52 @@ def run(input_file: KGTKFiles,
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
 
-            erows.append([edge_id,
-                          node1,
-                          label,
-                          node2,
-                          rank,
-                          typ,
-                          claim_id,
-                          # claim_type,
-                          val_type,
-                          entity_type,
-                          datahash,
-                          precision,
-                          calendar,
-            ])
+            if edge_file:
+                if explode_values:
+                    erows.append([edge_id,
+                                  node1,
+                                  label,
+                                  node2,
+                                  rank,
+                                  magnitude,
+                                  unit,
+                                  date,
+                                  item,
+                                  lower,
+                                  upper,
+                                  latitude,
+                                  longitude,
+                                  precision,
+                                  calendar,
+                                  entity_type,
+                                  wikidatatype,
+                    ])
+                else:
+                    erows.append([edge_id,
+                                  node1,
+                                  label,
+                                  node2,
+                                  rank,
+                                  wikidatatype,
+                                  claim_id,
+                                  # claim_type,
+                                  val_type,
+                                  entity_type,
+                                  datahash,
+                                  precision,
+                                  calendar,
+                    ])
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
-                         typ="",
+                         magnitude="",
+                         unit="",
+                         date="",
+                         item="",
+                         lower="",
+                         upper="",
+                         latitude="",
+                         longitude="",
+                         wikidatatype="",
                          val_type="",
                          entity_type="",
                          datahash="",
@@ -364,18 +401,59 @@ def run(input_file: KGTKFiles,
                          calendar="",
         ):
 
-            qrows.append([edge_id,
-                          node1,
-                          label,
-                          node2,
-                          typ,
-                          val_type,
-                          entity_type,
-                          datahash,
-                          precision,
-                          calendar,
-            ])
-
+            if qual_file:
+                if explode_values:
+                    qrows.append([edge_id,
+                                  node1,
+                                  label,
+                                  node2,
+                                  magnitude,
+                                  unit,
+                                  date,
+                                  item,
+                                  lower,
+                                  upper,
+                                  latitude,
+                                  longitude,
+                                  precision,
+                                  calendar,
+                                  entity_type,
+                                  wikidatatype,
+                    ])
+                else:
+                    qrows.append([edge_id,
+                                  node1,
+                                  label,
+                                  node2,
+                                  wikidatatype,
+                                  val_type,
+                                  entity_type,
+                                  datahash,
+                                  precision,
+                                  calendar,
+                    ])
+                    
+                
+            if interleave:
+                self.erows_append(erows,
+                                  edge_id=edge_id,
+                                  node1=node1,
+                                  label=label,
+                                  node2=node2,
+                                  magnitude=magnitude,
+                                  unit=unit,
+                                  date=date,
+                                  item=item,
+                                  lower=lower,
+                                  upper=upper,
+                                  latitude=latitude,
+                                  longitude=longitude,
+                                  wikidatatype=wikidatatype,
+                                  entity_type=entity_type,
+                                  datahash=datahash,
+                                  precision=precision,
+                                  calendar=calendar)
+            
         def process(self,line,node_file,edge_file,qual_file,languages,doc_id):
             write_mode='a'
             if self.first==True:
@@ -417,31 +495,11 @@ def run(input_file: KGTKFiles,
 
                                     if label_edges and edge_file:
                                         sid = qnode + '-' + "label" + '-' + lang
-                                        if explode_values:
-                                            erows.append([sid,
-                                                          qnode,
-                                                          "label",
-                                                          value,
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                            ])
-                                        else:
-                                            self.erows_append(erows,
-                                                              edge_id=sid,
-                                                              node1=qnode,
-                                                              label="label",
-                                                              node2=value)
+                                        self.erows_append(erows,
+                                                          edge_id=sid,
+                                                          node1=qnode,
+                                                          label="label",
+                                                          node2=value)
 
 
                         if len(label_list)>0:
@@ -465,31 +523,11 @@ def run(input_file: KGTKFiles,
                                     descr_list.append(value)
                                     if descr_edges and edge_file:
                                         sid = qnode + '-' + "description" + '-' + lang
-                                        if explode_values:
-                                            erows.append([sid,
-                                                          qnode,
-                                                          "description",
-                                                          value,
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                                          '',
-                                            ])
-                                        else:
-                                            self.erows_append(erows,
-                                                              edge_id=sid,
-                                                              node1=qnode,
-                                                              label="description",
-                                                              node2=value)
+                                        self.erows_append(erows,
+                                                          edge_id=sid,
+                                                          node1=qnode,
+                                                          label="description",
+                                                          node2=value)
 
                         if len(descr_list)>0:
                             row.append("|".join(descr_list))
@@ -514,31 +552,11 @@ def run(input_file: KGTKFiles,
                                         if alias_edges and edge_file:
                                             sid = qnode + '-' + "alias" + "-" + lang + '-' + str(seq_no)
                                             seq_no += 1
-                                            if explode_values:
-                                                erows.append([sid,
-                                                              qnode,
-                                                              "alias",
-                                                              value,
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                              '',
-                                                ])
-                                            else:
-                                                self.erows_append(erows,
-                                                                  edge_id=sid,
-                                                                  node1=qnode,
-                                                                  label="alias",
-                                                                  node2=value)
+                                            self.erows_append(erows,
+                                                              edge_id=sid,
+                                                              node1=qnode,
+                                                              label="alias",
+                                                              node2=value)
 
 
                         if len(alias_list)>0:
@@ -661,39 +679,27 @@ def run(input_file: KGTKFiles,
                                         value = KgtkFormat.stringify(val)
 
                                     if edge_file:
-                                        if explode_values:
-                                            erows.append([sid,
-                                                          qnode,
-                                                          prop,
-                                                          value,
-                                                          rank,
-                                                          mag,
-                                                          unit,
-                                                          date,
-                                                          item,
-                                                          lower,
-                                                          upper,
-                                                          lat,
-                                                          long,
-                                                          precision,
-                                                          calendar,
-                                                          enttype,
-                                                          typ,
-                                            ])
-                                        else:
-                                            self.erows_append(erows,
-                                                              edge_id=sid,
-                                                              node1=qnode,
-                                                              label=prop,
-                                                              node2=value,
-                                                              rank=rank,
-                                                              typ=typ,
-                                                              claim_id=claim_id,
-                                                              claim_type=claim_type,
-                                                              val_type=val_type,
-                                                              entity_type=enttype,
-                                                              precision=precision,
-                                                              calendar=calendar)
+                                        self.erows_append(erows,
+                                                          edge_id=sid,
+                                                          node1=qnode,
+                                                          label=prop,
+                                                          node2=value,
+                                                          rank=rank,
+                                                          magnitude=mag,
+                                                          unit=unit,
+                                                          date=date,
+                                                          item=item,
+                                                          lower=lower,
+                                                          upper=upper,
+                                                          latitude=lat,
+                                                          longitude=long,
+                                                          wikidatatype=typ,
+                                                          claim_id=claim_id,
+                                                          claim_type=claim_type,
+                                                          val_type=val_type,
+                                                          entity_type=enttype,
+                                                          precision=precision,
+                                                          calendar=calendar)
 
                                     seq_no += 1
                                     if qual_file or interleave:
@@ -777,71 +783,25 @@ def run(input_file: KGTKFiles,
                                                         else:
                                                             # value = '\"' + val.replace('"','\\"') + '\"'
                                                             value = KgtkFormat.stringify(val)
-                                                        if qual_file:
-                                                            if explode_values:
-                                                                qrows.append([
-                                                                    tempid,
-                                                                    sid,
-                                                                    qual_prop,
-                                                                    value,
-                                                                    mag,
-                                                                    unit,
-                                                                    date,
-                                                                    item,
-                                                                    lower,
-                                                                    upper,
-                                                                    lat,
-                                                                    long,
-                                                                    precision,
-                                                                    calendar,
-                                                                    enttype,
-                                                                    typ,
-                                                                ])
-                                                            else:
-                                                                self.qrows_append(qrows,
-                                                                                  edge_id=tempid,
-                                                                                  node1=sid,
-                                                                                  label=qual_prop,
-                                                                                  node2=value,
-                                                                                  typ=typ,
-                                                                                  entity_type=enttype,
-                                                                                  datahash=datahash,
-                                                                                  precision=precision,
-                                                                                  calendar=calendar)
-
-                                                        if interleave:
-                                                            if explode_values:
-                                                                erows.append([
-                                                                    tempid,
-                                                                    sid,
-                                                                    qual_prop,
-                                                                    value,
-                                                                    "",
-                                                                    mag,
-                                                                    unit,
-                                                                    date,
-                                                                    item,
-                                                                    lower,
-                                                                    upper,
-                                                                    lat,
-                                                                    long,
-                                                                    precision,
-                                                                    calendar,
-                                                                    enttype,
-                                                                    typ,
-                                                                ])
-                                                            else:
-                                                                self.erows_append(erows,
-                                                                                  edge_id=tempid,
-                                                                                  node1=sid,
-                                                                                  label=qual_prop,
-                                                                                  node2=value,
-                                                                                  typ=typ,
-                                                                                  entity_type=enttype,
-                                                                                  datahash=datahash,
-                                                                                  precision=precision,
-                                                                                  calendar=calendar)
-            
+                                                        self.qrows_append(qrows,
+                                                                          edge_id=tempid,
+                                                                          node1=sid,
+                                                                          label=qual_prop,
+                                                                          node2=value,
+                                                                          magnitude=mag,
+                                                                          unit=unit,
+                                                                          date=date,
+                                                                          item=item,
+                                                                          lower=lower,
+                                                                          upper=upper,
+                                                                          latitude=lat,
+                                                                          longitude=long,
+                                                                          wikidatatype=typ,
+                                                                          entity_type=enttype,
+                                                                          datahash=datahash,
+                                                                          precision=precision,
+                                                                          calendar=calendar)
+                                                        
                         if sitelinks:
                             wikipedia_seq_no = 1
                             for link in sitelinks:
@@ -867,64 +827,46 @@ def run(input_file: KGTKFiles,
                                         sitelang=""
                                     sitehost=link+'.org' # TODO: Needs more work here
                                     sitelink = 'http://'+sitehost+'/wiki/'+sitetitle
+
                                 if sitelink is not None:
-                                    if explode_values:
-                                        if edge_file:
-                                            erows.append([sid, qnode, linklabel, sitelink,'','','','','','','',
-                                                          '','','','','',''])
-                                        if qual_file:
-                                            if len(sitelang) > 0:
-                                                tempid=sid+'-language-1'
-                                                qrows.append([tempid,sid,'language',sitelang,'','','','','','','','','','','',''])
-                                            tempid=sid+'-site-1'
-                                            qrows.append([tempid,sid,'site',link,'','','','','','','','','','','',''])
-                                            tempid=sid+'-title-1'
-                                            qrows.append([tempid,sid,'title',KgtkFormat.stringify(sitelinks[link]['title']),'','','','','','','','','','','',''])
-                                            badge_num: int = 0
-                                            for badge in sitelinks[link]['badges']:
-                                                tempid=sid+'-badge-'+str(badge_num + 1)
-                                                qrows.append([tempid,sid,'badge',sitelinks[link]['badges'][badge_num],'','','','','','','','','','','',''])
-                                                badge_num += 1
-
-                                    else:
-                                        if edge_file:
-                                            self.erows_append(erows,
-                                                              edge_id=sid,
-                                                              node1=qnode,
-                                                              label=linklabel,
-                                                              node2=sitelink)
-                                        if qual_file:
-                                            if len(sitelang) > 0:
-                                                tempid=sid+'-language-1'
-                                                self.qrows_append(qrows,
-                                                                  edge_id=tempid,
-                                                                  node1=sid,
-                                                                  label='language',
-                                                                  node2=sitelang)
-
-                                            tempid=sid+'-site-1'
+                                    if edge_file:
+                                        self.erows_append(erows,
+                                                          edge_id=sid,
+                                                          node1=qnode,
+                                                          label=linklabel,
+                                                          node2=sitelink)
+                                    if qual_file or interleave:
+                                        if len(sitelang) > 0:
+                                            tempid=sid+'-language-1'
                                             self.qrows_append(qrows,
                                                               edge_id=tempid,
                                                               node1=sid,
-                                                              label='site',
-                                                              node2=link)
+                                                              label='language',
+                                                              node2=sitelang)
 
-                                            tempid=sid+'-title-1'
+                                        tempid=sid+'-site-1'
+                                        self.qrows_append(qrows,
+                                                          edge_id=tempid,
+                                                          node1=sid,
+                                                          label='site',
+                                                          node2=link)
+
+                                        tempid=sid+'-title-1'
+                                        self.qrows_append(qrows,
+                                                          edge_id=tempid,
+                                                          node1=sid,
+                                                          label='title',
+                                                          node2=KgtkFormat.stringify(sitelinks[link]['title']))
+
+                                        badge_num: int = 0
+                                        for badge in sitelinks[link]['badges']:
+                                            tempid=sid+'-badge-'+str(badge_num + 1)
                                             self.qrows_append(qrows,
                                                               edge_id=tempid,
                                                               node1=sid,
-                                                              label='title',
-                                                              node2=KgtkFormat.stringify(sitelinks[link]['title']))
-
-                                            badge_num: int = 0
-                                            for badge in sitelinks[link]['badges']:
-                                                tempid=sid+'-badge-'+str(badge_num + 1)
-                                                self.qrows_append(qrows,
-                                                                  edge_id=tempid,
-                                                                  node1=sid,
-                                                                  label='badge',
-                                                                  node2=sitelinks[link]['badges'][badge_num])
-                                                badge_num += 1
+                                                              label='badge',
+                                                              node2=sitelinks[link]['badges'][badge_num])
+                                            badge_num += 1
 
             if node_file:
                 with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
@@ -1003,8 +945,12 @@ def run(input_file: KGTKFiles,
                         lineterminator=csv_line_terminator)
                     wr.writerow(header)
             if qual_file:
-                header.remove('rank')
-                header.remove('claim_id')
+                if "rank" in header:
+                    header.remove('rank')
+                if "claim_type" in header:
+                    header.remove('claim_type')
+                if "claim_id" in header:
+                    header.remove('claim_id')
                 with open(qual_file+'_header', 'w', newline='') as myfile:
                     wr = csv.writer(
                         myfile,
