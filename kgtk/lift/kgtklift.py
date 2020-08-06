@@ -120,11 +120,11 @@ class KgtkLift(KgtkFormat):
         if self.label_match_column_name is None:
             if kr.is_edge_file:
                 if kr.node1_column_idx < 0:
-                    raise ValueError("No label match node1 column index.")
+                    raise ValueError("Cannot find the label match column (node1) in the label file (an edge file).")
                 label_match_column_idx = kr.node1_column_idx
             elif kr.is_node_file:
                 if kr.id_column_idx < 0:
-                    raise ValueError("No label match id column index.")
+                    raise ValueError("Cannot find the label match column (id) in the label file (a node file).")
                 label_match_column_idx = kr.id_column_idx
             else:
                 raise ValueError("No label match column specified and not an edge or node file.")
@@ -139,7 +139,7 @@ class KgtkLift(KgtkFormat):
         label_select_column_idx: int
         if self.label_select_column_name is None:
             if kr.label_column_idx < 0:
-                raise ValueError("No label select column index.")
+                raise ValueError("Cannot find the label select column (label) in the label file.")
             label_select_column_idx = kr.label_column_idx
         else:
             if self.label_select_column_name not in kr.column_name_map:
@@ -151,11 +151,11 @@ class KgtkLift(KgtkFormat):
         label_value_column_idx: int
         if self.label_value_column_name is None:
             if kr.node2_column_idx < 0:
-                raise ValueError("No label value column index.")
+                raise ValueError("Cannot find the label value column (node2) in the label file.")
             label_value_column_idx = kr.node2_column_idx
         else:
             if self.label_value_column_name not in kr.column_name_map:
-                raise ValueError("Label value column `%s` not found." % self.label_value_column_name)
+                raise ValueError("Label value column `%s` not found in the label file." % self.label_value_column_name)
             label_value_column_idx = kr.column_name_map[self.label_value_column_name]
 
         return label_value_column_idx

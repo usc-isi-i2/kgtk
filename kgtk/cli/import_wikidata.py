@@ -597,7 +597,7 @@ def run(input_file: KGTKFiles,
 
     
     try:
-        UPDATE_VERSION: str = "2020-07-23T02:02:15.389869+00:00#TN1Bg8DKAzP7+I3bjT+HJHkauAxEWg73CNCjkdY1eLw716rcAe/Lv34DJwkeSoI115UxEQnBwAlqqv6cCsx3Nw=="
+        UPDATE_VERSION: str = "2020-08-06T17:06:06.886090+00:00#T6yEN2toVYbj/L1j6gXhfKc4+pz+DdXM2jauFkMLdEfclNmP7PdqikUklUCLMRvnbk+CRtIAtlzAGknubBUXqA=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, flush=True)
 
         inp_path = KGTKArgumentParser.get_input_file(input_file)
