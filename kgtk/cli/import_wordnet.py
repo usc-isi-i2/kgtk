@@ -103,16 +103,12 @@ def run():
                 node1_preflabel=labels[node1].split('|')[0]
                 node2_preflabel=labels[node2].split('|')[0]
                 sentence=''
-                if rel=='/r/IsA':
-                    question=('What is %s?' % node1_preflabel).capitalize()
-                else:
-                    question=('%s %s what?' % (node1_preflabel, rel_label)).capitalize()
-                a_row=['wn:' + node1, rel, 'wn:' + node2, labels[node1], labels[node2], rel_label, "", "", "WN", "", sentence, question]
+                a_row=['wn:' + node1, rel, 'wn:' + node2, labels[node1], labels[node2], rel_label, "", "WN", sentence]
                 all_rows.append(a_row)
         return all_rows
 
     try:
-        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'weight', 'source', 'origin', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
         sys.stdout.write(header_to_edge(out_columns))
 
         all_labels, all_hyps, all_members, all_parts, all_subs=get_wn_data()

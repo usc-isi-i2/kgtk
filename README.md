@@ -84,7 +84,9 @@ conda activate kgtk-env
 
 You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
-3. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+3. Download the English model of SpaCY: `python -m spacy download en_core_web_sm`
+
+4. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
 
 ### Updating your KGTK installation
 To update your version of KGTK, just follow the instructions below:
