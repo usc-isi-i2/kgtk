@@ -460,6 +460,8 @@ class ExportWikidata(KgtkFormat):
         value: str = qualifier_row[self.qual_node2_idx]
         if value == "somevalue":
             qualifier["snaktype"] = "somevalue"
+        elif value == "novalue":
+            qualifier["snaktype"] = "novalue"
         else:
             qualifier["datavalue"] = self.process_qual_datavalue(value, qualifier_row, datatype)
 
@@ -505,6 +507,8 @@ class ExportWikidata(KgtkFormat):
         value: str = edge_row[self.edge_node2_idx]
         if value == "somevalue":
             mainsnak["snaktype"] = "somevalue"
+        elif value == "novalue":
+            mainsnak["snaktype"] = "novalue"
         else:
             mainsnak["snaktype"] = "value"
             mainsnak["datavalue"] = self.process_edge_datavalue(value, edge_row, datatype)

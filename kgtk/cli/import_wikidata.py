@@ -627,7 +627,10 @@ def run(input_file: KGTKFiles,
                                         val_type = datavalue.get("type", "")
                                     elif snaktype == 'somevalue':
                                         val = None
-                                        val_type = ""
+                                        val_type = "somevalue"
+                                    elif snaktype == 'novalue':
+                                        val = None
+                                        val_type = "novalue"
                                     else:
                                         raise ValueError("Unknown snaktype %s" % snaktype)
 
@@ -651,7 +654,7 @@ def run(input_file: KGTKFiles,
                                     enttype = ''
 
                                     if val is None:
-                                        value = "somevalue"
+                                        value = val_type
                                     elif typ.startswith('wikibase'):
                                         enttype = val.get('entity-type')
                                         value = val.get('id', '')
@@ -728,7 +731,22 @@ def run(input_file: KGTKFiles,
                                             for qual_prop, qual_claim_property in quals.items():
                                                 qual_seq_no = 1
                                                 for qcp in qual_claim_property:
-                                                    if qcp['snaktype'] == 'value':
+
+                                                    snaktype = qcp['snaktype']
+                                                    if snaktype == 'value':
+                                                        datavalue = qcp['datavalue']
+                                                        val = datavalue.get('value')
+                                                        val_type = datavalue.get("type", "")
+                                                    elif snaktype == 'somevalue':
+                                                        val = None
+                                                        val_type = "somevalue"
+                                                    elif snaktype == 'novalue':
+                                                        val = None
+                                                        val_type = "novalue"
+                                                    else:
+                                                        raise ValueError("Unknown qualifier snaktype %s" % snaktype)
+
+                                                    if True:
                                                         value = ''
                                                         mag = ''
                                                         unit = ''
@@ -742,14 +760,15 @@ def run(input_file: KGTKFiles,
                                                         long = ''
                                                         enttype = ''
                                                         datahash = qcp['hash']
-                                                        datavalue = qcp['datavalue']
-                                                        val = datavalue.get('value')
-                                                        val_type = datavalue.get("type", "")
                                                         typ = qcp['datatype']
                                                         tempid = sid + '-' + qual_prop + \
                                                             '-' + str(qual_seq_no)
                                                         qual_seq_no += 1
-                                                        if typ.startswith(
+
+                                                        if val is None:
+                                                            value = val_type
+
+                                                        elif typ.startswith(
                                                                 'wikibase'):
                                                             enttype = val.get(
                                                                 'entity-type')
