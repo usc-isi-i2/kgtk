@@ -63,7 +63,7 @@ class Generator:
         self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(alias_set.split(",")), set(description_set.split(","))
     
     def initialize_order_map(self, edge:str):
-        edge_list = edge.strip("\n").split("\t")
+        edge_list = edge.strip("\r\n").split("\t")
         node1_index = edge_list.index("node1")
         node2_index = edge_list.index("node2")
         prop_index = edge_list.index("label")
@@ -83,7 +83,7 @@ class Generator:
     
     def parse_edges(self,edge:str):
         # use the order_map to map the node
-        edge_list = edge.strip("\n").split("\t")
+        edge_list = edge.strip("\r\n").split("\t")
         try:
             node1 = edge_list[self.order_map["node1"]].strip()
             node2 = edge_list[self.order_map["node2"]].strip()
@@ -205,7 +205,7 @@ class TripleGenerator(Generator):
         if prefix_path != "NONE":
             with open(prefix_path,"r") as fp:
                 for line_num, edge in enumerate(fp):
-                    edge_list = edge.strip("\n").split("\t")
+                    edge_list = edge.strip("\r\n").split("\t")
                     if line_num == 0:
                         node1_index, node2_index = edge_list.index("node1"), edge_list.index("node2")
                     else:
@@ -563,7 +563,7 @@ class JsonGenerator(Generator):
         if line_number == 1:
             self.initialize_order_map(edge)
             return
-        edge_list = edge.strip("\n").split("\t")
+        edge_list = edge.strip("\r\n").split("\t")
         node1 = edge_list[self.order_map["node1"]].strip()
         node2 = edge_list[self.order_map["node2"]].strip()
         prop = edge_list[self.order_map["label"]].strip()

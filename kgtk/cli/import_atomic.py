@@ -81,17 +81,11 @@ def run(input_file: KGTKFiles):
                 }
         return mapping[rel]
 
-    def make_question(n1, lbl):
-        return f'If {n1}, then {lbl}?' 
-
-    #def make_sentence(node_label, rel_label, value_label):
-    #    return 'If %s, then %s %s.' % (node_label, rel_label, value_label)
-
     try:
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
-        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'weight', 'source', 'origin', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
 
         df = pd.read_csv(filename,index_col=0)
         df.iloc[:,:9] = df.iloc[:,:9].apply(lambda col: col.apply(json.loads))
@@ -117,11 +111,9 @@ def run(input_file: KGTKFiles):
 
                     sentence='' #make_sentence(first_event_label, rel_label, first_value_label)
 
-                    question=make_question(first_event_label, rel_label)
-
                     relation=make_node(c)
 
-                    this_row=[n1, relation, n2, event_label, value_label, rel_label, '', '', 'AT', "", sentence, question]
+                    this_row=[n1, relation, n2, event_label, value_label, rel_label, '', 'AT', sentence]
 
                     sys.stdout.write('\t'.join(this_row) + '\n')
 
