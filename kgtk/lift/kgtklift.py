@@ -52,8 +52,10 @@ class KgtkLift(KgtkFormat):
                                                                                  iterable_validator=attr.validators.instance_of(list))),
                 default=None)
 
+    label_select_disable: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     label_select_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     label_select_column_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LABEL_SELECT_COLUMN_VALUE)
+
     label_match_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     label_value_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
@@ -119,10 +121,16 @@ class KgtkLift(KgtkFormat):
         label_match_column_idx: int
         if self.label_match_column_name is None:
             if kr.is_edge_file:
+                if self.verbose:
+                    print("The label file is an edge file, defaulting to the node1 column (or alias) for the match column.",
+                          file=self.error_file, flush=True)
                 if kr.node1_column_idx < 0:
                     raise ValueError("Cannot find the label match column (node1) in the label file (an edge file).")
                 label_match_column_idx = kr.node1_column_idx
             elif kr.is_node_file:
+                if self.verbose:
+                    print("The label file is a node file, defaulting to the ID column for the match column.",
+                          file=self.error_file, flush=True)
                 if kr.id_column_idx < 0:
                     raise ValueError("Cannot find the label match column (id) in the label file (a node file).")
                 label_match_column_idx = kr.id_column_idx
@@ -137,10 +145,19 @@ class KgtkLift(KgtkFormat):
 
     def lookup_label_select_column_idx(self, kr: KgtkReader)->int:
         label_select_column_idx: int
-        if self.label_select_column_name is None:
-            if kr.label_column_idx < 0:
-                raise ValueError("Cannot find the label select column (label) in the label file.")
-            label_select_column_idx = kr.label_column_idx
+        if self.label_select_disable:
+            label_select_column_idx = -1
+        elif self.label_select_column_name is None:
+            if kr.is_edge_file:
+                if kr.label_column_idx < 0:
+                    raise ValueError("Cannot find the label select column (label) in the label file.")
+                label_select_column_idx = kr.label_column_idx
+            elif kr.is_node_file:
+                if self.verbose:
+                    print("The label file is a node file, defaulting to no label select column.", file=self.error_file, flush=True)
+                label_select_column_idx = -1 # Special case!
+            else:
+                raise ValueError("No label match column specified and not an edge or node file.")
         else:
             if self.label_select_column_name not in kr.column_name_map:
                 raise ValueError("Label select column `%s` not found." % self.label_select_column_name)
@@ -150,9 +167,20 @@ class KgtkLift(KgtkFormat):
     def lookup_label_value_column_idx(self, kr: KgtkReader)->int:
         label_value_column_idx: int
         if self.label_value_column_name is None:
-            if kr.node2_column_idx < 0:
-                raise ValueError("Cannot find the label value column (node2) in the label file.")
-            label_value_column_idx = kr.node2_column_idx
+            if kr.is_edge_file:
+                if self.verbose:
+                    print("The label file is an edge file, defaulting to the node2 column (or alias) for the value column.",
+                          file=self.error_file, flush=True)
+                if kr.node2_column_idx < 0:
+                    raise ValueError("Cannot find the label value column (node2) in the label edge file.")
+                label_value_column_idx = kr.node2_column_idx
+            elif kr.is_node_file:
+                if self.verbose:
+                    print("The label file is a node file, defaulting to the label column for the value column.",
+                          file=self.error_file, flush=True)
+                if kr.label_column_idx < 0:
+                    raise ValueError("Cannot find the label value column (label) in the label node file.")
+                label_value_column_idx = kr.label_column_idx
         else:
             if self.label_value_column_name not in kr.column_name_map:
                 raise ValueError("Label value column `%s` not found in the label file." % self.label_value_column_name)
@@ -186,14 +214,17 @@ class KgtkLift(KgtkFormat):
             if labels_needed is not None:
                 print("Filtering for needed labels", file=self.error_file, flush=True)
             print("label_match_column_idx=%d (%s)." % (label_match_column_idx, kr.column_names[label_match_column_idx]), file=self.error_file, flush=True)
-            print("label_select_column_idx=%d (%s)." % (label_select_column_idx, kr.column_names[label_select_column_idx]), file=self.error_file, flush=True)
+            if label_select_column_idx < 0:
+                print("label_select_column_idx=%d." % (label_select_column_idx), file=self.error_file, flush=True)
+            else:
+                print("label_select_column_idx=%d (%s)." % (label_select_column_idx, kr.column_names[label_select_column_idx]), file=self.error_file, flush=True)
             print("label_value_column_idx=%d (%s)." % (label_value_column_idx, kr.column_names[label_value_column_idx]), file=self.error_file, flush=True)
             print("label_select_column_value='%s'." % self.label_select_column_value, file=self.error_file, flush=True)
 
         key: str
         row: typing.List[str]
         for row in kr:
-            if row[label_select_column_idx] == self.label_select_column_value:
+            if label_select_column_idx < 0 or row[label_select_column_idx] == self.label_select_column_value:
                 # This is a label definition row.
                 label_key = row[label_match_column_idx]
                 label_value: str = row[label_value_column_idx]
@@ -237,13 +268,15 @@ class KgtkLift(KgtkFormat):
                                           kr: KgtkReader,
                                           path: Path,
     )-> typing.List[typing.List[str]]:
-        input_rows: typing.List[typing.List[str]] = [ ]
+        label_select_column_idx: int = self.lookup_label_select_column_idx(kr)
+        if label_select_column_idx < 0:
+            return self.load_input_keeping_label_records(kr, path)
 
         if self.verbose:
             print("Loading input rows without labels from %s" % path, file=self.error_file, flush=True)
-        row: typing.List[str]
 
-        label_select_column_idx: int = self.lookup_label_select_column_idx(kr)
+        input_rows: typing.List[typing.List[str]] = [ ]
+        row: typing.List[str]
         for row in kr:
             if row[label_select_column_idx] != self.label_select_column_value:
                 input_rows.append(row)
@@ -622,7 +655,7 @@ class KgtkLift(KgtkFormat):
                 # While the label records have node1 values equal to the value we are trying to lift,
                 # look for label values from the label file.
                 while more_labels and current_label_row is not None and current_label_row[label_match_column_idx] == value_to_lift:
-                    if current_label_row[label_select_column_idx] == self.label_select_column_value:
+                    if label_select_column_idx < 0 or current_label_row[label_select_column_idx] == self.label_select_column_value:
                         label_value: str = current_label_row[label_value_column_idx]
                         if len(label_value) > 0:
                             if len(lifted_label_value) > 0:
