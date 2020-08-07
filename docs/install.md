@@ -23,8 +23,10 @@ docker run -it uscisii2/kgtk /bin/bash
 
 If you want to run KGTK in a Jupyter notebook, then you will have to type:
 ```
-docker run -it -p 8888:8888 uscisii2/kgtk /bin/bash -c "jupyter notebook --ip='*' --port=8888 --allow-root --no-browser"
+docker run -it -p 8888:8888 uscisii2/kgtk /bin/bash -c "jupyter notebook --ip='*' --port=8888 --no-browser"
 ```
+
+**Note**: Versions 0.3.2 and 0.2.1 require `--allow-root` as part of the jupyter notebook command `jupyter notebook --ip='*' --port=8888 --allow-root --no-browser`
 
 You will see a message similar to:
 

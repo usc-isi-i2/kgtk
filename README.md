@@ -61,10 +61,11 @@ To run KGTK in the command line just type:
 docker run -it uscisii2/kgtk /bin/bash
 ```
 
-If you want to run KGTK in a Jupyter notebook, then you will have to type:
+If you want to run KGTK in a **Jupyter notebook**, then you will have to type:
 ```
-docker run -it -p 8888:8888 uscisii2/kgtk /bin/bash -c "jupyter notebook --ip='*' --port=8888 --allow-root --no-browser"
+docker run -it -p 8888:8888 dgarijo/kgtk_test /bin/bash -c "jupyter notebook --ip='*' --port=8888 --no-browser"
 ```
+Versions 0.3.2 and 0.2.1 require `--allow-root` as part of the jupyter notebook command.
 
 Note: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
 
