@@ -455,7 +455,7 @@ class ExportWikidata(KgtkFormat):
 
         datahash: str = qualifier_row[self.qual_datahash_idx]
         if len(datahash) > 0:
-            qualifier["hash"] = datahash
+            qualifier["hash"] = KgtkFormat.unstringify(datahash)
 
         value: str = qualifier_row[self.qual_node2_idx]
         if value == "somevalue":
