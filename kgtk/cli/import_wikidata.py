@@ -759,7 +759,7 @@ def run(input_file: KGTKFiles,
                                                         lat = ''
                                                         long = ''
                                                         enttype = ''
-                                                        datahash = qcp['hash']
+                                                        datahash = '"' + qcp['hash'] + '"'
                                                         typ = qcp['datatype']
                                                         tempid = sid + '-' + qual_prop + \
                                                             '-' + str(qual_seq_no)
