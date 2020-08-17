@@ -258,10 +258,10 @@ def add_arguments(parser: KGTKArgumentParser):
     )
 
     parser.add_argument(
-        "--any-language",
+        "--all-languages",
         nargs='?',
         type=optional_bool,
-        dest="any_language",
+        dest="all_languages",
         const=True,
         default=False,
         metavar="True/False",
@@ -293,7 +293,7 @@ def run(input_file: KGTKFiles,
         parse_labels,
         parse_claims,
         fail_if_missing,
-        any_language):
+        all_languages):
 
     # import modules locally
     import bz2
@@ -509,7 +509,7 @@ def run(input_file: KGTKFiles,
                             raise KGTKException("Qnode %s is missing its labels" % qnode)
                         label_list=[]
                         if labels:
-                            if any_languages:
+                            if all_languages:
                                 label_languages = labels.keys()
                             else:
                                 label_languages = languages
@@ -550,7 +550,7 @@ def run(input_file: KGTKFiles,
                             raise KGTKException("Qnode %s is missing its descriptions" % qnode)
                         descr_list=[]
                         if descriptions:
-                            if any_languages:
+                            if all_languages:
                                 desc_languages = descriptions.keys()
                             else:
                                 desc_languages = languages
@@ -580,7 +580,7 @@ def run(input_file: KGTKFiles,
                             raise KGTKException("Qnode %s is missing its aliases" % qnode)
                         alias_list = []
                         if aliases:
-                            if any_languages:
+                            if all_languages:
                                 alias_languages = aliases.keys()
                             else:
                                 alias_languages = languages
