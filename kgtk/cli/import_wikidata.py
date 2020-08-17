@@ -257,6 +257,17 @@ def add_arguments(parser: KGTKArgumentParser):
         help="If true, fail if expected data is missing. (default=%(default)s).",
     )
 
+    parser.add_argument(
+        "--all-languages",
+        nargs='?',
+        type=optional_bool,
+        dest="all_languages",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, override --lang and import aliases, dscriptions, and labels in all languages. (default=%(default)s).",
+    )
+
     
 def run(input_file: KGTKFiles,
         procs,
@@ -281,7 +292,8 @@ def run(input_file: KGTKFiles,
         parse_descr,
         parse_labels,
         parse_claims,
-        fail_if_missing):
+        fail_if_missing,
+        all_languages):
 
     # import modules locally
     import bz2
@@ -497,14 +509,18 @@ def run(input_file: KGTKFiles,
                             raise KGTKException("Qnode %s is missing its labels" % qnode)
                         label_list=[]
                         if labels:
-                            for lang in languages:
+                            if all_languages:
+                                label_languages = labels.keys()
+                            else:
+                                label_languages = languages
+                            for lang in label_languages:
                                 lang_label = labels.get(lang, None)
                                 if lang_label:
                                     # lang_label['value']=lang_label['value'].replace('|','\\|')
                                     # label_list.append('\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_label['value'], language=lang)
                                     label_list.append(value)
-
+                                        
                                     if label_edges and edge_file:
                                         sid = qnode + '-' + "label" + '-' + lang
                                         self.erows_append(erows,
@@ -534,7 +550,11 @@ def run(input_file: KGTKFiles,
                             raise KGTKException("Qnode %s is missing its descriptions" % qnode)
                         descr_list=[]
                         if descriptions:
-                            for lang in languages:
+                            if all_languages:
+                                desc_languages = descriptions.keys()
+                            else:
+                                desc_languages = languages
+                            for lang in desc_languages:
                                 lang_descr = descriptions.get(lang, None)
                                 if lang_descr:
                                     # lang_descr['value']=lang_descr['value'].replace('|','\\|')
@@ -560,7 +580,11 @@ def run(input_file: KGTKFiles,
                             raise KGTKException("Qnode %s is missing its aliases" % qnode)
                         alias_list = []
                         if aliases:
-                            for lang in languages:
+                            if all_languages:
+                                alias_languages = aliases.keys()
+                            else:
+                                alias_languages = languages
+                            for lang in alias_languages:
                                 seq_no = 1
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
