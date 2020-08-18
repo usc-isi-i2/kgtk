@@ -55,6 +55,9 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument('-r', '--reverse', action='store_true', dest='reverse',
                         help="generate output in reverse sort order")
 
+    parser.add_argument('-X', '--extra', default='', action='store', dest='extra',
+                        help="extra options to supply to the sort program")
+
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
                         help="generate debuigging messages")
 
@@ -63,6 +66,7 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         columns: typing.Optional[typing.List[str]] = None,
         reverse: bool =False,
+        extra: typing.Optional[str] = None,
         verbose: bool = False
 )->int:
     import os
@@ -81,14 +85,14 @@ def run(input_file: KGTKFiles,
         header_read_fd, header_write_fd = os.pipe()
         os.set_inheritable(header_write_fd, True)
         if verbose:
-            print("header: read_fd=%d write_fd=%d" % (header_read_fd, header_write_fd))
+            print("header pipe: read_fd=%d write_fd=%d" % (header_read_fd, header_write_fd))
         
         sortopt_read_fd : int
         sortopt_write_fd: int
         sortopt_read_fd, sortopt_write_fd = os.pipe()
         os.set_inheritable(sortopt_read_fd, True)
         if verbose:
-            print("sort options: read_fd=%d write_fd=%d" % (sortopt_read_fd, sortopt_write_fd))
+            print("sort options pipe: read_fd=%d write_fd=%d" % (sortopt_read_fd, sortopt_write_fd))
 
         cmd: str = ""
 
@@ -99,30 +103,33 @@ def run(input_file: KGTKFiles,
 
         cmd += " { IFS= read -r header ; " # Read the header line
         cmd += " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; " # Send the header to Python
-        cmd += " printf \"%s\\n\" \"$header\" ; " # Send the header to standard output (which may be redirected below)
+        cmd += " printf \"%s\\n\" \"$header\" ; " # Send the header to standard output (which may be redirected to a file, below).
         cmd += " IFS= read -u " + str(sortopt_read_fd) + " -r options ; " # Read the sort command options from Python.
         cmd += " LC_ALL=C sort -t '\t' $options ; } " # Sort the remaining input lines using the options read from Python.
 
         if str(output_path) != "-":
-            # Feed the output to the named file.  Otherwise, the output goes
-            # to standrd output without passing through Python.
+            # Feed the sorted output to the named file.  Otherwise, the sorted
+            # output goes to standard output without passing through Python.
             cmd += " > " + repr(str(output_path))
 
         if verbose:
-            print("Cmd: %s" % cmd)
+            print("sort command: %s" % cmd)
 
-        # Sh version 1.13 or greater is required for __pass_fds.
+        # Sh version 1.13 or greater is required for _pass_fds.
         proc = sh.sh("-c", cmd, _in=sys.stdin, _out=sys.stdout, _err=sys.stderr, _bg=True, _pass_fds={header_write_fd, sortopt_read_fd})
 
         if verbose:
-            print("Reading the header line with KgtkReader")
+            print("Reading the KGTK input file header line with KgtkReader")
         kr: KgtkReader = KgtkReader.open(Path("<%d" % header_read_fd))
         if verbose:
-            print("header: %s" % " ".join(kr.column_names))
+            print("KGTK header: %s" % " ".join(kr.column_names))
 
         sort_options: str = ""
         if reverse:
             sort_options += " --reverse"
+
+        if extra is not None and len(extra) > 0:
+            sort_options += " " + extra
 
         sort_idx: int
         if columns is not None and len(columns) > 0:
