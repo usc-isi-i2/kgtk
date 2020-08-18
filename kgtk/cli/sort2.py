@@ -66,7 +66,7 @@ def run(input_file: KGTKFiles,
             str(header_write_fd) + \
             " ; } ; printf \"%s\\n\" \"$header\" ; " + \
             " IFS= read -u " + str(sortkey_read_fd) + " -r options ; " + \
-            " sort -t '\t' $options"
+            " LC_ALL=C sort -t '\t' $options"
         if reverse:
             cmd += " --reverse"
 
