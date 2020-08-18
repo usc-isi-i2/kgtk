@@ -79,20 +79,22 @@ def run(input_file: KGTKFiles,
     input_path: Path = KGTKArgumentParser.get_input_file(input_file)
     output_path: Path = KGTKArgumentParser.get_output_file(output_file)
 
+    error_file = sys.stderr
+
     try:
         header_read_fd : int
         header_write_fd: int
         header_read_fd, header_write_fd = os.pipe()
         os.set_inheritable(header_write_fd, True)
         if verbose:
-            print("header pipe: read_fd=%d write_fd=%d" % (header_read_fd, header_write_fd))
+            print("header pipe: read_fd=%d write_fd=%d" % (header_read_fd, header_write_fd), file=error_file, flush=True)
         
         sortopt_read_fd : int
         sortopt_write_fd: int
         sortopt_read_fd, sortopt_write_fd = os.pipe()
         os.set_inheritable(sortopt_read_fd, True)
         if verbose:
-            print("sort options pipe: read_fd=%d write_fd=%d" % (sortopt_read_fd, sortopt_write_fd))
+            print("sort options pipe: read_fd=%d write_fd=%d" % (sortopt_read_fd, sortopt_write_fd), file=error_file, flush=True)
 
         cmd: str = ""
 
@@ -113,16 +115,16 @@ def run(input_file: KGTKFiles,
             cmd += " > " + repr(str(output_path))
 
         if verbose:
-            print("sort command: %s" % cmd)
+            print("sort command: %s" % cmd, file=error_file, flush=True)
 
         # Sh version 1.13 or greater is required for _pass_fds.
         proc = sh.sh("-c", cmd, _in=sys.stdin, _out=sys.stdout, _err=sys.stderr, _bg=True, _pass_fds={header_write_fd, sortopt_read_fd})
 
         if verbose:
-            print("Reading the KGTK input file header line with KgtkReader")
+            print("Reading the KGTK input file header line with KgtkReader", file=error_file, flush=True)
         kr: KgtkReader = KgtkReader.open(Path("<%d" % header_read_fd))
         if verbose:
-            print("KGTK header: %s" % " ".join(kr.column_names))
+            print("KGTK header: %s" % " ".join(kr.column_names), file=error_file, flush=True)
 
         sort_options: str = ""
         if reverse:
@@ -146,7 +148,7 @@ def run(input_file: KGTKFiles,
                         sort_idx = int(column_name_2)
                         if sort_idx > len(kr.column_names):
                             proc.kill_group()
-                            raise KGTKException("invalid column number %d." % sort_idx)
+                            raise KGTKException("Invalid column number %d (max %d)." % (sort_idx, len(kr.column_names)))
                     else:
                         if column_name_2 not in kr.column_names:
                             proc.kill_group()
@@ -157,15 +159,18 @@ def run(input_file: KGTKFiles,
             if kr.is_node_file:
                 sort_idx = kr.id_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
-            elif kr.is_edge_file:
 
+            elif kr.is_edge_file:
                 if kr.id_column_idx >= 0:
                     sort_idx = kr.id_column_idx + 1
                     sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+
                 sort_idx = kr.node1_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+
                 sort_idx = kr.label_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+
                 sort_idx = kr.node2_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
             else:
@@ -173,7 +178,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Unknown KGTK file mode, please specify the sorting columns.")
 
         if verbose:
-            print("sort options: %s" % sort_options)
+            print("sort options: %s" % sort_options, file=error_file, flush=True)
 
         kr.close() # We are done with the KgtkReader now.
 
