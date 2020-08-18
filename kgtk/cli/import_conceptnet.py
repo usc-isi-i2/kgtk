@@ -47,54 +47,6 @@ def run(input_file: KGTKFiles, english_only):
     def make_rel_label(rel):
         return split_camel_case(rel.split('/')[-1])
 
-    def get_template(label):
-        t={
-            'antonym': Template('What is the opposite from $node1?'),
-            'at location': Template('At what location is $node1?'),
-            'capable of': Template('What is $node1 capable of?'),
-            'causes': Template('What is caused by $node1?'),
-            'causes desire': Template('What desire is caused by $node1?'),
-            'created by': Template('What can create $node1?'),
-            'defined as': Template('How can $node1 be defined?'),
-            'derived from': Template('From which word is $node1 derived?'),
-            'desires': Template('What does $node1 desire?'),
-            'distinct from': Template('What is $node1 distinct from?'),
-            'etymologically derived from': Template('What is $node1 etymologically derived from?'),
-            'symbol of': Template('What is $node1 symbol of?'),
-            'synonym': Template('What is a synonym of $node1?'),
-            'manner of': Template('$node1 is a manner of what?'),
-            'located near': Template('What is $node1 located near to?'),
-            'has context': Template('What is a context of $node1?'),
-            'similar to': Template('What is $node1 similar to?'),
-            'etymologically related to': Template("What is $node1 etymologically related to?"),
-            'made of': Template('What is $node1 made of?'),
-            'receives action': Template('What can be done to $node1?'),
-            'obstructed by': Template('What is $node1 obstructed by?'),
-            'motivated by goal': Template('What goal motivates $node1?'),
-            'has property': Template('What is a property of $node1?'),
-            'has prerequisite': Template('What is a prerequisite for $node1?'),
-            'has first subevent': Template('What is the first subevent of $node1?'),
-            'has last subevent': Template('What is the last subevent of $node1?'),
-            'has subevent': Template('What is a subevent of $node1?'),
-            'used for': Template('What is $node1 used for?'),
-            'has a': Template('What belongs to $node1?'),
-            'is a': Template('What is a $node1?'),
-            'form of': Template('What is $node1 a form of?'),
-            'related to': Template('What is $node1 related to?'),
-            'entails': Template('What is entailed by $node1?'),
-            'part of': Template('What is $node1 a part of?'),
-            'instance of': Template('What is a $node1?')
-            }
-        if label in t.keys():
-            return t[label]
-        else:
-            return Template('What is the %s of $node1?' % label)
-            #return None
-
-    def make_question(node1, label, node2):
-        t=get_template(label)
-        return t.substitute(node1=node1)
-
     def row_to_edge(row, cols):
 
         edge={}
@@ -107,20 +59,12 @@ def run(input_file: KGTKFiles, english_only):
         edge['relation_dimension']=''
 
         metadata=json.loads(row[4])
-        edge['weight']=str(metadata['weight'])
         edge['source']='CN'
-        edge['origin']=metadata['dataset']
         if 'surfaceText' in metadata.keys():
             edge['sentence']=metadata['surfaceText'].replace('\\', '')
         else:
             edge['sentence']=''
         
-        t=get_template(edge['relation_label'])
-        if t:
-            edge['question']=t.substitute(node1=edge['node1_label'])
-        else:
-            return ''
-
         edge_list=[edge[col] for col in cols]
         return '\t'.join(edge_list) + '\n'
 
@@ -128,7 +72,7 @@ def run(input_file: KGTKFiles, english_only):
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
         in_columns=['assertion','rel','subj','obj','metadata']
-        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'weight', 'source', 'origin', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
 
         with open(filename, 'r') as f:
             reader = csv.reader(f, delimiter='\t', quotechar='"')
