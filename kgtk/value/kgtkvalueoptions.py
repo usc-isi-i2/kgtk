@@ -58,12 +58,16 @@ class KgtkValueOptions:
 
     escape_list_separators: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # When repair_lax_coordinates is true, coordinates using scientific notation
+    # When allow_lax_coordinates is true, coordinates using scientific notation
     # will be parsed.
     allow_lax_coordinates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     # When repair_lax_coordinates is true, coordinates using scientific notation
     # will be parsed, but they will be rewritten to fixed point notation.
     repair_lax_coordinates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # When allow_out_of_range_coordinates is true, coordinates that don't nake
+    # sense will still be considered valid.
+    allow_out_of_range_coordinates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     require_iso8601_extended: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     force_iso8601_extended: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -220,6 +224,10 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "Allow coordinates using scientific notation. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        vgroup.add_argument(      prefix1 + "allow-out-of-range-coordinates", dest=prefix2 + "allow_out_of_range_coordinates",
+                                  help=h(prefix3 + "Allow coordinates that don't make sense. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "minimum-valid-lat", dest=prefix2 + "minimum_valid_lat",
                                   help=h(prefix3 + "The minimum valid latitude. (default=%(default)f)."),
                                   type=int, **d(default=cls.MINIMUM_VALID_LAT))
@@ -287,6 +295,7 @@ class KgtkValueOptions:
 
                    allow_lax_coordinates=d.get(prefix + "allow_lax_coordinates", False),
                    repair_lax_coordinates=d.get(prefix + "repair_lax_coordinates", False),
+                   allow_out_of_range_coordinates=d.get(prefix + "allow_out_of_range_coordinates", False),
 
                    minimum_valid_lat=d.get(prefix + "minimum_valid_lat", cls.MINIMUM_VALID_LAT),
                    clamp_minimum_lat=d.get(prefix + "clamp_minimum_lat", False),
@@ -329,6 +338,7 @@ class KgtkValueOptions:
 
         print("%sallow-lax-coordinates=%s" % (prefix, str(self.allow_lax_coordinates)), file=out)
         print("%srepair-lax-coordinates=%s" % (prefix, str(self.repair_lax_coordinates)), file=out)
+        print("%sallow-out-of-range-coordinates=%s" % (prefix, str(self.allow_out_of_range_coordinates)), file=out)
 
         print("%sminimum-valid-lat=%f" % (prefix, self.minimum_valid_lat), file=out)
         print("%sclamp-minimum-lat=%s" % (prefix, str(self.clamp_minimum_lat)), file=out)

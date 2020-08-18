@@ -1200,7 +1200,9 @@ class KgtkValue(KgtkFormat):
         # TODO: Offer a wrapping repair for latitude, which will also affect latitude.
         try:
             lat: float = float(latstr)
-            if  lat < self.options.minimum_valid_lat:
+            if self.options.allow_out_of_range_coordinates:
+                pass
+            elif lat < self.options.minimum_valid_lat:
                 if self.options.clamp_minimum_lat:
                     lat = self.options.minimum_valid_lat
                     latstr = str(lat)
@@ -1222,7 +1224,7 @@ class KgtkValue(KgtkFormat):
                               file=self.error_file, flush=True)
                     self.valid = False
                     return False
-            elif rewrite_needed:
+            if rewrite_needed:
                 latstr = self.format_degrees(lat)
                 fixup_needed = True
         except ValueError:
@@ -1235,7 +1237,9 @@ class KgtkValue(KgtkFormat):
         # Longitude normally runs from -180 to +180:
         try:
             lon: float = float(lonstr)
-            if  lon < self.options.minimum_valid_lon:
+            if self.options.allow_out_of_range_coordinates:
+                pass
+            elif  lon < self.options.minimum_valid_lon:
                 if self.options.modulo_repair_lon:
                     lon = self.wrap_longitude(lon)
                     lonstr = str(lon)
@@ -1265,7 +1269,7 @@ class KgtkValue(KgtkFormat):
                               file=self.error_file, flush=True)
                     self.valid = False
                     return False
-            elif rewrite_needed:
+            if rewrite_needed:
                 lonstr = self.format_degrees(lon)
                 fixup_needed = True
         except ValueError:
