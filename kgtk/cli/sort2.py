@@ -181,7 +181,9 @@ def run(input_file: KGTKFiles,
 
         proc.wait()
 
-        # Clean up the file descriptors, just in case:
+        # Clean up the file descriptors, just in case.
+        #
+        # Note: Should close these when we raise an exception, too.
         try:
             os.close(header_read_fd)
         except os.error:
