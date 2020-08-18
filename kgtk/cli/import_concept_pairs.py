@@ -59,13 +59,9 @@ def run(input_file: KGTKFiles, relation, source):
         edge['relation_label']=make_rel_label(rel)
         edge['relation_dimension']=''
 
-        edge['weight']=''
         edge['source']=source
-        edge['origin']=''
         edge['sentence']=''
         
-        edge['question'] = ''
-
         edge_list=[edge[col] for col in cols]
         return '\t'.join(edge_list) + '\n'
 
@@ -73,7 +69,7 @@ def run(input_file: KGTKFiles, relation, source):
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
         in_columns=['assertion','rel','subj','obj','metadata']
-        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'weight', 'source', 'origin', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
 
         with open(filename, 'r') as f:
             reader = csv.reader(f, delimiter=' ', quotechar='"')
@@ -82,4 +78,4 @@ def run(input_file: KGTKFiles, relation, source):
                 sys.stdout.write(row_to_edge(row[0], relation, row[1], source, out_columns))
 
     except Exception as e:
-            kgtk_exception_auto_handler(e)
+        kgtk_exception_auto_handler(e)
