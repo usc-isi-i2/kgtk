@@ -238,14 +238,20 @@ class ExportWikidata(KgtkFormat):
         if len(entity_type) > 0:
             valuemap["entity-type"] = entity_type
             valuemap["id"] = value
-            valuemap["numeric-id"] = int(value[1:])
+
+            # TODO: Is this the right thing to do?
+            numeric_id: str = value[1:]
+            if "-" in numeric_id:
+                numeric_id = numeric_id[:numeric_id.index("-")]
+            valuemap["numeric-id"] = int(numeric_id)
             return datavalue
 
         kv = KgtkValue(value, options=self.value_options, parse_fields=True, error_file=self.error_file, verbose=self.verbose)
         if not kv.validate():
-            raise ValueError("Invalide KGTK value %s" % value)
+            # raise ValueError("Invalid KGTK value '%s'" % value)
+            print("Warning: Invalid KGTK value '%s'" % value, file=self.error_file, flush=True)
         if kv.fields is None:
-            raise ValueError("KGTK valueis missing fields.")
+            raise ValueError("KGTK value '%s' is missing fields." %value)
 
         if kv.is_number():
             if kv.fields.numberstr is None:
@@ -261,8 +267,12 @@ class ExportWikidata(KgtkFormat):
             valuemap["amount"] = kv.fields.numberstr # TODO: add plus sign
 
             if kv.fields.units_node is None:
-                raise ValueError("quantity is missing unitsnode.")
-            valuemap["unit"] = "http://www.wikidata.org/entity/" + kv.fields.units_node
+                # TODO: research this further.
+                #
+                # raise ValueError("quantity is missing units_node for %s." % value)
+                valuemap["init"] = "undefined"
+            else:
+                valuemap["unit"] = "http://www.wikidata.org/entity/" + kv.fields.units_node
 
             if kv.fields.low_tolerancestr is not None and len(kv.fields.low_tolerancestr) > 0:
                 valuemap["lowerBound"] = kv.fields.low_tolerancestr # TODO: add plus sign
@@ -317,7 +327,13 @@ class ExportWikidata(KgtkFormat):
 
             valuemap["altitide"] = None # deprecated
 
-            valuemap["precision"] = float(edge_row[self.edge_precision_idx])
+            # TODO: Validate that it's OK to have location coordinates without precision.
+            precision: str = edge_row[self.edge_precision_idx]
+            if len(precision) > 0:
+                try:
+                    valuemap["precision"] = float(edge_row[self.edge_precision_idx])
+                except ValueError:
+                    print("Invalid precision '%s'" % precision, file=self.error_file, flush=True)
 
             valuemap["globe"] = "http://www.wikidata.org/entity/Q2"
             return datavalue
@@ -342,12 +358,18 @@ class ExportWikidata(KgtkFormat):
         if len(entity_type) > 0:
             valuemap["entity-type"] = entity_type
             valuemap["id"] = value
-            valuemap["numeric-id"] = int(value[1:])
+
+            # TODO: Is this the right thing to do for Q16097-F1?
+            numeric_id: str = value[1:]
+            if "-" in numeric_id:
+                numeric_id = numeric_id[:numeric_id.index("-")]
+            valuemap["numeric-id"] = int(numeric_id)
             return datavalue
 
         kv = KgtkValue(value, options=self.value_options, parse_fields=True, error_file=self.error_file, verbose=self.verbose)
         if not kv.validate():
-            raise ValueError("Invalide KGTK value %s" % value)
+            # raise ValueError("Invalid KGTK value '%s'" % value)
+            print("Warning: Invalid KGTK value '%s'" % value, file=self.error_file, flush=True)
         if kv.fields is None:
             raise ValueError("KGTK value %s is missing fields." % value)
 
@@ -365,8 +387,13 @@ class ExportWikidata(KgtkFormat):
             valuemap["amount"] = kv.fields.numberstr # TODO: add plus sign
 
             if kv.fields.units_node is None:
-                raise ValueError("quantity is missing units_node for %s." % value)
-            valuemap["unit"] = "http://www.wikidata.org/entity/" + kv.fields.units_node
+                # TODO: Research this further.  Why did we get here?  Is it because import_wikidata
+                # dropped the units?
+                #
+                # raise ValueError("quantity is missing units_node for %s in: %s" % (value, " ".join(qual_row)))
+                valuemap["unit"] = "undefined"
+            else:
+                valuemap["unit"] = "http://www.wikidata.org/entity/" + kv.fields.units_node
 
             if kv.fields.low_tolerancestr is not None and len(kv.fields.low_tolerancestr) > 0:
                 valuemap["lowerBound"] = kv.fields.low_tolerancestr # TODO: add plus sign
@@ -563,7 +590,7 @@ class ExportWikidata(KgtkFormat):
                       qgr: GroupedReader,
     )->typing.Mapping[str, typing.Any]:
         qnode: str = qnode_info[self.node_qnode_idx]
-        if self.verbose:
+        if self.very_verbose:
             print("Processing qnode %s" % qnode)
 
         result: typing.MutableMapping[str, typing.Any] =  self.process_qnode_info(qnode, qnode_info)
