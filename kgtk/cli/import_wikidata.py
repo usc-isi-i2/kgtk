@@ -695,10 +695,12 @@ def run(input_file: KGTKFiles,
                                             upper = val.get('upperBound', '')
                                             value += '[' + lower + \
                                                 ',' + upper + ']'
+                                        # TODO: Don't lose the single-character unit code.  At a minimum, verify that it is the value "1".
                                         if len(val.get('unit')) > 1:
                                             unit = val.get(
                                                 'unit').split('/')[-1]
                                             if unit not in ["undefined"]:
+                                                # TODO: don't lose track of "undefined" units.
                                                 value += unit
                                     elif typ == 'globe-coordinate':
                                         lat = str(val['latitude'])
