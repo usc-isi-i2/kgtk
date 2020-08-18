@@ -32,7 +32,6 @@ runs in parallel with the Python process.
    sorts it, and writes the sorted data ro the output stream.
 """
 import typing
-# import logging
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.exceptions import KGTKException
@@ -73,12 +72,8 @@ def run(input_file: KGTKFiles,
 
     from kgtk.io.kgtkreader import KgtkReader
 
-    # print("Sort running.", file=sys.stderr, flush=True) # ***
-
-    input_path: Path = str(KGTKArgumentParser.get_input_file(input_file))
-    output_path: Path = str(KGTKArgumentParser.get_output_file(output_file))
-
-    # logging.basicConfig(level=logging.INFO)
+    input_path: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_path: Path = KGTKArgumentParser.get_output_file(output_file)
 
     try:
         header_read_fd : int
@@ -100,7 +95,7 @@ def run(input_file: KGTKFiles,
         if str(input_path) != "-":
             # Feed the named file into the data processing pipeline,
             # otherwise read from standard input.
-            cmd += "cat " + repr(input_path) + " | "
+            cmd += "cat " + repr(str(input_path)) + " | "
 
         cmd += " { IFS= read -r header ; " # Read the header line
         cmd += " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; " # Send the header to Python
@@ -111,7 +106,7 @@ def run(input_file: KGTKFiles,
         if str(output_path) != "-":
             # Feed the output to the named file.  Otherwise, the output goes
             # to standrd output without passing through Python.
-            cmd += " > " + repr(output_path)
+            cmd += " > " + repr(str(output_path))
 
         if verbose:
             print("Cmd: %s" % cmd)
