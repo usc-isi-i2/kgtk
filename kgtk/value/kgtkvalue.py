@@ -1084,7 +1084,7 @@ class KgtkValue(KgtkFormat):
 
     def is_language_qualified_string(self, validate: bool=False)->bool:
         """
-        Return True if the value looks like a language-qualified string.
+o        Return True if the value looks like a language-qualified string.
         """
         if self.data_type is None:
             if not self.value.startswith("'"):
