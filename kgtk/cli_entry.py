@@ -38,6 +38,7 @@ def cli_entry(*args):
 
     # Capture the initial time for timing measurements.
     start_time: float = time.time()
+    process_start_time: float = time.process_time()
 
     # get all arguments
     if not args:
@@ -163,8 +164,17 @@ def cli_entry(*args):
 
     if parsed_shared_args._timing:
         end_time: float = time.time()
-        elapsed_seconds = end_time - start_time
-        print("Time taken: %s (%s)" % (str(datetime.timedelta(seconds=elapsed_seconds)), " ".join(args)), file=sys.stderr, flush=True)
+        elapsed_seconds: float = end_time - start_time
+
+        process_end_time: float = time.process_time()
+        process_elapsed_seconds: float = process_end_time - process_start_time
+
+        cpu_ratio: float = process_elapsed_seconds / elapsed_seconds
+
+        print("Timing: elapsed=%s CPU=%s (%5.1f%%): %s" % (str(datetime.timedelta(seconds=elapsed_seconds)),
+                                                           str(datetime.timedelta(seconds=process_elapsed_seconds)),
+                                                           cpu_ratio * 100.0,
+                                                           " ".join(args)), file=sys.stderr, flush=True)
 
     return ret_code
 
