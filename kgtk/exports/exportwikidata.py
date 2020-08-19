@@ -515,34 +515,38 @@ class ExportWikidata(KgtkFormat):
             claims[prop] = list()
         proplist: typing.List[typing.Mapping[str, typing.Any]] = claims[prop]
 
-        statement: typing.MutableMapping[str, typing.Any] = dict()
-        proplist.append(statement)
-
-        # Fill in the top-level attributes:
-        statement["type"] = "statement" # We hope this is correct.
-        statement["id"] = edge_row[self.edge_claim_id_idx]
-        statement["rank"] = edge_row[self.edge_rank_idx]
-
-        mainsnak: typing.MutableMapping[str, typing.Any] = dict()
-        statement["mainsnak"] = mainsnak
-
-        mainsnak["property"] = prop
-
-        datatype: str = edge_row[self.edge_wikidatatype_idx]
-        mainsnak["datatype"] = datatype
-
-        value: str = edge_row[self.edge_node2_idx]
-        if value == "somevalue":
-            mainsnak["snaktype"] = "somevalue"
-        elif value == "novalue":
-            mainsnak["snaktype"] = "novalue"
-        else:
-            mainsnak["snaktype"] = "value"
-            mainsnak["datavalue"] = self.process_edge_datavalue(value, edge_row, datatype)
-
-        if qualifier_rows is not None and len(qualifier_rows) > 0:
-            self.process_qnode_edge_qualifiers(result, edge_id, qualifier_rows)
+        try:
+            statement: typing.MutableMapping[str, typing.Any] = dict()
             
+            # Fill in the top-level attributes:
+            statement["type"] = "statement" # We hope this is correct.
+            statement["id"] = edge_row[self.edge_claim_id_idx]
+            statement["rank"] = edge_row[self.edge_rank_idx]
+
+            mainsnak: typing.MutableMapping[str, typing.Any] = dict()
+            statement["mainsnak"] = mainsnak
+
+            mainsnak["property"] = prop
+
+            datatype: str = edge_row[self.edge_wikidatatype_idx]
+            mainsnak["datatype"] = datatype
+
+            value: str = edge_row[self.edge_node2_idx]
+            if value == "somevalue":
+                mainsnak["snaktype"] = "somevalue"
+            elif value == "novalue":
+                mainsnak["snaktype"] = "novalue"
+            else:
+                mainsnak["snaktype"] = "value"
+                mainsnak["datavalue"] = self.process_edge_datavalue(value, edge_row, datatype)
+
+            if qualifier_rows is not None and len(qualifier_rows) > 0:
+                self.process_qnode_edge_qualifiers(result, edge_id, qualifier_rows)
+
+            proplist.append(statement)
+        
+        except ValueError as e:
+            print("Error, skipping statement: %s" % str(e), file=self.error_file, flush=True)
 
     def process_qnode_edges(self,
                             result: typing.MutableMapping[str, typing.Any],
