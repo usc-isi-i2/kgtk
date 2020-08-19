@@ -85,12 +85,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="If both input files are edge files, include the node2 column in the join (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
     
+    parser.add_argument(      "--left-prefix", dest="left_prefix",
+                              help="An optional prefix applied to left file column names in the output file (default=None).")
+    
     parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns (default=None).", nargs='+')
 
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--prefix", dest="prefix",
+    parser.add_argument(      "--right-prefix", "--prefix", dest="right_prefix",
                               help="An optional prefix applied to right file column names in the output file (default=None).")
     
     parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns (default=None).", nargs='+')
@@ -114,13 +117,16 @@ def run(left_file: KGTKFiles,
         right_file: KGTKFiles,
         output_file: KGTKFiles,
 
-        left_join: bool,
-        right_join: bool,
-        join_on_label: bool,
-        join_on_node2: bool,
-        left_join_columns: typing.Optional[typing.List[str]],
-        right_join_columns: typing.Optional[typing.List[str]],
-        prefix: typing.Optional[str] = None,
+        join_on_label: bool = False,
+        join_on_node2: bool = False,
+
+        left_prefix: typing.Optional[str] = None,
+        left_join_columns: typing.Optional[typing.List[str]] = None,
+        left_join: bool = False,
+
+        right_prefix: typing.Optional[str] = None,
+        right_join_columns: typing.Optional[typing.List[str]] = None,
+        right_join: bool = False,
 
         field_separator: typing.Optional[str] = None,
 
@@ -185,8 +191,10 @@ def run(left_file: KGTKFiles,
             print("--left-join-columns=%s" % " ".join(left_join_columns), file=error_file)
         if right_join_columns is not None:
             print("--right-join-columns=%s" % " ".join(right_join_columns), file=error_file)
-        if prefix is not None:
-            print("--prefix=%s" % str(prefix), file=error_file)
+        if left_prefix is not None:
+            print("--left-prefix=%s" % str(left_prefix), file=error_file)
+        if right_prefix is not None:
+            print("--right-prefix=%s" % str(right_prefix), file=error_file)
         print("--field-separator=%s" % repr(field_separator), file=error_file)
               
         left_reader_options.show(out=error_file, who="left")
@@ -204,7 +212,8 @@ def run(left_file: KGTKFiles,
             join_on_node2=join_on_node2,
             left_join_columns=left_join_columns,
             right_join_columns=right_join_columns,
-            prefix=prefix,
+            left_prefix=left_prefix,
+            right_prefix=right_prefix,
             field_separator=field_separator,
             left_reader_options=left_reader_options,
             right_reader_options=right_reader_options,
