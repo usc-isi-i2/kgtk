@@ -22,3 +22,20 @@ RUN conda update -n base -c defaults conda
 RUN conda install -c conda-forge graph-tool
 
 RUN conda install -c conda-forge jupyterlab
+
+ARG NB_USER=jovyan
+ARG NB_UID=1000
+ENV USER ${NB_USER}
+ENV NB_UID ${NB_UID}
+ENV HOME /home/${NB_USER}
+
+RUN adduser --disabled-password \
+    --gecos "Default user" \
+    --uid ${NB_UID} \
+    ${NB_USER}
+    
+COPY . ${HOME}
+USER root
+RUN chown -R ${NB_UID} ${HOME}
+RUN chown -R ${NB_UID} kgtk
+USER ${NB_USER}

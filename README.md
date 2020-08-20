@@ -24,10 +24,12 @@ KGTK is a Python library for easy manipulation with knowledge graphs. It provide
 
 https://kgtk.readthedocs.io/en/latest/
 
-### Try KGTK online with MyBinder
-The easiest, no-cost way of trying out KGTK now is through [MyBinder](https://mybinder.org/). We have made available an **example notebook** to show some of the features of KGTK. The notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) will not run. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/dev?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
+### Demo: try KGTK online with MyBinder
+The easiest, no-cost way of trying out KGTK is through [MyBinder](https://mybinder.org/). We have made available several **example notebooks** to show some of the features of KGTK, which can be run in two environments: 
 
-To see the **graph analytics and embedding capabilities** of KGTK, launch the following Notebook (launch usually requires 10-20 minutes):  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
+* Basic KGTK functionality: This notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) **will not run**. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/dev?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
+
+* Advanced KGTK functionality: This notebook may take 10-20 minutes to launch. It includes basic KGTK functionality and **graph analytics and embedding capabilities** of KGTK:  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
 
 For executing KGTK with large datasets, **we recommend a Docker/local installation**.
 
@@ -59,10 +61,11 @@ To run KGTK in the command line just type:
 docker run -it uscisii2/kgtk /bin/bash
 ```
 
-If you want to run KGTK in a Jupyter notebook, then you will have to type:
+If you want to run KGTK in a **Jupyter notebook**, then you will have to type:
 ```
-docker run -it -p 8888:8888 uscisii2/kgtk /bin/bash -c "jupyter notebook --ip='*' --port=8888 --allow-root --no-browser"
+docker run -it -p 8888:8888 uscisii2/kgtk:latest /bin/bash -c "jupyter notebook --ip='*' --port=8888 --no-browser"
 ```
+Versions 0.3.2 and 0.2.1 require `--allow-root` as part of the jupyter notebook command.
 
 Note: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
 
