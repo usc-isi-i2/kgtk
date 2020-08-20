@@ -34,18 +34,18 @@ def run(input_file: KGTKFiles,
     import re
     from pathlib import Path
     from collections import defaultdict
+    from kgtk.kgtkformat import KgtkFormat
 
     out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
 
     proximity_relation='/r/LocatedNear'
     property_relation='mw:MayHaveProperty'
-    property_relation_label='may have property'
+    property_relation_label=KgtkFormat.stringify('may have property')
     capableof_relation='/r/CapableOf'
-    capableof_relation_label='capable of'
-
+    capableof_relation_label=KgtkFormat.stringify('capable of')
 
     def create_edge(node1, node1_lbl, node2, node2_lbl, rel, rel_lbl, image_id):
-        my_row=[node1, rel, node2, '|'.join(node1_lbl), '|'.join(node2_lbl), rel_lbl, '', 'VG', '']
+        my_row=[node1, rel, node2, '|'.join(node1_lbl), '|'.join(node2_lbl), rel_lbl, '', KgtkFormat.stringify('VG'), '']
         return '\t'.join(my_row) + '\n'
 
     def header_to_edge(row):
@@ -82,7 +82,7 @@ def run(input_file: KGTKFiles,
                 for name in o['names']:
                     name=name.strip().lower().rstrip('.')
                     if not name: continue
-                    objid2names[obj_id].append(name)
+                    objid2names[obj_id].append(KgtkFormat.stringify(name))
 
                 # ATTRIBUTES
                 if 'attributes' in o.keys():
@@ -98,7 +98,7 @@ def run(input_file: KGTKFiles,
                                             edge_row=create_edge('wn:' + osyn, 
                                                     objid2names[obj_id], 
                                                     'wn:' + asyn, 
-                                                    [attr], 
+                                                    [KgtkFormat.stringify(attr)], 
                                                     capableof_relation, 
                                                     capableof_relation_label, 
                                                     image_id)
@@ -110,7 +110,7 @@ def run(input_file: KGTKFiles,
                                             edge_row=create_edge('wn:' + osyn, 
                                                     objid2names[obj_id], 
                                                     'wn:' + asyn, 
-                                                    [attr], 
+                                                    [KgtkFormat.stringify(attr)], 
                                                     property_relation, 
                                                     property_relation_label, 
                                                     image_id)
@@ -120,7 +120,7 @@ def run(input_file: KGTKFiles,
             # RELATIONS
             for rel in an_image['relationships']:
                 #synsets=rel['synsets']
-                relation_label=rel['predicate'].lower().strip().strip('.')
+                relation_label=KgtkFormat.stringify(rel['predicate'].lower().strip().strip('.'))
                 sub_id=rel['subject_id']
                 sub_names=objid2names[sub_id]
                 sub_syns=objid2syns[sub_id]

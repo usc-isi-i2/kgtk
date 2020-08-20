@@ -654,6 +654,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     print("%s: reading stdin" % who, file=error_file, flush=True)
                 return ClosableIterTextIOWrapper(sys.stdin)
 
+        if str(file_path).startswith("<"):
+            fd: int = int(str(file_path)[1:])
+            if verbose:
+                print("%s: reading file descriptor %d" % (who, fd), file=error_file, flush=True)
+            return ClosableIterTextIOWrapper(open(fd, "r"))
+
         if verbose:
             print("%s: File_path.suffix: %s" % (who, file_path.suffix), file=error_file, flush=True)
 

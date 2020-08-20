@@ -31,21 +31,21 @@ def run(input_file: KGTKFiles, english_only):
     import json
     import re
     from pathlib import Path
-    from string import Template
+    from kgtk.kgtkformat import KgtkFormat
 
     def header_to_edge(row):
         row=[r.replace('_', ';') for r in row]
         return '\t'.join(row) + '\n'
 
     def make_node_label(node):
-        return node.strip().split('/')[3].replace('_', ' ')
+        return KgtkFormat.stringify(node.strip().split('/')[3].replace('_', ' '))
 
     def split_camel_case(name):
         splitted = re.sub('([A-Z][a-z]+)', r' \1', re.sub('([A-Z]+)', r' \1', name)).split()
         return ' '.join(splitted).lower()
 
     def make_rel_label(rel):
-        return split_camel_case(rel.split('/')[-1])
+        return KgtkFormat.stringify(split_camel_case(rel.split('/')[-1]))
 
     def row_to_edge(row, cols):
 
@@ -59,9 +59,9 @@ def run(input_file: KGTKFiles, english_only):
         edge['relation_dimension']=''
 
         metadata=json.loads(row[4])
-        edge['source']='CN'
+        edge['source']=KgtkFormat.stringify('CN')
         if 'surfaceText' in metadata.keys():
-            edge['sentence']=metadata['surfaceText'].replace('\\', '')
+            edge['sentence']=KgtkFormat.stringify(metadata['surfaceText'].replace('\\', ''))
         else:
             edge['sentence']=''
         
