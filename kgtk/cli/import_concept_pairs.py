@@ -32,20 +32,21 @@ def run(input_file: KGTKFiles, relation, source):
     import re
     from pathlib import Path
     from string import Template
+    from kgtk.kgtkformat import KgtkFormat
 
     def header_to_edge(row):
         row=[r.replace('_', ';') for r in row]
         return '\t'.join(row) + '\n'
 
     def make_node_label(node):
-        return node[3:]
+        return KgtkFormat.stringify(node[3:])
 
     def split_camel_case(name):
         splitted = re.sub('([A-Z][a-z]+)', r' \1', re.sub('([A-Z]+)', r' \1', name)).split()
         return ' '.join(splitted).lower()
 
     def make_rel_label(rel):
-        return split_camel_case(rel.split('/')[-1])
+        return KgtkFormat.stringify(split_camel_case(rel.split('/')[-1]))
 
     def row_to_edge(node1, rel, node2, source, cols):
 
@@ -59,7 +60,7 @@ def run(input_file: KGTKFiles, relation, source):
         edge['relation_label']=make_rel_label(rel)
         edge['relation_dimension']=''
 
-        edge['source']=source
+        edge['source']=KgtkFormat.stringify(source)
         edge['sentence']=''
         
         edge_list=[edge[col] for col in cols]
