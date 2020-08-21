@@ -368,7 +368,7 @@ class KgtkIfExists(KgtkFormat):
         )
 
         if self.verbose:
-            print("Opening the filter input file: %s" % self.filter_file_path, flush=True)
+            print("Opening the filter input file: %s" % self.filter_file_path, file=self.error_file, flush=True)
         filter_kr: KgtkReader = KgtkReader.open(self.filter_file_path,
                                                 who="filter",
                                                 error_file=self.error_file,
