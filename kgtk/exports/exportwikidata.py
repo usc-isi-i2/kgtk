@@ -71,6 +71,7 @@ class ExportWikidata(KgtkFormat):
     node_label_idx: int = attr.ib(default=-1)
     node_qnode_idx: int = attr.ib(default=-1)
     node_type_idx: int = attr.ib(default=-1)
+    node_datatype_idx: int = attr.ib(default=-1)
 
     edge_id_idx: int = attr.ib(default=-1)
     edge_node1_idx: int = attr.ib(default=-1)
@@ -157,6 +158,12 @@ class ExportWikidata(KgtkFormat):
                  node_type: str):
         result["type"] = node_type
 
+    def add_datatype(self,
+                 result: typing.MutableMapping[str, typing.Any],
+                 node_type: str):
+        if len(node_type) > 0:
+            result["datatype"] = node_type
+
     def process_qnode_info(self,
                            qnode: str,
                            qnode_info: typing.List[str],
@@ -164,6 +171,7 @@ class ExportWikidata(KgtkFormat):
         result: typing.MutableMapping[str, typing.Any] = dict()
         self.add_qnode(result, qnode)
         self.add_type(result, qnode_info[self.node_type_idx])
+        self.add_datatype(result, qnode_info[self.node_datatype_idx])
 
         self.build_attr_map(result, qnode_info[self.node_label_idx], "labels")
         self.build_attr_map(result, qnode_info[self.node_description_idx], "descriptions")
@@ -576,6 +584,9 @@ class ExportWikidata(KgtkFormat):
             elif edge_label == "type":
                 self.add_type(result, edge_row[self.edge_node2_idx])
 
+            elif edge_label == "datatype":
+                self.add_datatype(result, edge_row[self.edge_node2_idx])
+
             elif edge_label in ("wikipedia_sitelink", "addl_wikipedia_sitelink"):
                 edge_id = edge_row[self.edge_id_idx]
                 qualifier_rows = qualifier_dict.get(edge_id)
@@ -618,6 +629,10 @@ class ExportWikidata(KgtkFormat):
         self.node_type_idx = nr.column_name_map.get("type", -1)
         if self.node_type_idx < 0:
             raise ValueError("The node file is missing a type column.")
+
+        self.node_datatype_idx = nr.column_name_map.get("datatype", -1)
+        if self.node_datatype_idx < 0:
+            raise ValueError("The node file is missing a datatype column.")
 
         self.node_description_idx = nr.column_name_map.get("description", -1)
         if self.node_description_idx < 0:
