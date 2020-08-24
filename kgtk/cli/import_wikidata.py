@@ -41,7 +41,14 @@ def add_arguments(parser: KGTKArgumentParser):
         type=int,
         dest="procs",
         default=2,
-        help='number of processes to run in parallel, default 2')
+        help='number of processes to run in parallel, default %(default)d')
+    parser.add_argument(
+        '--max-size-per-mapper-queue',
+        action="store",
+        type=int,
+        dest="max_size_per_mapper_queue",
+        default=20,
+        help='max depth of server queues, default %(default)d')
     parser.add_argument(
         "--node",
         action="store",
@@ -294,6 +301,7 @@ def add_arguments(parser: KGTKArgumentParser):
     
 def run(input_file: KGTKFiles,
         procs,
+        max_size_per_mapper_queue,
         node_file,
         edge_file,
         qual_file,
@@ -374,6 +382,49 @@ def run(input_file: KGTKFiles,
             self.first=True
             self.cnt=0
             self.write_mode='w'
+
+            
+            self.node_f = None
+            if node_file:
+                self.node_f = open(node_file+'_{}'.format(self._idx), self.write_mode, newline='')
+                self.node_wr = csv.writer(
+                    self.node_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
+                
+            self.edge_f = None
+            if edge_file:
+                self.edge_f = open(edge_file+'_{}'.format(self._idx), self.write_mode, newline='')
+                self.edge_wr = csv.writer(
+                    self.edge_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
+                
+            self.qual_f = None
+            if qual_file:
+                self.qual_f = open(qual_file+'_{}'.format(self._idx), self.write_mode, newline='')
+                self.qual_wr = csv.writer(
+                    self.qual_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
+
+
+        def exit(self):
+            if self.node_f is not None:
+                self.node_f.close()
+            if self.edge_f is not None:
+                self.edge_f.close()
+            if self.qual_f is not None:
+                self.qual_f.close()
 
         def erows_append(self, erows, edge_id, node1, label, node2,
                          rank="",
@@ -504,10 +555,6 @@ def run(input_file: KGTKFiles,
                                   calendar=calendar)
             
         def process(self,line,node_file,edge_file,qual_file,languages,doc_id):
-            write_mode='a'
-            if self.first==True:
-                write_mode='w'
-                self.first=False
             if self.cnt % 500000 == 0 and self.cnt>0:
                 print("{} lines processed by processor {}".format(self.cnt,self._idx), file=sys.stderr, flush=True)
             self.cnt+=1
@@ -984,38 +1031,15 @@ def run(input_file: KGTKFiles,
                                             badge_num += 1
 
             if node_file:
-                with open(node_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
-                    for row in nrows:
-                        wr = csv.writer(
-                            myfile,
-                            quoting=csv.QUOTE_NONE,
-                            delimiter="\t",
-                            escapechar="\n",
-                            quotechar='',
-                            lineterminator=csv_line_terminator)
-                        wr.writerow(row)
+                for row in nrows:
+                    self.node_wr.writerow(row)
+
             if edge_file:
-                with open(edge_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
-                    for row in erows:
-                        wr = csv.writer(
-                            myfile,
-                            quoting=csv.QUOTE_NONE,
-                            delimiter="\t",
-                            escapechar="\n",
-                            quotechar='',
-                            lineterminator=csv_line_terminator)
-                        wr.writerow(row)
+                for row in erows:
+                    self.edge_wr.writerow(row)
             if qual_file:
-                with open(qual_file+'_{}'.format(self._idx), write_mode, newline='') as myfile:
-                    for row in qrows:
-                        wr = csv.writer(
-                            myfile,
-                            quoting=csv.QUOTE_NONE,
-                            delimiter="\t",
-                            escapechar="\n",
-                            quotechar='',
-                            lineterminator=csv_line_terminator)
-                        wr.writerow(row)
+                for row in qrows:
+                    self.qual_wr.writerow(row)
 
     
     try:
@@ -1075,7 +1099,8 @@ def run(input_file: KGTKFiles,
                         quotechar='',
                         lineterminator=csv_line_terminator)
                     wr.writerow(header)
-            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True)
+            print('Start parallel processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
+            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
             pp.start()
             if str(inp_path).endswith(".bz2"):
                 with bz2.open(inp_path, mode='rb') as file:
