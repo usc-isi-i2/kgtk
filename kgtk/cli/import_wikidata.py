@@ -180,6 +180,18 @@ def add_arguments(parser: KGTKArgumentParser):
 
     
     parser.add_argument(
+       "--datatype-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="datatype_edges",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, create edge records for property datatypes. (default=%(default)s).",
+    )
+
+    
+    parser.add_argument(
        "--description-edges",
         nargs='?',
         type=optional_bool,
@@ -267,6 +279,17 @@ def add_arguments(parser: KGTKArgumentParser):
         metavar="True/False",
         help="If true, override --lang and import aliases, dscriptions, and labels in all languages. (default=%(default)s).",
     )
+    
+    parser.add_argument(
+        "--warn-if-missing",
+        nargs='?',
+        type=optional_bool,
+        dest="warn_if_missing",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, print a warning message if expected data is missing. (default=%(default)s).",
+    )
 
     
 def run(input_file: KGTKFiles,
@@ -286,6 +309,7 @@ def run(input_file: KGTKFiles,
         interleave,
         entry_type_edges,
         alias_edges,
+        datatype_edges,
         descr_edges,
         label_edges,
         parse_aliases,
@@ -293,7 +317,8 @@ def run(input_file: KGTKFiles,
         parse_labels,
         parse_claims,
         fail_if_missing,
-        all_languages):
+        all_languages,
+        warn_if_missing):
 
     # import modules locally
     import bz2
@@ -484,7 +509,7 @@ def run(input_file: KGTKFiles,
                 write_mode='w'
                 self.first=False
             if self.cnt % 500000 == 0 and self.cnt>0:
-                print("{} lines processed by processor {}".format(self.cnt,self._idx), flush=True)
+                print("{} lines processed by processor {}".format(self.cnt,self._idx), file=sys.stderr, flush=True)
             self.cnt+=1
             csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
             nrows=[]
@@ -498,6 +523,8 @@ def run(input_file: KGTKFiles,
                 entry_type = obj["type"]
                 if entry_type == "item" or entry_type == "property":
                     keep = True
+                elif warn_if_missing:
+                    print("Unknown object type {}.".format(entry_type), file=sys.stderr, flush=True)
                 if (node_file or entry_type_edges or label_edges or alias_edges or descr_edges) and keep:
                     row = []
                     qnode = obj["id"]
@@ -505,8 +532,11 @@ def run(input_file: KGTKFiles,
 
                     if parse_labels:
                         labels = obj.get("labels")
-                        if fail_if_missing and labels is None:
-                            raise KGTKException("Qnode %s is missing its labels" % qnode)
+                        if labels is None:
+                            if fail_if_missing:
+                                raise KGTKException("Qnode %s is missing its labels" % qnode)
+                            elif warn_if_missing:
+                                print("Object id {} has no labels.".format(qnode), file=sys.stderr, flush=True)
                         label_list=[]
                         if labels:
                             if all_languages:
@@ -546,8 +576,11 @@ def run(input_file: KGTKFiles,
 
                     if parse_descr:
                         descriptions = obj.get("descriptions")
-                        if fail_if_missing and descriptions is None:
-                            raise KGTKException("Qnode %s is missing its descriptions" % qnode)
+                        if descriptions is None:
+                            if fail_if_missing:
+                                raise KGTKException("Qnode %s is missing its descriptions" % qnode)
+                            elif warn_if_missing:
+                                print("Object id {} has no descriptions.".format(qnode), file=sys.stderr, flush=True)
                         descr_list=[]
                         if descriptions:
                             if all_languages:
@@ -576,8 +609,11 @@ def run(input_file: KGTKFiles,
 
                     if parse_aliases:
                         aliases = obj.get("aliases")
-                        if fail_if_missing and aliases is None:
-                            raise KGTKException("Qnode %s is missing its aliases" % qnode)
+                        if aliases is None:
+                            if fail_if_missing:
+                                raise KGTKException("Qnode %s is missing its aliases" % qnode)
+                            elif warn_if_missing:
+                                print("Object id {} has no aliasees.".format(qnode), file=sys.stderr, flush=True)
                         alias_list = []
                         if aliases:
                             if all_languages:
@@ -608,13 +644,27 @@ def run(input_file: KGTKFiles,
                         else:
                             row.append("")
 
+                    datatype = obj.get("datatype", "")
+                    row.append(datatype)
+                    if len(datatype) > 0 and datatype_edges and edge_file:
+                        sid = qnode + '-' + "datatype"
+                        # We expect the datatype to be a valid KGTK symbol, so
+                        # there's no need to stringify it.
+                        self.erows_append(erows,
+                                          edge_id=sid,
+                                          node1=qnode,
+                                          label="datatype",
+                                          node2=datatype)
+                    
                     #row.append(doc_id)
                     if node_file:
                         nrows.append(row)
 
                 if (edge_file or qual_file) and parse_claims and "claims" not in obj:
                     if fail_if_missing:
-                            raise KGTKException("Qnode %s is missing its claims" % qnode)
+                        raise KGTKException("Qnode %s is missing its claims" % qnode)
+                    elif warn_if_missing:
+                        print("Object id {} is missing its claims.".format(qnode), file=sys.stderr, flush=True)
                     
                 if (edge_file or qual_file) and parse_claims and "claims" in obj:
                     claims = obj["claims"]
@@ -970,7 +1020,7 @@ def run(input_file: KGTKFiles,
     
     try:
         UPDATE_VERSION: str = "2020-08-06T17:06:06.886090+00:00#T6yEN2toVYbj/L1j6gXhfKc4+pz+DdXM2jauFkMLdEfclNmP7PdqikUklUCLMRvnbk+CRtIAtlzAGknubBUXqA=="
-        print("kgtk import-wikidata version: %s" % UPDATE_VERSION, flush=True)
+        print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
 
         inp_path = KGTKArgumentParser.get_input_file(input_file)
         
@@ -981,7 +1031,7 @@ def run(input_file: KGTKFiles,
         if not skip_processing:
             languages=lang.split(',')
             if node_file:
-                header = ['id','label','type','description','alias']
+                header = ['id','label','type','description','alias','datatype']
                 with open(node_file+'_header', 'w', newline='') as myfile:
                     wr = csv.writer(
                         myfile,
@@ -1029,24 +1079,24 @@ def run(input_file: KGTKFiles,
             pp.start()
             if str(inp_path).endswith(".bz2"):
                 with bz2.open(inp_path, mode='rb') as file:
-                    print('Decompressing and processing wikidata file %s' % str(inp_path), flush=True)
+                    print('Decompressing and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
                     for cnt, line in enumerate(file):
                         if limit and cnt >= limit:
                             break
                         pp.add_task(line,node_file,edge_file,qual_file,languages,source)
             else:                             
                 with open(inp_path, mode='rb') as file:
-                    print('Processing wikidata file %s' % str(inp_path), flush=True)
+                    print('Processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
                     for cnt, line in enumerate(file):
                         if limit and cnt >= limit:
                             break
                         pp.add_task(line,node_file,edge_file,qual_file,languages,source)
 
-            print('Done processing {}'.format(str(inp_path)), flush=True)
+            print('Done processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
             pp.task_done()
-            print('Tasks done.', flush=True)
+            print('Tasks done.', file=sys.stderr, flush=True)
             pp.join()
-            print('Join complete.', flush=True)
+            print('Join complete.', file=sys.stderr, flush=True)
 
         if not skip_merging:
             # We've finished processing the input data, possibly using multiple
@@ -1057,28 +1107,28 @@ def run(input_file: KGTKFiles,
             # If we assume that we are on Linux or MacOS, then os.sendfile(...)
             # should provide the simplest, highest-performing solution.
             if node_file:
-                print('Combining the node file fragments', flush=True)
+                print('Combining the node file fragments', file=sys.stderr, flush=True)
                 node_file_fragments=[node_file+'_header']
                 for n in range(procs):
                     node_file_fragments.append(node_file+'_'+str(n))
                 platform_cat(node_file_fragments, node_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
             if edge_file:
-                print('Combining the edge file fragments', flush=True)
+                print('Combining the edge file fragments', file=sys.stderr, flush=True)
                 edge_file_fragments=[edge_file+'_header']
                 for n in range(procs):
                     edge_file_fragments.append(edge_file+'_'+str(n))
                 platform_cat(edge_file_fragments, edge_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
             if qual_file:
-                print('Combining the qualifier file fragments', flush=True)
+                print('Combining the qualifier file fragments', file=sys.stderr, flush=True)
                 qual_file_fragments=[qual_file+'_header']
                 for n in range(procs):
                     qual_file_fragments.append(qual_file+'_'+str(n))
                 platform_cat(qual_file_fragments, qual_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
-        print('import complete', flush=True)
+        print('import complete', file=sys.stderr, flush=True)
         end=time.time()
-        print('time taken : {}s'.format(end-start), flush=True)
+        print('time taken : {}s'.format(end-start), file=sys.stderr, flush=True)
     except:
         raise KGTKException
