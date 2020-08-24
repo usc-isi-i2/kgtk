@@ -332,6 +332,7 @@ def run(input_file: KGTKFiles,
     import bz2
     import simplejson as json
     import csv
+    import gzip
     import os
     import pyrallel
     import sys
@@ -1104,7 +1105,14 @@ def run(input_file: KGTKFiles,
             pp.start()
             if str(inp_path).endswith(".bz2"):
                 with bz2.open(inp_path, mode='rb') as file:
-                    print('Decompressing and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
+                    print('Decompressing (bz2) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
+                    for cnt, line in enumerate(file):
+                        if limit and cnt >= limit:
+                            break
+                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+            elif str(inp_path).endswith(".gz"):
+                with gzip.open(inp_path, mode='rb') as file:
+                    print('Decompressing (gzip) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
                     for cnt, line in enumerate(file):
                         if limit and cnt >= limit:
                             break
