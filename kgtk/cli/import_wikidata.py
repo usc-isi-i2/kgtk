@@ -419,7 +419,7 @@ def run(input_file: KGTKFiles,
                     lineterminator=csv_line_terminator)
 
 
-        def exit(self):
+        def exit(self, *args, **kwargs):
             if self.node_f is not None:
                 self.node_f.close()
             if self.edge_f is not None:
