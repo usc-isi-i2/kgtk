@@ -39,6 +39,7 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_KGTK: str = "kgtk"
     OUTPUT_FORMAT_MD: str = "md"
     OUTPUT_FORMAT_TSV: str = "tsv"
+    OUTPUT_FORMAT_TSV_UNQUOTED: str = "tsv-unquoted"
 
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
         OUTPUT_FORMAT_CSV,
@@ -51,6 +52,7 @@ class KgtkWriter(KgtkBase):
         OUTPUT_FORMAT_KGTK,
         OUTPUT_FORMAT_MD,
         OUTPUT_FORMAT_TSV,
+        OUTPUT_FORMAT_TSV_UNQUOTED,
     ]
     OUTPUT_FORMAT_DEFAULT: str = OUTPUT_FORMAT_KGTK
 
@@ -390,7 +392,7 @@ class KgtkWriter(KgtkBase):
             line += value
         return line
 
-    def join_tsv(self, values: typing.List[str])->str:
+    def join_tsv(self, values: typing.List[str], unquoted: bool = False)->str:
         line: str = ""
         value: str
         for value in values:
@@ -398,6 +400,8 @@ class KgtkWriter(KgtkBase):
             value = value.replace("\\|", "|")
             if value.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
                 value = self.reformat_datetime(value)
+            elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)) and unquoted:
+                value = KgtkFormat.unstringify(value) # Lose the language code.
             if len(line) > 0:
                 line += "\t"
             line += value
@@ -480,7 +484,11 @@ class KgtkWriter(KgtkBase):
                 header += " " + col + " |"
                 header2 += " -- |"
             
-        elif self.output_format in [self.OUTPUT_FORMAT_KGTK, self.OUTPUT_FORMAT_CSV, self.OUTPUT_FORMAT_TSV]:
+        elif self.output_format in [self.OUTPUT_FORMAT_KGTK,
+                                    self.OUTPUT_FORMAT_CSV,
+                                    self.OUTPUT_FORMAT_TSV,
+                                    self.OUTPUT_FORMAT_TSV_UNQUOTED,
+                                    ]:
             header = self.column_separator.join(column_names)
         else:
             raise ValueError("KgtkWriter: header: Unrecognized output format '%s'." % self.output_format)
@@ -544,6 +552,8 @@ class KgtkWriter(KgtkBase):
             self.writeline(self.column_separator.join(values))
         elif self.output_format == self.OUTPUT_FORMAT_TSV:
             self.writeline(self.join_tsv(values))
+        elif self.output_format == self.OUTPUT_FORMAT_TSV_UNQUOTED:
+            self.writeline(self.join_tsv(values, unquoted=True))
         elif self.output_format == self.OUTPUT_FORMAT_CSV:
             self.writeline(self.join_csv(values))
         elif self.output_format == self.OUTPUT_FORMAT_MD:
