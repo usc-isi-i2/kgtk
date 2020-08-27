@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 import attr
 import bz2
 from enum import Enum
+import errno
 import gzip
 import json
 import lz4 # type: ignore
@@ -497,7 +498,13 @@ class KgtkWriter(KgtkBase):
         if self.gzip_thread is not None:
             self.gzip_thread.write(line + "\n") # Todo: use system end-of-line sequence?
         else:
-            self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
+            try:
+                self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
+            except IOError as e:
+                if e.errno == errno.EPIPE:
+                    pass # TODO: propogate a close backwards.
+                else:
+                    raise e
 
     # Write the next list of edge values as a list of strings.
     # TODO: Convert integers, coordinates, etc. from Python types
@@ -563,7 +570,13 @@ class KgtkWriter(KgtkBase):
 
     def flush(self):
         if self.gzip_thread is None:
-            self.file_out.flush()
+            try:
+                self.file_out.flush()
+            except IOError as e:
+                if e.errno == errno.EPIPE:
+                    pass # Ignore.
+                else:
+                    raise e
 
     def close(self):
         if self.output_format == "json":
@@ -574,8 +587,13 @@ class KgtkWriter(KgtkBase):
         if self.gzip_thread is not None:
             self.gzip_thread.close()
         else:
-            self.file_out.close()
-
+            try:
+                self.file_out.close()
+            except IOError as e:
+                if e.errno == errno.EPIPE:
+                    pass # Ignore.
+                else:
+                    raise e
 
     def writemap(self, value_map: typing.Mapping[str, str]):
         """
