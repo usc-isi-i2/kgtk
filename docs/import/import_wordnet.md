@@ -1,4 +1,4 @@
-Import WordNet v3.0 into KGTK format. Currently, four relations are included: hypernymy, membership holonymy, part-of holonymy, and substance meronymy. The resulting KGTK file consists of 12 columns.
+Import WordNet v3.0 into KGTK format. Currently, four relations are included: hypernymy, membership holonymy, part-of holonymy, and substance meronymy. The resulting KGTK file consists of 9 columns.
 
 ## Usage
 ```
