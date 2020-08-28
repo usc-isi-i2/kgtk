@@ -118,9 +118,13 @@ class KgtkWriter(KgtkBase):
              new_column_names: typing.Optional[typing.List[str]] = None,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
+
         if file_path is None or str(file_path) == "-":
             if verbose:
                 print("KgtkWriter: writing stdout", file=error_file, flush=True)
+
+            if output_format is None:
+                output_format = cls.OUTPUT_FORMAT_DEFAULT
 
             return cls._setup(column_names=column_names,
                               file_path=None,
@@ -169,6 +173,22 @@ class KgtkWriter(KgtkBase):
                 # TODO: throw a better exception.
                 raise ValueError("Unexpected file_path.suffiz = '%s'" % file_path.suffix)
 
+            if output_format is None:
+                if len(file_path.suffixes) < 2:
+                    output_format = cls.OUTPUT_FORMAT_DEFAULT
+                else:
+                    format_suffix: str = file_path.suffixes[-2]
+                    if format_suffix == ".md":
+                        output_format = cls.OUTPUT_FORMAT_MD
+                    elif format_suffix == ".csv":
+                        output_format = cls.OUTPUT_FORMAT_CSV
+                    elif format_suffix == ".json":
+                        output_format = cls.OUTPUT_FORMAT_JSON
+                    elif format_suffix == ".jsonl":
+                        output_format = cls.OUTPUT_FORMAT_JSONL
+                    else:
+                        output_format = cls.OUTPUT_FORMAT_DEFAULT
+
             return cls._setup(column_names=column_names,
                               file_path=file_path,
                               who=who,
@@ -192,17 +212,16 @@ class KgtkWriter(KgtkBase):
             
         else:
             if output_format is None:
-                # TODO: optionally stack these on top of compression
                 if file_path.suffix == ".md":
-                    output_format = "md"
+                    output_format = cls.OUTPUT_FORMAT_MD
                 elif file_path.suffix == ".csv":
-                    output_format = "csv"
+                    output_format = cls.OUTPUT_FORMAT_CSV
                 elif file_path.suffix == ".json":
-                    output_format = "json"
+                    output_format = cls.OUTPUT_FORMAT_JSON
                 elif file_path.suffix == ".jsonl":
-                    output_format = "jsonl"
+                    output_format = cls.OUTPUT_FORMAT_JSONL
                 else:
-                    output_format = "kgtk"
+                    output_format = cls.OUTPUT_FORMAT_DEFAULT
 
             if verbose:
                 print("KgtkWriter: writing file %s" % str(file_path), file=error_file, flush=True)
