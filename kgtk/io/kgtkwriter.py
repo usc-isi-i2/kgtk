@@ -416,11 +416,13 @@ class KgtkWriter(KgtkBase):
         value: str
         for value in values:
             # TODO: Complain if the value is a KGTK List.
-            value = value.replace("\\|", "|")
             if value.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
                 value = self.reformat_datetime(value)
             elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)) and unquoted:
                 value = KgtkFormat.unstringify(value) # Lose the language code.
+            else:
+                value = value.replace("\\|", "|")
+
             if len(line) > 0:
                 line += "\t"
             line += value
