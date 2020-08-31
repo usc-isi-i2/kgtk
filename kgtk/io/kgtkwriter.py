@@ -40,6 +40,7 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_MD: str = "md"
     OUTPUT_FORMAT_TSV: str = "tsv"
     OUTPUT_FORMAT_TSV_UNQUOTED: str = "tsv-unquoted"
+    OUTPUT_FORMAT_TSV_UNQUOTED_EP: str = "tsv-unquoted-ep"
 
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
         OUTPUT_FORMAT_CSV,
@@ -53,6 +54,7 @@ class KgtkWriter(KgtkBase):
         OUTPUT_FORMAT_MD,
         OUTPUT_FORMAT_TSV,
         OUTPUT_FORMAT_TSV_UNQUOTED,
+        OUTPUT_FORMAT_TSV_UNQUOTED_EP,
     ]
     OUTPUT_FORMAT_DEFAULT: str = OUTPUT_FORMAT_KGTK
 
@@ -389,20 +391,23 @@ class KgtkWriter(KgtkBase):
     def reformat_datetime(self, value: str)->str:
         return value[1:] # Strip the datetime sigil, perhaps more reformatting later.
 
-    def join_csv(self, values: typing.List[str])->str:
+    def join_csv(self, values: typing.List[str], unquoted: bool = False)->str:
         line: str = ""
         value: str
         for value in values:
             # TODO: Complain if the value is a KGTK List.
-            value = value.replace("\\|", "|")
-            if value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+            if value.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
+                value = self.reformat_datetime(value)
+
+            elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
                 value = KgtkFormat.unstringify(value) # Lose the language code.
                 # TODO: Complain if internal newline or carriage return.
-                value = '"' + value.replace('"', '""') + '"'
+
+                if not unquoted:
+                    value = '"' + value.replace('"', '""') + '"'
                 
-            elif value.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
-                value = self.reformat_datetime(value)
             else:
+                value = value.replace("\\|", "|")
                 if '"' in value or ',' in value:
                     # A symbol with an internal double quote or comma: turn it into a string.
                     value = '"' + value.replace('"', '""') + '"'
@@ -411,15 +416,25 @@ class KgtkWriter(KgtkBase):
             line += value
         return line
 
-    def join_tsv(self, values: typing.List[str], unquoted: bool = False)->str:
+    def join_tsv(self, values: typing.List[str], unquoted: bool = False, unescape_pipe: bool = True)->str:
         line: str = ""
         value: str
         for value in values:
             # TODO: Complain if the value is a KGTK List.
             if value.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
                 value = self.reformat_datetime(value)
+
             elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)) and unquoted:
-                value = KgtkFormat.unstringify(value) # Lose the language code.
+                # What if the value is a list? unstringify(...) will be
+                # unhappy.  The following hack protects strings (but not
+                # language-qualified strings) against errors, introducing
+                # the ambiguity of exporting lists:
+                value = value.replace('"|"', '|')
+                try:
+                    value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
+                except ValueError as e:
+                    print("Error unstringifying %s" % repr(value), file=self.error_file, flush=True)
+                    raise e
             else:
                 value = value.replace("\\|", "|")
 
@@ -509,6 +524,7 @@ class KgtkWriter(KgtkBase):
                                     self.OUTPUT_FORMAT_CSV,
                                     self.OUTPUT_FORMAT_TSV,
                                     self.OUTPUT_FORMAT_TSV_UNQUOTED,
+                                    self.OUTPUT_FORMAT_TSV_UNQUOTED_EP,
                                     ]:
             header = self.column_separator.join(column_names)
         else:
@@ -575,6 +591,8 @@ class KgtkWriter(KgtkBase):
             self.writeline(self.join_tsv(values))
         elif self.output_format == self.OUTPUT_FORMAT_TSV_UNQUOTED:
             self.writeline(self.join_tsv(values, unquoted=True))
+        elif self.output_format == self.OUTPUT_FORMAT_TSV_UNQUOTED_EP:
+            self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False))
         elif self.output_format == self.OUTPUT_FORMAT_CSV:
             self.writeline(self.join_csv(values))
         elif self.output_format == self.OUTPUT_FORMAT_MD:
