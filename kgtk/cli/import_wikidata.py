@@ -11,9 +11,7 @@ TODO: Incorporate geographic precision into the KGTK data model.
 
 TODO: Incorporate URLs into the KGTK data model.
 
-TODO: Optionally select all languages for aliases, descriptions, etc.
-
-TODO: Node type needs to be optionall in the edge file.
+TODO: Node type needs to be optional in the edge file.
 
 """
 
@@ -298,6 +296,17 @@ def add_arguments(parser: KGTKArgumentParser):
         help="If true, print a warning message if expected data is missing. (default=%(default)s).",
     )
 
+    parser.add_argument(
+        "--collect-results",
+        nargs='?',
+        type=optional_bool,
+        dest="collect_results",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, collect the results before writing to disk.  If false, write results to disk, then concatenate. (default=%(default)s).",
+    )
+
     
 def run(input_file: KGTKFiles,
         procs,
@@ -326,7 +335,8 @@ def run(input_file: KGTKFiles,
         parse_claims,
         fail_if_missing,
         all_languages,
-        warn_if_missing):
+        warn_if_missing,
+        collect_results):
 
     # import modules locally
     import bz2
@@ -386,7 +396,7 @@ def run(input_file: KGTKFiles,
 
             
             self.node_f = None
-            if node_file:
+            if node_file and not collect_results:
                 self.node_f = open(node_file+'_{}'.format(self._idx), self.write_mode, newline='')
                 self.node_wr = csv.writer(
                     self.node_f,
@@ -397,7 +407,7 @@ def run(input_file: KGTKFiles,
                     lineterminator=csv_line_terminator)
                 
             self.edge_f = None
-            if edge_file:
+            if edge_file and not collect_results:
                 self.edge_f = open(edge_file+'_{}'.format(self._idx), self.write_mode, newline='')
                 self.edge_wr = csv.writer(
                     self.edge_f,
@@ -408,7 +418,7 @@ def run(input_file: KGTKFiles,
                     lineterminator=csv_line_terminator)
                 
             self.qual_f = None
-            if qual_file:
+            if qual_file and not collect_results:
                 self.qual_f = open(qual_file+'_{}'.format(self._idx), self.write_mode, newline='')
                 self.qual_wr = csv.writer(
                     self.qual_f,
@@ -1031,18 +1041,90 @@ def run(input_file: KGTKFiles,
                                                               node2=sitelinks[link]['badges'][badge_num])
                                             badge_num += 1
 
-            if node_file:
-                for row in nrows:
-                    self.node_wr.writerow(row)
+            if collect_results:
+                return nrows, erows, qrows
 
-            if edge_file:
-                for row in erows:
-                    self.edge_wr.writerow(row)
-            if qual_file:
-                for row in qrows:
-                    self.qual_wr.writerow(row)
+            else:
+                if node_file:
+                    for row in nrows:
+                        self.node_wr.writerow(row)
+
+                if edge_file:
+                    for row in erows:
+                        self.edge_wr.writerow(row)
+
+                if qual_file:
+                    for row in qrows:
+                        self.qual_wr.writerow(row)
 
     
+    # Prepare to ue the collector.
+    collector_node_f: typing.Optional[typing.TextIO] = None
+    collector_node_wr = None
+    collector_edge_f: typing.Optional[typing.textIO] = None
+    collector_edge_wr = None
+    collector_qual_f: typing.Optional[typing.TextIO] = None
+    collector_qual_wr = None
+
+    def collector_enter():
+        print("Preparing the collector.", file=sys.stderr, flush=True)
+        if node_file and collect_results:
+            print("Opening the node file in the collector.", file=sys.stderr, flush=True)
+            collector_node_f = open(node_file, "w", newline='')
+            collector_node_wr = csv.writer(
+                collector_node_f,
+                quoting=csv.QUOTE_NONE,
+                delimiter="\t",
+                escapechar="\n",
+                quotechar='',
+                lineterminator=csv_line_terminator)
+                
+        if edge_file and collect_results:
+            print("Opening the edge file in the collector.", file=sys.stderr, flush=True)
+            collector_edge_f = open(edge_file, "w", newline='')
+            collector_edge_wr = csv.writer(
+                colletor_edge_f,
+                quoting=csv.QUOTE_NONE,
+                delimiter="\t",
+                escapechar="\n",
+                quotechar='',
+                lineterminator=csv_line_terminator)
+                
+        if qual_file and collect_results:
+            print("Opening the qual file in the collector.", file=sys.stderr, flush=True)
+            collector_qual_f = open(qual_file, "w", newline='')
+            collector_qual_wr = csv.writer(
+                collector_qual_f,
+                quoting=csv.QUOTE_NONE,
+                delimiter="\t",
+                escapechar="\n",
+                quotechar='',
+                lineterminator=csv_line_terminator)
+        print("The collector is ready.", file=sys.stderr, flush=True)
+
+    def collector_exit():
+        print("Exiting the collector.", file=sys.stderr, flush=True)
+        if collector_node_f is not None:
+            collector_node_f.close()
+        if collector_edge_f is not None:
+            collector_edge_f.close()
+        if collector_qual_f is not None:
+            collector_qual_f.close()
+        print("The collector has closed its output files.", file=sys.stderr, flush=True)
+
+    def collector(nrows, erows, qrows):
+        if collector_node_wr is not None:
+            for row in nrows:
+                collector_node_wr.writerow(row)
+
+        if collector_edge_wr is not None:
+            for row in erows:
+                collector_edge_wr.writerow(row)
+
+        if collector_qual_wr is not None:
+            for row in qrows:
+                collector_qual_wr.writerow(row)
+
     try:
         UPDATE_VERSION: str = "2020-08-24T21:47:20.195799+00:00#nBfX3VKkFGR4CoYcf5biYoh/AkmTSE5eFB6nkOdpgPmnuq8N3GTsIi3N4JCBl9MmKZ+VyzW6zYl/3ml5ps9WJQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
@@ -1055,17 +1137,24 @@ def run(input_file: KGTKFiles,
 
         if not skip_processing:
             languages=lang.split(',')
+
+            if collect_results:
+                collector_enter()
+
             if node_file:
                 header = ['id','label','type','description','alias','datatype']
-                with open(node_file+'_header', 'w', newline='') as myfile:
-                    wr = csv.writer(
-                        myfile,
-                        quoting=csv.QUOTE_NONE,
-                        delimiter="\t",
-                        escapechar="\n",
-                        quotechar='',
-                        lineterminator=csv_line_terminator)
-                    wr.writerow(header)
+                if collector_node_wr is not None:
+                    collector_node_wr.writerow(header)
+                else:
+                    with open(node_file+'_header', 'w', newline='') as myfile:
+                        wr = csv.writer(
+                            myfile,
+                            quoting=csv.QUOTE_NONE,
+                            delimiter="\t",
+                            escapechar="\n",
+                            quotechar='',
+                            lineterminator=csv_line_terminator)
+                        wr.writerow(header)
             if explode_values:
                 header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
                           'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype']
@@ -1075,15 +1164,18 @@ def run(input_file: KGTKFiles,
                           'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar']
 
             if edge_file:
-                with open(edge_file+'_header', 'w', newline='') as myfile:
-                    wr = csv.writer(
-                        myfile,
-                        quoting=csv.QUOTE_NONE,
-                        delimiter="\t",
-                        escapechar="\n",
-                        quotechar='',
-                        lineterminator=csv_line_terminator)
-                    wr.writerow(header)
+                if collector_edge_wr is not None:
+                    collector_edge_wr.writerow(header)
+                else:
+                    with open(edge_file+'_header', 'w', newline='') as myfile:
+                        wr = csv.writer(
+                            myfile,
+                            quoting=csv.QUOTE_NONE,
+                            delimiter="\t",
+                            escapechar="\n",
+                            quotechar='',
+                            lineterminator=csv_line_terminator)
+                        wr.writerow(header)
             if qual_file:
                 if "rank" in header:
                     header.remove('rank')
@@ -1091,15 +1183,19 @@ def run(input_file: KGTKFiles,
                     header.remove('claim_type')
                 if "claim_id" in header:
                     header.remove('claim_id')
-                with open(qual_file+'_header', 'w', newline='') as myfile:
-                    wr = csv.writer(
-                        myfile,
-                        quoting=csv.QUOTE_NONE,
-                        delimiter="\t",
-                        escapechar="\n",
-                        quotechar='',
-                        lineterminator=csv_line_terminator)
-                    wr.writerow(header)
+                if collector_qual_wr is not None:
+                    collector_qual_wr.writerow(header)
+                else:
+                    with open(qual_file+'_header', 'w', newline='') as myfile:
+                        wr = csv.writer(
+                            myfile,
+                            quoting=csv.QUOTE_NONE,
+                            delimiter="\t",
+                            escapechar="\n",
+                            quotechar='',
+                            lineterminator=csv_line_terminator)
+                        wr.writerow(header)
+
             print('Start parallel processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
             pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
             pp.start()
@@ -1131,13 +1227,16 @@ def run(input_file: KGTKFiles,
             pp.join()
             print('Join complete.', file=sys.stderr, flush=True)
 
-        if not skip_merging:
+            if collect_results:
+                collector_exit()
+
+        if not skip_merging and not collect_results:
             # We've finished processing the input data, possibly using multiple
             # server processes.  We need to assemble the final output file(s) with
             # the header first, then the fragments produced by parallel
             # processing.
             #
-            # If we assume that we are on Linux or MacOS, then os.sendfile(...)
+            # If we assume that we are on Linux, then os.sendfile(...)
             # should provide the simplest, highest-performing solution.
             if node_file:
                 print('Combining the node file fragments', file=sys.stderr, flush=True)
