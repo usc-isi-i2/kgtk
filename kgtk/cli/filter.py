@@ -141,6 +141,9 @@ def run(input_file: KGTKFiles,
                                 pred_idx: int,
                                 pred_filter: typing.Set[str],
                                 ):
+        if verbose:
+            print("Applying a single predicate filter", file=error_file, flush=True)
+
         pred_filter_value: str = list(pred_filter)[0]
 
         input_line_count: int = 0
@@ -169,6 +172,9 @@ def run(input_file: KGTKFiles,
                                          pred_idx: int,
                                          pred_filter: typing.Set[str],
                                          ):
+        if verbose:
+            print("Applying a single predicate filter inverted", file=error_file, flush=True)
+
         pred_filter_value: str = list(pred_filter)[0]
 
         input_line_count: int = 0
@@ -197,6 +203,9 @@ def run(input_file: KGTKFiles,
                              obj_idx: int,
                              obj_filter: typing.Set[str],
                              ):
+        if verbose:
+            print("Applying a single object filter", file=error_file, flush=True)
+
         obj_filter_value: str = list(obj_filter)[0]
 
         input_line_count: int = 0
@@ -225,6 +234,9 @@ def run(input_file: KGTKFiles,
                                       obj_idx: int,
                                       obj_filter: typing.Set[str],
                                       ):
+        if verbose:
+            print("Applying a single object filter inverted", file=error_file, flush=True)
+
         obj_filter_value: str = list(obj_filter)[0]
 
         input_line_count: int = 0
@@ -256,6 +268,9 @@ def run(input_file: KGTKFiles,
                        pred_filter: typing.Set[str],
                        obj_idx: int,
                        obj_filter: typing.Set[str]):
+        if verbose:
+            print("Applying a general filter", file=error_file, flush=True)
+
         apply_subj_filter: bool = len(subj_filter) > 0
         apply_pred_filter: bool = len(pred_filter) > 0
         apply_obj_filter: bool = len(obj_filter) > 0
