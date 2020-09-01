@@ -400,6 +400,11 @@ class KgtkWriter(KgtkBase):
                 value = self.reformat_datetime(value)
 
             elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                # What if the value is a list? unstringify(...) will be
+                # unhappy.  The following hack protects strings (but not
+                # language-qualified strings) against errors, introducing
+                # an ambiguity when exporting lists:
+                value = value.replace('"|"', '|')
                 value = KgtkFormat.unstringify(value) # Lose the language code.
                 # TODO: Complain if internal newline or carriage return.
 
@@ -428,7 +433,7 @@ class KgtkWriter(KgtkBase):
                 # What if the value is a list? unstringify(...) will be
                 # unhappy.  The following hack protects strings (but not
                 # language-qualified strings) against errors, introducing
-                # the ambiguity of exporting lists:
+                # an ambiguity when exporting lists:
                 value = value.replace('"|"', '|')
                 try:
                     value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
@@ -454,6 +459,11 @@ class KgtkWriter(KgtkBase):
     def reformat_value_for_json(self, value: str)->typing.Union[str, int, float, bool]:
         # TODO: Complain if the value is a KGTK List.
         if value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+            # What if the value is a list? unstringify(...) will be
+            # unhappy.  The following hack protects strings (but not
+            # language-qualified strings) against errors, introducing
+            # an ambiguity when exporting lists:
+            value = value.replace('"|"', '|')
             return KgtkFormat.unstringify(value) # Lose the language code.
         elif value == KgtkFormat.TRUE_SYMBOL:
             return True
