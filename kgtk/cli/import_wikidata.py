@@ -1091,7 +1091,7 @@ def run(input_file: KGTKFiles,
                 print("Opening the node file in the collector.", file=sys.stderr, flush=True)
                 self.node_f = open(node_file, "w", newline='')
                 self.node_wr = csv.writer(
-                    collector_node_f,
+                    self.node_f,
                     quoting=csv.QUOTE_NONE,
                     delimiter="\t",
                     escapechar="\n",
@@ -1102,7 +1102,7 @@ def run(input_file: KGTKFiles,
                 print("Opening the edge file in the collector.", file=sys.stderr, flush=True)
                 self.edge_f = open(edge_file, "w", newline='')
                 self.edge_wr = csv.writer(
-                    colletor_edge_f,
+                    self.edge_f,
                     quoting=csv.QUOTE_NONE,
                     delimiter="\t",
                     escapechar="\n",
@@ -1113,7 +1113,7 @@ def run(input_file: KGTKFiles,
                 print("Opening the qual file in the collector.", file=sys.stderr, flush=True)
                 self.qual_f = open(qual_file, "w", newline='')
                 self.qual_wr = csv.writer(
-                    collector_qual_f,
+                    self.qual_f,
                     quoting=csv.QUOTE_NONE,
                     delimiter="\t",
                     escapechar="\n",
