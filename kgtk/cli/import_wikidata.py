@@ -347,6 +347,7 @@ def run(input_file: KGTKFiles,
     import pyrallel
     import sys
     import time
+    import typing
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.cli_argparse import KGTKArgumentParser
     from kgtk.exceptions import KGTKException
@@ -1058,13 +1059,17 @@ def run(input_file: KGTKFiles,
                         self.qual_wr.writerow(row)
 
     
-    # Prepare to ue the collector.
+    # Prepare to use the collector.
     collector_node_f: typing.Optional[typing.TextIO] = None
     collector_node_wr = None
-    collector_edge_f: typing.Optional[typing.textIO] = None
+    collector_nrows: int = 0
+    collector_edge_f: typing.Optional[typing.TextIO] = None
     collector_edge_wr = None
+    collector_erows: int = 0
     collector_qual_f: typing.Optional[typing.TextIO] = None
     collector_qual_wr = None
+    collector_cnt: int = 0
+    collector_qrows: int = 0
 
     def collector_enter():
         print("Preparing the collector.", file=sys.stderr, flush=True)
@@ -1113,7 +1118,16 @@ def run(input_file: KGTKFiles,
         print("The collector has closed its output files.", file=sys.stderr, flush=True)
 
     def collector(nrows, erows, qrows):
-        # print("Collected %d nrows, %d erows, %d qrows" % (len(nrows), len(erows), len(qrows)), file=sys.stderr, flush=True)
+        collector_nrows += len(nrows)
+        collector_erows += len(erows)
+        collector_qrows += len(qrows)
+        if collector_cnt % 500000 == 0 and collector_cnt > 0:
+            print("Collector called {} times: {} nrows, {} erows, {} qrows".format(collector_cnt,
+                                                                                   collector_nrows,
+                                                                                   collector_erows,
+                                                                                   collector_qrows), file=sys.stderr, flush=True)
+        collector_cnt += 1
+
         if collector_node_wr is not None:
             for row in nrows:
                 collector_node_wr.writerow(row)
