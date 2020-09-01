@@ -307,36 +307,44 @@ def add_arguments(parser: KGTKArgumentParser):
         help="If true, collect the results before writing to disk.  If false, write results to disk, then concatenate. (default=%(default)s).",
     )
 
+    parser.add_argument(
+        '--progress-interval',
+        action="store",
+        type=int,
+        dest="progress_interval",
+        default=500000,
+        help='How often to report progress. (default=%(default)d)')
     
 def run(input_file: KGTKFiles,
-        procs,
-        max_size_per_mapper_queue,
-        node_file,
-        edge_file,
-        qual_file,
-        limit,
-        lang,
-        source,
-        deprecated,
-        explode_values,
-        use_python_cat,
-        keep_temp_files,
-        skip_processing,
-        skip_merging,
-        interleave,
-        entry_type_edges,
-        alias_edges,
-        datatype_edges,
-        descr_edges,
-        label_edges,
-        parse_aliases,
-        parse_descr,
-        parse_labels,
-        parse_claims,
-        fail_if_missing,
-        all_languages,
-        warn_if_missing,
-        collect_results):
+        procs: int,
+        max_size_per_mapper_queue: int,
+        node_file: str,
+        edge_file: str,
+        qual_file: str,
+        limit: int,
+        lang: str,
+        source: str,
+        deprecated: bool,
+        explode_values: bool,
+        use_python_cat: bool,
+        keep_temp_files: bool,
+        skip_processing: bool,
+        skip_merging: bool,
+        interleave: bool,
+        entry_type_edges: bool,
+        alias_edges: bool,
+        datatype_edges: bool,
+        descr_edges: bool,
+        label_edges: bool,
+        parse_aliases: bool,
+        parse_descr: bool,
+        parse_labels: bool,
+        parse_claims: bool,
+        fail_if_missing: bool,
+        all_languages: bool,
+        warn_if_missing: bool,
+        collect_results: bool,
+        progress_interval: int):
 
     # import modules locally
     import bz2
@@ -567,7 +575,7 @@ def run(input_file: KGTKFiles,
                                   calendar=calendar)
             
         def process(self,line,node_file,edge_file,qual_file,languages,doc_id):
-            if self.cnt % 500000 == 0 and self.cnt>0:
+            if self.cnt % progress_interval == 0 and self.cnt>0:
                 print("{} lines processed by processor {}".format(self.cnt,self._idx), file=sys.stderr, flush=True)
             self.cnt+=1
             csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
@@ -1121,7 +1129,7 @@ def run(input_file: KGTKFiles,
         collector_nrows += len(nrows)
         collector_erows += len(erows)
         collector_qrows += len(qrows)
-        if collector_cnt % 500000 == 0 and collector_cnt > 0:
+        if collector_cnt % progress_interval == 0 and collector_cnt > 0:
             print("Collector called {} times: {} nrows, {} erows, {} qrows".format(collector_cnt,
                                                                                    collector_nrows,
                                                                                    collector_erows,
