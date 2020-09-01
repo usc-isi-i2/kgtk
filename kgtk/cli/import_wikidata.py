@@ -1067,86 +1067,97 @@ def run(input_file: KGTKFiles,
                         self.qual_wr.writerow(row)
 
     
-    # Prepare to use the collector.
-    collector_node_f: typing.Optional[typing.TextIO] = None
-    collector_node_wr = None
-    collector_nrows: int = 0
-    collector_edge_f: typing.Optional[typing.TextIO] = None
-    collector_edge_wr = None
-    collector_erows: int = 0
-    collector_qual_f: typing.Optional[typing.TextIO] = None
-    collector_qual_wr = None
-    collector_cnt: int = 0
-    collector_qrows: int = 0
+    class MyCollector:
 
-    def collector_enter():
-        print("Preparing the collector.", file=sys.stderr, flush=True)
-        if node_file and collect_results:
-            print("Opening the node file in the collector.", file=sys.stderr, flush=True)
-            collector_node_f = open(node_file, "w", newline='')
-            collector_node_wr = csv.writer(
-                collector_node_f,
-                quoting=csv.QUOTE_NONE,
-                delimiter="\t",
-                escapechar="\n",
-                quotechar='',
-                lineterminator=csv_line_terminator)
+        def __init__(self):
+            # Prepare to use the collector.
+            self.node_f: typing.Optional[typing.TextIO] = None
+            self.node_wr = None
+            self.nrows: int = 0
+
+            self.edge_f: typing.Optional[typing.TextIO] = None
+            self.edge_wr = None
+            self.erows: int = 0
+
+            self.qual_f: typing.Optional[typing.TextIO] = None
+            self.qual_wr = None
+            self.qrows: int = 0
+
+            self.cnt: int = 0
+
+        def enter(self):
+            print("Preparing the collector.", file=sys.stderr, flush=True)
+            if node_file:
+                print("Opening the node file in the collector.", file=sys.stderr, flush=True)
+                self.node_f = open(node_file, "w", newline='')
+                self.node_wr = csv.writer(
+                    collector_node_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
                 
-        if edge_file and collect_results:
-            print("Opening the edge file in the collector.", file=sys.stderr, flush=True)
-            collector_edge_f = open(edge_file, "w", newline='')
-            collector_edge_wr = csv.writer(
-                colletor_edge_f,
-                quoting=csv.QUOTE_NONE,
-                delimiter="\t",
-                escapechar="\n",
-                quotechar='',
-                lineterminator=csv_line_terminator)
+            if edge_file:
+                print("Opening the edge file in the collector.", file=sys.stderr, flush=True)
+                self.edge_f = open(edge_file, "w", newline='')
+                self.edge_wr = csv.writer(
+                    colletor_edge_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
                 
-        if qual_file and collect_results:
-            print("Opening the qual file in the collector.", file=sys.stderr, flush=True)
-            collector_qual_f = open(qual_file, "w", newline='')
-            collector_qual_wr = csv.writer(
-                collector_qual_f,
-                quoting=csv.QUOTE_NONE,
-                delimiter="\t",
-                escapechar="\n",
-                quotechar='',
-                lineterminator=csv_line_terminator)
-        print("The collector is ready.", file=sys.stderr, flush=True)
+            if qual_file:
+                print("Opening the qual file in the collector.", file=sys.stderr, flush=True)
+                self.qual_f = open(qual_file, "w", newline='')
+                self.qual_wr = csv.writer(
+                    collector_qual_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
+            print("The collector is ready.", file=sys.stderr, flush=True)
 
-    def collector_exit():
-        print("Exiting the collector.", file=sys.stderr, flush=True)
-        if collector_node_f is not None:
-            collector_node_f.close()
-        if collector_edge_f is not None:
-            collector_edge_f.close()
-        if collector_qual_f is not None:
-            collector_qual_f.close()
-        print("The collector has closed its output files.", file=sys.stderr, flush=True)
+        def exit(self):
+            print("Exiting the collector.", file=sys.stderr, flush=True)
 
-    def collector(nrows, erows, qrows):
-        collector_nrows += len(nrows)
-        collector_erows += len(erows)
-        collector_qrows += len(qrows)
-        if collector_cnt % progress_interval == 0 and collector_cnt > 0:
-            print("Collector called {} times: {} nrows, {} erows, {} qrows".format(collector_cnt,
-                                                                                   collector_nrows,
-                                                                                   collector_erows,
-                                                                                   collector_qrows), file=sys.stderr, flush=True)
-        collector_cnt += 1
+            if self.node_f is not None:
+                self.node_f.close()
 
-        if collector_node_wr is not None:
-            for row in nrows:
-                collector_node_wr.writerow(row)
+            if self.edge_f is not None:
+                self.edge_f.close()
 
-        if collector_edge_wr is not None:
-            for row in erows:
-                collector_edge_wr.writerow(row)
+            if self.qual_f is not None:
+                self.qual_f.close()
 
-        if collector_qual_wr is not None:
-            for row in qrows:
-                collector_qual_wr.writerow(row)
+            print("The collector has closed its output files.", file=sys.stderr, flush=True)
+
+        def collect(nrows, erows, qrows):
+            self.nrows += len(nrows)
+            self.erows += len(erows)
+            self.qrows += len(qrows)
+
+            if self.cnt % progress_interval == 0 and self.cnt > 0:
+                print("Collector called {} times: {} nrows, {} erows, {} qrows".format(self.cnt,
+                                                                                       self.nrows,
+                                                                                       self.erows,
+                                                                                       self.qrows), file=sys.stderr, flush=True)
+            self.cnt += 1
+
+            if self.node_wr is not None:
+                for row in nrows:
+                    self.node_wr.writerow(row)
+
+            if self.edge_wr is not None:
+                for row in erows:
+                    self.edge_wr.writerow(row)
+
+            if self.qual_wr is not None:
+                for row in qrows:
+                    self.qual_wr.writerow(row)
 
     try:
         UPDATE_VERSION: str = "2020-08-24T21:47:20.195799+00:00#nBfX3VKkFGR4CoYcf5biYoh/AkmTSE5eFB6nkOdpgPmnuq8N3GTsIi3N4JCBl9MmKZ+VyzW6zYl/3ml5ps9WJQ=="
@@ -1161,13 +1172,15 @@ def run(input_file: KGTKFiles,
         if not skip_processing:
             languages=lang.split(',')
 
+            collector: typing.Optional[MyCollector] = None
             if collect_results:
-                collector_enter()
+                collector = MyCollector()
+                collector.enter()
 
             if node_file:
                 header = ['id','label','type','description','alias','datatype']
-                if collector_node_wr is not None:
-                    collector_node_wr.writerow(header)
+                if collector is not None and collector.node_wr is not None:
+                    collector.node_wr.writerow(header)
                 else:
                     with open(node_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1187,8 +1200,8 @@ def run(input_file: KGTKFiles,
                           'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar']
 
             if edge_file:
-                if collector_edge_wr is not None:
-                    collector_edge_wr.writerow(header)
+                if collector is not None and collector.edge_wr is not None:
+                    collector.edge_wr.writerow(header)
                 else:
                     with open(edge_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1206,8 +1219,9 @@ def run(input_file: KGTKFiles,
                     header.remove('claim_type')
                 if "claim_id" in header:
                     header.remove('claim_id')
-                if collector_qual_wr is not None:
-                    collector_qual_wr.writerow(header)
+
+                if collector is not None and collector.qual_wr is not None:
+                    collector.qual_wr.writerow(header)
                 else:
                     with open(qual_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1220,8 +1234,8 @@ def run(input_file: KGTKFiles,
                         wr.writerow(header)
 
             print('Start parallel processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
-            if collect_results:
-                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue, collector=collector)
+            if collector is not None:
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue, collector=collector.collect)
             else:
                 pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
             pp.start()
@@ -1253,8 +1267,8 @@ def run(input_file: KGTKFiles,
             pp.join()
             print('Join complete.', file=sys.stderr, flush=True)
 
-            if collect_results:
-                collector_exit()
+            if collector is not None:
+                collector.exit()
 
         if not skip_merging and not collect_results:
             # We've finished processing the input data, possibly using multiple
