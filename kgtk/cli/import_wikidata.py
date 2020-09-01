@@ -1113,6 +1113,7 @@ def run(input_file: KGTKFiles,
         print("The collector has closed its output files.", file=sys.stderr, flush=True)
 
     def collector(nrows, erows, qrows):
+        # print("Collected %d nrows, %d erows, %d qrows" % (len(nrows), len(erows), len(qrows)), file=sys.stderr, flush=True)
         if collector_node_wr is not None:
             for row in nrows:
                 collector_node_wr.writerow(row)
@@ -1197,7 +1198,10 @@ def run(input_file: KGTKFiles,
                         wr.writerow(header)
 
             print('Start parallel processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
-            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
+            if collect_results:
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue, collector=collector)
+            else:
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
             pp.start()
             if str(inp_path).endswith(".bz2"):
                 with bz2.open(inp_path, mode='rb') as file:
