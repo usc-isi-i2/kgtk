@@ -1135,7 +1135,7 @@ def run(input_file: KGTKFiles,
 
             print("The collector has closed its output files.", file=sys.stderr, flush=True)
 
-        def collect(nrows, erows, qrows):
+        def collect(self, nrows, erows, qrows):
             self.nrows += len(nrows)
             self.erows += len(erows)
             self.qrows += len(qrows)
