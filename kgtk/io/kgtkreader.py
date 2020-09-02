@@ -118,7 +118,7 @@ class KgtkReaderOptions():
 
     # Other implementation options?
     input_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
-    compression_type: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=INPUT_FORMAT_DEFAULT) # TODO: use an Enum
+    compression_type: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
