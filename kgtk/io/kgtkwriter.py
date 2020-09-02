@@ -39,6 +39,7 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_KGTK: str = "kgtk"
     OUTPUT_FORMAT_MD: str = "md"
     OUTPUT_FORMAT_TSV: str = "tsv"
+    OUTPUT_FORMAT_TSV_CSVLIKE: str = "tsv-csvlike"
     OUTPUT_FORMAT_TSV_UNQUOTED: str = "tsv-unquoted"
     OUTPUT_FORMAT_TSV_UNQUOTED_EP: str = "tsv-unquoted-ep"
 
@@ -53,6 +54,7 @@ class KgtkWriter(KgtkBase):
         OUTPUT_FORMAT_KGTK,
         OUTPUT_FORMAT_MD,
         OUTPUT_FORMAT_TSV,
+        OUTPUT_FORMAT_TSV_CSVLIKE,
         OUTPUT_FORMAT_TSV_UNQUOTED,
         OUTPUT_FORMAT_TSV_UNQUOTED_EP,
     ]
@@ -391,7 +393,9 @@ class KgtkWriter(KgtkBase):
     def reformat_datetime(self, value: str)->str:
         return value[1:] # Strip the datetime sigil, perhaps more reformatting later.
 
-    def join_csv(self, values: typing.List[str], unquoted: bool = False)->str:
+    def join_csv(self, values: typing.List[str],
+                 unquoted: bool = False,
+                 )->str:
         line: str = ""
         value: str
         for value in values:
@@ -421,7 +425,12 @@ class KgtkWriter(KgtkBase):
             line += value
         return line
 
-    def join_tsv(self, values: typing.List[str], unquoted: bool = False, unescape_pipe: bool = True)->str:
+    def join_tsv(self,
+                 values: typing.List[str],
+                 unquoted: bool = False,
+                 unescape_pipe: bool = True,
+                 csvlike: bool = False,
+                 )->str:
         line: str = ""
         value: str
         for value in values:
@@ -429,17 +438,33 @@ class KgtkWriter(KgtkBase):
             if value.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
                 value = self.reformat_datetime(value)
 
-            elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)) and unquoted:
-                # What if the value is a list? unstringify(...) will be
-                # unhappy.  The following hack protects strings (but not
-                # language-qualified strings) against errors, introducing
-                # an ambiguity when exporting lists:
-                value = value.replace('"|"', '|')
-                try:
-                    value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
-                except ValueError as e:
-                    print("Error unstringifying %s" % repr(value), file=self.error_file, flush=True)
-                    raise e
+            elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                if unquoted:
+                    # What if the value is a list? unstringify(...) will be
+                    # unhappy.  The following hack protects strings (but not
+                    # language-qualified strings) against errors, introducing
+                    # an ambiguity when exporting lists:
+                    value = value.replace('"|"', '|')
+                    try:
+                        value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
+                    except ValueError as e:
+                        print("Error unstringifying %s" % repr(value), file=self.error_file, flush=True)
+                        raise e
+                elif csvlike:
+                    # What if the value is a list? unstringify(...) will be
+                    # unhappy.  The following hack protects strings (but not
+                    # language-qualified strings) against errors, introducing
+                    # an ambiguity when exporting lists:
+                    value = value.replace('"|"', '|')
+                    try:
+                        value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
+                    except ValueError as e:
+                        print("Error unstringifying %s" % repr(value), file=self.error_file, flush=True)
+                        raise e
+                    value = '"' + value.replace('"', '""') + '"'
+                    
+                else:
+                    value = value.replace("\\|", "|")
             else:
                 value = value.replace("\\|", "|")
 
@@ -533,6 +558,7 @@ class KgtkWriter(KgtkBase):
         elif self.output_format in [self.OUTPUT_FORMAT_KGTK,
                                     self.OUTPUT_FORMAT_CSV,
                                     self.OUTPUT_FORMAT_TSV,
+                                    self.OUTPUT_FORMAT_TSV_CSVLIKE,
                                     self.OUTPUT_FORMAT_TSV_UNQUOTED,
                                     self.OUTPUT_FORMAT_TSV_UNQUOTED_EP,
                                     ]:
@@ -603,6 +629,8 @@ class KgtkWriter(KgtkBase):
             self.writeline(self.join_tsv(values, unquoted=True))
         elif self.output_format == self.OUTPUT_FORMAT_TSV_UNQUOTED_EP:
             self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False))
+        elif self.output_format == self.OUTPUT_FORMAT_TSV_CSVLIKE:
+            self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False, csvlike=True))
         elif self.output_format == self.OUTPUT_FORMAT_CSV:
             self.writeline(self.join_csv(values))
         elif self.output_format == self.OUTPUT_FORMAT_MD:
