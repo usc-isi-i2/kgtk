@@ -46,6 +46,9 @@ class KgtkValueOptions:
     # check if internal single quotes are excaped by backslash.
     allow_lax_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
+    # Permit Wikidata language qualifier extensions.
+    allow_wikidata_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     allow_language_suffixes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     # If this list gets long, we may want to turn it into a map to make lookup
@@ -172,6 +175,10 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "Do not check if single quotes are backslashed inside language qualified strings. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        vgroup.add_argument(      prefix1 + "allow-wikidata-lq-strings", dest=prefix2 + "allow_wikidata_lq_strings",
+                                  help=h(prefix3 + "Allow Wikidata language qualifiers. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "require-iso8601-extended", dest=prefix2 + "require_iso8601_extended",
                                   help=h(prefix3 + "Require colon(:) and hyphen(-) in dates and times. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
@@ -282,6 +289,7 @@ class KgtkValueOptions:
                    allow_language_suffixes=d.get(prefix + "allow_language_suffixes", True),
                    allow_lax_strings=d.get(prefix + "allow_lax_strings", False),
                    allow_lax_lq_strings=d.get(prefix + "allow_lax_lq_strings", False),
+                   allow_wikidata_lq_strings=d.get(prefix + "allow_wikidata_lq_strings", False),
                    additional_language_codes=d.get(prefix + "additional_language_codes", None),
 
                    require_iso8601_extended=d.get(prefix + "require_iso8601_extended", False),
@@ -324,6 +332,7 @@ class KgtkValueOptions:
         print("%sallow-language-suffixes=%s" % (prefix, str(self.allow_language_suffixes)), file=out)
         print("%sallow-lax-strings=%s" % (prefix, str(self.allow_lax_strings)), file=out)
         print("%sallow-lax-lq-strings=%s" % (prefix, str(self.allow_lax_lq_strings)), file=out)
+        print("%sallow-wikidata-lq-strings=%s" % (prefix, str(self.allow_wikidata_lq_strings)), file=out)
         if self.additional_language_codes is not None:
             print("%sadditional-language-codes=%s" % (prefix, " ".join(self.additional_language_codes)), file=out)
 
