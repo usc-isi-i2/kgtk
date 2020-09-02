@@ -351,8 +351,10 @@ def run(input_file: KGTKFiles,
     import simplejson as json
     import csv
     import gzip
+    import multiprocessing as mp
     import os
     import pyrallel
+    from pyrallel.queue import ShmQueue
     import sys
     import time
     import typing
@@ -360,6 +362,10 @@ def run(input_file: KGTKFiles,
     from kgtk.cli_argparse import KGTKArgumentParser
     from kgtk.exceptions import KGTKException
     from kgtk.utils.cats import platform_cat
+
+    collector_q = None
+    if collect_results:
+        collector_q = ShmQueue()
 
     class MyMapper(pyrallel.Mapper):
 
@@ -1051,7 +1057,8 @@ def run(input_file: KGTKFiles,
                                             badge_num += 1
 
             if collect_results:
-                return nrows, erows, qrows
+                if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0:
+                    collector_q.put(("rows", nrows, erows, qrows, None))
 
             else:
                 if node_file:
@@ -1085,7 +1092,24 @@ def run(input_file: KGTKFiles,
 
             self.cnt: int = 0
 
-        def enter(self):
+        def run(self, node_file: str, edge_file: str, qual_file: str, collector_q):
+            self.enter(node_file, edge_file, qual_file)
+
+            while True:
+                action, nrows, erows, qrows, header = collector_q.get()
+                if action == "rows":
+                    self.collect(nrows, erows, qrows)
+                elif action == "node_header" and self.node_wr is not None:
+                    self.node_wr.writerow(header)
+                elif action == "edge_header" and self.edge_wr is not None:
+                    self.edge_wr.writerow(header)
+                elif action == "qual_header" and self.qual_wr is not None:
+                    self.qual_wr.writerow(header)
+                elif action == "exit":
+                    self.exit()
+                    break
+
+        def enter(self, node_file: str, edge_file: str, qual_file: str):
             print("Preparing the collector.", file=sys.stderr, flush=True)
             if node_file:
                 print("Opening the node file in the collector.", file=sys.stderr, flush=True)
@@ -1172,15 +1196,15 @@ def run(input_file: KGTKFiles,
         if not skip_processing:
             languages=lang.split(',')
 
-            collector: typing.Optional[MyCollector] = None
+            collector_p = None
             if collect_results:
-                collector = MyCollector()
-                collector.enter()
+                collector: MyCollector = MyCollector()
+                collector_p = mp.Process(target=collector.run, args=(node_file, edge_file, qual_file, collector_q))
 
             if node_file:
                 header = ['id','label','type','description','alias','datatype']
-                if collector is not None and collector.node_wr is not None:
-                    collector.node_wr.writerow(header)
+                if collector_q is not None:
+                    collector_q.put(("node_header", None, None, None, header))
                 else:
                     with open(node_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1200,8 +1224,8 @@ def run(input_file: KGTKFiles,
                           'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar']
 
             if edge_file:
-                if collector is not None and collector.edge_wr is not None:
-                    collector.edge_wr.writerow(header)
+                if collector_q is not None:
+                    collector_q.put(("edge_header", None, None, None, header))
                 else:
                     with open(edge_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1220,8 +1244,8 @@ def run(input_file: KGTKFiles,
                 if "claim_id" in header:
                     header.remove('claim_id')
 
-                if collector is not None and collector.qual_wr is not None:
-                    collector.qual_wr.writerow(header)
+                if collector_q is not None:
+                    collector_q.put(("qual_header", None, None, None, header))
                 else:
                     with open(qual_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1234,10 +1258,7 @@ def run(input_file: KGTKFiles,
                         wr.writerow(header)
 
             print('Start parallel processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
-            if collector is not None:
-                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue, collector=collector.collect)
-            else:
-                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
+            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
             pp.start()
             if str(inp_path).endswith(".bz2"):
                 with bz2.open(inp_path, mode='rb') as file:
@@ -1267,8 +1288,11 @@ def run(input_file: KGTKFiles,
             pp.join()
             print('Join complete.', file=sys.stderr, flush=True)
 
-            if collector is not None:
-                collector.exit()
+            if collector_q is not None:
+                collector_q.put(("exit", None, None, None, None))
+            if collector_p is not None:
+                collector_p.join()
+                                    
 
         if not skip_merging and not collect_results:
             # We've finished processing the input data, possibly using multiple
