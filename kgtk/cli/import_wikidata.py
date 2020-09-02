@@ -1093,7 +1093,7 @@ def run(input_file: KGTKFiles,
             self.cnt: int = 0
 
         def run(self, node_file: str, edge_file: str, qual_file: str, collector_q):
-            self.enter(node_file, edge_file, qual_file)
+            self.startup(node_file, edge_file, qual_file)
 
             while True:
                 action, nrows, erows, qrows, header = collector_q.get()
@@ -1105,13 +1105,13 @@ def run(input_file: KGTKFiles,
                     self.edge_wr.writerow(header)
                 elif action == "qual_header" and self.qual_wr is not None:
                     self.qual_wr.writerow(header)
-                elif action == "exit":
-                    self.exit()
+                elif action == "shutdown":
+                    self.shutdown()
                     break
 
-        def enter(self, node_file: str, edge_file: str, qual_file: str):
+        def startup(self, node_file: str, edge_file: str, qual_file: str):
             print("Preparing the collector.", file=sys.stderr, flush=True)
-            if node_file:
+            if node_file is not None:
                 print("Opening the node file in the collector.", file=sys.stderr, flush=True)
                 self.node_f = open(node_file, "w", newline='')
                 self.node_wr = csv.writer(
@@ -1122,7 +1122,7 @@ def run(input_file: KGTKFiles,
                     quotechar='',
                     lineterminator=csv_line_terminator)
                 
-            if edge_file:
+            if edge_file is not None:
                 print("Opening the edge file in the collector.", file=sys.stderr, flush=True)
                 self.edge_f = open(edge_file, "w", newline='')
                 self.edge_wr = csv.writer(
@@ -1133,7 +1133,7 @@ def run(input_file: KGTKFiles,
                     quotechar='',
                     lineterminator=csv_line_terminator)
                 
-            if qual_file:
+            if qual_file is not None:
                 print("Opening the qual file in the collector.", file=sys.stderr, flush=True)
                 self.qual_f = open(qual_file, "w", newline='')
                 self.qual_wr = csv.writer(
@@ -1145,7 +1145,7 @@ def run(input_file: KGTKFiles,
                     lineterminator=csv_line_terminator)
             print("The collector is ready.", file=sys.stderr, flush=True)
 
-        def exit(self):
+        def shutdown(self):
             print("Exiting the collector.", file=sys.stderr, flush=True)
 
             if self.node_f is not None:
@@ -1283,16 +1283,19 @@ def run(input_file: KGTKFiles,
                         pp.add_task(line,node_file,edge_file,qual_file,languages,source)
 
             print('Done processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
+            print('Telling the workers to shut down.', file=sys.stderr, flush=True)
             pp.task_done()
-            print('Tasks done.', file=sys.stderr, flush=True)
+            print('Waiting for the workers to shut down.', file=sys.stderr, flush=True)
             pp.join()
-            print('Join complete.', file=sys.stderr, flush=True)
+            print('Worker shut down is complete.', file=sys.stderr, flush=True)
 
             if collector_q is not None:
-                collector_q.put(("exit", None, None, None, None))
+                print('Telling the collector to shut down.', file=sys.stderr, flush=True)
+                collector_q.put(("shutdown", None, None, None, None))
             if collector_p is not None:
+                print('Waiting for the collector to shut down.', file=sys.stderr, flush=True)
                 collector_p.join()
-                                    
+                print('Collector shut down is complete.', file=sys.stderr, flush=True)
 
         if not skip_merging and not collect_results:
             # We've finished processing the input data, possibly using multiple
