@@ -1081,6 +1081,7 @@ class KgtkValue(KgtkFormat):
     # with a country code or dialect name suffix after the language code.
     lax_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>.*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z0-9]+)?)$")
     strict_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z0-9]+)?)$")
+    wikidata_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,})(?P<suffix>-[-a-zA-Z0-9]+)?)$")
 
     def is_language_qualified_string(self, validate: bool=False)->bool:
         """
@@ -1103,13 +1104,17 @@ o        Return True if the value looks like a language-qualified string.
         # Validate the language qualified string.
         # print("checking %s" % self.value)
         m: typing.Optional[typing.Match]
-        if self.options.allow_lax_lq_strings:
+        if self.options.allow_wikidata_lq_strings:
+            m = KgtkValue.wikidata_language_qualified_string_re.match(self.value)
+        elif self.options.allow_lax_lq_strings:
             m = KgtkValue.lax_language_qualified_string_re.match(self.value)
         else:
             m = KgtkValue.strict_language_qualified_string_re.match(self.value)
         if m is None:
             if self.verbose:
-                if self.options.allow_lax_lq_strings:
+                if self.options.allow_wikidata_lq_strings:
+                    print("KgtkValue.wikidata_language_qualified_string_re.match failed for %s" % self.value, file=self.error_file, flush=True)
+                elif self.options.allow_lax_lq_strings:
                     print("KgtkValue.lax_language_qualified_string_re.match failed for %s" % self.value, file=self.error_file, flush=True)
                 else:
                     print("KgtkValue.strict_language_qualified_string_re.match failed for %s" % self.value, file=self.error_file, flush=True)
@@ -1121,7 +1126,7 @@ o        Return True if the value looks like a language-qualified string.
         # print("lang_and_suffix: %s" % lang_and_suffix)
 
         # Validate the language code:
-        if not LanguageValidator.validate(lang_and_suffix.lower(), options=self.options):
+        if not self.options.allow_wikidata_lq_strings and not LanguageValidator.validate(lang_and_suffix.lower(), options=self.options):
             if self.verbose:
                 print("language validation failed for %s" % self.value, file=self.error_file, flush=True)
             self.valid = False
