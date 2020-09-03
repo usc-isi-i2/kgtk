@@ -14,7 +14,7 @@ install:
 script:
 - python -m spacy download en_core_web_sm
 - cd kgtk/tests
-- coverage run --omit */site-packages/* -m unittest discover
+- coverage run --source=kgtk --omit */site-packages/* -m unittest discover
 after_success:
 - coveralls
 notifications:
