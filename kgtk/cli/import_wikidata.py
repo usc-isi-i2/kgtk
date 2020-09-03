@@ -40,13 +40,60 @@ def add_arguments(parser: KGTKArgumentParser):
         dest="procs",
         default=2,
         help='number of processes to run in parallel, default %(default)d')
+
     parser.add_argument(
         '--max-size-per-mapper-queue',
         action="store",
         type=int,
         dest="max_size_per_mapper_queue",
-        default=20,
+        default=4,
         help='max depth of server queues, default %(default)d')
+
+    parser.add_argument(
+        '--mapper-batch-size',
+        action="store",
+        type=int,
+        dest="mapper_batch_size",
+        default=5,
+        help='How many statements to queue in a batch to a worker. (default=%(default)d)')
+
+    parser.add_argument(
+        "--collect-results",
+        nargs='?',
+        type=optional_bool,
+        dest="collect_results",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, collect the results before writing to disk.  If false, write results to disk, then concatenate. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        '--collector-batch-size',
+        action="store",
+        type=int,
+        dest="collector_batch_size",
+        default=5,
+        help='How many statements to queue in a batch to the collector. (default=%(default)d)')
+
+    parser.add_argument(
+        "--use-shm",
+        nargs='?',
+        type=optional_bool,
+        dest="use_shm",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, use ShmQueue. (default=%(default)s).")
+
+    parser.add_argument(
+        '--collector-queue-per-proc-size',
+        action="store",
+        type=int,
+        dest="collector_queue_per_proc_size",
+        default=2,
+        help='collector queue depth per proc, default %(default)d')
+
     parser.add_argument(
         "--node",
         action="store",
@@ -297,17 +344,6 @@ def add_arguments(parser: KGTKArgumentParser):
     )
 
     parser.add_argument(
-        "--collect-results",
-        nargs='?',
-        type=optional_bool,
-        dest="collect_results",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help="If true, collect the results before writing to disk.  If false, write results to disk, then concatenate. (default=%(default)s).",
-    )
-
-    parser.add_argument(
         '--progress-interval',
         action="store",
         type=int,
@@ -344,7 +380,11 @@ def run(input_file: KGTKFiles,
         all_languages: bool,
         warn_if_missing: bool,
         collect_results: bool,
-        progress_interval: int):
+        collector_queue_per_proc_size: int,
+        progress_interval: int,
+        use_shm: bool,
+        mapper_batch_size: int,
+        collector_batch_size: int):
 
     # import modules locally
     import bz2
@@ -354,7 +394,6 @@ def run(input_file: KGTKFiles,
     import multiprocessing as mp
     import os
     import pyrallel
-    from pyrallel.queue import ShmQueue
     import sys
     import time
     import typing
@@ -363,13 +402,12 @@ def run(input_file: KGTKFiles,
     from kgtk.exceptions import KGTKException
     from kgtk.utils.cats import platform_cat
 
-    collector_q = None
-    if collect_results:
-        collector_q = ShmQueue()
+    collector_q: pyrallel.ShmQueue = None
 
     class MyMapper(pyrallel.Mapper):
 
         def enter(self):
+            print("Starting worker process {}.".format(self._idx), file=sys.stderr, flush=True)
             WD_META_ITEMS = [
                 "Q163875",
                 "Q191780",
@@ -443,14 +481,28 @@ def run(input_file: KGTKFiles,
                     quotechar='',
                     lineterminator=csv_line_terminator)
 
+            if collect_results and collector_batch_size > 1:
+                self.collector_batch_cnt = 0
+                self.collector_nrows_batch = [ ]
+                self.collector_erows_batch = [ ]
+                self.collector_qrows_batch = [ ]
+
 
         def exit(self, *args, **kwargs):
-            if self.node_f is not None:
-                self.node_f.close()
-            if self.edge_f is not None:
-                self.edge_f.close()
-            if self.qual_f is not None:
-                self.qual_f.close()
+            if collect_results:
+                if collector_batch_size > 1:
+                    if len(self.collector_nrows_batch) > 0 or len(self.collector_erows_batch) > 0 or len(self.collector_qrows_batch) > 0:
+                        collector_q.put(("rows", self.collector_nrows_batch, self.collector_erows_batch, self.collector_qrows_batch, None))
+
+            else:
+                if self.node_f is not None:
+                    self.node_f.close()
+
+                if self.edge_f is not None:
+                    self.edge_f.close()
+
+                if self.qual_f is not None:
+                    self.qual_f.close()
 
         def erows_append(self, erows, edge_id, node1, label, node2,
                          rank="",
@@ -1031,7 +1083,7 @@ def run(input_file: KGTKFiles,
                                                               node1=sid,
                                                               label='language',
                                                               node2=sitelang)
-
+                                            
                                         tempid=sid+'-site-1'
                                         self.qrows_append(qrows,
                                                           edge_id=tempid,
@@ -1056,23 +1108,35 @@ def run(input_file: KGTKFiles,
                                                               node2=sitelinks[link]['badges'][badge_num])
                                             badge_num += 1
 
-            if collect_results:
-                if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0:
-                    collector_q.put(("rows", nrows, erows, qrows, None))
+            if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0:               
+                if collect_results:
+                    if collector_batch_size == 1:
+                        collector_q.put(("rows", nrows, erows, qrows, None))
+                    else:
+                        self.collector_nrows_batch.extend(nrows)
+                        self.collector_erows_batch.extend(erows)
+                        self.collector_qrows_batch.extend(qrows)
+                        self.collector_batch_cnt += 1
 
-            else:
-                if node_file:
-                    for row in nrows:
-                        self.node_wr.writerow(row)
+                        if self.collector_batch_cnt >= collector_batch_size:
+                            collector_q.put(("rows", self.collector_nrows_batch, self.collector_erows_batch, self.collector_qrows_batch, None))
+                            self.collector_nrows_batch.clear()
+                            self.collector_erows_batch.clear()
+                            self.collector_qrows_batch.clear()
+                            self.collector_batch_cnt = 0
 
-                if edge_file:
-                    for row in erows:
-                        self.edge_wr.writerow(row)
+                else:
+                    if node_file:
+                        for row in nrows:
+                            self.node_wr.writerow(row)
 
-                if qual_file:
-                    for row in qrows:
-                        self.qual_wr.writerow(row)
+                    if edge_file:
+                        for row in erows:
+                            self.edge_wr.writerow(row)
 
+                    if qual_file:
+                        for row in qrows:
+                            self.qual_wr.writerow(row)
     
     class MyCollector:
 
@@ -1097,6 +1161,7 @@ def run(input_file: KGTKFiles,
 
             while True:
                 action, nrows, erows, qrows, header = collector_q.get()
+                # print("Collector action %s." % action, file=sys.stderr, flush=True)
                 if action == "rows":
                     self.collect(nrows, erows, qrows)
                 elif action == "node_header" and self.node_wr is not None:
@@ -1110,7 +1175,7 @@ def run(input_file: KGTKFiles,
                     break
 
         def startup(self, node_file: str, edge_file: str, qual_file: str):
-            print("Preparing the collector.", file=sys.stderr, flush=True)
+            print("Collector startup.", file=sys.stderr, flush=True)
             if node_file is not None:
                 print("Opening the node file in the collector.", file=sys.stderr, flush=True)
                 self.node_f = open(node_file, "w", newline='')
@@ -1164,13 +1229,12 @@ def run(input_file: KGTKFiles,
             self.erows += len(erows)
             self.qrows += len(qrows)
 
-            if self.cnt % progress_interval == 0 and self.cnt > 0:
+            self.cnt += 1
+            if self.cnt % progress_interval == 0:
                 print("Collector called {} times: {} nrows, {} erows, {} qrows".format(self.cnt,
                                                                                        self.nrows,
                                                                                        self.erows,
                                                                                        self.qrows), file=sys.stderr, flush=True)
-            self.cnt += 1
-
             if self.node_wr is not None:
                 for row in nrows:
                     self.node_wr.writerow(row)
@@ -1194,17 +1258,44 @@ def run(input_file: KGTKFiles,
         start=time.time()
 
         if not skip_processing:
+            print("Processing.", file=sys.stderr, flush=True)
             languages=lang.split(',')
+
+            # Open the input file first to make it easier to monitor with "pv".
+            if str(inp_path).endswith(".bz2"):
+                print('Decompressing (bz2) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
+                input_file = bz2.open(inp_path, mode='rb')
+
+            elif str(inp_path).endswith(".gz"):
+                print('Decompressing (gzip) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
+                input_file = gzip.open(inp_path, mode='rb')
+
+            else:                             
+                print('Processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
+                input_file = open(inp_path, mode='rb')
 
             collector_p = None
             if collect_results:
+                print("Creating the collector queue.", file=sys.stderr, flush=True)
+                # collector_q = pyrallel.ShmQueue()
+                collector_q_maxsize = procs*collector_queue_per_proc_size
+                collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+                
+                print("Creating the collector.", file=sys.stderr, flush=True)
                 collector: MyCollector = MyCollector()
+                print("Creating the collector process.", file=sys.stderr, flush=True)
                 collector_p = mp.Process(target=collector.run, args=(node_file, edge_file, qual_file, collector_q))
+                print("Starting the collector process.", file=sys.stderr, flush=True)
+                collector_p.start()
+                print("Started the collector process.", file=sys.stderr, flush=True)
 
             if node_file:
                 header = ['id','label','type','description','alias','datatype']
                 if collector_q is not None:
+                    print("Sending the node header to the collector.", file=sys.stderr, flush=True)
                     collector_q.put(("node_header", None, None, None, header))
+                    print("Sent the node header to the collector.", file=sys.stderr, flush=True)
                 else:
                     with open(node_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1225,7 +1316,9 @@ def run(input_file: KGTKFiles,
 
             if edge_file:
                 if collector_q is not None:
+                    print("Sending the edge header to the collector.", file=sys.stderr, flush=True)
                     collector_q.put(("edge_header", None, None, None, header))
+                    print("Sent the edge header to the collector.", file=sys.stderr, flush=True)
                 else:
                     with open(edge_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1245,7 +1338,9 @@ def run(input_file: KGTKFiles,
                     header.remove('claim_id')
 
                 if collector_q is not None:
+                    print("Sending the qual header to the collector.", file=sys.stderr, flush=True)
                     collector_q.put(("qual_header", None, None, None, header))
+                    print("Sent the qual header to the collector.", file=sys.stderr, flush=True)
                 else:
                     with open(qual_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1258,31 +1353,17 @@ def run(input_file: KGTKFiles,
                         wr.writerow(header)
 
             print('Start parallel processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
-            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
+            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                            use_shm=use_shm, enable_collector_queues=False, batch_size=mapper_batch_size)
             pp.start()
-            if str(inp_path).endswith(".bz2"):
-                with bz2.open(inp_path, mode='rb') as file:
-                    print('Decompressing (bz2) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                    for cnt, line in enumerate(file):
-                        if limit and cnt >= limit:
-                            break
-                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
-            elif str(inp_path).endswith(".gz"):
-                with gzip.open(inp_path, mode='rb') as file:
-                    print('Decompressing (gzip) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                    for cnt, line in enumerate(file):
-                        if limit and cnt >= limit:
-                            break
-                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
-            else:                             
-                with open(inp_path, mode='rb') as file:
-                    print('Processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                    for cnt, line in enumerate(file):
-                        if limit and cnt >= limit:
-                            break
-                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+            for cnt, line in enumerate(input_file):
+                if limit and cnt >= limit:
+                    break
+                pp.add_task(line,node_file,edge_file,qual_file,languages,source)
 
             print('Done processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
+            input_file.close()
+            
             print('Telling the workers to shut down.', file=sys.stderr, flush=True)
             pp.task_done()
             print('Waiting for the workers to shut down.', file=sys.stderr, flush=True)
@@ -1296,6 +1377,8 @@ def run(input_file: KGTKFiles,
                 print('Waiting for the collector to shut down.', file=sys.stderr, flush=True)
                 collector_p.join()
                 print('Collector shut down is complete.', file=sys.stderr, flush=True)
+            if collector_q is not None:
+                collector_q.close()
 
         if not skip_merging and not collect_results:
             # We've finished processing the input data, possibly using multiple
@@ -1329,5 +1412,5 @@ def run(input_file: KGTKFiles,
         print('import complete', file=sys.stderr, flush=True)
         end=time.time()
         print('time taken : {}s'.format(end-start), file=sys.stderr, flush=True)
-    except:
-        raise KGTKException
+    except Exception as e:
+        raise KGTKException(str(e))
