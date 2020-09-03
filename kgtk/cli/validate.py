@@ -12,14 +12,9 @@ TODO: Add a reject file.
 """
 
 from argparse import Namespace
-from pathlib import Path
-import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -41,6 +36,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
     _expert: bool = parsed_shared_args._expert
 
     parser.add_input_file(who="The KGTK file(s) to validate.",
@@ -68,7 +67,12 @@ def run(input_files: KGTKFiles,
         **kwargs # Whatever KgtkReaderOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     kgtk_files: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_files)
 

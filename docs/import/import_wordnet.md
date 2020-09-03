@@ -1,4 +1,4 @@
-Import WordNet v3.0 into KGTK format. Currently, four relations are included: hypernymy, membership holonymy, part-of holonymy, and substance meronymy. The resulting KGTK file consists of 12 columns.
+Import WordNet v3.0 into KGTK format. Currently, four relations are included: hypernymy, membership holonymy, part-of holonymy, and substance meronymy. The resulting KGTK file consists of 9 columns.
 
 ## Usage
 ```
@@ -18,25 +18,25 @@ kgtk import-wordnet
 
 Example output (first and last 10 lines):
 ```
-node1	label	node2	node1;label	label;label	node2;label	label;dimension	source	weight	creator	sentence	question
-physical_entity.n.01	/r/IsA	entity.n.01	physical entity	is a	entity		WN	1.0		physical entity is a entity	What is physical entity?
-abstraction.n.06	/r/IsA	entity.n.01	abstraction|abstract entity	is a	entity		WN	1.0		abstraction is a entity	What is abstraction?
-thing.n.12	/r/IsA	physical_entity.n.01	thing	is a	physical entity		WN	1.0		thing is a physical entity	What is thing?
-object.n.01	/r/IsA	physical_entity.n.01	object|physical object	is a	physical entity		WN	1.0		object is a physical entity	What is object?
-whole.n.02	/r/IsA	object.n.01	whole|unit	is a	object|physical object		WN	1.0		whole is a object	What is whole?
-congener.n.03	/r/IsA	whole.n.02	congener	is a	whole|unit		WN	1.0		congener is a whole	What is congener?
-living_thing.n.01	/r/IsA	whole.n.02	living thing|animate thing	is a	whole|unit		WN	1.0		living thing is a whole	What is living thing?
-organism.n.01	/r/IsA	living_thing.n.01	organism|being	is a	living thing|animate thing		WN	1.0		organism is a living thing	What is organism?
-benthos.n.02	/r/IsA	organism.n.01	benthos	is a	organism|being		WN	1.0		benthos is a organism	What is benthos?
+node1	relation	node2	node1;label	node2;label	relation;label	relation;dimension	weight	source	origin	sentence	question
+physical_entity.n.01	/r/IsA	entity.n.01	physical entity	entity	is a			WN		physical entity is a entity	What is physical entity?
+abstraction.n.06	/r/IsA	entity.n.01	abstraction|abstract entity	entity	is a			WN		abstraction is a entity	What is abstraction?
+thing.n.12	/r/IsA	physical_entity.n.01	thing	physical entity	is a			WN		thing is a physical entity	What is thing?
+object.n.01	/r/IsA	physical_entity.n.01	object|physical object	physical entity	is a			WN		object is a physical entity	What is object?
+whole.n.02	/r/IsA	object.n.01	whole|unit	object|physical object	is a			WN		whole is a object	What is whole?
+congener.n.03	/r/IsA	whole.n.02	congener	whole|unit	is a			WN		congener is a whole	What is congener?
+living_thing.n.01	/r/IsA	whole.n.02	living thing|animate thing	whole|unit	is a			WN		living thing is a whole	What is living thing?
+organism.n.01	/r/IsA	living_thing.n.01	organism|being	living thing|animate thing	is a			WN		organism is a living thing	What is organism?
+benthos.n.02	/r/IsA	organism.n.01	benthos	organism|being	is a			WN		benthos is a organism	What is benthos?
 ...
-fertile_period.n.01	/r/PartOf	menstrual_cycle.n.01	fertile period|fertile phase	is a part of	menstrual cycle		WN	1.0		fertile period is a part of menstrual cycle	Fertile period is a part of what?
-menstrual_phase.n.01	/r/PartOf	menstrual_cycle.n.01	menstrual phase	is a part of	menstrual cycle		WN	1.0		menstrual phase is a part of menstrual cycle	Menstrual phase is a part of what?
-secretory_phase.n.01	/r/PartOf	menstrual_cycle.n.01	secretory phase|luteal phase	is a part of	menstrual cycle		WN	1.0		secretory phase is a part of menstrual cycle	Secretory phase is a part of what?
-phase.n.03	/r/PartOf	cycle.n.01	phase|phase angle	is a part of	cycle|rhythm|round		WN	1.0		phase is a part of cycle	Phase is a part of what?
-shift.n.03	/r/PartOf	workday.n.02	shift|work shift|duty period	is a part of	workday|working day		WN	1.0		shift is a part of workday	Shift is a part of what?
-safe_period.n.01	/r/PartOf	menstrual_cycle.n.01	safe period	is a part of	menstrual cycle		WN	1.0		safe period is a part of menstrual cycle	Safe period is a part of what?
-rotational_latency.n.01	/r/PartOf	access_time.n.01	rotational latency|latency	is a part of	access time		WN	1.0		rotational latency is a part of access time	Rotational latency is a part of what?
-command_processing_overhead_time.n.01	/r/PartOf	access_time.n.01	command processing overhead time|command processing overhead|command overhead|overhead	is a part of	access time		WN	1.0		command processing overhead time is a part of access time	Command processing overhead time is a part of what?
-study_hall.n.01	/r/PartOf	school.n.05	study hall	is a part of	school|schooltime|school day		WN	1.0		study hall is a part of school	Study hall is a part of what?
-9/11.n.01	/r/PartOf	september.n.01	9/11|9-11|September 11|Sept. 11|Sep 11	is a part of	September|Sep|Sept		WN	1.0		9/11 is a part of September	9/11 is a part of what?
+wood.n.01	/r/MadeOf	lignin.n.01	wood	lignin	is made of			WN		wood is made of lignin	Wood is made of what?
+wolframite.n.01	/r/MadeOf	tungsten.n.01	wolframite|iron manganese tungsten	tungsten|wolfram|W|atomic number 74	is made of			WN		wolframite is made of tungsten	Wolframite is made of what?
+xenotime.n.01	/r/MadeOf	thulium.n.01	xenotime	thulium|Tm|atomic number 69	is made of			WN		xenotime is made of thulium	Xenotime is made of what?
+xenotime.n.01	/r/MadeOf	ytterbium.n.01	xenotime	ytterbium|Yb|atomic number 70	is made of			WN		xenotime is made of ytterbium	Xenotime is made of what?
+xenotime.n.01	/r/MadeOf	yttrium.n.01	xenotime	yttrium|Y|atomic number 39	is made of			WN		xenotime is made of yttrium	Xenotime is made of what?
+zinc_blende.n.01	/r/MadeOf	indium.n.01	zinc blende|blende|sphalerite	indium|In|atomic number 49	is made of			WN		zinc blende is made of indium	Zinc blende is made of what?
+zinc_blende.n.01	/r/MadeOf	thallium.n.01	zinc blende|blende|sphalerite	thallium|Tl|atomic number 81	is made of			WN		zinc blende is made of thallium	Zinc blende is made of what?
+zinc_white.n.01	/r/MadeOf	zinc_oxide.n.01	zinc white|Chinese white	zinc oxide|flowers of zinc|philosopher's wool|philosophers' wool	is made of			WN		zinc white is made of zinc oxide	Zinc white is made of what?
+zinnwaldite.n.01	/r/MadeOf	lithium.n.01	zinnwaldite	lithium|Li|atomic number 3	is made of			WN		zinnwaldite is made of lithium	Zinnwaldite is made of what?
+zircon.n.01	/r/MadeOf	zirconium.n.01	zircon|zirconium silicate	zirconium|Zr|atomic number 40	is made of			WN		zircon is made of zirconium	Zircon is made of what?
 ```

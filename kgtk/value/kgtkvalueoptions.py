@@ -46,6 +46,9 @@ class KgtkValueOptions:
     # check if internal single quotes are excaped by backslash.
     allow_lax_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
+    # Permit Wikidata language qualifier extensions.
+    allow_wikidata_lq_strings: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     allow_language_suffixes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     # If this list gets long, we may want to turn it into a map to make lookup
@@ -58,21 +61,30 @@ class KgtkValueOptions:
 
     escape_list_separators: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # When repair_lax_coordinates is true, coordinates using scientific notation
+    # When allow_lax_coordinates is true, coordinates using scientific notation
     # will be parsed.
     allow_lax_coordinates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     # When repair_lax_coordinates is true, coordinates using scientific notation
     # will be parsed, but they will be rewritten to fixed point notation.
     repair_lax_coordinates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # When allow_out_of_range_coordinates is true, coordinates that don't nake
+    # sense will still be considered valid.
+    allow_out_of_range_coordinates: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    require_iso8601_extended: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    force_iso8601_extended: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # Minimum and maximum year range in dates.
     MINIMUM_VALID_YEAR: int = 1583 # Per ISO 8601, years before this one require special agreement.
     minimum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MINIMUM_VALID_YEAR)
     clamp_minimum_year: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    ignore_minimum_year: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     MAXIMUM_VALID_YEAR: int = 2100 # Arbitrarily chosen.
     maximum_valid_year: int = attr.ib(validator=attr.validators.instance_of(int), default=MAXIMUM_VALID_YEAR)
     clamp_maximum_year: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    ignore_maximum_year: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     MINIMUM_VALID_LAT: float = -90.
     minimum_valid_lat: float = attr.ib(validator=attr.validators.instance_of(float), default=MINIMUM_VALID_LAT)
@@ -163,6 +175,18 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "Do not check if single quotes are backslashed inside language qualified strings. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        vgroup.add_argument(      prefix1 + "allow-wikidata-lq-strings", dest=prefix2 + "allow_wikidata_lq_strings",
+                                  help=h(prefix3 + "Allow Wikidata language qualifiers. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
+        vgroup.add_argument(      prefix1 + "require-iso8601-extended", dest=prefix2 + "require_iso8601_extended",
+                                  help=h(prefix3 + "Require colon(:) and hyphen(-) in dates and times. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
+        vgroup.add_argument(      prefix1 + "force-iso8601-extended", dest=prefix2 + "force_iso8601_extended",
+                                  help=h(prefix3 + "Force colon (:) and hyphen(-) in dates and times. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "allow-month-or-day-zero", dest=prefix2 + "allow_month_or_day_zero",
                                   help=h(prefix3 + "Allow month or day zero in dates. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
@@ -183,6 +207,10 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "Clamp years at the minimum value. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        vgroup.add_argument(      prefix1 + "ignore-minimum-year", dest=prefix2 + "ignore_minimum_year",
+                                  help=h(prefix3 + "Ignore the minimum year constraint. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "maximum-valid-year", dest=prefix2 + "maximum_valid_year",
                                   help=h(prefix3 + "The maximum valid year in dates. (default=%(default)d)."),
                                   type=int, **d(default=cls.MAXIMUM_VALID_YEAR))
@@ -191,12 +219,20 @@ class KgtkValueOptions:
                                   help=h(prefix3 + "Clamp years at the maximum value. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        vgroup.add_argument(      prefix1 + "ignore-maximum-year", dest=prefix2 + "ignore_maximum_year",
+                                  help=h(prefix3 + "Ignore the maximum year constraint. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
         vgroup.add_argument(      prefix1 + "allow-lax-coordinates", dest=prefix2 + "allow_lax_coordinates",
                                   help=h(prefix3 + "Allow coordinates using scientific notation. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "repair-lax-coordinates", dest=prefix2 + "repair_lax_coordinates",
                                   help=h(prefix3 + "Allow coordinates using scientific notation. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
+        vgroup.add_argument(      prefix1 + "allow-out-of-range-coordinates", dest=prefix2 + "allow_out_of_range_coordinates",
+                                  help=h(prefix3 + "Allow coordinates that don't make sense. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "minimum-valid-lat", dest=prefix2 + "minimum_valid_lat",
@@ -253,14 +289,21 @@ class KgtkValueOptions:
                    allow_language_suffixes=d.get(prefix + "allow_language_suffixes", True),
                    allow_lax_strings=d.get(prefix + "allow_lax_strings", False),
                    allow_lax_lq_strings=d.get(prefix + "allow_lax_lq_strings", False),
+                   allow_wikidata_lq_strings=d.get(prefix + "allow_wikidata_lq_strings", False),
                    additional_language_codes=d.get(prefix + "additional_language_codes", None),
+
+                   require_iso8601_extended=d.get(prefix + "require_iso8601_extended", False),
+                   force_iso8601_extended=d.get(prefix + "force_iso8601_extended", False),
                    minimum_valid_year=d.get(prefix + "minimum_valid_year", cls.MINIMUM_VALID_YEAR),
                    clamp_minimum_year=d.get(prefix + "clamp_minimum_year", False),
+                   ignore_minimum_year=d.get(prefix + "ignore_minimum_year", False),
                    maximum_valid_year=d.get(prefix + "maximum_valid_year", cls.MAXIMUM_VALID_YEAR),
                    clamp_maximum_year=d.get(prefix + "clamp_maximum_year", False),
+                   ignore_maximum_year=d.get(prefix + "ignore_maximum_year", False),
 
                    allow_lax_coordinates=d.get(prefix + "allow_lax_coordinates", False),
                    repair_lax_coordinates=d.get(prefix + "repair_lax_coordinates", False),
+                   allow_out_of_range_coordinates=d.get(prefix + "allow_out_of_range_coordinates", False),
 
                    minimum_valid_lat=d.get(prefix + "minimum_valid_lat", cls.MINIMUM_VALID_LAT),
                    clamp_minimum_lat=d.get(prefix + "clamp_minimum_lat", False),
@@ -289,16 +332,22 @@ class KgtkValueOptions:
         print("%sallow-language-suffixes=%s" % (prefix, str(self.allow_language_suffixes)), file=out)
         print("%sallow-lax-strings=%s" % (prefix, str(self.allow_lax_strings)), file=out)
         print("%sallow-lax-lq-strings=%s" % (prefix, str(self.allow_lax_lq_strings)), file=out)
+        print("%sallow-wikidata-lq-strings=%s" % (prefix, str(self.allow_wikidata_lq_strings)), file=out)
         if self.additional_language_codes is not None:
             print("%sadditional-language-codes=%s" % (prefix, " ".join(self.additional_language_codes)), file=out)
 
+        print("%srequire-iso8601-extended=%s" % (prefix, str(self.require_iso8601_extended)), file=out)
+        print("%sforce-iso8601-extended=%s" % (prefix, str(self.force_iso8601_extended)), file=out)
         print("%sminimum-valid-year=%d" % (prefix, self.minimum_valid_year), file=out)
         print("%sclamp-minimum-year=%s" % (prefix, str(self.clamp_minimum_year)), file=out)
+        print("%signore-minimum-year=%s" % (prefix, str(self.ignore_minimum_year)), file=out)
         print("%smaximum-valid-year=%d" % (prefix, self.maximum_valid_year), file=out)
         print("%sclamp-maximum-year=%s" % (prefix, str(self.clamp_maximum_year)), file=out)
+        print("%signore-maximum-year=%s" % (prefix, str(self.ignore_maximum_year)), file=out)
 
         print("%sallow-lax-coordinates=%s" % (prefix, str(self.allow_lax_coordinates)), file=out)
         print("%srepair-lax-coordinates=%s" % (prefix, str(self.repair_lax_coordinates)), file=out)
+        print("%sallow-out-of-range-coordinates=%s" % (prefix, str(self.allow_out_of_range_coordinates)), file=out)
 
         print("%sminimum-valid-lat=%f" % (prefix, self.minimum_valid_lat), file=out)
         print("%sclamp-minimum-lat=%s" % (prefix, str(self.clamp_minimum_lat)), file=out)

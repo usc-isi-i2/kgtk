@@ -29,6 +29,7 @@ def run():
     import json
     import nltk
     from nltk.corpus import wordnet as wn
+    from kgtk.kgtkformat import KgtkFormat
 
     def header_to_edge(row):
         row=[r.replace('_', ';') for r in row]
@@ -37,7 +38,7 @@ def run():
     def obtain_wordnet_lemmas(syn):
         lemmas=[]
         for lemma in syn.lemma_names():
-            lemmas.append(lemma.replace('_', ' '))
+            lemmas.append(KgtkFormat.stringify(lemma.replace('_', ' ')))
         return lemmas
 
     def obtain_hypernyms(syn):
@@ -98,28 +99,24 @@ def run():
 
     def create_edges(data, labels, rel, rel_label):
         all_rows=[]
+        source=KgtkFormat.stringify('WN')
         for node1, v in data.items():
             for node2 in v:
                 node1_preflabel=labels[node1].split('|')[0]
                 node2_preflabel=labels[node2].split('|')[0]
-                sentence=' '.join([node1_preflabel, rel_label, node2_preflabel])
-                if rel=='/r/IsA':
-                    question=('What is %s?' % node1_preflabel).capitalize()
-                else:
-                    question=('%s %s what?' % (node1_preflabel, rel_label)).capitalize()
-                a_row=[node1, rel, node2, labels[node1], rel_label, labels[node2], "", "WN", "1.0", "", sentence, question]
+                a_row=['wn:' + node1, rel, 'wn:' + node2, labels[node1], labels[node2], rel_label, "", source, '']
                 all_rows.append(a_row)
         return all_rows
 
     try:
-        out_columns=['node1', 'label', 'node2', 'node1_label', 'label_label', 'node2_label', 'label_dimension', 'source', 'weight', 'creator', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
         sys.stdout.write(header_to_edge(out_columns))
 
         all_labels, all_hyps, all_members, all_parts, all_subs=get_wn_data()
-        hyp_edges=create_edges(all_hyps, all_labels, '/r/IsA', 'is a')
-        member_edges=create_edges(all_members, all_labels, '/r/PartOf', 'is a part of')
-        part_edges=create_edges(all_parts, all_labels, '/r/PartOf', 'is a part of')
-        sub_edges=create_edges(all_subs, all_labels, '/r/MadeOf', 'is made of')
+        hyp_edges=create_edges(all_hyps, all_labels, '/r/IsA', KgtkFormat.stringify('is a'))
+        member_edges=create_edges(all_members, all_labels, '/r/PartOf', KgtkFormat.stringify('is a part of'))
+        part_edges=create_edges(all_parts, all_labels, '/r/PartOf', KgtkFormat.stringify('is a part of'))
+        sub_edges=create_edges(all_subs, all_labels, '/r/MadeOf', KgtkFormat.stringify('is made of'))
         all_edges=hyp_edges+member_edges+part_edges+sub_edges
 
         for edge in all_edges:

@@ -31,6 +31,7 @@ def run(input_file: KGTKFiles):
     from pathlib import Path
     from string import Template
     import pandas as pd
+    from kgtk.kgtkformat import KgtkFormat
 
     def header_to_edge(row):
         row=[r.replace('_', ';') for r in row]
@@ -61,10 +62,10 @@ def run(input_file: KGTKFiles):
         e2=remove_people_mentions(e1)
         while '  ' in e2:
             e2=e2.replace('  ', ' ')
-        if e1!=e2:
-            return '|'.join([e1,e2])
+        if e1!=e2 and e2:
+            return '|'.join([KgtkFormat.stringify(e1),KgtkFormat.stringify(e2)])
         else:
-            return e1
+            return KgtkFormat.stringify(e1)
 
     def produce_rel_label(rel):
         mapping={
@@ -79,19 +80,13 @@ def run(input_file: KGTKFiles):
                     'xEffect': 'effect on person x',
                     'oEffect': 'the effect on others'
                 }
-        return mapping[rel]
-
-    def make_question(n1, lbl):
-        return f'If {n1}, then {lbl}?' 
-
-    def make_sentence(node_label, rel_label, value_label):
-        return 'If %s, then %s %s.' % (node_label, rel_label, value_label)
+        return KgtkFormat.stringify(mapping[rel])
 
     try:
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
-        out_columns=['node1', 'label', 'node2', 'node1_label', 'label_label', 'node2_label', 'label_dimension', 'source', 'weight', 'creator', 'sentence', 'question']
+        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
 
         df = pd.read_csv(filename,index_col=0)
         df.iloc[:,:9] = df.iloc[:,:9].apply(lambda col: col.apply(json.loads))
@@ -104,24 +99,22 @@ def run(input_file: KGTKFiles):
         for event, row in df.iterrows():
             event_label=produce_node_labels(event)
 
-            first_event_label=event_label.split('|')[0] if '|' in event_label else event_label
+            first_event_label=KgtkFormat.unstringify(event_label.split('|')[0] if '|' in event_label else event_label)
             n1=make_node(first_event_label)
             for c in df.columns:
                 for v in row[c]:
                     if v=='none': continue
                     value_label=produce_node_labels(v)
-                    first_value_label=value_label.split('|')[0] if '|' in value_label else value_label
+                    first_value_label=KgtkFormat.unstringify(value_label.split('|')[0] if '|' in value_label else value_label)
                     n2=make_node(first_value_label)
 
                     rel_label=produce_rel_label(c)
 
-                    sentence=make_sentence(first_event_label, rel_label, first_value_label)
+                    sentence=''
 
-                    question=make_question(first_event_label, rel_label)
+                    relation=make_node(c)
 
-                    label=make_node(c)
-
-                    this_row=[n1, label, n2, event_label, rel_label, value_label, '', 'AT', "1.0", "", sentence, question]
+                    this_row=[n1, relation, n2, event_label, value_label, rel_label, '', KgtkFormat.stringify('AT'), sentence]
 
                     sys.stdout.write('\t'.join(this_row) + '\n')
 

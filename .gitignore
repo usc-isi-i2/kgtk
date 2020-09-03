@@ -137,6 +137,9 @@ dmypy.json
 # MacOS file system hidden file
 .DS_Store
 
+#wikidata properties
+wikidata_props.tsv
+
 # warning log exception
 !corrupted_warning.log
 

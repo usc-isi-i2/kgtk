@@ -1,12 +1,18 @@
-"""
-Validate language qualifiers.
+"""Validate language qualifiers.
 
-TODO: Extend pour language tag recognition to RFC 3066.
+TODO: Extend our language tag recognition to RFC 3066.
 https://tools.ietf.org/html/rfc3066
 
 TODO: Cite RDF compliance:  BCP46 Section 2-2-9.
 https://tools.ietf.org/html/bcp47#section-2.2.9
 https://www.w3.org/TR/2014/REC-rdf11-concepts-20140225/#section-Graph-Literal
+
+TODO: For tull Wikimedia compatability, consider supporting Wimikedia's additional
+codes.  See the following references:
+
+https://www.wikidata.org/wiki/Help:Wikimedia_language_codes/lists/all
+https://meta.wikimedia.org/wiki/Special_language_codes
+
 """
 
 from argparse import ArgumentParser, Namespace

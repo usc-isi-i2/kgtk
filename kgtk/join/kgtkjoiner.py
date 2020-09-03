@@ -45,8 +45,9 @@ class KgtkJoiner(KgtkFormat):
     left_join_columns: typing.Optional[typing.List[str]] = attr.ib(default=None)
     right_join_columns: typing.Optional[typing.List[str]] = attr.ib(default=None)
 
-    # The prefix applied to right file column names in the output file:
-    prefix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    # The prefix applied to left and right file column names in the output file:
+    left_prefix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    right_prefix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # The field separator used in multifield joins.  The KGTK list character should be safe.
     # TODO: USE THE COLUMN SEPARATOR !!!!!
@@ -278,8 +279,8 @@ class KgtkJoiner(KgtkFormat):
         if self.verbose:
             print("Mapping the column names for the join.", file=self.error_file, flush=True)
         kmc: KgtkMergeColumns = KgtkMergeColumns()
-        kmc.merge(left_kr.column_names)
-        right_column_names: typing.List[str] = kmc.merge(right_kr.column_names, prefix=self.prefix)
+        kmc.merge(left_kr.column_names, prefix=self.left_prefix)
+        right_column_names: typing.List[str] = kmc.merge(right_kr.column_names, prefix=self.right_prefix)
         joined_column_names: typing.List[str] = kmc.column_names
 
         if self.verbose:
@@ -359,6 +360,8 @@ def main():
     parser = ArgumentParser()
     parser.add_argument(dest="left_file_path", help="The left KGTK file to join", type=Path)
     parser.add_argument(dest="right_file_path", help="The right KGTK file to join", type=Path)
+    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write", type=Path, default=None)
+
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=KgtkJoiner.FIELD_SEPARATOR_DEFAULT)
 
     parser.add_argument(      "--join-on-label", dest="join_on_label",
@@ -369,15 +372,13 @@ def main():
                               help="If both input files are edge files, include the node2 column in the join (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
     
-    parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
-
+    parser.add_argument(      "--left-prefix", dest="left_prefix", help="An optional prefix applied to left file column names in the output file (default=None).")
     parser.add_argument(      "--left-join", dest="left_join", help="Perform a left outer join (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
+    parser.add_argument(      "--left-file-join-columns", dest="left_join_columns", help="Left file join columns.", nargs='+')
 
-    parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write", type=Path, default=None)
-    parser.add_argument(      "--prefix", dest="prefix", help="An optional prefix applied to right file column names in the output file (default=None).")
+    parser.add_argument(      "--right-prefix", "--prefix", dest="right_prefix", help="An optional prefix applied to right file column names in the output file (default=None).")
     parser.add_argument(      "--right-file-join-columns", dest="right_join_columns", help="Right file join columns.", nargs='+')
-
     parser.add_argument(      "--right-join", dest="right_join", help="Perform a right outer join (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
@@ -397,6 +398,10 @@ def main():
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
+        if args.left_prefix is not None:
+            print("--left-prefix=%s" % args.left_prefix, file=error_file, flush=True)
+        if args.right_prefix is not None:
+            print("--right-prefix=%s" % args.right_prefix, file=error_file, flush=True)
         left_reader_options.show(out=error_file, who=KgtkJoiner.LEFT)
         right_reader_options.show(out=error_file, who=KgtkJoiner.RIGHT)
         value_options.show(out=error_file)
@@ -410,7 +415,8 @@ def main():
                                 join_on_node2=args.join_on_node2,
                                 left_join_columns=args.left_join_columns,
                                 right_join_columns=args.right_join_columns,
-                                prefix=args.prefix,
+                                left_prefix=args.left_prefix,
+                                right_prefix=args.right_prefix,
                                 field_separator=args.field_separator,
                                 left_reader_options=left_reader_options,
                                 right_reader_options=right_reader_options,

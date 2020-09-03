@@ -25,6 +25,8 @@ class KgtkExplode(KgtkFormat):
     reader_options: KgtkReaderOptions= attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
     value_options: KgtkValueOptions= attr.ib(validator=attr.validators.instance_of(KgtkValueOptions))
 
+    output_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)))
+
     column_name: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.NODE2)
 
     prefix: str = attr.ib(validator=attr.validators.instance_of(str), default= KgtkFormat.NODE2 + ";" + KgtkFormat.KGTK_NAMESPACE)
@@ -140,6 +142,7 @@ class KgtkExplode(KgtkFormat):
         ew: KgtkWriter = KgtkWriter.open(column_names,
                                          self.output_file_path,
                                          mode=kr.mode,
+                                         output_format=self.output_format,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,

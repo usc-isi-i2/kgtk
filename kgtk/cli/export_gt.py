@@ -54,6 +54,8 @@ def run(input_file: KGTKFiles,
         from graph_tool import load_graph_from_csv
         from graph_tool import centrality
         import kgtk.gt.analysis_utils as gtanalysis
+        import csv
+        csv.field_size_limit(sys.maxsize)
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
         output: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file)
@@ -62,13 +64,12 @@ def run(input_file: KGTKFiles,
             header = next(f).split('\t')
             subj_index = infer_index(header, options=['node1', 'subject'])
             obj_index = infer_index(header, options=['node2', 'object', 'value'])
-            predicate = infer_predicate(header, options=['property', 'predicate', 'label'])
+            predicate = infer_predicate(header, options=['relation', 'predicate', 'label', 'relationship'])
 
             p = []
             for i, header_col in enumerate(header):
                 if i in [subj_index, obj_index]: continue
                 p.append(header_col)
-
         with open(log_file, 'w') as writer:
             writer.write('loading the TSV graph now ...\n')
             G2 = load_graph_from_csv(str(filename),

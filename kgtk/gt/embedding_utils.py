@@ -409,6 +409,7 @@ class EmbeddingVector:
             # read contents
             each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
                                     "description_properties": [], "has_properties_values": []}
+
             current_process_node_id = None
 
             if self._parallel_count > 1:
@@ -505,6 +506,7 @@ class EmbeddingVector:
     def attribute_to_sentence(self, attribute_dict: dict, node_id=None):
         concated_sentence = ""
         have_isa_properties = False
+
         # sort the properties to ensure the sentence always same
         attribute_dict = {key: sorted(list(value)) for key, value in attribute_dict.items() if len(value) > 0}
         if "label_properties" in attribute_dict and len(attribute_dict["label_properties"]) > 0:
@@ -542,6 +544,7 @@ class EmbeddingVector:
             concated_sentence += " and ".join(temp)
         if "has_properties" in attribute_dict and len(attribute_dict["has_properties"]) > 0:
             temp = [self.get_real_label_name(each) for each in attribute_dict["has_properties"]]
+            temp = list(set(temp))
             if concated_sentence != "" and temp[0] != "":
                 if have_isa_properties:
                     concated_sentence += ", and has "
