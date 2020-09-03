@@ -39,3 +39,11 @@ class TestKGTKFilter(unittest.TestCase):
         for q in r_node2s:
             self.assertTrue(q in node2s)
         self.assertEqual(len(df), 27)
+
+    def test_kgtk_filter_one_row(self):
+        cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/one_row.tsv', "-p",
+                  "Q65695069;P577;^2019-07-19T00:00:00Z/11")
+
+        df = pd.read_csv(f'{self.temp_dir}/one_row.tsv', sep='\t')
+
+        self.assertEqual(len(df), 1)
