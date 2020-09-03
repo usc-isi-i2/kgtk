@@ -13,14 +13,8 @@ TODO: Add a reject file.
 """
 
 from argparse import Namespace, SUPPRESS
-from pathlib import Path
-import sys
-import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -38,10 +32,19 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    # import modules locally
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+    
     _expert: bool = parsed_shared_args._expert
 
     parser.add_input_file(positional=True)
     parser.add_output_file(positional=True)
+    parser.add_output_file(who="Reject file",
+                           dest="reject_file",
+                           options=["--reject-file"],
+                           metavar="REJECT_FILE",
+                           optional=True)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
@@ -50,6 +53,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
+        reject_file: KGTKFiles,
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
         show_options: bool = False,
@@ -58,10 +62,18 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkReaderOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+    import typing
+    
     from kgtk.exceptions import KGTKException
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
-    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
-    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    input_kgtk_file_path: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
+    reject_kgtk_file_path: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="Reject file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -72,32 +84,44 @@ def run(input_file: KGTKFiles,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("--input-file=%s" % str(input_kgtk_file), file=error_file)
-        print("--output-file=%s" % str(output_kgtk_file), file=error_file)
+        print("--input-file=%s" % str(input_kgtk_file_path), file=error_file)
+        print("--output-file=%s" % str(output_kgtk_file_path), file=error_file)
+        if reject_kgtk_file_path is not None:
+            print("--reject-file=%s" % str(reject_kgtk_file_path), file=error_file)
+            
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     if verbose:
-        if str(input_file) == "-":
-            print("Cleaning data from '%s'" % str(input_kgtk_file), file=error_file, flush=True)
-        else:
+        if str(input_kgtk_file_path) == "-":
             print ("Cleaning data from stdin", file=error_file, flush=True)
-        if str(output_file) == "-":
-            print("Writing data to '%s'" % str(output_kgtk_file), file=error_file, flush=True)
         else:
+            print("Cleaning data from '%s'" % str(input_kgtk_file_path), file=error_file, flush=True)
+        if str(output_kgtk_file_path) == "-":
             print ("Writing data to stdout", file=error_file, flush=True)
-                
+        else:
+            print("Writing data to '%s'" % str(output_kgtk_file_path), file=error_file, flush=True)
+        if str(reject_kgtk_file_path) == "-":
+            print ("Writing reject data to stdout", file=error_file, flush=True)
+        else:
+            print("Writing reject data to '%s'" % str(reject_kgtk_file_path), file=error_file, flush=True)
+
+    reject_kgtk_file: typing.Optional[typing.TextIO] = None
+    if reject_kgtk_file_path is not None:
+        reject_kgtk_file = open(reject_kgtk_file_path, mode="wt")
+
     try:
-        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
+        kr: KgtkReader = KgtkReader.open(input_kgtk_file_path,
                                          error_file=error_file,
+                                         reject_file=reject_kgtk_file,
                                          options=reader_options,
                                          value_options=value_options,
                                          verbose=verbose,
                                          very_verbose=very_verbose)
 
         kw: KgtkWriter = KgtkWriter.open(kr.column_names,
-                                         output_kgtk_file,
+                                         output_kgtk_file_path,
                                          verbose=verbose, very_verbose=very_verbose)
         
         line_count: int = 0
@@ -107,6 +131,9 @@ def run(input_file: KGTKFiles,
             line_count += 1
 
         kw.close()
+        if reject_kgtk_file is not None:
+            reject_kgtk_file.close()
+
         if verbose:
             print("Copied %d clean data lines" % line_count, file=error_file, flush=True)
         return 0

@@ -1,6 +1,7 @@
 import typing
 from kgtk.exceptions import KGTKException
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
+import sys
 
 ALL_EMBEDDING_MODELS_NAMES = [
     "bert-base-nli-cls-token",
@@ -206,6 +207,7 @@ def main(**kwargs):
                                input_format=input_format, target_properties=sentence_properties,
                                property_labels_dict=property_labels_dict)
             process.get_vectors()
+
             process.plot_result(output_properties=output_properties,
                                 input_format=input_format, output_uri=output_uri,
                                 dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
@@ -236,7 +238,7 @@ def add_arguments(parser: KGTKArgumentParser):
     # model name
     all_models_names = ALL_EMBEDDING_MODELS_NAMES
     parser.add_argument('-m', '--model', action='store', nargs='+', dest='all_models_names',
-                        default="bert-base-wikipedia-sections-mean-tokens", choices=all_models_names,
+                        default="bert-base-nli-cls-token", choices=all_models_names,
                         help="the model to used for embedding")
     # parser.add_argument('-i', '--input', action='store', nargs='+', dest='input_uris',
     #                     help="input path", )
@@ -277,7 +279,7 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument('-o', '--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
     parser.add_argument('--output-format', action='store', dest='output_format',
-                        default="kgtk", choices=("tsv_format", "kgtk_format"),
+                        default="kgtk_format", choices=("tsv_format", "kgtk_format"),
                         help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
                              "will be a tsv file, with each row contains only the vector representation of a node. Each "
                              "dimension is separated by a tab")

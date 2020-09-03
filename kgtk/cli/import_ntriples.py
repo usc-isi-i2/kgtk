@@ -4,18 +4,9 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import _MutuallyExclusiveGroup, Namespace, SUPPRESS
-from pathlib import Path
-import sys
 import typing
 
-from kgtk.kgtkformat import KgtkFormat
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.imports.kgtkntriples import KgtkNtriples
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -31,6 +22,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.imports.kgtkntriples import KgtkNtriples
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -114,12 +110,20 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    from pathlib import Path
+    import sys
+
     from kgtk.exceptions import KGTKException
+    from kgtk.imports.kgtkntriples import KgtkNtriples
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     # Select where to send error messages, defaulting to stderr.
     input_file_paths: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
-    reject_file_path: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file, who="KGTK reject file")
+    reject_file_path: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="KGTK reject file")
 
     namespace_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_input_file(namespace_file, who="KGTK namespace file")
     updated_namespace_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(updated_namespace_file, who="KGTK updated namespace file")

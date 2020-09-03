@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 import attr
 import bz2
 from enum import Enum
+import errno
 import gzip
 import json
 import lz4 # type: ignore
@@ -37,6 +38,10 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_JSONL_MAP_COMPACT: str = "jsonl-map-compact"
     OUTPUT_FORMAT_KGTK: str = "kgtk"
     OUTPUT_FORMAT_MD: str = "md"
+    OUTPUT_FORMAT_TSV: str = "tsv"
+    OUTPUT_FORMAT_TSV_CSVLIKE: str = "tsv-csvlike"
+    OUTPUT_FORMAT_TSV_UNQUOTED: str = "tsv-unquoted"
+    OUTPUT_FORMAT_TSV_UNQUOTED_EP: str = "tsv-unquoted-ep"
 
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
         OUTPUT_FORMAT_CSV,
@@ -48,6 +53,10 @@ class KgtkWriter(KgtkBase):
         OUTPUT_FORMAT_JSONL_MAP_COMPACT,
         OUTPUT_FORMAT_KGTK,
         OUTPUT_FORMAT_MD,
+        OUTPUT_FORMAT_TSV,
+        OUTPUT_FORMAT_TSV_CSVLIKE,
+        OUTPUT_FORMAT_TSV_UNQUOTED,
+        OUTPUT_FORMAT_TSV_UNQUOTED_EP,
     ]
     OUTPUT_FORMAT_DEFAULT: str = OUTPUT_FORMAT_KGTK
 
@@ -118,9 +127,13 @@ class KgtkWriter(KgtkBase):
              new_column_names: typing.Optional[typing.List[str]] = None,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
+
         if file_path is None or str(file_path) == "-":
             if verbose:
                 print("KgtkWriter: writing stdout", file=error_file, flush=True)
+
+            if output_format is None:
+                output_format = cls.OUTPUT_FORMAT_DEFAULT
 
             return cls._setup(column_names=column_names,
                               file_path=None,
@@ -169,6 +182,22 @@ class KgtkWriter(KgtkBase):
                 # TODO: throw a better exception.
                 raise ValueError("Unexpected file_path.suffiz = '%s'" % file_path.suffix)
 
+            if output_format is None:
+                if len(file_path.suffixes) < 2:
+                    output_format = cls.OUTPUT_FORMAT_DEFAULT
+                else:
+                    format_suffix: str = file_path.suffixes[-2]
+                    if format_suffix == ".md":
+                        output_format = cls.OUTPUT_FORMAT_MD
+                    elif format_suffix == ".csv":
+                        output_format = cls.OUTPUT_FORMAT_CSV
+                    elif format_suffix == ".json":
+                        output_format = cls.OUTPUT_FORMAT_JSON
+                    elif format_suffix == ".jsonl":
+                        output_format = cls.OUTPUT_FORMAT_JSONL
+                    else:
+                        output_format = cls.OUTPUT_FORMAT_DEFAULT
+
             return cls._setup(column_names=column_names,
                               file_path=file_path,
                               who=who,
@@ -192,17 +221,16 @@ class KgtkWriter(KgtkBase):
             
         else:
             if output_format is None:
-                # TODO: optionally stack these on top of compression
                 if file_path.suffix == ".md":
-                    output_format = "md"
+                    output_format = cls.OUTPUT_FORMAT_MD
                 elif file_path.suffix == ".csv":
-                    output_format = "csv"
+                    output_format = cls.OUTPUT_FORMAT_CSV
                 elif file_path.suffix == ".json":
-                    output_format = "json"
+                    output_format = cls.OUTPUT_FORMAT_JSON
                 elif file_path.suffix == ".jsonl":
-                    output_format = "jsonl"
+                    output_format = cls.OUTPUT_FORMAT_JSONL
                 else:
-                    output_format = "kgtk"
+                    output_format = cls.OUTPUT_FORMAT_DEFAULT
 
             if verbose:
                 print("KgtkWriter: writing file %s" % str(file_path), file=error_file, flush=True)
@@ -362,14 +390,86 @@ class KgtkWriter(KgtkBase):
         return kw
 
 
-    def join_csv(self, values: typing.List[str])->str:
+    def reformat_datetime(self, value: str)->str:
+        return value[1:] # Strip the datetime sigil, perhaps more reformatting later.
+
+    def join_csv(self, values: typing.List[str],
+                 unquoted: bool = False,
+                 )->str:
         line: str = ""
         value: str
         for value in values:
-            if '"' in value or ',' in value:
-                value = '"' + '""'.join(value.split('"')) + '"'
+            # TODO: Complain if the value is a KGTK List.
+            if value.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
+                value = self.reformat_datetime(value)
+
+            elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                # What if the value is a list? unstringify(...) will be
+                # unhappy.  The following hack protects strings (but not
+                # language-qualified strings) against errors, introducing
+                # an ambiguity when exporting lists:
+                value = value.replace('"|"', '|')
+                value = KgtkFormat.unstringify(value) # Lose the language code.
+                # TODO: Complain if internal newline or carriage return.
+
+                if not unquoted:
+                    value = '"' + value.replace('"', '""') + '"'
+                
+            else:
+                value = value.replace("\\|", "|")
+                if '"' in value or ',' in value:
+                    # A symbol with an internal double quote or comma: turn it into a string.
+                    value = '"' + value.replace('"', '""') + '"'
             if len(line) > 0:
                 line += ","
+            line += value
+        return line
+
+    def join_tsv(self,
+                 values: typing.List[str],
+                 unquoted: bool = False,
+                 unescape_pipe: bool = True,
+                 csvlike: bool = False,
+                 )->str:
+        line: str = ""
+        value: str
+        for value in values:
+            # TODO: Complain if the value is a KGTK List.
+            if value.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
+                value = self.reformat_datetime(value)
+
+            elif value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                if unquoted:
+                    # What if the value is a list? unstringify(...) will be
+                    # unhappy.  The following hack protects strings (but not
+                    # language-qualified strings) against errors, introducing
+                    # an ambiguity when exporting lists:
+                    value = value.replace('"|"', '|')
+                    try:
+                        value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
+                    except ValueError as e:
+                        print("Error unstringifying %s" % repr(value), file=self.error_file, flush=True)
+                        raise e
+                elif csvlike:
+                    # What if the value is a list? unstringify(...) will be
+                    # unhappy.  The following hack protects strings (but not
+                    # language-qualified strings) against errors, introducing
+                    # an ambiguity when exporting lists:
+                    value = value.replace('"|"', '|')
+                    try:
+                        value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
+                    except ValueError as e:
+                        print("Error unstringifying %s" % repr(value), file=self.error_file, flush=True)
+                        raise e
+                    value = '"' + value.replace('"', '""') + '"'
+                    
+                else:
+                    value = value.replace("\\|", "|")
+            else:
+                value = value.replace("\\|", "|")
+
+            if len(line) > 0:
+                line += "\t"
             line += value
         return line
 
@@ -381,13 +481,43 @@ class KgtkWriter(KgtkBase):
             line += " " + value + " |"
         return line
 
-    def json_map(self, values: typing.List[str], compact: bool = False)->typing.Mapping[str, str]:
-        result: typing.MutableMapping[str, str] = { }
+    def reformat_value_for_json(self, value: str)->typing.Union[str, int, float, bool]:
+        # TODO: Complain if the value is a KGTK List.
+        if value.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+            # What if the value is a list? unstringify(...) will be
+            # unhappy.  The following hack protects strings (but not
+            # language-qualified strings) against errors, introducing
+            # an ambiguity when exporting lists:
+            value = value.replace('"|"', '|')
+            return KgtkFormat.unstringify(value) # Lose the language code.
+        elif value == KgtkFormat.TRUE_SYMBOL:
+            return True
+        elif value == KgtkFormat.FALSE_SYMBOL:
+            return False
+        elif value.isdigit():
+            return int(value)
+        elif value.startswith(("+", "-")) and value[1:].isdigit():
+            return int(value)
+        else:
+            # TODO: process floating point numbers.
+            # TODO: process datetimes
+            # TODO: process geolocations
+            return value
+
+    def reformat_values_for_json(self, values: typing.List[str])->typing.List[typing.Union[str, int, float, bool]]:
+        results: typing.List[typing.Union[str, int, float, bool]] = [ ]
+        value: str
+        for value in values:
+            results.append(self.reformat_value_for_json(value))
+        return results
+
+    def json_map(self, values: typing.List[str], compact: bool = False)->typing.Mapping[str, typing.Union[str, int, float, bool]]:
+        result: typing.MutableMapping[str, typing.Union[str, int, float, bool]] = { }
         idx: int
         value: str
         for idx, value in enumerate(values):
             if len(value) > 0 or not compact:
-                result[self.output_column_names[idx]] = value
+                result[self.output_column_names[idx]] = self.reformat_value_for_json(value)
         return result
 
     def write_header(self):
@@ -425,7 +555,13 @@ class KgtkWriter(KgtkBase):
                 header += " " + col + " |"
                 header2 += " -- |"
             
-        elif self.output_format in [self.OUTPUT_FORMAT_KGTK, self.OUTPUT_FORMAT_CSV]:
+        elif self.output_format in [self.OUTPUT_FORMAT_KGTK,
+                                    self.OUTPUT_FORMAT_CSV,
+                                    self.OUTPUT_FORMAT_TSV,
+                                    self.OUTPUT_FORMAT_TSV_CSVLIKE,
+                                    self.OUTPUT_FORMAT_TSV_UNQUOTED,
+                                    self.OUTPUT_FORMAT_TSV_UNQUOTED_EP,
+                                    ]:
             header = self.column_separator.join(column_names)
         else:
             raise ValueError("KgtkWriter: header: Unrecognized output format '%s'." % self.output_format)
@@ -435,13 +571,21 @@ class KgtkWriter(KgtkBase):
             print("header: %s" % header, file=self.error_file, flush=True)
         self.writeline(header)
         if header2 is not None:
+            if self.verbose:
+                print("header2: %s" % header2, file=self.error_file, flush=True)
             self.writeline(header2)
 
     def writeline(self, line: str):
         if self.gzip_thread is not None:
             self.gzip_thread.write(line + "\n") # Todo: use system end-of-line sequence?
         else:
-            self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
+            try:
+                self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
+            except IOError as e:
+                if e.errno == errno.EPIPE:
+                    pass # TODO: propogate a close backwards.
+                else:
+                    raise e
 
     # Write the next list of edge values as a list of strings.
     # TODO: Convert integers, coordinates, etc. from Python types
@@ -479,12 +623,20 @@ class KgtkWriter(KgtkBase):
                                                                                                 len(values) - self.column_count, line))
         if self.output_format == self.OUTPUT_FORMAT_KGTK:
             self.writeline(self.column_separator.join(values))
+        elif self.output_format == self.OUTPUT_FORMAT_TSV:
+            self.writeline(self.join_tsv(values))
+        elif self.output_format == self.OUTPUT_FORMAT_TSV_UNQUOTED:
+            self.writeline(self.join_tsv(values, unquoted=True))
+        elif self.output_format == self.OUTPUT_FORMAT_TSV_UNQUOTED_EP:
+            self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False))
+        elif self.output_format == self.OUTPUT_FORMAT_TSV_CSVLIKE:
+            self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False, csvlike=True))
         elif self.output_format == self.OUTPUT_FORMAT_CSV:
             self.writeline(self.join_csv(values))
         elif self.output_format == self.OUTPUT_FORMAT_MD:
             self.writeline(self.join_md(values))
         elif self.output_format == self.OUTPUT_FORMAT_JSON:
-            self.writeline(json.dumps(values, indent=None, separators=(',', ':')) + ",")
+            self.writeline(json.dumps(self.reformat_values_for_json(values), indent=None, separators=(',', ':')) + ",")
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
             self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')) + ",")
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
@@ -505,7 +657,13 @@ class KgtkWriter(KgtkBase):
 
     def flush(self):
         if self.gzip_thread is None:
-            self.file_out.flush()
+            try:
+                self.file_out.flush()
+            except IOError as e:
+                if e.errno == errno.EPIPE:
+                    pass # Ignore.
+                else:
+                    raise e
 
     def close(self):
         if self.output_format == "json":
@@ -516,8 +674,13 @@ class KgtkWriter(KgtkBase):
         if self.gzip_thread is not None:
             self.gzip_thread.close()
         else:
-            self.file_out.close()
-
+            try:
+                self.file_out.close()
+            except IOError as e:
+                if e.errno == errno.EPIPE:
+                    pass # Ignore.
+                else:
+                    raise e
 
     def writemap(self, value_map: typing.Mapping[str, str]):
         """

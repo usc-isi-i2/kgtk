@@ -21,6 +21,7 @@ import attr
 import bz2
 from enum import Enum
 import gzip
+import io
 import lz4 # type: ignore
 import lzma
 from multiprocessing import Process, Queue
@@ -52,6 +53,16 @@ class KgtkReaderOptions():
     ERROR_LIMIT_DEFAULT: int = 1000
     GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
 
+    # TODO: use an enum
+    INPUT_FORMAT_CSV: str = "csv"
+    INPUT_FORMAT_KGTK: str = "kgtk"
+
+    INPUT_FORMAT_CHOICES: typing.List[str] = [
+        INPUT_FORMAT_CSV,
+        INPUT_FORMAT_KGTK,
+    ]
+    INPUT_FORMAT_DEFAULT: str = INPUT_FORMAT_KGTK
+    
     mode: KgtkReaderMode = attr.ib(validator=attr.validators.instance_of(KgtkReaderMode), default=KgtkReaderMode.AUTO)
 
     # The column separator is normally tab.
@@ -106,6 +117,7 @@ class KgtkReaderOptions():
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # Other implementation options?
+    input_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
     compression_type: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
@@ -160,6 +172,10 @@ class KgtkReaderOptions():
                             type=str, **d(default=KgtkFormat.COLUMN_SEPARATOR))
 
         # TODO: use an Enum or add choices.
+        fgroup.add_argument(prefix1 + "input-format",
+                            dest=prefix2 + "input_format",
+                            help=h(prefix3 + "Specify the input format (default=%(default)s)."))
+
         fgroup.add_argument(prefix1 + "compression-type",
                             dest=prefix2 + "compression_type",
                             help=h(prefix3 + "Specify the compression type (default=%(default)s)."))
@@ -280,7 +296,7 @@ class KgtkReaderOptions():
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
         lgroup.add_argument(prefix1 + "prohibited-list-action",
-                            dest=prefix2 + "prohibited list_action",
+                            dest=prefix2 + "prohibited_list_action",
                             help=h(prefix3 + "The action to take when a data cell contains a prohibited list (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.COMPLAIN))
 
@@ -331,6 +347,7 @@ class KgtkReaderOptions():
             blank_required_field_line_action=lookup("blank_required_field_line_action", ValidationAction.EXCLUDE),
             column_separator=lookup("column_separator", KgtkFormat.COLUMN_SEPARATOR),
             comment_line_action=lookup("comment_line_action", ValidationAction.EXCLUDE),
+            input_format=lookup("input_format", None),
             compression_type=lookup("compression_type", None),
             empty_line_action=lookup("empty_line_action", ValidationAction.EXCLUDE),
             error_limit=lookup("error_limit", cls.ERROR_LIMIT_DEFAULT),
@@ -395,12 +412,13 @@ class KgtkReaderOptions():
         print("%sprohibited-list-action=%s" % (prefix, self.prohibited_list_action.name), file=out)
         print("%sfill-short-lines=%s" % (prefix, str(self.fill_short_lines)), file=out)
         print("%struncate-long-lines=%s" % (prefix, str(self.truncate_long_lines)), file=out)
+        if self.input_format is not None:
+            print("%sinput-format=%s" % (prefix, str(self.input_format)), file=out)
         if self.compression_type is not None:
             print("%scompression-type=%s" % (prefix, str(self.compression_type)), file=out)
         print("%sgzip-in-parallel=%s" % (prefix, str(self.gzip_in_parallel)), file=out)
         print("%sgzip-queue-size=%s" % (prefix, str(self.gzip_queue_size)), file=out)
               
-        
 
 DEFAULT_KGTK_READER_OPTIONS: KgtkReaderOptions = KgtkReaderOptions()
 
@@ -424,6 +442,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     column_name_map: typing.Mapping[str, int] = attr.ib(validator=attr.validators.deep_mapping(key_validator=attr.validators.instance_of(str),
                                                                                                value_validator=attr.validators.instance_of(int)))
 
+    # A copy of the raw header line for use by the reject file.
+    header: str = attr.ib(validator=attr.validators.instance_of(str))
+
     # The actual mode used.
     #
     # TODO: fix the validator.
@@ -445,6 +466,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     # Is this an edge file or a node file?
     is_edge_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     is_node_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Reject file
+    reject_file: typing.Optional[typing.TextIO] = attr.ib(default=None)
+    reject_line_count: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # Feedback and error output:
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
@@ -470,6 +495,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
              file_path: typing.Optional[Path],
              who: str = "input",
              error_file: typing.TextIO = sys.stderr,
+             reject_file: typing.Optional[typing.TextIO] = None,
              mode: typing.Optional[KgtkReaderMode] = None,
              options: typing.Optional[KgtkReaderOptions] = None,
              value_options: typing.Optional[KgtkValueOptions] = None,
@@ -581,12 +607,14 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                    column_names=column_names,
                    column_name_map=column_name_map,
                    column_count=len(column_names),
+                   header=header,
                    mode=mode,
                    node1_column_idx=node1_column_idx,
                    label_column_idx=label_column_idx,
                    node2_column_idx=node2_column_idx,
                    id_column_idx=id_column_idx,
                    error_file=error_file,
+                   reject_file=reject_file,
                    options=options,
                    value_options=value_options,
                    is_edge_file=is_edge_file,
@@ -643,6 +671,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     print("%s: reading stdin" % who, file=error_file, flush=True)
                 return ClosableIterTextIOWrapper(sys.stdin)
 
+        if str(file_path).startswith("<"):
+            fd: int = int(str(file_path)[1:])
+            if verbose:
+                print("%s: reading file descriptor %d" % (who, fd), file=error_file, flush=True)
+            return ClosableIterTextIOWrapper(open(fd, "r"))
+
         if verbose:
             print("%s: File_path.suffix: %s" % (who, file_path.suffix), file=error_file, flush=True)
 
@@ -687,6 +721,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 print("header: %s" % header, file=error_file, flush=True)
 
             # Split the first line into column names.
+            #
+            # TODO: if options.input_format == KgtkReaderOptions.INPUT_FORMAT_CSV, be smarter.
             return header, header.split(options.column_separator)
         else:
             # Skip the first record to override the column names in the file.
@@ -730,6 +766,62 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             raise ValueError("Too many data errors, exiting.")
         return result
 
+    def reject(self, line):
+        if self.reject_file is None:
+            return
+
+        if self.reject_line_count == 0:
+            if self.header.endswith("\n") or self.header.endswith("\r"):
+                self.reject_file.write(self.header)
+            else:
+                print("%s" % self.header, file=self.reject_file)
+        self.reject_line_count += 1            
+        
+        if line.endswith("\n") or line.endswith("\r"):
+            self.reject_file.write(line)
+        else:
+            print("%s" % line, file=self.reject_file)
+
+    def csvsplit(self, line: str)->typing.List[str]:
+        row: typing.List[str] = [ ]
+        item: str = ""
+        c: str
+        instring: bool = False
+        sawstring:bool = False
+        for c in line:
+            if instring:
+                if c == '"':
+                    # TODO: optionally look for escaped characters.
+                    instring = False
+                    sawstring = True
+                else:
+                    item += c
+            else:
+                if c == '"':
+                    instring = True
+                    if sawstring:
+                        item += c
+                elif c == ",":
+                    if sawstring:
+                        row.append(KgtkFormat.stringify(item))
+                    else:
+                        row.append(item)
+                    item = ""
+                else:
+                    item += c
+                sawstring = False
+
+        if sawstring:
+            row.append(KgtkFormat.stringify(item))
+        else:
+            row.append(item)
+
+        # for x in row:
+        #     print("X: '%s'" % x, file=sys.stderr, flush=True)
+                    
+        return row
+        
+
     # Get the next edge values as a list of strings.
     def nextrow(self)-> typing.List[str]:
         row: typing.List[str]
@@ -744,6 +836,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             tail_skip_count: int = self.options.record_limit - self.options.tail_count
             if tail_skip_count > skip_count:
                 skip_count = tail_skip_count # Take the larger skip count.
+
+        input_format: str
+        if self.options.input_format is None:
+            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
+        else:
+            input_format = self.options.input_format
 
         # This loop accomodates lines that are ignored.
         while (True):
@@ -789,19 +887,25 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 # Ignore empty lines.
                 if self.options.empty_line_action != ValidationAction.PASS and len(line) == 0:
                     if self.exclude_line(self.options.empty_line_action, "saw an empty line", line):
+                        self.reject(line)
                         continue
 
                 # Ignore comment lines:
                 if self.options.comment_line_action != ValidationAction.PASS  and line[0] == self.COMMENT_INDICATOR:
                     if self.exclude_line(self.options.comment_line_action, "saw a comment line", line):
+                        self.reject(line)
                         continue
 
                 # Ignore whitespace lines
                 if self.options.whitespace_line_action != ValidationAction.PASS and line.isspace():
                     if self.exclude_line(self.options.whitespace_line_action, "saw a whitespace line", line):
+                        self.reject(line)
                         continue
 
-            row = line.split(self.options.column_separator)
+            if input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
+                row = self.csvsplit(line)
+            else:
+                row = line.split(self.options.column_separator)
 
             if repair_and_validate_lines:
                 # Optionally fill missing trailing columns with empty row:
@@ -822,6 +926,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                 len(row),
                                                                                 line),
                                          line):
+                        self.reject(line)
                         continue
                              
                 if self.options.long_line_action != ValidationAction.PASS and len(row) > self.column_count:
@@ -831,9 +936,11 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                            len(row) - self.column_count,
                                                                                            line),
                                          line):
+                        self.reject(line)
                         continue
 
                 if self._ignore_if_blank_fields(row, line):
+                    self.reject(line)
                     continue
 
             if repair_and_validate_values:
@@ -842,10 +949,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     # so we don't have to create them a second time in the conversion
                     # and iterator methods below.
                     if self._ignore_invalid_values(row, line):
+                        self.reject(line)
                         continue
 
                 if self.options.prohibited_list_action != ValidationAction.PASS:
                     if self._ignore_prohibited_lists(row, line):
+                        self.reject(line)
                         continue
 
             self.data_lines_passed += 1
@@ -1048,22 +1157,32 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         validation problems, we might want to emit error messages and we might
         want to ignore the entire row.
 
+        If self.verbose is True, we use StringIO to capture additional error messages
+        from KgtkValue validation.
+
         Returns True to indicate that the row should be ignored (skipped).
 
         """
+        error_file: typing.Optional[io.StringIO] = None
         problems: typing.List[str] = [ ] # Build a list of problems.
         idx: int
         item: str
         for idx, item in enumerate(row):
             if len(item) > 0: # Optimize the common case of empty columns.
-                kv: KgtkValue = KgtkValue(item, options=self.value_options)
+                if self.verbose:
+                    error_file = io.StringIO()
+                kv: KgtkValue = KgtkValue(item, options=self.value_options, error_file=self.error_file, verbose=self.verbose)
                 if not kv.is_valid():
-                    problems.append("col %d (%s) value '%s'is an %s" % (idx, self.column_names[idx], item, kv.describe()))
+                    if error_file is not None:
+                        problems.append("col %d (%s) value %s: %s" % (idx, self.column_names[idx], repr(item), error_file.getvalue().rstrip()))
+                    problems.append("col %d (%s) value %s is an %s" % (idx, self.column_names[idx], repr(item), kv.describe()))
                 if kv.repaired:
                     # If this value was repaired, update the item in the row.
                     #
                     # Warning: We expect this change to be seen by the caller.
                     row[idx] = kv.value
+                if error_file is not None:
+                    error_file.close()
 
         if len(problems) == 0:
             return False

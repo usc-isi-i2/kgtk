@@ -82,6 +82,7 @@ class Unique(KgtkFormat):
             print("Counting unique values from the %s column in %s" % (self.column_name, self.input_file_path), file=self.error_file, flush=True)
         input_line_count: int = 0
         skip_line_count: int = 0
+        empty_value_count: int = 0
 
         value_counts: typing.MutableMapping[str, int] = { }
         
@@ -98,12 +99,14 @@ class Unique(KgtkFormat):
             if len(value) > 0:
                 value = self.prefix + value
                 value_counts[value] = value_counts.get(value, 0) + 1
+            else:
+                empty_value_count += 1
                 
         if self.verbose:
             print("Read %d records, skipped %d, found %d unique non-empty values, %d empty values." % (input_line_count,
                                                                                                        skip_line_count,
                                                                                                        len(value_counts),
-                                                                                                       input_line_count - len(value_counts)),
+                                                                                                       empty_value_count),
                   file=self.error_file, flush=True)
 
         # No node mode we can't open the output file until we are done reading
@@ -144,6 +147,9 @@ class Unique(KgtkFormat):
             ew.write(row)
         else:
             raise ValueError("Unknown output format %s" % str(self.output_format))
+
+        if self.verbose:
+            print("There were %d unique values." % len(value_counts), file=self.error_file, flush=True)
 
         ew.close()
        

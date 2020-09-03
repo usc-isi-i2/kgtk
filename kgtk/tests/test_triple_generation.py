@@ -5,8 +5,6 @@ from pathlib import Path
 
 
 class TestTripleGeneration(unittest.TestCase):
-
-
     def test_truthy_dates_generation(self):
         # to reproduce standard file
         # kgtk generate_wikidata_triples -pf wikidata_properties.tsv -w yes --log-path date_warning.log -n 100 --use-id yes -gt yes < dates.tsv > dates_truthy.ttl

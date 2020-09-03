@@ -52,6 +52,7 @@ class Generator:
         self.to_append_statement_id = None
         self.corrupted_statement_id = None
         self.to_append_statement = None # for Json generator
+        self.wiki_import_prop_types = set(["wikipedia_sitelink","language"])
     def serialize(self):
         raise NotImplemented
     def finalize(self):
@@ -62,7 +63,7 @@ class Generator:
         self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(alias_set.split(",")), set(description_set.split(","))
     
     def initialize_order_map(self, edge:str):
-        edge_list = edge.strip("\n").split("\t")
+        edge_list = edge.strip("\r\n").split("\t")
         node1_index = edge_list.index("node1")
         node2_index = edge_list.index("node2")
         prop_index = edge_list.index("label")
@@ -75,14 +76,21 @@ class Generator:
             self.order_map["node2"] = node2_index
             self.order_map["label"] = prop_index
             self.order_map["id"] = id_index
+            if hasattr(self, 'has_rank') and self.has_rank == True: 
+                rank_index = edge_list.index("rank")
+                self.order_map["rank"] = rank_index
+            
     
     def parse_edges(self,edge:str):
         # use the order_map to map the node
-        edge_list = edge.strip("\n").split("\t")
-        node1 = edge_list[self.order_map["node1"]].strip()
-        node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["label"]].strip()
-        e_id = edge_list[self.order_map["id"]].strip()  
+        edge_list = edge.strip("\r\n").split("\t")
+        try:
+            node1 = edge_list[self.order_map["node1"]].strip()
+            node2 = edge_list[self.order_map["node2"]].strip()
+            prop = edge_list[self.order_map["label"]].strip()
+            e_id = edge_list[self.order_map["id"]].strip()  
+        except:
+            print(edge_list)
         return node1, node2, prop, e_id
 
     @staticmethod
@@ -197,7 +205,7 @@ class TripleGenerator(Generator):
         if prefix_path != "NONE":
             with open(prefix_path,"r") as fp:
                 for line_num, edge in enumerate(fp):
-                    edge_list = edge.strip("\n").split("\t")
+                    edge_list = edge.strip("\r\n").split("\t")
                     if line_num == 0:
                         node1_index, node2_index = edge_list.index("node1"), edge_list.index("node2")
                     else:
@@ -515,6 +523,7 @@ class JsonGenerator(Generator):
         super().__init__(**kwargs)
         self.prop_declaration = kwargs.pop("prop_declaration")
         self.output_prefix = kwargs.pop("output_prefix")
+        self.has_rank = kwargs.pop("has_rank")
         self.file_num = 0
         # this data_type mapping is to comply with the SQID UI parsing requirements
         self.datatype_mapping = {
@@ -546,21 +555,23 @@ class JsonGenerator(Generator):
             "Url": "url"
         }
         self.set_properties(self.prop_file)
-        # curret dictionaries
         self.set_json_dict()
         self.previous_qnode = None
 
     def entry_point(self,line_number, edge):
         self.read_num_of_lines += 1
         if line_number == 1:
-            # initialize the order_map
             self.initialize_order_map(edge)
             return
-        edge_list = edge.strip("\n").split("\t")
+        edge_list = edge.strip("\r\n").split("\t")
         node1 = edge_list[self.order_map["node1"]].strip()
         node2 = edge_list[self.order_map["node2"]].strip()
         prop = edge_list[self.order_map["label"]].strip()
         e_id = edge_list[self.order_map["id"]].strip()
+        if self.has_rank:
+            rank = edge_list[self.order_map["rank"]].strip()
+        else:
+            rank = "normal" #TODO default rank
 
         # property declaration
         if prop == "data_type":
@@ -611,26 +622,26 @@ class JsonGenerator(Generator):
         
         # update label_json_dict
         if prop in self.label_set:
-            success = self.update_misc_json_dict(node1, prop, node2, line_number, "label")
+            success = self.update_misc_json_dict(node1, prop, node2, line_number, rank,"label")
             assert(success)
             return
         
         # update alias and descriptions
         if prop in self.description_set:
-            success = self.update_misc_json_dict(node1, prop, node2, line_number,"description")
+            success = self.update_misc_json_dict(node1, prop, node2, line_number, rank, "description")
             assert(success)
             return 
 
         if prop in self.alias_set:
-            success = self.update_misc_json_dict(node1, prop, node2, line_number,"alias")
+            success = self.update_misc_json_dict(node1, prop, node2, line_number, rank, "alias")
             assert(success)
             return 
         
         # normal update for claims & qualifiers
         if is_qualifier_edge:
-            success = self.update_misc_json_dict(node1,prop,node2,line_number,"qualifier")
+            success = self.update_misc_json_dict(node1,prop,node2,line_number, rank, "qualifier")
         else:
-            success = self.update_misc_json_dict(node1,prop,node2,line_number,"statement")
+            success = self.update_misc_json_dict(node1,prop,node2,line_number, rank, "statement")
         
         if (not success) and self.warning:
             if not is_qualifier_edge:
@@ -664,27 +675,6 @@ class JsonGenerator(Generator):
         self.misc_json_dict[node]["type"] = label_type
         self.misc_json_dict[node]["id"] = node
 
-    # def update_misc_json_dict_label(self,node1:str, prop:str, node2:str):
-    #     if node1 not in self.misc_json_dict:
-    #         self.init_entity_in_json(node1)
-    #     temp_dict = {}
-    #     if node1 not in self.prop_types:
-    #         label_type = "item"
-    #     else:
-    #         label_type = "property"
-    #         label_datatype = self.prop_types[node1]
-    #         temp_dict["datatype"] = label_datatype
-    #     temp_dict["type"] = label_type
-
-    #     temp_dict["id"] = node1
-    #     temp_dict["labels"] = {}
-    #     if node2 != None:
-    #         text_string, lang = JsonGenerator.process_text_string(node2)
-    #         temp_dict["labels"][lang] = {"language":lang, "value": text_string}
-    #     self.misc_json_dict[node1].update(temp_dict)  
-
-    #     return True
-
     def update_misc_json_dict_info(self, node:str, line_number: int, data_type = None):
         if node not in self.misc_json_dict:
             self.init_entity_in_json(node)
@@ -714,7 +704,7 @@ class JsonGenerator(Generator):
             if self.warning:
                 self.warn_log.write("node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number)) 
         return True
-    def update_misc_json_dict(self, node1:str, prop:str, node2:str, line_number:int, field:str):
+    def update_misc_json_dict(self, node1:str, prop:str, node2:str, line_number:int, rank: str, field:str):
         if node1 not in self.misc_json_dict and field != "qualifier":
             self.init_entity_in_json(node1)
         
@@ -745,30 +735,34 @@ class JsonGenerator(Generator):
             is_qualifier_edge = True
         
         if prop not in self.prop_types:
-            raise KGTKException("property {} at line {} is not defined.".format(prop,line_number))
+            if prop in self.wiki_import_prop_types:
+                if self.warning:
+                    self.warn_log.write("Property {} created by wikidata json dump at line {} is skipped.\n".format(prop,line_number))
+                return True
+            else:
+                raise KGTKException("property {} at line {} is not defined.".format(prop,line_number))
         
         if not is_qualifier_edge:
             if prop not in self.misc_json_dict[node1]["claims"]:
                     self.misc_json_dict[node1]["claims"][prop] = []
-        
         try:
             if self.prop_types[prop] == "wikibase-item":
-                object = self.update_misc_json_dict_item(node1, prop, node2, is_qualifier_edge)
+                object = self.update_misc_json_dict_item(node1, prop, node2, rank, is_qualifier_edge)
             elif self.prop_types[prop] == "time":
                 # print("matched date format yyyy-mm-dd",node1,prop,node2,is_qualifier_edge)
-                object = self.update_misc_json_dict_time(node1,prop,node2,is_qualifier_edge)
+                object = self.update_misc_json_dict_time(node1, prop, node2, rank, is_qualifier_edge)
             elif self.prop_types[prop] == "globe-coordinate":
-                object = self.update_misc_json_dict_coordinate(node1,prop,node2,is_qualifier_edge)
+                object = self.update_misc_json_dict_coordinate(node1,prop,node2,rank,is_qualifier_edge)
             elif self.prop_types[prop] == "quantity":
-                object = self.update_misc_json_dict_quantity(node1,prop,node2,is_qualifier_edge)
+                object = self.update_misc_json_dict_quantity(node1,prop,node2,rank,is_qualifier_edge)
             elif self.prop_types[prop] == "monolingualtext":
-                object = self.update_misc_json_dict_monolingualtext(node1,prop,node2,is_qualifier_edge)
+                object = self.update_misc_json_dict_monolingualtext(node1,prop,node2,rank,is_qualifier_edge)
             elif self.prop_types[prop] == "string":
-                object = self.update_misc_json_dict_string(node1,prop,node2,is_qualifier_edge)
+                object = self.update_misc_json_dict_string(node1,prop,node2,rank,is_qualifier_edge)
             elif self.prop_types[prop] == "external-id":
-                object = self.update_misc_json_dict_external_id(node1,prop,node2,is_qualifier_edge)
+                object = self.update_misc_json_dict_external_id(node1,prop,node2,rank,is_qualifier_edge)
             elif self.prop_types[prop] == "url":
-                object = self.update_misc_json_dict_url(node1,prop,node2,is_qualifier_edge)
+                object = self.update_misc_json_dict_url(node1,prop,node2,rank,is_qualifier_edge)
             else:
                 raise KGTKException("property tyepe {} of property {} at line {} is not defined.".format(self.prop_types[prop],prop,line_number)) 
             
@@ -784,20 +778,17 @@ class JsonGenerator(Generator):
                     self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers"][prop].append(object)
                 else:
                     self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers"][prop] = [object]
-                
-                # update qualifier order
                 if prop not in (self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers-order"]):
 
                     self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers-order"].append(prop)
             else:
                 self.misc_json_dict[node1]["claims"][prop].append(object)
-            
             return True
 
         except:
             raise KGTKException("illegal edge at line {}.".format(line_number))
     
-    def update_misc_json_dict_item(self,node1:str,prop:str,node2:str, is_qualifier_edge:bool):
+    def update_misc_json_dict_item(self,node1:str,prop:str,node2:str, rank:str, is_qualifier_edge:bool):
         if not is_qualifier_edge:
             temp_item_dict = {
                     "mainsnak":{
@@ -806,15 +797,17 @@ class JsonGenerator(Generator):
                         "hash":"",
                         "datavalue":{
                             "value":{
-                                "entity-type":"item","numeric-id":0,"id":node2 # place holder for numeric id
+                                "entity-type":"item",
+                                "numeric-id":0,
+                                "id":node2
                             },
                             "type":"wikibase-entityid"
                         },
                         "datatype":"wikibase-item"
                     },
                     "type":"statement",
-                    "id":"",
-                    "rank":"normal", #TODO
+                    "id":node1 + prop + node2,
+                    "rank": rank, #TODO
                     "references":[],
                     "qualifiers":{},
                     "qualifiers-order":[]
@@ -826,7 +819,9 @@ class JsonGenerator(Generator):
                         "hash":"",
                         "datavalue":{
                             "value":{
-                                "entity-type":"item","numeric-id":0,"id": node2 # place holder for numeric id
+                                "entity-type":"item",
+                                "numeric-id":0,
+                                "id": node2
                             },
                             "type":"wikibase-entityid"
                         },
@@ -834,7 +829,7 @@ class JsonGenerator(Generator):
                     }
         return temp_item_dict
 
-    def update_misc_json_dict_time(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+    def update_misc_json_dict_time(self,node1:str,prop:str,node2:str, rank:str, is_qualifier_edge:bool):
         if self.yyyy_mm_dd_pattern.match(node2):
             time_string = node2 + "-00-00T00:00:00Z"
             precision = 11
@@ -844,6 +839,10 @@ class JsonGenerator(Generator):
         else:
             try:
                 time_string, precision = node2.split("/")
+                if time_string.startswith("^"):
+                    time_string = time_string[1:]
+                if time_string.startswith("+"):
+                    time_string = time_string[1:]
                 precision = int(precision)
             except:
                 return None
@@ -867,8 +866,8 @@ class JsonGenerator(Generator):
                     "datatype":"time"
                 },
                 "type":"statement",
-                "id":"",
-                "rank":"normal", #TODO
+                "id":node1 + prop + node2,
+                "rank":rank, #TODO
                 "references":[],
                 "qualifiers":{},
                 "qualifiers-order":[]
@@ -893,7 +892,7 @@ class JsonGenerator(Generator):
                 }
         return temp_time_dict
 
-    def update_misc_json_dict_coordinate(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+    def update_misc_json_dict_coordinate(self,node1:str,prop:str,node2:str,rank:str,is_qualifier_edge:bool):
         try:
             latitude, longitude = node2[1:].split("/")
             latitude = float(latitude)
@@ -911,7 +910,7 @@ class JsonGenerator(Generator):
                             "latitude":latitude,
                             "longitude": longitude,
                             "altitude": None,
-                            "precision": 0.00027777777777778, # TODO
+                            "precision": 0.01, # TODO
                             "globe": "http://www.wikidata.org/entity/Q2"    
                         },
                         "type":"globecoordinate"
@@ -919,8 +918,8 @@ class JsonGenerator(Generator):
                     "datatype":"globecoordinate"
                 },
                 "type":"statement",
-                "id":"",
-                "rank":"normal", #TODO
+                "id":node1+prop+node2,
+                "rank":rank,
                 "references":[],
                 "qualifiers":{},
                 "qualifiers-order":[]
@@ -935,7 +934,7 @@ class JsonGenerator(Generator):
                             "latitude":latitude,
                             "longitude": longitude,
                             "altitude": None,
-                            "precision": 0.00027777777777778, # TODO
+                            "precision": 0.01, # TODO
                             "globe": "http://www.wikidata.org/entity/Q2"    
                         },
                         "type":"globecoordinate"
@@ -944,7 +943,7 @@ class JsonGenerator(Generator):
             }
         return temp_coordinate_dict
 
-    def update_misc_json_dict_quantity(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+    def update_misc_json_dict_quantity(self,node1:str,prop:str,node2:str,rank:str,is_qualifier_edge:bool):
         try:
             res = self.quantity_pattern.match(node2).groups()
             amount, lower_bound, upper_bound, unit = res
@@ -972,8 +971,8 @@ class JsonGenerator(Generator):
                     "datatype":"quantity"
                 },
                 "type":"statement",
-                "id":"",
-                "rank":"normal", #TODO
+                "id":node1 + prop + node2,
+                "rank":rank,
                 "references":[],
                 "qualifiers":{},
                 "qualifiers-order":[]
@@ -996,7 +995,7 @@ class JsonGenerator(Generator):
                 }
         return temp_quantity_dict
   
-    def update_misc_json_dict_monolingualtext(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+    def update_misc_json_dict_monolingualtext(self,node1:str,prop:str,node2:str, rank:str, is_qualifier_edge:bool):
         text_string, lang = JsonGenerator.process_text_string(node2)
         if not is_qualifier_edge:
             temp_mono_dict ={
@@ -1014,8 +1013,8 @@ class JsonGenerator(Generator):
                         "datatype":"monolingualtext"
                     },
                     "type":"statement",
-                    "id":"",
-                    "rank":"normal", #TODO
+                    "id": node1 + prop + node2,
+                    "rank":rank,
                     "references":[],
                     "qualifiers":{},
                     "qualifiers-order":[]
@@ -1036,7 +1035,7 @@ class JsonGenerator(Generator):
                     }
         return temp_mono_dict
  
-    def update_misc_json_dict_string(self,node1:str,prop:str,node2:str,is_qualifier_edge:bool):
+    def update_misc_json_dict_string(self,node1:str,prop:str,node2:str,rank:str,is_qualifier_edge:bool):
         string, lang = JsonGenerator.process_text_string(node2)
         if not is_qualifier_edge:
             temp_string_dict = {
@@ -1048,8 +1047,8 @@ class JsonGenerator(Generator):
                 "datatype": "string"
                 },
                 "type": "statement",
-                "id": "",
-                "rank": "normal",
+                "id": node1 + prop + node2,
+                "rank": rank,
                 "references":[],
                 "qualifiers":{},
                 "qualifiers-order":[]
@@ -1064,7 +1063,7 @@ class JsonGenerator(Generator):
                 }
         return temp_string_dict
 
-    def update_misc_json_dict_external_id(self,node1:str, prop:str ,node2:str, is_qualifier_edge: bool):
+    def update_misc_json_dict_external_id(self,node1:str, prop:str ,node2:str, rank:str, is_qualifier_edge: bool):
 
         if not is_qualifier_edge: 
             temp_e_id_dict = {"mainsnak": {
@@ -1075,8 +1074,8 @@ class JsonGenerator(Generator):
                 "datatype": "external-id"
             },
             "type": "statement",
-            "id": "",
-            "rank": "normal",            
+            "id": node1 + prop + node2,
+            "rank": rank,            
             "references":[],
             "qualifiers":{},
             "qualifiers-order":[]
@@ -1091,7 +1090,7 @@ class JsonGenerator(Generator):
             }
         return temp_e_id_dict
 
-    def update_misc_json_dict_url(self,node1:str ,prop:str ,node2: str, is_qualifier_edge: bool):
+    def update_misc_json_dict_url(self,node1:str ,prop:str ,node2: str, rank:str, is_qualifier_edge: bool):
         if not is_qualifier_edge:
             temp_url_dict ={
             "mainsnak": {
@@ -1105,8 +1104,8 @@ class JsonGenerator(Generator):
                 "datatype": "url"
             },
             "type": "statement",
-            "id": "",
-            "rank": "normal",            
+            "id": node1 + prop + node2,
+            "rank": rank,            
             "references":[],
             "qualifiers":{},
             "qualifiers-order":[]

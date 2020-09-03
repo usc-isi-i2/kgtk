@@ -1,4 +1,4 @@
-sh
+sh>=1.13
 attrs
 lz4
 iso-639

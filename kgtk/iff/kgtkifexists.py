@@ -46,7 +46,8 @@ class KgtkIfExists(KgtkFormat):
     filter_keys: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                                                              iterable_validator=attr.validators.instance_of(list))))
 
-    output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
+    reject_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
@@ -60,6 +61,8 @@ class KgtkIfExists(KgtkFormat):
     input_reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
     filter_reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
+
+    show_version: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -144,9 +147,11 @@ class KgtkIfExists(KgtkFormat):
                                 filter_kr: KgtkReader,
                                 input_key_columns: typing.List[int],
                                 filter_key_columns: typing.List[int],
-                                ew: KgtkWriter):
+                                ew: typing.Optional[KgtkWriter],
+                                rew: typing.Optional[KgtkWriter],
+    ):
         if self.verbose:
-            print("Processing by cacheing the filter file's key set..")
+            print("Processing by cacheing the filter file's key set.", file=self.error_file, flush=True)
 
         if self.verbose:
             print("Building the filter key set from %s" % self.filter_file_path, file=self.error_file, flush=True)
@@ -159,7 +164,8 @@ class KgtkIfExists(KgtkFormat):
         if self.verbose:
             print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
         input_line_count: int = 0
-        output_line_count: int = 0;
+        accept_line_count: int = 0;
+        reject_line_count: int = 0;
 
         # TODO: join these two code paths using xor?
         row: typing.List[str]
@@ -169,18 +175,29 @@ class KgtkIfExists(KgtkFormat):
                 input_line_count += 1
                 input_key = self.build_key(row, input_key_columns)
                 if input_key not in key_set:
-                    ew.write(row)
-                    output_line_count += 1
+                    accept_line_count += 1
+                    if ew is not None:
+                        ew.write(row)
+                else:
+                    reject_line_count += 1
+                    if rew is not None:
+                        rew.write(row)
         else:
             for row in input_kr:
                 input_line_count += 1
                 input_key = self.build_key(row, input_key_columns)
                 if input_key in key_set:
-                    ew.write(row)
-                    output_line_count += 1
+                    accept_line_count += 1
+                    if ew is not None:
+                        ew.write(row)
+                else:
+                    reject_line_count += 1
+                    if rew is not None:
+                        rew.write(row)
 
         if self.verbose:
-            print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
+            print("Read %d records, accepted %d records, rejected %d records." % (input_line_count, accept_line_count, reject_line_count),
+                  file=self.error_file, flush=True)
         
 
     def process_cacheing_input(self,
@@ -188,15 +205,18 @@ class KgtkIfExists(KgtkFormat):
                                filter_kr: KgtkReader,
                                input_key_columns: typing.List[int],
                                filter_key_columns: typing.List[int],
-                               ew: KgtkWriter):
+                               ew: typing.Optional[KgtkWriter],
+                               rew: typing.Optional[KgtkWriter],
+    ):
         if self.verbose:
             print("Processing by cacheing the input file.")
         input_line_count: int = 0
         filter_line_count: int = 0
-        output_line_count: int = 0
+        accept_line_count: int = 0
+        reject_line_count: int = 0
         
         # Map key values to lists of input and output data.
-        inputmap: typing.MutableMapping[str, typing.List[typing.List[str]]] = { }
+        inputmap: typing.Dict[str, typing.List[typing.List[str]]] = { }
         outputmap: typing.MutableMapping[str, typing.List[typing.List[str]]] = { }
 
         if self.verbose:
@@ -216,7 +236,7 @@ class KgtkIfExists(KgtkFormat):
             print("Applying the filter from %s" % self.filter_file_path, file=self.error_file, flush=True)
         filter_key: str
         if self.invert:
-            outputmap = inputmap
+            outputmap = inputmap.copy()
             for row in filter_kr:
                 filter_line_count += 1
                 filter_key = self.build_key(row, filter_key_columns)
@@ -232,18 +252,30 @@ class KgtkIfExists(KgtkFormat):
         if self.verbose:
             print("Writing the output data to %s" % self.output_file_path, file=self.error_file, flush=True)
 
+        key: str
         # To simplify debugging, write the output data in sorted order (keys,
         # then input order).
-        key: str
         for key in sorted(outputmap.keys()):
             for row in outputmap[key]:
-                ew.write(row)
-                output_line_count += 1
+                accept_line_count += 1
+                if ew is not None:
+                    ew.write(row)
+
+        # To simplify debugging, write the reject data in sorted order (keys,
+        # then input order).
+        for key in sorted(inputmap.keys()):
+            if key not in outputmap:
+                for row in inputmap[key]:
+                    reject_line_count += 1
+                    if rew is not None:
+                        rew.write(row)
+            
 
         if self.verbose:
-            print("Read %d input records, read %d filter records, wrote %d records." % (input_line_count,
-                                                                                        filter_line_count,
-                                                                                        output_line_count),
+            print("Read %d input records, read %d filter records, accepted %d records, rejected %d records." % (input_line_count,
+                                                                                                                filter_line_count,
+                                                                                                                accept_line_count,
+                                                                                                                reject_line_count),
                   file=self.error_file, flush=True)
 
     def process_cacheing_input_preserving_order(self,
@@ -251,7 +283,8 @@ class KgtkIfExists(KgtkFormat):
                                                 filter_kr: KgtkReader,
                                                 input_key_columns: typing.List[int],
                                                 filter_key_columns: typing.List[int],
-                                                ew: KgtkWriter):
+                                                ew: typing.Optional[KgtkWriter] = None,
+                                                rew: typing.Optional[KgtkWriter] = None):
         # This algorithm preserves the input file's record order in the output file,
         # at the cost of extra work building keys.
 
@@ -297,16 +330,27 @@ class KgtkIfExists(KgtkFormat):
 
         # Step three: read the input rows from the cache and write only the
         # ones with keys in the output key set.
-        output_line_count: int = 0
+        accept_line_count: int = 0
+        reject_line_count: int = 0
         for row in input_cache:
             input_key: str = self.build_key(row, input_key_columns)
             if input_key in output_key_set:
-                ew.write(row)
-                output_line_count += 1
+                accept_line_count += 1
+                if ew is not None:
+                    ew.write(row)
+            else:
+                reject_line_count += 1
+                if rew is not None:
+                    rew.write(row)
+
         if self.verbose:
-            print("Wrote %d rows to the output file." % output_line_count, file=self.error_file, flush=True)
+            print("Accepted %d rows, rejected %d rows." % (accept_line_count, reject_line_count), file=self.error_file, flush=True)
         
     def process(self):
+        UPDATE_VERSION: str = "2020-08-24T21:47:20.256050+00:00#mr0wtMHlN/QaplDsGc/ylG3Hw5stsjziykzuGlSHBSion4xoW/Bec0sn55IQ7wFWBUClRS7g1tbAuaqEduhUVA=="
+        if self.show_version or self.verbose:
+            print("KgtkIfEfexists version: %s" % UPDATE_VERSION, file=self.error_file, flush=True)
+
         # Open the input files once.
         if self.verbose:
             if self.input_file_path is not None:
@@ -324,7 +368,7 @@ class KgtkIfExists(KgtkFormat):
         )
 
         if self.verbose:
-            print("Opening the filter input file: %s" % self.filter_file_path, flush=True)
+            print("Opening the filter input file: %s" % self.filter_file_path, file=self.error_file, flush=True)
         filter_kr: KgtkReader = KgtkReader.open(self.filter_file_path,
                                                 who="filter",
                                                 error_file=self.error_file,
@@ -342,40 +386,61 @@ class KgtkIfExists(KgtkFormat):
                   file=self.error_file, flush=True)
             return
 
-        if self.verbose:
-            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
-        ew: KgtkWriter = KgtkWriter.open(input_kr.column_names,
-                                         self.output_file_path,
-                                         mode=input_kr.mode,
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)
-
+        ew: typing.Optional[KgtkWriter] = None
+        if self.output_file_path is not None:
+            if self.verbose:
+                print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+            ew = KgtkWriter.open(input_kr.column_names,
+                                 self.output_file_path,
+                                 mode=input_kr.mode,
+                                 require_all_columns=False,
+                                 prohibit_extra_columns=True,
+                                 fill_missing_columns=True,
+                                 gzip_in_parallel=False,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose)
+            
+        rew: typing.Optional[KgtkWriter] = None
+        if self.reject_file_path is not None:
+            if self.verbose:
+                print("Opening the reject file: %s" % self.reject_file_path, file=self.error_file, flush=True)
+            rew = KgtkWriter.open(input_kr.column_names,
+                                  self.reject_file_path,
+                                  mode=input_kr.mode,
+                                  require_all_columns=False,
+                                  prohibit_extra_columns=True,
+                                  fill_missing_columns=True,
+                                  gzip_in_parallel=False,
+                                  verbose=self.verbose,
+                                  very_verbose=self.very_verbose)
+            
         if self.cache_input:
             if self.preserve_order:
-                pass
                 self.process_cacheing_input_preserving_order(input_kr=input_kr,
                                                              filter_kr=filter_kr,
                                                              input_key_columns=input_key_columns,
                                                              filter_key_columns=filter_key_columns,
-                                                             ew=ew)
+                                                             ew=ew,
+                                                             rew=rew)
             else:
                 self.process_cacheing_input(input_kr=input_kr,
                                             filter_kr=filter_kr,
                                             input_key_columns=input_key_columns,
                                             filter_key_columns=filter_key_columns,
-                                            ew=ew)
+                                            ew=ew,
+                                            rew=rew)
         else:
             self.process_cacheing_filter(input_kr=input_kr,
                                          filter_kr=filter_kr,
                                          input_key_columns=input_key_columns,
                                          filter_key_columns=filter_key_columns,
-                                         ew=ew)
+                                         ew=ew,
+                                         rew=rew)
 
-        ew.close()
+        if ew is not None:
+            ew.close()
+        if rew is not None:
+            rew.close()
 
 def main():
     """
