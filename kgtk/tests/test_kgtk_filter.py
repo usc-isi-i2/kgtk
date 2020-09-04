@@ -8,6 +8,7 @@ from kgtk.cli_entry import cli_entry
 class TestKGTKFilter(unittest.TestCase):
     def setUp(self) -> None:
         self.file_path = 'data/sample_kgtk_edge_file.tsv'
+        self.file_path2 = 'data/sample_kgtk_non_edge_file.tsv'
         self.temp_dir = tempfile.mkdtemp()
         self.df = pd.read_csv(self.file_path, sep='\t')
 
@@ -49,8 +50,8 @@ class TestKGTKFilter(unittest.TestCase):
         self.assertEqual(len(df), 1)
 
     def test_kgtk_filter_spo(self):
-        cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/Q65695069_P577.tsv', "-p",
-                  "Q65695069;P577;", "--subj", "node1", "--pred", "label", "--obj", "node2")
+        cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/Q65695069_P577.tsv', "-p",
+                  "Q65695069;P577;", "--subj", "subject", "--pred", "predicate", "--obj", "object")
 
         df = pd.read_csv(f'{self.temp_dir}/Q65695069_P577.tsv', sep='\t')
 
