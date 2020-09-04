@@ -22,7 +22,8 @@ class TestKGTKFilter(unittest.TestCase):
         # create GT from the file itself using pandas
         p31_qnodes = list(self.df.loc[self.df['label'] == 'P31']['node1'].unique())
 
-        cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/p31.tsv', "-p", ";P31;", "-v")
+        cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/p31.tsv', "-p", ";P31;", "-v",
+                  "--reject-file", f'{self.temp_dir}/reject.tsv')
 
         df = pd.read_csv(f'{self.temp_dir}/p31.tsv', sep='\t')
         r_qnodes = list(df['node1'].unique())
@@ -35,7 +36,8 @@ class TestKGTKFilter(unittest.TestCase):
         # create GT from the file itself using pandas
         node2s = list(self.df.loc[self.df['node1'] == 'Q2447774']['node2'])
 
-        cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/Q2447774.tsv', "-p", "Q2447774;;")
+        cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/Q2447774.tsv', "-p", "Q2447774;;",
+                  "--reject-file", f'{self.temp_dir}/reject.tsv')
 
         df = pd.read_csv(f'{self.temp_dir}/Q2447774.tsv', sep='\t')
         r_node2s = list(df['node2'])
@@ -46,7 +48,8 @@ class TestKGTKFilter(unittest.TestCase):
 
     def test_kgtk_filter_one_row(self):
         cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/one_row.tsv', "-p",
-                  "Q65695069;P577;^2019-07-19T00:00:00Z/11", "-v")
+                  "Q65695069;P577;^2019-07-19T00:00:00Z/11", "-v",
+                  "--reject-file", f'{self.temp_dir}/reject.tsv')
 
         df = pd.read_csv(f'{self.temp_dir}/one_row.tsv', sep='\t')
 
@@ -55,7 +58,8 @@ class TestKGTKFilter(unittest.TestCase):
     def test_kgtk_filter_single_pred_inverted(self):
         df = self.df2.loc[self.df2['pred'] != 'P577']
         cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/P577.tsv', "-p",
-                  ";P577;", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert")
+                  ";P577;", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert",
+                  "--reject-file", f'{self.temp_dir}/reject.tsv')
 
         df_r = pd.read_csv(f'{self.temp_dir}/P577.tsv', sep='\t')
 
@@ -64,7 +68,8 @@ class TestKGTKFilter(unittest.TestCase):
     def test_kgtk_filter_single_object(self):
         df = self.df2.loc[self.df2['obj'] == 'Q11365']
         cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/Q11365.tsv', "-p",
-                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v")
+                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v",
+                  "--reject-file", f'{self.temp_dir}/reject.tsv')
 
         df_r = pd.read_csv(f'{self.temp_dir}/Q11365.tsv', sep='\t')
 
@@ -73,7 +78,8 @@ class TestKGTKFilter(unittest.TestCase):
     def test_kgtk_filter_single_object_inverted(self):
         df = self.df2.loc[self.df2['obj'] != 'Q11365']
         cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/Q11365.tsv', "-p",
-                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert")
+                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert",
+                  "--reject-file", f'{self.temp_dir}/reject.tsv', "--show-version")
 
         df_r = pd.read_csv(f'{self.temp_dir}/Q11365.tsv', sep='\t')
 
