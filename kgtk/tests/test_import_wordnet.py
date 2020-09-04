@@ -1,6 +1,8 @@
+import shutil
 import unittest
+import tempfile
+import pandas as pd
 from kgtk.cli_entry import cli_entry
-from kgtk.cli.dummy import run
 from kgtk.exceptions import KGTKException
 
 class TestImportWordNet(unittest.TestCase):
