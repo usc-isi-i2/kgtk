@@ -42,7 +42,7 @@ class TestKGTKFilter(unittest.TestCase):
 
     def test_kgtk_filter_one_row(self):
         cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/one_row.tsv', "-p",
-                  "Q65695069;P577;^2019-07-19T00:00:00Z/11")
+                  "Q65695069;P577;^2019-07-19T00:00:00Z/11", "-v")
 
         df = pd.read_csv(f'{self.temp_dir}/one_row.tsv', sep='\t')
 
