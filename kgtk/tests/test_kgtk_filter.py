@@ -5,6 +5,7 @@ import pandas as pd
 from kgtk.cli_entry import cli_entry
 from kgtk.cli.filter import run
 from kgtk.exceptions import KGTKException
+from pathlib import Path
 
 
 class TestKGTKFilter(unittest.TestCase):
@@ -78,8 +79,8 @@ class TestKGTKFilter(unittest.TestCase):
     def test_kgtk_filter_single_object_inverted(self):
         df = self.df2.loc[self.df2['obj'] != 'Q11365']
         cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/Q11365.tsv', "-p",
-                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert",
-                  "--reject-file", f'{self.temp_dir}/reject.tsv', "--show-version")
+                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "--invert",
+                  "--reject-file", f'{self.temp_dir}/reject.tsv', "--show-option")
 
         df_r = pd.read_csv(f'{self.temp_dir}/Q11365.tsv', sep='\t')
 
@@ -97,21 +98,14 @@ class TestKGTKFilter(unittest.TestCase):
 
     def test_kgtk_filter_long_filter_pattern(self):
         with self.assertRaises(KGTKException):
-            run(input_file=self.file_path, output_file=f'{self.temp_dir}/one_row.tsv',
+            run(input_file=Path(self.file_path), output_file=Path(f'{self.temp_dir}/one_row.tsv'),
                 reject_file=None, pattern="Q65695069;P577;^2019-07-19T00:00:00Z/11;bla",
-                subj_col=None, pred_col=None, obj_col=None, or_pattern=False,
-                invert=False, show_version=False)
-
-    def test_kgtk_filter_no_filter_pattern(self):
-        with self.assertRaises(KGTKException):
-            run(input_file=self.file_path, output_file=f'{self.temp_dir}/one_row.tsv',
-                reject_file=None, pattern=";;",
                 subj_col=None, pred_col=None, obj_col=None, or_pattern=False,
                 invert=False, show_version=False)
 
     def test_kgtk_filter_missing_columns(self):
         with self.assertRaises(KGTKException):
-            run(input_file=self.file_path2, output_file=f'{self.temp_dir}/one_row.tsv',
-                reject_file=None, pattern=";;",
+            run(input_file=Path(self.file_path2), output_file=Path(f'{self.temp_dir}/one_row.tsv'),
+                reject_file=None, pattern="Q;P;O",
                 subj_col='1', pred_col='2', obj_col='3', or_pattern=False,
                 invert=False, show_version=False)
