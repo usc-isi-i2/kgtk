@@ -18,7 +18,7 @@ class TestKGTKFilter(unittest.TestCase):
         # create GT from the file itself using pandas
         p31_qnodes = list(self.df.loc[self.df['label'] == 'P31']['node1'].unique())
 
-        cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/p31.tsv', "-p", ";P31;")
+        cli_entry("kgtk", "filter", "-i", self.file_path, "-o", f'{self.temp_dir}/p31.tsv', "-p", ";P31;", "-v")
 
         df = pd.read_csv(f'{self.temp_dir}/p31.tsv', sep='\t')
         r_qnodes = list(df['node1'].unique())
