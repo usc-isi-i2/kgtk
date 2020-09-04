@@ -51,8 +51,8 @@ class TestKGTKFilter(unittest.TestCase):
 
     def test_kgtk_filter_spo(self):
         cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/Q65695069_P577.tsv', "-p",
-                  "Q65695069;P577;", "--subj", "subject", "--pred", "predicate", "--obj", "object")
+                  "Q65695069;P577;", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert")
 
         df = pd.read_csv(f'{self.temp_dir}/Q65695069_P577.tsv', sep='\t')
 
-        self.assertEqual(len(df), 1)
+        self.assertEqual(len(df), 286)
