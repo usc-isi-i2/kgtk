@@ -50,11 +50,29 @@ class TestKGTKFilter(unittest.TestCase):
 
         self.assertEqual(len(df), 1)
 
-    def test_kgtk_filter_spo(self):
+    def test_kgtk_filter_single_pred_inverted(self):
         df = self.df2.loc[self.df2['pred'] != 'P577']
         cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/P577.tsv', "-p",
                   ";P577;", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert")
 
         df_r = pd.read_csv(f'{self.temp_dir}/P577.tsv', sep='\t')
+
+        self.assertEqual(len(df_r), len(df))
+
+    def test_kgtk_filter_single_object(self):
+        df = self.df2.loc[self.df2['obj'] == 'Q11365']
+        cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/Q11365.tsv', "-p",
+                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v")
+
+        df_r = pd.read_csv(f'{self.temp_dir}/Q11365.tsv', sep='\t')
+
+        self.assertEqual(len(df_r), len(df))
+
+    def test_kgtk_filter_single_object_inverted(self):
+        df = self.df2.loc[self.df2['obj'] != 'Q11365']
+        cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/Q11365.tsv', "-p",
+                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert")
+
+        df_r = pd.read_csv(f'{self.temp_dir}/Q11365.tsv', sep='\t')
 
         self.assertEqual(len(df_r), len(df))
