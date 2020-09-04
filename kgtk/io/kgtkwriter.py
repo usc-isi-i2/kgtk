@@ -156,6 +156,36 @@ class KgtkWriter(KgtkBase):
                               very_verbose=very_verbose,
             )
         
+        if str(file_path).startswith(">"):
+            fd: int = int(str(file_path)[1:])
+            if verbose:
+                print("%s: writing file descriptor %d" % (who, fd), file=error_file, flush=True)
+
+            if output_format is None:
+                output_format = cls.OUTPUT_FORMAT_DEFAULT
+
+            return cls._setup(column_names=column_names,
+                              file_path=file_path,
+                              who=who,
+                              file_out=open(fd, "w"),
+                              require_all_columns=require_all_columns,
+                              prohibit_extra_columns=prohibit_extra_columns,
+                              fill_missing_columns=fill_missing_columns,
+                              error_file=error_file,
+                              header_error_action=header_error_action,
+                              gzip_in_parallel=gzip_in_parallel,
+                              gzip_queue_size=gzip_queue_size,
+                              column_separator=column_separator,
+                              mode=mode,
+                              output_format=output_format,
+                              output_column_names=output_column_names,
+                              old_column_names=old_column_names,
+                              new_column_names=new_column_names,
+                              verbose=verbose,
+                              very_verbose=very_verbose,
+            )
+                
+
         if verbose:
             print("File_path.suffix: %s" % file_path.suffix, file=error_file, flush=True)
 
