@@ -96,7 +96,7 @@ class TestKGTKFilter(unittest.TestCase):
 
         self.assertEqual(len(df_r), len(df))
 
-    def test_kgtk_filter_long_filter_pattern(self):
+    def test_kgtk_filter_bad_pattern(self):
         with self.assertRaises(KGTKException):
             run(input_file=Path(self.file_path), output_file=Path(f'{self.temp_dir}/one_row.tsv'),
                 reject_file=None, pattern="Q65695069;P577;^2019-07-19T00:00:00Z/11;bla",
