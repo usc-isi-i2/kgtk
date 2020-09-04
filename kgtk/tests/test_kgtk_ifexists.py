@@ -17,7 +17,7 @@ class TestKGTKFilter(unittest.TestCase):
 
     def test_kgtk_ifexists(self):
         cli_entry("kgtk", "ifexists", "-i", self.file_path, "--filter-on", self.Q47158_path, "-o",
-                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "node1")
+                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "node1", "--show-option")
 
         df = pd.read_csv(f'{self.temp_dir}/Q47158.tsv', sep='\t')
 
