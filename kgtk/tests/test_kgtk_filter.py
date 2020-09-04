@@ -76,3 +76,13 @@ class TestKGTKFilter(unittest.TestCase):
         df_r = pd.read_csv(f'{self.temp_dir}/Q11365.tsv', sep='\t')
 
         self.assertEqual(len(df_r), len(df))
+
+    def test_kgtk_filter_reject_file(self):
+        df = self.df2.loc[self.df2['obj'] == 'Q11365']
+        cli_entry("kgtk", "filter", "-i", self.file_path2, "-o", f'{self.temp_dir}/Q11365.tsv', "-p",
+                  ";;Q11365", "--subj", "sub", "--pred", "pred", "--obj", "obj", "-v", "--invert", "--reject-file",
+                  f'{self.temp_dir}/reject.tsv')
+
+        df_r = pd.read_csv(f'{self.temp_dir}/reject.tsv', sep='\t')
+
+        self.assertEqual(len(df_r), len(df))
