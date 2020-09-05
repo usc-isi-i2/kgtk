@@ -1,7 +1,41 @@
 """
 Cypher grammar (derived from ruruki.parsers.cypher_parser.py)
 https://s3.amazonaws.com/artifacts.opencypher.org/cypher.ebnf
+https://s3.amazonaws.com/artifacts.opencypher.org/openCypher9.pdf
 """
+
+# NOTES:
+# - this is patterned after the cypher.ebnf grammar which seems to be a Neo product
+#   and which is somewhat different from what is in openCypher9.pdf, e.g., the
+#   Open Cypher examples use multiple MATCH clauses instead of comma chains
+# - the latest cypher.ebnf is copyrighted 2020 while the grammar below was derived
+#   from some 2016 version which might have differed slightly
+# - the cypher.ebnf in this directory has a August 11, 2020, 7:06:53 AM PDT page mod date
+# - cypher.ebnf and the version below only seems to support only a single triple in a
+#   where clause, e.g., "where not (a)-[:P23]->(b)" as opposed to arbitrary chains;
+#   is this a grammar bug or intentional restriction?
+# - we should eliminate all parts of the grammar we do not support such as the various
+#   update operations; better is to wrap relevant parts with ["Unsupported" ....]
+#   directly in the grammar, thus allowing us later to gradually support them if we want
+# - Cypher is a registered trademark, and we are not allowed to call what we build
+#   "Cypher" - see the copyright on the grammar
+
+# - EBNF:
+#   - cypher.ebnf uses Extended BNF for which ISO/IEC 14977:1996 is a (proposed) standard
+#   - we downloaded the standard from here to review some quirks:
+#     - https://standards.iso.org/ittf/PubliclyAvailableStandards/s026153_ISO_IEC_14977_1996(E).zip
+#   - meta characters: [] means 0 or 1 times, {} means 0 or more time, - is the exception symbol
+#     that means everything in the first clause not matched by the second exception clause,
+#     finally {...}-, means one time or more, since it has an empty exception - that one was tricky
+#   - we might be able to automatically convert the EBNF grammar into a Parsley grammar that returns
+#     a structured parse tree as a result, which we'd have to then further normalize; the problem
+#     with the current scheme is that it uses a custom rewrite of EBNF into Parsley which is a bit
+#     "wooly" and is harder to adapt when the underlying Cypher grammar changes
+#   - we basically want each keyword to return itself, and each toplevel alternative of each rule
+#     return the rule's name with the arguments of that disjunction.  For example (or something like that):
+#     - EBNF:     OrExpression = XorExpression, { SP, (O,R), SP, XorExpression } ;
+#     - Parsley:  OrExpression = XorExpression:x1 (WS (O R) -> "OR" WS XorExpression)*:x2 -> ["OrExpression", x1, x2]
+
 
 CYPHER_GRAMMAR = r"""
     Cypher = WS Statement:s (WS ';')? WS -> s
@@ -28,7 +62,7 @@ CYPHER_GRAMMAR = r"""
 
     SingleQuery = Match?:m WS With?:w WS Return:r -> ["SingleQuery", m, w, r]
 
-    # TODO: Not usre if I need to handle optional !!
+    # TODO: Not sure if I need to handle optional !!
     Match = (O P T I O N A L SP)? M A T C H WS Pattern:p (WS Where)?:w -> ["Match", p, w]
 
     Unwind = U N W I N D WS Expression:ex SP A S SP Variable:v -> ["Unwind", ex, v]
@@ -72,14 +106,15 @@ CYPHER_GRAMMAR = r"""
 
     Limit =  L I M I T SP Expression:ex -> ["Limit", ex]
 
-    SortItem = Expression:ex (D E S C E N D I N G | D E S C) -> ["sort", ex, "desc"]
-             | Expression:ex (A S C E N D I N G | A S C)? -> ["sort", ex, "asc"]
+    SortItem = Expression:ex (SP D E S C E N D I N G | SP D E S C) -> ["sort", ex, "desc"]
+             | Expression:ex (SP A S C E N D I N G | SP A S C)? -> ["sort", ex, "asc"]
 
     Where = W H E R E SP Expression:ex -> ["Where", ex]
 
     Pattern = PatternPart:head (',' WS PatternPart)*:tail -> [head] + tail
 
     PatternPart = (Variable:v WS '=' WS AnonymousPatternPart:ap) -> ["PatternPart", v, ap]
+                | (Variable:v ':' WS AnonymousPatternPart:ap) -> ["GraphPatternPart", v, ap]
                 | AnonymousPatternPart:ap -> ["PatternPart", None, ap]
 
     AnonymousPatternPart = PatternElement
@@ -93,7 +128,7 @@ CYPHER_GRAMMAR = r"""
     NodePattern = '(' WS
                  (
                     SymbolicName:s WS -> s
-                 )?:v
+                 )?:s
                  (
                      NodeLabels:nl WS -> nl
                  )?:nl
@@ -106,6 +141,7 @@ CYPHER_GRAMMAR = r"""
 
     RelationshipPattern = LeftArrowHead?:la WS Dash WS RelationshipDetail?:rd WS Dash WS RightArrowHead?:ra -> ["RelationshipsPattern", la, rd, ra]
 
+    # TO DO: fix WS handling here to be more liberal and match what we do for NodePattern:
     RelationshipDetail = '['
                       Variable?:v
                       '?'?:q
@@ -213,6 +249,7 @@ CYPHER_GRAMMAR = r"""
          | N O N E WS '(' WS FilterExpression:fex WS ')' -> ["None", fex]
          | S I N G L E WS '(' WS FilterExpression:fex WS ')' -> ["Single", fex]
          | RelationshipsPattern
+         | GraphRelationshipsPattern
          | parenthesizedExpression
          | FunctionInvocation
          | Variable
@@ -220,6 +257,8 @@ CYPHER_GRAMMAR = r"""
     parenthesizedExpression = '(' WS Expression:ex WS ')' -> ex
 
     RelationshipsPattern = NodePattern:np (WS PatternElementChain)?:pec -> ["RelationshipsPattern", np, pec]
+    
+    GraphRelationshipsPattern = Variable:v ':' WS NodePattern:np (WS PatternElementChain)?:pec -> ["GraphRelationshipsPattern", v, np, pec]
 
     FilterExpression = IdInColl:i (WS Where)?:w -> ["FilterExpression", i, w]
 
