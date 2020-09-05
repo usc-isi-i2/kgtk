@@ -1,426 +1,61 @@
 """
-Cypher parser (derived from ruruki.parsers.cypher_parser.py
+Kypher parser (derived from ruruki.parsers.cypher_parser.py).
 https://s3.amazonaws.com/artifacts.opencypher.org/cypher.ebnf
 """
 
 import sys
+import os
+import os.path
 import pprint
-
 import parsley
+import ometa.grammar
+from   kgtk.kypher.grammar import CYPHER_GRAMMAR
 
 pp = pprint.PrettyPrinter(indent=4)
 
 
-CYPHER_GRAMMAR = r"""
-    Cypher = WS Statement:s (WS ';')? WS -> s
-
-    Statement = Query
-
-    Query = RegularQuery
-
-    RegularQuery = SingleQuery:sq SP U N I O N SP A L L SP RegularQuery:rq -> ["UnionAll", sq, rq]
-                 | SingleQuery:sq SP U N I O N SP RegularQuery:rq -> ["Union", sq, rq]
-                 | SingleQuery:sq
-
-    # SingleQuery = Clause:head (WS Clause)*:tail -> ["SingleQuery", [head] + tail]
-
-    # Clause = Match
-    #        | Unwind
-    #        | Merge
-    #        | Create
-    #        | Set
-    #        | Delete
-    #        | Remove
-    #        | With
-    #        | Return
-
-    SingleQuery = Match?:m WS With?:w WS Return:r -> ["SingleQuery", m, w, r]
-
-    # TODO: Not usre if I need to handle optional !!
-    Match = (O P T I O N A L SP)? M A T C H WS Pattern:p (WS Where)?:w -> ["Match", p, w]
-
-    Unwind = U N W I N D WS Expression:ex SP A S SP Variable:v -> ["Unwind", ex, v]
-
-    Merge = M E R G E WS PatternPart:head (SP MergeAction)*:tail -> ["Merge", [head] + tail]
-
-    MergeAction = O N SP M A T C H SP Set:s -> ["MergeActionMatch", s]
-                | O N SP C R E A T E SP Set:s -> ["MergeActionCreate", s]
-
-    Create = C R E A T E WS Pattern:p -> ["Create", p]
-
-    Set = S E T SP SetItem:head (WS ',' WS SetItem)*:tail -> ["Set", [head] + tail]
-
-    SetItem = PropertyExpression:pex '=' Expression:ex -> ["SetItemPropertyExpression", pex, ex]
-            | Variable:v '=' Expression:ex -> ["SetItem", v, ex]
-            | Variable:v '+=' Expression:ex -> ["SetItem", v, ex]
-            | Variable:v NodeLabels:ex -> ["SetItem", v, ex]
-
-    Delete = (D E T A C H SP)? D E L E T E SP Expression:head (',' WS Expression )*:tail -> ["Delete", [head] + tail]
-
-    Remove = R E M O V E SP RemoveItem:head (WS ',' WS RemoveItem)*:tail -> ["Remove", [head] + tail]
-
-    RemoveItem = Variable:v NodeLabels:nl -> ["RemoveItemVar", v, nl]
-                | PropertyExpression:p -> ["RemoveItemPe", p]
-
-    With = W I T H (SP D I S T I N C T)?:d SP ReturnBody:rb (Where)?:w -> ["With", d, rb, w]
-
-    Return = R E T U R N (SP D I S T I N C T)?:d SP ReturnBody:rb -> ["Return", d, rb]
-
-    ReturnBody = ReturnItems:ri (SP Order)?:o (SP Skip)?:s (SP Limit)?:l -> ["ReturnBody", ri, o, s, l]
-
-    ReturnItems = ('*' | ReturnItem):head
-                (WS ',' WS ReturnItem )*:tail -> ["ReturnItems", [head] + tail]
-
-    ReturnItem = Expression:ex SP A S SP SymbolicName:s -> ["ReturnItem", ex, s]
-               | Expression:ex -> ["ReturnItem", ex, None]
-
-    Order =  O R D E R SP B Y SP SortItem:head (',' WS SortItem)*:tail -> ["Order", [head] + tail]
-
-    Skip =  S K I P SP Expression:ex -> ["Skip", ex]
-
-    Limit =  L I M I T SP Expression:ex -> ["Limit", ex]
-
-    SortItem = Expression:ex (D E S C E N D I N G | D E S C) -> ["sort", ex, "desc"]
-             | Expression:ex (A S C E N D I N G | A S C)? -> ["sort", ex, "asc"]
-
-    Where = W H E R E SP Expression:ex -> ["Where", ex]
-
-    Pattern = PatternPart:head (',' WS PatternPart)*:tail -> [head] + tail
-
-    PatternPart = (Variable:v WS '=' WS AnonymousPatternPart:ap) -> ["PatternPart", v, ap]
-                | AnonymousPatternPart:ap -> ["PatternPart", None, ap]
-
-    AnonymousPatternPart = PatternElement
-
-    PatternElement = (
-                        NodePattern:np
-                        (WS PatternElementChain)*:pec
-                    ) -> ["PatternElement", np, pec]
-                    | '(' PatternElement:pe ')' -> pe
-
-    NodePattern = '(' WS
-                 (
-                    SymbolicName:s WS -> s
-                 )?:v
-                 (
-                     NodeLabels:nl WS -> nl
-                 )?:nl
-                 (
-                     Properties:p WS -> p
-                 )?:p
-                ')' -> ["NodePattern", s, nl, p]
-
-    PatternElementChain = RelationshipPattern:rp WS NodePattern:np -> ["PatternElementChain", rp, np]
-
-    RelationshipPattern = LeftArrowHead?:la WS Dash WS RelationshipDetail?:rd WS Dash WS RightArrowHead?:ra -> ["RelationshipsPattern", la, rd, ra]
-
-    RelationshipDetail = '['
-                      Variable?:v
-                      '?'?:q
-                      RelationshipTypes?:rt
-                      ('*' RangeLiteral)?:rl WS
-                      Properties?:p
-                      ']' -> ["RelationshipDetail", v, q, rt, rl, p]
-
-    Properties = MapLiteral
-               | Parameter
-
-    RelationshipTypes = ':' RelTypeName:head (WS '|' ':'? WS RelTypeName)*:tail -> ["RelationshipTypes", head] + tail
-
-    NodeLabels = NodeLabel:head (WS NodeLabel)*:tail -> [head] + tail
-
-    NodeLabel = ':' LabelName:n -> ["NodeLabel", n]
-
-    RangeLiteral = (WS IntegerLiteral)?:start WS ('..' WS IntegerLiteral)?:stop WS -> slice(start, stop)
-
-    LabelName = SymbolicName
-
-    RelTypeName = SymbolicName
-
-    Expression = Expression12
-
-    Expression12 = Expression11:ex1 SP O R SP Expression12:ex2 -> ["or", ex1, ex2]
-                 | Expression11
-
-    Expression11 = Expression10:ex1 SP X O R SP Expression11:ex2 -> ["xor", ex1, ex2]
-                 | Expression10
-
-    Expression10 = Expression9:ex1 SP A N D SP Expression10:ex2 -> ["and", ex1, ex2]
-                 | Expression9
-
-    Expression9 = N O T SP Expression9:ex -> ["not", ex]
-                | Expression8
-
-    Expression8 = Expression7:ex1 WS '='  WS Expression8:ex2 -> ["eq",  ex1, ex2]
-                | Expression7:ex1 WS '<>' WS Expression8:ex2 -> ["neq", ex1, ex2]
-                | Expression7:ex1 WS '!=' WS Expression8:ex2 -> ["neq", ex1, ex2]
-                | Expression7:ex1 WS '<'  WS Expression8:ex2 -> ["lt",  ex1, ex2]
-                | Expression7:ex1 WS '>'  WS Expression8:ex2 -> ["gt",  ex1, ex2]
-                | Expression7:ex1 WS '<=' WS Expression8:ex2 -> ["lte", ex1, ex2]
-                | Expression7:ex1 WS '>=' WS Expression8:ex2 -> ["gte", ex1, ex2]
-                | Expression7
-
-    Expression7 = Expression6:ex1 WS '+' WS Expression7:ex2 -> ["add", ex1, ex2]
-                | Expression6:ex1 WS '-' WS Expression7:ex2 -> ["sub", ex1, ex2]
-                | Expression6
-
-    Expression6 = Expression5:ex1 WS '*' WS Expression6:ex2 -> ["multi", ex1, ex2]
-                | Expression5:ex1 WS '/' WS Expression6:ex2 -> ["div",   ex1, ex2]
-                | Expression5:ex1 WS '%' WS Expression6:ex2 -> ["mod",   ex1, ex2]
-                | Expression5
-
-    Expression5 = Expression4:ex1 WS '^' WS Expression5:ex2 -> ["hat", ex1, ex2]
-                | Expression4
-
-    Expression4 = '+' WS Expression4
-                | '-' WS Expression4:ex -> ["minus", ex]
-                | Expression3
-
-    Expression3 = Expression2:ex1
-                  (
-                    WS '[' Expression:prop_name ']' -> ["PropertyLookup", prop_name]
-                    | WS '[' Expression?:start '..' Expression?:end ']' -> ["slice", start, end]
-                    | (
-                        WS '=~' -> "regex"
-                        | SP I N -> "in"
-                        | SP S T A R T S SP W I T H -> "starts_with"
-                        | SP E N D S SP W I T H  -> "ends_with"
-                        | SP C O N T A I N S  -> "contains"
-                    ):operator WS Expression2:ex2 -> [operator, ex2]
-                    | SP I S SP N U L L  -> ["is_null"]
-                    | SP I S SP N O T SP N U L L -> ["is_not_null"]
-                  )+:c -> ["Expression3", ex1, c]
-                  | Expression2
-
-    Expression2 = Atom:a (PropertyLookup | NodeLabels)+:c -> ["Expression2", a, c]
-                  | Atom
-
-    Atom = NumberLiteral
-         | StringLiteral
-         | Parameter
-         | T R U E -> ["Literal", True]
-         | F A L S E -> ["Literal", False]
-         | N U L L -> ["Literal", None]
-         | CaseExpression
-         | C O U N T '(' '*' ')' -> ["count *"]
-         | MapLiteral
-         | ListComprehension
-         | '['
-                (
-                    WS Expression:head WS
-                    (',' WS Expression:item WS -> item
-                    )*:tail -> [head] + tail
-                    |
-                    -> []
-                ):ex
-            ']' -> ["List", ex]
-         | F I L T E R WS '(' WS FilterExpression:fex WS ')' -> ["Filter", fex]
-         | E X T R A C T WS '(' WS FilterExpression:fex WS (WS '|' Expression)?:ex ')' -> ["Extract", fex, ex]
-         | A L L WS '(' WS FilterExpression:fex WS ')' -> ["All", fex]
-         | A N Y WS '(' WS FilterExpression:fex WS ')' -> ["Any", fex]
-         | N O N E WS '(' WS FilterExpression:fex WS ')' -> ["None", fex]
-         | S I N G L E WS '(' WS FilterExpression:fex WS ')' -> ["Single", fex]
-         | RelationshipsPattern
-         | parenthesizedExpression
-         | FunctionInvocation
-         | Variable
-
-    parenthesizedExpression = '(' WS Expression:ex WS ')' -> ex
-
-    RelationshipsPattern = NodePattern:np (WS PatternElementChain)?:pec -> ["RelationshipsPattern", np, pec]
-
-    FilterExpression = IdInColl:i (WS Where)?:w -> ["FilterExpression", i, w]
-
-    IdInColl = Variable:v SP I N SP Expression:ex -> ["IdInColl", v, ex]
-
-    FunctionInvocation = FunctionName:func
-                        WS '(' WS
-                        (D I S T I N C T WS -> "distinct")?:distinct
-                        (
-                            Expression:head
-                            (
-                                ',' WS Expression
-                            )*:tail -> [head] + tail
-                        | -> []
-                        ):args
-                        WS ')' -> ["call", func, distinct, args]
-
-    FunctionName = SymbolicName
-
-    ListComprehension = '[' FilterExpression:fex (WS '|' Expression)?:ex ']' -> ["ListComprehension", fex, ex]
-
-    # PropertyLookup = WS '.' WS ((PropertyKeyName ('?' | '!')) | PropertyKeyName)
-    PropertyLookup = WS '.' WS PropertyKeyName:n -> ["PropertyLookup", n]
-
-    CaseExpression =
-                     C A S E WS
-                     (Expression)?:ex
-                     (WS CaseAlternatives)+:cas 
-                     (WS E L S E WS Expression)?:el
-                     WS E N D
-                     -> ["Case", ex, cas, el]
-
-    CaseAlternatives = W H E N WS Expression:ex1 WS T H E N WS Expression:ex2 -> [ex1, ex2]
-
-    Variable = SymbolicName:s -> ["Variable", s]
-
-    StringLiteral = (
-                  '"' (~('"'|'\\') anything | EscapedChar)*:cs '"' -> "".join(cs)
-                  | "'" (~("'"|'\\') anything | EscapedChar)*:cs "'" -> "".join(cs)
-                  ):l -> ["Literal", l]
-
-    EscapedChar = '\\'
-                ('\\' -> '\\'
-                | "'" -> "'"
-                | '"' -> '"'
-                | N -> '\n'
-                | R -> '\r'
-                | T -> '\t'
-                | '_' -> '_'
-                | '%' -> '%'
-                )
-
-    NumberLiteral = (
-                  DoubleLiteral
-                  | IntegerLiteral
-                  ):l -> ["Literal", l]
-
-    MapLiteral = '{' WS
-                 (
-                    (
-                        PropertyKeyName:k WS ':' WS Expression:v -> (k, v)
-                    ):head WS
-                    (
-                        ',' WS PropertyKeyName:k WS ':' WS Expression:v WS -> (k, v)
-                    )*:tail -> [head] + tail
-                 | -> []):pairs
-                '}' -> ["Literal", dict(pairs)]
-
-    Parameter = '{' WS (SymbolicName | DecimalInteger):p WS '}' -> ["Parameter", p]
-
-    PropertyExpression = Atom:a (WS PropertyLookup)*:opts -> ["Expression", a, opts]
-
-    PropertyKeyName = SymbolicName
-
-    IntegerLiteral = HexInteger
-                   | OctalInteger
-                   | DecimalInteger
-
-    OctalDigit = ~('8'|'9') digit
-
-    OctalInteger = '0' <OctalDigit+>:ds -> int(ds, 8)
-
-    HexDigit = digit | A | B | C | D | E | F
-
-    HexInteger = '0' X <HexDigit+>:ds -> int(ds, 16)
-
-    DecimalInteger = <digit+>:ds -> int(ds)
-
-    DoubleLiteral = ExponentDecimalReal
-                  | RegularDecimalReal
-
-    ExponentDecimalReal = <(DecimalInteger | RegularDecimalReal) E DecimalInteger>:ds -> float(ds)
-
-    RegularDecimalReal = <digit+ '.' digit+>:ds -> float(ds)
-
-    SymbolicName = UnescapedSymbolicName
-                 | EscapedSymbolicName
-
-    UnescapedSymbolicName = <letter ('_' | letterOrDigit)*>
-
-    EscapedSymbolicName = '`' (~'`' anything | "``" -> '`')*:cs '`' -> "".join(cs)
-
-    WS = whitespace*
-
-    SP = whitespace+
-
-    whitespace = ' '
-               | '\t'
-               | '\n'
-               | Comment
-
-    Comment = "/*" (~"*/" anything)* "*/"
-            | "//" (~('\r'|'\n') anything)* '\r'? ('\n'|end)
-
-    LeftArrowHead = '<'
-
-    RightArrowHead = '>'
-
-    Dash = '-'
-
-    A = 'A' | 'a'
-
-    B = 'B' | 'b'
-
-    C = 'C' | 'c'
-
-    D = 'D' | 'd'
-
-    E = 'E' | 'e'
-
-    F = 'F' | 'f'
-
-    G = 'G' | 'g'
-
-    H = 'H' | 'h'
-
-    I = 'I' | 'i'
-
-    K = 'K' | 'k'
-
-    L = 'L' | 'l'
-
-    M = 'M' | 'm'
-
-    N = 'N' | 'n'
-
-    O = 'O' | 'o'
-
-    P = 'P' | 'p'
-
-    R = 'R' | 'r'
-
-    S = 'S' | 's'
-
-    T = 'T' | 't'
-
-    U = 'U' | 'u'
-
-    V = 'V' | 'v'
-
-    W = 'W' | 'w'
-
-    X = 'X' | 'x'
-
-    Y = 'Y' | 'y'
-
-    Z = 'Z' | 'z'
-    """
-
-# for now we rebuild the grammar every time we load:
-Parser = parsley.makeGrammar(CYPHER_GRAMMAR, {})
-
-"""
-# if we want to use this for production, we can save the grammar as a Python file like this:
->>> import ometa.grammar
->>> cygram = ometa.grammar.OMeta.makeGrammar(cp.CYPHER_GRAMMAR)
->>> open('kgtk/cypher/cypher_grammar_compiled.py', 'w').write(cygram.__loader__.source)
-
-# and then load it like this - there doesn't seem to be a better user API for this:
->>> import parsley
->>> import ometa.grammar
->>> import kgtk.cypher.cypher_grammar_compiled as cgc
->>> cgram = cgc.createParserClass(ometa.grammar.OMetaBase, {})
->>> wcgram = parsley.wrapGrammar(cgram)
->>> wcgram('MATCH (n1) RETURN r').Cypher()
-['SingleQuery', ['Match', [['PatternPart', None, ... None, None, None]]]]
-"""
+# TO DO:
+# - flesh out the TO DOs below
+# - add missing pattern elements
+# + expression simplification and normalization (e.g., with <-x-> patterns)
+# + add implied clauses (e.g., from properties)
+#   - handled by query translator instead
+# - handle match-pattern OR-expansion (from undirected arrows and multiple relation labels)
+#   - possibly also handle this by query translator (if at all)
+# - handle restrictions and unsupported elements more consistently and pervasively
+
+
+GRAMMAR_FILE = os.path.join(os.path.dirname(sys.modules['kgtk.cypher.grammar'].__file__), 'grammar.py')
+COMPILED_GRAMMAR_FILE = os.path.join(os.path.dirname(GRAMMAR_FILE), 'grammar_compiled.py')
+
+def compile_grammar():
+    # if we want to use this for production, we can save the grammar as a Python file like this:
+    cygram = ometa.grammar.OMeta.makeGrammar(CYPHER_GRAMMAR)
+    with open(COMPILED_GRAMMAR_FILE, 'w') as out:
+        out.write(cygram.__loader__.source)
+
+def load_grammar(compile=True):
+    if compile:
+        # re/compile if necessary:
+        if not os.path.exists(COMPILED_GRAMMAR_FILE) or \
+           os.path.getmtime(GRAMMAR_FILE) > os.path.getmtime(COMPILED_GRAMMAR_FILE):
+            compile_grammar()
+        # load it like this - there doesn't seem to be a better user API available:
+        import kgtk.cypher.grammar_compiled as cgc
+        cgram = cgc.createParserClass(ometa.grammar.OMetaBase, {})
+        return parsley.wrapGrammar(cgram)
+    else:
+        # rebuild the grammar from scratch:
+        return parsley.makeGrammar(CYPHER_GRAMMAR, {})
+
+Parser = load_grammar()
 
 
 """
-# 75 Output patterns:
+# The grammar has 75 output patterns:
 # - there are two with varying signatures - might be a mistake
 # - we are currently handling about 40
+# - we should redo this from scratch (see grammar notes) - maybe later
 
 ["All", fex] ["Any", fex] ["Case", ex, cas, el] ["Create", p]
 ["Delete", [head] + tail] ["Expression", a, opts] ["Expression2", a, c]
@@ -455,6 +90,8 @@ Parser = parsley.makeGrammar(CYPHER_GRAMMAR, {})
 """
 
 
+### Parse tree utilities
+
 def object_to_tree(obj):
     if hasattr(obj, 'to_tree'):
         return obj.to_tree()
@@ -470,24 +107,43 @@ def object_to_tree(obj):
     else:
         return obj
 
-def normalize_object(obj):
-    if hasattr(obj, 'normalize'):
-        return obj.normalize()
+def simplify_object(obj):
+    if hasattr(obj, 'simplify'):
+        return obj.simplify()
     elif isinstance(obj, list):
         for i in range(len(obj)):
-            obj[i] = normalize_object(obj[i])
+            obj[i] = simplify_object(obj[i])
         return obj
     elif isinstance(obj, dict):
         table = {}
         for key, val in obj.items():
             if key.startswith('_') or val is None:
                 continue
-            table[key] = normalize_object(val)
+            table[key] = simplify_object(val)
         for key, val in table.items():
             obj[key] = val
         return obj
     else:
         return obj
+
+def has_element(obj, test):
+    """Return True if any of the `QueryElement's in `obj'
+    or any of their recursive subelements satisfy `test'.
+    """
+    if isinstance(obj, QueryElement):
+        return test(obj) or has_element(obj.__dict__, test)
+    elif isinstance(obj, list):
+        for elt in obj:
+            if has_element(elt, test):
+                return True
+    elif isinstance(obj, dict):
+        for elt in obj.values():
+            if has_element(elt, test):
+                return True
+    return False
+
+
+### Object representation for Kypher ASTs (Abstract Syntax Trees)
 
 class QueryElement(object):
     ast_name = None
@@ -495,8 +151,8 @@ class QueryElement(object):
     def to_tree(self):
         return (self.__class__.__name__, object_to_tree(self.__dict__))
 
-    def normalize(self):
-        normalize_object(self.__dict__)
+    def simplify(self):
+        simplify_object(self.__dict__)
         return self
 
 
@@ -515,6 +171,10 @@ class Variable(QueryElement):
     def __init__(self, query, name):
         self._query = query
         self.name = name
+        query.variables[name] = self
+
+class AnonymousVariable(Variable):
+    pass
 
 
 # Arithmetic:
@@ -740,6 +400,7 @@ class NodePattern(QueryElement):
         self._query = query
         self.variable = name
         self.labels = intern_ast_list(query, labels)
+        self.graph = None
         self.properties = None
         if properties is not None:
             if properties[0] == 'Literal':
@@ -748,8 +409,19 @@ class NodePattern(QueryElement):
                 # parameter:
                 self.properties = intern_ast(query, properties)
 
-    def normalize(self):
+    def simplify(self):
         self.variable = Variable(self._query, self.variable)
+        if self.labels is not None:
+            self.labels = [lab.name for lab in self.labels]
+        return self
+
+    def normalize_term(self, implied_clauses):
+        # TO DO: handle implied clauses from properties
+        query = self._query
+        labels = self.labels
+        assert labels is None or len(labels) == 1, 'Multiple node labels are not allowed'
+        if self.variable is None or self.variable.name is None:
+            self.variable = query.create_anonymous_variable()
         return self
 
 class RelationshipPattern(QueryElement):
@@ -762,6 +434,7 @@ class RelationshipPattern(QueryElement):
             # - WHERE case:  ["RelationshipsPattern", np, pec]
             # We handle this here with a "change class" to `PatternElement' which is what it should be.
             # TO DO: clean this up, but it will do for now:
+            #        make this return a PathPattern to make normalization work similar to MATCH
             head = args[0]
             tail = args[1] is not None and list(args[1:]) or []
             PatternElement.__init__(self, query, head, tail)
@@ -771,13 +444,14 @@ class RelationshipPattern(QueryElement):
         self._query = query
         self.left_arrow = left_arrow
         self.detail = intern_ast(query, detail)
+        self.labels = None
         self.right_arrow = right_arrow
         # a bidirectional arrow is legal in the grammar but not legal Cypher;
         if left_arrow and right_arrow:
-            raise Exception('Illegal bidirectional arrow: %s' % str(self.normalize().to_tree()))
+            raise Exception('Illegal bidirectional arrow: %s' % str(self.simplify().to_tree()))
 
-    def normalize(self):
-        self.detail = normalize_object(self.detail)
+    def simplify(self):
+        self.detail = simplify_object(self.detail)
         self.variable = self.detail and self.detail.variable or None
         self.qualifier = self.detail and self.detail.qualifier or None
         # multiple labels amount to an OR in KGTK which we are addressing later:
@@ -789,6 +463,15 @@ class RelationshipPattern(QueryElement):
         delattr(self, 'left_arrow')
         delattr(self, 'right_arrow')
         delattr(self, 'detail')
+        return self
+
+    def normalize_term(self, implied_clauses):
+        # TO DO: handle implied clauses from properties
+        query = self._query
+        labels = self.labels
+        assert labels is None or len(labels) == 1, 'Multiple relationship labels are not (yet) allowed'
+        if self.variable is None or self.variable.name is None:
+            self.variable = query.create_anonymous_variable()
         return self
 
 class RelationshipDetail(QueryElement):
@@ -815,7 +498,7 @@ class RelationshipTypes(QueryElement):
         self._query = query
         self.labels = types
 
-    def normalize(self):
+    def simplify(self):
         return self.labels
 
 class PatternElementChain(QueryElement):
@@ -826,8 +509,8 @@ class PatternElementChain(QueryElement):
         self.head = intern_ast(query, head)
         self.tail = intern_ast(query, tail)
 
-    def normalize(self):
-        return [self.head.normalize(), self.tail.normalize()]
+    def simplify(self):
+        return [self.head.simplify(), self.tail.simplify()]
         
 class PatternElement(QueryElement):
     ast_name = 'PatternElement'
@@ -836,10 +519,12 @@ class PatternElement(QueryElement):
         self._query = query
         self.head = intern_ast(query, element)
         self.tail = intern_ast_list(query, chain)
+        self.graph = None
 
-    def normalize(self):
-        chain = [self.head.normalize()]
-        for subchain in normalize_object(self.tail):
+    def simplify(self):
+        chain = [self.head.simplify()]
+        chain[0].graph = self.graph
+        for subchain in simplify_object(self.tail):
             chain += subchain
         return chain
     
@@ -852,9 +537,32 @@ class PatternPart(QueryElement):
         self.variable = intern_ast(query, variable)
         self.pattern = intern_ast(query, pattern)
 
-    def normalize(self):
+    def simplify(self):
         # simply rename to `PathPattern':
-        return PathPattern(self._query, normalize_object(self.variable), normalize_object(self.pattern))
+        return PathPattern(self._query, simplify_object(self.variable), simplify_object(self.pattern))
+
+class GraphPatternPart(QueryElement):
+    ast_name = 'GraphPatternPart'
+
+    def __init__(self, query, graph, pattern):
+        self._query = query
+        # we have a pattern prefixed with a graph variable:
+        self.graph = intern_ast(query, graph)
+        self.pattern = intern_ast(query, pattern)
+
+    def simplify(self):
+        # simply rename to `PathPattern' and set graph variable:
+        pattern = PathPattern(self._query, None, simplify_object(self.pattern))
+        pattern.graph = simplify_object(self.graph)
+        return pattern
+
+class GraphRelationshipsPattern(PatternElement):
+    ast_name = 'GraphRelationshipsPattern'
+
+    def __init__(self, query, graph, head, tail):
+        # this is a variant of RelationshipPattern where we don't have the ambiguity:
+        super().__init__(query, head, [tail])
+        self.graph = intern_ast(query, graph)
 
 class PathPattern(QueryElement):
 
@@ -863,9 +571,75 @@ class PathPattern(QueryElement):
         # these can either be named with a variable or anonymous:
         self.variable = variable
         self.pattern = pattern
+        self.graph = None
+
+    def normalize_clauses(self):
+        # Path patterns are either N, N-R-N, or N-R-N-R-...-R-N for two or more relations.
+        # We normalize them onto a single or list of implicitly conjoined N-R-N path patterns.
+        # Assumes simplification has been run.
+        query = self._query
+        pattern = self.pattern
+        graph = self.graph
+        num_elements = len(pattern)
+        if num_elements == 3:
+            if pattern[1].arrow == '<--':
+                # normalize onto forward direction:
+                head = pattern[0]
+                pattern[0] = pattern[2]
+                pattern[2] = head
+                pattern[1].arrow = '-->'
+            pattern[0].graph = graph
+            return self
+        elif num_elements == 1:
+            pattern[0].graph = graph
+            relpat = RelationshipPattern(query, None, None, None)
+            relpat.arrow = '-->'
+            relpat.variable = query.create_anonymous_variable()
+            self.pattern.append(relpat)
+            nodepat = NodePattern(query, None, None, None)
+            nodepat.variable = query.create_anonymous_variable()
+            self.pattern.append(nodepat)
+            return self
+        else:
+            assert num_elements >= 5 and num_elements % 2 == 1, 'Unexpected number of path pattern elements'
+            norm_patterns = []
+            while len(pattern) >= 3:
+                subpat = PathPattern(query, self.variable, pattern[0:3])
+                subpat.graph = graph
+                norm_patterns.append(subpat.normalize_clauses())
+                # we create a connecting variable node, but we do not copy any of the other attributes if any,
+                # since those might result in additional clauses which we only want to create once:
+                conn_nodepat = pattern[2]
+                if conn_nodepat.variable is None:
+                    conn_nodepat.variable = query.create_anonymous_variable()
+                nodepat = NodePattern(query, None, None, None)
+                nodepat.variable = conn_nodepat.variable
+                nodepat.graph = graph
+                conn_nodepat = nodepat
+                pattern = [conn_nodepat] + pattern[3:]
+            return norm_patterns
+
+    def normalize_terms(self, implied_clauses):
+        query = self._query
+        pattern = self.pattern
+        assert len(pattern) == 3, 'Unnormalized path pattern'
+        pattern[0] = pattern[0].normalize_term(implied_clauses)
+        pattern[1] = pattern[1].normalize_term(implied_clauses)
+        pattern[2] = pattern[2].normalize_term(implied_clauses)
+
+    def normalize(self):
+        # this gives us either a single or list of normalized N-R-N PathPattern's:
+        clauses = self.normalize_clauses()
+        if not hasattr(clauses, '__iter__'):
+            clauses = [clauses]
+        norm_clauses = []
+        for clause in clauses:
+            norm_clauses.append(clause)
+            clause.normalize_terms(norm_clauses)
+        return norm_clauses
 
 
-# Query top level:
+# Query top level clauses:
 
 class Match(QueryElement):
     ast_name = 'Match'
@@ -883,37 +657,86 @@ class Where(QueryElement):
         self.expression = intern_ast(query, expression)
 
 
+class Skip(QueryElement):
+    ast_name = 'Skip'
+
+    def __init__(self, query, expression):
+        self._query = query
+        self.expression = intern_ast(query, expression)
+
+class Limit(QueryElement):
+    ast_name = 'Limit'
+
+    def __init__(self, query, expression):
+        self._query = query
+        self.expression = intern_ast(query, expression)
+
+class Order(QueryElement):
+    ast_name = 'Order'
+
+    def __init__(self, query, items):
+        self._query = query
+        self.items = intern_ast(query, items)
+
+class SortItem(QueryElement):
+    ast_name = 'sort'
+
+    def __init__(self, query, expression, direction):
+        self._query = query
+        self.expression = intern_ast(query, expression)
+        self.direction = direction
+
 class ReturnItem(QueryElement):
     ast_name = 'ReturnItem'
 
     def __init__(self, query, expression, name):
-        """TO DO"""
         self._query = query
-        pass
+        self.name = name
+        self.expression = intern_ast(query, expression)
 
 class ReturnItems(QueryElement):
     ast_name = 'ReturnItems'
 
     def __init__(self, query, items):
-        """TO DO"""
         self._query = query
-        pass
+        self.items = []
+        if len(items) > 0 and items[0] == '*':
+            self.items.append(ReturnItem(query, Variable(query, '*'), None))
+            items = items[1:]
+        if len(items) > 0:
+            items = intern_ast(query, items)
+        self.items += items
 
 class ReturnBody(QueryElement):
     ast_name = 'ReturnBody'
 
     def __init__(self, query, items, order, skip, limit):
-        """TO DO"""
         self._query = query
-        pass
+        self.items = intern_ast(query, items)
+        self.order = intern_ast(query, order)
+        self.skip = intern_ast(query, skip)
+        self.limit = intern_ast(query, limit)
+
+    def simplify(self):
+        self.items = self.items.items
+        return self
 
 class Return(QueryElement):
     ast_name = 'Return'
 
     def __init__(self, query, distinct, body):
-        """TO DO"""
         self._query = query
-        pass
+        self.distinct = distinct is not None
+        self.body = intern_ast(query, body)
+
+    def simplify(self):
+        body = self.body.simplify()
+        self.items = body.items
+        self.order = body.order
+        self.skip = body.skip
+        self.limit = body.limit
+        delattr(self, 'body')
+        return self
 
 
 class SingleQuery(QueryElement):
@@ -923,9 +746,10 @@ class SingleQuery(QueryElement):
         """TO DO: COMPLETE"""
         self._query = query
         self.match = intern_ast(query, match)
+        self.return_ = intern_ast(query, return_)
 
 
-# AST internment:
+### AST internment:
 
 def build_ast_name_table():
     table = {}
@@ -960,42 +784,99 @@ def intern_ast_list(query, ast_list):
     raise Exception('Unhandled list type: %s' % ast_list)
 
 
-# Cypher query:
+### Cypher query:
 
 class CypherQuery(object):
-    def __init__(self, ast=None, query_string=None):
+    def __init__(self, query_string):
         self.query = None
-        if ast is not None:
-            self.query = intern_ast(self, ast)
-        elif query_string is not None:
-            self.query = intern_ast(self, parse(query_string))
+        self.variables = {}
+        self.simplified = False
+        self.match_clauses = None
+        self.parse = Parser(query_string)
+        self.query = intern_ast(self, self.parse.Cypher())
 
     def to_tree(self):
         return (self.__class__.__name__, self.query and self.query.to_tree() or None)
 
-    def normalize(self):
-        self.query = self.query.normalize()
+    def simplify(self):
+        """Simplifies the structure of the interned parse tree to get rid of unneeded
+        elements and nesting that are simply an artifact of the grammar specification.
+        """
+        if not self.simplified:
+            self.query = self.query.simplify()
+            self.simplified = True
         return self
 
+    def get_match_pattern(self):
+        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
+        return self.query.match.pattern
 
-# Top level:
+    def get_match_clauses(self):
+        """Returns a list of [<NodePattern ...> <RelationshipPattern --> ...> <NodePattern ...>] clauses
+        where each pattern element has a named or anonymous variable and optional single label.  All
+        property elements have been translated into additional normalized match clauses (not yet).
+        """
+        if self.match_clauses is None:
+            self.simplify()
+            self.match_clauses = []
+            current_graph = None
+            for pathpat in self.get_match_pattern():
+                for normpath in pathpat.normalize():
+                    normpath = normpath.pattern
+                    current_graph = normpath[0].graph or current_graph
+                    normpath[0].graph = current_graph
+                    self.match_clauses.append(normpath)
+        return self.match_clauses
+
+    def get_where_clause(self):
+        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
+        self.simplify()
+        where = self.query.match.where
+        return where
+
+    def get_return_clause(self):
+        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
+        self.simplify()
+        ret = self.query.return_
+        return ret
+
+    def get_order_clause(self):
+        ret = self.get_return_clause()
+        order = ret and ret.order or None
+        return order
+
+    def get_skip_clause(self):
+        ret = self.get_return_clause()
+        skip = ret and ret.skip or None
+        return skip
+
+    def get_limit_clause(self):
+        ret = self.get_return_clause()
+        limit = ret and ret.limit or None
+        return limit
+
+    def create_anonymous_variable(self):
+        i = 1
+        while True:
+            varname = '_x%04d' % i
+            if varname not in self.variables:
+                var = AnonymousVariable(self, varname)
+                self.variables[varname] = var
+                return var
+            i += 1
+
+
+### Top level:
 
 def parse(query_string):
     return Parser(query_string).Cypher()
 
 def intern(query_string):
-    return CypherQuery(query_string=query_string)
+    return CypherQuery(query_string)
 
 
 # Example w/ interesting differences between node and relation patterns:
-# - node patterns must have a variable (or name), relation patterns can omit it
 # - node patterns can have multiple labels (and-ed), all with a prefixing colon
 # - relation patterns can have alternative labels, only the first prefixed with a colon
 #
 # cq = cp.intern("MATCH (n:Person :Human {name: 'Bob'})-[:Loves | Adores {id: '17'}]->(n2) RETURN DISTINCT n;")
-
-# TO DO next:
-# - flesh out the TO DOs above
-# - add missing pattern elements
-# - expression simplification and normalization (e.g., with <-x-> patterns)
-# - implement initial simple eval plans
