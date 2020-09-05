@@ -5,15 +5,14 @@ Cypher queries over KGTK graphs.
 import sys
 import os
 import os.path
-import pprint
-import tempfile
 import sqlite3
-from odictliteral import odict
+from   odictliteral import odict
 import time
 import csv
 import io
 import re
-from functools import lru_cache
+from   functools import lru_cache
+import pprint
 
 import sh
 
@@ -23,22 +22,7 @@ from   kgtk.value.kgtkvalue import KgtkValue
 pp = pprint.PrettyPrinter(indent=4)
 
 
-### NOTES, TO DO:
-
-# - not sure if kgtk join does what we need, since it always creates an edge file it seems
-#   that adds additional edges to the end
-# - what we want - I think - is the regular Unix join which creates a wide file adding columns
-#   similar to what we get with an SQL relational join
-
-
-TMP_DIR = '/tmp'       # this should be configurable
-
-def make_temp_file(prefix='kgtk.'):
-    return tempfile.mkstemp(dir=TMP_DIR, prefix=prefix)[1]
-
-def grep_regex_quote(value):
-    # TO DO: WRITE ME.
-    return value
+### Utilities
 
 def open_to_read(file):
     """Version of `open' that is smart about gzip compression and already open file-like objects.
@@ -61,263 +45,7 @@ def listify(x):
     return (hasattr(x, '__iter__') and not isinstance(x, str) and list(x)) or (x and [x]) or []
 
 
-class PatternElement(object):
-    
-    def get_grep_pattern(self):
-        raise Exception('not implemented')
-
-    def to_tree(self):
-        return (self.__class__.__name__, parser.object_to_tree(self.__dict__))
-
-
-class Variable(PatternElement):
-    
-    def __init__(self, name):
-        self.name = name
-
-    def get_grep_pattern(self, group=None):
-        if group is not None:
-            return '\\%d' % group
-        else:
-            return '\(.*\)'
-
-class Literal(PatternElement):
-    
-    def __init__(self, value):
-        self.value = value
-
-    def get_grep_pattern(self):
-        return grep_regex_quote(self.value)
-
-class TuplePattern(object):
-    """Simple tuple pattern implemented as a dictionary of 
-    implicitly conjoined column_name->pattern_element entries.
-    """
-    
-    def __init__(self, pattern=None):
-        self.pattern = pattern or {}
-
-    def to_tree(self):
-        return parser.object_to_tree(self.pattern)
-
-    def get_restriction(self, name):
-        return self.pattern.get(name)
-
-    def set_restriction(self, name, restr):
-        self.pattern[name] = restr
-
-    def get_grep_pattern(self, columns):
-        """Convert `match_pattern' into a grep pattern to match
-        it against a file-based tuple with `columns'.
-        """
-        pattern = []
-        variables = []
-        has_restriction = False
-        for col in columns:
-            restriction = self.get_restriction(col)
-            if restriction is None:
-                pat = '.*'
-            elif isinstance(restriction, Variable):
-                varname = restriction.name
-                if varname in variables:
-                    pat = restriction.get_grep_pattern(variables.index(varname) + 1)
-                    has_restriction = True
-                else:
-                    variables.append(varname)
-                    pat = restriction.get_grep_pattern()
-            elif isinstance(restriction, Literal):
-                pat = restriction.get_grep_pattern()
-                has_restriction = True
-            else:
-                raise Exception('Unhandled match restriction: %s' % restriction)
-            pattern.append(pat)
-        if not has_restriction:
-            # all columns are either None or unique variables:
-            return None
-        else:
-            return '^' + '\t'.join(pattern) + '$'
-
-"""
->>> pat = cq.TuplePattern({'node1': cq.Variable('?x'), 'label': cq.Literal('loves')})
->>> pat.get_grep_pattern(['node1', 'label', 'node2', 'id'])
-'^\\(.*\\)\tloves\t.*\t.*$'
->>> pat2 = cq.TuplePattern({'node1': cq.Variable('?x'), 'label': cq.Literal('loves'), 'node2': cq.Variable('?x')})
->>> pat2.get_grep_pattern(['node1', 'label', 'node2', 'id'])
-'^\\(.*\\)\tloves\t\\1\t.*$'
->>> pat3 = cq.TuplePattern({'node1': cq.Variable('?x')})
->>> 
-"""
-
-
-class DataTable(object):
-    """Data table representing a KGTK graph which might be implemented by a file,
-    Pandas data frame, database table or other.
-    """
-    
-    def __init__(self, db, columns):
-        self.db = db
-        self.column_names = columns
-
-    def get_default_join_column(self, other):
-        assert isinstance(other, DataTable), 'argument needs to be a DataTable'
-        for col1 in self.column_names:
-            if col1 in other.column_names:
-                return col1
-        return None
-
-    def get_join_column_positions(self, other, column):
-        """Return the zero-based positions of `column' in `self' and `other'.
-        """
-        assert isinstance(other, DataTable), 'argument needs to be a DataTable'
-        return self.column_names.index(column), other.column_names.index(column)
-
-class FileDataTable(DataTable):
-    """Data table implemented by a tab-separated text file.
-    """
-    
-    def __init__(self, file, columns, header=False, sortcol=None):
-        self.db = file
-        self.column_names = columns
-        self.header=header
-        self.sortcol=sortcol  # element in `columns'
-
-    def describe(self):
-        if not self.header:
-            print(self.column_names)
-        with open(self.db, 'rt') as inp:
-            for line in inp:
-                sys.stdout.write(line)
-
-    def filter(self, pattern):
-        """Run a filter operation on `self' based on the restrictions in
-        `pattern' and return a new FileDataTable describing the result.
-        """
-        grep_pattern = pattern.get_grep_pattern(self.column_names)
-        if grep_pattern is None:
-            # pattern doesn't have any restrictions:
-            return self
-        result_graph = make_temp_file()
-        if self.header:
-            sh.grep(sh.tail('-n', '+2', self.db), '-G', '-h', grep_pattern, _out=result_graph)
-        else:
-            sh.grep('-G', '-h', grep_pattern, self.db, _out=result_graph)
-        return FileDataTable(result_graph, self.column_names)
-
-    def join(self, other, column=None):
-        """Run a join operation on `self' and `other' and return a new table describing the result.
-        Use `column' to join, otherwise use the first shared column name found.
-        """
-        assert isinstance(other, FileDataTable), 'second table needs to be also a FileDataTable'
-        column = column or self.get_default_join_column(other)
-        assert column is not None and column in self.column_names and column in other.column_names, 'disconnected join'
-        
-        pos1, pos2 = self.get_join_column_positions(other, column)
-        # TO DO: think about this since it potentially repeates column names:
-        join_columns = self.column_names[:] + other.column_names[0:pos2] + other.column_names[pos2 + 1:]
-
-        sorted_graph1 = make_temp_file()
-        sorted_graph2 = make_temp_file()
-        pos1, pos2 = pos1 + 1, pos2 + 1
-
-        if self.header:
-            sh.sort(sh.tail('-n', '+2', self.db), '-t', '\t', '-k', '%d,%d' % (pos1, pos1), _out=sorted_graph1)
-        else:
-            sh.sort('-t', '\t', '-k', '%d,%d' % (pos1, pos1), self.db, _out=sorted_graph1)
-        if other.header:
-            sh.sort(sh.tail('-n', '+2', other.db), '-t', '\t', '-k', '%d,%d' % (pos2, pos2), _out=sorted_graph2)
-        else:
-            sh.sort('-t', '\t', '-k', '%d,%d' % (pos2, pos2), other.db, _out=sorted_graph2)
-
-        join_graph = make_temp_file()
-        sh.join('-1', str(pos1), '-2', str(pos2), sorted_graph1, sorted_graph2, _out=join_graph)
-        return FileDataTable(join_graph, join_columns, sortcol=pos1)
-
-"""
->>> ft1 = cq.FileDataTable('/home/hans/Projects/kgtk/code/kgtk/kgtk/cypher/.work/file1.tsv', ['node1', 'label', 'node2', 'id'], header=True)
->>> ft2 = cq.FileDataTable('/home/hans/Projects/kgtk/code/kgtk/kgtk/cypher/.work/file2.tsv', ['node1', 'label', 'node2', 'id'], header=True)
->>> pat = cq.TuplePattern({'node1': cq.Variable('?x'), 'label': cq.Literal('loves')})
->>> ft1.filter(pat)
-<kgtk.cypher.query.FileDataTable object at 0x7f5a25a79490>
->>> ft1.join(ft2, 'node1')
-<kgtk.cypher.query.FileDataTable object at 0x7f5a25705910>
-"""
-
-def query_clause_to_tuple_pattern(clause):
-    node1 = clause[0]
-    rel = clause[1]
-    node2 = clause[2]
-    pattern = TuplePattern()
-    if node1.labels is not None:
-        pattern.set_restriction('node1', Literal(node1.labels[0]))
-    else:
-        pattern.set_restriction('node1', Variable(node1.variable.name))
-    if node2.labels is not None:
-        pattern.set_restriction('node2', Literal(node2.labels[0]))
-    else:
-        pattern.set_restriction('node2', Variable(node2.variable.name))
-    if rel.labels is not None:
-        pattern.set_restriction('label', Literal(rel.labels[0]))
-    pattern.set_restriction('id', Variable(rel.variable.name))
-    return pattern
-
-def run_test_match_query(graph, query):
-    query = 'MATCH ' + query + ' RETURN r;'
-    clauses = parser.intern(query).get_match_clauses()
-    tuple_query = [query_clause_to_tuple_pattern(clause) for clause in clauses]
-    print('Normalized clauses:')
-    pp.pprint(parser.object_to_tree(clauses))
-    print('\nTuple clauses:')
-    pp.pprint(parser.object_to_tree(tuple_query))
-    graph_table = FileDataTable(graph, ['node1', 'label', 'node2', 'id'], header=True)
-    result = execute_query(graph_table, tuple_query)
-    print('\nResult:')
-    result.describe()
-    return result
-
-def execute_query(graph_table, tuple_query):
-    n_clauses = len(tuple_query)
-    i = 1
-    result = graph_table.filter(tuple_query[0])
-    while i < n_clauses:
-        clause = graph_table.filter(tuple_query[i])
-        result = result.join(clause)
-        i += 1
-    return result
-
-# Using properties to restrict on "wide" columns:
-#
-# Example - unrestricted:
-#
-#    (a)-[:loves]->(b)
-#
-# Example - qualified:
-#
-#    (a {nationality: "Austria"})-[:loves]->(b)
-#
-# This could mean:
-#    {'node1': <Variable a>, 'node1;nationality': "Austria", 'label': "loves", 'node2': <Variable b>}
-#
-#    (a)-[:loves {graph: "g1"}]->(b)
-#
-# This could mean:
-#    {'node1': <Variable a>, 'label': "loves", 'graph': "g1", 'node2': <Variable b>}
-#
-# Assumption: if we access something via a property, it will always be accessed via a column,
-# not via a normalized edge; if data has mixed representation for some edges, it has to be
-# normalized one way or the other first for the query to get all results.  If not, it will
-# only pick up the representation used in the query, other edges will be ignored.
-#
-# For structured literals, we assume their fields are implied/virtual wide columns that aren't
-# materialized.  For example:
-#
-#    (id)-[:P580]->(time {`kgtk:year`: year})
-#    where year <= 2010
-#
-# which would be the same as (if we named the accessors like our column names):
-#
-#    (id)-[:P580]->(time)
-#    where kgtk_year(time) <= 2010
-
+### SQL Store
 
 class SqlStore(object):
     """SQL database capable of storing one or more KGTK graph files as individual tables
@@ -864,40 +592,72 @@ SqliteStore.register_user_function('kgtk_date_precision', 1, kgtk_date_precision
 
 ### Query translation:
 
-"""
-# from https://neo4j.com/docs/cypher-manual/current/syntax/expressions/:
+# An expression in Cypher can be (`+' means handled fully, `o' partially):
+# (from https://neo4j.com/docs/cypher-manual/current/syntax/expressions/)
+#
+# o A decimal (integer or float) literal: 13, -40000, 3.14, 6.022E23.
+#   - HC: 6.022E23 fails in the grammar
+# + A hexadecimal integer literal (starting with 0x): 0x13af, 0xFC3A9, -0x66eff
+#   - HC: get converted into decimal
+# + An octal integer literal (starting with 0): 01372, 02127, -05671.
+#   - HC: get converted into decimal
+# + A string literal: 'Hello', "World".
+# + A boolean literal: true, false, TRUE, FALSE.
+#   - HC: get converted into 0/1
+# + A variable: n, x, rel, myFancyVariable, `A name with weird stuff in it[]!`.
+# + A property: n.prop, x.prop, rel.thisProperty, myFancyVariable.`(weird property name)`
+# - A dynamic property: n["prop"], rel[n.city + n.zip], map[coll[0]].
+#   - HC: not doable in SQL, amounts to a function or column variable
+# - A parameter: $param, $0
+# + A list of expressions: ['a', 'b'], [1, 2, 3], ['a', 2, n.property, $param], [ ].
+#   - HC: only lists of literals
+# + A function call: length(p), nodes(p).
+# + An aggregate function: avg(x.prop), count(*).
+# - A path-pattern: (a)-->()<--(b).
+# + An operator application: 1 + 2 and 3 < 4.
+# + A predicate expression is an expression that returns true or false: a.prop = 'Hello', length(p) > 10, exists(a.name).
+# - An existential subquery is an expression that returns true or false: EXISTS { MATCH (n)-[r]→(p) WHERE p.name = 'Sven' }.
+# + A regular expression: a.name =~ 'Tim.*'
+#   - HC: SQLite supports LIKE and GLOB (which both have different regexp syntax),
+#     and REGEXP and MATCH through user-defined functions (we support =~ via kgtk_regex)
+# - A case-sensitive string matching expression: a.surname STARTS WITH 'Sven', a.surname ENDS WITH 'son' or a.surname CONTAINS 'son'
+#   - HC: would need to be implemented via a user-defined function
+# - A CASE expression.
 
-An expression in Cypher can be (`+' means handled fully, `o' partially):
+# Using properties to restrict on "wide" columns:
+#
+# Example - unrestricted:
+#
+#    (a)-[:loves]->(b)
+#
+# Example - qualified:
+#
+#    (a {nationality: "Austria"})-[:loves]->(b)
+#
+# This could mean:
+#    {'node1': <Variable a>, 'node1;nationality': "Austria", 'label': "loves", 'node2': <Variable b>}
+#
+#    (a)-[:loves {graph: "g1"}]->(b)
+#
+# This could mean:
+#    {'node1': <Variable a>, 'label': "loves", 'graph': "g1", 'node2': <Variable b>}
+#
+# Assumption: if we access something via a property, it will always be accessed via a column,
+# not via a normalized edge; if data has mixed representation for some edges, it has to be
+# normalized one way or the other first for the query to get all results.  If not, it will
+# only pick up the representation used in the query, other edges will be ignored.
+#
+# For structured literals, we assume their fields are implied/virtual wide columns that aren't
+# materialized.  For example:
+#
+#    (id)-[:P580]->(time {`kgtk:year`: year})
+#    where year <= 2010
+#
+# which would be the same as (if we named the accessors like our column names):
+#
+#    (id)-[:P580]->(time)
+#    where kgtk_year(time) <= 2010
 
-o A decimal (integer or float) literal: 13, -40000, 3.14, 6.022E23.
-  - HC: 6.022E23 fails in the grammar
-+ A hexadecimal integer literal (starting with 0x): 0x13af, 0xFC3A9, -0x66eff
-  - HC: get converted into decimal
-+ An octal integer literal (starting with 0): 01372, 02127, -05671.
-  - HC: get converted into decimal
-+ A string literal: 'Hello', "World".
-+ A boolean literal: true, false, TRUE, FALSE.
-  - HC: get converted into 0/1
-+ A variable: n, x, rel, myFancyVariable, `A name with weird stuff in it[]!`.
-+ A property: n.prop, x.prop, rel.thisProperty, myFancyVariable.`(weird property name)`
-- A dynamic property: n["prop"], rel[n.city + n.zip], map[coll[0]].
-  - HC: not doable in SQL, amounts to a function or column variable
-- A parameter: $param, $0
-+ A list of expressions: ['a', 'b'], [1, 2, 3], ['a', 2, n.property, $param], [ ].
-  - HC: only lists of literals
-+ A function call: length(p), nodes(p).
-+ An aggregate function: avg(x.prop), count(*).
-- A path-pattern: (a)-->()<--(b).
-+ An operator application: 1 + 2 and 3 < 4.
-+ A predicate expression is an expression that returns true or false: a.prop = 'Hello', length(p) > 10, exists(a.name).
-- An existential subquery is an expression that returns true or false: EXISTS { MATCH (n)-[r]→(p) WHERE p.name = 'Sven' }.
-+ A regular expression: a.name =~ 'Tim.*'
-  - HC: SQLite supports LIKE and GLOB (which both have different regexp syntax),
-    and REGEXP and MATCH through user-defined functions (we support =~ via kgtk_regex)
-- A case-sensitive string matching expression: a.surname STARTS WITH 'Sven', a.surname ENDS WITH 'son' or a.surname CONTAINS 'son'
-  - HC: would need to be implemented via a user-defined function
-- A CASE expression.
-"""
 
 class KgtkQuery(object):
 
@@ -1282,27 +1042,32 @@ class KgtkQuery(object):
         restrictions = set()  # maps (graph, col) SQL columns onto literal restrictions
         joins = set()         # maps equivalent SQL column pairs (avoiding dupes and redundant flips)
         parameters = None     # maps ? parameters in sequence onto actual query parameters
+        
         # translate clause top-level info:
         for i, clause in enumerate(self.match_clauses):
             graph = self.get_pattern_clause_graph(clause)
             graph_alias = '%s_c%d' % (graph, i+1) # per-clause graph table alias for self-joins
             graphs.add((graph, graph_alias))
             self.pattern_clause_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
+            
         # translate properties:
         for i, clause in enumerate(self.match_clauses):
             graph = self.get_pattern_clause_graph(clause)
             graph_alias = '%s_c%d' % (graph, i+1) # per-clause graph table alias for self-joins
             self.pattern_clause_props_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
+            
         select, group_by = self.return_clause_to_sql_selection(self.return_clause, litmap, varmap)
         graphs = ', '.join([g + ' ' + a for g, a in sorted(list(graphs))])
         query = io.StringIO()
         query.write('SELECT %s\nFROM %s' % (select, graphs))
+        
         if len(restrictions) > 0 or len(joins) > 0 or self.where_clause is not None:
             query.write('\nWHERE TRUE')
         for (g, c), val in sorted(list(restrictions)):
             query.write('\nAND %s.%s=%s' % (g, sql_quote_ident(c), val))
         for (g1, c1), (g2, c2) in sorted(list(joins)):
             query.write('\nAND %s.%s=%s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2)))
+            
         where = self.where_clause_to_sql(self.where_clause, litmap, varmap)
         where and query.write('\nAND ' + where)
         group_by and query.write('\n' + group_by)
@@ -1312,6 +1077,7 @@ class KgtkQuery(object):
         limit and query.write('\n' + limit)
         query = query.getvalue().replace(' TRUE\nAND', '')
         query, parameters = self.replace_literal_parameters(query, litmap)
+        
         self.log(1, '\nSQL: %s\nPARAS: %s\n' % (query.replace('\n', '\n     '), parameters))
         return query, parameters
 
@@ -1321,9 +1087,10 @@ class KgtkQuery(object):
         self.result_header = [c[0] for c in result.description]
         return result
 
+
 """
 >>> store = cq.SqliteStore('/tmp/graphstore.sqlite3.db', create=True)
->>> graph = '/home/hans/Documents/kgtk/code/kgtk/kgtk/cypher/.work/graph.tsv'
+>>> graph = '/home/hans/Documents/kgtk/code/kgtk/kgtk/kypher/.work/data/graph.tsv'
 
 >>> query = cq.KgtkQuery(graph, store, match='(a)-[:loves]->(b)')
 >>> list(query.execute())
@@ -1338,8 +1105,7 @@ class KgtkQuery(object):
 [('Joe', 'loves', 'Joe', 'e14', 'Joe', 'loves', 'Joe', 'e14')]
 
 >>> query = cq.KgtkQuery(graph, store, loglevel=1,
-                         match='g: (a)-[:loves]->(a), (a)-[r2:name]->(n)', 
-                         ret='a as node1, r2.label as label, n as node2, r2 as id')
+                         match='g: (a)-[:loves]->(a), (a)-[r2:name]->(n)')
 >>> list(query.execute())
 SQL: SELECT *
      FROM graph_1 graph_1_c1, graph_1 graph_1_c2
@@ -1351,8 +1117,11 @@ PARAS: ['loves', 'name']
 [('Joe', 'loves', 'Joe', 'e14', 'Joe', 'name', '"Joe"', 'e23')]
 >>> 
 
-# TO DO: the next thing to try is to implement the proper return selection
-# which requires translation of expressions and property lookups:
+# return clause translation:
+
+>>> query = cq.KgtkQuery(graph, store, loglevel=1,
+                         match='g: (a)-[:loves]->(a), (a)-[r2:name]->(n)', 
+                         ret="distinct a as node1, 'loves' as label, n as node2, r2 as id")
 
 >>> cp.pp.pprint(query.return_clause.to_tree())
 (   'Return',
@@ -1373,13 +1142,6 @@ PARAS: ['loves', 'name']
                      (   'ReturnItem',
                          {   'expression': ('Variable', {'name': 'r2'}),
                              'name': 'id'})]})
->>> 
-
-# we can do this now, still need to handle property lookup detection and arg normalization:
-
-query = cq.KgtkQuery(graph, store, loglevel=1,
-                         match='g: (a)-[:loves]->(a), (a)-[r2:name]->(n)', 
-                         ret="distinct a as node1, 'loves' as label, n as node2, r2 as id")
 
 >>> list(query.execute())
 SQL: SELECT DISTINCT graph_1_c2."node1" "node1", ? "label", graph_1_c2."node2" "node2", graph_1_c2."id" "id"
@@ -1392,13 +1154,4 @@ PARAS: ['loves', 'loves', 'name']
 [('Joe', 'loves', '"Joe"', 'e23')]
 >>> query.result_header
 ['node1', 'label', 'node2', 'id']
-"""
-
-"""
-# possible command syntax for arbitrary query:
-kgtk query -i dir1/graph1.tsv.gz -i dir2/graph2.tsv \
-     --match 'graph1: (a)-[:loves]->(b), graph2: (b)-[:label]->(l)' \
-     --where "l < 'Hans'" \
-     --return 'a, b, l' \
-     --limit 10
 """
