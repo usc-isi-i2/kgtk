@@ -25,7 +25,7 @@ pp = pprint.PrettyPrinter(indent=4)
 # - handle restrictions and unsupported elements more consistently and pervasively
 
 
-GRAMMAR_FILE = os.path.join(os.path.dirname(sys.modules['kgtk.cypher.grammar'].__file__), 'grammar.py')
+GRAMMAR_FILE = os.path.join(os.path.dirname(sys.modules['kgtk.kypher.grammar'].__file__), 'grammar.py')
 COMPILED_GRAMMAR_FILE = os.path.join(os.path.dirname(GRAMMAR_FILE), 'grammar_compiled.py')
 
 def compile_grammar():
@@ -41,7 +41,7 @@ def load_grammar(compile=True):
            os.path.getmtime(GRAMMAR_FILE) > os.path.getmtime(COMPILED_GRAMMAR_FILE):
             compile_grammar()
         # load it like this - there doesn't seem to be a better user API available:
-        import kgtk.cypher.grammar_compiled as cgc
+        import kgtk.kypher.grammar_compiled as cgc
         cgram = cgc.createParserClass(ometa.grammar.OMetaBase, {})
         return parsley.wrapGrammar(cgram)
     else:
