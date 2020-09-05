@@ -119,6 +119,12 @@ An example command that computes instances of the subclasses of two classes:
 kgtk instances --transitive --class Q13442814,Q12345678
 ```
 
+## Running unit tests locally
+```
+cd kgtk/tests
+python -W ignore -m unittest discover
+```
+
 ## How to cite
 
 ```
