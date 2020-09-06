@@ -1,5 +1,5 @@
 """
-Kypher queries over KGTK graphs.
+SQLStore to support Kypher queries over KGTK graphs.
 """
 
 import sys
@@ -26,13 +26,13 @@ def open_to_read(file):
     """
     if isinstance(file, str) and file.endswith('.gz'):
         import gzip
-        return gzip.open(file, 'rt', encoding='uf8')
+        return gzip.open(file, 'rt', encoding='utf8')
     elif isinstance(file, str) and file.endswith('.bz2'):
         import bz2
-        return bz2.open(file, 'rt', encoding='uf8')
+        return bz2.open(file, 'rt', encoding='utf8')
     elif isinstance(file, str) and file.endswith('.xz'):
         import lzma
-        return lzma.open(file, 'rt', encoding='uf8')
+        return lzma.open(file, 'rt', encoding='utf8')
     elif hasattr(file, 'read'):
         return file
     else:
@@ -240,6 +240,28 @@ class SqliteStore(SqlStore):
         colspec = ', '.join([sql_quote_ident(col._name_) + ' ' + col.type for col in table_schema.columns.values()])
         return 'CREATE TABLE %s (%s)' % (table_schema._name_, colspec)
 
+    def get_index_definition(self, table_schema, column, unique=False):
+        """Return a definition statement to create an index for `column' on `schema'.
+        Create a `unique' or primary key index if `unique' is True.  We are currently
+        only considering single-column indexes, since multi-column doesn't generally
+        make sense for a KGTK edge file.
+        """
+        table_name = table_schema._name_
+        column_name = table_schema.columns[column]._name_
+        index_name = '%s_%s_idx' % (table_name, column_name)
+        unique = unique and 'UNIQUE' or ''
+        return 'CREATE %s INDEX %s on %s (%s)' % (
+            unique, sql_quote_ident(index_name), table_name, sql_quote_ident(column_name))
+
+    def has_index(self, table_schema, column):
+        """Return True if table `table_schema' has an index defined for `column'.
+        """
+        table_name = table_schema._name_
+        column_name = table_schema.columns[column]._name_
+        index_name = '%s_%s_idx' % (table_name, column_name)
+        # we just key in on the name, not the table type, given how the names are constructed:
+        return self.has_table(index_name)
+
     def get_column_list(self, *columns):
         return ', '.join([sql_quote_ident(col._name_) for col in columns])
 
@@ -322,6 +344,19 @@ class SqliteStore(SqlStore):
         """Return the graph table name created from the data of `file'.
         """
         return self.get_file_info(file).graph
+
+    def get_graph_files(self, table_name):
+        """Return the list of all files whose data is represented by `table_name'.
+        Generally, there will only be one, but it is possible that different versions
+        of a file (e.g., compressed vs. uncompressed) created the same underlying data
+        which we could detect by running a sha hash command on the resulting tables.
+        """
+        schema = self.FILE_TABLE
+        table = schema._name_
+        cols = schema.columns
+        keycol = self.get_key_column(schema)
+        query = 'SELECT %s FROM %s WHERE %s=?' % (cols.file._name_, table, cols.graph._name_)
+        return [file for (file,) in self.execute(query, (table_name,))]
         
 
     ### Graph information and access:
@@ -347,6 +382,23 @@ class SqliteStore(SqlStore):
         """
         self.drop_record_info(self.GRAPH_TABLE, table_name)
 
+    def get_graph_table_schema(self, table_name):
+        """Get a graph table schema definition for graph `table_name'.
+        """
+        info = self.get_graph_info(table_name)
+        header = eval(info.header)
+        return self.kgtk_header_to_graph_table_schema(table_name, header)
+
+    def ensure_graph_index(self, table_name, column, unique=False):
+        """Ensure an index for `table_name' on `column' already exists or gets created.
+        """
+        schema = self.get_graph_table_schema(table_name)
+        if not self.has_index(schema, column):
+            # TO DO: record the increase in disk space for this graph from the index:
+            index_stmt = self.get_index_definition(schema, column, unique=unique)
+            self.log(1, 'CREATE INDEX on table %s column %s' % (table_name, column))
+            self.execute(index_stmt)
+
     def number_of_graphs(self):
         """Return the number of graphs currently stored in `self'.
         """
@@ -355,13 +407,21 @@ class SqliteStore(SqlStore):
     def new_graph_table(self):
         """Return a new table name to be used for representing a graph.
         """
-        return 'graph_%d' % (self.number_of_graphs() + 1)
+        graphid = (self.number_of_graphs() + 1)
+        # search for an open ID (we might have gaps due to deletions):
+        while True:
+            table = 'graph_%d' % graphid
+            if not self.has_table(table):
+                return table
+            graphid += 1
 
     # TO DO: figure out more precisely what to do when we do have an outdated or
     # different file for a graph, how to throw away the old one and then reimport
     
     def has_graph(self, file):
-        """Return True if the KGTK graph represented by `file' has already been imported.
+        """Return True if the KGTK graph represented by `file' has already been imported
+        and is up-to-date.  If this returns false, an obsolete graph table for `file'
+        might still exist and will have to be removed before new data gets imported.
         """
         file = os.path.realpath(file)
         info = self.get_file_info(file)
@@ -377,6 +437,10 @@ class SqliteStore(SqlStore):
     def add_graph(self, file):
         if self.has_graph(file):
             return
+        file_info = self.get_file_info(file)
+        if file_info is not None:
+            # we already have an earlier version of the file in store, delete its graph data:
+            self.drop_graph(file_info.graph)
         table = self.new_graph_table()
         oldsize = self.get_db_size()
         # for now we do this for simplicity, but it costs us about a factor of 2 in speed:
@@ -386,6 +450,19 @@ class SqliteStore(SqlStore):
         header = str(self.get_table_header(table))
         self.set_file_info(file, size=os.path.getsize(file), modtime=os.path.getmtime(file), graph=table)
         self.set_graph_info(table, header=header, size=graphsize, acctime=time.time())
+
+    def drop_graph(self, table_name):
+        """Delete the graph `table_name' and all its associated info records.
+        """
+        # delete all supporting file infos:
+        for file in self.get_graph_files(table_name):
+            self.log(1, 'DROP graph data table %s from %s' % (table_name, file))
+            self.drop_file_info(file)
+        # delete the graph info:
+        self.drop_graph_info(table_name)
+        # now delete the graph table and all associated indexes:
+        if self.has_table(table_name):
+            self.execute('DROP TABLE %s' % table_name)
 
 
     ### Data import:
