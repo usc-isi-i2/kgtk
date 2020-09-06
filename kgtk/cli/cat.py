@@ -10,10 +10,6 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.join.kgtkcat import KgtkCat
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
@@ -30,6 +26,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -88,6 +87,11 @@ def run(input_files: KGTKFiles,
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    from kgtk.join.kgtkcat import KgtkCat
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+    
     input_file_paths: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_files)
     output_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
     
