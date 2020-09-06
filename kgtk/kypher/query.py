@@ -1,5 +1,5 @@
 """
-Cypher queries over KGTK graphs.
+Kypher queries over KGTK graphs.
 """
 
 import sys
@@ -24,7 +24,7 @@ def listify(x):
 
 ### Query translation:
 
-# An expression in Cypher can be (`+' means handled fully, `o' partially):
+# An expression in Kypher can be (`+' means handled fully, `o' partially):
 # (from https://neo4j.com/docs/cypher-manual/current/syntax/expressions/)
 #
 # o A decimal (integer or float) literal: 13, -40000, 3.14, 6.022E23.
@@ -201,7 +201,7 @@ class KgtkQuery(object):
         return query.getvalue(), parameters
                  
     def register_clause_variable(self, query_var, sql_var, varmap, joins):
-        """Register a reference to the Cypher variable `query_var' which corresponds to the
+        """Register a reference to the Kypher variable `query_var' which corresponds to the
         SQL clause variable `sql_var' represented as `(graph, column)' where `graph' is a
         table alias for the relevant graph specific to the current clause.  If this is the
         first reference to `query_var', simply add it to `varmap'.  Otherwise, find the best
@@ -302,7 +302,7 @@ class KgtkQuery(object):
         return str(op).upper().startswith('KGTK_')
 
     def expression_to_sql(self, expr, litmap, varmap):
-        """Translate a Cypher expression `expr' into its SQL equivalent.
+        """Translate a Kypher expression `expr' into its SQL equivalent.
         """
         # this can only handle literals and variables for now:
         expr_type = type(expr)
@@ -469,8 +469,8 @@ class KgtkQuery(object):
 
     def translate_to_sql(self):
         graphs = set()        # the set of graph table names referenced by this query
-        litmap = {}           # maps Cypher literals onto parameter placeholders
-        varmap = {}           # maps Cypher variables onto representative (graph, col) SQL columns
+        litmap = {}           # maps Kypher literals onto parameter placeholders
+        varmap = {}           # maps Kypher variables onto representative (graph, col) SQL columns
         restrictions = set()  # maps (graph, col) SQL columns onto literal restrictions
         joins = set()         # maps equivalent SQL column pairs (avoiding dupes and redundant flips)
         parameters = None     # maps ? parameters in sequence onto actual query parameters

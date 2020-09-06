@@ -37,8 +37,8 @@ https://s3.amazonaws.com/artifacts.opencypher.org/openCypher9.pdf
 #     - Parsley:  OrExpression = XorExpression:x1 (WS (O R) -> "OR" WS XorExpression)*:x2 -> ["OrExpression", x1, x2]
 
 
-CYPHER_GRAMMAR = r"""
-    Cypher = WS Statement:s (WS ';')? WS -> s
+KYPHER_GRAMMAR = r"""
+    Kypher = WS Statement:s (WS ';')? WS -> s
 
     Statement = Query
 
