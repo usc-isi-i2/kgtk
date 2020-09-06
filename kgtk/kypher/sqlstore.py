@@ -1,5 +1,5 @@
 """
-Cypher queries over KGTK graphs.
+Kypher queries over KGTK graphs.
 """
 
 import sys
@@ -424,7 +424,7 @@ class SqliteStore(SqlStore):
     ('Susi', 'name', '"Susi"', 'e25')]
 
 >>> cq.pp.pprint(list(store.execute('select * from fileinfo')))
-[   (   '/home/hans/Documents/kgtk/code/kgtk/kgtk/cypher/.work/graph.tsv',
+[   (   '/home/hans/Documents/kgtk/code/kgtk/kgtk/kypher/.work/graph.tsv',
         205,
         1597353182.1801062,
         None,

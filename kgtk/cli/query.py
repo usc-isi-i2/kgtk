@@ -16,8 +16,8 @@ DEFAULT_GRAPH_CACHE_FILE = os.path.join(
 
 def parser():
     return {
-        'help': 'Query one or more KGTK files with Cypher',
-        'description': 'Query one or more KGTK files with Cypher.',
+        'help': 'Query one or more KGTK files with Kypher',
+        'description': 'Query one or more KGTK files with Kypher.',
     }
 
 def add_arguments_extended(parser, parsed_shared_args):
@@ -27,20 +27,20 @@ def add_arguments_extended(parser, parsed_shared_args):
     parser.add_argument('--input', '-i', metavar='INPUT', action='append', dest='inputs',
                         help="one or more named input files to query (maybe compressed)")
     parser.add_argument('--query', default=None, action='store', dest='query',
-                        help="complete Cypher query combining all clauses," +
+                        help="complete Kypher query combining all clauses," +
                         " if supplied, all other specialized clause arguments will be ignored")
     parser.add_argument('--match', metavar='PATTERN', default='()', action='store', dest='match',
-                        help="MATCH pattern of a Cypher query, defaults to universal node pattern `()'")
+                        help="MATCH pattern of a Kypher query, defaults to universal node pattern `()'")
     parser.add_argument('--where', metavar='CLAUSE', default=None, action='store', dest='where',
-                        help="WHERE clause of a Cypher query")
+                        help="WHERE clause of a Kypher query")
     parser.add_argument('--return', metavar='CLAUSE', default='*', action='store', dest='return_',
-                        help="RETURN clause of a Cypher query (defaults to *)")
+                        help="RETURN clause of a Kypher query (defaults to *)")
     parser.add_argument('--order-by', metavar='CLAUSE', default=None, action='store', dest='order',
-                        help="ORDER BY clause of a Cypher query")
+                        help="ORDER BY clause of a Kypher query")
     parser.add_argument('--skip', metavar='CLAUSE', default=None, action='store', dest='skip',
-                        help="SKIP clause of a Cypher query")
+                        help="SKIP clause of a Kypher query")
     parser.add_argument('--limit', metavar='CLAUSE', default=None, action='store', dest='limit',
-                        help="LIMIT clause of a Cypher query")
+                        help="LIMIT clause of a Kypher query")
     parser.add_argument('--graph-cache', default=DEFAULT_GRAPH_CACHE_FILE, action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")

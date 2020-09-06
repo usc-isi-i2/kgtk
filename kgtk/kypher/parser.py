@@ -9,7 +9,7 @@ import os.path
 import pprint
 import parsley
 import ometa.grammar
-from   kgtk.kypher.grammar import CYPHER_GRAMMAR
+from   kgtk.kypher.grammar import KYPHER_GRAMMAR
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -30,7 +30,7 @@ COMPILED_GRAMMAR_FILE = os.path.join(os.path.dirname(GRAMMAR_FILE), 'grammar_com
 
 def compile_grammar():
     # if we want to use this for production, we can save the grammar as a Python file like this:
-    cygram = ometa.grammar.OMeta.makeGrammar(CYPHER_GRAMMAR)
+    cygram = ometa.grammar.OMeta.makeGrammar(KYPHER_GRAMMAR)
     with open(COMPILED_GRAMMAR_FILE, 'w') as out:
         out.write(cygram.__loader__.source)
 
@@ -46,7 +46,7 @@ def load_grammar(compile=True):
         return parsley.wrapGrammar(cgram)
     else:
         # rebuild the grammar from scratch:
-        return parsley.makeGrammar(CYPHER_GRAMMAR, {})
+        return parsley.makeGrammar(KYPHER_GRAMMAR, {})
 
 Parser = load_grammar()
 
@@ -784,16 +784,16 @@ def intern_ast_list(query, ast_list):
     raise Exception('Unhandled list type: %s' % ast_list)
 
 
-### Cypher query:
+### Kypher query:
 
-class CypherQuery(object):
+class KypherQuery(object):
     def __init__(self, query_string):
         self.query = None
         self.variables = {}
         self.simplified = False
         self.match_clauses = None
         self.parse = Parser(query_string)
-        self.query = intern_ast(self, self.parse.Cypher())
+        self.query = intern_ast(self, self.parse.Kypher())
 
     def to_tree(self):
         return (self.__class__.__name__, self.query and self.query.to_tree() or None)
@@ -869,10 +869,10 @@ class CypherQuery(object):
 ### Top level:
 
 def parse(query_string):
-    return Parser(query_string).Cypher()
+    return Parser(query_string).Kypher()
 
 def intern(query_string):
-    return CypherQuery(query_string)
+    return KypherQuery(query_string)
 
 
 # Example w/ interesting differences between node and relation patterns:
