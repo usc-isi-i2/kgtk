@@ -1,5 +1,5 @@
 """
-Test driver for KGTK Cypher query engine
+Test driver for KGTK Kypher query engine
 """
 
 import sys
@@ -55,8 +55,10 @@ def import_modules():
     setattr(mod, "sh", sh)
     import csv
     setattr(mod, "csv", csv)
-    import kgtk.kypher.query as kypher
-    setattr(mod, "kypher", kypher)
+    import kgtk.kypher.query as kyquery
+    setattr(mod, "kyquery", kyquery)
+    import kgtk.kypher.sqlstore as sqlstore
+    setattr(mod, "sqlstore", sqlstore)
 
 def run(**options):
     """Run Kypher query according to the provided command-line arguments.
@@ -83,16 +85,16 @@ def run(**options):
 
         try:
             graph_cache = options.get('graph_cache_file')
-            store = kypher.SqliteStore(graph_cache, create=not os.path.exists(graph_cache), loglevel=loglevel)
+            store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache), loglevel=loglevel)
         
-            query = kypher.KgtkQuery(inputs, store, loglevel=loglevel,
-                                     query=options.get('query'),
-                                     match=options.get('match'),
-                                     where=options.get('where'),
-                                     ret=options.get('return_'),
-                                     order=options.get('order'),
-                                     skip=options.get('skip'),
-                                     limit=options.get('limit'))
+            query = kyquery.KgtkQuery(inputs, store, loglevel=loglevel,
+                                      query=options.get('query'),
+                                      match=options.get('match'),
+                                      where=options.get('where'),
+                                      ret=options.get('return_'),
+                                      order=options.get('order'),
+                                      skip=options.get('skip'),
+                                      limit=options.get('limit'))
             result = query.execute()
 
             csvwriter = csv.writer(output, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE, quotechar=None)
