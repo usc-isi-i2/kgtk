@@ -100,14 +100,15 @@ class KgtkFormat:
             return "'" + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
 
     @classmethod
-    def unstringify(cls, s: str)->str:
+    def unstringify(cls, s: str, unescape_pipe: bool = True)->str:
         """Convert a KGTK formatted string into an internal string.  The language
         code and suffix are not returned.
         """
         if s.startswith("'"):
             language: str
             s, language = s.rsplit("@", 1)
-        s = s.replace('\\|', '|')
+        if unescape_pipe:
+            s = s.replace('\\|', '|')
         return ast.literal_eval(s)
 
     @classmethod

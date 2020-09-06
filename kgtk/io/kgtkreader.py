@@ -53,6 +53,16 @@ class KgtkReaderOptions():
     ERROR_LIMIT_DEFAULT: int = 1000
     GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
 
+    # TODO: use an enum
+    INPUT_FORMAT_CSV: str = "csv"
+    INPUT_FORMAT_KGTK: str = "kgtk"
+
+    INPUT_FORMAT_CHOICES: typing.List[str] = [
+        INPUT_FORMAT_CSV,
+        INPUT_FORMAT_KGTK,
+    ]
+    INPUT_FORMAT_DEFAULT: str = INPUT_FORMAT_KGTK
+    
     mode: KgtkReaderMode = attr.ib(validator=attr.validators.instance_of(KgtkReaderMode), default=KgtkReaderMode.AUTO)
 
     # The column separator is normally tab.
@@ -107,6 +117,7 @@ class KgtkReaderOptions():
     truncate_long_lines: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # Other implementation options?
+    input_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
     compression_type: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
@@ -161,6 +172,10 @@ class KgtkReaderOptions():
                             type=str, **d(default=KgtkFormat.COLUMN_SEPARATOR))
 
         # TODO: use an Enum or add choices.
+        fgroup.add_argument(prefix1 + "input-format",
+                            dest=prefix2 + "input_format",
+                            help=h(prefix3 + "Specify the input format (default=%(default)s)."))
+
         fgroup.add_argument(prefix1 + "compression-type",
                             dest=prefix2 + "compression_type",
                             help=h(prefix3 + "Specify the compression type (default=%(default)s)."))
@@ -332,6 +347,7 @@ class KgtkReaderOptions():
             blank_required_field_line_action=lookup("blank_required_field_line_action", ValidationAction.EXCLUDE),
             column_separator=lookup("column_separator", KgtkFormat.COLUMN_SEPARATOR),
             comment_line_action=lookup("comment_line_action", ValidationAction.EXCLUDE),
+            input_format=lookup("input_format", None),
             compression_type=lookup("compression_type", None),
             empty_line_action=lookup("empty_line_action", ValidationAction.EXCLUDE),
             error_limit=lookup("error_limit", cls.ERROR_LIMIT_DEFAULT),
@@ -396,12 +412,13 @@ class KgtkReaderOptions():
         print("%sprohibited-list-action=%s" % (prefix, self.prohibited_list_action.name), file=out)
         print("%sfill-short-lines=%s" % (prefix, str(self.fill_short_lines)), file=out)
         print("%struncate-long-lines=%s" % (prefix, str(self.truncate_long_lines)), file=out)
+        if self.input_format is not None:
+            print("%sinput-format=%s" % (prefix, str(self.input_format)), file=out)
         if self.compression_type is not None:
             print("%scompression-type=%s" % (prefix, str(self.compression_type)), file=out)
         print("%sgzip-in-parallel=%s" % (prefix, str(self.gzip_in_parallel)), file=out)
         print("%sgzip-queue-size=%s" % (prefix, str(self.gzip_queue_size)), file=out)
               
-        
 
 DEFAULT_KGTK_READER_OPTIONS: KgtkReaderOptions = KgtkReaderOptions()
 
@@ -704,6 +721,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 print("header: %s" % header, file=error_file, flush=True)
 
             # Split the first line into column names.
+            #
+            # TODO: if options.input_format == KgtkReaderOptions.INPUT_FORMAT_CSV, be smarter.
             return header, header.split(options.column_separator)
         else:
             # Skip the first record to override the column names in the file.
@@ -763,6 +782,46 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             print("%s" % line, file=self.reject_file)
 
+    def csvsplit(self, line: str)->typing.List[str]:
+        row: typing.List[str] = [ ]
+        item: str = ""
+        c: str
+        instring: bool = False
+        sawstring:bool = False
+        for c in line:
+            if instring:
+                if c == '"':
+                    # TODO: optionally look for escaped characters.
+                    instring = False
+                    sawstring = True
+                else:
+                    item += c
+            else:
+                if c == '"':
+                    instring = True
+                    if sawstring:
+                        item += c
+                elif c == ",":
+                    if sawstring:
+                        row.append(KgtkFormat.stringify(item))
+                    else:
+                        row.append(item)
+                    item = ""
+                else:
+                    item += c
+                sawstring = False
+
+        if sawstring:
+            row.append(KgtkFormat.stringify(item))
+        else:
+            row.append(item)
+
+        # for x in row:
+        #     print("X: '%s'" % x, file=sys.stderr, flush=True)
+                    
+        return row
+        
+
     # Get the next edge values as a list of strings.
     def nextrow(self)-> typing.List[str]:
         row: typing.List[str]
@@ -777,6 +836,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             tail_skip_count: int = self.options.record_limit - self.options.tail_count
             if tail_skip_count > skip_count:
                 skip_count = tail_skip_count # Take the larger skip count.
+
+        input_format: str
+        if self.options.input_format is None:
+            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
+        else:
+            input_format = self.options.input_format
 
         # This loop accomodates lines that are ignored.
         while (True):
@@ -837,7 +902,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                         self.reject(line)
                         continue
 
-            row = line.split(self.options.column_separator)
+            if input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
+                row = self.csvsplit(line)
+            else:
+                row = line.split(self.options.column_separator)
 
             if repair_and_validate_lines:
                 # Optionally fill missing trailing columns with empty row:
