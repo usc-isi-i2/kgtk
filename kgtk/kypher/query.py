@@ -94,7 +94,7 @@ def listify(x):
 class KgtkQuery(object):
 
     def __init__(self, files, store, query=None,
-                 match=None, where=None, ret=None,
+                 match='()', where=None, ret='*',
                  order=None, skip=None, limit=None,
                  loglevel=0):
         self.files = [os.path.realpath(f) for f in listify(files)]
@@ -489,16 +489,20 @@ class KgtkQuery(object):
             self.pattern_clause_props_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
             
         select, group_by = self.return_clause_to_sql_selection(self.return_clause, litmap, varmap)
-        graphs = ', '.join([g + ' ' + a for g, a in sorted(list(graphs))])
+        graph_tables = ', '.join([g + ' ' + a for g, a in sorted(list(graphs))])
         query = io.StringIO()
-        query.write('SELECT %s\nFROM %s' % (select, graphs))
+        query.write('SELECT %s\nFROM %s' % (select, graph_tables))
         
         if len(restrictions) > 0 or len(joins) > 0 or self.where_clause is not None:
             query.write('\nWHERE TRUE')
         for (g, c), val in sorted(list(restrictions)):
             query.write('\nAND %s.%s=%s' % (g, sql_quote_ident(c), val))
+        alias_to_graph = {alias: graph for graph, alias in graphs}
         for (g1, c1), (g2, c2) in sorted(list(joins)):
             query.write('\nAND %s.%s=%s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2)))
+            # ensure we have indices on joined columns - the ID check needs to be generalized:
+            self.store.ensure_graph_index(alias_to_graph[g1], c1, unique=c1.upper()=='ID')
+            self.store.ensure_graph_index(alias_to_graph[g2], c2, unique=c2.upper()=='ID')
             
         where = self.where_clause_to_sql(self.where_clause, litmap, varmap)
         where and query.write('\nAND ' + where)
