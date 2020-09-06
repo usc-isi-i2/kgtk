@@ -2,15 +2,15 @@ def createParserClass(GrammarBase, ruleGlobals):
     if ruleGlobals is None:
         ruleGlobals = {}
     class Grammar(GrammarBase):
-        def rule_Cypher(self):
+        def rule_Kypher(self):
             _locals = {'self': self}
-            self.locals['Cypher'] = _locals
+            self.locals['Kypher'] = _locals
             self._trace('er ', (9, 12), self.input.position)
             _G_apply_1, lastError = self._apply(self.rule_WS, "WS", [])
-            self.considerError(lastError, 'Cypher')
+            self.considerError(lastError, 'Kypher')
             self._trace('= WS State', (12, 22), self.input.position)
             _G_apply_2, lastError = self._apply(self.rule_Statement, "Statement", [])
-            self.considerError(lastError, 'Cypher')
+            self.considerError(lastError, 'Kypher')
             _locals['s'] = _G_apply_2
             def _G_optional_3():
                 self._trace(':s', (26, 28), self.input.position)
@@ -23,12 +23,12 @@ def createParserClass(GrammarBase, ruleGlobals):
             def _G_optional_6():
                 return (None, self.input.nullError())
             _G_or_7, lastError = self._or([_G_optional_3, _G_optional_6])
-            self.considerError(lastError, 'Cypher')
+            self.considerError(lastError, 'Kypher')
             self._trace(";')", (34, 37), self.input.position)
             _G_apply_8, lastError = self._apply(self.rule_WS, "WS", [])
-            self.considerError(lastError, 'Cypher')
+            self.considerError(lastError, 'Kypher')
             _G_python_10, lastError = eval(self._G_expr_9, self.globals, _locals), None
-            self.considerError(lastError, 'Cypher')
+            self.considerError(lastError, 'Kypher')
             return (_G_python_10, self.currentError)
 
 
