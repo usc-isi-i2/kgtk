@@ -22,8 +22,10 @@ pp = pprint.PrettyPrinter(indent=4)
 ### Utilities
 
 def open_to_read(file):
-    """Version of `open' that is smart about gzip compression and already open file-like objects.
+    """Version of `open' that is smart about different types of compressed files
+    and file-like objects that are already open to read.
     """
+    # TO DO: I am sure something like this already exists somewhere in Craig's code
     if isinstance(file, str) and file.endswith('.gz'):
         import gzip
         return gzip.open(file, 'rt', encoding='utf8')
@@ -360,6 +362,9 @@ class SqliteStore(SqlStore):
         
 
     ### Graph information and access:
+
+    # TO DO: add `bump_timestamp' so we can easily track when this graph was last used
+    #        add `update_xxx_info' methods that only change not None fields
     
     def get_graph_info(self, table_name):
         """Return a dict info structure for the graph stored in `table_name' (there can only be one),
@@ -394,10 +399,15 @@ class SqliteStore(SqlStore):
         """
         schema = self.get_graph_table_schema(table_name)
         if not self.has_index(schema, column):
-            # TO DO: record the increase in disk space for this graph from the index:
             index_stmt = self.get_index_definition(schema, column, unique=unique)
             self.log(1, 'CREATE INDEX on table %s column %s' % (table_name, column))
+            # we also measure the increase in diskspace here:
+            oldsize = self.get_db_size()
             self.execute(index_stmt)
+            idxsize = self.get_db_size() - oldsize
+            ginfo = self.get_graph_info(table_name)
+            ginfo.size += idxsize
+            self.set_record_info(self.GRAPH_TABLE, ginfo)
 
     def number_of_graphs(self):
         """Return the number of graphs currently stored in `self'.
@@ -415,9 +425,6 @@ class SqliteStore(SqlStore):
                 return table
             graphid += 1
 
-    # TO DO: figure out more precisely what to do when we do have an outdated or
-    # different file for a graph, how to throw away the old one and then reimport
-    
     def has_graph(self, file):
         """Return True if the KGTK graph represented by `file' has already been imported
         and is up-to-date.  If this returns false, an obsolete graph table for `file'
