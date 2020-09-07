@@ -304,7 +304,6 @@ class KgtkQuery(object):
     def expression_to_sql(self, expr, litmap, varmap):
         """Translate a Kypher expression `expr' into its SQL equivalent.
         """
-        # this can only handle literals and variables for now:
         expr_type = type(expr)
         if expr_type == parser.Literal:
             return self.get_literal_parameter(expr.value, litmap)
@@ -500,9 +499,18 @@ class KgtkQuery(object):
         alias_to_graph = {alias: graph for graph, alias in graphs}
         for (g1, c1), (g2, c2) in sorted(list(joins)):
             query.write('\nAND %s.%s=%s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2)))
-            # ensure we have indices on joined columns - the ID check needs to be generalized:
-            self.store.ensure_graph_index(alias_to_graph[g1], c1, unique=c1.upper()=='ID')
-            self.store.ensure_graph_index(alias_to_graph[g2], c2, unique=c2.upper()=='ID')
+
+        # ensure that we have relevant indices:
+        # TO DO: think about this some more, we might need some manual control as well
+        if len(joins) > 0:
+            for (g1, c1), (g2, c2) in joins:
+                # ensure we have indices on joined columns - the ID check needs to be generalized:
+                self.store.ensure_graph_index(alias_to_graph[g1], c1, unique=c1.upper()=='ID')
+                self.store.ensure_graph_index(alias_to_graph[g2], c2, unique=c2.upper()=='ID')
+        elif len(restrictions) > 0:
+            # if we don't have any joins, we might need indexes on restricted columns:
+            for (g, c), val in restrictions:
+                self.store.ensure_graph_index(alias_to_graph[g], c, unique=c.upper()=='ID')
             
         where = self.where_clause_to_sql(self.where_clause, litmap, varmap)
         where and query.write('\nAND ' + where)
