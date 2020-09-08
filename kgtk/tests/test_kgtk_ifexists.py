@@ -71,3 +71,18 @@ class TestKGTKFilter(unittest.TestCase):
         df = pd.read_csv(f'{self.temp_dir}/Q47158.tsv', sep='\t')
 
         self.assertEqual(len(df), 169)
+
+
+    def test_kgtk_ifnotexists_preserve_order(self):
+        Q47158_path = 'data/Q47158_non_edge.tsv'
+        cli_entry("kgtk", "ifnotexists", "-i", self.file_path, "--filter-on", Q47158_path, "-o",
+                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "heading", "--mode", "NONE",
+                  "--preserve-order", "--cache-input", "--verbose")
+
+        f = open(f'{self.temp_dir}/Q47158.tsv')
+        lines = f.readlines()
+        # strip off the \n
+        self.assertEqual(lines[1].strip(), "Q1052204-P18-1	Q1052204	P18	Shengjianbao by buncheduptv in San Mateo, CA.jpg	normal")
+        self.assertEqual(lines[len(lines) - 1].replace('\n', ''),
+                         "Q65695069-label-1	Q65695069	label	Spring Break Forever\t")
+        f.close()
