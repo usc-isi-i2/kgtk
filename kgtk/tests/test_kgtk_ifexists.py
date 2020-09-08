@@ -17,7 +17,8 @@ class TestKGTKFilter(unittest.TestCase):
     def test_kgtk_ifexists(self):
         Q47158_path = 'data/sample_kgtk_edge_Q47158.tsv'
         cli_entry("kgtk", "ifexists", "-i", self.file_path, "--filter-on", Q47158_path, "-o",
-                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "node1", "--show-option")
+                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "node1", "--show-option",
+                  "--verbose")
 
         df = pd.read_csv(f'{self.temp_dir}/Q47158.tsv', sep='\t')
 
@@ -26,7 +27,8 @@ class TestKGTKFilter(unittest.TestCase):
     def test_kgtk_ifexists_mode_none(self):
         Q47158_path = 'data/Q47158_non_edge.tsv'
         cli_entry("kgtk", "ifexists", "-i", self.file_path, "--filter-on", Q47158_path, "-o",
-                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "heading", "--mode", "NONE")
+                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "heading", "--mode", "NONE",
+                  "--verbose")
 
         df = pd.read_csv(f'{self.temp_dir}/Q47158.tsv', sep='\t')
 
@@ -59,3 +61,13 @@ class TestKGTKFilter(unittest.TestCase):
         self.assertEqual(lines[len(lines) - 1].replace('\n', ''),
                          "Q47158-wikipedia_sitelink-9	Q47158	wikipedia_sitelink	http://et.wikipedia.org/wiki/Triias	")
         f.close()
+
+    def test_kgtk_ifnotexists(self):
+        Q47158_path = 'data/Q47158_non_edge.tsv'
+        cli_entry("kgtk", "ifnotexists", "-i", self.file_path, "--filter-on", Q47158_path, "-o",
+                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "heading", "--mode", "NONE",
+                  "--verbose")
+
+        df = pd.read_csv(f'{self.temp_dir}/Q47158.tsv', sep='\t')
+
+        self.assertEqual(len(df), 169)
