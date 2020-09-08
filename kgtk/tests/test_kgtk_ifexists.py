@@ -38,8 +38,10 @@ class TestKGTKFilter(unittest.TestCase):
                   f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "heading", "--mode", "NONE",
                   "--preserve-order")
 
-        lines = open(f'{self.temp_dir}/Q47158.tsv').readlines()
+        f = open(f'{self.temp_dir}/Q47158.tsv')
+        lines = f.readlines()
         # strip off the \n
         self.assertEqual(lines[1].strip(), "Q47158-P1014-1	Q47158	P1014	300391257	normal")
         self.assertEqual(lines[len(lines) - 1].replace('\n', ''),
                          "Q47158-wikipedia_sitelink-9	Q47158	wikipedia_sitelink	http://et.wikipedia.org/wiki/Triias	")
+        f.close()
