@@ -31,3 +31,15 @@ class TestKGTKFilter(unittest.TestCase):
         df = pd.read_csv(f'{self.temp_dir}/Q47158.tsv', sep='\t')
 
         self.assertEqual(len(df), 118)
+
+    def test_kgtk_ifexists_preserve_order(self):
+        Q47158_path = 'data/Q47158_non_edge.tsv'
+        cli_entry("kgtk", "ifexists", "-i", self.file_path, "--filter-on", Q47158_path, "-o",
+                  f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "heading", "--mode", "NONE",
+                  "--preserve-order")
+
+        lines = open(f'{self.temp_dir}/Q47158.tsv').readlines()
+        # strip off the \n
+        self.assertEqual(lines[1].strip(), "Q47158-P1014-1	Q47158	P1014	300391257	normal")
+        self.assertEqual(lines[len(lines) - 1].replace('\n', ''),
+                         "Q47158-wikipedia_sitelink-9	Q47158	wikipedia_sitelink	http://et.wikipedia.org/wiki/Triias	")
