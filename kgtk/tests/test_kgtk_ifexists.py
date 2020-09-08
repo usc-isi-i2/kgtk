@@ -36,7 +36,7 @@ class TestKGTKFilter(unittest.TestCase):
         Q47158_path = 'data/Q47158_non_edge.tsv'
         cli_entry("kgtk", "ifexists", "-i", self.file_path, "--filter-on", Q47158_path, "-o",
                   f'{self.temp_dir}/Q47158.tsv', "--input-keys", "node1", "--filter-keys", "heading", "--mode", "NONE",
-                  "--preserve-order")
+                  "--preserve-order", "--cache-input")
 
         f = open(f'{self.temp_dir}/Q47158.tsv')
         lines = f.readlines()
