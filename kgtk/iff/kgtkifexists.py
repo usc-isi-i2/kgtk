@@ -164,8 +164,8 @@ class KgtkIfExists(KgtkFormat):
         if self.verbose:
             print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
         input_line_count: int = 0
-        accept_line_count: int = 0;
-        reject_line_count: int = 0;
+        accept_line_count: int = 0
+        reject_line_count: int = 0
 
         # TODO: join these two code paths using xor?
         row: typing.List[str]
