@@ -11,6 +11,7 @@ from pathlib import Path
 class TestKGTKCat(unittest.TestCase):
     def setUp(self) -> None:
         self.file_path = 'data/sample_kgtk_edge_file.tsv'
+        self.file_path_node = 'data/sample_kgtk_nodes.tsv'
         self.temp_dir = tempfile.mkdtemp()
 
     def tearDown(self) -> None:
@@ -76,3 +77,15 @@ class TestKGTKCat(unittest.TestCase):
             self.assertTrue('label' in x)
             self.assertTrue('node2' in x)
             self.assertTrue('rank' in x)
+
+    def test_kgtk_cat_edge_node_file(self):
+        rc = cli_entry("kgtk", "cat", "-i", self.file_path, self.file_path_node, "-o", f'{self.temp_dir}/cat.tsv')
+        # non zero exit code
+        self.assertEqual(rc, 1)
+
+    def test_kgtk_cat_two_files(self):
+        f1_path = 'data/sample_kgtk_edge_Q47158.tsv'
+        f2_path = 'data/sample_kgtk_edge_file_with_id.tsv'
+        cli_entry("kgtk", "cat", "-i", f1_path, f2_path, "-o", f'{self.temp_dir}/cat.tsv')
+        df = pd.read_csv(f'{self.temp_dir}/cat.tsv', sep='\t')
+        self.assertEqual(len(df), 6)
