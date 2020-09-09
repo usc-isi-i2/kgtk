@@ -15,8 +15,8 @@ class TestKGTKNormalizeNodes(unittest.TestCase):
         shutil.rmtree(self.temp_dir)
 
     def test_kgtk_normalize_nodes_default(self):
-        cli_entry("kgtk", "normalize-nodes", "-i", self.file_path, "-o", f'{self.temp_dir}/normalize.tsv')
-        cli_entry("kgtk", "normalize-nodes", "-i", self.file_path, "-o", '/tmp/normalize.tsv')
+        cli_entry("kgtk", "normalize-nodes", "-i", self.file_path, "-o", f'{self.temp_dir}/normalize.tsv', "--verbose",
+                  "--show-option")
 
         df = pd.read_csv(f'{self.temp_dir}/normalize.tsv', sep='\t')
 
@@ -25,7 +25,23 @@ class TestKGTKNormalizeNodes(unittest.TestCase):
         self.assertTrue(len(df), 3)
         print(df)
         labels = list(df['node2'].unique())
-        
+
         self.assertTrue("'Germany'@en" in labels)
         self.assertTrue("'Германия'@ru" in labels)
         self.assertTrue("'Німеччина'@uk" in labels)
+
+    def test_kgtk_normalize_nodes_alias_only(self):
+        cli_entry("kgtk", "normalize-nodes", "-i", self.file_path, "-o", f'{self.temp_dir}/normalize.tsv', "-c",
+                  "alias")
+
+        df = pd.read_csv(f'{self.temp_dir}/normalize.tsv', sep='\t')
+        self.assertEqual(len(df), 24)
+        self.assertEqual(list(df['label'].unique())[0], 'alias')
+
+    def test_kgtk_normalize_nodes_alias_only_labels(self):
+        cli_entry("kgtk", "normalize-nodes", "-i", self.file_path, "-o", f'{self.temp_dir}/normalize.tsv', "-c",
+                  "alias", "--labels", "aliases")
+
+        df = pd.read_csv(f'{self.temp_dir}/normalize.tsv', sep='\t')
+        self.assertEqual(len(df), 24)
+        self.assertEqual(list(df['label'].unique())[0], 'aliases')
