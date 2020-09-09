@@ -35,3 +35,59 @@ class TestKGTKAddID(unittest.TestCase):
         df = pd.read_csv(f'{self.temp_dir}/id.tsv',sep='\t')
         for i, row in df.iterrows():
             self.assertEqual(row['id_new'], f'E{i+1}')
+
+    # def test_kgtk_add_id_new_id_column_specify_old_id_column(self):
+    #     file_path = 'data/sample_kgtk_edge_file_with_id.tsv'
+    #     cli_entry("kgtk", "add-id", "-i", file_path, "-o", f'{self.temp_dir}/id.tsv',
+    #             "--new-id-column-name", "id_new", "-old-id-column-name", "id")
+    #     df = pd.read_csv(f'{self.temp_dir}/id.tsv',sep='\t')
+    #     for i, row in df.iterrows():
+    #         self.assertEqual(row['id_new'], f'E{i+1}')
+
+    def test_kgtk_add_id_overwrite_style_n1_l_n2(self):
+        file_path = 'data/sample_kgtk_edge_file_with_id.tsv'
+        cli_entry("kgtk", "add-id", "-i", file_path, "-o", f'{self.temp_dir}/id.tsv',
+                  "--overwrite-id", "--id-style", "node1-label-node2")
+        df = pd.read_csv(f'{self.temp_dir}/id.tsv', sep='\t')
+        for i, row in df.iterrows():
+            self.assertEqual(row['id'], f'{row["node1"]}-{row["label"]}-{row["node2"]}')
+
+    def test_kgtk_add_id_overwrite_style_n1_l_num(self):
+        file_path = 'data/sample_kgtk_edge_file_with_id.tsv'
+        cli_entry("kgtk", "add-id", "-i", file_path, "-o", f'{self.temp_dir}/id.tsv',
+                  "--overwrite-id", "--id-style", "node1-label-num")
+        df = pd.read_csv(f'{self.temp_dir}/id.tsv', sep='\t')
+        for i, row in df.iterrows():
+            self.assertEqual(row['id'], f'{row["node1"]}-{row["label"]}-0000')
+
+    def test_kgtk_add_id_overwrite_style_n1_l_n2_num(self):
+        file_path = 'data/sample_kgtk_edge_file_with_id.tsv'
+        cli_entry("kgtk", "add-id", "-i", file_path, "-o", f'{self.temp_dir}/id.tsv',
+                  "--overwrite-id", "--id-style", "node1-label-node2-num")
+        df = pd.read_csv(f'{self.temp_dir}/id.tsv', sep='\t')
+        for i, row in df.iterrows():
+            self.assertEqual(row['id'], f'{row["node1"]}-{row["label"]}-{row["node2"]}-0000')
+
+    def test_kgtk_add_id_overwrite_style_n1_l_n2_id(self):
+        file_path = 'data/sample_kgtk_edge_file_with_id.tsv'
+        cli_entry("kgtk", "add-id", "-i", file_path, "-o", f'{self.temp_dir}/id.tsv',
+                  "--overwrite-id", "--id-style", "node1-label-node2-id")
+        df = pd.read_csv(f'{self.temp_dir}/id.tsv', sep='\t')
+        for i, row in df.iterrows():
+            self.assertEqual(row['id'], f'{row["node1"]}-{row["label"]}-{row["node2"]}-{i+1}')
+
+    def test_kgtk_add_id_overwrite_style_empty(self):
+        file_path = 'data/sample_kgtk_edge_file_with_id.tsv'
+        cli_entry("kgtk", "add-id", "-i", file_path, "-o", f'{self.temp_dir}/id.tsv',
+                  "--overwrite-id", "--id-style", "empty")
+        df = pd.read_csv(f'{self.temp_dir}/id.tsv', sep='\t').fillna("")
+        for i, row in df.iterrows():
+            self.assertEqual(row['id'], "")
+
+    # def test_kgtk_add_id_overwrite_style_prefix(self):
+    #     file_path = 'data/sample_kgtk_edge_file_with_id.tsv'
+    #     cli_entry("kgtk", "add-id", "-i", file_path, "-o", f'{self.temp_dir}/id.tsv',
+    #               "--overwrite-id", "--id-style", "prefix2")
+    #     df = pd.read_csv(f'{self.temp_dir}/id.tsv', sep='\t').fillna("")
+    #     for i, row in df.iterrows():
+    #         self.assertEqual(row['id'], "")
