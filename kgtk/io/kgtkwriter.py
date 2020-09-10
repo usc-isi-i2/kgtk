@@ -666,7 +666,7 @@ class KgtkWriter(KgtkBase):
                     raise e
 
     def close(self):
-        if self.output_format == "json":
+        if self.output_format in [self.OUTPUT_FORMAT_JSON, self.OUTPUT_FORMAT_JSON_MAP, self.OUTPUT_FORMAT_JSON_MAP_COMPACT]:
             if self.verbose:
                 print("Closing the JSON list.", file=self.error_file, flush=True)
             self.writeline("]")

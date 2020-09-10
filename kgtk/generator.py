@@ -388,7 +388,14 @@ class TripleGenerator(Generator):
 
         elif edge_type == QuantityValue:
             # +70[+60,+80]Q743895
-            res = self.quantity_pattern.match(node2).groups()
+            try:
+                res = self.quantity_pattern.match(node2).groups()
+            except:
+                raise KGTKException(
+                    "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
+                        node2, line_number)
+                )
+
             amount, lower_bound, upper_bound, unit = res
 
             amount = TripleGenerator.clean_number_string(amount)
