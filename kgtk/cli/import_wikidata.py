@@ -435,7 +435,7 @@ def run(input_file: KGTKFiles,
     class MyMapper(pyrallel.Mapper):
 
         def enter(self):
-            print("Starting worker process {}.".format(self._idx), file=sys.stderr, flush=True)
+            print("Starting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
             WD_META_ITEMS = [
                 "Q163875",
                 "Q191780",
@@ -517,7 +517,7 @@ def run(input_file: KGTKFiles,
 
 
         def exit(self, *args, **kwargs):
-            print("Exiting worker process {}.".format(self._idx), file=sys.stderr, flush=True)
+            print("Exiting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
             if collect_results:
                 if collector_batch_size > 1:
                     if len(self.collector_nrows_batch) > 0 or len(self.collector_erows_batch) > 0 or len(self.collector_qrows_batch) > 0:
@@ -1236,7 +1236,7 @@ def run(input_file: KGTKFiles,
             if self.started:
                 return
             
-            print("The %s collector is starting." % who, file=sys.stderr, flush=True)
+            print("The %s collector is starting (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
             if node_file is not None:
                 print("Opening the node file in the %s collector." % who, file=sys.stderr, flush=True)
                 self.node_f = open(node_file, "w", newline='')
@@ -1272,7 +1272,7 @@ def run(input_file: KGTKFiles,
             print("The %s collector is ready." % who, file=sys.stderr, flush=True)
 
         def shutdown(self, who: str):
-            print("Exiting the %s collector." % who, file=sys.stderr, flush=True)
+            print("Exiting the %s collector (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
 
             if self.node_f is not None:
                 self.node_f.close()
@@ -1312,7 +1312,7 @@ def run(input_file: KGTKFiles,
     try:
         UPDATE_VERSION: str = "2020-08-24T21:47:20.195799+00:00#nBfX3VKkFGR4CoYcf5biYoh/AkmTSE5eFB6nkOdpgPmnuq8N3GTsIi3N4JCBl9MmKZ+VyzW6zYl/3ml5ps9WJQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
-
+        print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
         
         csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
