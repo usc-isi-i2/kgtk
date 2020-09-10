@@ -327,7 +327,7 @@ KYPHER_GRAMMAR = r"""
                  | -> []):pairs
                 '}' -> ["Literal", dict(pairs)]
 
-    Parameter = '{' WS (SymbolicName | DecimalInteger):p WS '}' -> ["Parameter", p]
+    Parameter = '$' (SymbolicName | DecimalInteger):p -> ["Parameter", p]
 
     PropertyExpression = Atom:a (WS PropertyLookup)*:opts -> ["Expression", a, opts]
 
