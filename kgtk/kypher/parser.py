@@ -176,6 +176,13 @@ class Variable(QueryElement):
 class AnonymousVariable(Variable):
     pass
 
+class Parameter(QueryElement):
+    ast_name = 'Parameter'
+    
+    def __init__(self, query, name):
+        self._query = query
+        self.name = name
+
 
 # Arithmetic:
 
