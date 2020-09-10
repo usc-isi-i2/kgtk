@@ -5,25 +5,20 @@ import pandas as pd
 from kgtk.cli_entry import cli_entry
 from kgtk.exceptions import KGTKException
 
-class TestImportConceptPairs(unittest.TestCase):
+class TestKGTKImportConceptPairs(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir=tempfile.mkdtemp()
 
     def tearDown(self) -> None:
         shutil.rmtree(self.temp_dir)
 
-    def test_import(self):
+    def test_kgtk_import_concept_pairs(self):
         cli_entry("kgtk", "import-concept-pairs", "-i", "data/synonyms.txt", "--source", "RG", "--relation", "/r/Synonym", "-o", f'{self.temp_dir}/roget_syn.tsv')
 
         df = pd.read_csv(f'{self.temp_dir}/roget_syn.tsv', sep='\t')
 
         self.assertEqual(len(df.columns), 9)
 
-        relations = list(df['relation'].unique())
-
         for i, row in df.iterrows():
             self.assertTrue(row['relation']=='/r/Synonym')
-
-if __name__ == "__main__":
-    unittest.main()
-
+        print('ROGET', df)
