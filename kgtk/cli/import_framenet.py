@@ -48,7 +48,7 @@ def run():
 
         def clean(e: str) -> str:
             out = e.split(':')[-1].replace('_', ' ')
-            return KgtkFormat.stringify(re.sub("([a-z])([A-Z])", "\g<1> \g<2>", out).strip())
+            return KgtkFormat.stringify(re.sub("([a-z])([A-Z])", "\g<1> \g<2>", out).strip().lower())
 
         return pd.Series({
             'node1': s,
