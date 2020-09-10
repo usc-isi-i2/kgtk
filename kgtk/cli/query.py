@@ -41,6 +41,12 @@ def add_arguments_extended(parser, parsed_shared_args):
                         help="SKIP clause of a Kypher query")
     parser.add_argument('--limit', metavar='CLAUSE', default=None, action='store', dest='limit',
                         help="LIMIT clause of a Kypher query")
+    parser.add_argument('--para', metavar='NAME=VAL', action='append', dest='regular_paras',
+                        help="zero or more named value parameters to be passed to the query")
+    parser.add_argument('--spara', metavar='NAME=VAL', action='append', dest='string_paras',
+                        help="zero or more named string parameters to be passed to the query")
+    parser.add_argument('--lqpara', metavar='NAME=VAL', action='append', dest='lqstring_paras',
+                        help="zero or more named LQ-string parameters to be passed to the query")
     parser.add_argument('--graph-cache', default=DEFAULT_GRAPH_CACHE_FILE, action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
@@ -60,6 +66,25 @@ def import_modules():
     import kgtk.kypher.sqlstore as sqlstore
     setattr(mod, "sqlstore", sqlstore)
 
+def parse_query_parameters(regular=[], string=[], lqstring=[]):
+    """Parse and DWIM any supplied parameter values and return as a dictionary.
+    """
+    para_specs = {'regular': regular, 'string': string, 'lqstring': lqstring}
+    parameters = {}
+    for ptype in ('regular', 'string', 'lqstring'):
+        for pspec in para_specs[ptype]:
+            eqpos = pspec.find('=')
+            if eqpos < 0:
+                raise KGTKException('Illegal parameter spec: %s' % pspec)
+            name = pspec[0:eqpos]
+            value = pspec[eqpos+1:]
+            if ptype == 'string':
+                value = kyquery.dwim_to_string_para(value)
+            if ptype == 'lqstring':
+                value = kyquery.dwim_to_lqstring_para(value)
+            parameters[name] = value
+    return parameters
+
 def run(**options):
     """Run Kypher query according to the provided command-line arguments.
     """
@@ -76,12 +101,18 @@ def run(**options):
         inputs = options.get('inputs') or []
         if len(inputs) == 0:
             raise KGTKException('At least one named input file needs to be supplied')
+        if '-' in inputs:
+            raise KGTKException('Cannot yet handle input from stdin')
 
         output = options.get('output')
         if output == '-':
             output = sys.stdout
         if isinstance(output, str):
             output = open(output, mode='wt')
+
+        parameters = parse_query_parameters(regular=options.get('regular_paras') or [],
+                                            string=options.get('string_paras') or [],
+                                            lqstring=options.get('lqstring_paras') or [])
 
         try:
             graph_cache = options.get('graph_cache_file')
@@ -94,7 +125,8 @@ def run(**options):
                                       ret=options.get('return_'),
                                       order=options.get('order'),
                                       skip=options.get('skip'),
-                                      limit=options.get('limit'))
+                                      limit=options.get('limit'),
+                                      parameters=parameters)
             result = query.execute()
 
             csvwriter = csv.writer(output, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE, quotechar=None)
