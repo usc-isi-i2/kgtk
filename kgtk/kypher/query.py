@@ -12,14 +12,65 @@ import sh
 
 import kgtk.kypher.parser as parser
 from   kgtk.kypher.sqlstore import sql_quote_ident
+from   kgtk.value.kgtkvalue import KgtkValue
 
 pp = pprint.PrettyPrinter(indent=4)
+
+
+### TO DO:
+
+# - implement query parameters to more easily pass in string literals
+# - more intelligent index creation
+# - investigate redundant join clauses
+# - header column dealiasing/normalization
+# - bump graph timestamps when they get queried
+# - allow order-by on column aliases (currently they are undefined variables)
+# - (not) exists pattern handling
+# - null-value handling and testing
+# - handle properties that are ambiguous across graphs
+# - graphs fed in from stdin
+# - graph naming independent from files, so we don't have to have source data files
+#   available after import for querying
+# - --create and --remove to instantiate and add/remove edge patterns from result bindings
+# - --with clause to compute derived values to use by --create and --remove
 
 
 ### Utilities
 
 def listify(x):
     return (hasattr(x, '__iter__') and not isinstance(x, str) and list(x)) or (x and [x]) or []
+
+def dwim_to_string_para(x):
+    """Try to coerce `x' to a KGTK string value that can be passed as a query parameter.
+    """
+    x = str(x)
+    m = KgtkValue.strict_string_re.match(x)
+    if m is not None:
+        return x
+    # if we have an enclosing pair of quotes, remove them:
+    if x.startswith('"') and x.endswith('"'):
+        x = x[1:-1]
+    x = re.sub(r'(?P<char>["\|])', r"\\\g<char>", x)
+    return '"%s"' % x
+
+def dwim_to_lqstring_para(x):
+    """Try to coerce `x' to a KGTK LQ-string value that can be passed as a query parameter.
+    """
+    x = str(x)
+    m = KgtkValue.strict_language_qualified_string_re.match(x)
+    if m is not None:
+        return x
+    atpos = x.rfind('@')
+    if atpos > 0:
+        text = x[0:atpos]
+        # this allows an empty or invalid language:
+        lang = x[atpos+1:]
+        # if we have an enclosing pair of quotes, remove them:
+        if text.startswith("'") and text.endswith("'"):
+            text = text[1:-1]
+        text = re.sub(r"(?P<char>['\|])", r"\\\g<char>", text)
+        return "'%s'@%s" % (text, lang)
+    raise Exception("cannot coerce `%s' into a language-qualified string" % x)
 
 
 ### Query translation:
@@ -96,10 +147,11 @@ class KgtkQuery(object):
     def __init__(self, files, store, query=None,
                  match='()', where=None, ret='*',
                  order=None, skip=None, limit=None,
-                 loglevel=0):
+                 parameters={}, loglevel=0):
         self.files = [os.path.realpath(f) for f in listify(files)]
         self.store = store
         self.loglevel = loglevel
+        self.parameters = parameters
         if query is None:
             # supplying a query through individual clause arguments might be a bit easier,
             # since they can be in any order, can have defaults, are easier to shell-quote, etc.:
@@ -154,6 +206,12 @@ class KgtkQuery(object):
                     hmap[handle] = file
                     return file
         raise Exception("failed to uniquely map handle `%s' onto one of %s" % (handle, files))
+
+    def get_parameter_value(self, name):
+        value = self.parameters.get(name)
+        if value is None:
+            raise Exception("undefined query parameter: `%s'" % name)
+        return value
 
     def get_pattern_clause_graph(self, clause):
         node1 = clause[0]
@@ -307,6 +365,10 @@ class KgtkQuery(object):
         expr_type = type(expr)
         if expr_type == parser.Literal:
             return self.get_literal_parameter(expr.value, litmap)
+        elif expr_type == parser.Parameter:
+            value = self.get_parameter_value(expr.name)
+            return self.get_literal_parameter(value, litmap)
+        
         elif expr_type == parser.Variable:
             query_var = expr.name
             if varmap is None:
@@ -319,10 +381,12 @@ class KgtkQuery(object):
                 raise Exception('Undefined variable: %s' % query_var)
             graph, col = list(sql_vars)[0]
             return '%s.%s' % (graph, sql_quote_ident(col))
+        
         elif expr_type == parser.List:
             # we only allow literals in lists, Cypher also supports variables:
             elements = [self.expression_to_sql(elt, litmap, None) for elt in expr.elements]
             return '(' + ', '.join(elements) + ')'
+        
         elif expr_type == parser.Minus:
             arg = self.expression_to_sql(expr.arg, litmap, varmap)
             return '(- %s)' % arg
@@ -333,6 +397,7 @@ class KgtkQuery(object):
             return '(%s %s %s)' % (arg1, op, arg2)
         elif expr_type == parser.Hat:
             raise Exception("Unsupported operator: `^'")
+        
         elif expr_type in (parser.Eq, parser.Neq, parser.Lt, parser.Gt, parser.Lte, parser.Gte):
             arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
             arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
@@ -351,6 +416,7 @@ class KgtkQuery(object):
         elif expr_type == parser.Case:
             # TO DO: implement, has the same syntax as SQL:
             raise Exception("Unsupported operator: `CASE'")
+        
         elif expr_type == parser.Call:
             function = expr.function
             if function.upper() == 'CAST':
@@ -365,6 +431,7 @@ class KgtkQuery(object):
             distinct = expr.distinct and 'DISTINCT ' or ''
             self.store.load_user_function(function, error=False)
             return function + '(' + distinct + ', '.join(args) + ')'
+        
         elif expr_type == parser.Expression2:
             arg1 = expr.arg1
             arg2 = expr.arg2
@@ -388,6 +455,7 @@ class KgtkQuery(object):
                 else:
                     return var
             raise Exception("Unhandled property lookup expression: " + str(expr))
+        
         elif expr_type == parser.Expression3:
             arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
             arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
@@ -501,7 +569,9 @@ class KgtkQuery(object):
             query.write('\nAND %s.%s=%s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2)))
 
         # ensure that we have relevant indices:
-        # TO DO: think about this some more, we might need some manual control as well
+        # TO DO: think about this some more, we might need some manual control as well; this should
+        # go into its separate function; to do this right we need some approximate analysis of the
+        # query, e.g., for the join we'll generally only need an index on one of the involved tables:
         if len(joins) > 0:
             for (g1, c1), (g2, c2) in joins:
                 # ensure we have indices on joined columns - the ID check needs to be generalized:
