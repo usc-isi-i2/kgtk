@@ -2,16 +2,21 @@ Import the entire ATOMIC into KGTK format.
 
 ## Usage
 ```
-usage: kgtk import-atomic [-h] [-i INPUT_FILE] [INPUT_FILE]
+usage: kgtk import-atomic [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [INPUT_FILE]
 
 positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
+  INPUT_FILE            The KGTK input file. (May be omitted or '-' for
+                        stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
+
 ```
 
 ## Examples
@@ -19,7 +24,7 @@ optional arguments:
 Import ATOMIC into KGTK. 
 
 ```
-kgtk import-atomic v4_atomic_all_agg.csv
+kgtk import-atomic -i v4_atomic_all_agg.csv -o atomic.tsv
 ```
 
 Example output (first and last 10 lines):
