@@ -24,6 +24,3 @@ class TestImportWordNet(unittest.TestCase):
         for r in ['/r/IsA', '/r/PartOf', '/r/MadeOf']:
             self.assertTrue(r in relations)
 
-if __name__ == "__main__":
-    unittest.main()
-
