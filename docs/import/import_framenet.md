@@ -13,7 +13,7 @@ optional arguments:
 
 ## Examples
 
-Importing FrameNet can be done as follows (no arguments should be provided, as FrameNet is read through the NLTK package):
+Importing FrameNet can be done as follows (no inputs should be provided, as FrameNet is read through the NLTK package):
 
 ```
 kgtk import-framenet
