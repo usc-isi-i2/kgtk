@@ -685,6 +685,26 @@ class KgtkWriter(KgtkBase):
             sys.stdout.write(".")
             sys.stdout.flush()
 
+    def writerow(self, row: typing.List[str]):
+        # Convenience method for interoperability with csv.writer.
+        # Don't forget to call kw.close() when done, though.
+        try:
+            newrow: typing.List[str] = [ ]
+            item: typing.Union[str, int, float, bool]
+            for item in row:
+                newrow.append(str(item))
+            self.write(newrow)
+        except TypeError:
+            print("TypeError on %s" % "[" + ", ".join([repr(x) for x in row]) + "]", file=self.error_file, flush=True)
+            raise
+
+    def writerows(self, rows: typing.List[typing.List[typing.Union[str, int, float, bool]]]):
+        # Convenience method for interoperability with csv.writer.
+        # Don't forget to call kw.close() when done, though.
+        row: typing.List[typing.Union[str, int, float, bool]]
+        for row in rows:
+            self.writerow(row)
+
     def flush(self):
         if self.gzip_thread is None:
             try:
@@ -693,7 +713,7 @@ class KgtkWriter(KgtkBase):
                 if e.errno == errno.EPIPE:
                     pass # Ignore.
                 else:
-                    raise e
+                    raise
 
     def close(self):
         if self.output_format == "json":
@@ -710,7 +730,7 @@ class KgtkWriter(KgtkBase):
                 if e.errno == errno.EPIPE:
                     pass # Ignore.
                 else:
-                    raise e
+                    raise
 
     def writemap(self, value_map: typing.Mapping[str, str]):
         """
