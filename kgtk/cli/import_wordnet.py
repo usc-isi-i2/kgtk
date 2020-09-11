@@ -1,12 +1,11 @@
 """
 Import WordNet to KGTK.
 
-TODO: Add --output-file
-
 """
 
 
 import sys
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -20,20 +19,19 @@ def add_arguments(parser):
     Args:
             parser (argparse.ArgumentParser)
     """
+    parser.add_output_file()
 
-def run():
+def run(output_file: KGTKFiles):
 
     # import modules locally
     import sys # type: ignore
     from kgtk.exceptions import kgtk_exception_auto_handler
     import json
     import nltk
+    nltk.download("wordnet")
     from nltk.corpus import wordnet as wn
     from kgtk.kgtkformat import KgtkFormat
-
-    def header_to_edge(row):
-        row=[r.replace('_', ';') for r in row]
-        return '\t'.join(row) + '\n'
+    from kgtk.io.kgtkwriter import KgtkWriter
 
     def obtain_wordnet_lemmas(syn):
         lemmas=[]
@@ -109,8 +107,19 @@ def run():
         return all_rows
 
     try:
-        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
-        sys.stdout.write(header_to_edge(out_columns))
+        out_columns=['node1', 'relation', 'node2', 'node1;label', 'node2;label','relation;label', 'relation;dimension', 'source', 'sentence']
+
+        output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+        ew: KgtkWriter = KgtkWriter.open(out_columns,
+                                         output_kgtk_file,
+                                         #mode=input_kr.mode,
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         gzip_in_parallel=False,
+                                         #verbose=self.verbose,
+                                         #very_verbose=self.very_verbose
+                                         )
 
         all_labels, all_hyps, all_members, all_parts, all_subs=get_wn_data()
         hyp_edges=create_edges(all_hyps, all_labels, '/r/IsA', KgtkFormat.stringify('is a'))
@@ -120,7 +129,7 @@ def run():
         all_edges=hyp_edges+member_edges+part_edges+sub_edges
 
         for edge in all_edges:
-            sys.stdout.write('\t'.join(edge) + '\n')
+            ew.write(edge)
 
     except Exception as e:
             kgtk_exception_auto_handler(e)
