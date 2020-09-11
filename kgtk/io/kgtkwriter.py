@@ -524,6 +524,8 @@ class KgtkWriter(KgtkBase):
         header: str
         header2: typing.Optional[str] = None
 
+        noeol: bool = False
+
         # Contemplate a last-second rename of the columns
         column_names: typing.List[str]
         if self.output_column_names is not None:
@@ -533,12 +535,13 @@ class KgtkWriter(KgtkBase):
 
         if self.output_format == self.OUTPUT_FORMAT_JSON:
             self.writeline("[")
-            header = json.dumps(column_names, indent=None, separators=(',', ':')) + ","
+            header = json.dumps(column_names, indent=None, separators=(',', ':'))
+            noeol = True
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
-            self.writeline("[")
+            self.writeline("[", noeol=True)
             return
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
-            self.writeline("[")
+            self.writeline("[", noeol=True)
             return
         elif self.output_format == self.OUTPUT_FORMAT_JSONL:
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
@@ -569,18 +572,24 @@ class KgtkWriter(KgtkBase):
         # Write the column names to the first line.
         if self.verbose:
             print("header: %s" % header, file=self.error_file, flush=True)
-        self.writeline(header)
+        self.writeline(header, noeol=noeol)
         if header2 is not None:
             if self.verbose:
                 print("header2: %s" % header2, file=self.error_file, flush=True)
             self.writeline(header2)
 
-    def writeline(self, line: str):
+    def writeline(self, line: str, noeol: bool = False):
         if self.gzip_thread is not None:
-            self.gzip_thread.write(line + "\n") # Todo: use system end-of-line sequence?
+            if noeol:
+                self.gzip_thread.write(line) # TODO: use alternative end-of-line sequences?
+            else:
+                self.gzip_thread.write(line + "\n") # TODO: use alternative end-of-line sequences?
         else:
             try:
-                self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
+                if noeol:
+                    self.file_out.write(line) # Todo: use system end-of-line sequence?
+                else:
+                    self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
             except IOError as e:
                 if e.errno == errno.EPIPE:
                     pass # TODO: propogate a close backwards.
@@ -636,11 +645,20 @@ class KgtkWriter(KgtkBase):
         elif self.output_format == self.OUTPUT_FORMAT_MD:
             self.writeline(self.join_md(values))
         elif self.output_format == self.OUTPUT_FORMAT_JSON:
-            self.writeline(json.dumps(self.reformat_values_for_json(values), indent=None, separators=(',', ':')) + ",")
+            self.writeline(",")
+            self.writeline(json.dumps(self.reformat_values_for_json(values), indent=None, separators=(',', ':')), noeol=True)
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
-            self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')) + ",")
+            if self.line_count == 1:
+                self.writeline("")
+            else:
+                self.writeline(",")
+            self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')), noeol=True)
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
-            self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')) + ",")
+            if self.line_count == 1:
+                self.writeline("")
+            else:
+                self.writeline(",")
+            self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')), noeol=True)
         elif self.output_format == self.OUTPUT_FORMAT_JSONL:
             self.writeline(json.dumps(values, indent=None, separators=(',', ':')))
         elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP:
@@ -669,6 +687,7 @@ class KgtkWriter(KgtkBase):
         if self.output_format in [self.OUTPUT_FORMAT_JSON, self.OUTPUT_FORMAT_JSON_MAP, self.OUTPUT_FORMAT_JSON_MAP_COMPACT]:
             if self.verbose:
                 print("Closing the JSON list.", file=self.error_file, flush=True)
+            self.writeline("")
             self.writeline("]")
 
         if self.gzip_thread is not None:
