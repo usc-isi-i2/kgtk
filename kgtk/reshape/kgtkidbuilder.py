@@ -219,7 +219,7 @@ class KgtkIdBuilder(KgtkFormat):
         if options.old_id_column_name is not None:
             # The old ID column was explicitly named.
             old_id_column_name = options.old_id_column_name
-            if new_id_column_name in column_name_map:
+            if old_id_column_name in column_name_map:
                 # The new ID column already exists.
                 old_id_column_idx = column_name_map[old_id_column_name]
             else:
