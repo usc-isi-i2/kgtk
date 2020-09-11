@@ -1,10 +1,10 @@
 Import a file with concept pairs into KGTK format. The relation to connect them with can be specified through an argument, as well as the source.
-The resulting KGTK file consists of 12 columns.
+The resulting KGTK file consists of 9 columns.
 
 ## Usage
 ```
 usage: kgtk import-concept-pairs [-h] [-i INPUT_FILE] [--relation RELATION]
-                                 [--source SOURCE]
+                                 [--source SOURCE] [-o OUTPUT_FILE]
                                  [INPUT_FILE]
 
 positional arguments:
@@ -18,6 +18,9 @@ optional arguments:
                         stdin.)
   --relation RELATION   Relation to connect the word pairs with.
   --source SOURCE       Source identifier
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
 ```
 
 ## Examples
@@ -25,12 +28,12 @@ optional arguments:
 Let's say that we want to import synonym pairs from the ROGET thesaurus, and connect them with the `/r/Synonym` relation:
 
 ```
-kgtk import-concept-pairs -i synonyms.txt --source RG --relation /r/Synonym
+kgtk import-concept-pairs -i synonyms.txt --source RG --relation /r/Synonym -o roget_syn.tsv
 ```
 
 Example output (first and last 10 lines):
 ```
-node1	relation	node2	node1;label	node2;label	relation;label	relation;dimension	weight	source	origin	sentence	question
+node1	relation	node2	node1;label	node2;label	relation;label	relation;dimension	source	sentence
 rg:en_fawn	/r/Synonym	rg:en_defer	fawn	defer	synonym			RG			
 rg:en_fawn	/r/Synonym	rg:en_kowtow	fawn	kowtow	synonym			RG			
 rg:en_fawn	/r/Synonym	rg:en_flatter	fawn	flatter	synonym			RG			

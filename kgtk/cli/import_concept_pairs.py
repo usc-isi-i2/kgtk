@@ -1,7 +1,5 @@
 """
 Import concept pairs into KGTK.
-
-TODO: Add --output-file
 """
 
 import sys

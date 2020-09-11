@@ -1,7 +1,6 @@
 """
 Import ConceptNet into KGTK.
 
-TODO: Add --output-file
 """
 
 import sys
@@ -20,9 +19,9 @@ def add_arguments(parser: KGTKArgumentParser):
     """
     parser.add_input_file(positional=True)
     parser.add_argument('--english_only', action="store_true", help="Only english conceptnet?")
+    parser.add_output_file()
 
-
-def run(input_file: KGTKFiles, english_only):
+def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles):
 
     # import modules locally
     import sys # type: ignore
@@ -32,10 +31,7 @@ def run(input_file: KGTKFiles, english_only):
     import re
     from pathlib import Path
     from kgtk.kgtkformat import KgtkFormat
-
-    def header_to_edge(row):
-        row=[r.replace('_', ';') for r in row]
-        return '\t'.join(row) + '\n'
+    from kgtk.io.kgtkwriter import KgtkWriter
 
     def make_node_label(node):
         return KgtkFormat.stringify(node.strip().split('/')[3].replace('_', ' '))
@@ -53,10 +49,10 @@ def run(input_file: KGTKFiles, english_only):
         edge['node1']=row[2]
         edge['relation']=row[1]
         edge['node2']=row[3]
-        edge['node1_label']=make_node_label(row[2])
-        edge['node2_label']=make_node_label(row[3])
-        edge['relation_label']=make_rel_label(row[1])
-        edge['relation_dimension']=''
+        edge['node1;label']=make_node_label(row[2])
+        edge['node2;label']=make_node_label(row[3])
+        edge['relation;label']=make_rel_label(row[1])
+        edge['relation;dimension']=''
 
         metadata=json.loads(row[4])
         edge['source']=KgtkFormat.stringify('CN')
@@ -66,20 +62,31 @@ def run(input_file: KGTKFiles, english_only):
             edge['sentence']=''
         
         edge_list=[edge[col] for col in cols]
-        return '\t'.join(edge_list) + '\n'
+        return edge_list
 
     try:
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
         in_columns=['assertion','rel','subj','obj','metadata']
-        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
+        out_columns=['node1', 'relation', 'node2', 'node1;label', 'node2;label','relation;label', 'relation;dimension', 'source', 'sentence']
+
+        output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+        ew: KgtkWriter = KgtkWriter.open(out_columns,
+                                         output_kgtk_file,
+                                         #mode=input_kr.mode,
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         gzip_in_parallel=False,
+                                         #verbose=self.verbose,
+                                         #very_verbose=self.very_verbose
+                                         )
 
         with open(filename, 'r') as f:
             reader = csv.reader(f, delimiter='\t', quotechar='"')
-            sys.stdout.write(header_to_edge(out_columns))
             for row in reader:
                 if not english_only or (row[2].startswith('/c/en/') and row[3].startswith('/c/en/')):
-                    sys.stdout.write(row_to_edge(row, out_columns))
+                    ew.write(row_to_edge(row, out_columns))
 
     except Exception as e:
-            kgtk_exception_auto_handler(e)
+        kgtk_exception_auto_handler(e)

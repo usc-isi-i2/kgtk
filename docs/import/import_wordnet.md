@@ -2,18 +2,21 @@ Import WordNet v3.0 into KGTK format. Currently, four relations are included: hy
 
 ## Usage
 ```
-usage: kgtk import-wordnet [-h]
+usage: kgtk import-wordnet [-h] [-o OUTPUT_FILE]
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
 ```
 
 ## Examples
 
-Importing WordNet can be done as follows (no arguments should be provided, as WordNet is read through the NLTK package):
+Importing WordNet can be done as follows (no inputs should be provided, as WordNet is read through the NLTK package):
 
 ```
-kgtk import-wordnet
+kgtk import-wordnet -o wordnet.tsv
 ```
 
 Example output (first and last 10 lines):
