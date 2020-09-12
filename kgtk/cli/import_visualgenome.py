@@ -40,9 +40,6 @@ def run(input_file: KGTKFiles,
         my_row=[node1, rel, node2, '|'.join(node1_lbl), '|'.join(node2_lbl), rel_lbl, '', KgtkFormat.stringify('VG'), '']
         return my_row
 
-    def create_uri(ns, rel):
-        return '%s:%s' % (ns, rel)
-
     try:
         scene_graph_filename: Path = KGTKArgumentParser.get_input_file(input_file)
         attr_synsets_filename: Path = KGTKArgumentParser.get_input_file(attr_syn_file)
