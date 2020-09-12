@@ -15,30 +15,49 @@ import pprint
 import sh
 
 from   kgtk.value.kgtkvalue import KgtkValue
+from   kgtk.cli.zconcat import determine_file_type, get_cat_command
+from   kgtk.exceptions import KGTKException
 
 pp = pprint.PrettyPrinter(indent=4)
 
 
+### TO DO:
+
+# - handle VACUUM and/or AUTO_VACUUM when graph tables get deleted
+# o automatically run ANALYZE on tables and indexes when they get created
+#   - we decided to only do this for indexes for now
+# - protect graph data import from failure or aborts through transactions
+# - provide some symbolic graph size classification (small/medium/large/xlarge)
+#   and implement table optimizations based on those categories
+# - support bump_timestamp or similar to better keep track of what's been used
+# - full LRU cache maintainance
+# - complete literal accessor functions
+# - graphs fed in from stdin
+
+
 ### Utilities
 
-def open_to_read(file):
+def open_to_read(file, mode='rt'):
     """Version of `open' that is smart about different types of compressed files
-    and file-like objects that are already open to read.
+    and file-like objects that are already open to read.  `mode' has to be a
+    valid read mode such as `r', `rb' or `rt'.
     """
+    assert mode in ('r', 'rb', 'rt'), 'illegal read mode'
+    enc = 't' in mode and 'utf8' or None
     # TO DO: I am sure something like this already exists somewhere in Craig's code
     if isinstance(file, str) and file.endswith('.gz'):
         import gzip
-        return gzip.open(file, 'rt', encoding='utf8')
+        return gzip.open(file, mode, encoding=enc)
     elif isinstance(file, str) and file.endswith('.bz2'):
         import bz2
-        return bz2.open(file, 'rt', encoding='utf8')
+        return bz2.open(file, mode, encoding=enc)
     elif isinstance(file, str) and file.endswith('.xz'):
         import lzma
-        return lzma.open(file, 'rt', encoding='utf8')
+        return lzma.open(file, mode, encoding=enc)
     elif hasattr(file, 'read'):
         return file
     else:
-        return open(file, 'rt')
+        return open(file, mode)
 
 
 ### SQL Store
@@ -112,7 +131,7 @@ class SqliteStore(SqlStore):
     def __init__(self, dbfile, create=False, loglevel=0):
         self.loglevel = loglevel
         if not os.path.exists(dbfile) and not create:
-            raise Exception('sqlite DB file does not exist: %s' % dbfile)
+            raise KGTKException('sqlite DB file does not exist: %s' % dbfile)
         self.dbfile = dbfile
         self.conn = None
         self.user_functions = set()
@@ -120,7 +139,9 @@ class SqliteStore(SqlStore):
 
     def log(self, level, message):
         if self.loglevel >= level:
-            print(message)
+            header = '[%s sqlstore]:' % time.strftime('%Y-%m-%d %H:%M:%S')
+            sys.stderr.write('%s %s\n' % (header, message))
+            sys.stderr.flush()
 
     def init_meta_tables(self):
         if not self.has_table(self.FILE_TABLE._name_):
@@ -184,7 +205,7 @@ class SqliteStore(SqlStore):
             self.get_conn().create_function(info['name'], info['num_params'], info['func'])
             self.user_functions.add(name)
         elif error:
-            raise Exception('No user-function has been registered for: ' + str(name))
+            raise KGTKException('No user-function has been registered for: ' + str(name))
 
     def is_aggregate_function(self, name):
         """Return True if `name' is an aggregate function supported by this database.
@@ -235,26 +256,34 @@ class SqliteStore(SqlStore):
             if col.get('key') == True:
                 return col._name_
         if error:
-            raise Exception('no key column defined')
+            raise KGTKException('no key column defined')
         return None
 
     def get_table_definition(self, table_schema):
         colspec = ', '.join([sql_quote_ident(col._name_) + ' ' + col.type for col in table_schema.columns.values()])
         return 'CREATE TABLE %s (%s)' % (table_schema._name_, colspec)
 
-    def get_index_definition(self, table_schema, column, unique=False):
-        """Return a definition statement to create an index for `column' on `schema'.
-        Create a `unique' or primary key index if `unique' is True.  We are currently
-        only considering single-column indexes, since multi-column doesn't generally
-        make sense for a KGTK edge file.
+    def get_index_name(self, table_schema, column):
+        """Return a global name for the index for `column' on `table_schema'.
         """
         table_name = table_schema._name_
         column_name = table_schema.columns[column]._name_
         index_name = '%s_%s_idx' % (table_name, column_name)
+        return index_name
+
+    def get_index_definition(self, table_schema, column, unique=False):
+        """Return a definition statement to create an index for `column' on `table_schema'.
+        Create a `unique' or primary key index if `unique' is True.  We are currently
+        only considering single-column indexes, however, we might generalize this down
+        the road to two-column indices such as `(node1, label)', `(label, node2)', etc.
+        """
+        table_name = table_schema._name_
+        column_name = table_schema.columns[column]._name_
+        index_name = self.get_index_name(table_schema, column)
         unique = unique and 'UNIQUE' or ''
         return 'CREATE %s INDEX %s on %s (%s)' % (
             unique, sql_quote_ident(index_name), table_name, sql_quote_ident(column_name))
-
+    
     def has_index(self, table_schema, column):
         """Return True if table `table_schema' has an index defined for `column'.
         """
@@ -400,10 +429,16 @@ class SqliteStore(SqlStore):
         schema = self.get_graph_table_schema(table_name)
         if not self.has_index(schema, column):
             index_stmt = self.get_index_definition(schema, column, unique=unique)
-            self.log(1, 'CREATE INDEX on table %s column %s' % (table_name, column))
+            self.log(1, 'CREATE INDEX on table %s column %s ...' % (table_name, column))
             # we also measure the increase in diskspace here:
+            # TO DO: figure out if this is accurate after table deletions which might
+            # not reclaim any of the freed diskspace in the database file; looks like
+            # we need to do VACUUM or set pragma AUTO_VACUUM to reclaim space:
             oldsize = self.get_db_size()
             self.execute(index_stmt)
+            # do this unconditionally for now, give that it only takes about 10% of creation time:
+            self.log(1, 'ANALYZE INDEX on table %s column %s ...' % (table_name, column))
+            self.execute('ANALYZE %s' % sql_quote_ident(self.get_index_name(schema, column)))
             idxsize = self.get_db_size() - oldsize
             ginfo = self.get_graph_info(table_name)
             ginfo.size += idxsize
@@ -450,8 +485,12 @@ class SqliteStore(SqlStore):
             self.drop_graph(file_info.graph)
         table = self.new_graph_table()
         oldsize = self.get_db_size()
-        # for now we do this for simplicity, but it costs us about a factor of 2 in speed:
-        self.import_graph_data_via_csv(table, file)
+        try:
+            # try fast shell-based import first, but if that is not applicable...
+            self.import_graph_data_via_import(table, file)
+        except (KGTKException, sh.CommandNotFound):
+            # ...fall back on CSV-based import which is more flexible but about 2x slower:
+            self.import_graph_data_via_csv(table, file)
         graphsize = self.get_db_size() - oldsize
         # this isn't really needed, but we store it for now - maybe use JSON-encoding instead:
         header = str(self.get_table_header(table))
@@ -475,7 +514,10 @@ class SqliteStore(SqlStore):
     ### Data import:
     
     def import_graph_data_via_csv(self, table, file):
-        self.log(1, 'IMPORT graph data into table %s from %s' % (table, file))
+        """Import `file' into `table' using Python's csv.reader.  This is safe and properly
+        handles conversion of different kinds of line endings, but 2x slower than direct import.
+        """
+        self.log(1, 'IMPORT graph via csv.reader into table %s from %s ...' % (table, file))
         with open_to_read(file) as inp:
             csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
             header = next(csvreader)
@@ -487,14 +529,63 @@ class SqliteStore(SqlStore):
 
     def import_graph_data_via_import(self, table, file):
         """Use the sqlite shell and its import command to import `file' into `table'.
-        This will be about 2+ times faster and can exploit parallelism for decompression,
-        but it requires us to go through the shell via sh.
+        This will be about 2+ times faster and can exploit parallelism for decompression.
+        This is only supported for Un*x for now and requires a named `file'.
         """
-        raise Exception('not yet implemented')
+        if os.name != 'posix':
+            raise KGTKException('not yet implemented for this OS: `%s' % os.name)
+        if not isinstance(file, str) or not os.path.exists(file):
+            raise KGTKException('only implemented for existing, named files')
+        # make sure we have the Unix commands we need:
+        cat = get_cat_command(determine_file_type(file))
+        tail = sh.Command('tail')
+        sqlite3 = sh.Command(self.get_sqlite_cmd())
+        isplain = os.path.basename(str(cat)) == 'cat'
+        
+        # This is slightly more messy than we'd like it to be: sqlite can create a table definition
+        # for a non-existing table from the header row, but it doesn't seem to handle just any weird
+        # column name we give it there, so we read the header and create the table ourselves;
+        # however, sqlite doesn't have an option to then skip the header, so we need to use `tail';
+        # also, eventually we might want to supply more elaborate table defs such as `without rowid';
+        # finally, we have to guard against multi-character line-endings which can't be handled right:
+        with open_to_read(file, 'r') as inp:
+            #csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
+            header = inp.readline()
+            header = isinstance(header, bytes) and header.decode('utf8') or header
+            if header.endswith('\r\n'):
+                # SQLite import can only handle single-character line endings,
+                # if we import anyway, \r winds up in the values of the last column:
+                raise KGTKException('cannot handle multi-character line endings')
+            eol = header[-1]
+            header = header[:-1].split('\t')
+            schema = self.kgtk_header_to_graph_table_schema(table, header)
+            self.execute(self.get_table_definition(schema))
+            self.commit()
+        
+        separators = '\\t %s' % repr(eol)[1:-1] # \r or \n for EOL
+        args = ['-cmd', '.mode ascii', '-cmd', '.separator ' + separators,
+                self.dbfile, '.import /dev/stdin %s' % table]
+
+        self.log(1, 'IMPORT graph directly into table %s from %s ...' % (table, file))
+        try:
+            if isplain:
+                tailproc = tail('+2', file, _piped=True)
+            else:
+                tailproc = tail(cat(file, _piped=True), '+2', _piped=True)
+            # we run this asynchronously, so we can kill it in the cleanup clause:
+            sqlproc = sqlite3(tailproc, *args, _bg=True)
+            sqlproc.wait()
+        finally:
+            # make sure we kill this process in case we had a user interrupt, however,
+            # getting this condition right so we don't hang and don't break was tricky,
+            # since there is various machinery under the hood which leads to additional
+            # waiting (we can't call is_alive or access sqlproc.exit_code):
+            if sqlproc is not None and sqlproc.process.exit_code is None:
+                sqlproc.terminate()
 
 """
->>> store = cq.SqliteStore('/tmp/graphstore.sqlite3.db', create=True)
->>> store.add_graph('/home/hans/Documents/kgtk/code/kgtk/kgtk/kypher/.work/data/graph.tsv')
+>>> store = cq.SqliteStore('/data/tmp/store.db', create=True)
+>>> store.add_graph('kgtk/tests/data/kypher/graph.tsv')
 
 >>> cq.pp.pprint(list(store.execute('select * from graph_1')))
 [   ('Hans', 'loves', 'Molly', 'e11'),
@@ -508,7 +599,7 @@ class SqliteStore(SqlStore):
     ('Susi', 'name', '"Susi"', 'e25')]
 
 >>> cq.pp.pprint(list(store.execute('select * from fileinfo')))
-[   (   '/home/hans/Documents/kgtk/code/kgtk/kgtk/kypher/.work/graph.tsv',
+[   (   'kgtk/tests/data/kypher/graph.tsv',
         205,
         1597353182.1801062,
         None,
@@ -521,6 +612,59 @@ class SqliteStore(SqlStore):
         1598648612.7562318)]
 
 >>> store.close()
+"""
+
+"""
+# Large DB times and sizes:
+#
+# Summary:
+# - Wikidata edges file, 1.15B edges, 16GB compressed, 78GB DB size, 20min import, 4.5min analyze
+# - index on node1 column, 16.5min, 22GB DB growth, 1.25min analyze
+# - analyze adds about 10% run/import time for index, 20% run/import time for table
+# - full 4-column index doubles DB size, increases import time by 3.3x
+# Optimizations:
+# - we might be able to build a covering index for `id' to save storage for one index
+# - we could use `id' as the primary key and build a 'without rowid' table
+# - we could build two-column indexes: (node1, label), (label, node2), (node2, label)
+# - we might forgo analyzing tables and only do it on indexes
+
+# Wikidata edges file (1.15B edges):
+> ls -l $EDGES
+-rw-r--r-- 1 hans isdstaff 16379491562 Aug 14 18:12 /data/kgtk/wikidata/run3/wikidata-20200803-all-edges.tsv.gz
+
+# Import:
+> time kgtk --debug query -i $EDGES --graph-cache /data/tmp/store.db --limit 10
+IMPORT graph data into table graph_1 from /data/kgtk/wikidata/run3/wikidata-20200803-all-edges.tsv.gz
+  ..............
+1517.701u 167.970s 20:14.79 138.7%	0+0k 29045920+153711296io 0pf+0w
+
+# DB size:
+> ls -l /data/tmp/store.db 
+-rw-r--r-- 1 hans isdstaff 78699548672 Sep 11 00:00 /data/tmp/store.db
+
+# Analyze graph table:
+> time sqlite3 /data/tmp/store.db 'analyze graph_1'
+30.410u 75.243s 4:23.90 40.0%	0+0k 153709096+40io 3pf+0w
+
+# DB size:
+> ls -l /data/tmp/store.db 
+-rw-r--r-- 1 hans isdstaff 78699552768 Sep 11 09:39 /data/tmp/store.db
+
+# Index creation on node1:
+> time kgtk --debug query -i $EDGES --graph-cache /data/tmp/store.db \
+       --match "edge: (p:Q52353442)-[r]->(y)" \
+       --limit 1000
+CREATE INDEX on table graph_1 column node1
+  .............
+699.576u 106.269s 16:30.38 81.3%	0+0k 190371536+104441192io 3424pf+0w
+
+# DB size:
+> ls -l /data/tmp/store.db 
+-rw-r--r-- 1 hans isdstaff 100584587264 Sep 11 11:15 /data/tmp/store.db
+
+# Analyze index:
+> time sqlite3 /data/tmp/store.db 'analyze graph_1_node1_idx'
+68.563u 6.544s 1:15.24 99.8%	0+0k 19904088+48io 0pf+0w
 """
 
 
