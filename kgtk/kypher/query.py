@@ -6,6 +6,7 @@ import sys
 import os.path
 import io
 import re
+import time
 import pprint
 
 import sh
@@ -19,7 +20,6 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### TO DO:
 
-# - implement query parameters to more easily pass in string literals
 # - more intelligent index creation
 # - investigate redundant join clauses
 # - header column dealiasing/normalization
@@ -178,7 +178,9 @@ class KgtkQuery(object):
 
     def log(self, level, message):
         if self.loglevel >= level:
-            print(message)
+            header = '[%s query]:' % time.strftime('%Y-%m-%d %H:%M:%S')
+            sys.stderr.write('%s %s\n' % (header, message))
+            sys.stderr.flush()
 
     def map_graph_handle_to_file(self, handle):
         """Performes a greedy mapping of `handle' to either a full file name
@@ -534,6 +536,34 @@ class KgtkQuery(object):
             limit += ' OFFSET ' + self.expression_to_sql(skip_clause.expression, litmap, None)
         return limit
 
+    def ensure_relevant_indexes(self, graphs, restrictions, joins):
+        """Ensure that we have relevant indexes for this query.
+        """
+        # TO DO: think about this some more
+        # - we might need some manual control as well
+        # - to do this right we need some approximate analysis of the query, e.g., for a join
+        #   we'll generally only need an index on one of the involved tables, however, knowing
+        #   for which one requires knowledge of table size, statistics and other selectivity of
+        #   the query, so we are defensive for now and create both indexes.
+        # - we could also try to exploit the SQLite expert command to create (variants) of the
+        #   indexes it suggests.
+        # - we only index core columns for now, should we index wide ones as well?
+        # - we might want to create two-column indexes such as (node1, label), etc.
+        # - we might want to always use `id' as the primary key and create `without rowid' tables
+        alias_to_graph = {alias: graph for graph, alias in graphs}
+        if len(joins) > 0:
+            for (g1, c1), (g2, c2) in joins:
+                # ensure we have indices on joined columns - the ID check needs to be generalized:
+                if c1.lower() in ('id', 'node1', 'label', 'node2'):
+                    self.store.ensure_graph_index(alias_to_graph[g1], c1, unique=c1.lower()=='id')
+                if c2.lower() in ('id', 'node1', 'label', 'node2'):
+                    self.store.ensure_graph_index(alias_to_graph[g2], c2, unique=c2.lower()=='id')
+        elif len(restrictions) > 0:
+            # if we don't have any joins, we might need indexes on restricted columns:
+            for (g, c), val in restrictions:
+                if c.lower() in ('id', 'node1', 'label', 'node2'):
+                    self.store.ensure_graph_index(alias_to_graph[g], c, unique=c.lower()=='id')
+
     def translate_to_sql(self):
         graphs = set()        # the set of graph table names referenced by this query
         litmap = {}           # maps Kypher literals onto parameter placeholders
@@ -554,7 +584,8 @@ class KgtkQuery(object):
             graph = self.get_pattern_clause_graph(clause)
             graph_alias = '%s_c%d' % (graph, i+1) # per-clause graph table alias for self-joins
             self.pattern_clause_props_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
-            
+
+        # assemble SQL query:
         select, group_by = self.return_clause_to_sql_selection(self.return_clause, litmap, varmap)
         graph_tables = ', '.join([g + ' ' + a for g, a in sorted(list(graphs))])
         query = io.StringIO()
@@ -564,24 +595,9 @@ class KgtkQuery(object):
             query.write('\nWHERE TRUE')
         for (g, c), val in sorted(list(restrictions)):
             query.write('\nAND %s.%s=%s' % (g, sql_quote_ident(c), val))
-        alias_to_graph = {alias: graph for graph, alias in graphs}
         for (g1, c1), (g2, c2) in sorted(list(joins)):
             query.write('\nAND %s.%s=%s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2)))
 
-        # ensure that we have relevant indices:
-        # TO DO: think about this some more, we might need some manual control as well; this should
-        # go into its separate function; to do this right we need some approximate analysis of the
-        # query, e.g., for the join we'll generally only need an index on one of the involved tables:
-        if len(joins) > 0:
-            for (g1, c1), (g2, c2) in joins:
-                # ensure we have indices on joined columns - the ID check needs to be generalized:
-                self.store.ensure_graph_index(alias_to_graph[g1], c1, unique=c1.upper()=='ID')
-                self.store.ensure_graph_index(alias_to_graph[g2], c2, unique=c2.upper()=='ID')
-        elif len(restrictions) > 0:
-            # if we don't have any joins, we might need indexes on restricted columns:
-            for (g, c), val in restrictions:
-                self.store.ensure_graph_index(alias_to_graph[g], c, unique=c.upper()=='ID')
-            
         where = self.where_clause_to_sql(self.where_clause, litmap, varmap)
         where and query.write('\nAND ' + where)
         group_by and query.write('\n' + group_by)
@@ -591,8 +607,14 @@ class KgtkQuery(object):
         limit and query.write('\n' + limit)
         query = query.getvalue().replace(' TRUE\nAND', '')
         query, parameters = self.replace_literal_parameters(query, litmap)
-        
-        self.log(1, '\nSQL: %s\nPARAS: %s\n' % (query.replace('\n', '\n     '), parameters))
+
+        # logging:
+        rule = '-' * 45
+        self.log(1, 'SQL Translation:\n%s\n  %s\n  PARAS: %s\n%s'
+                 % (rule, query.replace('\n', '\n     '), parameters, rule))
+
+        # ensure indexes are available:
+        self.ensure_relevant_indexes(graphs, restrictions, joins)
         return query, parameters
 
     def execute(self):
