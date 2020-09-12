@@ -474,12 +474,13 @@ class KgtkWriter(KgtkBase):
         return line
 
     def join_md(self, values: typing.List[str])->str:
-        line: str = "|"
+        linebuf: typing.List[str] = ["|"]
         value: str
         for value in values:
-            value = "\\|".join(value.split("|"))
-            line += " " + value + " |"
-        return line
+            linebuf.append(" ")
+            linebuf.append("\\|".join(value.split("|")))
+            linebuf.append(" |")
+        return "".join(linebuf)
 
     def reformat_value_for_json(self, value: str)->typing.Union[str, int, float, bool]:
         # TODO: Complain if the value is a KGTK List.
