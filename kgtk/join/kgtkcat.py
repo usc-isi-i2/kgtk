@@ -69,11 +69,11 @@ class KgtkCat():
         for idx, input_file_path in enumerate(self.input_file_paths):
             if str(input_file_path) == "-":
                 if saw_stdin:
-                    raise ValueError("Duplicate standard input file %d" % idx + 1)
+                    raise ValueError("Duplicate standard input file %d" % (idx + 1))
                 else:
                     saw_stdin = False
                 if self.verbose:
-                    print("Opening file %d: standard input" % idx + 1, file=self.error_file, flush=True)
+                    print("Opening file %d: standard input" % (idx + 1), file=self.error_file, flush=True)
             else:
                 if self.verbose:
                     print("Opening file %d: %s" % (idx + 1, str(input_file_path)), file=self.error_file, flush=True)
