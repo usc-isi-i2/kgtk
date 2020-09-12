@@ -7,6 +7,7 @@ TODO: Need output file mode.
 
 from argparse import ArgumentParser
 import attr
+import os
 from pathlib import Path
 import sys
 import typing
@@ -60,6 +61,9 @@ class KgtkCat():
         krs: typing.List[KgtkReader] = [ ]
         kr: KgtkReader
         idx: int
+
+        if self.verbose:
+            print("Starting kgtkcat pid=%d" % (os.getpid()), file=self.error_file, flush=True)
 
         if self.verbose:
             print("Opening the %d input files." % len(self.input_file_paths), file=self.error_file, flush=True)
