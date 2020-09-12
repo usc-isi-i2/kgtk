@@ -2,15 +2,18 @@ Import FrameNet v1.7 into KGTK format. The resulting KGTK file consists of 9 col
 
 ## Usage
 ```
-usage: kgtk import-framenet [-h]
+usage: kgtk import-framenet [-h] [-o OUTPUT_FILE]
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help            show this help message and exit
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
 ```
 
 ## Examples
 
-Importing FrameNet can be done as follows (no arguments should be provided, as FrameNet is read through the NLTK package):
+Importing FrameNet can be done as follows (no inputs should be provided, as FrameNet is read through the NLTK package):
 
 ```
 kgtk import-framenet

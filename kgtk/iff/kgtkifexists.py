@@ -347,7 +347,7 @@ class KgtkIfExists(KgtkFormat):
             print("Accepted %d rows, rejected %d rows." % (accept_line_count, reject_line_count), file=self.error_file, flush=True)
         
     def process(self):
-        UPDATE_VERSION: str = "2020-08-24T21:47:20.256050+00:00#mr0wtMHlN/QaplDsGc/ylG3Hw5stsjziykzuGlSHBSion4xoW/Bec0sn55IQ7wFWBUClRS7g1tbAuaqEduhUVA=="
+        UPDATE_VERSION: str = "2020-09-10T22:20:40.887878+00:00#7nlXamYJdHaSdQloi5pdHKCBpHgYiMJMdK2pVohyCdZVlkDLzY9twJeKd0n0W9mk97vba+4l5kd6qubdETpCtA=="
         if self.show_version or self.verbose:
             print("KgtkIfEfexists version: %s" % UPDATE_VERSION, file=self.error_file, flush=True)
 
