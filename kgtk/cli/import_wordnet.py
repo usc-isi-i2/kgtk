@@ -3,7 +3,6 @@ Import WordNet to KGTK.
 
 """
 
-
 import sys
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 

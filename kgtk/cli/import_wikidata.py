@@ -15,6 +15,7 @@ TODO: Node type needs to be optional in the edge file.
 
 """
 
+import typing
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
@@ -373,12 +374,22 @@ def add_arguments(parser: KGTKArgumentParser):
         default=500000,
         help='How often to report progress. (default=%(default)d)')
     
+    parser.add_argument(
+        "--use-kgtkwriter",
+        nargs='?',
+        type=optional_bool,
+        dest="use_kgtkwriter",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, use KgtkWriter instead of csv.writer. (default=%(default)s).")
+
 def run(input_file: KGTKFiles,
         procs: int,
         max_size_per_mapper_queue: int,
-        node_file: str,
-        edge_file: str,
-        qual_file: str,
+        node_file: typing.Optional[str],
+        edge_file: typing.Optional[str],
+        qual_file: typing.Optional[str],
         limit: int,
         lang: str,
         source: str,
@@ -409,6 +420,7 @@ def run(input_file: KGTKFiles,
         mapper_batch_size: int,
         collector_batch_size: int,
         single_mapper_queue: bool,
+        use_kgtkwriter: bool,
         ):
 
     # import modules locally
@@ -418,13 +430,14 @@ def run(input_file: KGTKFiles,
     import gzip
     import multiprocessing as mp
     import os
+    from pathlib import Path
     import pyrallel
     import sys
     import time
-    import typing
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.cli_argparse import KGTKArgumentParser
     from kgtk.exceptions import KGTKException
+    from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -918,7 +931,7 @@ def run(input_file: KGTKFiles,
                                     elif typ == 'globe-coordinate':
                                         lat = str(val['latitude'])
                                         long = str(val['longitude'])
-                                        precision = val.get('precision', '')
+                                        precision = str(val.get('precision', ''))
                                         value = '@' + lat + '/' + long
                                         # TODO: what about "globe"?
                                     elif typ == 'time':
@@ -1038,8 +1051,8 @@ def run(input_file: KGTKFiles,
                                                                 val['latitude'])
                                                             long = str(
                                                                 val['longitude'])
-                                                            precision = val.get(
-                                                                'precision', '')
+                                                            precision = str(val.get(
+                                                                'precision', ''))
                                                             value = '@' + lat + '/' + long
                                                         elif typ == 'time':
                                                             if val['time'][0]=='-':
@@ -1213,8 +1226,13 @@ def run(input_file: KGTKFiles,
 
             self.started: bool = False
 
-        def run(self, node_file: str, edge_file: str, qual_file: str, collector_q, who: str):
-            self.startup(node_file, edge_file, qual_file, who)
+        def run(self,
+                node_file: typing.Optional[str],
+                edge_file: typing.Optional[str],
+                qual_file: typing.Optional[str],
+                collector_q,
+                who: str):
+            print("The %s collector is starting (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
                 
             while True:
                 action, nrows, erows, qrows, header = collector_q.get()
@@ -1222,23 +1240,31 @@ def run(input_file: KGTKFiles,
 
                 if action == "rows":
                     self.collect(nrows, erows, qrows, who)
-                elif action == "node_header" and self.node_wr is not None:
-                    self.node_wr.writerow(header)
-                elif action == "edge_header" and self.edge_wr is not None:
-                    self.edge_wr.writerow(header)
-                elif action == "qual_header" and self.qual_wr is not None:
-                    self.qual_wr.writerow(header)
+
+                elif action == "node_header":
+                    self.open_node_file(node_file, header, who)
+
+                elif action == "edge_header":
+                    self.open_edge_file(edge_file, header, who)
+
+                elif action == "qual_header":
+                    self.open_qual_file(qual_file, header, who)
+
                 elif action == "shutdown":
                     self.shutdown(who)
                     break
 
-        def startup(self, node_file: str, edge_file: str, qual_file: str, who: str):
-            if self.started:
-                return
-            
-            print("The %s collector is starting (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
-            if node_file is not None:
-                print("Opening the node file in the %s collector." % who, file=sys.stderr, flush=True)
+        def open_node_file(self, node_file: typing.Optional[str], header: typing.List[str], who: str):
+            if node_file is None or len(node_file) == 0:
+                raise ValueError("Node header without a node file in the %s collector." % who)
+
+            if use_kgtkwriter:
+                print("Opening the node file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
+                self.node_wr = KgtkWriter.open(header, Path(node_file), who=who + " collector")
+                
+            else:
+                print("Opening the node file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
+                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
                 self.node_f = open(node_file, "w", newline='')
                 self.node_wr = csv.writer(
                     self.node_f,
@@ -1247,9 +1273,19 @@ def run(input_file: KGTKFiles,
                     escapechar="\n",
                     quotechar='',
                     lineterminator=csv_line_terminator)
+                self.node_wr.writerow(header)
+
+        def open_edge_file(self, edge_file: typing.Optional[str], header: typing.List[str], who: str):
+            if edge_file is None or len(edge_file) == 0:
+                raise ValueError("Edge header without an edge file in the %s collector." % who)
+
+            if use_kgtkwriter:
+                print("Opening the edge file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
+                self.edge_wr = KgtkWriter.open(header, Path(edge_file), who=who + " collector")
                 
-            if edge_file is not None:
-                print("Opening the edge file in the %s collector." % who, file=sys.stderr, flush=True)
+            else:
+                print("Opening the edge file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
+                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
                 self.edge_f = open(edge_file, "w", newline='')
                 self.edge_wr = csv.writer(
                     self.edge_f,
@@ -1258,9 +1294,19 @@ def run(input_file: KGTKFiles,
                     escapechar="\n",
                     quotechar='',
                     lineterminator=csv_line_terminator)
+                self.edge_wr.writerow(header)
+
+        def open_qual_file(self, qual_file: typing.Optional[str], header: typing.List[str], who: str):
+            if qual_file is None or len(qual_file) == 0:
+                raise ValueError("Qual header without a qual file in the %s collector." % who)
+
+            if use_kgtkwriter:
+                print("Opening the qual file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
+                self.qual_wr = KgtkWriter.open(header, Path(qual_file), who=who + " collector")
                 
-            if qual_file is not None:
-                print("Opening the qual file in the %s collector." % who, file=sys.stderr, flush=True)
+            else:
+                print("Opening the qual file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
+                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
                 self.qual_f = open(qual_file, "w", newline='')
                 self.qual_wr = csv.writer(
                     self.qual_f,
@@ -1269,19 +1315,28 @@ def run(input_file: KGTKFiles,
                     escapechar="\n",
                     quotechar='',
                     lineterminator=csv_line_terminator)
-            print("The %s collector is ready." % who, file=sys.stderr, flush=True)
-
+                self.qual_wr.writerow(header)
+            
         def shutdown(self, who: str):
             print("Exiting the %s collector (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
 
-            if self.node_f is not None:
-                self.node_f.close()
+            if use_kgtkwriter:
+                if self.node_wr is not None:
+                    self.node_wr.close()
+                if self.edge_wr is not None:
+                    self.edge_wr.close()
+                if self.qual_wr is not None:
+                    self.qual_wr.close()
 
-            if self.edge_f is not None:
-                self.edge_f.close()
+            else:
+                if self.node_f is not None:
+                    self.node_f.close()
 
-            if self.qual_f is not None:
-                self.qual_f.close()
+                if self.edge_f is not None:
+                    self.edge_f.close()
+
+                if self.qual_f is not None:
+                    self.qual_f.close()
 
             print("The %s collector has closed its output files." % who, file=sys.stderr, flush=True)
 
@@ -1298,16 +1353,31 @@ def run(input_file: KGTKFiles,
                                                                                               self.erows,
                                                                                               self.qrows), file=sys.stderr, flush=True)
             if self.node_wr is not None:
-                for row in nrows:
-                    self.node_wr.writerow(row)
+                if use_kgtkwriter:
+                    for row in nrows:
+                        self.node_wr.write(row)
+                else:
+                    self.node_wr.writerows(nrows)
+            elif len(nrows) > 0:
+                raise ValueError("Unexpected node rows in the %s collector." % who)
 
             if self.edge_wr is not None:
-                for row in erows:
-                    self.edge_wr.writerow(row)
+                if use_kgtkwriter:
+                    for row in erows:
+                        self.edge_wr.write(row)
+                else:
+                    self.edge_wr.writerows(erows)
+            elif len(erows) > 0:
+                raise ValueError("Unexpected edge rows in the %s collector." % who)
 
             if self.qual_wr is not None:
-                for row in qrows:
-                    self.qual_wr.writerow(row)
+                if use_kgtkwriter:
+                    for row in qrows:
+                        self.qual_wr.write(row)
+                else:
+                    self.qual_wr.writerows(qrows)
+            elif len(qrows) > 0:
+                raise ValueError("Unexpected qual rows in the %s collector." % who)
 
     try:
         UPDATE_VERSION: str = "2020-09-10T22:20:40.879539+00:00#H/efBooi/N4ZmRwyM0xEJqu3HLU6XzsVhLtueht4KjGlvH/QjJE33MtEXrpD1NZkem6nJYhhQEcFz+wJqea4TQ=="
