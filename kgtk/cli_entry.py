@@ -166,13 +166,15 @@ def cli_entry(*args):
                     "_err": sys.stderr,
                     "_bg": True,
                     "_internal_bufsize": 1,
-                    # "_piped": True,
                 }
                 # add specific arguments
                 if idx == 0:  # first command
                     kwargs["_in"] = sys.stdin
                 elif idx + 1 == len(pipe):  # last command
                     kwargs["_out"] = sys.stdout
+
+                if idx + 1 < len(pipe):
+                    kwargs["_piped"] = True
 
                 if parsed_shared_args._pipedebug:
                     cmd_str = " ".join(full_args)
