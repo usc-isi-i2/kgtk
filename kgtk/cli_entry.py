@@ -25,7 +25,6 @@ handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
 pipe_delimiter = '/'
 ret_code = 0
 
-
 def cmd_done(cmd, success, exit_code):
     # cmd.cmd -> complete command line
     global ret_code
@@ -136,7 +135,11 @@ def cli_entry(*args):
 
         running_pv_command = None
         if parsed_shared_args._progress:
-            running_pv_command = sh.pv("-d {}".format(os.getpid()), _out=parsed_shared_args._progress_tty, _err=parsed_shared_args._progress_tty, _bg=True)
+            if hasattr(mod, 'progress_initiator'):
+                mod.progress_initiator(parsed_shared_args._progress_tty)
+            else:
+                running_pv_command = sh.pv("-d {}".format(os.getpid()),
+                                           _out=parsed_shared_args._progress_tty, _err=parsed_shared_args._progress_tty, _bg=True)
 
         # run module
         try: 
@@ -147,6 +150,8 @@ def cli_entry(*args):
             if running_pv_command is not None:
                 # print("Killing pv", file=sys.stderr, flush=True)
                 running_pv_command.kill()
+            elif hasattr(mod, 'progress_shutdown'):
+                mod.progress_shutdown()
             # Silently exit instead of re-raising the KeyboardInterrupt.
             # raise
 
