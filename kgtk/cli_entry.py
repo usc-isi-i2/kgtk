@@ -151,6 +151,8 @@ def cli_entry(*args):
             # raise
 
     else:  # piped commands
+        if parsed_shared_args._pipedebug:
+            print("Building a KGTK pipe.  pid=%d" % (os.getpid()), file=sys.stderr, flush=True)
         processes = [ ]
         try:
             for idx, cmd_args in enumerate(pipe):
@@ -167,13 +169,14 @@ def cli_entry(*args):
                     "_bg": True,
                     "_internal_bufsize": 1,
                 }
-                # add specific arguments
-                if idx == 0:  # first command
-                    kwargs["_in"] = sys.stdin
-                elif idx + 1 == len(pipe):  # last command
-                    kwargs["_out"] = sys.stdout
 
+                # add specific arguments
+                if idx == 0:  # The first commamd reads from our STDIN.
+                    kwargs["_in"] = sys.stdin
+                elif idx + 1 == len(pipe):  # The last command writes to our STDOUT.
+                    kwargs["_out"] = sys.stdout
                 if idx + 1 < len(pipe):
+                    # All commands but the last pipe their output to the next command.
                     kwargs["_piped"] = True
 
                 if parsed_shared_args._pipedebug:
