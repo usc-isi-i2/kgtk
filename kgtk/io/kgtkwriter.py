@@ -504,12 +504,13 @@ class KgtkWriter(KgtkBase):
         return line
 
     def join_md(self, values: typing.List[str])->str:
-        line: str = "|"
+        linebuf: typing.List[str] = ["|"]
         value: str
         for value in values:
-            value = "\\|".join(value.split("|"))
-            line += " " + value + " |"
-        return line
+            linebuf.append(" ")
+            linebuf.append("\\|".join(value.split("|")))
+            linebuf.append(" |")
+        return "".join(linebuf)
 
     def reformat_value_for_json(self, value: str)->typing.Union[str, int, float, bool]:
         # TODO: Complain if the value is a KGTK List.
@@ -568,10 +569,10 @@ class KgtkWriter(KgtkBase):
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
             noeol = True
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
-            self.writeline("[", noeol=True)
+            self.writeline_noeol("[")
             return
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
-            self.writeline("[", noeol=True)
+            self.writeline_noeol("[")
             return
         elif self.output_format == self.OUTPUT_FORMAT_JSONL:
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
@@ -602,29 +603,42 @@ class KgtkWriter(KgtkBase):
         # Write the column names to the first line.
         if self.verbose:
             print("header: %s" % header, file=self.error_file, flush=True)
-        self.writeline(header, noeol=noeol)
+        if noeol:
+            self.writeline_noeol(header)
+        else:
+            self.writeline(header)
         if header2 is not None:
             if self.verbose:
                 print("header2: %s" % header2, file=self.error_file, flush=True)
             self.writeline(header2)
 
-    def writeline(self, line: str, noeol: bool = False):
+    def writeline(self, line: str):
         if self.gzip_thread is not None:
-            if noeol:
-                self.gzip_thread.write(line) # TODO: use alternative end-of-line sequences?
-            else:
-                self.gzip_thread.write(line + "\n") # TODO: use alternative end-of-line sequences?
+            # self.gzip_thread.write(line + "\n") # TODO: use alternative end-of-line sequences?
+            self.gzip_thread.write(line)
+            self.gzip_thread.write("\n") # TODO: use alternative end-of-line sequences?
         else:
             try:
-                if noeol:
-                    self.file_out.write(line) # Todo: use system end-of-line sequence?
-                else:
-                    self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
+                # self.file_out.write(line + "\n") # Todo: use system end-of-line sequence?
+                self.file_out.write(line)
+                self.file_out.write("\n") # Todo: use system end-of-line sequence?
             except IOError as e:
                 if e.errno == errno.EPIPE:
                     pass # TODO: propogate a close backwards.
                 else:
-                    raise e
+                    raise
+
+    def writeline_noeol(self, line: str):
+        if self.gzip_thread is not None:
+            self.gzip_thread.write(line) # TODO: use alternative end-of-line sequences?
+        else:
+            try:
+                self.file_out.write(line) # Todo: use system end-of-line sequence?
+            except IOError as e:
+                if e.errno == errno.EPIPE:
+                    pass # TODO: propogate a close backwards.
+                else:
+                    raise
 
     # Write the next list of edge values as a list of strings.
     # TODO: Convert integers, coordinates, etc. from Python types
@@ -676,19 +690,19 @@ class KgtkWriter(KgtkBase):
             self.writeline(self.join_md(values))
         elif self.output_format == self.OUTPUT_FORMAT_JSON:
             self.writeline(",")
-            self.writeline(json.dumps(self.reformat_values_for_json(values), indent=None, separators=(',', ':')), noeol=True)
+            self.writeline_noeol(json.dumps(self.reformat_values_for_json(values), indent=None, separators=(',', ':')))
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
             if self.line_count == 1:
                 self.writeline("")
             else:
                 self.writeline(",")
-            self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')), noeol=True)
+            self.writeline_noeol(json.dumps(self.json_map(values), indent=None, separators=(',', ':')))
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
             if self.line_count == 1:
                 self.writeline("")
             else:
                 self.writeline(",")
-            self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')), noeol=True)
+            self.writeline_noeol(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
         elif self.output_format == self.OUTPUT_FORMAT_JSONL:
             self.writeline(json.dumps(values, indent=None, separators=(',', ':')))
         elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP:
@@ -703,6 +717,26 @@ class KgtkWriter(KgtkBase):
             sys.stdout.write(".")
             sys.stdout.flush()
 
+    def writerow(self, row: typing.List[str]):
+        # Convenience method for interoperability with csv.writer.
+        # Don't forget to call kw.close() when done, though.
+        try:
+            newrow: typing.List[str] = [ ]
+            item: typing.Union[str, int, float, bool]
+            for item in row:
+                newrow.append(str(item))
+            self.write(newrow)
+        except TypeError:
+            print("TypeError on %s" % "[" + ", ".join([repr(x) for x in row]) + "]", file=self.error_file, flush=True)
+            raise
+
+    def writerows(self, rows: typing.List[typing.List[typing.Union[str, int, float, bool]]]):
+        # Convenience method for interoperability with csv.writer.
+        # Don't forget to call kw.close() when done, though.
+        row: typing.List[typing.Union[str, int, float, bool]]
+        for row in rows:
+            self.writerow(row)
+
     def flush(self):
         if self.gzip_thread is None:
             try:
@@ -711,7 +745,7 @@ class KgtkWriter(KgtkBase):
                 if e.errno == errno.EPIPE:
                     pass # Ignore.
                 else:
-                    raise e
+                    raise
 
     def close(self):
         if self.output_format in [self.OUTPUT_FORMAT_JSON, self.OUTPUT_FORMAT_JSON_MAP, self.OUTPUT_FORMAT_JSON_MAP_COMPACT]:
@@ -729,7 +763,7 @@ class KgtkWriter(KgtkBase):
                 if e.errno == errno.EPIPE:
                     pass # Ignore.
                 else:
-                    raise e
+                    raise
 
     def writemap(self, value_map: typing.Mapping[str, str]):
         """

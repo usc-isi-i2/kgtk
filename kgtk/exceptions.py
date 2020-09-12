@@ -45,6 +45,8 @@ class KGTKExceptionHandler(object):
             return return_code
         except (sh.SignalException_SIGPIPE, BrokenPipeError):
             pass
+        except KeyboardInterrupt:
+            raise
         except BaseException:
             type_, exc_val, exc_tb = sys.exc_info()
             return self.handle_exception(type_, exc_val, exc_tb)
