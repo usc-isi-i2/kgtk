@@ -129,7 +129,13 @@ def run(**options):
                                       parameters=parameters)
             result = query.execute()
 
-            csvwriter = csv.writer(output, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE, quotechar=None)
+            # we are forcing \n line endings here instead of \r\n, since those
+            # can be re/imported efficiently with the new SQLite import command;
+            # we also specify `escapechar' now so any unexpected column or line
+            # separators in fields will be quoted and visible:
+            csvwriter = csv.writer(output, dialect=None, delimiter='\t',
+                                   quoting=csv.QUOTE_NONE, quotechar=None,
+                                   lineterminator='\n', escapechar='\\')
             csvwriter.writerow(query.result_header)
             csvwriter.writerows(result)
             output.flush()
