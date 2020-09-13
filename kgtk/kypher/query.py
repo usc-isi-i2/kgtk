@@ -20,6 +20,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### TO DO:
 
+# - support parameters in lists, maybe positional parameters $0, $1,...
 # - more intelligent index creation
 # - investigate redundant join clauses
 # - header column dealiasing/normalization
@@ -30,7 +31,8 @@ pp = pprint.PrettyPrinter(indent=4)
 # - handle properties that are ambiguous across graphs
 # - graphs fed in from stdin
 # - graph naming independent from files, so we don't have to have source data files
-#   available after import for querying
+#   available after import for querying, e.g.: ... -i $FILE1 --as g1 -i $FILE2 --as g2 ...
+# - with named graphs, we probably also need some kind of --info command to list content
 # - --create and --remove to instantiate and add/remove edge patterns from result bindings
 # - --with clause to compute derived values to use by --create and --remove
 
@@ -91,7 +93,7 @@ def dwim_to_lqstring_para(x):
 # + A property: n.prop, x.prop, rel.thisProperty, myFancyVariable.`(weird property name)`
 # - A dynamic property: n["prop"], rel[n.city + n.zip], map[coll[0]].
 #   - HC: not doable in SQL, amounts to a function or column variable
-# - A parameter: $param, $0
+# + A parameter: $param, $0
 # + A list of expressions: ['a', 'b'], [1, 2, 3], ['a', 2, n.property, $param], [ ].
 #   - HC: only lists of literals
 # + A function call: length(p), nodes(p).
@@ -558,8 +560,8 @@ class KgtkQuery(object):
                     self.store.ensure_graph_index(alias_to_graph[g1], c1, unique=c1.lower()=='id')
                 if c2.lower() in ('id', 'node1', 'label', 'node2'):
                     self.store.ensure_graph_index(alias_to_graph[g2], c2, unique=c2.lower()=='id')
-        elif len(restrictions) > 0:
-            # if we don't have any joins, we might need indexes on restricted columns:
+        if len(restrictions) > 0:
+            # even if we have joins, we might need additional indexes on restricted columns:
             for (g, c), val in restrictions:
                 if c.lower() in ('id', 'node1', 'label', 'node2'):
                     self.store.ensure_graph_index(alias_to_graph[g], c, unique=c.lower()=='id')
