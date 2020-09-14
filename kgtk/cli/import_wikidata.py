@@ -384,6 +384,9 @@ def add_arguments(parser: KGTKArgumentParser):
         metavar="True/False",
         help="If true, use KgtkWriter instead of csv.writer. (default=%(default)s).")
 
+def custom_progress()->bool:
+    return True # We want to start a custom progress monitor.
+
 def run(input_file: KGTKFiles,
         procs: int,
         max_size_per_mapper_queue: int,
@@ -436,6 +439,7 @@ def run(input_file: KGTKFiles,
     import time
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.cli_argparse import KGTKArgumentParser
+    from kgtk.cli_entry import progress_startup
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
@@ -1393,19 +1397,24 @@ def run(input_file: KGTKFiles,
             print("Processing.", file=sys.stderr, flush=True)
             languages=lang.split(',')
 
-            input_f: typing.IO[typing.Any]
             # Open the input file first to make it easier to monitor with "pv".
-            if str(inp_path).endswith(".bz2"):
-                print('Decompressing (bz2) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                input_f = bz2.open(inp_path, mode='rb')
+            input_f: typing.IO[typing.Any]
+            if str(inp_path) == "-":
+                print('Processing wikidata from standard input', file=sys.stderr, flush=True)
+                input_f = sys.stdin.buffer
 
-            elif str(inp_path).endswith(".gz"):
-                print('Decompressing (gzip) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                input_f = gzip.open(inp_path, mode='rb')
-
-            else:                             
+            else:
                 print('Processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
                 input_f = open(inp_path, mode='rb')
+                progress_startup(fd=input_f.fileno()) # Start the custom progress monitor.
+            
+                if str(inp_path).endswith(".bz2"):
+                    print('Decompressing (bz2)', file=sys.stderr, flush=True)
+                    input_f = bz2.open(input_f)
+
+                elif str(inp_path).endswith(".gz"):
+                    print('Decompressing (gzip)', file=sys.stderr, flush=True)
+                    input_f = gzip.open(input_f)
 
             collector_p = None
             node_collector_p = None
@@ -1641,3 +1650,4 @@ def run(input_file: KGTKFiles,
         print('time taken : {}s'.format(end-start), file=sys.stderr, flush=True)
     except Exception as e:
         raise KGTKException(str(e))
+
