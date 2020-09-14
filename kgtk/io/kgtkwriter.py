@@ -717,7 +717,7 @@ class KgtkWriter(KgtkBase):
             sys.stdout.write(".")
             sys.stdout.flush()
 
-    def writerow(self, row: typing.List[str]):
+    def writerow(self, row: typing.List[typing.Union[str, int, float, bool]]):
         # Convenience method for interoperability with csv.writer.
         # Don't forget to call kw.close() when done, though.
         try:
