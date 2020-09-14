@@ -130,5 +130,8 @@ def run(output_file: KGTKFiles):
         for edge in all_edges:
             ew.write(edge)
 
+        # Clean up.
+        ew.close()
+
     except Exception as e:
             kgtk_exception_auto_handler(e)
