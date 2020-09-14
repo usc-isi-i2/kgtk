@@ -47,6 +47,7 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
     # input files other than calling this routine sequentially
     import os
     import sh
+    global _save_progress_tty
     if _save_progress_tty is not None:
         global _save_progress_command
         if _save_progress_command is not None:
@@ -64,6 +65,7 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
                                            _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
 
 def progress_shutdown():
+    global _save_progress_command
     if _save_progress_command is not None:
         _save_progress_command.kill()
         _save_progress_command = None
