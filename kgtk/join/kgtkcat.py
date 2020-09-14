@@ -98,12 +98,22 @@ class KgtkCat():
             # consistency check will be skipped.
             if kr.is_edge_file:
                 if is_node_file:
+                    # Close the open files before raising the exception.
+                    #
+                    # TODO: Use a try..finally block to ensure these files are closed.
+                    for kr2 in krs:
+                        kr2.close()
                     raise ValueError("Cannot merge an edge file to a node file: %s" % input_file_path)
                 if is_edge_file == False and self.verbose:
                     print("The output file will be an edge file.", file=self.error_file, flush=True)
                 is_edge_file = True
             elif kr.is_node_file:
                 if is_edge_file:
+                    # Close the open files before raising the exception.
+                    #
+                    # TODO: Use a try..finally block to ensure these files are closed.
+                    for kr2 in krs:
+                        kr2.close()
                     raise ValueError("Cannot merge a node file to an edge file: %s" % input_file_path)
                 if is_node_file == False and self.verbose:
                     print("The output file will be an node file.", file=self.error_file, flush=True)
@@ -126,6 +136,11 @@ class KgtkCat():
             if self.verbose:
                 print("There are %d new output column names." % len(self.output_column_names), file=self.error_file, flush=True)
             if len(self.output_column_names) != len(kmc.column_names):
+                # Close the open files before raising the exception.
+                #
+                # TODO: Use a try..finally block to ensure these files are closed.
+                for kr2 in krs:
+                    kr2.close()
                 raise ValueError("There are %d merged columns, but %d output column names." % (len(kmc.column_names), len(self.output_column_names)))
 
         output_mode: KgtkWriter.Mode = KgtkWriter.Mode.NONE
@@ -163,6 +178,12 @@ class KgtkCat():
                 # checking here keeps mypy happy.
                 #
                 # TODO: throw a better exception.
+                #
+                # Close the open files before raising the exception.
+                #
+                # TODO: Use a try..finally block to ensure these files are closed.
+                for kr2 in krs:
+                    kr2.close()
                 raise ValueError("Missing file path.")
             input_file_path = kr.file_path
             if self.verbose:
@@ -186,7 +207,10 @@ class KgtkCat():
         if self.verbose:
             print("Wrote %d lines total from %d files" % (output_data_lines, len(krs)), file=self.error_file, flush=True)
 
+        # Close the open files.
         ew.close()
+        for kr2 in krs:
+            kr2.close()
         
 def main():
     """
