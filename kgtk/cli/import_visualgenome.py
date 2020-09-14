@@ -147,5 +147,8 @@ def run(input_file: KGTKFiles,
             for a_row in rows:
                 ew.write(a_row)
 
+        # Clean up
+        ew.close()
+
     except Exception as e:
             kgtk_exception_auto_handler(e)

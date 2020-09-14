@@ -367,6 +367,8 @@ def run(input_file: KGTKFiles,
             trouble = True
             print("Error: Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col), file=error_file, flush=True)
         if trouble:
+            # Clean up:
+            kr.close()
             raise KGTKException("Missing columns.")
 
         if verbose:
