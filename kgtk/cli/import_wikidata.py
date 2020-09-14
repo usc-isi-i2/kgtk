@@ -1401,6 +1401,10 @@ def run(input_file: KGTKFiles,
             input_f: typing.IO[typing.Any]
             if str(inp_path) == "-":
                 print('Processing wikidata from standard input', file=sys.stderr, flush=True)
+                # It is not well documented, but this is how you read binary data
+                # from stdin in Python 3.
+                #
+                # TODO: Add decompression.
                 input_f = sys.stdin.buffer
 
             else:
@@ -1410,10 +1414,12 @@ def run(input_file: KGTKFiles,
             
                 if str(inp_path).endswith(".bz2"):
                     print('Decompressing (bz2)', file=sys.stderr, flush=True)
+                    # TODO: Optionally use a system decompression program.
                     input_f = bz2.open(input_f)
 
                 elif str(inp_path).endswith(".gz"):
                     print('Decompressing (gzip)', file=sys.stderr, flush=True)
+                    # TODO: Optionally use a system decompression program.
                     input_f = gzip.open(input_f)
 
             collector_p = None
