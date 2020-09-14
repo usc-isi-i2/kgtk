@@ -29,3 +29,6 @@ unittest:
 
 coverage:
 	cd kgtk/tests && coverage run --source=kgtk -m unittest discover --verbose
+
+download-spacy-model:
+	python3 -m spacy download en_core_web_sm
