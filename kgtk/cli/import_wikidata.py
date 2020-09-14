@@ -1562,9 +1562,13 @@ def run(input_file: KGTKFiles,
                         wr.writerow(header)
 
             print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
-            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
-                                            use_shm=use_shm, enable_collector_queues=False, batch_size=mapper_batch_size,
-                                            single_mapper_queue=single_mapper_queue)
+            if use_shm or single_mapper_queue:
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                                use_shm=use_shm, enable_collector_queues=False, batch_size=mapper_batch_size,
+                                                single_mapper_queue=single_mapper_queue)
+            else:
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                                batch_size=mapper_batch_size)
             print('Start parallel processing', file=sys.stderr, flush=True)
             pp.start()
             for cnt, line in enumerate(input_f):
