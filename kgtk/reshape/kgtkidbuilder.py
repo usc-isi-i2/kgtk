@@ -479,5 +479,8 @@ def main():
     # Process the input file, building IDs.
     idb.process(kr, ew)
 
+    ew.close()
+    kr.close()
+
 if __name__ == "__main__":
     main()
