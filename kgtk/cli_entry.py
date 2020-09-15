@@ -64,6 +64,7 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
                                            _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
 
 def progress_shutdown():
+    global _save_progress_command
     if _save_progress_command is not None:
         _save_progress_command.kill()
         _save_progress_command = None
@@ -211,11 +212,13 @@ def cli_entry(*args):
                 # add specific arguments
                 if idx == 0:  # The first commamd reads from our STDIN.
                     kwargs["_in"] = sys.stdin
-                elif idx + 1 == len(pipe):  # The last command writes to our STDOUT.
-                    kwargs["_out"] = sys.stdout
+
                 if idx + 1 < len(pipe):
                     # All commands but the last pipe their output to the next command.
                     kwargs["_piped"] = True
+                else:
+                    # The last command writes to our STDOUT.
+                    kwargs["_out"] = sys.stdout
 
                 if parsed_shared_args._pipedebug:
                     cmd_str = " ".join(full_args)
