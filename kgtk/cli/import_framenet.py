@@ -191,5 +191,7 @@ def run(output_file: KGTKFiles):
         for i, row in df_.iterrows():
             ew.write(row)
 
+        ew.close()
+
     except Exception as e:
             kgtk_exception_auto_handler(e)

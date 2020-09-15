@@ -1384,7 +1384,7 @@ def run(input_file: KGTKFiles,
                 raise ValueError("Unexpected qual rows in the %s collector." % who)
 
     try:
-        UPDATE_VERSION: str = "2020-09-15T20:04:01.527932+00:00#r8zDJ4xWVSzWat3/OpfBTYy23DjEaPMYbAGA6PJbR69S1S5KnZir9GOJsTSjaTE1rpChzbPBrf3z3EJBx21erA=="
+        UPDATE_VERSION: str = "2020-09-14T22:13:50.434152+00:00#flOJV7jeH3XhclcGDslyMU2bCTa6Ra/VVIg8nxqFsYCYa2cbIG23Iz8MzuPSaDZhQLAWURR1MtCDltkkgv/3qQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -1562,9 +1562,13 @@ def run(input_file: KGTKFiles,
                         wr.writerow(header)
 
             print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
-            pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
-                                            use_shm=use_shm, enable_collector_queues=False, batch_size=mapper_batch_size,
-                                            single_mapper_queue=single_mapper_queue)
+            if use_shm or single_mapper_queue:
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                                use_shm=use_shm, enable_collector_queues=False, batch_size=mapper_batch_size,
+                                                single_mapper_queue=single_mapper_queue)
+            else:
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                                batch_size=mapper_batch_size)
             print('Start parallel processing', file=sys.stderr, flush=True)
             pp.start()
             for cnt, line in enumerate(input_f):
