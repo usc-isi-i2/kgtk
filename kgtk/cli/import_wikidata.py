@@ -1384,7 +1384,7 @@ def run(input_file: KGTKFiles,
                 raise ValueError("Unexpected qual rows in the %s collector." % who)
 
     try:
-        UPDATE_VERSION: str = "2020-09-10T22:20:40.879539+00:00#H/efBooi/N4ZmRwyM0xEJqu3HLU6XzsVhLtueht4KjGlvH/QjJE33MtEXrpD1NZkem6nJYhhQEcFz+wJqea4TQ=="
+        UPDATE_VERSION: str = "2020-09-15T20:04:01.527932+00:00#r8zDJ4xWVSzWat3/OpfBTYy23DjEaPMYbAGA6PJbR69S1S5KnZir9GOJsTSjaTE1rpChzbPBrf3z3EJBx21erA=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
