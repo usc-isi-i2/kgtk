@@ -51,7 +51,10 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
         global _save_progress_command
         if _save_progress_command is not None:
             # Shut down an existing process monitor.
-            _save_progress_command.kill()
+            try:
+                _save_progress_command.terminate()
+            except Exception:
+                pass
             _save_progress_command = None
 
         # Start a process monitor.
@@ -66,7 +69,10 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
 def progress_shutdown():
     global _save_progress_command
     if _save_progress_command is not None:
-        _save_progress_command.kill()
+        try:
+            _save_progress_command.terminate()
+        except Exception:
+            pass
         _save_progress_command = None
     
 def cli_entry(*args):
@@ -186,6 +192,9 @@ def cli_entry(*args):
         except KeyboardInterrupt as e:
             print("\nKeyboard interrupt in %s." % " ".join(args), file=sys.stderr, flush=True)
             progress_shutdown()
+            if hasattr(mod, 'keyboard_interrupt'):
+                mod.keyboard_interrupt()
+
             # Silently exit instead of re-raising the KeyboardInterrupt.
             # raise
 
