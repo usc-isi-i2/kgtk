@@ -123,6 +123,11 @@ def run(input_file: KGTKFiles,
 
         # Process the input file, building IDs.
         idb.process(kr, ew)
+
+        # Clean up.
+        ew.close()
+        kr.close()
+
         return 0
 
     except SystemExit as e:

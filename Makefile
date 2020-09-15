@@ -23,3 +23,12 @@ clean-build:
 
 update-version:
 	python3 kgtk/utils/updateversion.py --show-changes=True $(FILES)
+
+unittest:
+	cd kgtk/tests && python3 -m unittest discover --verbose
+
+coverage:
+	cd kgtk/tests && coverage run --source=kgtk -m unittest discover --verbose
+
+download-spacy-model:
+	python3 -m spacy download en_core_web_sm
