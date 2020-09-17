@@ -3,12 +3,12 @@
 # This script expects to be executed with the current working directory:
 #
 # kgtk/datasets/time-machine-20101201
-source scripts/common.sh
+source common.sh
 
 # ==============================================================================
 # Extract the property datatypes.
 echo -e "\nExtract the property datatypes from the edge file."
-kgtk ${KGTKFLAGS} \
+kgtk ${KGTK_FLAGS} \
      filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-property-datatypes-sorted.tsv \
@@ -16,7 +16,7 @@ kgtk ${KGTKFLAGS} \
     |& tee ${LOGDIR}/${WIKIDATA_ALL_EDGES}-property-datatypes-sorted.log
 
 echo -e "\nCount the property datatypes."
-kgtk ${KGTKFLAGS} \
+kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-property-datatypes-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-property-datatype-counts.tsv \
@@ -24,7 +24,7 @@ kgtk ${KGTKFLAGS} \
     |& tee ${LOGDIR}/${WIKIDATA_ALL_EDGES}-property-datatype-counts.log
 
 echo -e "\nExtract the properties with external IDs."
-kgtk ${KGTKFLAGS} \
+kgtk ${KGTK_FLAGS} \
      filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-property-datatypes-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-external-id-properties-sorted.tsv \
@@ -35,7 +35,7 @@ kgtk ${KGTKFLAGS} \
 # ==============================================================================
 # Extract the sitelinks.
 echo -e "\nExtract the sitelinks."
-kgtk ${KGTKFLAGS} \
+kgtk ${KGTK_FLAGS} \
      filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-sitelinks-sorted.tsv \
@@ -44,7 +44,7 @@ kgtk ${KGTKFLAGS} \
     |& tee ${LOGDIR}/${WIKIDATA_ALL}-sitelinks-sorted.log
 
 echo -e "\nExtract the additional sitelinks."
-kgtk ${KGTKFLAGS} \
+kgtk ${KGTK_FLAGS} \
      filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-without-sitelinks-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-addl-sitelinks-sorted.tsv \
@@ -80,32 +80,32 @@ kgtk ${KGTK_FLAGS} \
 # ==============================================================================
 # Extract the alias, datatype, description, and label edges for all languages.
 echo -e "\nExtract the alias edges for all languages."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-all-lang-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-aliases-all-lang-sorted.tsv \
      --pattern '; alias ;' \
     |& tee ${WIKIDATA_ALL}-aliases-all-lang-sorted.log
 
 echo -e "\nExtract the datatype edges for all languages."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-all-lang-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-datatypes-all-lang-sorted.tsv \
      --pattern '; datatype ;' \
     |& tee ${WIKIDATA_ALL}-datatypes-all-lang-sorted.log
 
 echo -e "\nExtract the description edges for all languages."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-all-lang-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-descriptions-all-lang-sorted.tsv \
      --pattern '; description ;' \
     |& tee ${WIKIDATA_ALL}-descriptions-all-lang-sorted.log
 
 echo -e "\nExtract the label edges for all languages."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-all-lang-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-labels-only-all-lang-sorted.tsv \
      --pattern '; label ;' \
@@ -114,32 +114,32 @@ kgtk --debug --timing \
 # ==============================================================================
 # Extract the alias, datatype, description, and label edges for English only.
 echo -e "\nExtract the alias edges for English only."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-en-only-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-aliases-en-only-sorted.tsv \
      --pattern '; alias ;' \
     |& tee ${WIKIDATA_ALL}-aliases-en-only-sorted.log
 
 echo -e "\nExtract the datatype edges for English only."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-en-only-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-datatypes-en-only-sorted.tsv \
      --pattern '; datatype ;' \
     |& tee ${WIKIDATA_ALL}-datatypes-en-only-sorted.log
 
 echo -e "\nExtract the description edges for English only."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-en-only-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-descriptions-en-only-sorted.tsv \
      --pattern '; description ;' \
     |& tee ${WIKIDATA_ALL}-descriptions-en-only-sorted.log
 
 echo -e "\nExtract the label edges for English only."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-en-only-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-labels-only-en-only-sorted.tsv \
      --pattern '; label ;' \
@@ -148,32 +148,32 @@ kgtk --debug --timing \
 # ==============================================================================
 # Extract the alias, datatype, description, and label edges for English, Spanish, Russian, and Ukranian.
 echo -e "\nExtract the alias edges for English, Spanish, Russian, and Ukranian."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-en-sp-ru-uk-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-aliases-en-sp-ru-uk-sorted.tsv \
      --pattern '; alias ;' \
     |& tee ${WIKIDATA_ALL}-aliases-en-sp-ru-uk-sorted.log
 
 echo -e "\nExtract the datatype edges for English, Spanish, Russian, and Ukranian."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-en-sp-ru-uk-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-datatypes-en-sp-ru-uk-sorted.tsv \
      --pattern '; datatype ;' \
     |& tee ${WIKIDATA_ALL}-datatypes-en-sp-ru-uk-sorted.log
 
 echo -e "\nExtract the description edges for English, Spanish, Russian, and Ukranian."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-en-sp-ru-uk-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-descriptions-en-sp-ru-uk-sorted.tsv \
      --pattern '; description ;' \
     |& tee ${WIKIDATA_ALL}-descriptions-en-sp-ru-uk-sorted.log
 
 echo -e "\nExtract the label edges for English, Spanish, Russian, and Ukranian."
-kgtk --debug --timing \
-     filter --verbose \
+kgtk ${KGTK_FLAGS} \
+     filter ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-labels-etc-en-sp-ru-uk-sorted.tsv \
      --output-file ${DATADIR}/${WIKIDATA_ALL}-labels-only-en-sp-ru-uk-sorted.tsv \
      --pattern '; label ;' \
@@ -181,7 +181,7 @@ kgtk --debug --timing \
 
 # ==============================================================================
 echo -e "\nCount the properties in ${DATADIR}/${WIKIDATA_ALL_EDGES}-sorted.tsv."
-kgtk ${KGTKFLAGS} \
+kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sorted.tsv \
      --output-file ${DATADIR}${WIKIDATA_ALL}-property-counts.tsv \
@@ -190,7 +190,7 @@ kgtk ${KGTKFLAGS} \
      |& tee logs/${WIKIDATA_ALL}-property-counts.log
 
 echo -e "\nLift the English property labels:"
-kgtk ${KGTKFLAGS} \
+kgtk ${KGTK_FLAGS} \
      lift ${VERBOSE} \
      --input-file ${DATADIR}/${WIKIDATA_ALL}-property-counts.tsv \
      --label-file ${DATADIR}/${WIKIDATA_ALL}-labels-only-en-only-sorted.tsv \
