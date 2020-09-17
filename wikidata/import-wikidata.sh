@@ -3,7 +3,7 @@
 # This script expects to be executed with the current working directory:
 #
 # kgtk/datasets/time-machine-20101201
-source scripts/common.sh
+source common.sh
 
 # ==============================================================================
 # Setup working directories:
@@ -14,15 +14,13 @@ mkdir --verbose ${LOGDIR}
 # ==============================================================================
 # Import the Wikidata dump file, getting labels, aliases, and descriptions
 # in all languages.
-#
-# Note: I use 8 processors on my home system.
 echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in all languages"
 kgtk ${KGTK_FLAGS} \
-     import-wikidata ${VERBOSE} \
+     import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \
-     --node ${WIKIDATA_ALL_NODES}-all-lang.tsv \
-     --edge ${WIKIDATA_ALL_EDGES}.tsv \
-     --qual ${WIKIDATA_ALL_QUALIFIERS}.tsv \
+     --node ${DATADIR}/${WIKIDATA_ALL_NODES}-all-lang.tsv \
+     --edge ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv \
+     --qual ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}.tsv \
      --explode-values False \
      --all-languages \
      --alias-edges False \
@@ -41,13 +39,14 @@ kgtk ${KGTK_FLAGS} \
      --progress-interval 500000 \
     |& tee ${LOGDIR}/import-wikidata.log
 
+# ==============================================================================
 # Repeat the import, getting only the English aliases, descriptors, and labels.
 # As of 15-Sep-2020, this is faster than filtering after extraction.
 echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in all languages"
 kgtk ${KGTK_FLAGS} \
-     import-wikidata ${VERBOSE} \
+     import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \
-     --node ${WIKIDATA_ALL_NODES}-en-only.tsv \
+     --node ${DATADIR}/${WIKIDATA_ALL_NODES}-en-only.tsv \
      --explode-values False \
      --lang en \
      --use-kgtkwriter True \
@@ -63,13 +62,14 @@ kgtk ${KGTK_FLAGS} \
      --progress-interval 500000 \
     |& tee ${LOGDIR}/import-wikidata-en-only.log
 
+# ==============================================================================
 # Repeat the import, getting English, Spanish, Russian, and Ukranian subset of
 # the aliases, descriptions, and labels,
 echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in English, Spanish, Russian, and Ukranian"
 kgtk ${KGTK_FLAGS} \
-     import-wikidata ${VERBOSE} \
+     import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \
-     --node ${WIKIDATA_ALL_NODES}-en-es-ru-uk.tsv \
+     --node ${DATADIR}/${WIKIDATA_ALL_NODES}-en-es-ru-uk.tsv \
      --explode-values False \
      --lang en,es,ru,uk \
      --use-kgtkwriter True \
@@ -85,22 +85,61 @@ kgtk ${KGTK_FLAGS} \
      --progress-interval 500000 \
     |& tee ${LOGDIR}/import-wikidata-en-es-ru-uk.log
 
-echo -e "\nCompress the files we have imported."
+# ==============================================================================
+echo -e "\nSort the files we have imported."
+kgtk ${KGTK_FLAGS} \
+     sort2 ${VERBOSE} \
+     --input-file ${DATADIR}/${WIKIDATA_ALL_NODES}-all-lang.tsv \
+     --output-file ${DATADIR}/${WIKIDATA_ALL_NODES}-all-lang-sorted.tsv \
+     --extra "${SORT_EXTRAS}" \
+    |& tee ${LOGDIR}/${WIKIDATA_ALL_NODES}-all-lang-sorted.log
+
+kgtk ${KGTK_FLAGS} \
+     sort2 ${VERBOSE} \
+     --input-file ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv \
+     --output-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sorted.tsv \
+     --extra "${SORT_EXTRAS}" \
+    |& tee ${LOGDIR}/${WIKIDATA_ALL_EDGES}-sorted.log
+
+kgtk ${KGTK_FLAGS} \
+     sort2 ${VERBOSE} \
+     --input-file ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}.tsv \
+     --output-file ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}-sorted.tsv \
+     --extra "${SORT_EXTRAS}" \
+    |& tee ${LOGDIR}/${WIKIDATA_ALL_QUALIFIERS}-sorted.log
+
+kgtk ${KGTK_FLAGS} \
+     sort2 ${VERBOSE} \
+     --input-file ${DATADIR}/${WIKIDATA_ALL_NODES}-en-only.tsv \
+     --output-file ${DATADIR}/${WIKIDATA_ALL_NODES}-en-only-sorted.tsv \
+     --extra "${SORT_EXTRAS}" \
+    |& tee ${LOGDIR}/${WIKIDATA_ALL_NODES}-en-only-sorted.log
+
+kgtk ${KGTK_FLAGS} \
+     sort2 ${VERBOSE} \
+     --input-file ${DATADIR}/${WIKIDATA_ALL_NODES}-en-es-ru-uk.tsv \
+     --output-file ${DATADIR}/${WIKIDATA_ALL_NODES}-en-es-ru-uk-sorted.tsv \
+     --extra "${SORT_EXTRAS}" \
+    |& tee ${LOGDIR}/${WIKIDATA_ALL_NODES}-en-es-ru-uk-sorted.log
+
+# ==============================================================================
+echo -e "\nCompress the sorted files to create the product files."
 time gzip --keep --force --verbose \
-     ${WIKIDATA_ALL_NODES}-all-lang.tsv \
-     ${WIKIDATA_ALL_EDGES}.tsv \
-     ${WIKIDATA_ALL_QUALIFIERS}.tsv \
-     ${WIKIDATA_ALL_NODES}-en-only.tsv \
-     ${WIKIDATA_ALL_NODES}-en-es-ru-uk.tsv \
+     ${DATADIR}/${WIKIDATA_ALL_NODES}-all-lang-sorted.tsv \
+     ${DATADIR}/${WIKIDATA_ALL_EDGES}-sorted.tsv \
+     ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}-sorted.tsv \
+     ${DATADIR}/${WIKIDATA_ALL_NODES}-en-only-sorted.tsv \
+     ${DATADIR}/${WIKIDATA_ALL_NODES}-en-es-ru-uk-sorted.tsv \
     |& tee ${LOGDIR}/import-wikidata-compress.log
 
-echo -e "\nDeliver the compressed extracted data to the KGTK Google Drive."
-time rsync --archive \
-     ${WIKIDATA_ALL_NODES}-all-lang.tsv \
-     ${WIKIDATA_ALL_EDGES}.tsv \
-     ${WIKIDATA_ALL_QUALIFIERS}.tsv \
-     ${WIKIDATA_ALL_NODES}-en-only.tsv \
-     ${WIKIDATA_ALL_NODES}-en-es-ru-uk.tsv \
+# ==============================================================================
+echo -e "\nDeliver the compressed data products to the KGTK Google Drive."
+time rsync --archive --verbose \
+     ${DATADIR}/${WIKIDATA_ALL_NODES}-all-lang-sorted.tsv.gz \
+     ${DATADIR}/${WIKIDATA_ALL_EDGES}-sorted.tsv.gz \
+     ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}-sorted.tsv.gz \
+     ${DATADIR}/${WIKIDATA_ALL_NODES}-en-only-sorted.tsv.gz \
+     ${DATADIR}/${WIKIDATA_ALL_NODES}-en-es-ru-uk-sorted.tsv.gz \
      ${PRODUCTDIR}/ \
     |& tee ${LOGDIR}/import-wikidata-deliver.log
 
