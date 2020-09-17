@@ -155,20 +155,23 @@ def main(**kwargs):
             "host": kwargs.get("cache_host", "dsbox01.isi.edu"),
             "port": kwargs.get("cache_port", 6379)
         }
-
+        property_values = kwargs.get("property_values", [])
+        if kwargs.get("property_values_file") is not None:
+            _ = pd.read_csv(kwargs.get("property_values_file"), sep='\t')
+            property_values = list(_['node1'].unique())
         sentence_properties = {
             "label_properties": kwargs.get("label_properties", ["label"]),
             "description_properties": kwargs.get("description_properties", ["description"]),
             "isa_properties": kwargs.get("isa_properties", ["P31"]),
             "has_properties": kwargs.get("has_properties", ["all"]),
-            "property_values": kwargs.get("property_values", [])
+            "property_values": property_values
         }
 
         output_properties = {
             "metadata_properties": kwargs.get("metadata_properties", []),
             "output_properties": kwargs.get("output_properties", "text_embedding")
         }
-
+        print(sentence_properties)
         if isinstance(all_models_names, str):
             all_models_names = [all_models_names]
         # if isinstance(input_uris, str):
@@ -262,13 +265,16 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="""The names of the edges for `isa` properties, Default is ["P31"] (the `instance of` node in 
                         wikidata).""")
     parser.add_argument('--has-properties', action='store', nargs='+',
-                        dest='has_properties', default=["all"],
+                        dest='has_properties', default=[],
                         help="""The names of the edges for `has` properties, Default is ["all"] (will automatically append all 
                         properties found for each node).""")
     parser.add_argument('--property-value', action='store', nargs='+',
                         dest='property_values', default=[],
                         help="""For those edges found in `has` properties, the nodes specified here will display with 
                         corresponding edge(property) values. instead of edge name. """)
+    parser.add_argument('--property-value-file', action='store',
+                        dest='property_values_file',
+                        help="""Read the properties for --property-value option from an KGTK edge file""")
     parser.add_argument('--output-property', action='store',
                         dest='output_properties', default="text_embedding",
                         help="""The output property name used to record the embedding. Default is `output_properties`. \n
