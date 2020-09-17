@@ -32,6 +32,7 @@ def cmd_done(cmd, success, exit_code):
     ret_code = exit_code
 
 
+_save_progress: bool = False
 _save_progress_tty: typing.Optional[str] = None
 _save_progress_command: typing.Optional[typing.Any] = None
 def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] = None):
@@ -47,8 +48,8 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
     # input files other than calling this routine sequentially
     import os
     import sh
-    global _save_progress_tty
-    if _save_progress_tty is not None:
+    global _save_progress, _save_progress_tty
+    if _save_progress and _save_progress_tty is not None:
         global _save_progress_command
         if _save_progress_command is not None:
             # Shut down an existing process monitor.
@@ -178,8 +179,10 @@ def cli_entry(*args):
                 else:
                     kwargs[sa] = getattr(parsed_shared_args, sa)
 
+        global _save_progress
+        _save_progress = parsed_shared_args._progress
         global _save_progress_tty
-        _save_progress_tty = parsed_shared_args._progress
+        _save_progress_tty = parsed_shared_args._progress_tty
         if parsed_shared_args._progress:
             if hasattr(mod, 'custom_progress') and mod.custom_progress():
                 pass
