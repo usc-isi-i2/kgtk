@@ -171,7 +171,6 @@ def main(**kwargs):
             "metadata_properties": kwargs.get("metadata_properties", []),
             "output_properties": kwargs.get("output_properties", "text_embedding")
         }
-        print(sentence_properties)
         if isinstance(all_models_names, str):
             all_models_names = [all_models_names]
         # if isinstance(input_uris, str):
