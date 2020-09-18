@@ -407,7 +407,7 @@ def run(input_file: KGTKFiles,
                                 obj_idx: int,
                                 obj_filters: typing.List[typing.Set[str]]):
         if verbose:
-            print("Applying a multiple general filter", file=error_file, flush=True)
+            print("Applying a multiple-output general filter", file=error_file, flush=True)
 
         input_line_count: int = 0
         reject_line_count: int = 0
