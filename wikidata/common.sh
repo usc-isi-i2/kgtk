@@ -30,9 +30,9 @@ WIKIDATA_ALL=${WIKIDATA_VERSION}-all
 WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json
 
 # We will import the following files first:
-WIKIDATA_ALL_NODES=${DATADIR}/${WIKIDATA_ALL}-nodes # a node file
-WIKIDATA_ALL_EDGES=${DATADIR}/${WIKIDATA_ALL}-edges # the main edge file
-WIKIDATA_ALL_QUALIFIERS=${DATADIR}/${WIKIDATA_ALL}-qualifiers # the qualifiers
+WIKIDATA_ALL_NODES=${WIKIDATA_ALL}-nodes # a node file
+WIKIDATA_ALL_EDGES=${WIKIDATA_ALL}-edges # the main edge file
+WIKIDATA_ALL_QUALIFIERS=${WIKIDATA_ALL}-qualifiers # the qualifiers
 
 # Ensure that sort has enough space for its temporary files.
 TMPDIR=/data1/rogers/tmp

@@ -98,7 +98,7 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
-    UPDATE_VERSION: str = "2020-09-14T23:19:03.274647+00:00#81HciZ194Bi4+8IF2v0Kh2WP3CuyBaHwVEERLrUDejTbAu2UNk+asYenlZt954sCG3ZEroJijHpjM7zmsQZxsw=="
+    UPDATE_VERSION: str = "2020-09-17T21:28:53.286703+00:00#BuTFNv1WGQo6jJOCWi0yCzztBqlCsFFDdLKSchQcBCaMkYcsMUe/S9hXmYTI4AgQmCOcbGrH9KLQLMgI55DIIg=="
     if show_version or verbose:
         print("kgtk filter version: %s" % UPDATE_VERSION, file=error_file, flush=True)
 
@@ -134,6 +134,68 @@ def run(input_file: KGTKFiles,
                 filt.add(target)
 
         return filt
+
+    def single_subject_filter(kr: KgtkReader,
+                              kw: KgtkWriter,
+                              rw: typing.Optional[KgtkWriter],
+                              subj_idx: int,
+                              subj_filter: typing.Set[str],
+                              ):
+        if verbose:
+            print("Applying a single subject filter", file=error_file, flush=True)
+
+        subj_filter_value: str = list(subj_filter)[0]
+
+        input_line_count: int = 0
+        reject_line_count: int = 0
+        output_line_count: int = 0
+
+        row: typing.List[str]
+        for row in kr:
+            input_line_count += 1
+
+            if row[subj_idx] == subj_filter_value:
+                kw.write(row)
+                output_line_count += 1
+
+            else:
+                if rw is not None:
+                    rw.write(row)
+                reject_line_count += 1
+
+        if verbose:
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+
+    def single_subject_filter_inverted(kr: KgtkReader,
+                                       kw: KgtkWriter,
+                                       rw: typing.Optional[KgtkWriter],
+                                       subj_idx: int,
+                                       subj_filter: typing.Set[str],
+                                       ):
+        if verbose:
+            print("Applying a single subject filter inverted", file=error_file, flush=True)
+
+        subj_filter_value: str = list(subj_filter)[0]
+
+        input_line_count: int = 0
+        reject_line_count: int = 0
+        output_line_count: int = 0
+
+        row: typing.List[str]
+        for row in kr:
+            input_line_count += 1
+
+            if row[subj_idx] != subj_filter_value:
+                kw.write(row)
+                output_line_count += 1
+
+            else:
+                if rw is not None:
+                    rw.write(row)
+                reject_line_count += 1
+
+        if verbose:
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
 
     def single_predicate_filter(kr: KgtkReader,
                                 kw: KgtkWriter,
@@ -389,11 +451,18 @@ def run(input_file: KGTKFiles,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
 
-        if len(subj_filter) == 0 and len(pred_filter) == 1 and len(obj_filter) == 0:
+        if len(subj_filter) == 1 and len(pred_filter) == 0 and len(obj_filter) == 0:
+            if invert:
+                single_subject_filter_inverted(kr, kw, rw, subj_idx, subj_filter)
+            else:
+                single_subject_filter(kr, kw, rw, subj_idx, subj_filter)
+
+        elif len(subj_filter) == 0 and len(pred_filter) == 1 and len(obj_filter) == 0:
             if invert:
                 single_predicate_filter_inverted(kr, kw, rw, pred_idx, pred_filter)
             else:
                 single_predicate_filter(kr, kw, rw, pred_idx, pred_filter)
+
         elif len(subj_filter) == 0 and len(pred_filter) == 0 and len(obj_filter) == 1:
             if invert:
                 single_object_filter_inverted(kr, kw, rw, obj_idx, obj_filter)
