@@ -118,26 +118,77 @@ def add_arguments(parser: KGTKArgumentParser):
         help='collector queue depth per proc, default %(default)d')
 
     parser.add_argument(
-        "--node",
+        "--node", '--node-file',
         action="store",
         type=str,
         dest="node_file",
         default=None,
         help='path to output node file')
     parser.add_argument(
-        "--edge",
+        "--edge", '--edge-file',
         action="store",
         type=str,
         dest="edge_file",
         default=None,
         help='path to output edge file')
     parser.add_argument(
-        "--qual",
+        "--qual", '--qual-file',
         action="store",
         type=str,
         dest="qual_file",
         default=None,
         help='path to output qualifier file')
+
+    # Optionally write the node file as seperate components.
+    # This file contains just the list of node ID values.
+    parser.add_argument(
+        '--node-id-file',
+        action="store",
+        type=str,
+        dest="node_id_file",
+        default=None,
+        help='path to output node id file')
+
+    # The remaining files are KGTK edge files that provide a single
+    # node property.
+    parser.add_argument(
+        '--node-alias-file',
+        action="store",
+        type=str,
+        dest="node_alias_file",
+        default=None,
+        help='path to output node alias file')
+    parser.add_argument(
+        '--node-datatype-file',
+        action="store",
+        type=str,
+        dest="node_datatype_file",
+        default=None,
+        help='path to output node datatype file')
+    parser.add_argument(
+        '--node-description-file',
+        action="store",
+        type=str,
+        dest="node_desciption_file",
+        default=None,
+        help='path to output node description file')
+    parser.add_argument(
+        '--node-label-file',
+        action="store",
+        type=str,
+        dest="node_label_file",
+        default=None,
+        help='path to output node label file')
+    parser.add_argument(
+        '--node-type-file',
+        action="store",
+        type=str,
+        dest="node_type_file",
+        default=None,
+        help='path to output node entry type file')
+
+    # TODO: Create a seperate file for the sitelinks.
+
     parser.add_argument(
         "--limit",
         action="store",
@@ -393,6 +444,14 @@ def run(input_file: KGTKFiles,
         node_file: typing.Optional[str],
         edge_file: typing.Optional[str],
         qual_file: typing.Optional[str],
+
+        node_id_file: typing.Optional[str],
+        node_alias_file: typing.Optional[str],
+        node_datatype_file: typing.Optional[str],
+        node_description_file: typing.Optional[str]
+        node_label_file: typing.Optional[str]
+        type_file: typing.Optional[str],
+
         limit: int,
         lang: str,
         source: str,
@@ -687,19 +746,6 @@ def run(input_file: KGTKFiles,
                                   calendar=calendar)
             
         # def process(self,line,node_file,edge_file,qual_file,languages,source):
-        def process(self, line):
-            if progress_interval > 0 and self.cnt % progress_interval == 0 and self.cnt>0:
-                print("{} lines processed by processor {}".format(self.cnt,self._idx), file=sys.stderr, flush=True)
-            self.cnt+=1
-            # csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-            nrows=[]
-            erows=[]
-            qrows=[]
-            clean_line = line.strip()
-            if clean_line.endswith(b","):
-                clean_line = clean_line[:-1]
-            if len(clean_line) > 1:
-                obj = json.loads(clean_line)
                 entry_type = obj["type"]
                 if entry_type == "item" or entry_type == "property":
                     keep = True
