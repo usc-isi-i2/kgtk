@@ -65,7 +65,8 @@ def add_arguments_extended(parser, parsed_shared_args):
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
-                        help="output file to write to, if `-' (the default) output goes to stdout")
+                        help="output file to write to, if `-' (the default) output goes to stdout."
+                        + " Files with extensions .gz, .bz2 or .xz will be appopriately compressed.")
 
 def import_modules():
     """Import command-specific modules that are only needed when we actually run.
@@ -122,7 +123,7 @@ def run(**options):
         if output == '-':
             output = sys.stdout
         if isinstance(output, str):
-            output = open(output, mode='wt')
+            output = sqlstore.open_to_write(output, mode='wt')
 
         parameters = parse_query_parameters(regular=options.get('regular_paras') or [],
                                             string=options.get('string_paras') or [],
