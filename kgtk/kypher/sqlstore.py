@@ -600,7 +600,7 @@ class SqliteStore(SqlStore):
         if not isinstance(file, str) or not os.path.exists(file):
             raise KGTKException('only implemented for existing, named files')
         # make sure we have the Unix commands we need:
-        catcmd = get_cat_command(file)
+        catcmd = get_cat_command(file, _piped=True)
         tail = sh.Command('tail')
         sqlite3 = sh.Command(self.get_sqlite_cmd())
         isplain = os.path.basename(catcmd._path) == b'cat'
