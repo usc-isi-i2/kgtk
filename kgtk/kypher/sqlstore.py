@@ -15,7 +15,6 @@ import pprint
 import sh
 
 from   kgtk.value.kgtkvalue import KgtkValue
-from   kgtk.cli.zconcat import determine_file_type, get_cat_command
 from   kgtk.exceptions import KGTKException
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -41,6 +40,8 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### Utilities
 
+# TO DO: I am sure some form of this already exists somewhere in Craig's code
+
 def open_to_read(file, mode='rt'):
     """Version of `open' that is smart about different types of compressed files
     and file-like objects that are already open to read.  `mode' has to be a
@@ -48,7 +49,6 @@ def open_to_read(file, mode='rt'):
     """
     assert mode in ('r', 'rb', 'rt'), 'illegal read mode'
     enc = 't' in mode and 'utf8' or None
-    # TO DO: I am sure something like this already exists somewhere in Craig's code
     if isinstance(file, str) and file.endswith('.gz'):
         import gzip
         return gzip.open(file, mode, encoding=enc)
@@ -62,6 +62,40 @@ def open_to_read(file, mode='rt'):
         return file
     else:
         return open(file, mode)
+
+def open_to_write(file, mode='wt'):
+    """Version of `open' that is smart about different types of compressed files
+    and file-like objects that are already open to write.  `mode' has to be a
+    valid write mode such as `w', `wb' or `wt'.
+    """
+    assert mode in ('w', 'wb', 'wt'), 'illegal write mode'
+    enc = 't' in mode and 'utf8' or None
+    if isinstance(file, str) and file.endswith('.gz'):
+        import gzip
+        return gzip.open(file, mode, encoding=enc)
+    elif isinstance(file, str) and file.endswith('.bz2'):
+        import bz2
+        return bz2.open(file, mode, encoding=enc)
+    elif isinstance(file, str) and file.endswith('.xz'):
+        import lzma
+        return lzma.open(file, mode, encoding=enc)
+    elif hasattr(file, 'write'):
+        return file
+    else:
+        return open(file, mode)
+
+def get_cat_command(file, _piped=False):
+    """Return a cat-like sh-command to copy the possibly compressed `file' to stdout.
+    """
+    # This works around some cross-platform issues with similar functionality in zconcat.
+    if file.endswith('.gz'):
+        return sh.gunzip.bake('-c', file, _piped=_piped)
+    elif file.endswith('.bz2'):
+        return sh.bunzip2.bake('-c', file, _piped=_piped)
+    elif file.endswith('.xz'):
+        return sh.unxz.bake('-c', file, _piped=_piped)
+    else:
+        return sh.cat.bake(file, _piped=_piped)
 
 
 ### SQL Store
@@ -566,10 +600,10 @@ class SqliteStore(SqlStore):
         if not isinstance(file, str) or not os.path.exists(file):
             raise KGTKException('only implemented for existing, named files')
         # make sure we have the Unix commands we need:
-        cat = get_cat_command(determine_file_type(file))
+        catcmd = get_cat_command(file)
         tail = sh.Command('tail')
         sqlite3 = sh.Command(self.get_sqlite_cmd())
-        isplain = os.path.basename(str(cat)) == 'cat'
+        isplain = os.path.basename(catcmd._path) == b'cat'
         
         # This is slightly more messy than we'd like it to be: sqlite can create a table definition
         # for a non-existing table from the header row, but it doesn't seem to handle just any weird
@@ -600,7 +634,7 @@ class SqliteStore(SqlStore):
             if isplain:
                 tailproc = tail('+2', file, _piped=True)
             else:
-                tailproc = tail(cat(file, _piped=True), '+2', _piped=True)
+                tailproc = tail(catcmd(), '+2', _piped=True)
             # we run this asynchronously, so we can kill it in the cleanup clause:
             sqlproc = sqlite3(tailproc, *args, _bg=True)
             sqlproc.wait()
