@@ -62,6 +62,61 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="generate debuigging messages")
 
 
+def custom_progress()->bool:
+    return True # We want to start a custom progress monitor.
+
+header_read_fd : int = -1
+header_write_fd: int = -1
+sortopt_read_fd : int = -1
+sortopt_write_fd: int = -1
+cat_proc = None
+cmd_proc = None
+def cleanup():
+    # Clean up the file descriptors and processes, just in case.
+    import os
+    if header_read_fd >= 0:
+        try:
+            os.close(header_read_fd)
+        except os.error:
+            pass
+
+    if header_write_fd >= 0:
+        try:
+            os.close(header_write_fd)
+        except os.error:
+            pass
+            
+    if sortopt_read_fd >= 0:
+        try:
+            os.close(sortopt_read_fd)
+        except os.error:
+            pass
+            
+    if sortopt_write_fd >= 0:
+        try:
+            os.close(sortopt_write_fd)
+        except os.error:
+            pass
+            
+    global cat_proc
+    if cat_proc is not None:
+        try:
+            cat_proc.kill_group()
+        except os.error:
+            pass
+        cat_proc = None
+
+    global cmd_proc
+    if cmd_proc is not None:
+        try:
+            cmd_proc.kill_group()
+        except os.error:
+            pass
+        cat_proc = None
+
+def keyboard_interrupt():
+    cleanup()
+
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         columns: typing.Optional[typing.List[str]] = None,
@@ -69,11 +124,14 @@ def run(input_file: KGTKFiles,
         extra: typing.Optional[str] = None,
         verbose: bool = False
 )->int:
+    from io import StringIO
     import os
     from pathlib import Path
     import sh # type: ignore
     import sys
+    import typing
 
+    from kgtk.cli_entry import progress_startup
     from kgtk.io.kgtkreader import KgtkReader
 
     input_path: Path = KGTKArgumentParser.get_input_file(input_file)
@@ -82,33 +140,27 @@ def run(input_file: KGTKFiles,
     error_file = sys.stderr
 
     try:
-        header_read_fd : int
-        header_write_fd: int
+        global header_read_fd
+        global header_write_fd
         header_read_fd, header_write_fd = os.pipe()
         os.set_inheritable(header_write_fd, True)
         if verbose:
             print("header pipe: read_fd=%d write_fd=%d" % (header_read_fd, header_write_fd), file=error_file, flush=True)
         
-        sortopt_read_fd : int
-        sortopt_write_fd: int
+        global sortopt_read_fd
+        global sortopt_write_fd
         sortopt_read_fd, sortopt_write_fd = os.pipe()
         os.set_inheritable(sortopt_read_fd, True)
         if verbose:
             print("sort options pipe: read_fd=%d write_fd=%d" % (sortopt_read_fd, sortopt_write_fd), file=error_file, flush=True)
 
-        cmd: str = ""
-
-        if str(input_path) != "-":
-            # Feed the named file into the data processing pipeline,
-            # otherwise read from standard input.
-            cmd += "cat " + repr(str(input_path)) + " | "
-
-        cmd += " { IFS= read -r header ; " # Read the header line
-        cmd += " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; " # Send the header to Python
-        cmd += " printf \"%s\\n\" \"$header\" ; " # Send the header to standard output (which may be redirected to a file, below).
-        cmd += " IFS= read -u " + str(sortopt_read_fd) + " -r options ; " # Read the sort command options from Python.
-        cmd += " LC_ALL=C sort -t '\t' $options ; } " # Sort the remaining input lines using the options read from Python.
-
+        cmd: str = "".join((
+            " { IFS= read -r header ; ", # Read the header line
+            " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; ", # Send the header to Python
+            " printf \"%s\\n\" \"$header\" ; ", # Send the header to standard output (which may be redirected to a file, below).
+            " IFS= read -u " + str(sortopt_read_fd) + " -r options ; ", # Read the sort command options from Python.
+            " LC_ALL=C sort -t '\t' $options ; } ", # Sort the remaining input lines using the options read from Python.
+        ))
         if str(output_path) != "-":
             # Feed the sorted output to the named file.  Otherwise, the sorted
             # output goes to standard output without passing through Python.
@@ -117,8 +169,98 @@ def run(input_file: KGTKFiles,
         if verbose:
             print("sort command: %s" % cmd, file=error_file, flush=True)
 
-        # Sh version 1.13 or greater is required for _pass_fds.
-        proc = sh.sh("-c", cmd, _in=sys.stdin, _out=sys.stdout, _err=sys.stderr, _bg=True, _pass_fds={header_write_fd, sortopt_read_fd})
+        global cat_proc
+        cat_proc = None
+        global cmd_proc
+        cmd_proc = None
+
+        def cat_done(cmd, success, exit_code):
+            # When the cat command finishes, monitor the progress of the sort command.
+            if verbose:
+                print("\nDone reading the input file", file=error_file, flush=True)
+            if cmd_proc is None:
+                return
+
+            # Locate the sort command using pgrep
+            buf = StringIO()
+            try:
+                sh.pgrep("-g", cmd_proc.pgid, "--newest", "sort", _out=buf)
+                pgrep_output = buf.getvalue()
+                if len(pgrep_output) ==0:
+                    if verbose:
+                        print("Unable to locate the sort command.", file=error_file, flush=True)
+                    return
+                sort_pid = int(pgrep_output)
+            except Exception as e:
+                if verbose:
+                    print("Exception looking for sort command: %s" % str(e), file=error_file, flush=True)
+                return
+            finally:
+                buf.close()
+
+            if verbose:
+                print("Monitoring the sort command (pid=%d)" % sort_pid, file=error_file, flush=True)
+            progress_startup(pid=sort_pid)
+
+        if str(input_path) == "-":
+            # Read from standard input.
+            #
+            # Sh version 1.13 or greater is required for _pass_fds.
+            cmd_proc = sh.sh("-c", cmd, _in=sys.stdin, _out=sys.stdout, _err=sys.stderr,
+                             _bg=True, _bg_exc=False, _internal_bufsize=1,
+                             _pass_fds={header_write_fd, sortopt_read_fd})
+
+            # It would be nice to monitor the sort command here.  Unfortunately, there
+            # is a race condition that makes this difficult.  We could loop until the
+            # sort command is created, then monitor it.
+
+        else:
+            # Feed the named file into the data processing pipeline,
+            if input_path.suffix.lower() in [".gz", ".z"]:
+                if verbose:
+                    print("gunzip input file: %s" % str(input_path), file=error_file, flush=True)
+                cat_proc = sh.gzip(input_path, "-dc",
+                                   _in=sys.stdin, _piped=True, _err=sys.stderr,
+                                   _bg=True, _bg_exc=False, _internal_bufsize=1,
+                                   _done=cat_done)
+
+            elif input_path.suffix.lower() in [".bz2", ".bz"]:
+                if verbose:
+                    print("bunzip2 input file: %s" % str(input_path), file=error_file, flush=True)
+                cat_proc = sh.bzip2(input_path, "-dc",
+                                    _in=sys.stdin, _piped=True, _err=sys.stderr,
+                                    _bg=True, _bg_exc=False, _internal_bufsize=1,
+                                    _done=cat_done)
+
+            elif input_path.suffix.lower() in [".xz", ".lzma"]:
+                if verbose:
+                    print("unxz input file: %s" % str(input_path), file=error_file, flush=True)
+                cat_proc = sh.xz(input_path, "-dc",
+                                 _in=sys.stdin, _piped=True, _err=sys.stderr,
+                                 _bg=True, _bg_exc=False, _internal_bufsize=1,
+                                 _done=cat_done)
+            else:
+                if verbose:
+                    print("input file: %s" % str(input_path), file=error_file, flush=True)
+                cat_proc = sh.cat(input_path, _in=sys.stdin, _piped=True, _err=sys.stderr,
+                                  _bg=True, _bg_exc=False, _internal_bufsize=1,
+                                  _done=cat_done)
+            # If enabled, monitor the progress of reading the input file.
+            # Since we do not have access to the pid of the sort command,
+            # we cannot monitor the progress of the merge phases.
+            if verbose:
+                print("Monitoring the cat command (pid=%d)." % cat_proc.pid, file=error_file, flush=True)
+            progress_startup(pid=cat_proc.pid)
+
+            # Sh version 1.13 or greater is required for _pass_fds.
+            cmd_proc = sh.sh(cat_proc, "-c", cmd, _out=sys.stdout, _err=sys.stderr,
+                             _bg=True, _bg_exc=False, _internal_bufsize=1,
+                             _pass_fds={header_write_fd, sortopt_read_fd})
+            # Since we do not have access to the pid of the sort command,
+            # we cannot monitor the progress of the merge phases.
+
+        if verbose:
+            print("Running the sort script (pid=%d)." % cmd_proc.pid, file=error_file, flush=True)
 
         if verbose:
             print("Reading the KGTK input file header line with KgtkReader", file=error_file, flush=True)
@@ -147,11 +289,13 @@ def run(input_file: KGTKFiles,
                     if column_name_2.isdigit():
                         sort_idx = int(column_name_2)
                         if sort_idx > len(kr.column_names):
-                            proc.kill_group()
+                            kr.close()
+                            cleanup()
                             raise KGTKException("Invalid column number %d (max %d)." % (sort_idx, len(kr.column_names)))
                     else:
                         if column_name_2 not in kr.column_names:
-                            proc.kill_group()
+                            kr.close()
+                            cleanup()
                             raise KGTKException("Unknown column_name %s" % column_name_2)
                         sort_idx = kr.column_name_map[column_name_2] + 1
                     sort_options += " -k %d,%d" % (sort_idx, sort_idx)
@@ -174,7 +318,7 @@ def run(input_file: KGTKFiles,
                 sort_idx = kr.node2_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
             else:
-                proc.kill_group()
+                cleanup()
                 raise KGTKException("Unknown KGTK file mode, please specify the sorting columns.")
 
         if verbose:
@@ -186,32 +330,18 @@ def run(input_file: KGTKFiles,
         with open(sortopt_write_fd, "w") as options_file:
             options_file.write(sort_options + "\n")
 
-        proc.wait()
+        if verbose:
+            print("\nWaiting for the sort command to complete.\n", file=error_file, flush=True)
+        cmd_proc.wait()
 
-        # Clean up the file descriptors, just in case.
-        #
-        # Note: Should close these when we raise an exception, too.
-        try:
-            os.close(header_read_fd)
-        except os.error:
-            pass
-        try:
-            os.close(header_write_fd)
-        except os.error:
-            pass
-            
-        try:
-            os.close(sortopt_read_fd)
-        except os.error:
-            pass
-        try:
-            os.close(sortopt_write_fd)
-        except os.error:
-            pass
-            
+        if verbose:
+            print("Cleanup.", file=error_file, flush=True)
+        cleanup()
+
         return 0
 
     except Exception as e:
-        #import traceback
-        #traceback.print_tb(sys.exc_info()[2], 10)
+        # import traceback
+        # traceback.print_tb(sys.exc_info()[2], 10)
         raise KGTKException('INTERNAL ERROR: ' + type(e).__module__ + '.' + str(e) + '\n')
+

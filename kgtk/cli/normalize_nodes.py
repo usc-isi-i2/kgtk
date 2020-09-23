@@ -62,6 +62,8 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    import os
+
     from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
@@ -89,6 +91,9 @@ def run(input_file: KGTKFiles,
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    if verbose:
+        print("Starting normalize_nodes pid=%d" % (os.getpid()), file=error_file, flush=True)
 
     label_map: typing.MutableMapping[str, str] = dict()
     if labels is not None and len(labels) > 0:

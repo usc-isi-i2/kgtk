@@ -27,9 +27,11 @@ def add_arguments(parser):
     parser.add_argument("--pred",action="store" ,type=int, dest="pred",help='Column in which predicate is given, default 1',default=1)
     parser.add_argument("--props", action="store", type=str, dest="props",help='Properties to consider while finding reachable nodes - comma-separated string,default all properties',default=None)
     parser.add_argument('--undirected', action='store_true', dest="undirected", help="Option to specify graph as undirected?")
+    parser.add_argument('--label', action='store', type=str, dest='label', help='The label for the reachable relationship. (default = %(default)s)',default="reachable")
+    parser.add_argument('--selflink',action='store_true',dest='selflink_bool',help='Option to include a link from each output node to itself.')
 
 
-def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_bool,sub,obj,pred,props,undirected):
+def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_bool,sub,obj,pred,props,undirected, label, selflink_bool):
     import sys
     import csv
     import time
@@ -92,19 +94,24 @@ def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_boo
     if output:
         f=open(output,'w')
         tsv_writer = csv.writer(f, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
-        if index_list == []:
+        if len(index_list) == 0:
             print("No root nodes found in the graph")
         else:
             tsv_writer.writerow(header)
             for index in index_list:
+                if selflink_bool:
+                    tsv_writer.writerow([name[index], label, name[index]])
+                
                 for e in dfs_iterator(G, G.vertex(index)):
-                    tsv_writer.writerow([name[index], 'reachable', name[e.target()]])
+                    tsv_writer.writerow([name[index], label, name[e.target()]])
         f.close()
     else:
-        if index_list == []:
+        if len(index_list) == 0:
             print("No root nodes found in the graph")
         else:
             sys.stdout.write('%s\t%s\t%s\n' % ('node1', 'label', 'node2'))
             for index in index_list:
+                if selflink_bool:
+                    sys.stdout.write('%s\t%s\t%s\n'% (name[index], label, name[index]))
                 for e in dfs_iterator(G, G.vertex(index)):
-                    sys.stdout.write('%s\t%s\t%s\n' % (name[index], 'reachable', name[e.target()]))
+                    sys.stdout.write('%s\t%s\t%s\n' % (name[index], label, name[e.target()]))

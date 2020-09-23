@@ -15,6 +15,7 @@ TODO: Node type needs to be optional in the edge file.
 
 """
 
+import typing
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
@@ -40,13 +41,82 @@ def add_arguments(parser: KGTKArgumentParser):
         dest="procs",
         default=2,
         help='number of processes to run in parallel, default %(default)d')
+
     parser.add_argument(
         '--max-size-per-mapper-queue',
         action="store",
         type=int,
         dest="max_size_per_mapper_queue",
-        default=20,
+        default=4,
         help='max depth of server queues, default %(default)d')
+
+    parser.add_argument(
+        '--mapper-batch-size',
+        action="store",
+        type=int,
+        dest="mapper_batch_size",
+        default=5,
+        help='How many statements to queue in a batch to a worker. (default=%(default)d)')
+
+    parser.add_argument(
+        "--single-mapper-queue",
+        nargs='?',
+        type=optional_bool,
+        dest="single_mapper_queue",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, use a single queue for worker tasks.  If false, each worker has its own task queue. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--collect-results",
+        nargs='?',
+        type=optional_bool,
+        dest="collect_results",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, collect the results before writing to disk.  If false, write results to disk, then concatenate. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--collect-seperately",
+        nargs='?',
+        type=optional_bool,
+        dest="collect_seperately",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, collect the node, edge, and qualifier results using seperate processes.  If false, collect the results with a single process. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        '--collector-batch-size',
+        action="store",
+        type=int,
+        dest="collector_batch_size",
+        default=5,
+        help='How many statements to queue in a batch to the collector. (default=%(default)d)')
+
+    parser.add_argument(
+        "--use-shm",
+        nargs='?',
+        type=optional_bool,
+        dest="use_shm",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, use ShmQueue. (default=%(default)s).")
+
+    parser.add_argument(
+        '--collector-queue-per-proc-size',
+        action="store",
+        type=int,
+        dest="collector_queue_per_proc_size",
+        default=2,
+        help='collector queue depth per proc, default %(default)d')
+
     parser.add_argument(
         "--node",
         action="store",
@@ -297,65 +367,92 @@ def add_arguments(parser: KGTKArgumentParser):
     )
 
     parser.add_argument(
-        "--collect-results",
+        '--progress-interval',
+        action="store",
+        type=int,
+        dest="progress_interval",
+        default=500000,
+        help='How often to report progress. (default=%(default)d)')
+    
+    parser.add_argument(
+        "--use-kgtkwriter",
         nargs='?',
         type=optional_bool,
-        dest="collect_results",
+        dest="use_kgtkwriter",
         const=True,
-        default=False,
+        default=True,
         metavar="True/False",
-        help="If true, collect the results before writing to disk.  If false, write results to disk, then concatenate. (default=%(default)s).",
-    )
+        help="If true, use KgtkWriter instead of csv.writer. (default=%(default)s).")
 
-    
+def custom_progress()->bool:
+    return True # We want to start a custom progress monitor.
+
 def run(input_file: KGTKFiles,
-        procs,
-        max_size_per_mapper_queue,
-        node_file,
-        edge_file,
-        qual_file,
-        limit,
-        lang,
-        source,
-        deprecated,
-        explode_values,
-        use_python_cat,
-        keep_temp_files,
-        skip_processing,
-        skip_merging,
-        interleave,
-        entry_type_edges,
-        alias_edges,
-        datatype_edges,
-        descr_edges,
-        label_edges,
-        parse_aliases,
-        parse_descr,
-        parse_labels,
-        parse_claims,
-        fail_if_missing,
-        all_languages,
-        warn_if_missing,
-        collect_results):
+        procs: int,
+        max_size_per_mapper_queue: int,
+        node_file: typing.Optional[str],
+        edge_file: typing.Optional[str],
+        qual_file: typing.Optional[str],
+        limit: int,
+        lang: str,
+        source: str,
+        deprecated: bool,
+        explode_values: bool,
+        use_python_cat: bool,
+        keep_temp_files: bool,
+        skip_processing: bool,
+        skip_merging: bool,
+        interleave: bool,
+        entry_type_edges: bool,
+        alias_edges: bool,
+        datatype_edges: bool,
+        descr_edges: bool,
+        label_edges: bool,
+        parse_aliases: bool,
+        parse_descr: bool,
+        parse_labels: bool,
+        parse_claims: bool,
+        fail_if_missing: bool,
+        all_languages: bool,
+        warn_if_missing: bool,
+        collect_results: bool,
+        collect_seperately: bool,
+        collector_queue_per_proc_size: int,
+        progress_interval: int,
+        use_shm: bool,
+        mapper_batch_size: int,
+        collector_batch_size: int,
+        single_mapper_queue: bool,
+        use_kgtkwriter: bool,
+        ):
 
     # import modules locally
     import bz2
     import simplejson as json
     import csv
     import gzip
+    import multiprocessing as mp
     import os
+    from pathlib import Path
     import pyrallel
     import sys
     import time
-    import typing
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.cli_argparse import KGTKArgumentParser
+    from kgtk.cli_entry import progress_startup
     from kgtk.exceptions import KGTKException
+    from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
+
+    collector_q: typing.Optional[pyrallel.ShmQueue] = None
+    node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
+    edge_collector_q: typing.Optional[pyrallel.ShmQueue] = None
+    qual_collector_q: typing.Optional[pyrallel.ShmQueue] = None
 
     class MyMapper(pyrallel.Mapper):
 
         def enter(self):
+            print("Starting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
             WD_META_ITEMS = [
                 "Q163875",
                 "Q191780",
@@ -429,14 +526,37 @@ def run(input_file: KGTKFiles,
                     quotechar='',
                     lineterminator=csv_line_terminator)
 
+            if collect_results and collector_batch_size > 1:
+                self.collector_batch_cnt = 0
+                self.collector_nrows_batch = [ ]
+                self.collector_erows_batch = [ ]
+                self.collector_qrows_batch = [ ]
+
 
         def exit(self, *args, **kwargs):
-            if self.node_f is not None:
-                self.node_f.close()
-            if self.edge_f is not None:
-                self.edge_f.close()
-            if self.qual_f is not None:
-                self.qual_f.close()
+            print("Exiting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
+            if collect_results:
+                if collector_batch_size > 1:
+                    if len(self.collector_nrows_batch) > 0 or len(self.collector_erows_batch) > 0 or len(self.collector_qrows_batch) > 0:
+                        if collect_seperately:
+                            if len(self.collector_nrows_batch) > 0:
+                                node_collector_q.put(("rows", self.collector_nrows_batch, [], [], None))
+                            if len(self.collector_erows_batch) > 0:
+                                edge_collector_q.put(("rows", [], self.collector_erows_batch, [], None))
+                            if len(self.collector_qrows_batch) > 0:
+                                qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, None))
+                        else:
+                            collector_q.put(("rows", self.collector_nrows_batch, self.collector_erows_batch, self.collector_qrows_batch, None))
+                        
+            else:
+                if self.node_f is not None:
+                    self.node_f.close()
+
+                if self.edge_f is not None:
+                    self.edge_f.close()
+
+                if self.qual_f is not None:
+                    self.qual_f.close()
 
         def erows_append(self, erows, edge_id, node1, label, node2,
                          rank="",
@@ -566,11 +686,12 @@ def run(input_file: KGTKFiles,
                                   precision=precision,
                                   calendar=calendar)
             
-        def process(self,line,node_file,edge_file,qual_file,languages,doc_id):
-            if self.cnt % 500000 == 0 and self.cnt>0:
+        # def process(self,line,node_file,edge_file,qual_file,languages,source):
+        def process(self, line):
+            if progress_interval > 0 and self.cnt % progress_interval == 0 and self.cnt>0:
                 print("{} lines processed by processor {}".format(self.cnt,self._idx), file=sys.stderr, flush=True)
             self.cnt+=1
-            csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
+            # csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
             nrows=[]
             erows=[]
             qrows=[]
@@ -715,7 +836,7 @@ def run(input_file: KGTKFiles,
                                           label="datatype",
                                           node2=datatype)
                     
-                    #row.append(doc_id)
+                    #row.append(source)
                     if node_file:
                         nrows.append(row)
 
@@ -814,7 +935,7 @@ def run(input_file: KGTKFiles,
                                     elif typ == 'globe-coordinate':
                                         lat = str(val['latitude'])
                                         long = str(val['longitude'])
-                                        precision = val.get('precision', '')
+                                        precision = str(val.get('precision', ''))
                                         value = '@' + lat + '/' + long
                                         # TODO: what about "globe"?
                                     elif typ == 'time':
@@ -934,8 +1055,8 @@ def run(input_file: KGTKFiles,
                                                                 val['latitude'])
                                                             long = str(
                                                                 val['longitude'])
-                                                            precision = val.get(
-                                                                'precision', '')
+                                                            precision = str(val.get(
+                                                                'precision', ''))
                                                             value = '@' + lat + '/' + long
                                                         elif typ == 'time':
                                                             if val['time'][0]=='-':
@@ -1017,7 +1138,7 @@ def run(input_file: KGTKFiles,
                                                               node1=sid,
                                                               label='language',
                                                               node2=sitelang)
-
+                                            
                                         tempid=sid+'-site-1'
                                         self.qrows_append(qrows,
                                                           edge_id=tempid,
@@ -1042,108 +1163,230 @@ def run(input_file: KGTKFiles,
                                                               node2=sitelinks[link]['badges'][badge_num])
                                             badge_num += 1
 
-            if collect_results:
-                return nrows, erows, qrows
+            if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0:               
+                if collect_results:
+                    if collector_batch_size == 1:
+                        if collect_seperately:
+                            if len(nrows) > 0 and node_collector_q is not None:
+                                node_collector_q.put(("rows", nrows, [], [], None))
+                            if len(erows) > 0 and edge_collector_q is not None:
+                                edge_collector_q.put(("rows", [], erows, [], None))
+                            if len(qrows) > 0 and qual_collector_q is not None:
+                                qual_collector_q.put(("rows", nrows, [], [], None))
+                        elif collector_q is not None:
+                            collector_q.put(("rows", nrows, erows, qrows, None))
+                    else:
+                        self.collector_nrows_batch.extend(nrows)
+                        self.collector_erows_batch.extend(erows)
+                        self.collector_qrows_batch.extend(qrows)
+                        self.collector_batch_cnt += 1
+
+                        if self.collector_batch_cnt >= collector_batch_size:
+                            if collect_seperately:
+                                if len(self.collector_nrows_batch) > 0 and node_collector_q is not None:
+                                    node_collector_q.put(("rows", self.collector_nrows_batch, [], [], None))
+                                if len(self.collector_erows_batch) > 0 and edge_collector_q is not None:
+                                    edge_collector_q.put(("rows", [], self.collector_erows_batch, [], None))
+                                if len(self.collector_qrows_batch) > 0 and qual_collector_q is not None:
+                                    qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, None))
+                            elif collector_q is not None:
+                                collector_q.put(("rows", self.collector_nrows_batch, self.collector_erows_batch, self.collector_qrows_batch, None))
+
+                            self.collector_nrows_batch.clear()
+                            self.collector_erows_batch.clear()
+                            self.collector_qrows_batch.clear()
+                            self.collector_batch_cnt = 0
+
+                else:
+                    if node_file:
+                        for row in nrows:
+                            self.node_wr.writerow(row)
+
+                    if edge_file:
+                        for row in erows:
+                            self.edge_wr.writerow(row)
+
+                    if qual_file:
+                        for row in qrows:
+                            self.qual_wr.writerow(row)
+    
+    class MyCollector:
+
+        def __init__(self):
+            # Prepare to use the collector.
+            self.node_f: typing.Optional[typing.TextIO] = None
+            self.node_wr = None
+            self.nrows: int = 0
+
+            self.edge_f: typing.Optional[typing.TextIO] = None
+            self.edge_wr = None
+            self.erows: int = 0
+
+            self.qual_f: typing.Optional[typing.TextIO] = None
+            self.qual_wr = None
+            self.qrows: int = 0
+
+            self.cnt: int = 0
+
+            self.started: bool = False
+
+        def run(self,
+                node_file: typing.Optional[str],
+                edge_file: typing.Optional[str],
+                qual_file: typing.Optional[str],
+                collector_q,
+                who: str):
+            print("The %s collector is starting (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
+                
+            while True:
+                action, nrows, erows, qrows, header = collector_q.get()
+                # print("Collector action %s." % action, file=sys.stderr, flush=True)
+
+                if action == "rows":
+                    self.collect(nrows, erows, qrows, who)
+
+                elif action == "node_header":
+                    self.open_node_file(node_file, header, who)
+
+                elif action == "edge_header":
+                    self.open_edge_file(edge_file, header, who)
+
+                elif action == "qual_header":
+                    self.open_qual_file(qual_file, header, who)
+
+                elif action == "shutdown":
+                    self.shutdown(who)
+                    break
+
+        def open_node_file(self, node_file: typing.Optional[str], header: typing.List[str], who: str):
+            if node_file is None or len(node_file) == 0:
+                raise ValueError("Node header without a node file in the %s collector." % who)
+
+            if use_kgtkwriter:
+                print("Opening the node file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
+                self.node_wr = KgtkWriter.open(header, Path(node_file), who=who + " collector")
+                
+            else:
+                print("Opening the node file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
+                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
+                self.node_f = open(node_file, "w", newline='')
+                self.node_wr = csv.writer(
+                    self.node_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
+                self.node_wr.writerow(header)
+
+        def open_edge_file(self, edge_file: typing.Optional[str], header: typing.List[str], who: str):
+            if edge_file is None or len(edge_file) == 0:
+                raise ValueError("Edge header without an edge file in the %s collector." % who)
+
+            if use_kgtkwriter:
+                print("Opening the edge file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
+                self.edge_wr = KgtkWriter.open(header, Path(edge_file), who=who + " collector")
+                
+            else:
+                print("Opening the edge file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
+                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
+                self.edge_f = open(edge_file, "w", newline='')
+                self.edge_wr = csv.writer(
+                    self.edge_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
+                self.edge_wr.writerow(header)
+
+        def open_qual_file(self, qual_file: typing.Optional[str], header: typing.List[str], who: str):
+            if qual_file is None or len(qual_file) == 0:
+                raise ValueError("Qual header without a qual file in the %s collector." % who)
+
+            if use_kgtkwriter:
+                print("Opening the qual file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
+                self.qual_wr = KgtkWriter.open(header, Path(qual_file), who=who + " collector")
+                
+            else:
+                print("Opening the qual file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
+                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
+                self.qual_f = open(qual_file, "w", newline='')
+                self.qual_wr = csv.writer(
+                    self.qual_f,
+                    quoting=csv.QUOTE_NONE,
+                    delimiter="\t",
+                    escapechar="\n",
+                    quotechar='',
+                    lineterminator=csv_line_terminator)
+                self.qual_wr.writerow(header)
+            
+        def shutdown(self, who: str):
+            print("Exiting the %s collector (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
+
+            if use_kgtkwriter:
+                if self.node_wr is not None:
+                    self.node_wr.close()
+                if self.edge_wr is not None:
+                    self.edge_wr.close()
+                if self.qual_wr is not None:
+                    self.qual_wr.close()
 
             else:
-                if node_file:
+                if self.node_f is not None:
+                    self.node_f.close()
+
+                if self.edge_f is not None:
+                    self.edge_f.close()
+
+                if self.qual_f is not None:
+                    self.qual_f.close()
+
+            print("The %s collector has closed its output files." % who, file=sys.stderr, flush=True)
+
+        def collect(self, nrows, erows, qrows, who: str):
+            self.nrows += len(nrows)
+            self.erows += len(erows)
+            self.qrows += len(qrows)
+
+            self.cnt += 1
+            if progress_interval > 0 and self.cnt % progress_interval == 0:
+                print("The {} collector called {} times: {} nrows, {} erows, {} qrows".format(who,
+                                                                                              self.cnt,
+                                                                                              self.nrows,
+                                                                                              self.erows,
+                                                                                              self.qrows), file=sys.stderr, flush=True)
+            if self.node_wr is not None:
+                if use_kgtkwriter:
                     for row in nrows:
-                        self.node_wr.writerow(row)
+                        self.node_wr.write(row)
+                else:
+                    self.node_wr.writerows(nrows)
+            elif len(nrows) > 0:
+                raise ValueError("Unexpected node rows in the %s collector." % who)
 
-                if edge_file:
+            if self.edge_wr is not None:
+                if use_kgtkwriter:
                     for row in erows:
-                        self.edge_wr.writerow(row)
+                        self.edge_wr.write(row)
+                else:
+                    self.edge_wr.writerows(erows)
+            elif len(erows) > 0:
+                raise ValueError("Unexpected edge rows in the %s collector." % who)
 
-                if qual_file:
+            if self.qual_wr is not None:
+                if use_kgtkwriter:
                     for row in qrows:
-                        self.qual_wr.writerow(row)
-
-    
-    # Prepare to use the collector.
-    collector_node_f: typing.Optional[typing.TextIO] = None
-    collector_node_wr = None
-    collector_nrows: int = 0
-    collector_edge_f: typing.Optional[typing.TextIO] = None
-    collector_edge_wr = None
-    collector_erows: int = 0
-    collector_qual_f: typing.Optional[typing.TextIO] = None
-    collector_qual_wr = None
-    collector_cnt: int = 0
-    collector_qrows: int = 0
-
-    def collector_enter():
-        print("Preparing the collector.", file=sys.stderr, flush=True)
-        if node_file and collect_results:
-            print("Opening the node file in the collector.", file=sys.stderr, flush=True)
-            collector_node_f = open(node_file, "w", newline='')
-            collector_node_wr = csv.writer(
-                collector_node_f,
-                quoting=csv.QUOTE_NONE,
-                delimiter="\t",
-                escapechar="\n",
-                quotechar='',
-                lineterminator=csv_line_terminator)
-                
-        if edge_file and collect_results:
-            print("Opening the edge file in the collector.", file=sys.stderr, flush=True)
-            collector_edge_f = open(edge_file, "w", newline='')
-            collector_edge_wr = csv.writer(
-                colletor_edge_f,
-                quoting=csv.QUOTE_NONE,
-                delimiter="\t",
-                escapechar="\n",
-                quotechar='',
-                lineterminator=csv_line_terminator)
-                
-        if qual_file and collect_results:
-            print("Opening the qual file in the collector.", file=sys.stderr, flush=True)
-            collector_qual_f = open(qual_file, "w", newline='')
-            collector_qual_wr = csv.writer(
-                collector_qual_f,
-                quoting=csv.QUOTE_NONE,
-                delimiter="\t",
-                escapechar="\n",
-                quotechar='',
-                lineterminator=csv_line_terminator)
-        print("The collector is ready.", file=sys.stderr, flush=True)
-
-    def collector_exit():
-        print("Exiting the collector.", file=sys.stderr, flush=True)
-        if collector_node_f is not None:
-            collector_node_f.close()
-        if collector_edge_f is not None:
-            collector_edge_f.close()
-        if collector_qual_f is not None:
-            collector_qual_f.close()
-        print("The collector has closed its output files.", file=sys.stderr, flush=True)
-
-    def collector(nrows, erows, qrows):
-        collector_nrows += len(nrows)
-        collector_erows += len(erows)
-        collector_qrows += len(qrows)
-        if collector_cnt % 500000 == 0 and collector_cnt > 0:
-            print("Collector called {} times: {} nrows, {} erows, {} qrows".format(collector_cnt,
-                                                                                   collector_nrows,
-                                                                                   collector_erows,
-                                                                                   collector_qrows), file=sys.stderr, flush=True)
-        collector_cnt += 1
-
-        if collector_node_wr is not None:
-            for row in nrows:
-                collector_node_wr.writerow(row)
-
-        if collector_edge_wr is not None:
-            for row in erows:
-                collector_edge_wr.writerow(row)
-
-        if collector_qual_wr is not None:
-            for row in qrows:
-                collector_qual_wr.writerow(row)
+                        self.qual_wr.write(row)
+                else:
+                    self.qual_wr.writerows(qrows)
+            elif len(qrows) > 0:
+                raise ValueError("Unexpected qual rows in the %s collector." % who)
 
     try:
-        UPDATE_VERSION: str = "2020-09-10T22:20:40.879539+00:00#H/efBooi/N4ZmRwyM0xEJqu3HLU6XzsVhLtueht4KjGlvH/QjJE33MtEXrpD1NZkem6nJYhhQEcFz+wJqea4TQ=="
+        UPDATE_VERSION: str = "2020-09-14T22:13:50.434152+00:00#flOJV7jeH3XhclcGDslyMU2bCTa6Ra/VVIg8nxqFsYCYa2cbIG23Iz8MzuPSaDZhQLAWURR1MtCDltkkgv/3qQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
-
+        print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
         
         csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
@@ -1151,15 +1394,105 @@ def run(input_file: KGTKFiles,
         start=time.time()
 
         if not skip_processing:
+            print("Processing.", file=sys.stderr, flush=True)
             languages=lang.split(',')
 
+            # Open the input file first to make it easier to monitor with "pv".
+            input_f: typing.IO[typing.Any]
+            if str(inp_path) == "-":
+                print('Processing wikidata from standard input', file=sys.stderr, flush=True)
+                # It is not well documented, but this is how you read binary data
+                # from stdin in Python 3.
+                #
+                # TODO: Add decompression.
+                input_f = sys.stdin.buffer
+
+            else:
+                print('Processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
+                input_f = open(inp_path, mode='rb')
+                progress_startup(fd=input_f.fileno()) # Start the custom progress monitor.
+            
+                if str(inp_path).endswith(".bz2"):
+                    print('Decompressing (bz2)', file=sys.stderr, flush=True)
+                    # TODO: Optionally use a system decompression program.
+                    input_f = bz2.open(input_f)
+
+                elif str(inp_path).endswith(".gz"):
+                    print('Decompressing (gzip)', file=sys.stderr, flush=True)
+                    # TODO: Optionally use a system decompression program.
+                    input_f = gzip.open(input_f)
+
+            collector_p = None
+            node_collector_p = None
+            edge_collector_p = None
+            qual_collector_p = None
+
             if collect_results:
-                collector_enter()
+                print("Creating the collector queue.", file=sys.stderr, flush=True)
+                # collector_q = pyrallel.ShmQueue()
+                collector_q_maxsize = procs*collector_queue_per_proc_size
+                if collect_seperately:
+
+                    if node_file is not None:
+                        node_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector node queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+                
+                        print("Creating the node_collector.", file=sys.stderr, flush=True)
+                        node_collector: MyCollector = MyCollector()
+                        print("Creating the node collector process.", file=sys.stderr, flush=True)
+                        node_collector_p = mp.Process(target=node_collector.run, args=(node_file, None, None, node_collector_q, "node"))
+                        print("Starting the node collector process.", file=sys.stderr, flush=True)
+                        node_collector_p.start()
+                        print("Started the node collector process.", file=sys.stderr, flush=True)
+
+                    if edge_file is not None:
+                        edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector edge queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+
+                        print("Creating the edge_collector.", file=sys.stderr, flush=True)
+                        edge_collector: MyCollector = MyCollector()
+                        print("Creating the edge collector process.", file=sys.stderr, flush=True)
+                        edge_collector_p = mp.Process(target=edge_collector.run, args=(None, edge_file, None, edge_collector_q, "edge"))
+                        print("Starting the edge collector process.", file=sys.stderr, flush=True)
+                        edge_collector_p.start()
+                        print("Started the edge collector process.", file=sys.stderr, flush=True)
+
+                    if qual_file is not None:
+                        qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector qual queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+
+                        print("Creating the qual_collector.", file=sys.stderr, flush=True)
+                        qual_collector: MyCollector = MyCollector()
+                        print("Creating the qual collector process.", file=sys.stderr, flush=True)
+                        qual_collector_p = mp.Process(target=qual_collector.run, args=(None, None, qual_file, qual_collector_q, "qual"))
+                        print("Starting the qual collector process.", file=sys.stderr, flush=True)
+                        qual_collector_p.start()
+                        print("Started the qual collector process.", file=sys.stderr, flush=True)
+
+                else:
+                    collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                    print("The common collector queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+                
+                    print("Creating the common collector.", file=sys.stderr, flush=True)
+                    collector: MyCollector = MyCollector()
+                    print("Creating the common collector process.", file=sys.stderr, flush=True)
+                    collector_p = mp.Process(target=collector.run, args=(node_file, edge_file, qual_file, collector_q, "common"))
+                    print("Starting the common collector process.", file=sys.stderr, flush=True)
+                    collector_p.start()
+                    print("Started the common collector process.", file=sys.stderr, flush=True)
 
             if node_file:
                 header = ['id','label','type','description','alias','datatype']
-                if collector_node_wr is not None:
-                    collector_node_wr.writerow(header)
+                if collector_q is not None:
+                    print("Sending the node header to the collector.", file=sys.stderr, flush=True)
+                    collector_q.put(("node_header", None, None, None, header))
+                    print("Sent the node header to the collector.", file=sys.stderr, flush=True)
+
+                elif node_collector_q is not None:
+                    print("Sending the node header to the node collector.", file=sys.stderr, flush=True)
+                    node_collector_q.put(("node_header", None, None, None, header))
+                    print("Sent the node header to the node collector.", file=sys.stderr, flush=True)
+
                 else:
                     with open(node_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1179,8 +1512,16 @@ def run(input_file: KGTKFiles,
                           'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar']
 
             if edge_file:
-                if collector_edge_wr is not None:
-                    collector_edge_wr.writerow(header)
+                if collector_q is not None:
+                    print("Sending the edge header to the collector.", file=sys.stderr, flush=True)
+                    collector_q.put(("edge_header", None, None, None, header))
+                    print("Sent the edge header to the collector.", file=sys.stderr, flush=True)
+
+                elif edge_collector_q is not None:
+                    print("Sending the edge header to the edge collector.", file=sys.stderr, flush=True)
+                    edge_collector_q.put(("edge_header", None, None, None, header))
+                    print("Sent the edge header to the edge collector.", file=sys.stderr, flush=True)
+
                 else:
                     with open(edge_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1198,8 +1539,17 @@ def run(input_file: KGTKFiles,
                     header.remove('claim_type')
                 if "claim_id" in header:
                     header.remove('claim_id')
-                if collector_qual_wr is not None:
-                    collector_qual_wr.writerow(header)
+
+                if collector_q is not None:
+                    print("Sending the qual header to the collector.", file=sys.stderr, flush=True)
+                    collector_q.put(("qual_header", None, None, None, header))
+                    print("Sent the qual header to the collector.", file=sys.stderr, flush=True)
+
+                elif qual_collector_q is not None:
+                    print("Sending the qual header to the qual collector.", file=sys.stderr, flush=True)
+                    qual_collector_q.put(("qual_header", None, None, None, header))
+                    print("Sent the qual header to the qual collector.", file=sys.stderr, flush=True)
+
                 else:
                     with open(qual_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
@@ -1211,42 +1561,70 @@ def run(input_file: KGTKFiles,
                             lineterminator=csv_line_terminator)
                         wr.writerow(header)
 
-            print('Start parallel processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
-            if collect_results:
-                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue, collector=collector)
+            print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
+            if use_shm or single_mapper_queue:
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                                use_shm=use_shm, enable_collector_queues=False, batch_size=mapper_batch_size,
+                                                single_mapper_queue=single_mapper_queue)
             else:
-                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue)
+                pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                                batch_size=mapper_batch_size)
+            print('Start parallel processing', file=sys.stderr, flush=True)
             pp.start()
-            if str(inp_path).endswith(".bz2"):
-                with bz2.open(inp_path, mode='rb') as file:
-                    print('Decompressing (bz2) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                    for cnt, line in enumerate(file):
-                        if limit and cnt >= limit:
-                            break
-                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
-            elif str(inp_path).endswith(".gz"):
-                with gzip.open(inp_path, mode='rb') as file:
-                    print('Decompressing (gzip) and processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                    for cnt, line in enumerate(file):
-                        if limit and cnt >= limit:
-                            break
-                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
-            else:                             
-                with open(inp_path, mode='rb') as file:
-                    print('Processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                    for cnt, line in enumerate(file):
-                        if limit and cnt >= limit:
-                            break
-                        pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+            for cnt, line in enumerate(input_f):
+                if limit and cnt >= limit:
+                    break
+                # pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+                pp.add_task(line)
 
             print('Done processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
+            input_f.close()
+            
+            print('Telling the workers to shut down.', file=sys.stderr, flush=True)
             pp.task_done()
-            print('Tasks done.', file=sys.stderr, flush=True)
+            print('Waiting for the workers to shut down.', file=sys.stderr, flush=True)
             pp.join()
-            print('Join complete.', file=sys.stderr, flush=True)
+            print('Worker shut down is complete.', file=sys.stderr, flush=True)
 
-            if collect_results:
-                collector_exit()
+            if collector_q is not None:
+                print('Telling the collector to shut down.', file=sys.stderr, flush=True)
+                collector_q.put(("shutdown", None, None, None, None))
+            if collector_p is not None:
+                print('Waiting for the collector to shut down.', file=sys.stderr, flush=True)
+                collector_p.join()
+                print('Collector shut down is complete.', file=sys.stderr, flush=True)
+            if collector_q is not None:
+                collector_q.close()
+
+            if node_collector_q is not None:
+                print('Telling the node collector to shut down.', file=sys.stderr, flush=True)
+                node_collector_q.put(("shutdown", None, None, None, None))
+            if node_collector_p is not None:
+                print('Waiting for the node collector to shut down.', file=sys.stderr, flush=True)
+                node_collector_p.join()
+                print('Node collector shut down is complete.', file=sys.stderr, flush=True)
+            if node_collector_q is not None:
+                node_collector_q.close()
+
+            if edge_collector_q is not None:
+                print('Telling the edge collector to shut down.', file=sys.stderr, flush=True)
+                edge_collector_q.put(("shutdown", None, None, None, None))
+            if edge_collector_p is not None:
+                print('Waiting for the edge collector to shut down.', file=sys.stderr, flush=True)
+                edge_collector_p.join()
+                print('Edge collector shut down is complete.', file=sys.stderr, flush=True)
+            if edge_collector_q is not None:
+                edge_collector_q.close()
+
+            if qual_collector_q is not None:
+                print('Telling the qual collector to shut down.', file=sys.stderr, flush=True)
+                qual_collector_q.put(("shutdown", None, None, None, None))
+            if qual_collector_p is not None:
+                print('Waiting for the qual collector to shut down.', file=sys.stderr, flush=True)
+                qual_collector_p.join()
+                print('Qual collector shut down is complete.', file=sys.stderr, flush=True)
+            if qual_collector_q is not None:
+                qual_collector_q.close()
 
         if not skip_merging and not collect_results:
             # We've finished processing the input data, possibly using multiple
@@ -1280,5 +1658,6 @@ def run(input_file: KGTKFiles,
         print('import complete', file=sys.stderr, flush=True)
         end=time.time()
         print('time taken : {}s'.format(end-start), file=sys.stderr, flush=True)
-    except:
-        raise KGTKException
+    except Exception as e:
+        raise KGTKException(str(e))
+
