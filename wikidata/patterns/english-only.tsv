@@ -1,0 +1,8 @@
+node1	label	node2
+language_tag	unknown	True
+language_tag	node2_field_op	english_only
+language_tag	node2_field_op	no_dialect
+english_only	field_name	language
+english_only	field_values	en
+no_dialect	field_name	language_suffix
+no_dialect	field_blank	True

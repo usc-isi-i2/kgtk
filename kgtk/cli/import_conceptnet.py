@@ -88,5 +88,8 @@ def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles):
                 if not english_only or (row[2].startswith('/c/en/') and row[3].startswith('/c/en/')):
                     ew.write(row_to_edge(row, out_columns))
 
+        # Clean up
+        ew.close()
+
     except Exception as e:
         kgtk_exception_auto_handler(e)

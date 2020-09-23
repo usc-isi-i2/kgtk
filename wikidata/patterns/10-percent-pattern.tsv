@@ -1,0 +1,5 @@
+node1	label	node2
+P580-or-P585-count	property	True
+P580-or-P585-count	node2_column	percent
+P580-or-P585-count	node2_type	number
+P580-or-P585-count	minval	10
