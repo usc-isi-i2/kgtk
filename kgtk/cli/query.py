@@ -20,6 +20,9 @@ def parser():
         'description': 'Query one or more KGTK files with Kypher.',
     }
 
+EXPLAIN_MODES = ('plan', 'full', 'expert')
+INDEX_MODES = ('auto', 'expert', 'quad', 'triple', 'node1+label', 'node1', 'label', 'node2', 'none')
+
 def add_arguments_extended(parser, parsed_shared_args):
     parser.accept_shared_argument('_debug')
     parser.accept_shared_argument('_expert')
@@ -47,6 +50,17 @@ def add_arguments_extended(parser, parsed_shared_args):
                         help="zero or more named string parameters to be passed to the query")
     parser.add_argument('--lqpara', metavar='NAME=VAL', action='append', dest='lqstring_paras',
                         help="zero or more named LQ-string parameters to be passed to the query")
+    parser.add_argument('--no-header', action='store_true', dest='no_header',
+                        help="do not generate a header row with column names")
+    parser.add_argument('--index', metavar='MODE', nargs='?', action='store', dest='index',
+                        choices=INDEX_MODES, const=INDEX_MODES[0], default=INDEX_MODES[0], 
+                        help="control column index creation according to MODE"
+                        + " (%(choices)s, default: %(const)s)")
+    parser.add_argument('--explain', metavar='MODE', nargs='?', action='store', dest='explain',
+                        choices=EXPLAIN_MODES, const=EXPLAIN_MODES[0], 
+                        help="explain the query execution and indexing plan according to MODE"
+                        + " (%(choices)s, default: %(const)s)."
+                        + " This will not actually run or create anything.")
     parser.add_argument('--graph-cache', default=DEFAULT_GRAPH_CACHE_FILE, action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
@@ -126,18 +140,26 @@ def run(**options):
                                       order=options.get('order'),
                                       skip=options.get('skip'),
                                       limit=options.get('limit'),
-                                      parameters=parameters)
-            result = query.execute()
-
-            # we are forcing \n line endings here instead of \r\n, since those
-            # can be re/imported efficiently with the new SQLite import command;
-            # we also specify `escapechar' now so any unexpected column or line
-            # separators in fields will be quoted and visible:
-            csvwriter = csv.writer(output, dialect=None, delimiter='\t',
-                                   quoting=csv.QUOTE_NONE, quotechar=None,
-                                   lineterminator='\n', escapechar='\\')
-            csvwriter.writerow(query.result_header)
-            csvwriter.writerows(result)
+                                      parameters=parameters,
+                                      index=options.get('index'))
+            
+            explain = options.get('explain')
+            if explain is not None:
+                result = query.explain(explain)
+                output.write(result)
+            else:
+                result = query.execute()
+                # we are forcing \n line endings here instead of \r\n, since those
+                # can be re/imported efficiently with the new SQLite import command;
+                # we also specify `escapechar' now so any unexpected column or line
+                # separators in fields will be quoted and visible:
+                csvwriter = csv.writer(output, dialect=None, delimiter='\t',
+                                       quoting=csv.QUOTE_NONE, quotechar=None,
+                                       lineterminator='\n', escapechar='\\')
+                if not options.get('no_header'):
+                    csvwriter.writerow(query.result_header)
+                csvwriter.writerows(result)
+                
             output.flush()
         finally:
             store.close()
