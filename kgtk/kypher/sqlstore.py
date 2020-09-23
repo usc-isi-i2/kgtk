@@ -23,16 +23,20 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### TO DO:
 
-# - handle VACUUM and/or AUTO_VACUUM when graph tables get deleted
 # o automatically run ANALYZE on tables and indexes when they get created
 #   - we decided to only do this for indexes for now
 # - protect graph data import from failure or aborts through transactions
+# - handle table/index creation locking when we might have parallel invocations,
+#   but it looks like sqlite already does that for us
 # - provide some symbolic graph size classification (small/medium/large/xlarge)
 #   and implement table optimizations based on those categories
 # - support bump_timestamp or similar to better keep track of what's been used
+# - improve table definitions to define core columns as required to be not null
 # - full LRU cache maintainance
 # - complete literal accessor functions
 # - graphs fed in from stdin
+# + handle VACUUM and/or AUTO_VACUUM when graph tables get deleted
+#   - actually no, that requires a lot of extra space, so require to do that manually
 
 
 ### Utilities
@@ -136,6 +140,7 @@ class SqliteStore(SqlStore):
         self.conn = None
         self.user_functions = set()
         self.init_meta_tables()
+        self.configure()
 
     def log(self, level, message):
         if self.loglevel >= level:
@@ -148,6 +153,13 @@ class SqliteStore(SqlStore):
             self.execute(self.get_table_definition(self.FILE_TABLE))
         if not self.has_table(self.GRAPH_TABLE._name_):
             self.execute(self.get_table_definition(self.GRAPH_TABLE))
+
+    CACHE_SIZE = 2 ** 32 # 4GB
+
+    def configure(self):
+        """Configure various settings of the store.
+        """
+        self.pragma('main.cache_size = %d' % int(self.CACHE_SIZE / self.pragma('page_size')))
 
 
     ### DB control:
@@ -177,6 +189,17 @@ class SqliteStore(SqlStore):
 
     def commit(self):
         self.get_conn().commit()
+
+    def pragma(self, expression):
+        """Evaluate a PRAGMA `expression' and return the result (if any).
+        """
+        res = list(self.execute('PRAGMA ' + expression))
+        if len(res) == 0:
+            return None
+        elif len(res) == 1:
+            return res[0][0]
+        else:
+            return res
 
 
     ### DB functions:
@@ -216,7 +239,12 @@ class SqliteStore(SqlStore):
     ### DB properties:
     
     def get_db_size(self):
-        return os.path.getsize(self.dbfile)
+        """Return the size of all currently allocated data pages in bytes.  This maybe smaller than
+        the size of the database file if there were deletions that put pages back on the free list.
+        Free pages can be reclaimed by running `VACUUM', but that might require a substantial amount
+        of available disk space if the current DB file is large.
+        """
+        return (self.pragma('page_count') - self.pragma('freelist_count')) * self.pragma('page_size')
 
     def has_table(self, table_name):
         """Return True if a table with name `table_name' exists in the store.
@@ -423,26 +451,27 @@ class SqliteStore(SqlStore):
         header = eval(info.header)
         return self.kgtk_header_to_graph_table_schema(table_name, header)
 
-    def ensure_graph_index(self, table_name, column, unique=False):
+    def ensure_graph_index(self, table_name, column, unique=False, explain=False):
         """Ensure an index for `table_name' on `column' already exists or gets created.
         """
         schema = self.get_graph_table_schema(table_name)
         if not self.has_index(schema, column):
             index_stmt = self.get_index_definition(schema, column, unique=unique)
-            self.log(1, 'CREATE INDEX on table %s column %s ...' % (table_name, column))
-            # we also measure the increase in diskspace here:
-            # TO DO: figure out if this is accurate after table deletions which might
-            # not reclaim any of the freed diskspace in the database file; looks like
-            # we need to do VACUUM or set pragma AUTO_VACUUM to reclaim space:
+            loglevel = explain and 0 or 1
+            self.log(loglevel, 'CREATE INDEX on table %s column %s ...' % (table_name, column))
+            # we also measure the increase in allocated disk space here:
             oldsize = self.get_db_size()
-            self.execute(index_stmt)
-            # do this unconditionally for now, give that it only takes about 10% of creation time:
-            self.log(1, 'ANALYZE INDEX on table %s column %s ...' % (table_name, column))
-            self.execute('ANALYZE %s' % sql_quote_ident(self.get_index_name(schema, column)))
+            if not explain:
+                self.execute(index_stmt)
+            # do this unconditionally for now, given that it only takes about 10% of creation time:
+            self.log(loglevel, 'ANALYZE INDEX on table %s column %s ...' % (table_name, column))
+            if not explain:
+                self.execute('ANALYZE %s' % sql_quote_ident(self.get_index_name(schema, column)))
             idxsize = self.get_db_size() - oldsize
             ginfo = self.get_graph_info(table_name)
             ginfo.size += idxsize
-            self.set_record_info(self.GRAPH_TABLE, ginfo)
+            if not explain:
+                self.set_record_info(self.GRAPH_TABLE, ginfo)
 
     def number_of_graphs(self):
         """Return the number of graphs currently stored in `self'.
@@ -582,6 +611,52 @@ class SqliteStore(SqlStore):
             # waiting (we can't call is_alive or access sqlproc.exit_code):
             if sqlproc is not None and sqlproc.process.exit_code is None:
                 sqlproc.terminate()
+
+                
+    def shell(self, *commands):
+        """Execute a sequence of sqlite3 shell `commands' in a single invocation
+        and return stdout and stderr as result strings.  These sqlite shell commands
+        are not invokable from a connection object, they have to be entered via `sh'.
+        """
+        sqlite3 = sh.Command(self.get_sqlite_cmd())
+        args = []
+        for cmd in commands[0:-1]:
+            args.append('-cmd')
+            args.append(cmd)
+        args.append(self.dbfile)
+        args.append(commands[-1])
+        proc = sqlite3(*args)
+        return proc.stdout, proc.stderr
+
+    def explain(self, sql_query, mode='plan'):
+        if mode == 'plan':
+            out, err = self.shell('EXPLAIN QUERY PLAN ' + sql_query)
+        elif mode == 'full':
+            out, err = self.shell('EXPLAIN ' + sql_query)
+        elif mode == 'expert':
+            out, err = self.shell('.expert', sql_query)
+        else:
+            raise KGTKException('illegal explanation mode: %s' % str(mode))
+        return out.decode('utf8')
+
+    def suggest_indexes(self, sql_query):
+        explanation = self.explain(sql_query, mode='expert')
+        indexes = []
+        index_regex = re.compile('\s*CREATE\s+INDEX\s+(?P<name>[^\s]+)'
+                                 + '\s+ON\s+(?P<table>[^\s(]+)'
+                                 + '\s*\(\s*(?P<columns>[^\s,)]+(\s*,\s*[^\s,)]+)*)\s*\)',
+                                 re.IGNORECASE)
+        split_regex = re.compile('\s*,\s*')
+        for line in explanation.splitlines():
+            m = index_regex.match(line)
+            if m is not None:
+                name = m['name']
+                table = m['table']
+                columns = m['columns']
+                columns = split_regex.split(columns)
+                indexes.append((name, table, columns))
+        return indexes
+
 
 """
 >>> store = cq.SqliteStore('/data/tmp/store.db', create=True)
