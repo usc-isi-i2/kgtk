@@ -21,9 +21,11 @@ pp = pprint.PrettyPrinter(indent=4)
 ### TO DO:
 
 # - support parameters in lists, maybe positional parameters $0, $1,...
+# - allow |-alternatives in relationship and node patterns (the latter being an
+#   extension to Cypher)
 # - more intelligent index creation
 # - investigate redundant join clauses
-# - header column dealiasing/normalization
+# - header column dealiasing/normalization, checking for required columns
 # - bump graph timestamps when they get queried
 # - allow order-by on column aliases (currently they are undefined variables)
 # - (not) exists pattern handling
@@ -149,11 +151,12 @@ class KgtkQuery(object):
     def __init__(self, files, store, query=None,
                  match='()', where=None, ret='*',
                  order=None, skip=None, limit=None,
-                 parameters={}, loglevel=0):
+                 parameters={}, index='auto', loglevel=0):
         self.files = [os.path.realpath(f) for f in listify(files)]
         self.store = store
         self.loglevel = loglevel
         self.parameters = parameters
+        self.index_mode = index.lower()
         if query is None:
             # supplying a query through individual clause arguments might be a bit easier,
             # since they can be in any order, can have defaults, are easier to shell-quote, etc.:
@@ -538,36 +541,86 @@ class KgtkQuery(object):
             limit += ' OFFSET ' + self.expression_to_sql(skip_clause.expression, litmap, None)
         return limit
 
-    def ensure_relevant_indexes(self, graphs, restrictions, joins):
-        """Ensure that we have relevant indexes for this query.
+    def compute_auto_indexes(self, graphs, restrictions, joins):
+        """Compute column indexes that are likely needed to run this query efficiently.
+        This is just an estimate based on columns involved in joins and restrictions.
         """
-        # TO DO: think about this some more
-        # - we might need some manual control as well
-        # - to do this right we need some approximate analysis of the query, e.g., for a join
-        #   we'll generally only need an index on one of the involved tables, however, knowing
-        #   for which one requires knowledge of table size, statistics and other selectivity of
-        #   the query, so we are defensive for now and create both indexes.
-        # - we could also try to exploit the SQLite expert command to create (variants) of the
-        #   indexes it suggests.
-        # - we only index core columns for now, should we index wide ones as well?
-        # - we might want to create two-column indexes such as (node1, label), etc.
-        # - we might want to always use `id' as the primary key and create `without rowid' tables
         alias_to_graph = {alias: graph for graph, alias in graphs}
+        indexes = set()
         if len(joins) > 0:
             for (g1, c1), (g2, c2) in joins:
-                # ensure we have indices on joined columns - the ID check needs to be generalized:
-                if c1.lower() in ('id', 'node1', 'label', 'node2'):
-                    self.store.ensure_graph_index(alias_to_graph[g1], c1, unique=c1.lower()=='id')
-                if c2.lower() in ('id', 'node1', 'label', 'node2'):
-                    self.store.ensure_graph_index(alias_to_graph[g2], c2, unique=c2.lower()=='id')
+                indexes.add((alias_to_graph[g1], c1))
+                indexes.add((alias_to_graph[g2], c2))
         if len(restrictions) > 0:
             # even if we have joins, we might need additional indexes on restricted columns:
             for (g, c), val in restrictions:
-                if c.lower() in ('id', 'node1', 'label', 'node2'):
-                    self.store.ensure_graph_index(alias_to_graph[g], c, unique=c.lower()=='id')
+                indexes.add((alias_to_graph[g], c))
+        return indexes
+
+    def ensure_relevant_indexes(self, sql, graphs=[], auto_indexes=[], explain=False):
+        """Ensure that relevant indexes for this `sql' query are available on the database.
+        Based on the specified index_mode strategy, either use `auto_indexes', the DB's
+        `expert' mode, or some fixed variant such as `quad' `triple', `node1+label', etc.
+        which will be applied to all `graphs'.  Each element in `auto_indexes' is assumed
+        to be an unaliased (graph, column) pair.
+        """
+        # NOTES
+        # - what we want is the minimal number of indexes that allow this query to run efficiently,
+        #   since index creation itself is expensive in time and disk space
+        # - however, to do this right we need some approximate analysis of the query, e.g., for a join
+        #   we'll generally only need an index on one of the involved columns, however, knowing for
+        #   which one requires knowledge of table size, statistics and other selectivity of the query
+        # - skewed distribution of fanout in columns complicates this further, since an average
+        #   fanout might be very different from maximum fanouts (e.g., for wikidata node2)
+        # - large fanouts might force us to use two-column indexes such as `label/node2' and `label/node1'
+        # - to handle this better, we will exploit the SQLite expert command to create (variants) of
+        #   the indexes it suggests, since that often wants multi-column indexes which are expensive
+        # - we also need some manual control as well to force certain indexing patterns
+        # - we only index core columns for now, but we might have use cases where that is too restrictive
+        
+        if self.index_mode == 'auto':
+            # build indexes as suggested by joins and restrictions:
+            for graph, column in auto_indexes:
+                # for now unconditionally restrict to core columns:
+                if column.lower() in ('id', 'node1', 'label', 'node2'):
+                    # the ID check needs to be generalized:
+                    self.store.ensure_graph_index(graph, column, unique=column.lower()=='id', explain=explain)
+            return
+        
+        elif self.index_mode == 'expert':
+            # build indexes as suggested by the database (only first column for now):
+            # TO DO: allow certain two-column indexes such as `label, node1' to handle fanout issues:
+            indexes = self.store.suggest_indexes(sql)
+            for name, graph, columns in indexes:
+                column = columns[0]
+                # the ID check needs to be generalized:
+                self.store.ensure_graph_index(graph, column, unique=column.lower()=='id', explain=explain)
+            return
+            
+        columns = []
+        if self.index_mode == 'quad':
+            columns += ['id', 'node1', 'label', 'node2']
+        elif self.index_mode == 'triple':
+            columns += ['node1', 'label', 'node2']
+        elif self.index_mode == 'node1+label':
+            columns += ['node1', 'label']
+        elif self.index_mode == 'node1':
+            columns += ['node1']
+        elif self.index_mode == 'label':
+            columns += ['label']
+        elif self.index_mode == 'node2':
+            columns += ['node2']
+        elif self.index_mode == 'none':
+            pass
+        else:
+            raise Exception('Unsupported index mode: %s' % self.index_mode)
+        for graph in graphs:
+            for column in columns:
+                # the ID check needs to be generalized:
+                self.store.ensure_graph_index(graph, column, unique=column=='id', explain=explain)
 
     def translate_to_sql(self):
-        graphs = set()        # the set of graph table names referenced by this query
+        graphs = set()        # the set of graph table names with aliases referenced by this query
         litmap = {}           # maps Kypher literals onto parameter placeholders
         varmap = {}           # maps Kypher variables onto representative (graph, col) SQL columns
         restrictions = set()  # maps (graph, col) SQL columns onto literal restrictions
@@ -589,7 +642,7 @@ class KgtkQuery(object):
 
         # assemble SQL query:
         select, group_by = self.return_clause_to_sql_selection(self.return_clause, litmap, varmap)
-        graph_tables = ', '.join([g + ' ' + a for g, a in sorted(list(graphs))])
+        graph_tables = ', '.join([g + ' AS ' + a for g, a in sorted(list(graphs))])
         query = io.StringIO()
         query.write('SELECT %s\nFROM %s' % (select, graph_tables))
         
@@ -609,20 +662,26 @@ class KgtkQuery(object):
         limit and query.write('\n' + limit)
         query = query.getvalue().replace(' TRUE\nAND', '')
         query, parameters = self.replace_literal_parameters(query, litmap)
+        auto_indexes = self.compute_auto_indexes(graphs, restrictions, joins)
 
         # logging:
         rule = '-' * 45
         self.log(1, 'SQL Translation:\n%s\n  %s\n  PARAS: %s\n%s'
                  % (rule, query.replace('\n', '\n     '), parameters, rule))
 
-        # ensure indexes are available:
-        self.ensure_relevant_indexes(graphs, restrictions, joins)
-        return query, parameters
+        return query, parameters, sorted(list(zip(*graphs))[0]), auto_indexes
 
     def execute(self):
-        query, params = self.translate_to_sql()
+        query, params, graphs, indexes = self.translate_to_sql()
+        self.ensure_relevant_indexes(query, graphs=graphs, auto_indexes=indexes)
         result = self.store.execute(query, params)
         self.result_header = [c[0] for c in result.description]
+        return result
+
+    def explain(self, mode='plan'):
+        query, params, graphs, indexes = self.translate_to_sql()
+        self.ensure_relevant_indexes(query, graphs=graphs, auto_indexes=indexes, explain=True)
+        result = self.store.explain(query, mode=mode)
         return result
 
 
