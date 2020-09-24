@@ -24,6 +24,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 # o automatically run ANALYZE on tables and indexes when they get created
 #   - we decided to only do this for indexes for now
+# - check for version of sqlite3, since older versions do not support ascii mode
 # - protect graph data import from failure or aborts through transactions
 # - handle table/index creation locking when we might have parallel invocations,
 #   but it looks like sqlite already does that for us
@@ -632,9 +633,9 @@ class SqliteStore(SqlStore):
         self.log(1, 'IMPORT graph directly into table %s from %s ...' % (table, file))
         try:
             if isplain:
-                tailproc = tail('+2', file, _piped=True)
+                tailproc = tail('-n', '+2', file, _piped=True)
             else:
-                tailproc = tail(catcmd(), '+2', _piped=True)
+                tailproc = tail(catcmd(), '-n', '+2', _piped=True)
             # we run this asynchronously, so we can kill it in the cleanup clause:
             sqlproc = sqlite3(tailproc, *args, _bg=True)
             sqlproc.wait()
