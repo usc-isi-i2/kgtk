@@ -289,13 +289,92 @@ class TestKGTKQuery(unittest.TestCase):
                   "g: (x)-[r:loves]->(y), w: (y)-[:works]-(c)",
                   "--return", 'r, x, r.label, y as node2, c as `node2;work`')
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
-        print(df)
         self.assertTrue(len(df) == 3)
         for i, row in df.iterrows():
             if row['id'] == 'e11':
                 self.assertEqual(row['node1'], 'Hans')
                 self.assertEqual(row['node2'], 'Molly')
                 self.assertEqual(row['node2;work'], 'Renal')
+
+    def test_kgtk_query_default_multi_graph_join_property_access_restriction_cast_integer(self):
+        cli_entry("kgtk", "query", "-i", self.file_path,
+                  "-i", self.works_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]-(c)",
+                  "--where", "cast(s, integer) >= 10000",
+                  "--return", 'r, x, r.label, y as node2, c as `node2;work`, s as `node2;salary`')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+
+        self.assertTrue(len(df) == 2)
+        for i, row in df.iterrows():
+            if row['id'] == 'e11':
+                self.assertEqual(row['node1'], 'Hans')
+                self.assertEqual(row['node2'], 'Molly')
+                self.assertEqual(row['node2;work'], 'Renal')
+
+    def test_kgtk_query_max(self):
+        cli_entry("kgtk", "query", "-i", self.file_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "g: (x)-[r]->(y)",
+                  "--return", 'max(x) as node1, r.label, y, r')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 1)
+        for i, row in df.iterrows():
+            if row['id'] == 'e25':
+                self.assertEqual(row['node1'], 'Susi')
+                self.assertEqual(row['node2'], 'Susi')
+
+    def test_kgtk_query_max_x_per_r(self):
+        cli_entry("kgtk", "query", "-i", self.file_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "g: (x)-[r]->(y)",
+                  "--return", 'r, max(x), r.label, y',
+                  "--limit", "5")
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+
+        self.assertTrue(len(df) == 5)
+        ids = list(df['id'].unique())
+        self.assertTrue('e11' in ids)
+        self.assertTrue('e12' in ids)
+        self.assertTrue('e13' in ids)
+        self.assertTrue('e14' in ids)
+        self.assertTrue('e21' in ids)
+
+    def test_kgtk_query_count(self):
+        cli_entry("kgtk", "query", "-i", self.file_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "g: (x)-[r]->(y)",
+                  "--where", 'x = "Joe"',
+                  "--return", 'count(x) as N')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+
+        self.assertTrue(len(df) == 1)
+        for i, row in df.iterrows():
+            self.assertEqual(row['N'], 3)
+
+    def test_kgtk_query_count_distinct(self):
+        cli_entry("kgtk", "query", "-i", self.file_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "g: (x)-[r]->(y)",
+                  "--where", 'x = "Joe"',
+                  "--return", 'count(distinct x) as N')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 1)
+        for i, row in df.iterrows():
+            self.assertEqual(row['N'], 1)
+
+
+    def test_kgtk_query_biggest_salary(self):
+        cli_entry("kgtk", "query", "-i", self.works_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "w: (y {salary: s})-[r:works]-(c)",
+                  "--return", 'max(cast(s, int)) as `node1;salary`, y, "works" as label, c, r')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 1)
+        for i, row in df.iterrows():
+            self.assertEqual(row['node1;salary'], 20000)
+            self.assertEqual(row['node1'], 'Joe')
+            self.assertEqual(row['node2'], 'Kaiser')
 
     def test_kgtk_query_date_filter(self):
         cli_entry("kgtk", "query", "-i", self.quals_path, "-o", f'{self.temp_dir}/out.tsv', "--match",
