@@ -18,9 +18,10 @@ echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in all languages"
 kgtk ${KGTK_FLAGS} \
      import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \
-     --node ${DATADIR}/${WIKIDATA_ALL_NODES}.tsv \
-     --edge ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv \
-     --qual ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}.tsv \
+     --node-file ${DATADIR}/${WIKIDATA_ALL_NODES}.tsv \
+     --detailed-edge-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-full.tsv \
+     --minimal-edge-file ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv \
+     --qual-file ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}.tsv \
      --node-file-id-only \
      --explode-values False \
      --all-languages \
