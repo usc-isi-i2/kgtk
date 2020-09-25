@@ -26,10 +26,13 @@ kgtk ${KGTK_FLAGS} \
      --all-languages \
      --alias-edges True \
      --split-alias-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-aliases-all-lang.tsv \
+     --split-en-alias-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-aliases-en-only.tsv \
      --description-edges True \
      --split-description-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-descriptions-all-lang.tsv \
+     --split-en-description-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-descriptions-en-only.tsv \
      --label-edges True \
      --split-label-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-labels-all-lang.tsv \
+     --split-en-label-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-labels-en-only.tsv \
      --datatype-edges True \
      --split-datatype-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-datatypes.tsv \
      --entry-type-edges True \
