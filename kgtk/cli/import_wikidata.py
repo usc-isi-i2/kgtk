@@ -143,9 +143,13 @@ def add_arguments(parser: KGTKArgumentParser):
     # This file contains just the list of node ID values.
     parser.add_argument(
         '--node-id-only',
-        action="store_true",
+        nargs='?',
+        type=optional_bool,
         dest="node_id_only",
-        help='Option to write only the node ID in the node file')
+        const=True,
+        default=False,
+        metavar="True/False",
+        help='Option to write only the node ID in the node file. (default=%(default)s)')
 
     # The remaining files are KGTK edge files that split out
     # special properties.
@@ -157,6 +161,13 @@ def add_arguments(parser: KGTKArgumentParser):
         default=None,
         help='path to output split alias file')
     parser.add_argument(
+        '--split-en-alias-file',
+        action="store",
+        type=str,
+        dest="split_en_alias_file",
+        default=None,
+        help='path to output split English alias file')
+    parser.add_argument(
         '--split-datatype-file',
         action="store",
         type=str,
@@ -167,9 +178,16 @@ def add_arguments(parser: KGTKArgumentParser):
         '--split-description-file',
         action="store",
         type=str,
-        dest="split_desciption_file",
+        dest="split_description_file",
         default=None,
         help='path to output splitdescription file')
+    parser.add_argument(
+        '--split-en-description-file',
+        action="store",
+        type=str,
+        dest="split_en_description_file",
+        default=None,
+        help='path to output split English description file')
     parser.add_argument(
         '--split-label-file',
         action="store",
@@ -177,6 +195,13 @@ def add_arguments(parser: KGTKArgumentParser):
         dest="split_label_file",
         default=None,
         help='path to output split label file')
+    parser.add_argument(
+        '--split-en-label-file',
+        action="store",
+        type=str,
+        dest="split_en_label_file",
+        default=None,
+        help='path to output split English label file')
     parser.add_argument(
         '--split-type-file',
         action="store",
@@ -445,9 +470,12 @@ def run(input_file: KGTKFiles,
 
         node_id_only: bool,
         split_alias_file: typing.Optional[str],
+        split_en_alias_file: typing.Optional[str],
         split_datatype_file: typing.Optional[str],
         split_description_file: typing.Optional[str],
+        split_en_description_file: typing.Optional[str],
         split_label_file: typing.Optional[str],
+        split_en_label_file: typing.Optional[str],
         split_type_file: typing.Optional[str],
 
         limit: int,
@@ -596,7 +624,7 @@ def run(input_file: KGTKFiles,
                 self.collector_qrows_batch = [ ]
 
             self.process_row_data = \
-                self.node_file or \
+                node_file or \
                 entry_type_edges or \
                 label_edges or \
                 alias_edges or \
@@ -645,6 +673,7 @@ def run(input_file: KGTKFiles,
                          datahash="",
                          precision="",
                          calendar="",
+                         lang=""
         ):
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
@@ -668,6 +697,7 @@ def run(input_file: KGTKFiles,
                                   calendar,
                                   entity_type,
                                   wikidatatype,
+                                  lang,
                     ])
                 else:
                     erows.append([edge_id,
@@ -683,6 +713,7 @@ def run(input_file: KGTKFiles,
                                   datahash,
                                   precision,
                                   calendar,
+                                  lang,
                     ])
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
@@ -807,7 +838,8 @@ def run(input_file: KGTKFiles,
                                                           edge_id=sid,
                                                           node1=qnode,
                                                           label=LABEL_LABEL,
-                                                          node2=value)
+                                                          node2=value,
+                                                          lang=lang)
 
 
                         if not node_id_only:
@@ -853,7 +885,8 @@ def run(input_file: KGTKFiles,
                                                           edge_id=sid,
                                                           node1=qnode,
                                                           label=DESCRIPTION_LABEL,
-                                                          node2=value)
+                                                          node2=value,
+                                                          lang=lang)
 
                         if not node_id_only:
                             if len(descr_list)>0:
@@ -890,7 +923,8 @@ def run(input_file: KGTKFiles,
                                                               edge_id=sid,
                                                               node1=qnode,
                                                               label=ALIAS_LABEL,
-                                                              node2=value)
+                                                              node2=value,
+                                                              lang=lang)
 
 
                         if not node_id_only:
@@ -1307,6 +1341,10 @@ def run(input_file: KGTKFiles,
             self.split_alias_wr = None
             self.n_alias_rows: int = 0
 
+            self.split_en_alias_f: typing.Optional[typing.TextIO] = None
+            self.split_en_alias_wr = None
+            self.n_en_alias_rows: int = 0
+
             self.split_datatype_f: typing.Optional[typing.TextIO] = None
             self.split_datatype_wr = None
             self.n_datatype_rows: int = 0
@@ -1315,9 +1353,17 @@ def run(input_file: KGTKFiles,
             self.split_description_wr = None
             self.n_description_rows: int = 0
 
+            self.split_en_description_f: typing.Optional[typing.TextIO] = None
+            self.split_en_description_wr = None
+            self.n_en_description_rows: int = 0
+
             self.split_label_f: typing.Optional[typing.TextIO] = None
             self.split_label_wr = None
             self.n_label_rows: int = 0
+
+            self.split_en_label_f: typing.Optional[typing.TextIO] = None
+            self.split_en_label_wr = None
+            self.n_en_label_rows: int = 0
 
             self.split_type_f: typing.Optional[typing.TextIO] = None
             self.split_type_wr = None
@@ -1354,6 +1400,10 @@ def run(input_file: KGTKFiles,
                     self.open_split_alias_file(header, who)
                     self.process_split_files = True
 
+                elif action == "split_en_alias_header":
+                    self.open_split_en_alias_file(header, who)
+                    self.process_split_files = True
+
                 elif action == "split_datatype_header":
                     self.open_split_datatype_file(header, who)
                     self.process_split_files = True
@@ -1362,8 +1412,16 @@ def run(input_file: KGTKFiles,
                     self.open_split_description_file(header, who)
                     self.process_split_files = True
 
+                elif action == "split_en_description_header":
+                    self.open_split_en_description_file(header, who)
+                    self.process_split_files = True
+
                 elif action == "split_label_header":
                     self.open_split_label_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_en_label_header":
+                    self.open_split_en_label_file(header, who)
                     self.process_split_files = True
 
                 elif action == "split_type_header":
@@ -1411,14 +1469,23 @@ def run(input_file: KGTKFiles,
         def open_split_alias_file(self, header: typing.List[str], who: str):
             self.split_alias_f, self.split_alias_wr = self._open_file(split_alias_file, header, ALIAS_LABEL, who)
 
+        def open_split_en_alias_file(self, header: typing.List[str], who: str):
+            self.split_en_alias_f, self.split_en_alias_wr = self._open_file(split_en_alias_file, header, "English " + ALIAS_LABEL, who)
+
         def open_split_datatype_file(self, header: typing.List[str], who: str):
             self.split_datatype_f, self.split_datatype_wr = self._open_file(split_datatype_file, header, DATATYPE_LABEL, who)
 
         def open_split_description_file(self, header: typing.List[str], who: str):
             self.split_description_f, self.split_description_wr = self._open_file(split_description_file, header, DESCRIPTION_LABEL, who)
 
+        def open_split_en_description_file(self, header: typing.List[str], who: str):
+            self.split_en_description_f, self.split_en_description_wr = self._open_file(split_en_description_file, header, "English " + DESCRIPTION_LABEL, who)
+
         def open_split_label_file(self, header: typing.List[str], who: str):
             self.split_label_f, self.split_label_wr = self._open_file(split_label_file, header, LABEL_LABEL, who)
+
+        def open_split_en_label_file(self, header: typing.List[str], who: str):
+            self.split_en_label_f, self.split_en_label_wr = self._open_file(split_en_label_file, header, "English " + LABEL_LABEL, who)
 
         def open_split_type_file(self, header: typing.List[str], who: str):
             self.split_type_f, self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
@@ -1439,14 +1506,23 @@ def run(input_file: KGTKFiles,
                 if self.split_alias_wr is not None:
                     self.split_alias_wr.close()
 
+                if self.split_en_alias_wr is not None:
+                    self.split_en_alias_wr.close()
+
                 if self.split_datatype_wr is not None:
                     self.split_datatype_wr.close()
 
                 if self.split_description_wr is not None:
                     self.split_description_wr.close()
 
+                if self.split_en_description_wr is not None:
+                    self.split_en_description_wr.close()
+
                 if self.split_label_wr is not None:
                     self.split_label_wr.close()
+
+                if self.split_en_label_wr is not None:
+                    self.split_en_label_wr.close()
 
                 if self.split_type_wr is not None:
                     self.split_type_wr.close()
@@ -1464,14 +1540,23 @@ def run(input_file: KGTKFiles,
                 if self.split_alias_f is not None:
                     self.split_alias_f.close()
 
+                if self.split_en_alias_f is not None:
+                    self.split_en_alias_f.close()
+
                 if self.split_datatype_f is not None:
                     self.split_datatype_f.close()
 
                 if self.split_description_f is not None:
                     self.split_description_f.close()
 
+                if self.split_en_description_f is not None:
+                    self.split_en_description_f.close()
+
                 if self.split_label_f is not None:
                     self.split_label_f.close()
+
+                if self.split_en_label_f is not None:
+                    self.split_en_label_f.close()
 
                 if self.split_type_f is not None:
                     self.split_type_f.close()
@@ -1490,54 +1575,80 @@ def run(input_file: KGTKFiles,
                                                                                               self.nrows,
                                                                                               self.erows,
                                                                                               self.qrows), file=sys.stderr, flush=True)
-            if self.node_wr is not None:
+            if len(nrows) > 0:
+                if self.node_wr is None:
+                    raise ValueError("Unexpected node rows in the %s collector." % who)
+
                 if use_kgtkwriter:
-                        for row in nrows:
-                            self.node_wr.write(row)
+                    for row in nrows:
+                        self.node_wr.write(row)
                 else:
                     self.node_wr.writerows(nrows)
-                    
-            elif len(nrows) > 0:
-                raise ValueError("Unexpected node rows in the %s collector." % who)
 
-            if self.edge_wr is not None:
+            if len(erows) > 0:
+                if self.edge_wr is None:
+                    raise ValueError("Unexpected edge rows in the %s collector." % who)
+
                 if use_kgtkwriter:
                     if not self.process_split_files:
                         for row in erows:
                             self.edge_wr.write(row)
                     else:
-                        for row in nrows:
+                        for row in erows:
+                            is_english: bool = row[-1] == "en"
+                            split: bool = False
                             label = row[2]
-                            if self.split_alias_wr is not None and label == ALIAS_LABEL:
-                                self.split_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                            if label == ALIAS_LABEL:
+                                if self.split_alias_wr is not None:
+                                    self.split_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
+                                    
+                                if self.split_en_alias_wr is not None and is_english:
+                                    self.split_en_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
+                                    
+                            elif label == DATATYPE_LABEL:
+                                if self.split_datatype_wr is not None:
+                                    self.split_datatype_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
+                                    
+                            elif label == DESCRIPTION_LABEL:
+                                if self.split_description_wr is not None:
+                                    self.split_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
 
-                            elif self.split_datatype_wr is not None and label == DATATYPE_LABEL:
-                                self.split_datatype_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                if self.split_en_description_wr is not None and is_english:
+                                    self.split_en_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
 
-                            elif self.split_description_wr is not None and label == DESCRIPTION_LABEL:
-                                self.split_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                            elif label == LABEL_LABEL:
+                                if self.split_label_wr is not None:
+                                    self.split_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
 
-                            elif self.split_label_wr is not None and label == LABEL_LABEL:
-                                self.split_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                if self.split_en_label_wr is not None and is_english:
+                                    self.split_en_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
 
-                            elif self.split_type_wr is not None and label == TYPE_LABEL:
-                                self.split_type_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                            elif label == TYPE_LABEL:
+                                if self.split_type_wr is not None:
+                                    self.split_type_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
 
-                            else:
+                            if not split:
                                 self.edge_wr.write(row)
                 else:
                     self.edge_wr.writerows(erows)
-            elif len(erows) > 0:
-                raise ValueError("Unexpected edge rows in the %s collector." % who)
 
-            if self.qual_wr is not None:
+            if len(qrows) > 0:
+                if self.qual_wr is None:
+                    raise ValueError("Unexpected qual rows in the %s collector." % who)
+
                 if use_kgtkwriter:
                     for row in qrows:
                         self.qual_wr.write(row)
                 else:
                     self.qual_wr.writerows(qrows)
-            elif len(qrows) > 0:
-                raise ValueError("Unexpected qual rows in the %s collector." % who)
 
     try:
         UPDATE_VERSION: str = "2020-09-14T22:13:50.434152+00:00#flOJV7jeH3XhclcGDslyMU2bCTa6Ra/VVIg8nxqFsYCYa2cbIG23Iz8MzuPSaDZhQLAWURR1MtCDltkkgv/3qQ=="
@@ -1639,14 +1750,14 @@ def run(input_file: KGTKFiles,
 
             if node_file:
                 if node_id_only:
-                    header = ['id']
+                    node_file_header = ['id']
                 else:
-                    header = ['id','label','type','description','alias','datatype']
+                   node_file_header = ['id','label','type','description','alias','datatype']
 
                 ncq = collector_q if collector_q is not None else node_collector_q
                 if ncq is not None:
                     print("Sending the node header to the collector.", file=sys.stderr, flush=True)
-                    ncq.put(("node_header", None, None, None, header))
+                    ncq.put(("node_header", None, None, None, node_file_header))
                     print("Sent the node header to the collector.", file=sys.stderr, flush=True)
 
                 else:
@@ -1658,21 +1769,21 @@ def run(input_file: KGTKFiles,
                             escapechar="\n",
                             quotechar='',
                             lineterminator=csv_line_terminator)
-                        wr.writerow(header)
+                        wr.writerow(node_file_header)
 
             if explode_values:
-                header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
-                          'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype']
+                edge_file_header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
+                                    'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype', 'lang']
             else:
-                header = ['id','node1','label','node2',
-                          'rank', 'node2;wikidatatype',
-                          'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar']
+                edge_file_header = ['id','node1','label','node2',
+                                    'rank', 'node2;wikidatatype',
+                                    'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
 
             if edge_file:
                 ecq = collector_q if collector_q is not None else edge_collector_q
                 if ecq is not None:
                     print("Sending the edge header to the collector.", file=sys.stderr, flush=True)
-                    ecq.put(("edge_header", None, None, None, header))
+                    ecq.put(("edge_header", None, None, None, edge_file_header))
                     print("Sent the edge header to the collector.", file=sys.stderr, flush=True)
 
                 else:
@@ -1684,52 +1795,73 @@ def run(input_file: KGTKFiles,
                             escapechar="\n",
                             quotechar='',
                             lineterminator=csv_line_terminator)
-                        wr.writerow(header)
+                        wr.writerow(edge_file_header)
 
             if split_alias_file and ecq is not None:
-                header = ['id', 'node1', 'label', 'node2']
-                print("Sending the node alias header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_alias_header", None, None, None, header))
-                print("Sent the node alias header to the collector.", file=sys.stderr, flush=True)
+                alias_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the alias file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_alias_header", None, None, None, alias_file_header))
+                print("Sent the alias file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_en_alias_file and ecq is not None:
+                en_alias_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the English alias file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_en_alias_header", None, None, None, en_alias_file_header))
+                print("Sent the English alias file header to the collector.", file=sys.stderr, flush=True)
 
             if split_datatype_file and ecq is not None:
-                header = ['id', 'node1', 'label', 'node2']
-                print("Sending the node datatype header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_datatype_header", None, None, None, header))
-                print("Sent the node datatype header to the collector.", file=sys.stderr, flush=True)
+                datatype_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the datatype file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_datatype_header", None, None, None, datatype_file_header))
+                print("Sent the datatype file header to the collector.", file=sys.stderr, flush=True)
 
             if split_description_file and ecq is not None:
-                header = ['id', 'node1', 'label', 'node2']
-                print("Sending the node description header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_description_header", None, None, None, header))
-                print("Sent the node description header to the collector.", file=sys.stderr, flush=True)
+                description_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the description file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_description_header", None, None, None, description_file_header))
+                print("Sent the description file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_en_description_file and ecq is not None:
+                en_description_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the English description file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_en_description_header", None, None, None, en_description_file_header))
+                print("Sent the English description file header to the collector.", file=sys.stderr, flush=True)
 
             if split_label_file and ecq is not None:
-                header = ['id', 'node1', 'label', 'node2']
-                print("Sending the node label header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_label_header", None, None, None, header))
-                print("Sent the node label header to the collector.", file=sys.stderr, flush=True)
+                label_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the label file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_label_header", None, None, None, label_file_header))
+                print("Sent the label file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_en_label_file and ecq is not None:
+                en_label_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the English label file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_en_label_header", None, None, None, en_label_file_header))
+                print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
 
             if split_type_file and ecq is not None:
-                header = ['id', 'node1', 'label', 'node2']
-                print("Sending the node type header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_type_header", None, None, None, header))
-                print("Sent the node type header to the collector.", file=sys.stderr, flush=True)
+                type_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the entry type file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_type_header", None, None, None, type_file_header))
+                print("Sent the type file header to the collector.", file=sys.stderr, flush=True)
 
 
             if qual_file:
-                if "rank" in header:
-                    header.remove('rank')
-                if "claim_type" in header:
-                    header.remove('claim_type')
-                if "claim_id" in header:
-                    header.remove('claim_id')
+                qual_file_header = edge_file_header.copy()
+                if "rank" in qual_file_header:
+                    qual_file_header.remove('rank')
+                if "claim_type" in qual_file_header:
+                    qual_file_header.remove('claim_type')
+                if "claim_id" in qual_file_header:
+                    qual_file_header.remove('claim_id')
+                if "lang" in qual_file_header:
+                    qual_file_header.remove('lang')
 
                 qcq = collector_q if collector_q is not None else qual_collector_q
                 if qcq is not None:
-                    print("Sending the qual header to the collector.", file=sys.stderr, flush=True)
-                    qcq.put(("qual_header", None, None, None, header))
-                    print("Sent the qual header to the collector.", file=sys.stderr, flush=True)
+                    print("Sending the qual file header to the collector.", file=sys.stderr, flush=True)
+                    qcq.put(("qual_header", None, None, None, qual_file_header))
+                    print("Sent the qual file header to the collector.", file=sys.stderr, flush=True)
 
                 else:
                     with open(qual_file+'_header', 'w', newline='') as myfile:
@@ -1740,7 +1872,7 @@ def run(input_file: KGTKFiles,
                             escapechar="\n",
                             quotechar='',
                             lineterminator=csv_line_terminator)
-                        wr.writerow(header)
+                        wr.writerow(qual_file_header)
 
             print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
             if use_shm or single_mapper_queue:
