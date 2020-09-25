@@ -1,9 +1,13 @@
 import datetime
 import importlib
+from io import StringIO
 import itertools
+import os
 import pkgutil
+import signal
 import sys
 import time
+import typing
 
 from kgtk import cli
 from kgtk.exceptions import KGTKExceptionHandler, KGTKArgumentParseException
@@ -22,13 +26,57 @@ handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
 pipe_delimiter = '/'
 ret_code = 0
 
-
 def cmd_done(cmd, success, exit_code):
     # cmd.cmd -> complete command line
     global ret_code
     ret_code = exit_code
 
 
+_save_progress: bool = False
+_save_progress_tty: typing.Optional[str] = None
+_save_progress_command: typing.Optional[typing.Any] = None
+def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] = None):
+    # This can be called multiple times, if it desired to monitor several
+    # input files in sequence.
+    #
+    # If pid is None, the cirrent process will be monitored.  If pid is not
+    # None, the specified process will be monitored.
+    #
+    # If target_fd is None, them all fds will be monitored.  If target is not
+    # None, the specific fd will be monitored: it must already be open, and it
+    # should be an input file.  There is no option to moitor multiple specific
+    # input files other than calling this routine sequentially
+    import os
+    import sh
+    global _save_progress, _save_progress_tty
+    if _save_progress and _save_progress_tty is not None:
+        global _save_progress_command
+        if _save_progress_command is not None:
+            # Shut down an existing process monitor.
+            try:
+                _save_progress_command.terminate()
+            except Exception:
+                pass
+            _save_progress_command = None
+
+        # Start a process monitor.
+        if pid is None:
+            pid = os.getpid()
+        if fd is None:
+            _save_progress_command = sh.pv("-d {}".format(pid), _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
+        else:
+            _save_progress_command = sh.pv("-d {}:{}".format(pid, fd),
+                                           _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
+
+def progress_shutdown():
+    global _save_progress_command
+    if _save_progress_command is not None:
+        try:
+            _save_progress_command.terminate()
+        except Exception:
+            pass
+        _save_progress_command = None
+    
 def cli_entry(*args):
     """
     Usage:
@@ -57,6 +105,8 @@ def cli_entry(*args):
     shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
     shared_args.add_argument('--expert', dest='_expert', action='store_true', default=False, help='enable expert mode')
     shared_args.add_argument('--pipedebug', dest='_pipedebug', action='store_true', default=False, help='enable pipe debug mode')
+    shared_args.add_argument('--progress', dest='_progress', action='store_true', default=False, help='enable progress monitoring')
+    shared_args.add_argument('--progress-tty', dest='_progress_tty', action='store', default="/dev/tty", help='progress monitoring output tty')
     shared_args.add_argument('--timing', dest='_timing', action='store_true', default=False, help='enable timing measurements')
     add_shared_arguments(shared_args)
 
@@ -99,7 +149,6 @@ def cli_entry(*args):
         parser.exit(KGTKArgumentParseException.return_code)
     elif len(pipe) == 1:  # single command
         cmd_args = pipe[0]
-
         cmd_name = cmd_args[0].replace("_", "-")
         cmd_args[0] = cmd_name
         # build sub-parser
@@ -130,35 +179,96 @@ def cli_entry(*args):
                 else:
                     kwargs[sa] = getattr(parsed_shared_args, sa)
 
-        # run module
-        kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
-        ret_code = kgtk_exception_handler(func, **kwargs)
-    else:  # piped commands
-        concat_cmd_str = None
-        for idx, cmd_args in enumerate(pipe):
-            # add shared arguments
-            cmd_str = ', '.join(['"{}"'.format(a) for a in shared_args])
-            if cmd_str:
-                cmd_str += ', '
-            # parse command and options
-            cmd_str += ', '.join(['"{}"'.format(a) for a in cmd_args])
-            # add other common arguments
-            cmd_str += ', _bg_exc=False, _done=cmd_done'  # , _err=sys.stdout
-            # add specific arguments
-            if idx == 0:  # first command
-                concat_cmd_str = 'sh.kgtk({}, _in=sys.stdin, _piped=True, _err=sys.stderr)'.format(cmd_str)
-            elif idx + 1 == len(pipe):  # last command
-                concat_cmd_str = 'sh.kgtk({}, {}, _out=sys.stdout, _err=sys.stderr)'.format(concat_cmd_str, cmd_str)
+        global _save_progress
+        _save_progress = parsed_shared_args._progress
+        global _save_progress_tty
+        _save_progress_tty = parsed_shared_args._progress_tty
+        if parsed_shared_args._progress:
+            if hasattr(mod, 'custom_progress') and mod.custom_progress():
+                pass
             else:
-                concat_cmd_str = 'sh.kgtk({}, {}, _piped=True, _err=sys.stderr)'.format(concat_cmd_str, cmd_str)
+                progress_startup()
+
+        # run module
+        try: 
+          kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
+          ret_code = kgtk_exception_handler(func, **kwargs)
+        except KeyboardInterrupt as e:
+            print("\nKeyboard interrupt in %s." % " ".join(args), file=sys.stderr, flush=True)
+            progress_shutdown()
+            if hasattr(mod, 'keyboard_interrupt'):
+                mod.keyboard_interrupt()
+
+            # Silently exit instead of re-raising the KeyboardInterrupt.
+            # raise
+
+    else:  # piped commands
+        if parsed_shared_args._pipedebug:
+            print("Building a KGTK pipe.  pid=%d" % (os.getpid()), file=sys.stderr, flush=True)
+        processes = [ ]
         try:
-            if parsed_shared_args._pipedebug:
-                print("eval: %s" % concat_cmd_str, file=sys.stderr, flush=True)
-            process = eval(concat_cmd_str)
-            process.wait()
+            for idx, cmd_args in enumerate(pipe):
+                # add shared arguments
+                full_args = [ ]
+                for shared_arg in shared_args:
+                    if idx == 0 or str(shared_arg) != "--progress":
+                        full_args.append(shared_arg)
+                full_args.extend(cmd_args)
+                kwargs = {
+                    "_bg_exc": False,
+                    "_done": cmd_done,
+                    "_err": sys.stderr,
+                    "_bg": True,
+                    "_internal_bufsize": 1,
+                }
+
+                # add specific arguments
+                if idx == 0:  # The first commamd reads from our STDIN.
+                    kwargs["_in"] = sys.stdin
+
+                if idx + 1 < len(pipe):
+                    # All commands but the last pipe their output to the next command.
+                    kwargs["_piped"] = True
+                else:
+                    # The last command writes to our STDOUT.
+                    kwargs["_out"] = sys.stdout
+
+                if parsed_shared_args._pipedebug:
+                    cmd_str = " ".join(full_args)
+                    for key in kwargs:
+                        cmd_str += " " + key + "=" + str(kwargs[key])
+                    print("pipe[%d]: kgtk %s" % (idx, cmd_str), file=sys.stderr, flush=True)
+
+                if idx == 0:
+                    processes.append(sh.kgtk(*full_args, **kwargs))
+                else:
+                    processes.append(sh.kgtk(processes[idx - 1], *full_args, **kwargs))
+                
+            for idx in range(len(pipe)):
+                processes[idx].wait()
+
         except sh.SignalException_SIGPIPE:
-            pass
+            if parsed_shared_args._pipedebug:
+                print("\npipe: sh.SignalException_SIGPIPE", file=sys.stderr, flush=True)
+
+        except sh.SignalException_SIGTERM:
+            if parsed_shared_args._pipedebug:
+                print("\npipe: sh.SignalException_SIGTERM", file=sys.stderr, flush=True)
+            raise
+
+        except KeyboardInterrupt as e:
+            if parsed_shared_args._pipedebug:
+                print("\npipe: KeyboardInterrupt", file=sys.stderr, flush=True)
+            if len(processes) > 0:
+                for idx in range(len(processes)):
+                    process = processes[idx]
+                    pgid = process.pgid
+                    print("Killing cmd %d process group %d" % (idx, pgid), file=sys.stderr, flush=True)
+                    process.signal_group(signal.SIGINT)
+
         except sh.ErrorReturnCode as e:
+            if parsed_shared_args._pipedebug:
+                print("\npipe: sh.ErrorReturnCode", file=sys.stderr, flush=True)
             # mimic parser exit
             parser.exit(KGTKArgumentParseException.return_code, e.stderr.decode('utf-8'))
 

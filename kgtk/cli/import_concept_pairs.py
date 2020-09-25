@@ -86,5 +86,8 @@ def run(input_file: KGTKFiles, relation, source, output_file: KGTKFiles):
             for row in reader:
                 ew.write(row_to_edge(row[0], relation, row[1], source, out_columns))
 
+        # Clean up.
+        ew.close()
+
     except Exception as e:
         kgtk_exception_auto_handler(e)

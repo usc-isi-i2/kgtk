@@ -115,5 +115,8 @@ def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles, weights_fil
                     if weights_file and 'weight' in json.loads(row[-1]).keys():
                         ew_aux.write(make_weight_edge(row))
 
+        # Clean up
+        ew.close()
+
     except Exception as e:
         kgtk_exception_auto_handler(e)

@@ -82,9 +82,9 @@ class KGTKArgumentParser(ArgumentParser):
                 self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
             else:
                 if default_stdio:
-                    self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[Path("-")])
+                    self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[], action="append")
                 else:
-                    self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, required=True)
+                    self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, required=True, action="append")
 
         else:
             if positional:
