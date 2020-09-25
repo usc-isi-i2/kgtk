@@ -499,7 +499,7 @@ class EmbeddingVector:
 
     def get_real_label_name(self, node):
         if node in self.node_labels:
-            return self.node_labels[node]
+            return self.node_labels[node].replace('"', "")
         else:
             return node
 

@@ -48,7 +48,9 @@ class TestKGTKCat(unittest.TestCase):
     def test_kgtk_cat_output_json_map(self):
         cli_entry("kgtk", "cat", "-i", self.file_path, "-o", f'{self.temp_dir}/cat.json', "--output-format", "json-map")
 
-        obj = json.load(open(f'{self.temp_dir}/cat.json'))
+        f = open(f'{self.temp_dir}/cat.json')
+        obj = json.load(f)
+        f.close()
         self.assertEqual(len(obj), 287)
         for x in obj:
             self.assertTrue('id' in x)

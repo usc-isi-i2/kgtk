@@ -125,5 +125,8 @@ def run(input_file: KGTKFiles, output_file: KGTKFiles):
                     this_row=[n1, relation, n2, event_label, value_label, rel_label, '', KgtkFormat.stringify('AT'), sentence]
                     ew.write(this_row)
 
+        # Clean up.
+        ew.close()
+
     except Exception as e:
         raise KGTKException('Error: ' + str(e))
