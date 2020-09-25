@@ -377,6 +377,39 @@ def add_arguments(parser: KGTKArgumentParser):
     )
 
     parser.add_argument(
+        "--sitelink-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="sitelink_edges",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create edge records for sitelinks. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--sitelink-verbose-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="sitelink_verbose_edges",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create edge records for sitelink details (lang, site, badges). (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--sitelink-verbose-qualifiers",
+        nargs='?',
+        type=optional_bool,
+        dest="sitelink_verbose_qualifiers",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create qualifier records for sitelink details (lang, site, badges). (default=%(default)s).",
+    )
+
+    parser.add_argument(
         "--parse-aliases",
         nargs='?',
         type=optional_bool,
@@ -519,6 +552,9 @@ def run(input_file: KGTKFiles,
         datatype_edges: bool,
         descr_edges: bool,
         label_edges: bool,
+        sitelink_edges: bool,
+        sitelink_verbose_edges: bool,
+        sitelink_verbose_qualifiers: bool,
         parse_aliases: bool,
         parse_descr: bool,
         parse_labels: bool,
@@ -556,12 +592,18 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
 
+    languages=lang.split(',')
+
     ADDL_SITELINK_LABEL: str = "addl_wikipedia_sitelink"
     ALIAS_LABEL: str = "alias"
     DATATYPE_LABEL: str = "datatype"
     DESCRIPTION_LABEL: str = "description"
     LABEL_LABEL: str = "label"
     SITELINK_LABEL: str = "wikipedia_sitelink"
+    SITELINK_BADGE_LABEL: str = "sitelink-badge"
+    SITELINK_LANGUAGE_LABEL: str = "sitelink-language"
+    SITELINK_SITE_LABEL: str = "sitelink-site"
+    SITELINK_TITLE_LABEL: str = "sitelink-title"
     TYPE_LABEL: str = "type"
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -713,7 +755,7 @@ def run(input_file: KGTKFiles,
                          datahash="",
                          precision="",
                          calendar="",
-                         lang=""
+                         entrylang=""
         ):
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
@@ -737,7 +779,7 @@ def run(input_file: KGTKFiles,
                                   calendar,
                                   entity_type,
                                   wikidatatype,
-                                  lang,
+                                  entrylang,
                     ])
                 else:
                     erows.append([edge_id,
@@ -753,7 +795,7 @@ def run(input_file: KGTKFiles,
                                   datahash,
                                   precision,
                                   calendar,
-                                  lang,
+                                  entrylang,
                     ])
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
@@ -883,7 +925,7 @@ def run(input_file: KGTKFiles,
                                                           node1=qnode,
                                                           label=LABEL_LABEL,
                                                           node2=value,
-                                                          lang=lang)
+                                                          entrylang=lang)
 
 
                         if not node_id_only:
@@ -930,7 +972,7 @@ def run(input_file: KGTKFiles,
                                                               node1=qnode,
                                                               label=DESCRIPTION_LABEL,
                                                               node2=value,
-                                                              lang=lang)
+                                                              entrylang=lang)
 
                         if not node_id_only:
                             if len(descr_list)>0:
@@ -968,7 +1010,7 @@ def run(input_file: KGTKFiles,
                                                               node1=qnode,
                                                               label=ALIAS_LABEL,
                                                               node2=value,
-                                                              lang=lang)
+                                                              entrylang=lang)
 
 
                         if not node_id_only:
@@ -1282,45 +1324,84 @@ def run(input_file: KGTKFiles,
                                     sitelink = 'http://'+sitehost+'/wiki/'+sitetitle
 
                                 if sitelink is not None:
-                                    if edge_file:
-                                        self.erows_append(sitelink_erows if collect_seperately else erows,
+                                    serows = sitelink_erows if collect_seperately else erows
+                                    if sitelink_edges:
+                                        self.erows_append(serows,
                                                           edge_id=sid,
                                                           node1=qnode,
                                                           label=linklabel,
                                                           node2=sitelink,
-                                                          lang=sitelang)
-                                    if qual_file or interleave:
+                                                          entrylang=sitelang)
+
+                                    if sitelink_verbose_edges:
+                                        if len(sitelang) > 0:
+                                            tempid=sid+'-language-1'
+                                            self.erows_append(serows,
+                                                              edge_id=tempid,
+                                                              node1=sid,
+                                                              label=SITELINK_LANGUAGE_LABEL,
+                                                              node2=sitelang,
+                                                              entrylang=sitelang)
+                                            
+                                        tempid=sid+'-site-1'
+                                        self.erows_append(serows,
+                                                          edge_id=tempid,
+                                                          node1=sid,
+                                                          label=SITELINK_SITE_LABEL,
+                                                          node2=link,
+                                                          entrylang=sitelang)
+
+                                        tempid=sid+'-title-1'
+                                        self.erows_append(serows,
+                                                          edge_id=tempid,
+                                                          node1=sid,
+                                                          label=SITELINK_TITLE_LABEL,
+                                                          node2=KgtkFormat.stringify(sitelinks[link]['title']),
+                                                          entrylang=sitelang)
+
+                                        edge_badge_num: int = 0
+                                        for badge in sitelinks[link]['badges']:
+                                            tempid=sid+'-badge-'+str(edge_badge_num + 1)
+                                            self.erows_append(serows,
+                                                              edge_id=tempid,
+                                                              node1=sid,
+                                                              label=SITELINK_BADGE_LABEL,
+                                                              node2=sitelinks[link]['badges'][edge_badge_num],
+                                                              entrylang=sitelang)
+                                            edge_badge_num += 1
+
+                                    if sitelink_verbose_qualifiers:
                                         if len(sitelang) > 0:
                                             tempid=sid+'-language-1'
                                             self.qrows_append(qrows,
                                                               edge_id=tempid,
                                                               node1=sid,
-                                                              label='language',
+                                                              label=SITELINK_LANGUAGE_LABEL,
                                                               node2=sitelang)
                                             
                                         tempid=sid+'-site-1'
                                         self.qrows_append(qrows,
                                                           edge_id=tempid,
                                                           node1=sid,
-                                                          label='site',
+                                                          label=SITELINK_SITE_LABEL,
                                                           node2=link)
 
                                         tempid=sid+'-title-1'
                                         self.qrows_append(qrows,
                                                           edge_id=tempid,
                                                           node1=sid,
-                                                          label='title',
+                                                          label=SITELINK_TITLE_LABEL,
                                                           node2=KgtkFormat.stringify(sitelinks[link]['title']))
 
-                                        badge_num: int = 0
+                                        qual_badge_num: int = 0
                                         for badge in sitelinks[link]['badges']:
-                                            tempid=sid+'-badge-'+str(badge_num + 1)
+                                            tempid=sid+'-badge-'+str(qual_badge_num + 1)
                                             self.qrows_append(qrows,
                                                               edge_id=tempid,
                                                               node1=sid,
-                                                              label='badge',
-                                                              node2=sitelinks[link]['badges'][badge_num])
-                                            badge_num += 1
+                                                              label=SITELINK_BADGE_LABEL,
+                                                              node2=sitelinks[link]['badges'][qual_badge_num])
+                                            qual_badge_num += 1
 
             if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0 or len(description_erows) > 0 or len(sitelink_erows) > 0:
                 if collect_results:
@@ -1740,16 +1821,22 @@ def run(input_file: KGTKFiles,
             self.split_dispatcher[DESCRIPTION_LABEL] = self.split_description
             self.split_dispatcher[LABEL_LABEL] = self.split_label
             self.split_dispatcher[SITELINK_LABEL] = self.split_sitelink
+            self.split_dispatcher[SITELINK_BADGE_LABEL] = self.split_sitelink
+            self.split_dispatcher[SITELINK_LANGUAGE_LABEL] = self.split_sitelink
+            self.split_dispatcher[SITELINK_SITE_LABEL] = self.split_sitelink
+            self.split_dispatcher[SITELINK_TITLE_LABEL] = self.split_sitelink
             self.split_dispatcher[TYPE_LABEL] = self.split_type
 
         def split_alias(self, row: typing.List[str])->bool:
             split: bool = False
 
+            lang: str = row[-1] # Hack: knows the structure of the row.
+
             if self.split_alias_wr is not None:
                 self.split_alias_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
                 split= True
                                     
-            if self.split_en_alias_wr is not None and row[-1] == "en":
+            if self.split_en_alias_wr is not None and lang == "en":
                 self.split_en_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
                 split = True
 
@@ -1767,11 +1854,13 @@ def run(input_file: KGTKFiles,
         def split_description(self, row: typing.List[str])->bool:
             split: bool = False
 
+            lang: str = row[-1] # Hack: knows the structure of the row.
+
             if self.split_description_wr is not None:
                 self.split_description_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
                 split = True
 
-            if self.split_en_description_wr is not None and row[-1] == "en":
+            if self.split_en_description_wr is not None and lang == "en":
                 self.split_en_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
                 split = True
                 
@@ -1780,11 +1869,13 @@ def run(input_file: KGTKFiles,
         def split_label(self, row: typing.List[str])->bool:
             split: bool = False
 
+            lang: str = row[-1] # Hack: knows the structure of the row.
+
             if self.split_label_wr is not None:
                 self.split_label_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
                 split = True
 
-            if self.split_en_label_wr is not None and row[-1] == "en":
+            if self.split_en_label_wr is not None and lang == "en":
                 self.split_en_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
                 split = True
 
@@ -1793,11 +1884,13 @@ def run(input_file: KGTKFiles,
         def split_sitelink(self, row: typing.List[str])->bool:
             split: bool = False
 
+            lang: str = row[-1] # Hack: knows the structure of the row.
+
             if self.split_sitelink_wr is not None:
                 self.split_sitelink_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
                 split = True
 
-            if self.split_en_sitelink_wr is not None and row[-1] == "en":
+            if self.split_en_sitelink_wr is not None and lang == "en":
                 self.split_en_sitelink_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
                 split = True
 
@@ -1825,7 +1918,6 @@ def run(input_file: KGTKFiles,
 
         if not skip_processing:
             print("Processing.", file=sys.stderr, flush=True)
-            languages=lang.split(',')
 
             # Open the input file first to make it easier to monitor with "pv".
             input_f: typing.IO[typing.Any]
