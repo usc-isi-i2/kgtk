@@ -139,10 +139,9 @@ def add_arguments(parser: KGTKArgumentParser):
         default=None,
         help='path to output qualifier file')
 
-    # Optionally write only the ID to the node file.
-    # This file contains just the list of node ID values.
+    # Optionally write only the ID column to the node file.
     parser.add_argument(
-        '--node-id-only',
+        '--node-file-id-only',
         nargs='?',
         type=optional_bool,
         dest="node_id_only",
@@ -152,7 +151,7 @@ def add_arguments(parser: KGTKArgumentParser):
         help='Option to write only the node ID in the node file. (default=%(default)s)')
 
     # The remaining files are KGTK edge files that split out
-    # special properties.
+    # special properties, removing them from the edge file.
     parser.add_argument(
         '--split-alias-file',
         action="store",
@@ -411,6 +410,17 @@ def add_arguments(parser: KGTKArgumentParser):
     )
 
     parser.add_argument(
+        "--parse-sitelinks",
+        nargs='?',
+        type=optional_bool,
+        dest="parse_sitelinks",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, parse sitelinks. (default=%(default)s).",
+    )
+
+    parser.add_argument(
         "--parse-claims",
         nargs='?',
         type=optional_bool,
@@ -512,6 +522,7 @@ def run(input_file: KGTKFiles,
         parse_aliases: bool,
         parse_descr: bool,
         parse_labels: bool,
+        parse_sitelinks: bool,
         parse_claims: bool,
         fail_if_missing: bool,
         all_languages: bool,
@@ -1006,7 +1017,6 @@ def run(input_file: KGTKFiles,
                                 if cp_rank != "deprecated" and cp_id in value_set:
                                     keep = False
                     if keep:
-                        sitelinks=obj.get('sitelinks',None)
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
                             seq_no = 1
@@ -1241,6 +1251,10 @@ def run(input_file: KGTKFiles,
                                                                           precision=precision,
                                                                           calendar=calendar)
                                                         
+                        if parse_sitelinks:
+                            sitelinks=obj.get('sitelinks',None)
+                        else:
+                            sitelinks = None
                         if sitelinks:
                             wikipedia_seq_no = 1
                             for link in sitelinks:

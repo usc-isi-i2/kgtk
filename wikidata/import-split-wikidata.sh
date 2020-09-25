@@ -21,24 +21,24 @@ kgtk ${KGTK_FLAGS} \
      --node ${DATADIR}/${WIKIDATA_ALL_NODES}.tsv \
      --edge ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv \
      --qual ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}.tsv \
-     --node-id-only \
+     --node-file-id-only \
      --explode-values False \
      --all-languages \
      --alias-edges True \
-     --split-alias-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-aliases-all-lang.tsv \
-     --split-en-alias-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-aliases-en-only.tsv \
+     --split-alias-file ${DATADIR}/${WIKIDATA_ALL}-aliases-all-lang.tsv \
+     --split-en-alias-file ${DATADIR}/${WIKIDATA_ALL}-aliases-en-only.tsv \
      --description-edges True \
-     --split-description-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-descriptions-all-lang.tsv \
-     --split-en-description-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-descriptions-en-only.tsv \
+     --split-description-file ${DATADIR}/${WIKIDATA_ALL}-descriptions-all-lang.tsv \
+     --split-en-description-file ${DATADIR}/${WIKIDATA_ALL}-descriptions-en-only.tsv \
      --label-edges True \
-     --split-label-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-labels-all-lang.tsv \
-     --split-en-label-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-labels-en-only.tsv \
+     --split-label-file ${DATADIR}/${WIKIDATA_ALL}-labels-all-lang.tsv \
+     --split-en-label-file ${DATADIR}/${WIKIDATA_ALL}-labels-en-only.tsv \
      --datatype-edges True \
-     --split-datatype-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-datatypes.tsv \
+     --split-datatype-file ${DATADIR}/${WIKIDATA_ALL}-datatypes.tsv \
      --entry-type-edges True \
-     --split-type-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-types.tsv \
-     --split-sitelink-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sitelinks-all-lang.tsv \
-     --split-en-sitelink-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sitelinks-en-only.tsv \
+     --split-type-file ${DATADIR}/${WIKIDATA_ALL}-types.tsv \
+     --split-sitelink-file ${DATADIR}/${WIKIDATA_ALL}-sitelinks-all-lang.tsv \
+     --split-en-sitelink-file ${DATADIR}/${WIKIDATA_ALL}-sitelinks-en-only.tsv \
      --use-kgtkwriter True \
      --use-shm True \
      --procs 5 \
