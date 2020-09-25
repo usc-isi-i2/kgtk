@@ -8,8 +8,11 @@ from kgtk.cli_entry import cli_entry
 class TestKGTKQuery(unittest.TestCase):
     def setUp(self) -> None:
         self.file_path = 'data/kypher/graph.tsv'
+        self.file_path_gz = 'data/kypher/graph.tsv.gz'
+        self.file_path_bz2 = 'data/kypher/graph.tsv.bz2'
         self.quals_path = 'data/kypher/quals.tsv'
         self.works_path = 'data/kypher/works.tsv'
+        self.props_path = 'data/kypher/props.tsv'
         self.temp_dir = tempfile.mkdtemp()
         self.df = pd.read_csv(self.file_path, sep='\t')
 
@@ -19,6 +22,16 @@ class TestKGTKQuery(unittest.TestCase):
     def test_kgtk_query_default(self):
         cli_entry("kgtk", "query", "-i", self.file_path, "-o", f'{self.temp_dir}/out.tsv')
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 9)
+
+    def test_kgtk_query_default_gzip(self):
+        cli_entry("kgtk", "query", "-i", self.file_path_gz, "-o", f'{self.temp_dir}/out.tsv.gz')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv.gz', sep='\t')
+        self.assertTrue(len(df) == 9)
+
+    def test_kgtk_query_default_bz2(self):
+        cli_entry("kgtk", "query", "-i", self.file_path_bz2, "-o", f'{self.temp_dir}/out.tsv.bz2')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv.bz2', sep='\t')
         self.assertTrue(len(df) == 9)
 
     def test_kgtk_query_match(self):
@@ -363,7 +376,6 @@ class TestKGTKQuery(unittest.TestCase):
         for i, row in df.iterrows():
             self.assertEqual(row['N'], 1)
 
-
     def test_kgtk_query_biggest_salary(self):
         cli_entry("kgtk", "query", "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
@@ -386,3 +398,65 @@ class TestKGTKQuery(unittest.TestCase):
         self.assertTrue('m12' in ids)
         self.assertTrue('m13' in ids)
         self.assertTrue('m14' in ids)
+
+    def test_kgtk_query_three_graphs(self):
+        cli_entry("kgtk", "query", "-i", self.works_path,
+                  "-i", self.quals_path,
+                  "-i", self.props_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "work: (x)-[r {label: rl}]->(y), qual: (r)-[rp {label: p}]->(time), prop: (p)-[:member]->(:set1)",
+                  "--where", 'time.kgtk_date_year <= 2000',
+                  "--return", 'r as id, x, rl, y, p as trel, time as time')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 3)
+        for i, row in df.iterrows():
+            if row['id'] == 'w12':
+                self.assertEqual(row['node1'], 'Otto')
+                self.assertEqual(row['node2'], 'Kaiser')
+                self.assertEqual(row['trel'], 'ends')
+                self.assertEqual(row['time'], '^1987-11-08T04:56:34Z/10')
+
+    def test_kgtk_query_property_enumeration_list(self):
+        cli_entry("kgtk", "query", "-i", self.works_path,
+                  "-i", self.quals_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "work: (x)-[r {label: rl}]->(y), qual: (r)-[rp {label: p}]->(time)",
+                  "--where", "p in ['starts', 'ends'] and time.kgtk_date_year <= 2000",
+                  "--return", 'r as id, x, rl, y, p as trel, time as time')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 3)
+        for i, row in df.iterrows():
+            if row['id'] == 'w12':
+                self.assertEqual(row['node1'], 'Otto')
+                self.assertEqual(row['node2'], 'Kaiser')
+                self.assertEqual(row['trel'], 'ends')
+                self.assertEqual(row['time'], '^1987-11-08T04:56:34Z/10')
+
+            if row['id'] == 'w11':
+                self.assertEqual(row['node1'], 'Hans')
+                self.assertEqual(row['node2'], 'ACME')
+                self.assertEqual(row['trel'], 'starts')
+                self.assertEqual(row['time'], '^1984-12-17T00:03:12Z/11')
+
+    def test_kgtk_query_multi_graph_regex(self):
+        cli_entry("kgtk", "query", "-i", self.works_path,
+                  "-i", self.quals_path,
+                  "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "work: (x)-[r {label: rl}]->(y), qual: (r)-[rp {label: p}]->(time)",
+                  "--where", "p =~ 's.*' and time.kgtk_date_year <= 2000",
+                  "--return", 'r as id, x, rl, y, p as trel, time as time',
+                  "--order-by", 'p desc, time asc')
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 2)
+        for i, row in df.iterrows():
+            if row['id'] == 'w13':
+                self.assertEqual(row['node1'], 'Joe')
+                self.assertEqual(row['node2'], 'Kaiser')
+                self.assertEqual(row['trel'], 'starts')
+                self.assertEqual(row['time'], '^1996-02-23T08:02:56Z/09')
+
+            if row['id'] == 'w11':
+                self.assertEqual(row['node1'], 'Hans')
+                self.assertEqual(row['node2'], 'ACME')
+                self.assertEqual(row['trel'], 'starts')
+                self.assertEqual(row['time'], '^1984-12-17T00:03:12Z/11')
