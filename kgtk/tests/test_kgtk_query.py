@@ -18,3 +18,13 @@ class TestKGTKQuery(unittest.TestCase):
         cli_entry("kgtk", "query", "-i", self.file_path, "-o", f'{self.temp_dir}/out.tsv')
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 9)
+
+    def test_kgtk_query_match(self):
+        cli_entry("kgtk", "query", "-i", self.file_path, "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  "(i)-[:loves]->(c)")
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 3)
+        ids = list(df['id'].unique())
+        self.assertTrue('e11' in ids)
+        self.assertTrue('e12' in ids)
+        self.assertTrue('e14' in ids)
