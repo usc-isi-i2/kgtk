@@ -1616,7 +1616,11 @@ def run(input_file: KGTKFiles,
 
             print("The %s collector has closed its output files." % who, file=sys.stderr, flush=True)
 
-        def collect(self, nrows, erows, qrows, who: str):
+        def collect(self,
+                    nrows: typing.List[typing.List[str]],
+                    erows: typing.List[typing.List[str]],
+                    qrows: typing.List[typing.List[str]],
+                    who: str):
             self.nrows += len(nrows)
             self.erows += len(erows)
             self.qrows += len(qrows)
@@ -1628,6 +1632,7 @@ def run(input_file: KGTKFiles,
                                                                                               self.nrows,
                                                                                               self.erows,
                                                                                               self.qrows), file=sys.stderr, flush=True)
+            row: typing.List[str]
             if len(nrows) > 0:
                 if self.node_wr is None:
                     raise ValueError("Unexpected node rows in the %s collector." % who)
@@ -1647,55 +1652,25 @@ def run(input_file: KGTKFiles,
                             self.edge_wr.write(row)
                     else:
                         for row in erows:
-                            lang: str = row[-1] # Hack: knows the structure of the row.
-                            is_english: bool = lang == "en"
                             split: bool = False
-                            label = row[2]
+                            label: str = row[2] # Hack: knows the structure of the row.
                             if label == ALIAS_LABEL:
-                                if self.split_alias_wr is not None:
-                                    self.split_alias_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
-                                    split = True
-                                    
-                                if self.split_en_alias_wr is not None and is_english:
-                                    self.split_en_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
-                                    split = True
+                                split = self.split_alias(row)
                                     
                             elif label == DATATYPE_LABEL:
-                                if self.split_datatype_wr is not None:
-                                    self.split_datatype_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
-                                    split = True
+                                split = self.split_datatype(row)
                                     
                             elif label == DESCRIPTION_LABEL:
-                                if self.split_description_wr is not None:
-                                    self.split_description_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
-                                    split = True
-
-                                if self.split_en_description_wr is not None and is_english:
-                                    self.split_en_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
-                                    split = True
+                                split = self.split_description(row)
 
                             elif label == LABEL_LABEL:
-                                if self.split_label_wr is not None:
-                                    self.split_label_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
-                                    split = True
-
-                                if self.split_en_label_wr is not None and is_english:
-                                    self.split_en_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
-                                    split = True
+                                split = self.split_label(row)
 
                             elif label == SITELINK_LABEL or label == ADDL_SITELINK_LABEL:
-                                if self.split_sitelink_wr is not None:
-                                    self.split_sitelink_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
-                                    split = True
-
-                                if self.split_en_sitelink_wr is not None and is_english:
-                                    self.split_en_sitelink_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
-                                    split = True
+                                split = self.split_sitelink(row)
 
                             elif label == TYPE_LABEL:
-                                if self.split_type_wr is not None:
-                                    self.split_type_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
-                                    split = True
+                                split = self.split_type(row)
 
                             if not split:
                                 if self.edge_wr is None:
@@ -1717,6 +1692,77 @@ def run(input_file: KGTKFiles,
                         self.qual_wr.write(row)
                 else:
                     self.qual_wr.writerows(qrows)
+
+        def split_alias(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            if self.split_alias_wr is not None:
+                self.split_alias_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
+                split= True
+                                    
+            if self.split_en_alias_wr is not None and row[-1] == "en":
+                self.split_en_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_datatype(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            if self.split_datatype_wr is not None:
+                self.split_datatype_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_description(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            if self.split_description_wr is not None:
+                self.split_description_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
+                split = True
+
+            if self.split_en_description_wr is not None and row[-1] == "en":
+                self.split_en_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+                
+            return split
+
+        def split_label(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            if self.split_label_wr is not None:
+                self.split_label_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
+                split = True
+
+            if self.split_en_label_wr is not None and row[-1] == "en":
+                self.split_en_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_sitelink(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            if self.split_sitelink_wr is not None:
+                self.split_sitelink_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
+                split = True
+
+            if self.split_en_sitelink_wr is not None and row[-1] == "en":
+                self.split_en_sitelink_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_type(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            if self.split_type_wr is not None:
+                self.split_type_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
 
     try:
         UPDATE_VERSION: str = "2020-09-14T22:13:50.434152+00:00#flOJV7jeH3XhclcGDslyMU2bCTa6Ra/VVIg8nxqFsYCYa2cbIG23Iz8MzuPSaDZhQLAWURR1MtCDltkkgv/3qQ=="
