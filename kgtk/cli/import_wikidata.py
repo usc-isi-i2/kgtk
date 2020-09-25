@@ -1397,6 +1397,7 @@ def run(input_file: KGTKFiles,
             self.n_type_rows: int = 0
 
             self.process_split_files: bool = False
+            self.setup_split_dispatcher()
 
             self.cnt: int = 0
 
@@ -1654,24 +1655,9 @@ def run(input_file: KGTKFiles,
                         for row in erows:
                             split: bool = False
                             label: str = row[2] # Hack: knows the structure of the row.
-                            if label == ALIAS_LABEL:
-                                split = self.split_alias(row)
-                                    
-                            elif label == DATATYPE_LABEL:
-                                split = self.split_datatype(row)
-                                    
-                            elif label == DESCRIPTION_LABEL:
-                                split = self.split_description(row)
-
-                            elif label == LABEL_LABEL:
-                                split = self.split_label(row)
-
-                            elif label == SITELINK_LABEL or label == ADDL_SITELINK_LABEL:
-                                split = self.split_sitelink(row)
-
-                            elif label == TYPE_LABEL:
-                                split = self.split_type(row)
-
+                            method: typing.Optional[typing.Callable[[typing.List[str]], bool]] = self.split_dispatcher.get(label)
+                            if method is not None:
+                                split = method(row)
                             if not split:
                                 if self.edge_wr is None:
                                     raise ValueError("Unexpected edge rows in the %s collector." % who)
@@ -1692,6 +1678,15 @@ def run(input_file: KGTKFiles,
                         self.qual_wr.write(row)
                 else:
                     self.qual_wr.writerows(qrows)
+
+        def setup_split_dispatcher(self):
+            self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
+            self.split_dispatcher[ALIAS_LABEL] = self.split_alias
+            self.split_dispatcher[DATATYPE_LABEL] = self.split_datatype
+            self.split_dispatcher[DESCRIPTION_LABEL] = self.split_description
+            self.split_dispatcher[LABEL_LABEL] = self.split_label
+            self.split_dispatcher[SITELINK_LABEL] = self.split_sitelink
+            self.split_dispatcher[TYPE_LABEL] = self.split_type
 
         def split_alias(self, row: typing.List[str])->bool:
             split: bool = False
