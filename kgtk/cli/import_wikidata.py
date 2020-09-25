@@ -558,6 +558,9 @@ def run(input_file: KGTKFiles,
     edge_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     qual_collector_q: typing.Optional[pyrallel.ShmQueue] = None
 
+    description_collector_q: typing.Optional[pyrallel.ShmQueue] = None
+    sitelink_collector_q: typing.Optional[pyrallel.ShmQueue] = None
+
     class MyMapper(pyrallel.Mapper):
 
         def enter(self):
@@ -641,6 +644,9 @@ def run(input_file: KGTKFiles,
                 self.collector_erows_batch = [ ]
                 self.collector_qrows_batch = [ ]
 
+                self.collector_description_erows_batch = [ ]
+                self.collector_sitelink_erows_batch = [ ]
+
             self.process_row_data = \
                 node_file or \
                 entry_type_edges or \
@@ -660,6 +666,11 @@ def run(input_file: KGTKFiles,
                                 edge_collector_q.put(("rows", [], self.collector_erows_batch, [], None))
                             if len(self.collector_qrows_batch) > 0:
                                 qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, None))
+
+                            if len(self.collector_description_erows_batch) > 0:
+                                description_collector_q.put(("rows", [], self.collector_description_erows_batch, [], None))
+                            if len(self.collector_sitelink_erows_batch) > 0:
+                                sitelink_collector_q.put(("rows", [], self.collector_sitelink_erows_batch, [], None))
                         else:
                             collector_q.put(("rows", self.collector_nrows_batch, self.collector_erows_batch, self.collector_qrows_batch, None))
                         
@@ -813,6 +824,10 @@ def run(input_file: KGTKFiles,
             nrows=[]
             erows=[]
             qrows=[]
+
+            description_erows = []
+            sitelink_erows = []
+
             clean_line = line.strip()
             if clean_line.endswith(b","):
                 clean_line = clean_line[:-1]
@@ -899,12 +914,12 @@ def run(input_file: KGTKFiles,
                                     descr_list.append(value)
                                     if descr_edges:
                                         sid = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
-                                        self.erows_append(erows,
-                                                          edge_id=sid,
-                                                          node1=qnode,
-                                                          label=DESCRIPTION_LABEL,
-                                                          node2=value,
-                                                          lang=lang)
+                                        self.erows_append(description_erows if collect_seperately else erows,
+                                                              edge_id=sid,
+                                                              node1=qnode,
+                                                              label=DESCRIPTION_LABEL,
+                                                              node2=value,
+                                                              lang=lang)
 
                         if not node_id_only:
                             if len(descr_list)>0:
@@ -1254,7 +1269,7 @@ def run(input_file: KGTKFiles,
 
                                 if sitelink is not None:
                                     if edge_file:
-                                        self.erows_append(erows,
+                                        self.erows_append(sitelink_erows if collect_seperately else erows,
                                                           edge_id=sid,
                                                           node1=qnode,
                                                           label=linklabel,
@@ -1293,32 +1308,56 @@ def run(input_file: KGTKFiles,
                                                               node2=sitelinks[link]['badges'][badge_num])
                                             badge_num += 1
 
-            if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0:               
+            if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0 or len(description_erows) > 0 or len(sitelink_erows) > 0:
                 if collect_results:
                     if collector_batch_size == 1:
                         if collect_seperately:
                             if len(nrows) > 0 and node_collector_q is not None:
                                 node_collector_q.put(("rows", nrows, [], [], None))
+
                             if len(erows) > 0 and edge_collector_q is not None:
                                 edge_collector_q.put(("rows", [], erows, [], None))
+
                             if len(qrows) > 0 and qual_collector_q is not None:
                                 qual_collector_q.put(("rows", nrows, [], [], None))
+
+                            if len(description_erows) > 0 and description_collector_q is not None:
+                                description_collector_q.put(("rows", [], description_erows, [], None))
+
+                            if len(sitelink_erows) > 0 and sitelink_collector_q is not None:
+                                sitelink_collector_q.put(("rows", [], sitelink_erows, [], None))
                         elif collector_q is not None:
                             collector_q.put(("rows", nrows, erows, qrows, None))
                     else:
                         self.collector_nrows_batch.extend(nrows)
                         self.collector_erows_batch.extend(erows)
                         self.collector_qrows_batch.extend(qrows)
-                        self.collector_batch_cnt += 1
 
+                        if collect_seperately:
+                            self.collector_description_erows_batch.extend(description_erows)
+                            self.collector_sitelink_erows_batch.extend(sitelink_erows)
+                            
+                        self.collector_batch_cnt += 1
+                        
                         if self.collector_batch_cnt >= collector_batch_size:
                             if collect_seperately:
                                 if len(self.collector_nrows_batch) > 0 and node_collector_q is not None:
                                     node_collector_q.put(("rows", self.collector_nrows_batch, [], [], None))
+
                                 if len(self.collector_erows_batch) > 0 and edge_collector_q is not None:
                                     edge_collector_q.put(("rows", [], self.collector_erows_batch, [], None))
+
                                 if len(self.collector_qrows_batch) > 0 and qual_collector_q is not None:
                                     qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, None))
+
+                                if len(self.collector_description_erows_batch) > 0 and description_collector_q is not None:
+                                    description_collector_q.put(("rows", [], self.collector_description_erows_batch, [], None))
+                                    self.collector_description_erows_batch.clear()
+
+                                if len(self.collector_sitelink_erows_batch) > 0 and sitelink_collector_q is not None:
+                                    sitelink_collector_q.put(("rows", [], self.collector_sitelink_erows_batch, [], None))
+                                    self.collector_sitelink_erows_batch.clear()
+                                
                             elif collector_q is not None:
                                 collector_q.put(("rows", self.collector_nrows_batch, self.collector_erows_batch, self.collector_qrows_batch, None))
 
@@ -1660,7 +1699,7 @@ def run(input_file: KGTKFiles,
                                 split = method(row)
                             if not split:
                                 if self.edge_wr is None:
-                                    raise ValueError("Unexpected edge rows in the %s collector." % who)
+                                    raise ValueError("Unexpected %s edge rows in the %s collector." % (label, who))
 
                                 self.edge_wr.write(row)
                 else:
@@ -1681,6 +1720,7 @@ def run(input_file: KGTKFiles,
 
         def setup_split_dispatcher(self):
             self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
+            self.split_dispatcher[ADDL_SITELINK_LABEL] = self.split_sitelink
             self.split_dispatcher[ALIAS_LABEL] = self.split_alias
             self.split_dispatcher[DATATYPE_LABEL] = self.split_datatype
             self.split_dispatcher[DESCRIPTION_LABEL] = self.split_description
@@ -1803,6 +1843,9 @@ def run(input_file: KGTKFiles,
             edge_collector_p = None
             qual_collector_p = None
 
+            description_collector_p = None
+            sitelink_collector_p = None
+
             if collect_results:
                 print("Creating the collector queue.", file=sys.stderr, flush=True)
                 # collector_q = pyrallel.ShmQueue()
@@ -1844,6 +1887,30 @@ def run(input_file: KGTKFiles,
                         print("Starting the qual collector process.", file=sys.stderr, flush=True)
                         qual_collector_p.start()
                         print("Started the qual collector process.", file=sys.stderr, flush=True)
+
+                    if split_description_file is not None:
+                        description_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector description queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+
+                        print("Creating the description collector.", file=sys.stderr, flush=True)
+                        description_collector: MyCollector = MyCollector()
+                        print("Creating the description collector process.", file=sys.stderr, flush=True)
+                        description_collector_p = mp.Process(target=description_collector.run, args=(description_collector_q, "description"))
+                        print("Starting the description collector process.", file=sys.stderr, flush=True)
+                        description_collector_p.start()
+                        print("Started the description collector process.", file=sys.stderr, flush=True)
+
+                    if split_sitelink_file is not None:
+                        sitelink_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector sitelink queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+
+                        print("Creating the sitelink collector.", file=sys.stderr, flush=True)
+                        sitelink_collector: MyCollector = MyCollector()
+                        print("Creating the sitelink collector process.", file=sys.stderr, flush=True)
+                        sitelink_collector_p = mp.Process(target=sitelink_collector.run, args=(sitelink_collector_q, "sitelink"))
+                        print("Starting the sitelink collector process.", file=sys.stderr, flush=True)
+                        sitelink_collector_p.start()
+                        print("Started the sitelink collector process.", file=sys.stderr, flush=True)
 
                 else:
                     collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
@@ -1888,8 +1955,8 @@ def run(input_file: KGTKFiles,
                                     'rank', 'node2;wikidatatype',
                                     'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
 
+            ecq = collector_q if collector_q is not None else edge_collector_q
             if edge_file:
-                ecq = collector_q if collector_q is not None else edge_collector_q
                 if ecq is not None:
                     print("Sending the edge header to the collector.", file=sys.stderr, flush=True)
                     ecq.put(("edge_header", None, None, None, edge_file_header))
@@ -1924,16 +1991,17 @@ def run(input_file: KGTKFiles,
                 ecq.put(("split_datatype_header", None, None, None, datatype_file_header))
                 print("Sent the datatype file header to the collector.", file=sys.stderr, flush=True)
 
-            if split_description_file and ecq is not None:
+            dcq = collector_q if collector_q is not None else description_collector_q
+            if split_description_file and dcq is not None:
                 description_file_header = ['id', 'node1', 'label', 'node2', 'lang']
                 print("Sending the description file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_description_header", None, None, None, description_file_header))
+                dcq.put(("split_description_header", None, None, None, description_file_header))
                 print("Sent the description file header to the collector.", file=sys.stderr, flush=True)
 
-            if split_en_description_file and ecq is not None:
+            if split_en_description_file and dcq is not None:
                 en_description_file_header = ['id', 'node1', 'label', 'node2']
                 print("Sending the English description file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_en_description_header", None, None, None, en_description_file_header))
+                dcq.put(("split_en_description_header", None, None, None, en_description_file_header))
                 print("Sent the English description file header to the collector.", file=sys.stderr, flush=True)
 
             if split_label_file and ecq is not None:
@@ -1948,16 +2016,17 @@ def run(input_file: KGTKFiles,
                 ecq.put(("split_en_label_header", None, None, None, en_label_file_header))
                 print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
 
-            if split_sitelink_file and ecq is not None:
+            scq = collector_q if collector_q is not None else sitelink_collector_q
+            if split_sitelink_file and scq is not None:
                 sitelink_file_header = ['id', 'node1', 'label', 'node2', 'lang']
                 print("Sending the sitelink file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_sitelink_header", None, None, None, sitelink_file_header))
+                scq.put(("split_sitelink_header", None, None, None, sitelink_file_header))
                 print("Sent the sitelink file header to the collector.", file=sys.stderr, flush=True)
 
-            if split_en_sitelink_file and ecq is not None:
+            if split_en_sitelink_file and scq is not None:
                 en_sitelink_file_header = ['id', 'node1', 'label', 'node2']
                 print("Sending the English sitelink file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_en_sitelink_header", None, None, None, en_sitelink_file_header))
+                scq.put(("split_en_sitelink_header", None, None, None, en_sitelink_file_header))
                 print("Sent the English sitelink file header to the collector.", file=sys.stderr, flush=True)
 
             if split_type_file and ecq is not None:
@@ -2059,6 +2128,26 @@ def run(input_file: KGTKFiles,
                 print('Qual collector shut down is complete.', file=sys.stderr, flush=True)
             if qual_collector_q is not None:
                 qual_collector_q.close()
+
+            if description_collector_q is not None:
+                print('Telling the description collector to shut down.', file=sys.stderr, flush=True)
+                description_collector_q.put(("shutdown", None, None, None, None))
+            if description_collector_p is not None:
+                print('Waiting for the description collector to shut down.', file=sys.stderr, flush=True)
+                description_collector_p.join()
+                print('Description collector shut down is complete.', file=sys.stderr, flush=True)
+            if description_collector_q is not None:
+                description_collector_q.close()
+
+            if sitelink_collector_q is not None:
+                print('Telling the sitelink collector to shut down.', file=sys.stderr, flush=True)
+                sitelink_collector_q.put(("shutdown", None, None, None, None))
+            if sitelink_collector_p is not None:
+                print('Waiting for the sitelink collector to shut down.', file=sys.stderr, flush=True)
+                sitelink_collector_p.join()
+                print('Sitelink collector shut down is complete.', file=sys.stderr, flush=True)
+            if sitelink_collector_q is not None:
+                sitelink_collector_q.close()
 
         if not skip_merging and not collect_results:
             # We've finished processing the input data, possibly using multiple

@@ -41,13 +41,13 @@ kgtk ${KGTK_FLAGS} \
      --split-en-sitelink-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sitelinks-en-only.tsv \
      --use-kgtkwriter True \
      --use-shm True \
-     --procs 4 \
+     --procs 5 \
      --mapper-batch-size 5 \
      --max-size-per-mapper-queue 10 \
      --single-mapper-queue True \
      --collect-results True \
      --collect-seperately True\
      --collector-batch-size 10 \
-     --collector-queue-per-proc-size 20 \
+     --collector-queue-per-proc-size 15 \
      --progress-interval 500000 \
     |& tee ${LOGDIR}/import-split-wikidata.log
