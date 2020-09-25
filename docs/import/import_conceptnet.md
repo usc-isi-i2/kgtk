@@ -1,9 +1,9 @@
-Import the entire ConceptNet, or just its English part, into KGTK format. 
+Import the entire ConceptNet, or just its English part, into KGTK format. Weights could optionally be stored in an auxiliary KGTK file. 
 
 ## Usage
 ```
 usage: kgtk import-conceptnet [-h] [-i INPUT_FILE] [--english_only]
-                              [-o OUTPUT_FILE]
+                              [-o OUTPUT_FILE] [--weights-file WEIGHTS_FILE]
                               [INPUT_FILE]
 
 positional arguments:
@@ -19,11 +19,14 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
+  --weights-file WEIGHTS_FILE
+                        A KGTK output file that will contain only the weights.
+                        (Optional, use '-' for stdout.)
 ```
 
 ## Examples
 
-Import the English part of ConceptNet into KGTK. 
+Import the English part of ConceptNet into KGTK. Don't import the weights. 
 
 ```
 kgtk import-conceptnet --english_only -i examples/conceptnet-assertions-5.7.0.csv -o conceptnet_en.tsv
