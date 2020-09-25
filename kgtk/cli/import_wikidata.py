@@ -139,53 +139,51 @@ def add_arguments(parser: KGTKArgumentParser):
         default=None,
         help='path to output qualifier file')
 
-    # Optionally write the node file as seperate components.
+    # Optionally write only the ID to the node file.
     # This file contains just the list of node ID values.
     parser.add_argument(
-        '--node-id-file',
-        action="store",
-        type=str,
-        dest="node_id_file",
-        default=None,
-        help='path to output node id file')
+        '--node-id-only',
+        action="store_true",
+        dest="node_id_only",
+        help='Option to write only the node ID in the node file')
 
-    # The remaining files are KGTK edge files that provide a single
-    # node property.
+    # The remaining files are KGTK edge files that split out
+    # special properties.
     parser.add_argument(
-        '--node-alias-file',
+        '--split-alias-file',
         action="store",
         type=str,
-        dest="node_alias_file",
+        dest="split_alias_file",
         default=None,
-        help='path to output node alias file')
+        help='path to output split alias file')
     parser.add_argument(
-        '--node-datatype-file',
+        '--split-datatype-file',
         action="store",
         type=str,
-        dest="node_datatype_file",
+        dest="split_datatype_file",
         default=None,
-        help='path to output node datatype file')
+        help='path to output split datatype file')
     parser.add_argument(
-        '--node-description-file',
+        '--split-description-file',
         action="store",
         type=str,
-        dest="node_desciption_file",
+        dest="split_desciption_file",
         default=None,
-        help='path to output node description file')
+        help='path to output splitdescription file')
     parser.add_argument(
-        '--node-label-file',
+        '--split-label-file',
         action="store",
         type=str,
-        dest="node_label_file",
+        dest="split_label_file",
         default=None,
-        help='path to output node label file')
+        help='path to output split label file')
     parser.add_argument(
-        '--node-type-file',
+        '--split-type-file',
         action="store",
         type=str,
-        dest="node_type_file",
+        dest="split_type_file",
         default=None,
-        help='path to output node entry type file')
+        help='path to output split entry type file')
 
     # TODO: Create a seperate file for the sitelinks.
 
@@ -445,12 +443,12 @@ def run(input_file: KGTKFiles,
         edge_file: typing.Optional[str],
         qual_file: typing.Optional[str],
 
-        node_id_file: typing.Optional[str],
-        node_alias_file: typing.Optional[str],
-        node_datatype_file: typing.Optional[str],
-        node_description_file: typing.Optional[str]
-        node_label_file: typing.Optional[str]
-        type_file: typing.Optional[str],
+        node_id_only: bool,
+        split_alias_file: typing.Optional[str],
+        split_datatype_file: typing.Optional[str],
+        split_description_file: typing.Optional[str],
+        split_label_file: typing.Optional[str],
+        split_type_file: typing.Optional[str],
 
         limit: int,
         lang: str,
@@ -502,6 +500,12 @@ def run(input_file: KGTKFiles,
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
+
+    ALIAS_LABEL: str = "alias"
+    DATATYPE_LABEL: str = "datatype"
+    DESCRIPTION_LABEL: str = "description"
+    LABEL_LABEL: str = "label"
+    TYPE_LABEL: str = "type"
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -591,6 +595,12 @@ def run(input_file: KGTKFiles,
                 self.collector_erows_batch = [ ]
                 self.collector_qrows_batch = [ ]
 
+            self.process_row_data = \
+                self.node_file or \
+                entry_type_edges or \
+                label_edges or \
+                alias_edges or \
+                descr_edges
 
         def exit(self, *args, **kwargs):
             print("Exiting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
@@ -746,12 +756,26 @@ def run(input_file: KGTKFiles,
                                   calendar=calendar)
             
         # def process(self,line,node_file,edge_file,qual_file,languages,source):
+        def process(self, line):
+            if progress_interval > 0 and self.cnt % progress_interval == 0 and self.cnt>0:
+                print("{} lines processed by processor {}".format(self.cnt,self._idx), file=sys.stderr, flush=True)
+            self.cnt+=1
+            # csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
+            nrows=[]
+            erows=[]
+            qrows=[]
+            clean_line = line.strip()
+            if clean_line.endswith(b","):
+                clean_line = clean_line[:-1]
+            if len(clean_line) > 1:
+                obj = json.loads(clean_line)
                 entry_type = obj["type"]
                 if entry_type == "item" or entry_type == "property":
                     keep = True
                 elif warn_if_missing:
                     print("Unknown object type {}.".format(entry_type), file=sys.stderr, flush=True)
-                if (node_file or entry_type_edges or label_edges or alias_edges or descr_edges) and keep:
+
+                if self.process_row_data and keep:
                     row = []
                     qnode = obj["id"]
                     row.append(qnode)
@@ -778,26 +802,29 @@ def run(input_file: KGTKFiles,
                                     label_list.append(value)
                                         
                                     if label_edges and edge_file:
-                                        sid = qnode + '-' + "label" + '-' + lang
+                                        sid = qnode + '-' + LABEL_LABEL + '-' + lang
                                         self.erows_append(erows,
                                                           edge_id=sid,
                                                           node1=qnode,
-                                                          label="label",
+                                                          label=LABEL_LABEL,
                                                           node2=value)
 
 
-                        if len(label_list)>0:
-                            row.append("|".join(label_list))
-                        else:
-                            row.append("")
+                        if not node_id_only:
+                            if len(label_list)>0:
+                                row.append("|".join(label_list))
+                            else:
+                                row.append("")
 
-                    row.append(entry_type)
+                    if not node_id_only:
+                        row.append(entry_type)
+                        
                     if entry_type_edges and edge_file:
-                        sid = qnode + '-' + "type"
+                        sid = qnode + '-' + TYPE_LABEL
                         self.erows_append(erows,
                                           edge_id=sid,
                                           node1=qnode,
-                                          label="type",
+                                          label=TYPE_LABEL,
                                           node2=entry_type)
 
                     if parse_descr:
@@ -821,17 +848,18 @@ def run(input_file: KGTKFiles,
                                     value = KgtkFormat.stringify(lang_descr['value'], language=lang)
                                     descr_list.append(value)
                                     if descr_edges and edge_file:
-                                        sid = qnode + '-' + "description" + '-' + lang
+                                        sid = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
                                         self.erows_append(erows,
                                                           edge_id=sid,
                                                           node1=qnode,
-                                                          label="description",
+                                                          label=DESCRIPTION_LABEL,
                                                           node2=value)
 
-                        if len(descr_list)>0:
-                            row.append("|".join(descr_list))
-                        else:
-                            row.append("")
+                        if not node_id_only:
+                            if len(descr_list)>0:
+                                row.append("|".join(descr_list))
+                            else:
+                                row.append("")
 
                     if parse_aliases:
                         aliases = obj.get("aliases")
@@ -856,22 +884,25 @@ def run(input_file: KGTKFiles,
                                         value = KgtkFormat.stringify(item['value'], language=lang)
                                         alias_list.append(value)
                                         if alias_edges and edge_file:
-                                            sid = qnode + '-' + "alias" + "-" + lang + '-' + str(seq_no)
+                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + str(seq_no)
                                             seq_no += 1
                                             self.erows_append(erows,
                                                               edge_id=sid,
                                                               node1=qnode,
-                                                              label="alias",
+                                                              label=ALIAS_LABEL,
                                                               node2=value)
 
 
-                        if len(alias_list)>0:
-                            row.append("|".join(alias_list))
-                        else:
-                            row.append("")
+                        if not node_id_only:
+                            if len(alias_list)>0:
+                                row.append("|".join(alias_list))
+                            else:
+                                row.append("")
 
+                    
                     datatype = obj.get("datatype", "")
-                    row.append(datatype)
+                    if not node_id_only:
+                        row.append(datatype)
                     if len(datatype) > 0 and datatype_edges and edge_file:
                         sid = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
@@ -879,7 +910,7 @@ def run(input_file: KGTKFiles,
                         self.erows_append(erows,
                                           edge_id=sid,
                                           node1=qnode,
-                                          label="datatype",
+                                          label=DATATYPE_LABEL,
                                           node2=datatype)
                     
                     #row.append(source)
@@ -1272,14 +1303,33 @@ def run(input_file: KGTKFiles,
             self.qual_wr = None
             self.qrows: int = 0
 
+            self.split_alias_f: typing.Optional[typing.TextIO] = None
+            self.split_alias_wr = None
+            self.n_alias_rows: int = 0
+
+            self.split_datatype_f: typing.Optional[typing.TextIO] = None
+            self.split_datatype_wr = None
+            self.n_datatype_rows: int = 0
+
+            self.split_description_f: typing.Optional[typing.TextIO] = None
+            self.split_description_wr = None
+            self.n_description_rows: int = 0
+
+            self.split_label_f: typing.Optional[typing.TextIO] = None
+            self.split_label_wr = None
+            self.n_label_rows: int = 0
+
+            self.split_type_f: typing.Optional[typing.TextIO] = None
+            self.split_type_wr = None
+            self.n_type_rows: int = 0
+
+            self.process_split_files: bool = False
+
             self.cnt: int = 0
 
             self.started: bool = False
 
         def run(self,
-                node_file: typing.Optional[str],
-                edge_file: typing.Optional[str],
-                qual_file: typing.Optional[str],
                 collector_q,
                 who: str):
             print("The %s collector is starting (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
@@ -1292,91 +1342,114 @@ def run(input_file: KGTKFiles,
                     self.collect(nrows, erows, qrows, who)
 
                 elif action == "node_header":
-                    self.open_node_file(node_file, header, who)
+                    self.open_node_file(header, who)
 
                 elif action == "edge_header":
-                    self.open_edge_file(edge_file, header, who)
+                    self.open_edge_file(header, who)
 
                 elif action == "qual_header":
-                    self.open_qual_file(qual_file, header, who)
+                    self.open_qual_file(header, who)
+
+                elif action == "split_alias_header":
+                    self.open_split_alias_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_datatype_header":
+                    self.open_split_datatype_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_description_header":
+                    self.open_split_description_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_label_header":
+                    self.open_split_label_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_type_header":
+                    self.open_split_type_file(header, who)
+                    self.process_split_files = True
 
                 elif action == "shutdown":
                     self.shutdown(who)
                     break
 
-        def open_node_file(self, node_file: typing.Optional[str], header: typing.List[str], who: str):
-            if node_file is None or len(node_file) == 0:
-                raise ValueError("Node header without a node file in the %s collector." % who)
+        def _open_file(self, the_file: typing.Optional[str], header: typing.List[str], file_type: str, who: str):
+            if the_file is None or len(the_file) == 0:
+                raise ValueError("%s header without a %s file in the %s collector." % (file_type, file_type, who))
 
+            f: typing.Optional[typing.TextIO]
+            wr: typing.Any
             if use_kgtkwriter:
-                print("Opening the node file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
-                self.node_wr = KgtkWriter.open(header, Path(node_file), who=who + " collector")
+                print("Opening the %s file in the %s collector with KgtkWriter." % (file_type, who), file=sys.stderr, flush=True)
+                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector")
+                return None, wr
                 
             else:
-                print("Opening the node file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
+                print("Opening the %s file in the %s collector with csv.writer." % (file_type, who), file=sys.stderr, flush=True)
                 csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-                self.node_f = open(node_file, "w", newline='')
-                self.node_wr = csv.writer(
-                    self.node_f,
+                f = open(the_file, "w", newline='')
+                wr = csv.writer(
+                    f,
                     quoting=csv.QUOTE_NONE,
                     delimiter="\t",
                     escapechar="\n",
                     quotechar='',
                     lineterminator=csv_line_terminator)
-                self.node_wr.writerow(header)
+                wr.writerow(header)
+                return f, wr
 
-        def open_edge_file(self, edge_file: typing.Optional[str], header: typing.List[str], who: str):
-            if edge_file is None or len(edge_file) == 0:
-                raise ValueError("Edge header without an edge file in the %s collector." % who)
+        def open_node_file(self, header: typing.List[str], who: str):
+            self.node_f, self.node_wr = self._open_file(node_file, header, "node", who)
 
-            if use_kgtkwriter:
-                print("Opening the edge file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
-                self.edge_wr = KgtkWriter.open(header, Path(edge_file), who=who + " collector")
-                
-            else:
-                print("Opening the edge file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
-                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-                self.edge_f = open(edge_file, "w", newline='')
-                self.edge_wr = csv.writer(
-                    self.edge_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-                self.edge_wr.writerow(header)
+        def open_edge_file(self, header: typing.List[str], who: str):
+            self.edge_f, self.edge_wr = self._open_file(edge_file, header, "edge", who)
 
-        def open_qual_file(self, qual_file: typing.Optional[str], header: typing.List[str], who: str):
-            if qual_file is None or len(qual_file) == 0:
-                raise ValueError("Qual header without a qual file in the %s collector." % who)
-
-            if use_kgtkwriter:
-                print("Opening the qual file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
-                self.qual_wr = KgtkWriter.open(header, Path(qual_file), who=who + " collector")
-                
-            else:
-                print("Opening the qual file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
-                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-                self.qual_f = open(qual_file, "w", newline='')
-                self.qual_wr = csv.writer(
-                    self.qual_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-                self.qual_wr.writerow(header)
+        def open_qual_file(self, header: typing.List[str], who: str):
+            self.qual_f, self.qual_wr = self._open_file(qual_file, header, "qual", who)
             
+        def open_split_alias_file(self, header: typing.List[str], who: str):
+            self.split_alias_f, self.split_alias_wr = self._open_file(split_alias_file, header, ALIAS_LABEL, who)
+
+        def open_split_datatype_file(self, header: typing.List[str], who: str):
+            self.split_datatype_f, self.split_datatype_wr = self._open_file(split_datatype_file, header, DATATYPE_LABEL, who)
+
+        def open_split_description_file(self, header: typing.List[str], who: str):
+            self.split_description_f, self.split_description_wr = self._open_file(split_description_file, header, DESCRIPTION_LABEL, who)
+
+        def open_split_label_file(self, header: typing.List[str], who: str):
+            self.split_label_f, self.split_label_wr = self._open_file(split_label_file, header, LABEL_LABEL, who)
+
+        def open_split_type_file(self, header: typing.List[str], who: str):
+            self.split_type_f, self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
+
         def shutdown(self, who: str):
             print("Exiting the %s collector (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
 
             if use_kgtkwriter:
                 if self.node_wr is not None:
                     self.node_wr.close()
+
                 if self.edge_wr is not None:
                     self.edge_wr.close()
+
                 if self.qual_wr is not None:
                     self.qual_wr.close()
+
+                if self.split_alias_wr is not None:
+                    self.split_alias_wr.close()
+
+                if self.split_datatype_wr is not None:
+                    self.split_datatype_wr.close()
+
+                if self.split_description_wr is not None:
+                    self.split_description_wr.close()
+
+                if self.split_label_wr is not None:
+                    self.split_label_wr.close()
+
+                if self.split_type_wr is not None:
+                    self.split_type_wr.close()
 
             else:
                 if self.node_f is not None:
@@ -1387,6 +1460,21 @@ def run(input_file: KGTKFiles,
 
                 if self.qual_f is not None:
                     self.qual_f.close()
+
+                if self.split_alias_f is not None:
+                    self.split_alias_f.close()
+
+                if self.split_datatype_f is not None:
+                    self.split_datatype_f.close()
+
+                if self.split_description_f is not None:
+                    self.split_description_f.close()
+
+                if self.split_label_f is not None:
+                    self.split_label_f.close()
+
+                if self.split_type_f is not None:
+                    self.split_type_f.close()
 
             print("The %s collector has closed its output files." % who, file=sys.stderr, flush=True)
 
@@ -1404,17 +1492,39 @@ def run(input_file: KGTKFiles,
                                                                                               self.qrows), file=sys.stderr, flush=True)
             if self.node_wr is not None:
                 if use_kgtkwriter:
-                    for row in nrows:
-                        self.node_wr.write(row)
+                        for row in nrows:
+                            self.node_wr.write(row)
                 else:
                     self.node_wr.writerows(nrows)
+                    
             elif len(nrows) > 0:
                 raise ValueError("Unexpected node rows in the %s collector." % who)
 
             if self.edge_wr is not None:
                 if use_kgtkwriter:
-                    for row in erows:
-                        self.edge_wr.write(row)
+                    if not self.process_split_files:
+                        for row in erows:
+                            self.edge_wr.write(row)
+                    else:
+                        for row in nrows:
+                            label = row[2]
+                            if self.split_alias_wr is not None and label == ALIAS_LABEL:
+                                self.split_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+
+                            elif self.split_datatype_wr is not None and label == DATATYPE_LABEL:
+                                self.split_datatype_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+
+                            elif self.split_description_wr is not None and label == DESCRIPTION_LABEL:
+                                self.split_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+
+                            elif self.split_label_wr is not None and label == LABEL_LABEL:
+                                self.split_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+
+                            elif self.split_type_wr is not None and label == TYPE_LABEL:
+                                self.split_type_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+
+                            else:
+                                self.edge_wr.write(row)
                 else:
                     self.edge_wr.writerows(erows)
             elif len(erows) > 0:
@@ -1486,7 +1596,7 @@ def run(input_file: KGTKFiles,
                         print("Creating the node_collector.", file=sys.stderr, flush=True)
                         node_collector: MyCollector = MyCollector()
                         print("Creating the node collector process.", file=sys.stderr, flush=True)
-                        node_collector_p = mp.Process(target=node_collector.run, args=(node_file, None, None, node_collector_q, "node"))
+                        node_collector_p = mp.Process(target=node_collector.run, args=(node_collector_q, "node"))
                         print("Starting the node collector process.", file=sys.stderr, flush=True)
                         node_collector_p.start()
                         print("Started the node collector process.", file=sys.stderr, flush=True)
@@ -1498,7 +1608,7 @@ def run(input_file: KGTKFiles,
                         print("Creating the edge_collector.", file=sys.stderr, flush=True)
                         edge_collector: MyCollector = MyCollector()
                         print("Creating the edge collector process.", file=sys.stderr, flush=True)
-                        edge_collector_p = mp.Process(target=edge_collector.run, args=(None, edge_file, None, edge_collector_q, "edge"))
+                        edge_collector_p = mp.Process(target=edge_collector.run, args=(edge_collector_q, "edge"))
                         print("Starting the edge collector process.", file=sys.stderr, flush=True)
                         edge_collector_p.start()
                         print("Started the edge collector process.", file=sys.stderr, flush=True)
@@ -1510,7 +1620,7 @@ def run(input_file: KGTKFiles,
                         print("Creating the qual_collector.", file=sys.stderr, flush=True)
                         qual_collector: MyCollector = MyCollector()
                         print("Creating the qual collector process.", file=sys.stderr, flush=True)
-                        qual_collector_p = mp.Process(target=qual_collector.run, args=(None, None, qual_file, qual_collector_q, "qual"))
+                        qual_collector_p = mp.Process(target=qual_collector.run, args=(qual_collector_q, "qual"))
                         print("Starting the qual collector process.", file=sys.stderr, flush=True)
                         qual_collector_p.start()
                         print("Started the qual collector process.", file=sys.stderr, flush=True)
@@ -1528,16 +1638,16 @@ def run(input_file: KGTKFiles,
                     print("Started the common collector process.", file=sys.stderr, flush=True)
 
             if node_file:
-                header = ['id','label','type','description','alias','datatype']
-                if collector_q is not None:
-                    print("Sending the node header to the collector.", file=sys.stderr, flush=True)
-                    collector_q.put(("node_header", None, None, None, header))
-                    print("Sent the node header to the collector.", file=sys.stderr, flush=True)
+                if node_id_only:
+                    header = ['id']
+                else:
+                    header = ['id','label','type','description','alias','datatype']
 
-                elif node_collector_q is not None:
-                    print("Sending the node header to the node collector.", file=sys.stderr, flush=True)
-                    node_collector_q.put(("node_header", None, None, None, header))
-                    print("Sent the node header to the node collector.", file=sys.stderr, flush=True)
+                ncq = collector_q if collector_q is not None else node_collector_q
+                if ncq is not None:
+                    print("Sending the node header to the collector.", file=sys.stderr, flush=True)
+                    ncq.put(("node_header", None, None, None, header))
+                    print("Sent the node header to the collector.", file=sys.stderr, flush=True)
 
                 else:
                     with open(node_file+'_header', 'w', newline='') as myfile:
@@ -1549,6 +1659,7 @@ def run(input_file: KGTKFiles,
                             quotechar='',
                             lineterminator=csv_line_terminator)
                         wr.writerow(header)
+
             if explode_values:
                 header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
                           'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype']
@@ -1558,15 +1669,11 @@ def run(input_file: KGTKFiles,
                           'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar']
 
             if edge_file:
-                if collector_q is not None:
+                ecq = collector_q if collector_q is not None else edge_collector_q
+                if ecq is not None:
                     print("Sending the edge header to the collector.", file=sys.stderr, flush=True)
-                    collector_q.put(("edge_header", None, None, None, header))
+                    ecq.put(("edge_header", None, None, None, header))
                     print("Sent the edge header to the collector.", file=sys.stderr, flush=True)
-
-                elif edge_collector_q is not None:
-                    print("Sending the edge header to the edge collector.", file=sys.stderr, flush=True)
-                    edge_collector_q.put(("edge_header", None, None, None, header))
-                    print("Sent the edge header to the edge collector.", file=sys.stderr, flush=True)
 
                 else:
                     with open(edge_file+'_header', 'w', newline='') as myfile:
@@ -1578,6 +1685,38 @@ def run(input_file: KGTKFiles,
                             quotechar='',
                             lineterminator=csv_line_terminator)
                         wr.writerow(header)
+
+            if split_alias_file and ecq is not None:
+                header = ['id', 'node1', 'label', 'node2']
+                print("Sending the node alias header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_alias_header", None, None, None, header))
+                print("Sent the node alias header to the collector.", file=sys.stderr, flush=True)
+
+            if split_datatype_file and ecq is not None:
+                header = ['id', 'node1', 'label', 'node2']
+                print("Sending the node datatype header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_datatype_header", None, None, None, header))
+                print("Sent the node datatype header to the collector.", file=sys.stderr, flush=True)
+
+            if split_description_file and ecq is not None:
+                header = ['id', 'node1', 'label', 'node2']
+                print("Sending the node description header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_description_header", None, None, None, header))
+                print("Sent the node description header to the collector.", file=sys.stderr, flush=True)
+
+            if split_label_file and ecq is not None:
+                header = ['id', 'node1', 'label', 'node2']
+                print("Sending the node label header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_label_header", None, None, None, header))
+                print("Sent the node label header to the collector.", file=sys.stderr, flush=True)
+
+            if split_type_file and ecq is not None:
+                header = ['id', 'node1', 'label', 'node2']
+                print("Sending the node type header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_type_header", None, None, None, header))
+                print("Sent the node type header to the collector.", file=sys.stderr, flush=True)
+
+
             if qual_file:
                 if "rank" in header:
                     header.remove('rank')
@@ -1586,15 +1725,11 @@ def run(input_file: KGTKFiles,
                 if "claim_id" in header:
                     header.remove('claim_id')
 
-                if collector_q is not None:
+                qcq = collector_q if collector_q is not None else qual_collector_q
+                if qcq is not None:
                     print("Sending the qual header to the collector.", file=sys.stderr, flush=True)
-                    collector_q.put(("qual_header", None, None, None, header))
+                    qcq.put(("qual_header", None, None, None, header))
                     print("Sent the qual header to the collector.", file=sys.stderr, flush=True)
-
-                elif qual_collector_q is not None:
-                    print("Sending the qual header to the qual collector.", file=sys.stderr, flush=True)
-                    qual_collector_q.put(("qual_header", None, None, None, header))
-                    print("Sent the qual header to the qual collector.", file=sys.stderr, flush=True)
 
                 else:
                     with open(qual_file+'_header', 'w', newline='') as myfile:
