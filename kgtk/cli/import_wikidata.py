@@ -1647,12 +1647,13 @@ def run(input_file: KGTKFiles,
                             self.edge_wr.write(row)
                     else:
                         for row in erows:
-                            is_english: bool = row[-1] == "en"
+                            lang: str = row[-1] # Hack: knows the structure of the row.
+                            is_english: bool = lang == "en"
                             split: bool = False
                             label = row[2]
                             if label == ALIAS_LABEL:
                                 if self.split_alias_wr is not None:
-                                    self.split_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    self.split_alias_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
                                     split = True
                                     
                                 if self.split_en_alias_wr is not None and is_english:
@@ -1666,7 +1667,7 @@ def run(input_file: KGTKFiles,
                                     
                             elif label == DESCRIPTION_LABEL:
                                 if self.split_description_wr is not None:
-                                    self.split_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    self.split_description_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
                                     split = True
 
                                 if self.split_en_description_wr is not None and is_english:
@@ -1675,7 +1676,7 @@ def run(input_file: KGTKFiles,
 
                             elif label == LABEL_LABEL:
                                 if self.split_label_wr is not None:
-                                    self.split_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    self.split_label_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
                                     split = True
 
                                 if self.split_en_label_wr is not None and is_english:
@@ -1684,7 +1685,7 @@ def run(input_file: KGTKFiles,
 
                             elif label == SITELINK_LABEL or label == ADDL_SITELINK_LABEL:
                                 if self.split_sitelink_wr is not None:
-                                    self.split_sitelink_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    self.split_sitelink_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
                                     split = True
 
                                 if self.split_en_sitelink_wr is not None and is_english:
@@ -1865,7 +1866,7 @@ def run(input_file: KGTKFiles,
                         wr.writerow(edge_file_header)
 
             if split_alias_file and ecq is not None:
-                alias_file_header = ['id', 'node1', 'label', 'node2']
+                alias_file_header = ['id', 'node1', 'label', 'node2', 'lang']
                 print("Sending the alias file header to the collector.", file=sys.stderr, flush=True)
                 ecq.put(("split_alias_header", None, None, None, alias_file_header))
                 print("Sent the alias file header to the collector.", file=sys.stderr, flush=True)
@@ -1883,7 +1884,7 @@ def run(input_file: KGTKFiles,
                 print("Sent the datatype file header to the collector.", file=sys.stderr, flush=True)
 
             if split_description_file and ecq is not None:
-                description_file_header = ['id', 'node1', 'label', 'node2']
+                description_file_header = ['id', 'node1', 'label', 'node2', 'lang']
                 print("Sending the description file header to the collector.", file=sys.stderr, flush=True)
                 ecq.put(("split_description_header", None, None, None, description_file_header))
                 print("Sent the description file header to the collector.", file=sys.stderr, flush=True)
@@ -1895,7 +1896,7 @@ def run(input_file: KGTKFiles,
                 print("Sent the English description file header to the collector.", file=sys.stderr, flush=True)
 
             if split_label_file and ecq is not None:
-                label_file_header = ['id', 'node1', 'label', 'node2']
+                label_file_header = ['id', 'node1', 'label', 'node2', 'lang']
                 print("Sending the label file header to the collector.", file=sys.stderr, flush=True)
                 ecq.put(("split_label_header", None, None, None, label_file_header))
                 print("Sent the label file header to the collector.", file=sys.stderr, flush=True)
@@ -1907,7 +1908,7 @@ def run(input_file: KGTKFiles,
                 print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
 
             if split_sitelink_file and ecq is not None:
-                sitelink_file_header = ['id', 'node1', 'label', 'node2']
+                sitelink_file_header = ['id', 'node1', 'label', 'node2', 'lang']
                 print("Sending the sitelink file header to the collector.", file=sys.stderr, flush=True)
                 ecq.put(("split_sitelink_header", None, None, None, sitelink_file_header))
                 print("Sent the sitelink file header to the collector.", file=sys.stderr, flush=True)
