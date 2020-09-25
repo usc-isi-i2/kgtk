@@ -124,13 +124,23 @@ def add_arguments(parser: KGTKArgumentParser):
         dest="node_file",
         default=None,
         help='path to output node file')
+
     parser.add_argument(
-        "--edge", '--edge-file',
+        "--edge", '--edge-file', '--detailed-edge-file',
         action="store",
         type=str,
-        dest="edge_file",
+        dest="detailed_edge_file",
         default=None,
-        help='path to output edge file')
+        help='path to output edge file with detailed data')
+
+    parser.add_argument(
+        '--minimal-edge-file',
+        action="store",
+        type=str,
+        dest="minimal_edge_file",
+        default=None,
+        help='path to output edge file with minimal data')
+
     parser.add_argument(
         "--qual", '--qual-file',
         action="store",
@@ -522,7 +532,8 @@ def run(input_file: KGTKFiles,
         procs: int,
         max_size_per_mapper_queue: int,
         node_file: typing.Optional[str],
-        edge_file: typing.Optional[str],
+        detailed_edge_file: typing.Optional[str],
+        minimal_edge_file: typing.Optional[str],
         qual_file: typing.Optional[str],
 
         node_id_only: bool,
@@ -670,8 +681,8 @@ def run(input_file: KGTKFiles,
                     lineterminator=csv_line_terminator)
                 
             self.edge_f = None
-            if edge_file and not collect_results:
-                self.edge_f = open(edge_file+'_{}'.format(self._idx), self.write_mode, newline='')
+            if detailed_edge_file and not collect_results:
+                self.edge_f = open(detailed_edge_file+'_{}'.format(self._idx), self.write_mode, newline='')
                 self.edge_wr = csv.writer(
                     self.edge_f,
                     quoting=csv.QUOTE_NONE,
@@ -760,43 +771,44 @@ def run(input_file: KGTKFiles,
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
 
-            if edge_file:
-                if explode_values:
-                    erows.append([edge_id,
-                                  node1,
-                                  label,
-                                  node2,
-                                  rank,
-                                  magnitude,
-                                  unit,
-                                  date,
-                                  item,
-                                  lower,
-                                  upper,
-                                  latitude,
-                                  longitude,
-                                  precision,
-                                  calendar,
-                                  entity_type,
-                                  wikidatatype,
-                                  entrylang,
-                    ])
-                else:
-                    erows.append([edge_id,
-                                  node1,
-                                  label,
-                                  node2,
-                                  rank,
-                                  wikidatatype,
-                                  claim_id,
-                                  # claim_type,
-                                  val_type,
-                                  entity_type,
-                                  datahash,
-                                  precision,
-                                  calendar,
-                                  entrylang,
-                    ])
+            if explode_values:
+                erows.append([edge_id,
+                              node1,
+                              label,
+                              node2,
+                              rank,
+                              magnitude,
+                              unit,
+                              date,
+                              item,
+                              lower,
+                              upper,
+                              latitude,
+                              longitude,
+                              precision,
+                              calendar,
+                              entity_type,
+                              wikidatatype,
+                              entrylang,
+                              ]
+                             )
+            else:
+                erows.append([edge_id,
+                              node1,
+                              label,
+                              node2,
+                              rank,
+                              wikidatatype,
+                              claim_id,
+                              # claim_type,
+                              val_type,
+                              entity_type,
+                              datahash,
+                              precision,
+                              calendar,
+                              entrylang,
+                              ]
+                             )
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
                          magnitude="",
@@ -1037,13 +1049,13 @@ def run(input_file: KGTKFiles,
                     if node_file:
                         nrows.append(row)
 
-                if (edge_file or qual_file) and parse_claims and "claims" not in obj:
+                if parse_claims and "claims" not in obj:
                     if fail_if_missing:
                         raise KGTKException("Qnode %s is missing its claims" % qnode)
                     elif warn_if_missing:
                         print("Object id {} is missing its claims.".format(qnode), file=sys.stderr, flush=True)
                     
-                if (edge_file or qual_file) and parse_claims and "claims" in obj:
+                if parse_claims and "claims" in obj:
                     claims = obj["claims"]
                     for prop, value_set in self.neg_prop_filter.items():
                         claim_property = claims.get(prop, None)
@@ -1153,7 +1165,7 @@ def run(input_file: KGTKFiles,
                                         # value = '\"' + val.replace('"','\\"').replace("|", "\\|") + '\"'
                                         value = KgtkFormat.stringify(val)
 
-                                    if edge_file:
+                                    if minimal_edge_file is not None or detailed_edge_file is not None:
                                         self.erows_append(erows,
                                                           edge_id=sid,
                                                           node1=qnode,
@@ -1466,7 +1478,7 @@ def run(input_file: KGTKFiles,
                         for row in nrows:
                             self.node_wr.writerow(row)
 
-                    if edge_file:
+                    if detailed_edge_file:
                         for row in erows:
                             self.edge_wr.writerow(row)
 
@@ -1482,8 +1494,11 @@ def run(input_file: KGTKFiles,
             self.node_wr = None
             self.nrows: int = 0
 
-            self.edge_f: typing.Optional[typing.TextIO] = None
-            self.edge_wr = None
+            self.minimal_edge_f: typing.Optional[typing.TextIO] = None
+            self.minimal_edge_wr = None
+
+            self.detailed_edge_f: typing.Optional[typing.TextIO] = None
+            self.detailed_edge_wr = None
             self.erows: int = 0
 
             self.qual_f: typing.Optional[typing.TextIO] = None
@@ -1552,8 +1567,12 @@ def run(input_file: KGTKFiles,
                 elif action == "node_header":
                     self.open_node_file(header, who)
 
-                elif action == "edge_header":
-                    self.open_edge_file(header, who)
+                elif action == "minimal_edge_header":
+                    self.open_minimal_edge_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "detailed_edge_header":
+                    self.open_detailed_edge_file(header, who)
 
                 elif action == "qual_header":
                     self.open_qual_file(header, who)
@@ -1630,8 +1649,11 @@ def run(input_file: KGTKFiles,
         def open_node_file(self, header: typing.List[str], who: str):
             self.node_f, self.node_wr = self._open_file(node_file, header, "node", who)
 
-        def open_edge_file(self, header: typing.List[str], who: str):
-            self.edge_f, self.edge_wr = self._open_file(edge_file, header, "edge", who)
+        def open_minimal_edge_file(self, header: typing.List[str], who: str):
+            self.minimal_edge_f, self.minimal_edge_wr = self._open_file(minimal_edge_file, header, "minimal edge", who)
+
+        def open_detailed_edge_file(self, header: typing.List[str], who: str):
+            self.detailed_edge_f, self.detailed_edge_wr = self._open_file(detailed_edge_file, header, "detailed edge", who)
 
         def open_qual_file(self, header: typing.List[str], who: str):
             self.qual_f, self.qual_wr = self._open_file(qual_file, header, "qual", who)
@@ -1673,8 +1695,11 @@ def run(input_file: KGTKFiles,
                 if self.node_wr is not None:
                     self.node_wr.close()
 
-                if self.edge_wr is not None:
-                    self.edge_wr.close()
+                if self.minimal_edge_wr is not None:
+                    self.minimal_edge_wr.close()
+
+                if self.detailed_edge_wr is not None:
+                    self.detailed_edge_wr.close()
 
                 if self.qual_wr is not None:
                     self.qual_wr.close()
@@ -1713,8 +1738,11 @@ def run(input_file: KGTKFiles,
                 if self.node_f is not None:
                     self.node_f.close()
 
-                if self.edge_f is not None:
-                    self.edge_f.close()
+                if self.minimal_edge_f is not None:
+                    self.minimal_edge_f.close()
+
+                if self.detailed_edge_f is not None:
+                    self.detailed_edge_f.close()
 
                 if self.qual_f is not None:
                     self.qual_f.close()
@@ -1781,10 +1809,10 @@ def run(input_file: KGTKFiles,
             if len(erows) > 0:
                 if use_kgtkwriter:
                     if not self.process_split_files:
-                        if self.edge_wr is None:
+                        if self.detailed_edge_wr is None:
                             raise ValueError("Unexpected edge rows in the %s collector." % who)
                         for row in erows:
-                            self.edge_wr.write(row)
+                            self.detailed_edge_wr.write(row)
                     else:
                         for row in erows:
                             split: bool = False
@@ -1793,15 +1821,19 @@ def run(input_file: KGTKFiles,
                             if method is not None:
                                 split = method(row)
                             if not split:
-                                if self.edge_wr is None:
+                                if self.minimal_edge_wr is None and self.detailed_edge_wr is None:
                                     raise ValueError("Unexpected %s edge rows in the %s collector." % (label, who))
 
-                                self.edge_wr.write(row)
+                                if self.minimal_edge_wr is not None:
+                                    self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+
+                                if self.detailed_edge_wr is not None:
+                                    self.detailed_edge_wr.write(row)
                 else:
-                    if self.edge_wr is None:
+                    if self.minimal_edge_wr is None:
                         raise ValueError("Unexpected edge rows in the %s collector." % who)
 
-                    self.edge_wr.writerows(erows)
+                    self.minimal_edge_wr.writerows(erows)
 
             if len(qrows) > 0:
                 if self.qual_wr is None:
@@ -1970,7 +2002,7 @@ def run(input_file: KGTKFiles,
                         node_collector_p.start()
                         print("Started the node collector process.", file=sys.stderr, flush=True)
 
-                    if edge_file is not None:
+                    if minimal_edge_file is not None or detailed_edge_file is not None:
                         edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
                         print("The collector edge queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
 
@@ -2025,7 +2057,7 @@ def run(input_file: KGTKFiles,
                     print("Creating the common collector.", file=sys.stderr, flush=True)
                     collector: MyCollector = MyCollector()
                     print("Creating the common collector process.", file=sys.stderr, flush=True)
-                    collector_p = mp.Process(target=collector.run, args=(node_file, edge_file, qual_file, collector_q, "common"))
+                    collector_p = mp.Process(target=collector.run, args=(collector_q, "common"))
                     print("Starting the common collector process.", file=sys.stderr, flush=True)
                     collector_p.start()
                     print("Started the common collector process.", file=sys.stderr, flush=True)
@@ -2062,14 +2094,14 @@ def run(input_file: KGTKFiles,
                                     'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
 
             ecq = collector_q if collector_q is not None else edge_collector_q
-            if edge_file:
+            if detailed_edge_file:
                 if ecq is not None:
-                    print("Sending the edge header to the collector.", file=sys.stderr, flush=True)
-                    ecq.put(("edge_header", None, None, None, edge_file_header))
-                    print("Sent the edge header to the collector.", file=sys.stderr, flush=True)
+                    print("Sending the detailed edge header to the collector.", file=sys.stderr, flush=True)
+                    ecq.put(("detailed_edge_header", None, None, None, edge_file_header))
+                    print("Sent the detailed edge header to the collector.", file=sys.stderr, flush=True)
 
                 else:
-                    with open(edge_file+'_header', 'w', newline='') as myfile:
+                    with open(detailed_edge_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
                             myfile,
                             quoting=csv.QUOTE_NONE,
@@ -2078,6 +2110,11 @@ def run(input_file: KGTKFiles,
                             quotechar='',
                             lineterminator=csv_line_terminator)
                         wr.writerow(edge_file_header)
+
+            if minimal_edge_file and ecq is not None:
+                print("Sending the minimal edge file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("minimal_edge_header", None, None, None, edge_file_header[0:6]))
+                print("Sent the minimal edge file header to the collector.", file=sys.stderr, flush=True)
 
             if split_alias_file and ecq is not None:
                 alias_file_header = ['id', 'node1', 'label', 'node2', 'lang']
@@ -2270,12 +2307,12 @@ def run(input_file: KGTKFiles,
                     node_file_fragments.append(node_file+'_'+str(n))
                 platform_cat(node_file_fragments, node_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
-            if edge_file:
+            if detailed_edge_file:
                 print('Combining the edge file fragments', file=sys.stderr, flush=True)
-                edge_file_fragments=[edge_file+'_header']
+                edge_file_fragments=[detailed_edge_file+'_header']
                 for n in range(procs):
-                    edge_file_fragments.append(edge_file+'_'+str(n))
-                platform_cat(edge_file_fragments, edge_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
+                    edge_file_fragments.append(detailed_edge_file+'_'+str(n))
+                platform_cat(edge_file_fragments, detailed_edge_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
             if qual_file:
                 print('Combining the qualifier file fragments', file=sys.stderr, flush=True)
