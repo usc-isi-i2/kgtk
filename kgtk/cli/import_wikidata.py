@@ -311,7 +311,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="entry_type_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for the entry type field. (default=%(default)s).",
     )
@@ -322,7 +322,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="alias_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for aliases. (default=%(default)s).",
     )
@@ -334,7 +334,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="datatype_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for property datatypes. (default=%(default)s).",
     )
@@ -346,7 +346,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="descr_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for descriptions. (default=%(default)s).",
     )
@@ -358,7 +358,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="label_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for labels. (default=%(default)s).",
     )
