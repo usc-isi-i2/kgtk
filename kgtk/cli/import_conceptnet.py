@@ -117,6 +117,7 @@ def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles, weights_fil
 
         # Clean up
         ew.close()
+        ew_aux.close()
 
     except Exception as e:
         kgtk_exception_auto_handler(e)
