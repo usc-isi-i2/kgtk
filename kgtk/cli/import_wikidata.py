@@ -832,7 +832,7 @@ def run(input_file: KGTKFiles,
                                     value = KgtkFormat.stringify(lang_label['value'], language=lang)
                                     label_list.append(value)
                                         
-                                    if label_edges and edge_file:
+                                    if label_edges:
                                         sid = qnode + '-' + LABEL_LABEL + '-' + lang
                                         self.erows_append(erows,
                                                           edge_id=sid,
@@ -851,7 +851,7 @@ def run(input_file: KGTKFiles,
                     if not node_id_only:
                         row.append(entry_type)
                         
-                    if entry_type_edges and edge_file:
+                    if entry_type_edges:
                         sid = qnode + '-' + TYPE_LABEL
                         self.erows_append(erows,
                                           edge_id=sid,
@@ -879,7 +879,7 @@ def run(input_file: KGTKFiles,
                                     # descr_list.append('\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_descr['value'], language=lang)
                                     descr_list.append(value)
-                                    if descr_edges and edge_file:
+                                    if descr_edges:
                                         sid = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
                                         self.erows_append(erows,
                                                           edge_id=sid,
@@ -916,7 +916,7 @@ def run(input_file: KGTKFiles,
                                         # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
                                         value = KgtkFormat.stringify(item['value'], language=lang)
                                         alias_list.append(value)
-                                        if alias_edges and edge_file:
+                                        if alias_edges:
                                             sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + str(seq_no)
                                             seq_no += 1
                                             self.erows_append(erows,
@@ -937,7 +937,7 @@ def run(input_file: KGTKFiles,
                     datatype = obj.get("datatype", "")
                     if not node_id_only:
                         row.append(datatype)
-                    if len(datatype) > 0 and datatype_edges and edge_file:
+                    if len(datatype) > 0 and datatype_edges:
                         sid = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
                         # there's no need to stringify it.
@@ -1586,11 +1586,10 @@ def run(input_file: KGTKFiles,
                     self.node_wr.writerows(nrows)
 
             if len(erows) > 0:
-                if self.edge_wr is None:
-                    raise ValueError("Unexpected edge rows in the %s collector." % who)
-
                 if use_kgtkwriter:
                     if not self.process_split_files:
+                        if self.edge_wr is None:
+                            raise ValueError("Unexpected edge rows in the %s collector." % who)
                         for row in erows:
                             self.edge_wr.write(row)
                     else:
@@ -1636,8 +1635,14 @@ def run(input_file: KGTKFiles,
                                     split = True
 
                             if not split:
+                                if self.edge_wr is None:
+                                    raise ValueError("Unexpected edge rows in the %s collector." % who)
+
                                 self.edge_wr.write(row)
                 else:
+                    if self.edge_wr is None:
+                        raise ValueError("Unexpected edge rows in the %s collector." % who)
+
                     self.edge_wr.writerows(erows)
 
             if len(qrows) > 0:
