@@ -203,6 +203,20 @@ def add_arguments(parser: KGTKArgumentParser):
         default=None,
         help='path to output split English label file')
     parser.add_argument(
+        '--split-sitelink-file',
+        action="store",
+        type=str,
+        dest="split_sitelink_file",
+        default=None,
+        help='path to output split sitelink file')
+    parser.add_argument(
+        '--split-en-sitelink-file',
+        action="store",
+        type=str,
+        dest="split_en_sitelink_file",
+        default=None,
+        help='path to output split English sitelink file')
+    parser.add_argument(
         '--split-type-file',
         action="store",
         type=str,
@@ -476,6 +490,8 @@ def run(input_file: KGTKFiles,
         split_en_description_file: typing.Optional[str],
         split_label_file: typing.Optional[str],
         split_en_label_file: typing.Optional[str],
+        split_sitelink_file: typing.Optional[str],
+        split_en_sitelink_file: typing.Optional[str],
         split_type_file: typing.Optional[str],
 
         limit: int,
@@ -529,10 +545,12 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
 
+    ADDL_SITELINK_LABEL: str = "addl_wikipedia_sitelink"
     ALIAS_LABEL: str = "alias"
     DATATYPE_LABEL: str = "datatype"
     DESCRIPTION_LABEL: str = "description"
     LABEL_LABEL: str = "label"
+    SITELINK_LABEL: str = "wikipedia_sitelink"
     TYPE_LABEL: str = "type"
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -1214,21 +1232,21 @@ def run(input_file: KGTKFiles,
                                 # TODO: If the title might contain vertical bar, more work is needed
                                 # to make the sitetitle safe for KGTK.
                                 if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
-                                    linklabel = 'wikipedia_sitelink'
+                                    linklabel = SITELINK_LABEL
                                     sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
                                     wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     sitelang=link.split('wiki')[0].replace('_','-')
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
                                 else:
-                                    linklabel = 'addl_wikipedia_sitelink'
+                                    linklabel = ADDL_SITELINK_LABEL
                                     sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
                                     wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     if "wiki" in link:
                                         sitelang=link.split("wiki")[0]
                                         if sitelang in ("commons", "simple"):
-                                            sitelang = "en"
+                                            sitelang = "en" # TODO: Need to retain the distinction we lose here.
                                     else:
                                         sitelang=""
                                     sitehost=link+'.org' # TODO: Needs more work here
@@ -1240,7 +1258,8 @@ def run(input_file: KGTKFiles,
                                                           edge_id=sid,
                                                           node1=qnode,
                                                           label=linklabel,
-                                                          node2=sitelink)
+                                                          node2=sitelink,
+                                                          lang=sitelang)
                                     if qual_file or interleave:
                                         if len(sitelang) > 0:
                                             tempid=sid+'-language-1'
@@ -1365,6 +1384,14 @@ def run(input_file: KGTKFiles,
             self.split_en_label_wr = None
             self.n_en_label_rows: int = 0
 
+            self.split_sitelink_f: typing.Optional[typing.TextIO] = None
+            self.split_sitelink_wr = None
+            self.n_sitelink_rows: int = 0
+
+            self.split_en_sitelink_f: typing.Optional[typing.TextIO] = None
+            self.split_en_sitelink_wr = None
+            self.n_en_sitelink_rows: int = 0
+
             self.split_type_f: typing.Optional[typing.TextIO] = None
             self.split_type_wr = None
             self.n_type_rows: int = 0
@@ -1422,6 +1449,14 @@ def run(input_file: KGTKFiles,
 
                 elif action == "split_en_label_header":
                     self.open_split_en_label_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_sitelink_header":
+                    self.open_split_sitelink_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_en_sitelink_header":
+                    self.open_split_en_sitelink_file(header, who)
                     self.process_split_files = True
 
                 elif action == "split_type_header":
@@ -1487,6 +1522,12 @@ def run(input_file: KGTKFiles,
         def open_split_en_label_file(self, header: typing.List[str], who: str):
             self.split_en_label_f, self.split_en_label_wr = self._open_file(split_en_label_file, header, "English " + LABEL_LABEL, who)
 
+        def open_split_sitelink_file(self, header: typing.List[str], who: str):
+            self.split_sitelink_f, self.split_sitelink_wr = self._open_file(split_sitelink_file, header, SITELINK_LABEL, who)
+
+        def open_split_en_sitelink_file(self, header: typing.List[str], who: str):
+            self.split_en_sitelink_f, self.split_en_sitelink_wr = self._open_file(split_en_sitelink_file, header, "English " + SITELINK_LABEL, who)
+
         def open_split_type_file(self, header: typing.List[str], who: str):
             self.split_type_f, self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
 
@@ -1524,6 +1565,12 @@ def run(input_file: KGTKFiles,
                 if self.split_en_label_wr is not None:
                     self.split_en_label_wr.close()
 
+                if self.split_sitelink_wr is not None:
+                    self.split_sitelink_wr.close()
+
+                if self.split_en_sitelink_wr is not None:
+                    self.split_en_sitelink_wr.close()
+
                 if self.split_type_wr is not None:
                     self.split_type_wr.close()
 
@@ -1557,6 +1604,12 @@ def run(input_file: KGTKFiles,
 
                 if self.split_en_label_f is not None:
                     self.split_en_label_f.close()
+
+                if self.split_sitelink_f is not None:
+                    self.split_sitelink_f.close()
+
+                if self.split_en_sitelink_f is not None:
+                    self.split_en_sitelink_f.close()
 
                 if self.split_type_f is not None:
                     self.split_type_f.close()
@@ -1627,6 +1680,15 @@ def run(input_file: KGTKFiles,
 
                                 if self.split_en_label_wr is not None and is_english:
                                     self.split_en_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
+
+                            elif label == SITELINK_LABEL or label == ADDL_SITELINK_LABEL:
+                                if self.split_sitelink_wr is not None:
+                                    self.split_sitelink_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                                    split = True
+
+                                if self.split_en_sitelink_wr is not None and is_english:
+                                    self.split_en_sitelink_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
                                     split = True
 
                             elif label == TYPE_LABEL:
@@ -1843,6 +1905,18 @@ def run(input_file: KGTKFiles,
                 print("Sending the English label file header to the collector.", file=sys.stderr, flush=True)
                 ecq.put(("split_en_label_header", None, None, None, en_label_file_header))
                 print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_sitelink_file and ecq is not None:
+                sitelink_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the sitelink file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_sitelink_header", None, None, None, sitelink_file_header))
+                print("Sent the sitelink file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_en_sitelink_file and ecq is not None:
+                en_sitelink_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the English sitelink file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_en_sitelink_header", None, None, None, en_sitelink_file_header))
+                print("Sent the English sitelink file header to the collector.", file=sys.stderr, flush=True)
 
             if split_type_file and ecq is not None:
                 type_file_header = ['id', 'node1', 'label', 'node2']

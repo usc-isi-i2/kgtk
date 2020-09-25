@@ -37,6 +37,8 @@ kgtk ${KGTK_FLAGS} \
      --split-datatype-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-datatypes.tsv \
      --entry-type-edges True \
      --split-type-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-types.tsv \
+     --split-sitelink-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sitelinks-all-lang.tsv \
+     --split-en-sitelink-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-sitelinks-en-only.tsv \
      --use-kgtkwriter True \
      --use-shm True \
      --procs 4 \
