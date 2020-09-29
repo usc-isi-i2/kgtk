@@ -13,15 +13,16 @@ mkdir --verbose ${LOGDIR}
 
 # ==============================================================================
 # Import the Wikidata dump file, getting labels, aliases, and descriptions
-# in all languages.
-echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in all languages"
+# in Englisn and in all languages.
+echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in English and all languages"
 kgtk ${KGTK_FLAGS} \
      import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \
      --node-file ${DATADIR}/${WIKIDATA_ALL_NODES}.tsv \
      --detailed-edge-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-full.tsv \
      --minimal-edge-file ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv \
-     --qual-file ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}.tsv \
+     --detailed-qual-file ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}-full.tsv \
+     --minimal-qual-file ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}.tsv \
      --node-file-id-only \
      --explode-values False \
      --all-languages \
@@ -54,3 +55,41 @@ kgtk ${KGTK_FLAGS} \
      --collector-queue-per-proc-size 15 \
      --progress-interval 500000 \
     |& tee ${LOGDIR}/import-split-wikidata.log
+
+# ==============================================================================
+for TARGET in \
+    ${WIKIDATA_ALL_NODES} \
+	${WIKIDATA_ALL_EDGES}-full \
+	${WIKIDATA_ALL_EDGES} \
+	${WIKIDATA_ALL_QUALIFIERS}-full \
+	${WIKIDATA_ALL_QUALIFIERS} \
+	${WIKIDATA_ALL}-aliases-all-lang \
+	${WIKIDATA_ALL}-aliases-en-only \
+	${WIKIDATA_ALL}-descriptions-all-lang \
+	${WIKIDATA_ALL}-descriptions-en-only \
+	${WIKIDATA_ALL}-labels-all-lang \
+	${WIKIDATA_ALL}-labels-en-only \
+	${WIKIDATA_ALL}-datatypes \
+	${WIKIDATA_ALL}-types \
+	${WIKIDATA_ALL}-sitelinks-all-lang \
+	${WIKIDATA_ALL}-sitelinks-en-only
+do
+    echo -e "\nSort the ${TARGET} file."
+    kgtk ${KGTK_FLAGS} \
+	 sort2 ${VERBOSE} \
+	 --input-file ${DATADIR}/${TARGET}.tsv \
+	 --output-file ${DATADIR}/${TARGET}-sorted.tsv \
+	 --extra "${SORT_EXTRAS}" \
+	|& tee ${LOGDIR}/${TARGET}-sorted.log
+
+    echo -e "\nCompress the sorted ${TARGET} file."
+    time gzip --keep --force --verbose \
+	 ${DATADIR}/${TARGET}-sorted.tsv \
+	|& tee ${LOGDIR}/${TARGET}-compress.log
+
+    echo -e "\nDeliver the compressed ${TARGET} file to the KGTK Google Drive."
+    time rsync --archive --verbose \
+	 ${DATADIR}/${TARGET}-sorted.tsv.gz \
+	 ${PRODUCTDIR}/ \
+	|& tee ${LOGDIR}/${TARGET}-deliver.log
+done

@@ -142,12 +142,20 @@ def add_arguments(parser: KGTKArgumentParser):
         help='path to output edge file with minimal data')
 
     parser.add_argument(
-        "--qual", '--qual-file',
+        "--qual", '--qual-file', '--detailed-qual-file',
         action="store",
         type=str,
-        dest="qual_file",
+        dest="detailed_qual_file",
         default=None,
-        help='path to output qualifier file')
+        help='path to output qualifier file with full data')
+
+    parser.add_argument(
+        '--minimal-qual-file',
+        action="store",
+        type=str,
+        dest="minimal_qual_file",
+        default=None,
+        help='path to output qualifier file with minimal data')
 
     # Optionally write only the ID column to the node file.
     parser.add_argument(
@@ -534,7 +542,8 @@ def run(input_file: KGTKFiles,
         node_file: typing.Optional[str],
         detailed_edge_file: typing.Optional[str],
         minimal_edge_file: typing.Optional[str],
-        qual_file: typing.Optional[str],
+        detailed_qual_file: typing.Optional[str],
+        minimal_qual_file: typing.Optional[str],
 
         node_id_only: bool,
         split_alias_file: typing.Optional[str],
@@ -692,8 +701,8 @@ def run(input_file: KGTKFiles,
                     lineterminator=csv_line_terminator)
                 
             self.qual_f = None
-            if qual_file and not collect_results:
-                self.qual_f = open(qual_file+'_{}'.format(self._idx), self.write_mode, newline='')
+            if detailed_qual_file and not collect_results:
+                self.qual_f = open(detailed_qual_file+'_{}'.format(self._idx), self.write_mode, newline='')
                 self.qual_wr = csv.writer(
                     self.qual_f,
                     quoting=csv.QUOTE_NONE,
@@ -827,7 +836,7 @@ def run(input_file: KGTKFiles,
                          calendar="",
         ):
 
-            if qual_file:
+            if minimal_qual_file is not None or detailed_qual_file is not None:
                 if explode_values:
                     qrows.append([edge_id,
                                   node1,
@@ -1189,7 +1198,7 @@ def run(input_file: KGTKFiles,
                                                           calendar=calendar)
 
                                     seq_no += 1
-                                    if qual_file or interleave:
+                                    if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
@@ -1482,7 +1491,7 @@ def run(input_file: KGTKFiles,
                         for row in erows:
                             self.edge_wr.writerow(row)
 
-                    if qual_file:
+                    if detailed_qual_file:
                         for row in qrows:
                             self.qual_wr.writerow(row)
     
@@ -1501,8 +1510,11 @@ def run(input_file: KGTKFiles,
             self.detailed_edge_wr = None
             self.erows: int = 0
 
-            self.qual_f: typing.Optional[typing.TextIO] = None
-            self.qual_wr = None
+            self.minimal_qual_f: typing.Optional[typing.TextIO] = None
+            self.minimal_qual_wr = None
+
+            self.detailed_qual_f: typing.Optional[typing.TextIO] = None
+            self.detailed_qual_wr = None
             self.qrows: int = 0
 
             self.split_alias_f: typing.Optional[typing.TextIO] = None
@@ -1574,8 +1586,11 @@ def run(input_file: KGTKFiles,
                 elif action == "detailed_edge_header":
                     self.open_detailed_edge_file(header, who)
 
-                elif action == "qual_header":
-                    self.open_qual_file(header, who)
+                elif action == "minimal_qual_header":
+                    self.open_minimal_qual_file(header, who)
+
+                elif action == "detailed_qual_header":
+                    self.open_detailed_qual_file(header, who)
 
                 elif action == "split_alias_header":
                     self.open_split_alias_file(header, who)
@@ -1655,8 +1670,11 @@ def run(input_file: KGTKFiles,
         def open_detailed_edge_file(self, header: typing.List[str], who: str):
             self.detailed_edge_f, self.detailed_edge_wr = self._open_file(detailed_edge_file, header, "detailed edge", who)
 
-        def open_qual_file(self, header: typing.List[str], who: str):
-            self.qual_f, self.qual_wr = self._open_file(qual_file, header, "qual", who)
+        def open_minimal_qual_file(self, header: typing.List[str], who: str):
+            self.minimal_qual_f, self.minimal_qual_wr = self._open_file(minimal_qual_file, header, "minimal qual", who)
+            
+        def open_detailed_qual_file(self, header: typing.List[str], who: str):
+            self.detailed_qual_f, self.detailed_qual_wr = self._open_file(detailed_qual_file, header, "qual", who)
             
         def open_split_alias_file(self, header: typing.List[str], who: str):
             self.split_alias_f, self.split_alias_wr = self._open_file(split_alias_file, header, ALIAS_LABEL, who)
@@ -1701,8 +1719,11 @@ def run(input_file: KGTKFiles,
                 if self.detailed_edge_wr is not None:
                     self.detailed_edge_wr.close()
 
-                if self.qual_wr is not None:
-                    self.qual_wr.close()
+                if self.minimal_qual_wr is not None:
+                    self.minimal_qual_wr.close()
+
+                if self.detailed_qual_wr is not None:
+                    self.detailed_qual_wr.close()
 
                 if self.split_alias_wr is not None:
                     self.split_alias_wr.close()
@@ -1744,8 +1765,11 @@ def run(input_file: KGTKFiles,
                 if self.detailed_edge_f is not None:
                     self.detailed_edge_f.close()
 
-                if self.qual_f is not None:
-                    self.qual_f.close()
+                if self.minimal_qual_f is not None:
+                    self.minimal_qual_f.close()
+
+                if self.detailed_qual_f is not None:
+                    self.detailed_qual_f.close()
 
                 if self.split_alias_f is not None:
                     self.split_alias_f.close()
@@ -1836,14 +1860,21 @@ def run(input_file: KGTKFiles,
                     self.minimal_edge_wr.writerows(erows)
 
             if len(qrows) > 0:
-                if self.qual_wr is None:
-                    raise ValueError("Unexpected qual rows in the %s collector." % who)
 
                 if use_kgtkwriter:
+                    if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
+                        raise ValueError("Unexpected qual rows in the %s collector." % who)
+                    
                     for row in qrows:
-                        self.qual_wr.write(row)
+                        if self.minimal_qual_wr is not None:
+                            self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+
+                        if self.detailed_qual_wr is not None:
+                            self.detailed_qual_wr.write(row)
                 else:
-                    self.qual_wr.writerows(qrows)
+                    if self.detailed_qual_wr is None:
+                        raise ValueError("Unexpected qual rows in the %s collector." % who)
+                    self.detailed_qual_wr.writerows(qrows)
 
         def setup_split_dispatcher(self):
             self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
@@ -2014,7 +2045,7 @@ def run(input_file: KGTKFiles,
                         edge_collector_p.start()
                         print("Started the edge collector process.", file=sys.stderr, flush=True)
 
-                    if qual_file is not None:
+                    if minimal_qual_file is not None or detailed_qual_file is not None:
                         qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
                         print("The collector qual queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
 
@@ -2179,7 +2210,7 @@ def run(input_file: KGTKFiles,
                 print("Sent the type file header to the collector.", file=sys.stderr, flush=True)
 
 
-            if qual_file:
+            if minimal_qual_file is not None or detailed_qual_file is not None:
                 qual_file_header = edge_file_header.copy()
                 if "rank" in qual_file_header:
                     qual_file_header.remove('rank')
@@ -2191,22 +2222,28 @@ def run(input_file: KGTKFiles,
                     qual_file_header.remove('lang')
 
                 qcq = collector_q if collector_q is not None else qual_collector_q
-                if qcq is not None:
-                    print("Sending the qual file header to the collector.", file=sys.stderr, flush=True)
-                    qcq.put(("qual_header", None, None, None, qual_file_header))
-                    print("Sent the qual file header to the collector.", file=sys.stderr, flush=True)
 
-                else:
-                    with open(qual_file+'_header', 'w', newline='') as myfile:
-                        wr = csv.writer(
-                            myfile,
-                            quoting=csv.QUOTE_NONE,
-                            delimiter="\t",
-                            escapechar="\n",
-                            quotechar='',
-                            lineterminator=csv_line_terminator)
-                        wr.writerow(qual_file_header)
+                if detailed_qual_file is not None:
+                    if qcq is not None:
+                        print("Sending the detailed qual file header to the collector.", file=sys.stderr, flush=True)
+                        qcq.put(("detailed_qual_header", None, None, None, qual_file_header))
+                        print("Sent the detailed qual file header to the collector.", file=sys.stderr, flush=True)
 
+                    else:
+                        with open(detailed_qual_file+'_header', 'w', newline='') as myfile:
+                            wr = csv.writer(
+                                myfile,
+                                quoting=csv.QUOTE_NONE,
+                                delimiter="\t",
+                                escapechar="\n",
+                                quotechar='',
+                                lineterminator=csv_line_terminator)
+                            wr.writerow(qual_file_header)
+                if minimal_qual_file is not None and qcq is not None:
+                    print("Sending the minimal qual file header to the collector.", file=sys.stderr, flush=True)
+                    qcq.put(("minimal_qual_header", None, None, None, qual_file_header[0:5]))
+                    print("Sent the minimal qual file header to the collector.", file=sys.stderr, flush=True)
+                        
             print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
             if use_shm or single_mapper_queue:
                 pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
@@ -2314,12 +2351,12 @@ def run(input_file: KGTKFiles,
                     edge_file_fragments.append(detailed_edge_file+'_'+str(n))
                 platform_cat(edge_file_fragments, detailed_edge_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
-            if qual_file:
+            if detailed_qual_file:
                 print('Combining the qualifier file fragments', file=sys.stderr, flush=True)
-                qual_file_fragments=[qual_file+'_header']
+                qual_file_fragments=[detailed_qual_file+'_header']
                 for n in range(procs):
-                    qual_file_fragments.append(qual_file+'_'+str(n))
-                platform_cat(qual_file_fragments, qual_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
+                    qual_file_fragments.append(detailed_qual_file+'_'+str(n))
+                platform_cat(qual_file_fragments, detailed_qual_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
         print('import complete', file=sys.stderr, flush=True)
         end=time.time()
