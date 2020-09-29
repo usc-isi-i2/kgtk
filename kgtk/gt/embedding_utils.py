@@ -1,23 +1,22 @@
-import logging
-import re
-import redis
-import typing
-import hashlib
-import pandas as pd  # type: ignore
-import numpy as np
 import io
-import math
-import pickle
 import os
+import re
+import math
 import time
-
-from pyrallel import ParallelProcessor
-from collections import defaultdict, OrderedDict
+import redis
+import pickle
+import typing
+import logging
+import hashlib
+import numpy as np
+import pandas as pd  # type: ignore
 from tqdm import tqdm  # type: ignore
 from ast import literal_eval
-from sentence_transformers import SentenceTransformer, SentencesDataset, LoggingHandler, losses, models  # type: ignore
-from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
+from pyrallel import ParallelProcessor
 from kgtk.exceptions import KGTKException
+from collections import defaultdict, OrderedDict
+from sentence_transformers import SentenceTransformer
+from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
 
 
 class EmbeddingVector:
@@ -25,15 +24,6 @@ class EmbeddingVector:
         self._logger = logging.getLogger(__name__)
         if not model_name:
             self.model_name = 'bert-base-nli-mean-tokens'
-        # xlnet need to be trained before using, we can't use this for now
-        # elif model_name == "xlnet-base-cased":
-        #     word_embedding_model = models.XLNet('xlnet-base-cased')
-        # # Apply mean pooling to get one fixed sized sentence vector
-        #     pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
-        #                                pooling_mode_mean_tokens=True,
-        #                                pooling_mode_cls_token=False,
-        #                                pooling_mode_max_tokens=False)
-        #     self.model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
         else:
             self.model_name = model_name
         self._logger.info("Using model {}".format(self.model_name))
