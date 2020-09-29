@@ -414,7 +414,7 @@ class EmbeddingVector:
             self._logger.debug("column index information: ")
             self._logger.debug(str(column_references))
             # read contents
-            each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
+            each_node_attributes = {"has_properties": set(), "isa_properties": set(), "label_properties": [],
                                     "description_properties": [], "has_properties_values": []}
 
             if self._parallel_count > 1:
@@ -471,7 +471,10 @@ class EmbeddingVector:
                         roles.discard("property_values")
                         roles.discard("has_properties")
                     for each_role in roles:
-                        each_node_attributes[each_role].append(node_value)
+                        if each_role in ['has_properties', 'isa_properties']:
+                            each_node_attributes[each_role].add(node_value)
+                        else:
+                            each_node_attributes[each_role].append(node_value)
                 elif add_all_properties:  # add remained properties if need all properties
                     each_node_attributes["has_properties"].append(self.get_real_label_name(node_property))
 
@@ -511,7 +514,7 @@ class EmbeddingVector:
             each_node_attributes["sentence"] = concat_sentence
             self.candidates[current_process_node_id] = each_node_attributes
         # after write down finish, we can clear and start parsing next one
-        each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
+        each_node_attributes = {"has_properties": set(), "isa_properties": set(), "label_properties": [],
                                 "description_properties": [], "has_properties_values": []}
         # update to new id
         current_process_node_id = node_id
