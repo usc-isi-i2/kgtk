@@ -1,6 +1,6 @@
 import typing
 from kgtk.exceptions import KGTKException
-from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
+from kgtk.cli_argparse import KGTKArgumentParser
 import sys
 
 ALL_EMBEDDING_MODELS_NAMES = [
@@ -124,16 +124,8 @@ def main(**kwargs):
     _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
 
     try:
-        import time
-        import torch
-        import typing
         import pandas as pd
-        import string
-        import math
-        import re
-        import argparse
-        import pickle
-        from collections import defaultdict
+        from pathlib import Path
         from kgtk.gt.embedding_utils import EmbeddingVector
 
         # get input parameters from kwargs
@@ -229,8 +221,7 @@ def parser():
 
 def add_arguments(parser: KGTKArgumentParser):
     from kgtk.utils.argparsehelpers import optional_bool
-    import sys
-    import argparse
+
     parser.accept_shared_argument('_debug')
 
     # input file
