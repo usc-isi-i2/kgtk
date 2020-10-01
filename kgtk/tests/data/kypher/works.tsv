@@ -1,0 +1,11 @@
+id	node1	label	node2	node1;salary	graph
+w11	Hans	works	ACME	10000	employ
+w12	Otto	works	Kaiser	8000	employ
+w13	Joe	works	Kaiser	20000	employ
+w14	Molly	works	Renal	11000	employ
+w15	Susi	works	Cakes	9900	employ
+w21	Hans	department	R&D		employ
+w22	Otto	department	Pharm		employ
+w23	Joe	department	Medic		employ
+w24	Molly	department	Sales		employ
+w25	Susi	department	Sales		employ
