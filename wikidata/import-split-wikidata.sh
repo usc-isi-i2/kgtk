@@ -43,6 +43,8 @@ kgtk ${KGTK_FLAGS} \
      --sitelink-verbose-edges True \
      --split-sitelink-file ${DATADIR}/${WIKIDATA_ALL}-sitelinks-all-lang.tsv \
      --split-en-sitelink-file ${DATADIR}/${WIKIDATA_ALL}-sitelinks-en-only.tsv \
+     --split-property-edge-file ${DATADIR}/${WIKIDATA_ALL}-properties.tsv \
+     --split-property-qual-file ${DATADIR}/${WIKIDATA_ALL}-property-qualifiers.tsv \
      --use-kgtkwriter True \
      --use-shm True \
      --procs 5 \
@@ -72,7 +74,9 @@ for TARGET in \
 	${WIKIDATA_ALL}-datatypes \
 	${WIKIDATA_ALL}-types \
 	${WIKIDATA_ALL}-sitelinks-all-lang \
-	${WIKIDATA_ALL}-sitelinks-en-only
+	${WIKIDATA_ALL}-sitelinks-en-only \
+	${WIKIDATA_ALL}-properties \
+	${WIKIDATA_ALL}-property-qualifiers
 do
     echo -e "\nSort the ${TARGET} file."
     kgtk ${KGTK_FLAGS} \

@@ -234,12 +234,28 @@ def add_arguments(parser: KGTKArgumentParser):
         default=None,
         help='path to output split English sitelink file')
     parser.add_argument(
-        '--split-type-file',
+        '--split-type-file', '--split-entity-type-file',
         action="store",
         type=str,
         dest="split_type_file",
         default=None,
         help='path to output split entry type file')
+
+    parser.add_argument(
+        '--split-property-edge-file',
+        action="store",
+        type=str,
+        dest="split_property_edge_file",
+        default=None,
+        help='path to output split property edge file')
+
+    parser.add_argument(
+        '--split-property-qual-file',
+        action="store",
+        type=str,
+        dest="split_property_qual_file",
+        default=None,
+        help='path to output split property qualifier file')
 
     # TODO: Create a seperate file for the sitelinks.
 
@@ -556,6 +572,8 @@ def run(input_file: KGTKFiles,
         split_sitelink_file: typing.Optional[str],
         split_en_sitelink_file: typing.Optional[str],
         split_type_file: typing.Optional[str],
+        split_property_edge_file: typing.Optional[str],
+        split_property_qual_file: typing.Optional[str],
 
         limit: int,
         lang: str,
@@ -1557,6 +1575,14 @@ def run(input_file: KGTKFiles,
             self.split_type_wr = None
             self.n_type_rows: int = 0
 
+            self.split_property_edge_f: typing.Optional[typing.TextIO] = None
+            self.split_property_edge_wr = None
+            self.n_property_edge_rows: int = 0
+
+            self.split_property_qual_f: typing.Optional[typing.TextIO] = None
+            self.split_property_qual_wr = None
+            self.n_property_qual_rows: int = 0
+
             self.process_split_files: bool = False
             self.setup_split_dispatcher()
 
@@ -1632,6 +1658,13 @@ def run(input_file: KGTKFiles,
                     self.open_split_type_file(header, who)
                     self.process_split_files = True
 
+                elif action == "split_property_edge_header":
+                    self.open_split_property_edge_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_property_qual_header":
+                    self.open_split_property_qual_file(header, who)
+
                 elif action == "shutdown":
                     self.shutdown(who)
                     break
@@ -1643,7 +1676,7 @@ def run(input_file: KGTKFiles,
             f: typing.Optional[typing.TextIO]
             wr: typing.Any
             if use_kgtkwriter:
-                print("Opening the %s file in the %s collector with KgtkWriter." % (file_type, who), file=sys.stderr, flush=True)
+                print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file), file=sys.stderr, flush=True)
                 wr = KgtkWriter.open(header, Path(the_file), who=who + " collector")
                 return None, wr
                 
@@ -1706,6 +1739,12 @@ def run(input_file: KGTKFiles,
         def open_split_type_file(self, header: typing.List[str], who: str):
             self.split_type_f, self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
 
+        def open_split_property_edge_file(self, header: typing.List[str], who: str):
+            self.split_property_edge_f, self.split_property_edge_wr = self._open_file(split_property_edge_file, header, "property edge", who)
+
+        def open_split_property_qual_file(self, header: typing.List[str], who: str):
+            self.split_property_qual_f, self.split_property_qual_wr = self._open_file(split_property_qual_file, header, "property qual", who)
+
         def shutdown(self, who: str):
             print("Exiting the %s collector (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
 
@@ -1755,6 +1794,12 @@ def run(input_file: KGTKFiles,
                 if self.split_type_wr is not None:
                     self.split_type_wr.close()
 
+                if self.split_property_edge_wr is not None:
+                    self.split_property_edge_wr.close()
+
+                if self.split_property_edge_wr is not None:
+                    self.split_property_edge_wr.close()
+
             else:
                 if self.node_f is not None:
                     self.node_f.close()
@@ -1801,6 +1846,12 @@ def run(input_file: KGTKFiles,
                 if self.split_type_f is not None:
                     self.split_type_f.close()
 
+                if self.split_property_edge_f is not None:
+                    self.split_property_edge_f.close()
+
+                if self.split_property_qual_f is not None:
+                    self.split_property_qual_f.close()
+
             print("The %s collector has closed its output files." % who, file=sys.stderr, flush=True)
 
         def collect(self,
@@ -1845,10 +1896,14 @@ def run(input_file: KGTKFiles,
                             if method is not None:
                                 split = method(row)
                             if not split:
-                                if self.minimal_edge_wr is None and self.detailed_edge_wr is None:
+                                if self.minimal_edge_wr is None and self.detailed_edge_wr is None and self.split_property_edge_wr is None:
                                     raise ValueError("Unexpected %s edge rows in the %s collector." % (label, who))
 
-                                if self.minimal_edge_wr is not None:
+                                if self.split_property_edge_wr is not None and row[1].startswith("P"): # Hack: knows the structure of the row.
+                                    # For now, split property files are minimal.
+                                    self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+
+                                elif self.minimal_edge_wr is not None:
                                     self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
 
                                 if self.detailed_edge_wr is not None:
@@ -1866,7 +1921,10 @@ def run(input_file: KGTKFiles,
                         raise ValueError("Unexpected qual rows in the %s collector." % who)
                     
                     for row in qrows:
-                        if self.minimal_qual_wr is not None:
+                        if self.split_property_qual_wr is not None and row[0].startswith("P"): # Hack: knows the structure of the row.
+                            self.split_property_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+                                                              
+                        elif self.minimal_qual_wr is not None:
                             self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
 
                         if self.detailed_qual_wr is not None:
@@ -2207,10 +2265,14 @@ def run(input_file: KGTKFiles,
                 type_file_header = ['id', 'node1', 'label', 'node2']
                 print("Sending the entry type file header to the collector.", file=sys.stderr, flush=True)
                 ecq.put(("split_type_header", None, None, None, type_file_header))
-                print("Sent the type file header to the collector.", file=sys.stderr, flush=True)
+                print("Sent the entry type file header to the collector.", file=sys.stderr, flush=True)
 
+            if split_property_edge_file and ecq is not None:
+                print("Sending the property edge file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_property_edge_header", None, None, None, edge_file_header[0:6]))
+                print("Sent the property edge file header to the collector.", file=sys.stderr, flush=True)
 
-            if minimal_qual_file is not None or detailed_qual_file is not None:
+            if minimal_qual_file is not None or detailed_qual_file is not None or split_property_qual_file is not None:
                 qual_file_header = edge_file_header.copy()
                 if "rank" in qual_file_header:
                     qual_file_header.remove('rank')
@@ -2244,6 +2306,12 @@ def run(input_file: KGTKFiles,
                     qcq.put(("minimal_qual_header", None, None, None, qual_file_header[0:5]))
                     print("Sent the minimal qual file header to the collector.", file=sys.stderr, flush=True)
                         
+                if split_property_qual_file and qcq is not None:
+                    print("Sending the property qual file header to the collector.", file=sys.stderr, flush=True)
+                    qcq.put(("split_property_qual_header", None, None, None, qual_file_header[0:5]))
+                    print("Sent the property qual file header to the collector.", file=sys.stderr, flush=True)
+
+
             print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
             if use_shm or single_mapper_queue:
                 pp = pyrallel.ParallelProcessor(procs, MyMapper,enable_process_id=True, max_size_per_mapper_queue=max_size_per_mapper_queue,
