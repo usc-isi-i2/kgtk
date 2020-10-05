@@ -57,3 +57,33 @@ kgtk ${KGTK_FLAGS} \
      --reject-file ${DATADIR}/${WIKIDATA_ALL}-property-other-sorted.tsv \
     |& tee ${LOGDIR}/${WIKIDATA_ALL}-property-datatype-split.log
 
+# ==============================================================================
+for TARGET in \
+    commonsMedia \
+	external-id \
+	math \
+	monolingualtext \
+	quantity \
+	string \
+	time \
+	url \
+	wikibase-form \
+	wikibase-item \
+	wikibase-lexeme \
+	wikibase-property \
+	wikibase-sense \
+	other
+do
+    TARGET_NAME=${WIKIDATA_ALL}-property-${TARGET}-sorted
+    echo -e "\mCompress ${TARGET_NAME} file."
+    echo -e "\nCompress the sorted ${TARGET} file."
+    time gzip --keep --force --verbose \
+	 ${DATADIR}/${TARGET_NAME}.tsv \
+	|& tee ${LOGDIR}/${TARGET_NAME}.log
+
+    echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
+    time rsync --archive --verbose \
+	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
+	 ${PRODUCTDIR}/ \
+	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
+done
