@@ -42,7 +42,7 @@ kgtk ${KGTK_FLAGS} \
 # ==============================================================================
 # Repeat the import, getting only the English aliases, descriptors, and labels.
 # As of 15-Sep-2020, this is faster than filtering after extraction.
-echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in all languages"
+echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in English"
 kgtk ${KGTK_FLAGS} \
      import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \

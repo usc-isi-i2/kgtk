@@ -118,26 +118,147 @@ def add_arguments(parser: KGTKArgumentParser):
         help='collector queue depth per proc, default %(default)d')
 
     parser.add_argument(
-        "--node",
+        "--node", '--node-file',
         action="store",
         type=str,
         dest="node_file",
         default=None,
         help='path to output node file')
+
     parser.add_argument(
-        "--edge",
+        "--edge", '--edge-file', '--detailed-edge-file',
         action="store",
         type=str,
-        dest="edge_file",
+        dest="detailed_edge_file",
         default=None,
-        help='path to output edge file')
+        help='path to output edge file with detailed data')
+
     parser.add_argument(
-        "--qual",
+        '--minimal-edge-file',
         action="store",
         type=str,
-        dest="qual_file",
+        dest="minimal_edge_file",
         default=None,
-        help='path to output qualifier file')
+        help='path to output edge file with minimal data')
+
+    parser.add_argument(
+        "--qual", '--qual-file', '--detailed-qual-file',
+        action="store",
+        type=str,
+        dest="detailed_qual_file",
+        default=None,
+        help='path to output qualifier file with full data')
+
+    parser.add_argument(
+        '--minimal-qual-file',
+        action="store",
+        type=str,
+        dest="minimal_qual_file",
+        default=None,
+        help='path to output qualifier file with minimal data')
+
+    # Optionally write only the ID column to the node file.
+    parser.add_argument(
+        '--node-file-id-only',
+        nargs='?',
+        type=optional_bool,
+        dest="node_id_only",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help='Option to write only the node ID in the node file. (default=%(default)s)')
+
+    # The remaining files are KGTK edge files that split out
+    # special properties, removing them from the edge file.
+    parser.add_argument(
+        '--split-alias-file',
+        action="store",
+        type=str,
+        dest="split_alias_file",
+        default=None,
+        help='path to output split alias file')
+    parser.add_argument(
+        '--split-en-alias-file',
+        action="store",
+        type=str,
+        dest="split_en_alias_file",
+        default=None,
+        help='path to output split English alias file')
+    parser.add_argument(
+        '--split-datatype-file',
+        action="store",
+        type=str,
+        dest="split_datatype_file",
+        default=None,
+        help='path to output split datatype file')
+    parser.add_argument(
+        '--split-description-file',
+        action="store",
+        type=str,
+        dest="split_description_file",
+        default=None,
+        help='path to output splitdescription file')
+    parser.add_argument(
+        '--split-en-description-file',
+        action="store",
+        type=str,
+        dest="split_en_description_file",
+        default=None,
+        help='path to output split English description file')
+    parser.add_argument(
+        '--split-label-file',
+        action="store",
+        type=str,
+        dest="split_label_file",
+        default=None,
+        help='path to output split label file')
+    parser.add_argument(
+        '--split-en-label-file',
+        action="store",
+        type=str,
+        dest="split_en_label_file",
+        default=None,
+        help='path to output split English label file')
+    parser.add_argument(
+        '--split-sitelink-file',
+        action="store",
+        type=str,
+        dest="split_sitelink_file",
+        default=None,
+        help='path to output split sitelink file')
+    parser.add_argument(
+        '--split-en-sitelink-file',
+        action="store",
+        type=str,
+        dest="split_en_sitelink_file",
+        default=None,
+        help='path to output split English sitelink file')
+    parser.add_argument(
+        '--split-type-file', '--split-entity-type-file',
+        action="store",
+        type=str,
+        dest="split_type_file",
+        default=None,
+        help='path to output split entry type file')
+
+    parser.add_argument(
+        '--split-property-edge-file',
+        action="store",
+        type=str,
+        dest="split_property_edge_file",
+        default=None,
+        help='path to output split property edge file')
+
+    parser.add_argument(
+        '--split-property-qual-file',
+        action="store",
+        type=str,
+        dest="split_property_qual_file",
+        default=None,
+        help='path to output split property qualifier file')
+
+    # TODO: Create a seperate file for the sitelinks.
+
     parser.add_argument(
         "--limit",
         action="store",
@@ -237,7 +358,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="entry_type_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for the entry type field. (default=%(default)s).",
     )
@@ -248,7 +369,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="alias_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for aliases. (default=%(default)s).",
     )
@@ -260,7 +381,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="datatype_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for property datatypes. (default=%(default)s).",
     )
@@ -272,7 +393,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="descr_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for descriptions. (default=%(default)s).",
     )
@@ -284,9 +405,42 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="label_edges",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, create edge records for labels. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--sitelink-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="sitelink_edges",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create edge records for sitelinks. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--sitelink-verbose-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="sitelink_verbose_edges",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create edge records for sitelink details (lang, site, badges). (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--sitelink-verbose-qualifiers",
+        nargs='?',
+        type=optional_bool,
+        dest="sitelink_verbose_qualifiers",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create qualifier records for sitelink details (lang, site, badges). (default=%(default)s).",
     )
 
     parser.add_argument(
@@ -320,6 +474,17 @@ def add_arguments(parser: KGTKArgumentParser):
         default=True,
         metavar="True/False",
         help="If true, parse labels. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--parse-sitelinks",
+        nargs='?',
+        type=optional_bool,
+        dest="parse_sitelinks",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, parse sitelinks. (default=%(default)s).",
     )
 
     parser.add_argument(
@@ -391,8 +556,25 @@ def run(input_file: KGTKFiles,
         procs: int,
         max_size_per_mapper_queue: int,
         node_file: typing.Optional[str],
-        edge_file: typing.Optional[str],
-        qual_file: typing.Optional[str],
+        detailed_edge_file: typing.Optional[str],
+        minimal_edge_file: typing.Optional[str],
+        detailed_qual_file: typing.Optional[str],
+        minimal_qual_file: typing.Optional[str],
+
+        node_id_only: bool,
+        split_alias_file: typing.Optional[str],
+        split_en_alias_file: typing.Optional[str],
+        split_datatype_file: typing.Optional[str],
+        split_description_file: typing.Optional[str],
+        split_en_description_file: typing.Optional[str],
+        split_label_file: typing.Optional[str],
+        split_en_label_file: typing.Optional[str],
+        split_sitelink_file: typing.Optional[str],
+        split_en_sitelink_file: typing.Optional[str],
+        split_type_file: typing.Optional[str],
+        split_property_edge_file: typing.Optional[str],
+        split_property_qual_file: typing.Optional[str],
+
         limit: int,
         lang: str,
         source: str,
@@ -408,9 +590,13 @@ def run(input_file: KGTKFiles,
         datatype_edges: bool,
         descr_edges: bool,
         label_edges: bool,
+        sitelink_edges: bool,
+        sitelink_verbose_edges: bool,
+        sitelink_verbose_qualifiers: bool,
         parse_aliases: bool,
         parse_descr: bool,
         parse_labels: bool,
+        parse_sitelinks: bool,
         parse_claims: bool,
         fail_if_missing: bool,
         all_languages: bool,
@@ -444,10 +630,27 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
 
+    languages=lang.split(',')
+
+    ADDL_SITELINK_LABEL: str = "addl_wikipedia_sitelink"
+    ALIAS_LABEL: str = "alias"
+    DATATYPE_LABEL: str = "datatype"
+    DESCRIPTION_LABEL: str = "description"
+    LABEL_LABEL: str = "label"
+    SITELINK_LABEL: str = "wikipedia_sitelink"
+    SITELINK_BADGE_LABEL: str = "sitelink-badge"
+    SITELINK_LANGUAGE_LABEL: str = "sitelink-language"
+    SITELINK_SITE_LABEL: str = "sitelink-site"
+    SITELINK_TITLE_LABEL: str = "sitelink-title"
+    TYPE_LABEL: str = "type"
+
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     edge_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     qual_collector_q: typing.Optional[pyrallel.ShmQueue] = None
+
+    description_collector_q: typing.Optional[pyrallel.ShmQueue] = None
+    sitelink_collector_q: typing.Optional[pyrallel.ShmQueue] = None
 
     class MyMapper(pyrallel.Mapper):
 
@@ -505,8 +708,8 @@ def run(input_file: KGTKFiles,
                     lineterminator=csv_line_terminator)
                 
             self.edge_f = None
-            if edge_file and not collect_results:
-                self.edge_f = open(edge_file+'_{}'.format(self._idx), self.write_mode, newline='')
+            if detailed_edge_file and not collect_results:
+                self.edge_f = open(detailed_edge_file+'_{}'.format(self._idx), self.write_mode, newline='')
                 self.edge_wr = csv.writer(
                     self.edge_f,
                     quoting=csv.QUOTE_NONE,
@@ -516,8 +719,8 @@ def run(input_file: KGTKFiles,
                     lineterminator=csv_line_terminator)
                 
             self.qual_f = None
-            if qual_file and not collect_results:
-                self.qual_f = open(qual_file+'_{}'.format(self._idx), self.write_mode, newline='')
+            if detailed_qual_file and not collect_results:
+                self.qual_f = open(detailed_qual_file+'_{}'.format(self._idx), self.write_mode, newline='')
                 self.qual_wr = csv.writer(
                     self.qual_f,
                     quoting=csv.QUOTE_NONE,
@@ -532,6 +735,15 @@ def run(input_file: KGTKFiles,
                 self.collector_erows_batch = [ ]
                 self.collector_qrows_batch = [ ]
 
+                self.collector_description_erows_batch = [ ]
+                self.collector_sitelink_erows_batch = [ ]
+
+            self.process_row_data = \
+                node_file or \
+                entry_type_edges or \
+                label_edges or \
+                alias_edges or \
+                descr_edges
 
         def exit(self, *args, **kwargs):
             print("Exiting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
@@ -545,6 +757,11 @@ def run(input_file: KGTKFiles,
                                 edge_collector_q.put(("rows", [], self.collector_erows_batch, [], None))
                             if len(self.collector_qrows_batch) > 0:
                                 qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, None))
+
+                            if len(self.collector_description_erows_batch) > 0:
+                                description_collector_q.put(("rows", [], self.collector_description_erows_batch, [], None))
+                            if len(self.collector_sitelink_erows_batch) > 0:
+                                sitelink_collector_q.put(("rows", [], self.collector_sitelink_erows_batch, [], None))
                         else:
                             collector_q.put(("rows", self.collector_nrows_batch, self.collector_erows_batch, self.collector_qrows_batch, None))
                         
@@ -576,45 +793,49 @@ def run(input_file: KGTKFiles,
                          datahash="",
                          precision="",
                          calendar="",
+                         entrylang=""
         ):
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
 
-            if edge_file:
-                if explode_values:
-                    erows.append([edge_id,
-                                  node1,
-                                  label,
-                                  node2,
-                                  rank,
-                                  magnitude,
-                                  unit,
-                                  date,
-                                  item,
-                                  lower,
-                                  upper,
-                                  latitude,
-                                  longitude,
-                                  precision,
-                                  calendar,
-                                  entity_type,
-                                  wikidatatype,
-                    ])
-                else:
-                    erows.append([edge_id,
-                                  node1,
-                                  label,
-                                  node2,
-                                  rank,
-                                  wikidatatype,
-                                  claim_id,
-                                  # claim_type,
-                                  val_type,
-                                  entity_type,
-                                  datahash,
-                                  precision,
-                                  calendar,
-                    ])
+            if explode_values:
+                erows.append([edge_id,
+                              node1,
+                              label,
+                              node2,
+                              rank,
+                              magnitude,
+                              unit,
+                              date,
+                              item,
+                              lower,
+                              upper,
+                              latitude,
+                              longitude,
+                              precision,
+                              calendar,
+                              entity_type,
+                              wikidatatype,
+                              entrylang,
+                              ]
+                             )
+            else:
+                erows.append([edge_id,
+                              node1,
+                              label,
+                              node2,
+                              rank,
+                              wikidatatype,
+                              claim_id,
+                              # claim_type,
+                              val_type,
+                              entity_type,
+                              datahash,
+                              precision,
+                              calendar,
+                              entrylang,
+                              ]
+                             )
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
                          magnitude="",
@@ -633,7 +854,7 @@ def run(input_file: KGTKFiles,
                          calendar="",
         ):
 
-            if qual_file:
+            if minimal_qual_file is not None or detailed_qual_file is not None:
                 if explode_values:
                     qrows.append([edge_id,
                                   node1,
@@ -695,6 +916,10 @@ def run(input_file: KGTKFiles,
             nrows=[]
             erows=[]
             qrows=[]
+
+            description_erows = []
+            sitelink_erows = []
+
             clean_line = line.strip()
             if clean_line.endswith(b","):
                 clean_line = clean_line[:-1]
@@ -705,7 +930,8 @@ def run(input_file: KGTKFiles,
                     keep = True
                 elif warn_if_missing:
                     print("Unknown object type {}.".format(entry_type), file=sys.stderr, flush=True)
-                if (node_file or entry_type_edges or label_edges or alias_edges or descr_edges) and keep:
+
+                if self.process_row_data and keep:
                     row = []
                     qnode = obj["id"]
                     row.append(qnode)
@@ -731,27 +957,31 @@ def run(input_file: KGTKFiles,
                                     value = KgtkFormat.stringify(lang_label['value'], language=lang)
                                     label_list.append(value)
                                         
-                                    if label_edges and edge_file:
-                                        sid = qnode + '-' + "label" + '-' + lang
+                                    if label_edges:
+                                        sid = qnode + '-' + LABEL_LABEL + '-' + lang
                                         self.erows_append(erows,
                                                           edge_id=sid,
                                                           node1=qnode,
-                                                          label="label",
-                                                          node2=value)
+                                                          label=LABEL_LABEL,
+                                                          node2=value,
+                                                          entrylang=lang)
 
 
-                        if len(label_list)>0:
-                            row.append("|".join(label_list))
-                        else:
-                            row.append("")
+                        if not node_id_only:
+                            if len(label_list)>0:
+                                row.append("|".join(label_list))
+                            else:
+                                row.append("")
 
-                    row.append(entry_type)
-                    if entry_type_edges and edge_file:
-                        sid = qnode + '-' + "type"
+                    if not node_id_only:
+                        row.append(entry_type)
+                        
+                    if entry_type_edges:
+                        sid = qnode + '-' + TYPE_LABEL
                         self.erows_append(erows,
                                           edge_id=sid,
                                           node1=qnode,
-                                          label="type",
+                                          label=TYPE_LABEL,
                                           node2=entry_type)
 
                     if parse_descr:
@@ -774,18 +1004,20 @@ def run(input_file: KGTKFiles,
                                     # descr_list.append('\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_descr['value'], language=lang)
                                     descr_list.append(value)
-                                    if descr_edges and edge_file:
-                                        sid = qnode + '-' + "description" + '-' + lang
-                                        self.erows_append(erows,
-                                                          edge_id=sid,
-                                                          node1=qnode,
-                                                          label="description",
-                                                          node2=value)
+                                    if descr_edges:
+                                        sid = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
+                                        self.erows_append(description_erows if collect_seperately else erows,
+                                                              edge_id=sid,
+                                                              node1=qnode,
+                                                              label=DESCRIPTION_LABEL,
+                                                              node2=value,
+                                                              entrylang=lang)
 
-                        if len(descr_list)>0:
-                            row.append("|".join(descr_list))
-                        else:
-                            row.append("")
+                        if not node_id_only:
+                            if len(descr_list)>0:
+                                row.append("|".join(descr_list))
+                            else:
+                                row.append("")
 
                     if parse_aliases:
                         aliases = obj.get("aliases")
@@ -809,44 +1041,48 @@ def run(input_file: KGTKFiles,
                                         # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
                                         value = KgtkFormat.stringify(item['value'], language=lang)
                                         alias_list.append(value)
-                                        if alias_edges and edge_file:
-                                            sid = qnode + '-' + "alias" + "-" + lang + '-' + str(seq_no)
+                                        if alias_edges:
+                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + str(seq_no)
                                             seq_no += 1
                                             self.erows_append(erows,
                                                               edge_id=sid,
                                                               node1=qnode,
-                                                              label="alias",
-                                                              node2=value)
+                                                              label=ALIAS_LABEL,
+                                                              node2=value,
+                                                              entrylang=lang)
 
 
-                        if len(alias_list)>0:
-                            row.append("|".join(alias_list))
-                        else:
-                            row.append("")
+                        if not node_id_only:
+                            if len(alias_list)>0:
+                                row.append("|".join(alias_list))
+                            else:
+                                row.append("")
 
+                    
                     datatype = obj.get("datatype", "")
-                    row.append(datatype)
-                    if len(datatype) > 0 and datatype_edges and edge_file:
+                    if not node_id_only:
+                        row.append(datatype)
+                    if len(datatype) > 0 and datatype_edges:
                         sid = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
                         # there's no need to stringify it.
                         self.erows_append(erows,
                                           edge_id=sid,
                                           node1=qnode,
-                                          label="datatype",
+                                          label=DATATYPE_LABEL,
                                           node2=datatype)
                     
                     #row.append(source)
                     if node_file:
                         nrows.append(row)
 
-                if (edge_file or qual_file) and parse_claims and "claims" not in obj:
+                if parse_claims and "claims" not in obj:
                     if fail_if_missing:
                         raise KGTKException("Qnode %s is missing its claims" % qnode)
                     elif warn_if_missing:
                         print("Object id {} is missing its claims.".format(qnode), file=sys.stderr, flush=True)
                     
-                if (edge_file or qual_file) and parse_claims and "claims" in obj:
+                if parse_claims and "claims" in obj:
                     claims = obj["claims"]
                     for prop, value_set in self.neg_prop_filter.items():
                         claim_property = claims.get(prop, None)
@@ -862,7 +1098,6 @@ def run(input_file: KGTKFiles,
                                 if cp_rank != "deprecated" and cp_id in value_set:
                                     keep = False
                     if keep:
-                        sitelinks=obj.get('sitelinks',None)
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
                             seq_no = 1
@@ -957,7 +1192,7 @@ def run(input_file: KGTKFiles,
                                         # value = '\"' + val.replace('"','\\"').replace("|", "\\|") + '\"'
                                         value = KgtkFormat.stringify(val)
 
-                                    if edge_file:
+                                    if minimal_edge_file is not None or detailed_edge_file is not None:
                                         self.erows_append(erows,
                                                           edge_id=sid,
                                                           node1=qnode,
@@ -981,7 +1216,7 @@ def run(input_file: KGTKFiles,
                                                           calendar=calendar)
 
                                     seq_no += 1
-                                    if qual_file or interleave:
+                                    if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
@@ -1097,98 +1332,166 @@ def run(input_file: KGTKFiles,
                                                                           precision=precision,
                                                                           calendar=calendar)
                                                         
+                        if parse_sitelinks:
+                            sitelinks=obj.get('sitelinks',None)
+                        else:
+                            sitelinks = None
                         if sitelinks:
                             wikipedia_seq_no = 1
                             for link in sitelinks:
                                 # TODO: If the title might contain vertical bar, more work is needed
                                 # to make the sitetitle safe for KGTK.
                                 if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
-                                    linklabel = 'wikipedia_sitelink'
+                                    linklabel = SITELINK_LABEL
                                     sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
                                     wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     sitelang=link.split('wiki')[0].replace('_','-')
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
                                 else:
-                                    linklabel = 'addl_wikipedia_sitelink'
+                                    linklabel = ADDL_SITELINK_LABEL
                                     sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
                                     wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     if "wiki" in link:
                                         sitelang=link.split("wiki")[0]
                                         if sitelang in ("commons", "simple"):
-                                            sitelang = "en"
+                                            sitelang = "en" # TODO: Need to retain the distinction we lose here.
                                     else:
                                         sitelang=""
                                     sitehost=link+'.org' # TODO: Needs more work here
                                     sitelink = 'http://'+sitehost+'/wiki/'+sitetitle
 
                                 if sitelink is not None:
-                                    if edge_file:
-                                        self.erows_append(erows,
+                                    serows = sitelink_erows if collect_seperately else erows
+                                    if sitelink_edges:
+                                        self.erows_append(serows,
                                                           edge_id=sid,
                                                           node1=qnode,
                                                           label=linklabel,
-                                                          node2=sitelink)
-                                    if qual_file or interleave:
+                                                          node2=sitelink,
+                                                          entrylang=sitelang)
+
+                                    if sitelink_verbose_edges:
+                                        if len(sitelang) > 0:
+                                            tempid=sid+'-language-1'
+                                            self.erows_append(serows,
+                                                              edge_id=tempid,
+                                                              node1=sid,
+                                                              label=SITELINK_LANGUAGE_LABEL,
+                                                              node2=sitelang,
+                                                              entrylang=sitelang)
+                                            
+                                        tempid=sid+'-site-1'
+                                        self.erows_append(serows,
+                                                          edge_id=tempid,
+                                                          node1=sid,
+                                                          label=SITELINK_SITE_LABEL,
+                                                          node2=link,
+                                                          entrylang=sitelang)
+
+                                        tempid=sid+'-title-1'
+                                        self.erows_append(serows,
+                                                          edge_id=tempid,
+                                                          node1=sid,
+                                                          label=SITELINK_TITLE_LABEL,
+                                                          node2=KgtkFormat.stringify(sitelinks[link]['title']),
+                                                          entrylang=sitelang)
+
+                                        edge_badge_num: int = 0
+                                        for badge in sitelinks[link]['badges']:
+                                            tempid=sid+'-badge-'+str(edge_badge_num + 1)
+                                            self.erows_append(serows,
+                                                              edge_id=tempid,
+                                                              node1=sid,
+                                                              label=SITELINK_BADGE_LABEL,
+                                                              node2=sitelinks[link]['badges'][edge_badge_num],
+                                                              entrylang=sitelang)
+                                            edge_badge_num += 1
+
+                                    if sitelink_verbose_qualifiers:
                                         if len(sitelang) > 0:
                                             tempid=sid+'-language-1'
                                             self.qrows_append(qrows,
                                                               edge_id=tempid,
                                                               node1=sid,
-                                                              label='language',
+                                                              label=SITELINK_LANGUAGE_LABEL,
                                                               node2=sitelang)
                                             
                                         tempid=sid+'-site-1'
                                         self.qrows_append(qrows,
                                                           edge_id=tempid,
                                                           node1=sid,
-                                                          label='site',
+                                                          label=SITELINK_SITE_LABEL,
                                                           node2=link)
 
                                         tempid=sid+'-title-1'
                                         self.qrows_append(qrows,
                                                           edge_id=tempid,
                                                           node1=sid,
-                                                          label='title',
+                                                          label=SITELINK_TITLE_LABEL,
                                                           node2=KgtkFormat.stringify(sitelinks[link]['title']))
 
-                                        badge_num: int = 0
+                                        qual_badge_num: int = 0
                                         for badge in sitelinks[link]['badges']:
-                                            tempid=sid+'-badge-'+str(badge_num + 1)
+                                            tempid=sid+'-badge-'+str(qual_badge_num + 1)
                                             self.qrows_append(qrows,
                                                               edge_id=tempid,
                                                               node1=sid,
-                                                              label='badge',
-                                                              node2=sitelinks[link]['badges'][badge_num])
-                                            badge_num += 1
+                                                              label=SITELINK_BADGE_LABEL,
+                                                              node2=sitelinks[link]['badges'][qual_badge_num])
+                                            qual_badge_num += 1
 
-            if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0:               
+            if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0 or len(description_erows) > 0 or len(sitelink_erows) > 0:
                 if collect_results:
                     if collector_batch_size == 1:
                         if collect_seperately:
                             if len(nrows) > 0 and node_collector_q is not None:
                                 node_collector_q.put(("rows", nrows, [], [], None))
+
                             if len(erows) > 0 and edge_collector_q is not None:
                                 edge_collector_q.put(("rows", [], erows, [], None))
+
                             if len(qrows) > 0 and qual_collector_q is not None:
                                 qual_collector_q.put(("rows", nrows, [], [], None))
+
+                            if len(description_erows) > 0 and description_collector_q is not None:
+                                description_collector_q.put(("rows", [], description_erows, [], None))
+
+                            if len(sitelink_erows) > 0 and sitelink_collector_q is not None:
+                                sitelink_collector_q.put(("rows", [], sitelink_erows, [], None))
                         elif collector_q is not None:
                             collector_q.put(("rows", nrows, erows, qrows, None))
                     else:
                         self.collector_nrows_batch.extend(nrows)
                         self.collector_erows_batch.extend(erows)
                         self.collector_qrows_batch.extend(qrows)
-                        self.collector_batch_cnt += 1
 
+                        if collect_seperately:
+                            self.collector_description_erows_batch.extend(description_erows)
+                            self.collector_sitelink_erows_batch.extend(sitelink_erows)
+                            
+                        self.collector_batch_cnt += 1
+                        
                         if self.collector_batch_cnt >= collector_batch_size:
                             if collect_seperately:
                                 if len(self.collector_nrows_batch) > 0 and node_collector_q is not None:
                                     node_collector_q.put(("rows", self.collector_nrows_batch, [], [], None))
+
                                 if len(self.collector_erows_batch) > 0 and edge_collector_q is not None:
                                     edge_collector_q.put(("rows", [], self.collector_erows_batch, [], None))
+
                                 if len(self.collector_qrows_batch) > 0 and qual_collector_q is not None:
                                     qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, None))
+
+                                if len(self.collector_description_erows_batch) > 0 and description_collector_q is not None:
+                                    description_collector_q.put(("rows", [], self.collector_description_erows_batch, [], None))
+                                    self.collector_description_erows_batch.clear()
+
+                                if len(self.collector_sitelink_erows_batch) > 0 and sitelink_collector_q is not None:
+                                    sitelink_collector_q.put(("rows", [], self.collector_sitelink_erows_batch, [], None))
+                                    self.collector_sitelink_erows_batch.clear()
+                                
                             elif collector_q is not None:
                                 collector_q.put(("rows", self.collector_nrows_batch, self.collector_erows_batch, self.collector_qrows_batch, None))
 
@@ -1202,11 +1505,11 @@ def run(input_file: KGTKFiles,
                         for row in nrows:
                             self.node_wr.writerow(row)
 
-                    if edge_file:
+                    if detailed_edge_file:
                         for row in erows:
                             self.edge_wr.writerow(row)
 
-                    if qual_file:
+                    if detailed_qual_file:
                         for row in qrows:
                             self.qual_wr.writerow(row)
     
@@ -1218,22 +1521,76 @@ def run(input_file: KGTKFiles,
             self.node_wr = None
             self.nrows: int = 0
 
-            self.edge_f: typing.Optional[typing.TextIO] = None
-            self.edge_wr = None
+            self.minimal_edge_f: typing.Optional[typing.TextIO] = None
+            self.minimal_edge_wr = None
+
+            self.detailed_edge_f: typing.Optional[typing.TextIO] = None
+            self.detailed_edge_wr = None
             self.erows: int = 0
 
-            self.qual_f: typing.Optional[typing.TextIO] = None
-            self.qual_wr = None
+            self.minimal_qual_f: typing.Optional[typing.TextIO] = None
+            self.minimal_qual_wr = None
+
+            self.detailed_qual_f: typing.Optional[typing.TextIO] = None
+            self.detailed_qual_wr = None
             self.qrows: int = 0
+
+            self.split_alias_f: typing.Optional[typing.TextIO] = None
+            self.split_alias_wr = None
+            self.n_alias_rows: int = 0
+
+            self.split_en_alias_f: typing.Optional[typing.TextIO] = None
+            self.split_en_alias_wr = None
+            self.n_en_alias_rows: int = 0
+
+            self.split_datatype_f: typing.Optional[typing.TextIO] = None
+            self.split_datatype_wr = None
+            self.n_datatype_rows: int = 0
+
+            self.split_description_f: typing.Optional[typing.TextIO] = None
+            self.split_description_wr = None
+            self.n_description_rows: int = 0
+
+            self.split_en_description_f: typing.Optional[typing.TextIO] = None
+            self.split_en_description_wr = None
+            self.n_en_description_rows: int = 0
+
+            self.split_label_f: typing.Optional[typing.TextIO] = None
+            self.split_label_wr = None
+            self.n_label_rows: int = 0
+
+            self.split_en_label_f: typing.Optional[typing.TextIO] = None
+            self.split_en_label_wr = None
+            self.n_en_label_rows: int = 0
+
+            self.split_sitelink_f: typing.Optional[typing.TextIO] = None
+            self.split_sitelink_wr = None
+            self.n_sitelink_rows: int = 0
+
+            self.split_en_sitelink_f: typing.Optional[typing.TextIO] = None
+            self.split_en_sitelink_wr = None
+            self.n_en_sitelink_rows: int = 0
+
+            self.split_type_f: typing.Optional[typing.TextIO] = None
+            self.split_type_wr = None
+            self.n_type_rows: int = 0
+
+            self.split_property_edge_f: typing.Optional[typing.TextIO] = None
+            self.split_property_edge_wr = None
+            self.n_property_edge_rows: int = 0
+
+            self.split_property_qual_f: typing.Optional[typing.TextIO] = None
+            self.split_property_qual_wr = None
+            self.n_property_qual_rows: int = 0
+
+            self.process_split_files: bool = False
+            self.setup_split_dispatcher()
 
             self.cnt: int = 0
 
             self.started: bool = False
 
         def run(self,
-                node_file: typing.Optional[str],
-                edge_file: typing.Optional[str],
-                qual_file: typing.Optional[str],
                 collector_q,
                 who: str):
             print("The %s collector is starting (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
@@ -1246,105 +1603,262 @@ def run(input_file: KGTKFiles,
                     self.collect(nrows, erows, qrows, who)
 
                 elif action == "node_header":
-                    self.open_node_file(node_file, header, who)
+                    self.open_node_file(header, who)
 
-                elif action == "edge_header":
-                    self.open_edge_file(edge_file, header, who)
+                elif action == "minimal_edge_header":
+                    self.open_minimal_edge_file(header, who)
+                    self.process_split_files = True
 
-                elif action == "qual_header":
-                    self.open_qual_file(qual_file, header, who)
+                elif action == "detailed_edge_header":
+                    self.open_detailed_edge_file(header, who)
+
+                elif action == "minimal_qual_header":
+                    self.open_minimal_qual_file(header, who)
+
+                elif action == "detailed_qual_header":
+                    self.open_detailed_qual_file(header, who)
+
+                elif action == "split_alias_header":
+                    self.open_split_alias_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_en_alias_header":
+                    self.open_split_en_alias_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_datatype_header":
+                    self.open_split_datatype_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_description_header":
+                    self.open_split_description_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_en_description_header":
+                    self.open_split_en_description_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_label_header":
+                    self.open_split_label_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_en_label_header":
+                    self.open_split_en_label_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_sitelink_header":
+                    self.open_split_sitelink_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_en_sitelink_header":
+                    self.open_split_en_sitelink_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_type_header":
+                    self.open_split_type_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_property_edge_header":
+                    self.open_split_property_edge_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_property_qual_header":
+                    self.open_split_property_qual_file(header, who)
 
                 elif action == "shutdown":
                     self.shutdown(who)
                     break
 
-        def open_node_file(self, node_file: typing.Optional[str], header: typing.List[str], who: str):
-            if node_file is None or len(node_file) == 0:
-                raise ValueError("Node header without a node file in the %s collector." % who)
+        def _open_file(self, the_file: typing.Optional[str], header: typing.List[str], file_type: str, who: str):
+            if the_file is None or len(the_file) == 0:
+                raise ValueError("%s header without a %s file in the %s collector." % (file_type, file_type, who))
 
+            f: typing.Optional[typing.TextIO]
+            wr: typing.Any
             if use_kgtkwriter:
-                print("Opening the node file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
-                self.node_wr = KgtkWriter.open(header, Path(node_file), who=who + " collector")
+                print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file), file=sys.stderr, flush=True)
+                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector")
+                return None, wr
                 
             else:
-                print("Opening the node file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
+                print("Opening the %s file in the %s collector with csv.writer." % (file_type, who), file=sys.stderr, flush=True)
                 csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-                self.node_f = open(node_file, "w", newline='')
-                self.node_wr = csv.writer(
-                    self.node_f,
+                f = open(the_file, "w", newline='')
+                wr = csv.writer(
+                    f,
                     quoting=csv.QUOTE_NONE,
                     delimiter="\t",
                     escapechar="\n",
                     quotechar='',
                     lineterminator=csv_line_terminator)
-                self.node_wr.writerow(header)
+                wr.writerow(header)
+                return f, wr
 
-        def open_edge_file(self, edge_file: typing.Optional[str], header: typing.List[str], who: str):
-            if edge_file is None or len(edge_file) == 0:
-                raise ValueError("Edge header without an edge file in the %s collector." % who)
+        def open_node_file(self, header: typing.List[str], who: str):
+            self.node_f, self.node_wr = self._open_file(node_file, header, "node", who)
 
-            if use_kgtkwriter:
-                print("Opening the edge file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
-                self.edge_wr = KgtkWriter.open(header, Path(edge_file), who=who + " collector")
-                
-            else:
-                print("Opening the edge file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
-                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-                self.edge_f = open(edge_file, "w", newline='')
-                self.edge_wr = csv.writer(
-                    self.edge_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-                self.edge_wr.writerow(header)
+        def open_minimal_edge_file(self, header: typing.List[str], who: str):
+            self.minimal_edge_f, self.minimal_edge_wr = self._open_file(minimal_edge_file, header, "minimal edge", who)
 
-        def open_qual_file(self, qual_file: typing.Optional[str], header: typing.List[str], who: str):
-            if qual_file is None or len(qual_file) == 0:
-                raise ValueError("Qual header without a qual file in the %s collector." % who)
+        def open_detailed_edge_file(self, header: typing.List[str], who: str):
+            self.detailed_edge_f, self.detailed_edge_wr = self._open_file(detailed_edge_file, header, "detailed edge", who)
 
-            if use_kgtkwriter:
-                print("Opening the qual file in the %s collector with KgtkWriter." % who, file=sys.stderr, flush=True)
-                self.qual_wr = KgtkWriter.open(header, Path(qual_file), who=who + " collector")
-                
-            else:
-                print("Opening the qual file in the %s collector with csv.writer." % who, file=sys.stderr, flush=True)
-                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-                self.qual_f = open(qual_file, "w", newline='')
-                self.qual_wr = csv.writer(
-                    self.qual_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-                self.qual_wr.writerow(header)
+        def open_minimal_qual_file(self, header: typing.List[str], who: str):
+            self.minimal_qual_f, self.minimal_qual_wr = self._open_file(minimal_qual_file, header, "minimal qual", who)
             
+        def open_detailed_qual_file(self, header: typing.List[str], who: str):
+            self.detailed_qual_f, self.detailed_qual_wr = self._open_file(detailed_qual_file, header, "qual", who)
+            
+        def open_split_alias_file(self, header: typing.List[str], who: str):
+            self.split_alias_f, self.split_alias_wr = self._open_file(split_alias_file, header, ALIAS_LABEL, who)
+
+        def open_split_en_alias_file(self, header: typing.List[str], who: str):
+            self.split_en_alias_f, self.split_en_alias_wr = self._open_file(split_en_alias_file, header, "English " + ALIAS_LABEL, who)
+
+        def open_split_datatype_file(self, header: typing.List[str], who: str):
+            self.split_datatype_f, self.split_datatype_wr = self._open_file(split_datatype_file, header, DATATYPE_LABEL, who)
+
+        def open_split_description_file(self, header: typing.List[str], who: str):
+            self.split_description_f, self.split_description_wr = self._open_file(split_description_file, header, DESCRIPTION_LABEL, who)
+
+        def open_split_en_description_file(self, header: typing.List[str], who: str):
+            self.split_en_description_f, self.split_en_description_wr = self._open_file(split_en_description_file, header, "English " + DESCRIPTION_LABEL, who)
+
+        def open_split_label_file(self, header: typing.List[str], who: str):
+            self.split_label_f, self.split_label_wr = self._open_file(split_label_file, header, LABEL_LABEL, who)
+
+        def open_split_en_label_file(self, header: typing.List[str], who: str):
+            self.split_en_label_f, self.split_en_label_wr = self._open_file(split_en_label_file, header, "English " + LABEL_LABEL, who)
+
+        def open_split_sitelink_file(self, header: typing.List[str], who: str):
+            self.split_sitelink_f, self.split_sitelink_wr = self._open_file(split_sitelink_file, header, SITELINK_LABEL, who)
+
+        def open_split_en_sitelink_file(self, header: typing.List[str], who: str):
+            self.split_en_sitelink_f, self.split_en_sitelink_wr = self._open_file(split_en_sitelink_file, header, "English " + SITELINK_LABEL, who)
+
+        def open_split_type_file(self, header: typing.List[str], who: str):
+            self.split_type_f, self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
+
+        def open_split_property_edge_file(self, header: typing.List[str], who: str):
+            self.split_property_edge_f, self.split_property_edge_wr = self._open_file(split_property_edge_file, header, "property edge", who)
+
+        def open_split_property_qual_file(self, header: typing.List[str], who: str):
+            self.split_property_qual_f, self.split_property_qual_wr = self._open_file(split_property_qual_file, header, "property qual", who)
+
         def shutdown(self, who: str):
             print("Exiting the %s collector (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
 
             if use_kgtkwriter:
                 if self.node_wr is not None:
                     self.node_wr.close()
-                if self.edge_wr is not None:
-                    self.edge_wr.close()
-                if self.qual_wr is not None:
-                    self.qual_wr.close()
+
+                if self.minimal_edge_wr is not None:
+                    self.minimal_edge_wr.close()
+
+                if self.detailed_edge_wr is not None:
+                    self.detailed_edge_wr.close()
+
+                if self.minimal_qual_wr is not None:
+                    self.minimal_qual_wr.close()
+
+                if self.detailed_qual_wr is not None:
+                    self.detailed_qual_wr.close()
+
+                if self.split_alias_wr is not None:
+                    self.split_alias_wr.close()
+
+                if self.split_en_alias_wr is not None:
+                    self.split_en_alias_wr.close()
+
+                if self.split_datatype_wr is not None:
+                    self.split_datatype_wr.close()
+
+                if self.split_description_wr is not None:
+                    self.split_description_wr.close()
+
+                if self.split_en_description_wr is not None:
+                    self.split_en_description_wr.close()
+
+                if self.split_label_wr is not None:
+                    self.split_label_wr.close()
+
+                if self.split_en_label_wr is not None:
+                    self.split_en_label_wr.close()
+
+                if self.split_sitelink_wr is not None:
+                    self.split_sitelink_wr.close()
+
+                if self.split_en_sitelink_wr is not None:
+                    self.split_en_sitelink_wr.close()
+
+                if self.split_type_wr is not None:
+                    self.split_type_wr.close()
+
+                if self.split_property_edge_wr is not None:
+                    self.split_property_edge_wr.close()
+
+                if self.split_property_edge_wr is not None:
+                    self.split_property_edge_wr.close()
 
             else:
                 if self.node_f is not None:
                     self.node_f.close()
 
-                if self.edge_f is not None:
-                    self.edge_f.close()
+                if self.minimal_edge_f is not None:
+                    self.minimal_edge_f.close()
 
-                if self.qual_f is not None:
-                    self.qual_f.close()
+                if self.detailed_edge_f is not None:
+                    self.detailed_edge_f.close()
+
+                if self.minimal_qual_f is not None:
+                    self.minimal_qual_f.close()
+
+                if self.detailed_qual_f is not None:
+                    self.detailed_qual_f.close()
+
+                if self.split_alias_f is not None:
+                    self.split_alias_f.close()
+
+                if self.split_en_alias_f is not None:
+                    self.split_en_alias_f.close()
+
+                if self.split_datatype_f is not None:
+                    self.split_datatype_f.close()
+
+                if self.split_description_f is not None:
+                    self.split_description_f.close()
+
+                if self.split_en_description_f is not None:
+                    self.split_en_description_f.close()
+
+                if self.split_label_f is not None:
+                    self.split_label_f.close()
+
+                if self.split_en_label_f is not None:
+                    self.split_en_label_f.close()
+
+                if self.split_sitelink_f is not None:
+                    self.split_sitelink_f.close()
+
+                if self.split_en_sitelink_f is not None:
+                    self.split_en_sitelink_f.close()
+
+                if self.split_type_f is not None:
+                    self.split_type_f.close()
+
+                if self.split_property_edge_f is not None:
+                    self.split_property_edge_f.close()
+
+                if self.split_property_qual_f is not None:
+                    self.split_property_qual_f.close()
 
             print("The %s collector has closed its output files." % who, file=sys.stderr, flush=True)
 
-        def collect(self, nrows, erows, qrows, who: str):
+        def collect(self,
+                    nrows: typing.List[typing.List[str]],
+                    erows: typing.List[typing.List[str]],
+                    qrows: typing.List[typing.List[str]],
+                    who: str):
             self.nrows += len(nrows)
             self.erows += len(erows)
             self.qrows += len(qrows)
@@ -1356,32 +1870,162 @@ def run(input_file: KGTKFiles,
                                                                                               self.nrows,
                                                                                               self.erows,
                                                                                               self.qrows), file=sys.stderr, flush=True)
-            if self.node_wr is not None:
+            row: typing.List[str]
+            if len(nrows) > 0:
+                if self.node_wr is None:
+                    raise ValueError("Unexpected node rows in the %s collector." % who)
+
                 if use_kgtkwriter:
                     for row in nrows:
                         self.node_wr.write(row)
                 else:
                     self.node_wr.writerows(nrows)
-            elif len(nrows) > 0:
-                raise ValueError("Unexpected node rows in the %s collector." % who)
 
-            if self.edge_wr is not None:
+            if len(erows) > 0:
                 if use_kgtkwriter:
-                    for row in erows:
-                        self.edge_wr.write(row)
+                    if not self.process_split_files:
+                        if self.detailed_edge_wr is None:
+                            raise ValueError("Unexpected edge rows in the %s collector." % who)
+                        for row in erows:
+                            self.detailed_edge_wr.write(row)
+                    else:
+                        for row in erows:
+                            split: bool = False
+                            label: str = row[2] # Hack: knows the structure of the row.
+                            method: typing.Optional[typing.Callable[[typing.List[str]], bool]] = self.split_dispatcher.get(label)
+                            if method is not None:
+                                split = method(row)
+                            if not split:
+                                if self.minimal_edge_wr is None and self.detailed_edge_wr is None and self.split_property_edge_wr is None:
+                                    raise ValueError("Unexpected %s edge rows in the %s collector." % (label, who))
+
+                                if self.split_property_edge_wr is not None and row[1].startswith("P"): # Hack: knows the structure of the row.
+                                    # For now, split property files are minimal.
+                                    self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+
+                                elif self.minimal_edge_wr is not None:
+                                    self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+
+                                if self.detailed_edge_wr is not None:
+                                    self.detailed_edge_wr.write(row)
                 else:
-                    self.edge_wr.writerows(erows)
-            elif len(erows) > 0:
-                raise ValueError("Unexpected edge rows in the %s collector." % who)
+                    if self.minimal_edge_wr is None:
+                        raise ValueError("Unexpected edge rows in the %s collector." % who)
 
-            if self.qual_wr is not None:
+                    self.minimal_edge_wr.writerows(erows)
+
+            if len(qrows) > 0:
+
                 if use_kgtkwriter:
+                    if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
+                        raise ValueError("Unexpected qual rows in the %s collector." % who)
+                    
                     for row in qrows:
-                        self.qual_wr.write(row)
+                        if self.split_property_qual_wr is not None and row[0].startswith("P"): # Hack: knows the structure of the row.
+                            self.split_property_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+                                                              
+                        elif self.minimal_qual_wr is not None:
+                            self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+
+                        if self.detailed_qual_wr is not None:
+                            self.detailed_qual_wr.write(row)
                 else:
-                    self.qual_wr.writerows(qrows)
-            elif len(qrows) > 0:
-                raise ValueError("Unexpected qual rows in the %s collector." % who)
+                    if self.detailed_qual_wr is None:
+                        raise ValueError("Unexpected qual rows in the %s collector." % who)
+                    self.detailed_qual_wr.writerows(qrows)
+
+        def setup_split_dispatcher(self):
+            self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
+            self.split_dispatcher[ADDL_SITELINK_LABEL] = self.split_sitelink
+            self.split_dispatcher[ALIAS_LABEL] = self.split_alias
+            self.split_dispatcher[DATATYPE_LABEL] = self.split_datatype
+            self.split_dispatcher[DESCRIPTION_LABEL] = self.split_description
+            self.split_dispatcher[LABEL_LABEL] = self.split_label
+            self.split_dispatcher[SITELINK_LABEL] = self.split_sitelink
+            self.split_dispatcher[SITELINK_BADGE_LABEL] = self.split_sitelink
+            self.split_dispatcher[SITELINK_LANGUAGE_LABEL] = self.split_sitelink
+            self.split_dispatcher[SITELINK_SITE_LABEL] = self.split_sitelink
+            self.split_dispatcher[SITELINK_TITLE_LABEL] = self.split_sitelink
+            self.split_dispatcher[TYPE_LABEL] = self.split_type
+
+        def split_alias(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            lang: str = row[-1] # Hack: knows the structure of the row.
+
+            if self.split_alias_wr is not None:
+                self.split_alias_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
+                split= True
+                                    
+            if self.split_en_alias_wr is not None and lang == "en":
+                self.split_en_alias_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_datatype(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            if self.split_datatype_wr is not None:
+                self.split_datatype_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_description(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            lang: str = row[-1] # Hack: knows the structure of the row.
+
+            if self.split_description_wr is not None:
+                self.split_description_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
+                split = True
+
+            if self.split_en_description_wr is not None and lang == "en":
+                self.split_en_description_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+                
+            return split
+
+        def split_label(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            lang: str = row[-1] # Hack: knows the structure of the row.
+
+            if self.split_label_wr is not None:
+                self.split_label_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
+                split = True
+
+            if self.split_en_label_wr is not None and lang == "en":
+                self.split_en_label_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_sitelink(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            lang: str = row[-1] # Hack: knows the structure of the row.
+
+            if self.split_sitelink_wr is not None:
+                self.split_sitelink_wr.write((row[0], row[1], row[2], row[3], lang)) # Hack: knows the structure of the row.
+                split = True
+
+            if self.split_en_sitelink_wr is not None and lang == "en":
+                self.split_en_sitelink_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_type(self, row: typing.List[str])->bool:
+            split: bool = False
+
+            if self.split_type_wr is not None:
+                self.split_type_wr.write((row[0], row[1], row[2], row[3])) # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
 
     try:
         UPDATE_VERSION: str = "2020-09-14T22:13:50.434152+00:00#flOJV7jeH3XhclcGDslyMU2bCTa6Ra/VVIg8nxqFsYCYa2cbIG23Iz8MzuPSaDZhQLAWURR1MtCDltkkgv/3qQ=="
@@ -1395,7 +2039,6 @@ def run(input_file: KGTKFiles,
 
         if not skip_processing:
             print("Processing.", file=sys.stderr, flush=True)
-            languages=lang.split(',')
 
             # Open the input file first to make it easier to monitor with "pv".
             input_f: typing.IO[typing.Any]
@@ -1427,6 +2070,9 @@ def run(input_file: KGTKFiles,
             edge_collector_p = None
             qual_collector_p = None
 
+            description_collector_p = None
+            sitelink_collector_p = None
+
             if collect_results:
                 print("Creating the collector queue.", file=sys.stderr, flush=True)
                 # collector_q = pyrallel.ShmQueue()
@@ -1440,34 +2086,58 @@ def run(input_file: KGTKFiles,
                         print("Creating the node_collector.", file=sys.stderr, flush=True)
                         node_collector: MyCollector = MyCollector()
                         print("Creating the node collector process.", file=sys.stderr, flush=True)
-                        node_collector_p = mp.Process(target=node_collector.run, args=(node_file, None, None, node_collector_q, "node"))
+                        node_collector_p = mp.Process(target=node_collector.run, args=(node_collector_q, "node"))
                         print("Starting the node collector process.", file=sys.stderr, flush=True)
                         node_collector_p.start()
                         print("Started the node collector process.", file=sys.stderr, flush=True)
 
-                    if edge_file is not None:
+                    if minimal_edge_file is not None or detailed_edge_file is not None:
                         edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
                         print("The collector edge queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
 
                         print("Creating the edge_collector.", file=sys.stderr, flush=True)
                         edge_collector: MyCollector = MyCollector()
                         print("Creating the edge collector process.", file=sys.stderr, flush=True)
-                        edge_collector_p = mp.Process(target=edge_collector.run, args=(None, edge_file, None, edge_collector_q, "edge"))
+                        edge_collector_p = mp.Process(target=edge_collector.run, args=(edge_collector_q, "edge"))
                         print("Starting the edge collector process.", file=sys.stderr, flush=True)
                         edge_collector_p.start()
                         print("Started the edge collector process.", file=sys.stderr, flush=True)
 
-                    if qual_file is not None:
+                    if minimal_qual_file is not None or detailed_qual_file is not None:
                         qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
                         print("The collector qual queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
 
                         print("Creating the qual_collector.", file=sys.stderr, flush=True)
                         qual_collector: MyCollector = MyCollector()
                         print("Creating the qual collector process.", file=sys.stderr, flush=True)
-                        qual_collector_p = mp.Process(target=qual_collector.run, args=(None, None, qual_file, qual_collector_q, "qual"))
+                        qual_collector_p = mp.Process(target=qual_collector.run, args=(qual_collector_q, "qual"))
                         print("Starting the qual collector process.", file=sys.stderr, flush=True)
                         qual_collector_p.start()
                         print("Started the qual collector process.", file=sys.stderr, flush=True)
+
+                    if split_description_file is not None:
+                        description_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector description queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+
+                        print("Creating the description collector.", file=sys.stderr, flush=True)
+                        description_collector: MyCollector = MyCollector()
+                        print("Creating the description collector process.", file=sys.stderr, flush=True)
+                        description_collector_p = mp.Process(target=description_collector.run, args=(description_collector_q, "description"))
+                        print("Starting the description collector process.", file=sys.stderr, flush=True)
+                        description_collector_p.start()
+                        print("Started the description collector process.", file=sys.stderr, flush=True)
+
+                    if split_sitelink_file is not None:
+                        sitelink_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector sitelink queue has been created (maxsize=%d)." % collector_q_maxsize, file=sys.stderr, flush=True)
+
+                        print("Creating the sitelink collector.", file=sys.stderr, flush=True)
+                        sitelink_collector: MyCollector = MyCollector()
+                        print("Creating the sitelink collector process.", file=sys.stderr, flush=True)
+                        sitelink_collector_p = mp.Process(target=sitelink_collector.run, args=(sitelink_collector_q, "sitelink"))
+                        print("Starting the sitelink collector process.", file=sys.stderr, flush=True)
+                        sitelink_collector_p.start()
+                        print("Started the sitelink collector process.", file=sys.stderr, flush=True)
 
                 else:
                     collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
@@ -1476,22 +2146,22 @@ def run(input_file: KGTKFiles,
                     print("Creating the common collector.", file=sys.stderr, flush=True)
                     collector: MyCollector = MyCollector()
                     print("Creating the common collector process.", file=sys.stderr, flush=True)
-                    collector_p = mp.Process(target=collector.run, args=(node_file, edge_file, qual_file, collector_q, "common"))
+                    collector_p = mp.Process(target=collector.run, args=(collector_q, "common"))
                     print("Starting the common collector process.", file=sys.stderr, flush=True)
                     collector_p.start()
                     print("Started the common collector process.", file=sys.stderr, flush=True)
 
             if node_file:
-                header = ['id','label','type','description','alias','datatype']
-                if collector_q is not None:
-                    print("Sending the node header to the collector.", file=sys.stderr, flush=True)
-                    collector_q.put(("node_header", None, None, None, header))
-                    print("Sent the node header to the collector.", file=sys.stderr, flush=True)
+                if node_id_only:
+                    node_file_header = ['id']
+                else:
+                   node_file_header = ['id','label','type','description','alias','datatype']
 
-                elif node_collector_q is not None:
-                    print("Sending the node header to the node collector.", file=sys.stderr, flush=True)
-                    node_collector_q.put(("node_header", None, None, None, header))
-                    print("Sent the node header to the node collector.", file=sys.stderr, flush=True)
+                ncq = collector_q if collector_q is not None else node_collector_q
+                if ncq is not None:
+                    print("Sending the node header to the collector.", file=sys.stderr, flush=True)
+                    ncq.put(("node_header", None, None, None, node_file_header))
+                    print("Sent the node header to the collector.", file=sys.stderr, flush=True)
 
                 else:
                     with open(node_file+'_header', 'w', newline='') as myfile:
@@ -1502,28 +2172,25 @@ def run(input_file: KGTKFiles,
                             escapechar="\n",
                             quotechar='',
                             lineterminator=csv_line_terminator)
-                        wr.writerow(header)
+                        wr.writerow(node_file_header)
+
             if explode_values:
-                header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
-                          'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype']
+                edge_file_header = ['id','node1','label','node2','rank','node2;magnitude','node2;unit','node2;date','node2;item','node2;lower','node2;upper',
+                                    'node2;latitude','node2;longitude','node2;precision','node2;calendar','node2;entity-type','node2;wikidatatype', 'lang']
             else:
-                header = ['id','node1','label','node2',
-                          'rank', 'node2;wikidatatype',
-                          'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar']
+                edge_file_header = ['id','node1','label','node2',
+                                    'rank', 'node2;wikidatatype',
+                                    'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
 
-            if edge_file:
-                if collector_q is not None:
-                    print("Sending the edge header to the collector.", file=sys.stderr, flush=True)
-                    collector_q.put(("edge_header", None, None, None, header))
-                    print("Sent the edge header to the collector.", file=sys.stderr, flush=True)
-
-                elif edge_collector_q is not None:
-                    print("Sending the edge header to the edge collector.", file=sys.stderr, flush=True)
-                    edge_collector_q.put(("edge_header", None, None, None, header))
-                    print("Sent the edge header to the edge collector.", file=sys.stderr, flush=True)
+            ecq = collector_q if collector_q is not None else edge_collector_q
+            if detailed_edge_file:
+                if ecq is not None:
+                    print("Sending the detailed edge header to the collector.", file=sys.stderr, flush=True)
+                    ecq.put(("detailed_edge_header", None, None, None, edge_file_header))
+                    print("Sent the detailed edge header to the collector.", file=sys.stderr, flush=True)
 
                 else:
-                    with open(edge_file+'_header', 'w', newline='') as myfile:
+                    with open(detailed_edge_file+'_header', 'w', newline='') as myfile:
                         wr = csv.writer(
                             myfile,
                             quoting=csv.QUOTE_NONE,
@@ -1531,35 +2198,119 @@ def run(input_file: KGTKFiles,
                             escapechar="\n",
                             quotechar='',
                             lineterminator=csv_line_terminator)
-                        wr.writerow(header)
-            if qual_file:
-                if "rank" in header:
-                    header.remove('rank')
-                if "claim_type" in header:
-                    header.remove('claim_type')
-                if "claim_id" in header:
-                    header.remove('claim_id')
+                        wr.writerow(edge_file_header)
 
-                if collector_q is not None:
-                    print("Sending the qual header to the collector.", file=sys.stderr, flush=True)
-                    collector_q.put(("qual_header", None, None, None, header))
-                    print("Sent the qual header to the collector.", file=sys.stderr, flush=True)
+            if minimal_edge_file and ecq is not None:
+                print("Sending the minimal edge file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("minimal_edge_header", None, None, None, edge_file_header[0:6]))
+                print("Sent the minimal edge file header to the collector.", file=sys.stderr, flush=True)
 
-                elif qual_collector_q is not None:
-                    print("Sending the qual header to the qual collector.", file=sys.stderr, flush=True)
-                    qual_collector_q.put(("qual_header", None, None, None, header))
-                    print("Sent the qual header to the qual collector.", file=sys.stderr, flush=True)
+            if split_alias_file and ecq is not None:
+                alias_file_header = ['id', 'node1', 'label', 'node2', 'lang']
+                print("Sending the alias file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_alias_header", None, None, None, alias_file_header))
+                print("Sent the alias file header to the collector.", file=sys.stderr, flush=True)
 
-                else:
-                    with open(qual_file+'_header', 'w', newline='') as myfile:
-                        wr = csv.writer(
-                            myfile,
-                            quoting=csv.QUOTE_NONE,
-                            delimiter="\t",
-                            escapechar="\n",
-                            quotechar='',
-                            lineterminator=csv_line_terminator)
-                        wr.writerow(header)
+            if split_en_alias_file and ecq is not None:
+                en_alias_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the English alias file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_en_alias_header", None, None, None, en_alias_file_header))
+                print("Sent the English alias file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_datatype_file and ecq is not None:
+                datatype_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the datatype file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_datatype_header", None, None, None, datatype_file_header))
+                print("Sent the datatype file header to the collector.", file=sys.stderr, flush=True)
+
+            dcq = collector_q if collector_q is not None else description_collector_q
+            if split_description_file and dcq is not None:
+                description_file_header = ['id', 'node1', 'label', 'node2', 'lang']
+                print("Sending the description file header to the collector.", file=sys.stderr, flush=True)
+                dcq.put(("split_description_header", None, None, None, description_file_header))
+                print("Sent the description file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_en_description_file and dcq is not None:
+                en_description_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the English description file header to the collector.", file=sys.stderr, flush=True)
+                dcq.put(("split_en_description_header", None, None, None, en_description_file_header))
+                print("Sent the English description file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_label_file and ecq is not None:
+                label_file_header = ['id', 'node1', 'label', 'node2', 'lang']
+                print("Sending the label file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_label_header", None, None, None, label_file_header))
+                print("Sent the label file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_en_label_file and ecq is not None:
+                en_label_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the English label file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_en_label_header", None, None, None, en_label_file_header))
+                print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
+
+            scq = collector_q if collector_q is not None else sitelink_collector_q
+            if split_sitelink_file and scq is not None:
+                sitelink_file_header = ['id', 'node1', 'label', 'node2', 'lang']
+                print("Sending the sitelink file header to the collector.", file=sys.stderr, flush=True)
+                scq.put(("split_sitelink_header", None, None, None, sitelink_file_header))
+                print("Sent the sitelink file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_en_sitelink_file and scq is not None:
+                en_sitelink_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the English sitelink file header to the collector.", file=sys.stderr, flush=True)
+                scq.put(("split_en_sitelink_header", None, None, None, en_sitelink_file_header))
+                print("Sent the English sitelink file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_type_file and ecq is not None:
+                type_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the entry type file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_type_header", None, None, None, type_file_header))
+                print("Sent the entry type file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_property_edge_file and ecq is not None:
+                print("Sending the property edge file header to the collector.", file=sys.stderr, flush=True)
+                ecq.put(("split_property_edge_header", None, None, None, edge_file_header[0:6]))
+                print("Sent the property edge file header to the collector.", file=sys.stderr, flush=True)
+
+            if minimal_qual_file is not None or detailed_qual_file is not None or split_property_qual_file is not None:
+                qual_file_header = edge_file_header.copy()
+                if "rank" in qual_file_header:
+                    qual_file_header.remove('rank')
+                if "claim_type" in qual_file_header:
+                    qual_file_header.remove('claim_type')
+                if "claim_id" in qual_file_header:
+                    qual_file_header.remove('claim_id')
+                if "lang" in qual_file_header:
+                    qual_file_header.remove('lang')
+
+                qcq = collector_q if collector_q is not None else qual_collector_q
+
+                if detailed_qual_file is not None:
+                    if qcq is not None:
+                        print("Sending the detailed qual file header to the collector.", file=sys.stderr, flush=True)
+                        qcq.put(("detailed_qual_header", None, None, None, qual_file_header))
+                        print("Sent the detailed qual file header to the collector.", file=sys.stderr, flush=True)
+
+                    else:
+                        with open(detailed_qual_file+'_header', 'w', newline='') as myfile:
+                            wr = csv.writer(
+                                myfile,
+                                quoting=csv.QUOTE_NONE,
+                                delimiter="\t",
+                                escapechar="\n",
+                                quotechar='',
+                                lineterminator=csv_line_terminator)
+                            wr.writerow(qual_file_header)
+                if minimal_qual_file is not None and qcq is not None:
+                    print("Sending the minimal qual file header to the collector.", file=sys.stderr, flush=True)
+                    qcq.put(("minimal_qual_header", None, None, None, qual_file_header[0:5]))
+                    print("Sent the minimal qual file header to the collector.", file=sys.stderr, flush=True)
+                        
+                if split_property_qual_file and qcq is not None:
+                    print("Sending the property qual file header to the collector.", file=sys.stderr, flush=True)
+                    qcq.put(("split_property_qual_header", None, None, None, qual_file_header[0:5]))
+                    print("Sent the property qual file header to the collector.", file=sys.stderr, flush=True)
+
 
             print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
             if use_shm or single_mapper_queue:
@@ -1626,6 +2377,26 @@ def run(input_file: KGTKFiles,
             if qual_collector_q is not None:
                 qual_collector_q.close()
 
+            if description_collector_q is not None:
+                print('Telling the description collector to shut down.', file=sys.stderr, flush=True)
+                description_collector_q.put(("shutdown", None, None, None, None))
+            if description_collector_p is not None:
+                print('Waiting for the description collector to shut down.', file=sys.stderr, flush=True)
+                description_collector_p.join()
+                print('Description collector shut down is complete.', file=sys.stderr, flush=True)
+            if description_collector_q is not None:
+                description_collector_q.close()
+
+            if sitelink_collector_q is not None:
+                print('Telling the sitelink collector to shut down.', file=sys.stderr, flush=True)
+                sitelink_collector_q.put(("shutdown", None, None, None, None))
+            if sitelink_collector_p is not None:
+                print('Waiting for the sitelink collector to shut down.', file=sys.stderr, flush=True)
+                sitelink_collector_p.join()
+                print('Sitelink collector shut down is complete.', file=sys.stderr, flush=True)
+            if sitelink_collector_q is not None:
+                sitelink_collector_q.close()
+
         if not skip_merging and not collect_results:
             # We've finished processing the input data, possibly using multiple
             # server processes.  We need to assemble the final output file(s) with
@@ -1641,19 +2412,19 @@ def run(input_file: KGTKFiles,
                     node_file_fragments.append(node_file+'_'+str(n))
                 platform_cat(node_file_fragments, node_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
-            if edge_file:
+            if detailed_edge_file:
                 print('Combining the edge file fragments', file=sys.stderr, flush=True)
-                edge_file_fragments=[edge_file+'_header']
+                edge_file_fragments=[detailed_edge_file+'_header']
                 for n in range(procs):
-                    edge_file_fragments.append(edge_file+'_'+str(n))
-                platform_cat(edge_file_fragments, edge_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
+                    edge_file_fragments.append(detailed_edge_file+'_'+str(n))
+                platform_cat(edge_file_fragments, detailed_edge_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
-            if qual_file:
+            if detailed_qual_file:
                 print('Combining the qualifier file fragments', file=sys.stderr, flush=True)
-                qual_file_fragments=[qual_file+'_header']
+                qual_file_fragments=[detailed_qual_file+'_header']
                 for n in range(procs):
-                    qual_file_fragments.append(qual_file+'_'+str(n))
-                platform_cat(qual_file_fragments, qual_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
+                    qual_file_fragments.append(detailed_qual_file+'_'+str(n))
+                platform_cat(qual_file_fragments, detailed_qual_file, remove=not keep_temp_files, use_python_cat=use_python_cat, verbose=True)
 
         print('import complete', file=sys.stderr, flush=True)
         end=time.time()
