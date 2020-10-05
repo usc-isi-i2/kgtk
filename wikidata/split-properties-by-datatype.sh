@@ -74,16 +74,36 @@ for TARGET in \
 	wikibase-sense \
 	other
 do
-    TARGET_NAME=${WIKIDATA_ALL}-property-${TARGET}-sorted
-    echo -e "\mCompress ${TARGET_NAME} file."
+    TARGET_NAME=${WIKIDATA_ALL}-property-${TARGET}
     echo -e "\nCompress the sorted ${TARGET} file."
     time gzip --keep --force --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv \
-	|& tee ${LOGDIR}/${TARGET_NAME}.log
+	 ${DATADIR}/${TARGET_NAME}-sorted.tsv \
+	|& tee ${LOGDIR}/${TARGET_NAME}-compress.log
 
     echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
     time rsync --archive --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
+	 ${DATADIR}/${TARGET_NAME}-sorted.tsv.gz \
 	 ${PRODUCTDIR}/ \
 	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
+
+    echo -e "\nExtract any qualifiers for the properties in ${TARGET_NAME}."
+    kgtk ${KGTK_FLAGS} \
+	 ifexists ${VERBOSE} \
+	 --input-file ${DATADIR}/${WIKIDATA_ALL}-property-qualifiers-sorted.tsv \
+	 --filter-on ${DATADIR}/${TARGET_NAME}-sorted.tsv \
+	 --output-file ${DATADIR}/${TARGET_NAME}-qualifiers-sorted.tsv \
+	 --input-keys node1 \
+	 --filter-keys id \
+	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers-sorted.log
+	 
+    echo -e "\nCompress the sorted qualifiers for the ${TARGET} properties."
+    time gzip --keep --force --verbose \
+	 ${DATADIR}/${TARGET_NAME}-qualifiers-sorted.tsv \
+	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers-compress.log
+
+    echo -e "\nDeliver the compressed qualifiers for ${TARGET_NAME} file to the KGTK Google Drive."
+    time rsync --archive --verbose \
+	 ${DATADIR}/${TARGET_NAME}-qualifiers-sorted.tsv.gz \
+	 ${PRODUCTDIR}/ \
+	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers-deliver.log
 done
