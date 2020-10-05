@@ -100,7 +100,7 @@ KYPHER_GRAMMAR = r"""
     ReturnItem = Expression:ex SP A S SP SymbolicName:s -> ["ReturnItem", ex, s]
                | Expression:ex -> ["ReturnItem", ex, None]
 
-    Order =  O R D E R SP B Y SP SortItem:head (',' WS SortItem)*:tail -> ["Order", [head] + tail]
+    Order =  O R D E R SP B Y SP SortItem:head (WS ',' WS SortItem)*:tail -> ["Order", [head] + tail]
 
     Skip =  S K I P SP Expression:ex -> ["Skip", ex]
 
