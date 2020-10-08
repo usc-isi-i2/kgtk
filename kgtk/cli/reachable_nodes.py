@@ -33,10 +33,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--rootfile',action='store',dest='rootfile',help='Option to specify a file containing the set of root nodes',default=None)
     parser.add_argument('--rootfilecolumn',action='store',type=str,dest='rootfilecolumn',
                         help='Option to specify column in root node file to use.  Default=node1 or alias if edge file, id if node file.')
-    parser.add_argument('--norootheader',action='store_true',dest='root_header_bool',help='Option to specify that root file has no header')
-    parser.add_argument("--subj", action="store", type=str, dest="subject_column_name", help='Name of the subject column. (Default node1 or alias)')
-    parser.add_argument("--obj", action="store", type=str, dest="object_column_name", help='Name of the object column. (Default label or alias)')
-    parser.add_argument("--pred",action="store" ,type=str, dest="predicate_column_name",help='Name of the predicate caolum. (Default node2 or alias)')
+    parser.add_argument("--subj", action="store", type=str, dest="subject_column_name", help='Name of the subject column. (Default: node1 or its alias)')
+    parser.add_argument("--obj", action="store", type=str, dest="object_column_name", help='Name of the object column. (Default: label or its alias)')
+    parser.add_argument("--pred",action="store" ,type=str, dest="predicate_column_name",help='Name of the predicate column. (Default: node2 or its alias)')
     parser.add_argument("--props", action="store", type=str, dest="props",help='Properties to consider while finding reachable nodes - comma-separated string,default all properties',default=None)
     parser.add_argument('--undirected', action='store_true', dest="undirected", help="Option to specify graph as undirected?")
     parser.add_argument('--label', action='store', type=str, dest='label', help='The label for the reachable relationship. (default = %(default)s)',default="reachable")
@@ -55,7 +54,6 @@ def run(input_file: KGTKFiles,
         root: typing.Optional[str],
         rootfile,
         rootfilecolumn,
-        root_header_bool: bool,
         subject_column_name: typing.Optional[str],
         object_column_name: typing.Optional[str],
         predicate_column_name: typing.Optional[str],
@@ -77,7 +75,7 @@ def run(input_file: KGTKFiles,
     from pathlib import Path
     import time
     from graph_tool.search import dfs_iterator
-    from graph_tool import load_graph_from_csv
+    # from graph_tool import load_graph_from_csv
     from graph_tool.util import find_edge
     from kgtk.exceptions import KGTKException
     from kgtk.cli_argparse import KGTKArgumentParser
@@ -117,8 +115,6 @@ def run(input_file: KGTKFiles,
             print("--root=%s" % root, file=error_file)
         if rootfile is not None:
             print("--rootfile=%s" % rootfile, file=error_file)
-        if root_header_bool:
-            print("--norootheader", file=error_file)
         if subject_column_name is not None:
             print("--subj=%s" % subject_column_name, file=error_file)
         if object_column_name is not None:
