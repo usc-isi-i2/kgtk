@@ -127,11 +127,9 @@ def run(input_file: KGTKFiles,
             print("--pred=%s" % predicate_column_name, file=error_file)
         if props is not None:
             print("--props=%s" % props, file=error_file)
-        if undirected:
-            print("--undirected", file=error_file)
+        print("--undirected=%s" % str(undirected), file=error_file)
         print("--label=%s" % label, file=error_file)
-        if selflink_bool:
-            print("--selflink", file=error_file)
+        print("--selflink=%s" % str(selflink_bool), file=error_file)
         input_reader_options.show(out=error_file)
         root_reader_options.show(out=error_file)
         value_options.show(out=error_file)
