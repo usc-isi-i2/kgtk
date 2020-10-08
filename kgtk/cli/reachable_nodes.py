@@ -30,18 +30,20 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='input filename here')
     # parser.add_argument('-o', '--out', action='store', type=str, dest='output', help='File to output the reachable nodes,if empty will be written out to standard output',default=None)
 
-    parser.add_argument('--root',action='store',dest='root',help='Set of root nodes to use, comma-separated string',default=None)
+    parser.add_argument('--root',action='store',dest='root',type=str, nargs="*",
+                        help='Set of root nodes to use, space- or comma-separated strings. (default=None)')
     parser.add_argument('--rootfile',action='store',dest='rootfile',help='Option to specify a file containing the set of root nodes',default=None)
     parser.add_argument('--rootfilecolumn',action='store',type=str,dest='rootfilecolumn',
-                        help='Option to specify column in root node file to use.  Default=node1 or alias if edge file, id if node file.')
-    parser.add_argument("--subj", action="store", type=str, dest="subject_column_name", help='Name of the subject column. (Default: node1 or its alias)')
-    parser.add_argument("--obj", action="store", type=str, dest="object_column_name", help='Name of the object column. (Default: label or its alias)')
-    parser.add_argument("--pred",action="store" ,type=str, dest="predicate_column_name",help='Name of the predicate column. (Default: node2 or its alias)')
-    parser.add_argument("--props", action="store", type=str, dest="props",help='Properties to consider while finding reachable nodes - comma-separated string,default all properties',default=None)
+                        help='Option to specify column in root node file to use.  (default=node1 or its alias if edge file, id if node file)')
+    parser.add_argument("--subj", action="store", type=str, dest="subject_column_name", help='Name of the subject column. (default: node1 or its alias)')
+    parser.add_argument("--obj", action="store", type=str, dest="object_column_name", help='Name of the object column. (default: label or its alias)')
+    parser.add_argument("--pred",action="store" ,type=str, dest="predicate_column_name",help='Name of the predicate column. (default: node2 or its alias)')
+    parser.add_argument("--props", action="store", type=str, dest="props", nargs="*",
+                        help='Properties to consider while finding reachable nodes, space- or comma-separated string. (default: all properties)',default=None)
     parser.add_argument('--undirected', dest="undirected",
                         help="When True, specify graph as undirected. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
-    parser.add_argument('--label', action='store', type=str, dest='label', help='The label for the reachable relationship. (default = %(default)s)',default="reachable")
+    parser.add_argument('--label', action='store', type=str, dest='label', help='The label for the reachable relationship. (default: %(default)s)',default="reachable")
     parser.add_argument('--selflink',dest='selflink_bool',
                         help='When True, include a link from each output node to itself. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
@@ -55,13 +57,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
 
-        root: typing.Optional[str],
+        root: typing.Optional[typing.List[str]],
         rootfile,
         rootfilecolumn,
         subject_column_name: typing.Optional[str],
         object_column_name: typing.Optional[str],
         predicate_column_name: typing.Optional[str],
-        props: typing.Optional[str],
+        props: typing.Optional[typing.List[str]],
         undirected: bool,
         label: str,
         selflink_bool: bool,
@@ -114,9 +116,15 @@ def run(input_file: KGTKFiles,
     root_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="root", fallback=True)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
+    if root is None:
+        root = [ ] # This simplifies matters.
+
+    if props is None:
+        props = [ ] # This simplifies matters.
+
     if show_options:
         if root is not None:
-            print("--root=%s" % root, file=error_file)
+            print("--root %s" % " ".join(root), file=error_file)
         if rootfile is not None:
             print("--rootfile=%s" % rootfile, file=error_file)
         if subject_column_name is not None:
@@ -126,7 +134,7 @@ def run(input_file: KGTKFiles,
         if predicate_column_name is not None:
             print("--pred=%s" % predicate_column_name, file=error_file)
         if props is not None:
-            print("--props=%s" % props, file=error_file)
+            print("--props=%s" % " ".join(props), file=error_file)
         print("--undirected=%s" % str(undirected), file=error_file)
         print("--label=%s" % label, file=error_file)
         print("--selflink=%s" % str(selflink_bool), file=error_file)
@@ -174,13 +182,16 @@ def run(input_file: KGTKFiles,
             root_set.add(rootnode)
         root_kr.close()
         
-    if root is not None:
+    if len(root) > 0:
         if verbose:
             print ("Adding root nodes from the command line.",  file=error_file, flush=True)
-        for r in root.split(','):
-            if verbose:
-                print("... adding %s" % repr(r), file=error_file, flush=True)
-            root_set.add(r)
+        root_group: str
+        for root_group in root:
+            r: str
+            for r in root_group.split(','):
+                if verbose:
+                    print("... adding %s" % repr(r), file=error_file, flush=True)
+                root_set.add(r)
     if len(root_set) == 0:
         print("Warning: No nodes in the root set, the output file will be empty.", file=error_file, flush=True)
     elif verbose:
@@ -228,17 +239,22 @@ def run(input_file: KGTKFiles,
     elif verbose:
         print("%d root nodes found in the graph." % len(index_list), file=error_file, flush=True)
 
-    edge_filter_set = set()
-    if props:
+    if len(props) > 0:
         pred_label: str = 'c'+str(find_pred_position(sub, pred, obj))
         if verbose:
             print("pred_label=%s" % repr(pred_label),  file=error_file, flush=True)
         
-        property_list = [item for item in props.split(',')]
+        
+        property_list =  [ ]
+        prop_group: str
+        for prop_group in props:
+            prop: str
+            for prop in prop_group.split(','):
+                property_list.append(prop)
         if verbose:
-            print("property_list=%s" % ",".join(property_list),  file=error_file, flush=True)
-
-        prop: str
+            print("property list=%s" % " ".join(property_list),  file=error_file, flush=True)
+        
+        edge_filter_set = set()
         for prop in property_list:
             edge_filter_set.update(get_edges_by_edge_prop(G, pred_label, prop))
         G.clear_edges()
