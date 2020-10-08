@@ -1,7 +1,10 @@
 """
 Find reachable nodes given a set of root nodes and properties
 """
+from argparse import Namespace, SUPPRESS
+import typing
 
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -9,31 +12,67 @@ def parser():
     }
 
 
-def add_arguments(parser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='input filename here')
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
+    _expert: bool = parsed_shared_args._expert
+
+    parser.add_input_file(positional=True, who="The KGTK file to find connected components in.")
+    parser.add_output_file()
+
+    # parser.add_argument(action="store", type=str, dest="filename", metavar='filename', help='input filename here')
+    # parser.add_argument('-o', '--out', action='store', type=str, dest='output', help='File to output the reachable nodes,if empty will be written out to standard output',default=None)
+
     parser.add_argument('--root',action='store',dest='root',help='Set of root nodes to use, comma-separated string',default=None)
     parser.add_argument('--rootfile',action='store',dest='rootfile',help='Option to specify a file containing the set of root nodes',default=None)
     parser.add_argument('--rootfilecolumn',action='store',type=int,dest='rootfilecolumn',help='Option to specify column of roots file to use, default 0',default=0)
     parser.add_argument('--norootheader',action='store_true',dest='root_header_bool',help='Option to specify that root file has no header')
-    parser.add_argument('-o', '--out', action='store', type=str, dest='output', help='File to output the reachable nodes,if empty will be written out to standard output',default=None)
-    parser.add_argument("--noheader", action="store_true", dest="header_bool", help="Option to specify that file does not have a header")
-    parser.add_argument("--subj", action="store", type=int, dest="sub", help='Column in which the subject is given, default 0', default=0)
-    parser.add_argument("--obj", action="store", type=int, dest="obj", help='Column in which the subject is given, default 2', default=2)
-    parser.add_argument("--pred",action="store" ,type=int, dest="pred",help='Column in which predicate is given, default 1',default=1)
+    parser.add_argument("--subj", action="store", type=str, dest="subject_column_name", help='Name of the subject column. (Default node1 or alias)')
+    parser.add_argument("--obj", action="store", type=str, dest="object_column_name", help='Name of the object column. (Default label or alias)')
+    parser.add_argument("--pred",action="store" ,type=str, dest="predicate_column_name",help='Name of the predicate caolum. (Default node2 or alias)')
     parser.add_argument("--props", action="store", type=str, dest="props",help='Properties to consider while finding reachable nodes - comma-separated string,default all properties',default=None)
     parser.add_argument('--undirected', action='store_true', dest="undirected", help="Option to specify graph as undirected?")
     parser.add_argument('--label', action='store', type=str, dest='label', help='The label for the reachable relationship. (default = %(default)s)',default="reachable")
     parser.add_argument('--selflink',action='store_true',dest='selflink_bool',help='Option to include a link from each output node to itself.')
 
 
-def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_bool,sub,obj,pred,props,undirected, label, selflink_bool):
+    KgtkReader.add_debug_arguments(parser, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
+
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+
+        root: typing.Optional[str],
+        rootfile,
+        rootfilecolumn,
+        root_header_bool: bool,
+        subject_column_name: typing.Optional[str],
+        object_column_name: typing.Optional[str],
+        predicate_column_name: typing.Optional[str],
+        props: typing.Optional[str],
+        undirected: bool,
+        label: str,
+        selflink_bool: bool,
+
+        errors_to_stdout: bool = False,
+        errors_to_stderr: bool = True,
+        show_options: bool = False,
+        verbose: bool = False,
+        very_verbose: bool = False,
+
+        **kwargs, # Whatever KgtkFileOptions and KgtkValueOptions want.
+        ):
     import sys
     import csv
+    from pathlib import Path
     import time
     from graph_tool.search import dfs_iterator
     from graph_tool import load_graph_from_csv
@@ -41,6 +80,11 @@ def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_boo
     from kgtk.exceptions import KGTKException
     from kgtk.cli_argparse import KGTKArgumentParser
 
+    from kgtk.kgtkformat import KgtkFormat
+    from kgtk.gt.gt_load import load_graph_from_kgtk
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     #Graph-tool names columns that are not subject or object c0, c1... This function finds the number that graph tool assigned to the predicate column
     def find_pred_position(sub,pred,obj):
@@ -55,12 +99,53 @@ def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_boo
         return find_edge(g, prop=g.properties[('e', p)], match=v)
 
 
-    label='c'+str(find_pred_position(sub,pred,obj))
-    header=['node1','label','node2']
-    root_set=set()
-    property_list=[]
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
-    if (rootfile):
+    # Select where to send error messages, defaulting to stderr.
+    error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+
+    # Build the option structures.
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+    if show_options:
+        if root is not None:
+            print("--root=%s" % root, file=error_file)
+        if rootfile is not None:
+            print("--rootfile=%s" % rootfile, file=error_file)
+        if root_header_bool:
+            print("--norootheader", file=error_file)
+        if subject_column_name is not None:
+            print("--subj=%s" % subject_column_name, file=error_file)
+        if object_column_name is not None:
+            print("--obj=%s" % object_column_name, file=error_file)
+        if predicate_column_name is not None:
+            print("--pred=%s" % predicate_column_name, file=error_file)
+        if props is not None:
+            print("--props=%s" % props, file=error_file)
+        if undirected:
+            print("--undirected", file=error_file)
+        print("--label=%s" % label, file=error_file)
+        if selflink_bool:
+            print("--selflink", file=error_file)
+        reader_options.show(out=error_file)
+        value_options.show(out=error_file)
+        KgtkReader.show_debug_arguments(errors_to_stdout=errors_to_stdout,
+                                        errors_to_stderr=errors_to_stderr,
+                                        show_options=show_options,
+                                        verbose=verbose,
+                                        very_verbose=very_verbose,
+                                        out=error_file)
+        print("=======", file=error_file, flush=True)
+
+    root_set: typing.Set = set()
+    property_list: typing.List = list()
+
+    if rootfile is not None:
+        # TODO: Replace this with KgtkReader.
+        if verbose:
+            print("Reading the root file %s" % repr(rootfile),  file=error_file, flush=True)
         tsv_file = open(rootfile)
         read_tsv = csv.reader(tsv_file, delimiter="\t")
         first_row=True
@@ -68,13 +153,51 @@ def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_boo
             if first_row and not root_header_bool:
                     first_row=False
                     continue
-            root_set.add(row[rootfilecolumn])
+            rootnode: str = row[rootfilecolumn]
+            root_set.add(rootnode)
         tsv_file.close()
-    if (root):
+    if root is not None:
+        if verbose:
+            print ("Adding root nodes from the command line.",  file=error_file, flush=True)
         for r in root.split(','):
+            if verbose:
+                print("... adding %s" % repr(r), file=error_file, flush=True)
             root_set.add(r)
+    if len(root_set) == 0:
+        print("No nodes in the root set.", file=error_file, flush=True)
+    elif verbose:
+        print("%d nodes in the root set." % len(root_set), file=error_file, flush=True)
 
-    G = load_graph_from_csv(filename,not(undirected),skip_first=not(header_bool),hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
+
+    kr: KgtkReader = KgtkReader.open(input_kgtk_file,
+                                     error_file=error_file,
+                                     who="input",
+                                     options=reader_options,
+                                     value_options=value_options,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose,
+                                     )
+    sub: int = int(subject_column_name) if subject_column_name.isdigit() else kr.get_node1_column_index(subject_column_name)
+    if sub < 0:
+        print("Unknown subject column %s" % repr(subject_column_name), file=error_file, flush=True)
+
+    pred: int = int(predicate_column_name) if predicate_column_name.isdigit() else kr.get_label_column_index(predicate_column_name)
+    if pred < 0:
+        print("Unknown predicate column %s" % repr(predicate_column_name), file=error_file, flush=True)
+
+    obj: int = int(object_column_name) if object_column_name.isdigit() else kr.get_node2_column_index(object_column_name)
+    if obj < 0:
+        print("Unknown object column %s" % repr(object_column_name), file=error_file, flush=True)
+
+    if sub < 0 or pred < 0 or obj < 0:
+        print("Exiting due to unknown column.", file=error_file, flush=True)
+        kr.close()
+        return
+    if verbose:
+        print("special columns: sub=%d pred=%d obj=%d" % (sub, pred, obj),  file=error_file, flush=True)
+
+    # G = load_graph_from_csv(filename,not(undirected),skip_first=not(header_bool),hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
+    G = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj))
 
     name = G.vp["name"]
 
@@ -82,36 +205,43 @@ def run(filename,root,rootfile,rootfilecolumn,root_header_bool,output,header_boo
     for v in G.vertices():
         if name[v] in root_set:
             index_list.append(v)
+    if len(index_list) == 0:
+        print("No root nodes found in the graph", file=error_file, flush=True)
+    elif verbose:
+        print("%d root nodes found in the graph." % len(index_list), file=error_file, flush=True)
 
     edge_filter_set = set()
     if props:
+        pred_label: str = 'c'+str(find_pred_position(sub, pred, obj))
+        if verbose:
+            print("pred_label=%s" % repr(pred_label),  file=error_file, flush=True)
+        
         property_list = [item for item in props.split(',')]
+        if verbose:
+            print("property_list=%s" % ",".join(property_list),  file=error_file, flush=True)
+
+        prop: str
         for prop in property_list:
-            edge_filter_set.update(get_edges_by_edge_prop(G, label,prop));        
+            edge_filter_set.update(get_edges_by_edge_prop(G, pred_label, prop))
         G.clear_edges()
         G.add_edge_list(list(edge_filter_set))
 
-    if output:
-        f=open(output,'w')
-        tsv_writer = csv.writer(f, quoting=csv.QUOTE_NONE,delimiter="\t",escapechar="\n",quotechar='')
-        if len(index_list) == 0:
-            print("No root nodes found in the graph")
-        else:
-            tsv_writer.writerow(header)
-            for index in index_list:
-                if selflink_bool:
-                    tsv_writer.writerow([name[index], label, name[index]])
+    output_header: typing.List[str] = ['node1','label','node2']
+
+    kw: KgtkWriter = KgtkWriter.open(output_header,
+                                     output_kgtk_file,
+                                     mode=KgtkWriter.Mode.EDGE,
+                                     require_all_columns=True,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=False,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose)
+    for index in index_list:
+        if selflink_bool:
+            kw.writerow([name[index], label, name[index]])
                 
-                for e in dfs_iterator(G, G.vertex(index)):
-                    tsv_writer.writerow([name[index], label, name[e.target()]])
-        f.close()
-    else:
-        if len(index_list) == 0:
-            print("No root nodes found in the graph")
-        else:
-            sys.stdout.write('%s\t%s\t%s\n' % ('node1', 'label', 'node2'))
-            for index in index_list:
-                if selflink_bool:
-                    sys.stdout.write('%s\t%s\t%s\n'% (name[index], label, name[index]))
-                for e in dfs_iterator(G, G.vertex(index)):
-                    sys.stdout.write('%s\t%s\t%s\n' % (name[index], label, name[e.target()]))
+        for e in dfs_iterator(G, G.vertex(index)):
+            kw.writerow([name[index], label, name[e.target()]])
+
+    kw.close()
+    kr.close()
