@@ -46,6 +46,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="root", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
@@ -107,6 +108,7 @@ def run(input_file: KGTKFiles,
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
+    # TODO: build seperate reader options for input and root.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
