@@ -1427,6 +1427,26 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         egroup.add_argument(      "--very-verbose", dest="very_verbose",
                                   help=h("Print additional progress messages (default=%(default)s)."),
                                   action='store_true')
+
+    @classmethod
+    def show_debug_arguments(cls,
+                             errors_to_stdout: bool = False,
+                             errors_to_stderr: bool = True,
+                             show_options: bool = False,
+                             verbose: bool = False,
+                             very_verbose: bool = False,
+                             out: typing.TextIO = sys.stderr):
+        if errors_to_stdout:
+            print("--errors-to-stdout", file=out)
+        if errors_to_stderr:
+            print("--errors-to-stderr", file=out)
+        if show_options:
+            print("--show-options", file=out)
+        if verbose:
+            print("--verbose", file=out)
+        if very_verbose:
+            print("--very-verbose", file=out)
+
         
 def main():
     """
