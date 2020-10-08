@@ -52,6 +52,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='When True, show the graph properties. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
+    parser.add_argument('--breadth-first',dest='breadth_first',
+                        help='When True, search the graph breadth first.  When false, search depth first. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
@@ -72,6 +76,7 @@ def run(input_file: KGTKFiles,
         label: str,
         selflink_bool: bool,
         show_properties: bool,
+        breadth_first: bool,
 
         errors_to_stdout: bool,
         errors_to_stderr: bool,
@@ -85,7 +90,7 @@ def run(input_file: KGTKFiles,
     import csv
     from pathlib import Path
     import time
-    from graph_tool.search import dfs_iterator
+    from graph_tool.search import dfs_iterator, bfs_iterator
     # from graph_tool import load_graph_from_csv
     from graph_tool.util import find_edge
     from kgtk.exceptions import KGTKException
@@ -143,6 +148,7 @@ def run(input_file: KGTKFiles,
         print("--undirected=%s" % str(undirected), file=error_file)
         print("--label=%s" % label, file=error_file)
         print("--selflink=%s" % str(selflink_bool), file=error_file)
+        print("--breadth-first=%s" % str(breadth_first), file=error_file)
         input_reader_options.show(out=error_file)
         root_reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -233,7 +239,7 @@ def run(input_file: KGTKFiles,
     # G = load_graph_from_csv(filename,not(undirected),skip_first=not(header_bool),hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
     G = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
 
-    name = G.vp["name"]
+    name = G.vp["name"] # Get the vertix name property map (vertex to ndoe1 (subject) name)
 
     if show_properties:
         print("Graph name=%s" % name, file=error_file, flush=True)
@@ -288,8 +294,12 @@ def run(input_file: KGTKFiles,
         if selflink_bool:
             kw.writerow([name[index], label, name[index]])
                 
-        for e in dfs_iterator(G, G.vertex(index)):
-            kw.writerow([name[index], label, name[e.target()]])
+        if breadth_first:
+            for e in bfs_iterator(G, G.vertex(index)):
+                kw.writerow([name[index], label, name[e.target()]])
+        else:
+            for e in dfs_iterator(G, G.vertex(index)):
+                kw.writerow([name[index], label, name[e.target()]])
 
     kw.close()
     kr.close()
