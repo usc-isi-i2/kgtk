@@ -19,6 +19,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
             parser (argparse.ArgumentParser)
     """
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -37,10 +38,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--obj", action="store", type=str, dest="object_column_name", help='Name of the object column. (Default: label or its alias)')
     parser.add_argument("--pred",action="store" ,type=str, dest="predicate_column_name",help='Name of the predicate column. (Default: node2 or its alias)')
     parser.add_argument("--props", action="store", type=str, dest="props",help='Properties to consider while finding reachable nodes - comma-separated string,default all properties',default=None)
-    parser.add_argument('--undirected', action='store_true', dest="undirected", help="Option to specify graph as undirected?")
+    parser.add_argument('--undirected', dest="undirected",
+                        help="When True, specify graph as undirected. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
     parser.add_argument('--label', action='store', type=str, dest='label', help='The label for the reachable relationship. (default = %(default)s)',default="reachable")
-    parser.add_argument('--selflink',action='store_true',dest='selflink_bool',help='Option to include a link from each output node to itself.')
-
+    parser.add_argument('--selflink',dest='selflink_bool',
+                        help='When True, include a link from each output node to itself. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
