@@ -252,7 +252,7 @@ def run(input_file: KGTKFiles,
         print("%d root nodes found in the graph." % len(index_list), file=error_file, flush=True)
 
     if len(props) > 0:
-        # Since the root file is not a KGTK file, the columns will have names.
+        # Since the root file is a KGTK file, the columns will have names.
         # pred_label: str = 'c'+str(find_pred_position(sub, pred, obj))
         pred_label: str = kr.column_names[pred]
         if verbose:
