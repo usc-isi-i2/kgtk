@@ -31,7 +31,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('--root',action='store',dest='root',help='Set of root nodes to use, comma-separated string',default=None)
     parser.add_argument('--rootfile',action='store',dest='rootfile',help='Option to specify a file containing the set of root nodes',default=None)
-    parser.add_argument('--rootfilecolumn',action='store',type=int,dest='rootfilecolumn',help='Option to specify column of roots file to use, default 0',default=0)
+    parser.add_argument('--rootfilecolumn',action='store',type=str,dest='rootfilecolumn',
+                        help='Option to specify column in root node file to use.  Default=node1 or alias if edge file, id if node file.')
     parser.add_argument('--norootheader',action='store_true',dest='root_header_bool',help='Option to specify that root file has no header')
     parser.add_argument("--subj", action="store", type=str, dest="subject_column_name", help='Name of the subject column. (Default node1 or alias)')
     parser.add_argument("--obj", action="store", type=str, dest="object_column_name", help='Name of the object column. (Default label or alias)')
@@ -143,19 +144,35 @@ def run(input_file: KGTKFiles,
     property_list: typing.List = list()
 
     if rootfile is not None:
-        # TODO: Replace this with KgtkReader.
         if verbose:
             print("Reading the root file %s" % repr(rootfile),  file=error_file, flush=True)
-        tsv_file = open(rootfile)
-        read_tsv = csv.reader(tsv_file, delimiter="\t")
-        first_row=True
-        for row in read_tsv:
-            if first_row and not root_header_bool:
-                    first_row=False
-                    continue
-            rootnode: str = row[rootfilecolumn]
+        root_kr: KgtkReader = KgtkReader.open(Path(rootfile),
+                                              error_file=error_file,
+                                              who="root",
+                                              options=reader_options,
+                                              value_options=value_options,
+                                              verbose=verbose,
+                                              very_verbose=very_verbose,
+                                              )
+
+        rootcol: int
+        if root_kr.is_edge_file:
+            rootcol = int(rootfilecolumn) if rootfilecolumn.isdigit() else root_kr.get_node1_column_index(rootfilecolumn)
+        elif root_kr.is_node_file:
+            rootcol = int(rootfilecolumn) if rootfilecolumn.isdigit() else root_kr.get_id_column_index(rootfilecolumn)
+        else:
+            root_kr.close()
+            raise ValueError("Unknoen root file type.")
+            
+        if rootcol < 0:
+            root_kr.close()
+            raise ValueError("Unknown root column %s" % repr(rootfilecolumn))
+
+        for row in root_kr:
+            rootnode: str = row[rootcol]
             root_set.add(rootnode)
-        tsv_file.close()
+        root_kr.close()
+        
     if root is not None:
         if verbose:
             print ("Adding root nodes from the command line.",  file=error_file, flush=True)
@@ -190,9 +207,9 @@ def run(input_file: KGTKFiles,
         print("Unknown object column %s" % repr(object_column_name), file=error_file, flush=True)
 
     if sub < 0 or pred < 0 or obj < 0:
-        print("Exiting due to unknown column.", file=error_file, flush=True)
         kr.close()
-        return
+        raise valueError("Exiting due to unknown column.")
+
     if verbose:
         print("special columns: sub=%d pred=%d obj=%d" % (sub, pred, obj),  file=error_file, flush=True)
 
