@@ -48,6 +48,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='When True, include a link from each output node to itself. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
+    parser.add_argument('--show-properties',dest='show_properties',
+                        help='When True, show the graph properties. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
@@ -67,12 +71,13 @@ def run(input_file: KGTKFiles,
         undirected: bool,
         label: str,
         selflink_bool: bool,
+        show_properties: bool,
 
-        errors_to_stdout: bool = False,
-        errors_to_stderr: bool = True,
-        show_options: bool = False,
-        verbose: bool = False,
-        very_verbose: bool = False,
+        errors_to_stdout: bool,
+        errors_to_stderr: bool,
+        show_options: bool,
+        verbose: bool,
+        very_verbose: bool,
 
         **kwargs, # Whatever KgtkFileOptions and KgtkValueOptions want.
         ):
@@ -226,9 +231,16 @@ def run(input_file: KGTKFiles,
         print("special columns: sub=%d pred=%d obj=%d" % (sub, pred, obj),  file=error_file, flush=True)
 
     # G = load_graph_from_csv(filename,not(undirected),skip_first=not(header_bool),hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
-    G = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj))
+    G = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
 
     name = G.vp["name"]
+
+    if show_properties:
+        print("Graph name=%s" % name, file=error_file, flush=True)
+        print("Graph properties:" , file=error_file, flush=True)
+        key: typing.Any
+        for key in G.properties:
+            print("    %s: %s" % (repr(key), repr(G.properties[key])), file=error_file, flush=True)
 
     index_list = []
     for v in G.vertices():
@@ -240,7 +252,9 @@ def run(input_file: KGTKFiles,
         print("%d root nodes found in the graph." % len(index_list), file=error_file, flush=True)
 
     if len(props) > 0:
-        pred_label: str = 'c'+str(find_pred_position(sub, pred, obj))
+        # Since the root file is not a KGTK file, the columns will have names.
+        # pred_label: str = 'c'+str(find_pred_position(sub, pred, obj))
+        pred_label: str = kr.column_names[pred]
         if verbose:
             print("pred_label=%s" % repr(pred_label),  file=error_file, flush=True)
         
