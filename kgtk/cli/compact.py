@@ -130,6 +130,12 @@ def run(input_file: KGTKFiles,
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
+        KgtkReader.show_debug_arguments(errors_to_stdout=errors_to_stdout,
+                                        errors_to_stderr=errors_to_stderr,
+                                        show_options=show_options,
+                                        verbose=verbose,
+                                        very_verbose=very_verbose,
+                                        out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:
