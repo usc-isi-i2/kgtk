@@ -106,8 +106,8 @@ def run(input_file: KGTKFiles,
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
-    # TODO: build seperate reader options for input and root.
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="input", fallback=True)
+    root_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="root", fallback=True)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     if show_options:
@@ -128,7 +128,8 @@ def run(input_file: KGTKFiles,
         print("--label=%s" % label, file=error_file)
         if selflink_bool:
             print("--selflink", file=error_file)
-        reader_options.show(out=error_file)
+        input_reader_options.show(out=error_file)
+        root_reader_options.show(out=error_file)
         value_options.show(out=error_file)
         KgtkReader.show_debug_arguments(errors_to_stdout=errors_to_stdout,
                                         errors_to_stderr=errors_to_stderr,
@@ -147,7 +148,7 @@ def run(input_file: KGTKFiles,
         root_kr: KgtkReader = KgtkReader.open(Path(rootfile),
                                               error_file=error_file,
                                               who="root",
-                                              options=reader_options,
+                                              options=root_reader_options,
                                               value_options=value_options,
                                               verbose=verbose,
                                               very_verbose=very_verbose,
@@ -160,11 +161,11 @@ def run(input_file: KGTKFiles,
             rootcol = int(rootfilecolumn) if rootfilecolumn.isdigit() else root_kr.get_id_column_index(rootfilecolumn)
         else:
             root_kr.close()
-            raise ValueError("Unknoen root file type.")
+            raise KGTKException("The root file is neither an edge nor a node file.")
             
         if rootcol < 0:
             root_kr.close()
-            raise ValueError("Unknown root column %s" % repr(rootfilecolumn))
+            raise KGTKException("Unknown root column %s" % repr(rootfilecolumn))
 
         for row in root_kr:
             rootnode: str = row[rootcol]
@@ -179,7 +180,7 @@ def run(input_file: KGTKFiles,
                 print("... adding %s" % repr(r), file=error_file, flush=True)
             root_set.add(r)
     if len(root_set) == 0:
-        print("No nodes in the root set.", file=error_file, flush=True)
+        print("Warning: No nodes in the root set, the output file will be empty.", file=error_file, flush=True)
     elif verbose:
         print("%d nodes in the root set." % len(root_set), file=error_file, flush=True)
 
@@ -187,26 +188,26 @@ def run(input_file: KGTKFiles,
     kr: KgtkReader = KgtkReader.open(input_kgtk_file,
                                      error_file=error_file,
                                      who="input",
-                                     options=reader_options,
+                                     options=input_reader_options,
                                      value_options=value_options,
                                      verbose=verbose,
                                      very_verbose=very_verbose,
                                      )
-    sub: int = int(subject_column_name) if subject_column_name.isdigit() else kr.get_node1_column_index(subject_column_name)
+    sub: int = int(subject_column_name) if subject_column_name is not None and subject_column_name.isdigit() else kr.get_node1_column_index(subject_column_name)
     if sub < 0:
         print("Unknown subject column %s" % repr(subject_column_name), file=error_file, flush=True)
 
-    pred: int = int(predicate_column_name) if predicate_column_name.isdigit() else kr.get_label_column_index(predicate_column_name)
+    pred: int = int(predicate_column_name) if predicate_column_name is not None and predicate_column_name.isdigit() else kr.get_label_column_index(predicate_column_name)
     if pred < 0:
         print("Unknown predicate column %s" % repr(predicate_column_name), file=error_file, flush=True)
 
-    obj: int = int(object_column_name) if object_column_name.isdigit() else kr.get_node2_column_index(object_column_name)
+    obj: int = int(object_column_name) if object_column_name is not None and object_column_name.isdigit() else kr.get_node2_column_index(object_column_name)
     if obj < 0:
         print("Unknown object column %s" % repr(object_column_name), file=error_file, flush=True)
 
     if sub < 0 or pred < 0 or obj < 0:
         kr.close()
-        raise valueError("Exiting due to unknown column.")
+        raise KGTKException("Exiting due to unknown column.")
 
     if verbose:
         print("special columns: sub=%d pred=%d obj=%d" % (sub, pred, obj),  file=error_file, flush=True)
@@ -221,7 +222,7 @@ def run(input_file: KGTKFiles,
         if name[v] in root_set:
             index_list.append(v)
     if len(index_list) == 0:
-        print("No root nodes found in the graph", file=error_file, flush=True)
+        print("Warning: No root nodes found in the graph, the output file will be empty.", file=error_file, flush=True)
     elif verbose:
         print("%d root nodes found in the graph." % len(index_list), file=error_file, flush=True)
 
