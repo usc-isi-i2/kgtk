@@ -177,9 +177,9 @@ def run(input_file: KGTKFiles,
 
         rootcol: int
         if root_kr.is_edge_file:
-            rootcol = int(rootfilecolumn) if rootfilecolumn.isdigit() else root_kr.get_node1_column_index(rootfilecolumn)
+            rootcol = int(rootfilecolumn) if rootfilecolumn is not None and rootfilecolumn.isdigit() else root_kr.get_node1_column_index(rootfilecolumn)
         elif root_kr.is_node_file:
-            rootcol = int(rootfilecolumn) if rootfilecolumn.isdigit() else root_kr.get_id_column_index(rootfilecolumn)
+            rootcol = int(rootfilecolumn) if rootfilecolumn is not None and rootfilecolumn.isdigit() else root_kr.get_id_column_index(rootfilecolumn)
         else:
             root_kr.close()
             raise KGTKException("The root file is neither an edge nor a node file.")
