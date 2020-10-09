@@ -65,18 +65,6 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
-    def infer_index(h, options=[]):
-        for o in options:
-            if o in h:
-                return h.index(o)
-        return -1
-
-    def infer_predicate(h, options=[]):
-        for o in options:
-            if o in h:
-                return o
-        return ''
-
     try:
         # Select where to send error messages, defaulting to stderr.
         error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
