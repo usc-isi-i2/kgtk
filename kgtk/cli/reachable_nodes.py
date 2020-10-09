@@ -32,9 +32,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('--root',action='store',dest='root',type=str, nargs="*",
                         help='Set of root nodes to use, space- or comma-separated strings. (default=None)')
-    parser.add_argument('--rootfile',action='store',dest='rootfile',help='Option to specify a file containing the set of root nodes',default=None)
+    parser.add_argument('--root-file', '--rootfile',action='store',dest='rootfile',help='Option to specify a file containing the set of root nodes',default=None)
     parser.add_argument('--rootfilecolumn',action='store',type=str,dest='rootfilecolumn',
-                        help='Option to specify column in root node file to use.  (default=node1 or its alias if edge file, id if node file)')
+                        help='Specify the name or number of the root file column with the root nodes.  (default=node1 or its alias if edge file, id if node file)')
     parser.add_argument("--subj", action="store", type=str, dest="subject_column_name", help='Name of the subject column. (default: node1 or its alias)')
     parser.add_argument("--obj", action="store", type=str, dest="object_column_name", help='Name of the object column. (default: label or its alias)')
     parser.add_argument("--pred",action="store" ,type=str, dest="predicate_column_name",help='Name of the predicate column. (default: node2 or its alias)')
