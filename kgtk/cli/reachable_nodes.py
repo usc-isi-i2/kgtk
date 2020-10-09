@@ -217,15 +217,15 @@ def run(input_file: KGTKFiles,
                                      verbose=verbose,
                                      very_verbose=very_verbose,
                                      )
-    sub: int = int(subject_column_name) if subject_column_name is not None and subject_column_name.isdigit() else kr.get_node1_column_index(subject_column_name)
+    sub: int = kr.get_node1_column_index(subject_column_name)
     if sub < 0:
         print("Unknown subject column %s" % repr(subject_column_name), file=error_file, flush=True)
 
-    pred: int = int(predicate_column_name) if predicate_column_name is not None and predicate_column_name.isdigit() else kr.get_label_column_index(predicate_column_name)
+    pred: int = kr.get_label_column_index(predicate_column_name)
     if pred < 0:
         print("Unknown predicate column %s" % repr(predicate_column_name), file=error_file, flush=True)
 
-    obj: int = int(object_column_name) if object_column_name is not None and object_column_name.isdigit() else kr.get_node2_column_index(object_column_name)
+    obj: int = kr.get_node2_column_index(object_column_name)
     if obj < 0:
         print("Unknown object column %s" % repr(object_column_name), file=error_file, flush=True)
 

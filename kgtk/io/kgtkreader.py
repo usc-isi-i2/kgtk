@@ -1256,20 +1256,43 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         return merged_columns
 
-    def get_node1_column_index(self, column_name: typing.Optional[str] = None)->int:
+    def _get_special_column_index(self, column_name_or_idx: typing.Optional[str], special_column_idx: int)->int:
+        """
+        Get the special column index, unless an overriding column
+        index or name name is provided.  Returns -1 if no column found.
+
+        Note: column index values start with 0 for the first column.
+        """
+        if column_name_or_idx is None or len(column_name_or_idx) == 0:
+            return special_column_idx
+        elif column_name_or_idx in self.column_name_map:
+            # By performing this test before the isdigit() test, we give
+            # precedence to columns with names that are integers.
+            return self.column_name_map[column_name_or_idx]
+        elif column_name_or_idx.isdigit():
+            column_idx: int = int(column_name_or_idx)
+            if column_idx < 0:
+                return -1
+            if column_idx >= self.column_count:
+                return -1
+            else:
+                return column_idx
+        else:
+            return -1
+
+    def get_node1_column_index(self, column_name_or_idx: typing.Optional[str] = None)->int:
         """
         Get the node1 column index, unless an overriding column
-        name is provided.  Returns -1 if no column found.
+        index or name is provided.  Returns -1 if no column found.
         """
-        if column_name is None or len(column_name) == 0:
-            return self.node1_column_idx
-        else:
-            return self.column_name_map.get(column_name, -1)
+        return self._get_special_column_index(column_name_or_idx, self.node1_column_idx)
 
     def get_node1_canonical_name(self, column_name: typing.Optional[str]=None)->str:
         """
         Get the canonical name for the node1 column, unless an
         overriding name is provided.
+
+        TODO: Should we convert column indexes to column names?
         """
         if column_name is not None and len(column_name) > 0:
             return column_name
@@ -1287,15 +1310,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             return ""
             
-    def get_label_column_index(self, column_name: typing.Optional[str] = None)->int:
+    def get_label_column_index(self, column_name_or_idx: typing.Optional[str] = None)->int:
         """
         Get the label column index, unless an overriding column
-        name is provided.  Returns -1 if no column found.
+        index or name is provided.  Returns -1 if no column found.
         """
-        if column_name is None or len(column_name) == 0:
-            return self.label_column_idx
-        else:
-            return self.column_name_map.get(column_name, -1)
+        return self._get_special_column_index(column_name_or_idx, self.label_column_idx)
             
     def get_label_canonical_name(self, column_name: typing.Optional[str]=None)->str:
         """
@@ -1318,15 +1338,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             return ""
 
-    def get_node2_column_index(self, column_name: typing.Optional[str] = None)->int:
+    def get_node2_column_index(self, column_name_or_idx: typing.Optional[str] = None)->int:
         """
         Get the node2 column index, unless an overriding column
-        name is provided.  Returns -1 if no column found.
+        index or name is provided.  Returns -1 if no column found.
         """
-        if column_name is None or len(column_name) == 0:
-            return self.node2_column_idx
-        else:
-            return self.column_name_map.get(column_name, -1)
+        return self._get_special_column_index(column_name_or_idx, self.node2_column_idx)
             
 
     def get_node2_canonical_name(self, column_name: typing.Optional[str]=None)->str:
@@ -1350,15 +1367,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             return ""
             
-    def get_id_column_index(self, column_name: typing.Optional[str] = None)->int:
+    def get_id_column_index(self, column_name_or_idx: typing.Optional[str] = None)->int:
         """
         Get the id column index, unless an overriding column
-        name is provided.  Returns -1 if no column found.
+        index or name is provided.  Returns -1 if no column found.
         """
-        if column_name is None or len(column_name) == 0:
-            return self.id_column_idx
-        else:
-            return self.column_name_map.get(column_name, -1)
+        return self._get_special_column_index(column_name_or_idx, self.id_column_idx)
             
     def get_id_canonical_name(self, column_name: typing.Optional[str]=None)->str:
         """
