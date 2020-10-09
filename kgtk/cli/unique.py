@@ -24,6 +24,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.join.unique import Unique
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -49,7 +50,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     # TODO: use an emum
     parser.add_argument(      "--format", dest="output_format", help=h("The output file format and mode (default=%(default)s)."),
-                              default="edge", choices=["edge", "node"])
+                              default=Unique.DEFAULT_FORMAT, choices=Unique.OUTPUT_FORMATS)
 
     parser.add_argument(      "--prefix", dest="prefix", help=h("The value prefix (default=%(default)s)."), default="")
 
