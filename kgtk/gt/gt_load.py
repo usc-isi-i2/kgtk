@@ -80,16 +80,17 @@ def load_graph_from_kgtk(kr: KgtkReader,
                 yield row
         r = conv(r)
 
-    line = list(next(r))
     g = Graph(directed=directed)
 
     if eprop_types is None:
         if verbose:
             print("eprop_types is None", file=out, flush=True)
-        eprops = [g.new_ep("string") for x in line[2:]]
+        eprops = [g.new_ep("string") for x in kr.column_names[2:]]
     else:
         if verbose:
             print("eprop_types: [%s]" % (", ".join([repr(x) for x in eprop_types])), file=out, flush=True)
+        if len(eprop_types) != kr.column_count - 2:
+            raise ValueError("There are %d eprop columns and %d eprop types." % (kr.column_count - 2, len(eprop_types)))
         eprops = [g.new_ep(t) for t in eprop_types]
 
     # 29-Jul-2020: This is supported in the git.skewed.de repository, and
@@ -101,8 +102,11 @@ def load_graph_from_kgtk(kr: KgtkReader,
     #
     # name = g.add_edge_list(itertools.chain([line], r), hashed=hashed,
     #                       hash_type=hash_type, eprops=eprops)
-    name = g.add_edge_list(itertools.chain([line], r), hashed=hashed,
-                           eprops=eprops)
+    if verbose:
+        print("Adding edges from the input file.", file=out, flush=True)
+    name = g.add_edge_list(r, hashed=hashed, eprops=eprops)
+    if verbose:
+        print("Done adding edges from the input file.", file=out, flush=True)
     g.vp.name = name
 
     eprop_names: typing.List[str] = list(kr.column_names)
