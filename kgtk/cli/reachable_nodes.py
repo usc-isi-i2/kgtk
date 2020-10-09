@@ -1,7 +1,7 @@
 """
 Find reachable nodes given a set of root nodes and properties
 """
-from argparse import Namespace, SUPPRESS
+from argparse import Namespace
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -96,7 +96,6 @@ def run(input_file: KGTKFiles,
     from kgtk.exceptions import KGTKException
     from kgtk.cli_argparse import KGTKArgumentParser
 
-    from kgtk.kgtkformat import KgtkFormat
     from kgtk.gt.gt_load import load_graph_from_kgtk
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
