@@ -617,6 +617,7 @@ def run(input_file: KGTKFiles,
     import simplejson as json
     import csv
     import gzip
+    import hashlib
     import multiprocessing as mp
     import os
     from pathlib import Path
@@ -1032,8 +1033,8 @@ def run(input_file: KGTKFiles,
                                 alias_languages = aliases.keys()
                             else:
                                 alias_languages = languages
+                            alias_seq_no_map: typing.MutableMapping[str, int] = dict()
                             for lang in alias_languages:
-                                seq_no = 1
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
                                     for item in lang_aliases:
@@ -1042,8 +1043,13 @@ def run(input_file: KGTKFiles,
                                         value = KgtkFormat.stringify(item['value'], language=lang)
                                         alias_list.append(value)
                                         if alias_edges:
-                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + str(seq_no)
-                                            seq_no += 1
+                                            value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[-8:]
+                                            if value_hash in alias_seq_no_map:
+                                                seq_no = alias_seq_no_map[value_hash]
+                                            else:
+                                                seq_no = 0
+                                            alias_seq_no_map[value_hash] = seq_no + 1
+                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + value_hash + '-' + str(seq_no)
                                             self.erows_append(erows,
                                                               edge_id=sid,
                                                               node1=qnode,
