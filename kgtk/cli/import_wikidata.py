@@ -1207,7 +1207,11 @@ def run(input_file: KGTKFiles,
                                         value = KgtkFormat.stringify(val)
 
                                     if minimal_edge_file is not None or detailed_edge_file is not None:
-                                        prop_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                        prop_value_hash: str
+                                        if value.startswith(('P', 'Q')):
+                                            prop_value_hash = value
+                                        else:
+                                            prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
                                         prop_seq_no: int # In case of hash collision
                                         if prop_value_hash in prop_value_hash_collision_map:
                                             prop_seq_no = prop_value_hash_collision_map[prop_value_hash]
@@ -1337,7 +1341,11 @@ def run(input_file: KGTKFiles,
                                                             # value = '\"' + val.replace('"','\\"') + '\"'
                                                             value = KgtkFormat.stringify(val)
 
-                                                        qual_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                                        qual_value_hash: str
+                                                        if value.startswith(('P', 'Q')):
+                                                            qual_value_hash = value
+                                                        else:
+                                                            qual_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
                                                         qual_seq_no: int # In case of hash collision
                                                         if qual_value_hash in qual_value_hash_collision_map:
                                                             qual_seq_no = qual_value_hash_collision_map[qual_value_hash]
@@ -1411,21 +1419,21 @@ def run(input_file: KGTKFiles,
                                     if sitelink_verbose_edges:
                                         if len(sitelang) > 0:
                                             self.erows_append(serows,
-                                                              edge_id=sitelinkid + '-language-1',
+                                                              edge_id=sitelinkid + '-language-0',
                                                               node1=sitelinkid,
                                                               label=SITELINK_LANGUAGE_LABEL,
                                                               node2=sitelang,
                                                               entrylang=sitelang)
                                             
                                         self.erows_append(serows,
-                                                          edge_id=sitelinkid + '-site-1',
+                                                          edge_id=sitelinkid + '-site-0',
                                                           node1=sitelinkid,
                                                           label=SITELINK_SITE_LABEL,
                                                           node2=link,
                                                           entrylang=sitelang)
 
                                         self.erows_append(serows,
-                                                          edge_id=sitelinkid + '-title-1',
+                                                          edge_id=sitelinkid + '-title-0',
                                                           node1=sitelinkid,
                                                           label=SITELINK_TITLE_LABEL,
                                                           node2=KgtkFormat.stringify(sitelinks[link]['title']),
@@ -1443,19 +1451,19 @@ def run(input_file: KGTKFiles,
                                     if sitelink_verbose_qualifiers:
                                         if len(sitelang) > 0:
                                             self.qrows_append(qrows,
-                                                              edge_id=sitelinkid + '-language-1',
+                                                              edge_id=sitelinkid + '-language-0',
                                                               node1=sitelinkid,
                                                               label=SITELINK_LANGUAGE_LABEL,
                                                               node2=sitelang)
                                             
                                         self.qrows_append(qrows,
-                                                          edge_id=sitelinkid + '-site-1',
+                                                          edge_id=sitelinkid + '-site-0',
                                                           node1=sitelinkid,
                                                           label=SITELINK_SITE_LABEL,
                                                           node2=link)
 
                                         self.qrows_append(qrows,
-                                                          edge_id=sitelinkid + '-title-1',
+                                                          edge_id=sitelinkid + '-title-0',
                                                           node1=sitelinkid,
                                                           label=SITELINK_TITLE_LABEL,
                                                           node2=KgtkFormat.stringify(sitelinks[link]['title']))
