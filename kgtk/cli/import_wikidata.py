@@ -1402,7 +1402,7 @@ def run(input_file: KGTKFiles,
                                     sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[:8]
                                     sitelink_seq_no: int = 0
                                     if linklabel + sitelink_value_hash in sitelink_value_collision_map:
-                                        sitelink_seq_no = sitelink_value_collision_map[linkliabel + sitelink_value_hash]
+                                        sitelink_seq_no = sitelink_value_collision_map[linklabel + sitelink_value_hash]
                                     else:
                                         sitelink_seq_no = 0
                                     sitelink_value_collision_map[linklabel + sitelink_value_hash] = sitelink_seq_no + 1
