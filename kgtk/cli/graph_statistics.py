@@ -8,6 +8,9 @@ data.  Thus, stdin cannot be used as the input file.
 
 TODO: Convert to KgtkReader and read the file only once.
 """
+from argparse import Namespace
+import typing
+
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
@@ -16,56 +19,102 @@ def parser():
     }
 
 
-def add_arguments(parser: KGTKArgumentParser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
-    parser.add_input_file(positional=True, optional=False)
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
-    parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
-    parser.add_argument('--degrees', action='store_true', dest='compute_degrees',
-                        help="Whether or not to compute degree distribution.")
-    parser.add_argument('--pagerank', action='store_true', dest='compute_pagerank',
-                        help="Whether or not to compute PageRank centraility.")
-    parser.add_argument('--hits', action='store_true', dest='compute_hits',
-                        help="Whether or not to compute HITS centraility.")
+    _expert: bool = parsed_shared_args._expert
+
+    parser.add_input_file(positional=True, optional=False)
+    parser.add_output_file()
+
+    parser.add_argument('--undirected', dest="undirected",
+                        help="Is the graph undirected? (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument('--degrees', dest='compute_degrees',
+                        help="Whether or not to compute degree distribution. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument('--pagerank', dest='compute_pagerank',
+                        help="Whether or not to compute PageRank centraility. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                        
+    parser.add_argument('--hits', dest='compute_hits',
+                        help="Whether or not to compute HITS centraility. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     parser.add_argument('--log', action='store', type=str, dest='log_file',
                         help='Summary file for the global statistics of the graph.', default="./summary.txt")
-    parser.add_argument('--statistics-only', action='store_true', dest='output_stats',
-                        help='If this flag is set, output only the statistics edges. Else, append the statistics to the original graph.')
+
+    parser.add_argument('--statistics-only', dest='statistics_only',
+                        help='If this flag is set, output only the statistics edges. Else, append the statistics to the original graph. (default=%(default)s',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     parser.add_argument('--vertex-in-degree-property', action='store', dest='vertex_in_degree',
                         default='vertex_in_degree',
-                        help='Label for edge: vertex in degree property')
+                        help='Label for edge: vertex in degree property. (default=%(default)s')
+
     parser.add_argument('--vertex-out-degree-property', action='store', dest='vertex_out_degree',
                         default='vertex_out_degree',
-                        help='Label for edge: vertex out degree property')
+                        help='Label for edge: vertex out degree property. (default=%(default)s)')
+
     parser.add_argument('--page-rank-property', action='store', dest='vertex_pagerank',
                         default='vertex_pagerank',
-                        help='Label for pank rank property')
+                        help='Label for pank rank property. (default=%(default)s)')
+
     parser.add_argument('--vertex-hits-authority-property', action='store', dest='vertex_auth',
                         default='vertex_auth',
-                        help='Label for edge: vertext hits authority')
+                        help='Label for edge: vertext hits authority. (default=%(default)s)')
+    
     parser.add_argument('--vertex-hits-hubs-property', action='store', dest='vertex_hubs',
                         default='vertex_hubs',
-                        help='Label for edge: vertex hits hubs')
+                        help='Label for edge: vertex hits hubs. (default=%(default)s)')
 
+    KgtkReader.add_debug_arguments(parser, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
 
-def run(input_file: KGTKFiles, directed, compute_degrees, compute_pagerank, compute_hits, log_file, output_stats,
-        vertex_in_degree, vertex_out_degree, vertex_pagerank, vertex_auth, vertex_hubs):
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+        
+        undirected: bool,
+        compute_degrees: bool,
+        compute_pagerank: bool,
+        compute_hits: bool,
+        log_file: str,
+        statistics_only: bool,
+        vertex_in_degree: str,
+        vertex_out_degree: str,
+        vertex_pagerank: str,
+        vertex_auth: str,
+        vertex_hubs: str,
+
+        errors_to_stdout: bool,
+        errors_to_stderr: bool,
+        show_options: bool,
+        verbose: bool,
+        very_verbose: bool,
+
+        **kwargs, # Whatever KgtkFileOptions and KgtkValueOptions want.
+        ):
+    # import modules locally
+    from pathlib import Path
+    import sys
+
+    from graph_tool import centrality
     from kgtk.exceptions import KGTKException
-    def infer_index(h, options=[]):
-        for o in options:
-            if o in h:
-                return h.index(o)
-        return -1
-
-    def infer_predicate(h, options=[]):
-        for o in options:
-            if o in h:
-                return o
-        return ''
+    import kgtk.gt.analysis_utils as gtanalysis
+    from kgtk.gt.gt_load import load_graph_from_kgtk
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     v_prop_dict = {
         'vertex_pagerank': vertex_pagerank,
@@ -73,43 +122,60 @@ def run(input_file: KGTKFiles, directed, compute_degrees, compute_pagerank, comp
         'vertex_auth': vertex_auth
     }
     try:
-        # import modules locally
-        import socket
-        from graph_tool import load_graph_from_csv
-        from graph_tool import centrality
-        import kgtk.gt.analysis_utils as gtanalysis
-        from pathlib import Path
-        import sys
-        import csv
-        csv.field_size_limit(sys.maxsize)
 
-        filename: Path = KGTKArgumentParser.get_input_file(input_file)
+        # Select where to send error messages, defaulting to stderr.
+        error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+
+        # Build the option structures.
+        reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+        value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+        input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+        output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
         # hardcoded values useful for the script. Perhaps some of them should be exposed as arguments later
         directions = ['in', 'out', 'total']
         id_col = 'name'
+        output_columns = ["node1", "label", "node2", "id"]
 
-        with open(filename, 'r') as f:
-            header = next(f).split('\t')
-            header=[h.strip() for h in header]
-            subj_index = infer_index(header, options=['node1', 'subject'])
-            obj_index = infer_index(header, options=['node2', 'object', 'value'])
-            predicate = infer_predicate(header, options=['label', 'predicate', 'relation', 'relationship'])
-            p = []
-            for i, header_col in enumerate(header):
-                if i in [subj_index, obj_index]: continue
-                p.append(header_col)
+        if verbose:
+            print('loading the KGTK input file...\n', file=error_file, flush=True)
+        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
+                                         error_file=error_file,
+                                         options=reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose,
+                                         )
+        sub: int = kr.get_node1_column_index()
+        if sub < 0:
+            print("Missing node1 (subject) column.", file=error_file, flush=True)
+        pred: int = kr.get_label_column_index()
+        if pred < 0:
+            print("Missing label (predicate) column.", file=error_file, flush=True)
+        obj: int = kr.get_node2_column_index()
+        if obj < 0:
+            print("Missing node2 (object) column", file=error_file, flush=True)
+        if sub < 0 or pred < 0 or obj < 0:
+            kr.close()
+            raise KGTKException("Exiting due to missing columns.")
+
+        predicate: str = kr.column_names[pred]
+
+        G2 = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
+        if verbose:
+            print('graph loaded! It has %d nodes and %d edges.' % (G2.num_vertices(), G2.num_edges()), file=error_file, flush=True)
+
+        kw: KgtkWriter = KgtkWriter.open(output_columns,
+                                     output_kgtk_file,
+                                     mode=KgtkWriter.Mode.EDGE,
+                                     require_all_columns=True,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=False,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose)
+
         with open(log_file, 'w') as writer:
-
-            writer.write('loading the TSV graph now ...\n')
-            G2 = load_graph_from_csv(str(filename),
-                                     skip_first=True,
-                                     directed=directed,
-                                     hashed=True,
-                                     ecols=[subj_index, obj_index],
-                                     eprop_names=p,
-                                     csv_options={'delimiter': '\t'})
-
             writer.write('graph loaded! It has %d nodes and %d edges\n' % (G2.num_vertices(), G2.num_edges()))
             writer.write('\n###Top relations:\n')
             for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=predicate):
@@ -146,36 +212,30 @@ def run(input_file: KGTKFiles, directed, compute_degrees, compute_pagerank, comp
                 for n_id, n_label, authority in main_auth:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 
-            sys.stdout.write('node1\tlabel\tnode2\tid\n')
-            id_count = 0
-            if not output_stats:
-                for e in G2.edges():
-                    sid, oid = e
-                    lbl = G2.ep[predicate][e]
-                    sys.stdout.write(
-                        '%s\t%s\t%s\t%s\n' % (G2.vp[id_col][sid], lbl, G2.vp[id_col][oid],
-                                              '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)))
-                    id_count += 1
-
-            id_count = 0
-            for v in G2.vertices():
-                v_id = G2.vp[id_col][v]
-
-                sys.stdout.write(
-                    '{}\t{}\t{}\t{}\n'.format(v_id, vertex_in_degree, v.in_degree(),
-                                              '{}-{}-{}'.format(v_id, vertex_in_degree, id_count)))
-                id_count += 1
-                sys.stdout.write(
-                    '{}\t{}\t{}\t{}\n'.format(v_id, vertex_out_degree, v.out_degree(),
-                                              '{}-{}-{}'.format(v_id, vertex_out_degree, id_count)))
+        id_count = 0
+        if not statistics_only:
+            for e in G2.edges():
+                sid, oid = e
+                lbl = G2.ep[predicate][e]
+                kw.write([G2.vp[id_col][sid], lbl, G2.vp[id_col][oid], '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)])
                 id_count += 1
 
-                for vprop in G2.vertex_properties.keys():
-                    if vprop == id_col: continue
-                    sys.stdout.write(
-                        '%s\t%s\t%s\t%s\n' % (v_id, v_prop_dict[vprop], G2.vp[vprop][v],
-                                              '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count)))
-                    id_count += 1
+        id_count = 0
+        for v in G2.vertices():
+            v_id = G2.vp[id_col][v]
+            kw.write([v_id, vertex_in_degree, str(v.in_degree()), '{}-{}-{}'.format(v_id, vertex_in_degree, id_count)])
+            id_count += 1
+            kw.write([v_id, vertex_out_degree, str(v.out_degree()), '{}-{}-{}'.format(v_id, vertex_out_degree, id_count)])
+            id_count += 1
+
+            for vprop in G2.vertex_properties.keys():
+                if vprop == id_col:
+                    continue
+                kw.write([v_id, v_prop_dict[vprop], str(G2.vp[vprop][v]), '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count)])
+                id_count += 1
+
+        kw.close()
+        kr.close()
 
     except Exception as e:
         raise KGTKException('Error: ' + str(e))
