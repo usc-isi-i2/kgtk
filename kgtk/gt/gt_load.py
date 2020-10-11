@@ -1,5 +1,6 @@
 from graph_tool import Graph
 import itertools
+import sys
 import typing
 
 from kgtk.io.kgtkreader import KgtkReader
@@ -7,10 +8,12 @@ from kgtk.io.kgtkreader import KgtkReader
 def load_graph_from_kgtk(kr: KgtkReader,
                          directed: bool=False,
                          eprop_types: typing.Optional[typing.List[str]]=None,
-                         eprop_names: typing.Optional[typing.List[str]]=None,
                          hashed: bool=True,
                          hash_type: str="string", # for future support
-                         ecols: typing.Optional[typing.Tuple[int, int]]=None):
+                         ecols: typing.Optional[typing.Tuple[int, int]]=None,
+                         out: typing.TextIO = sys.stderr,
+                         verbose: bool = False,
+                         ):
     """Load a graph from a `KgtkReader` file containing a list of edges and edge
     properties.  This code is based on load_graph_from_csv(...) in
     `graph-tool/src/graph_tool/__init__.py`, downloaded from git.skewed.de on
@@ -26,12 +29,6 @@ def load_graph_from_kgtk(kr: KgtkReader,
     eprop_types : list of ``str`` (optional, default: ``None``)
         List of edge property types to be read from remaining columns (if this
         is ``None``, all properties will be of type ``string``.
-
-    eprop_names : list of ``str`` (optional, default: ``None``)
-        List of edge property names to be used for the remaining columns (if
-        this is ``None``, and ``skip_first`` is ``True`` their values will be
-        obtained from the first line, otherwise they will be called ``c1, c2,
-        ...``).
 
     hashed : ``bool`` (optional, default: ``True``)
         If ``True`` the vertex values in the edge list are not assumed to
@@ -60,8 +57,6 @@ def load_graph_from_kgtk(kr: KgtkReader,
     """
     r = kr # R may be wrapped for column reordering and/or non-hashed use.
 
-    first_line: typing.List[str] = list(kr.column_names)
-
     if ecols is None:
         ecols = (kr.node1_column_idx, kr.node2_column_idx)
 
@@ -85,12 +80,17 @@ def load_graph_from_kgtk(kr: KgtkReader,
                 yield row
         r = conv(r)
 
-    line = list(next(r))
     g = Graph(directed=directed)
 
     if eprop_types is None:
-        eprops = [g.new_ep("string") for x in line[2:]]
+        if verbose:
+            print("eprop_types is None", file=out, flush=True)
+        eprops = [g.new_ep("string") for x in kr.column_names[2:]]
     else:
+        if verbose:
+            print("eprop_types: [%s]" % (", ".join([repr(x) for x in eprop_types])), file=out, flush=True)
+        if len(eprop_types) != kr.column_count - 2:
+            raise ValueError("There are %d eprop columns and %d eprop types." % (kr.column_count - 2, len(eprop_types)))
         eprops = [g.new_ep(t) for t in eprop_types]
 
     # 29-Jul-2020: This is supported in the git.skewed.de repository, and
@@ -102,21 +102,23 @@ def load_graph_from_kgtk(kr: KgtkReader,
     #
     # name = g.add_edge_list(itertools.chain([line], r), hashed=hashed,
     #                       hash_type=hash_type, eprops=eprops)
-    name = g.add_edge_list(itertools.chain([line], r), hashed=hashed,
-                           eprops=eprops)
+    if verbose:
+        print("Adding edges from the input file.", file=out, flush=True)
+    name = g.add_edge_list(r, hashed=hashed, eprops=eprops)
+    if verbose:
+        print("Done adding edges from the input file.", file=out, flush=True)
+    g.vp.name = name
 
-    if eprop_names is None and len(first_line) == len(line):
-        eprop_names = list(first_line)
-        del eprop_names[min(ecols)]
-        del eprop_names[max(ecols)-1]
+    eprop_names: typing.List[str] = list(kr.column_names)
+    del eprop_names[min(ecols)]
+    del eprop_names[max(ecols)-1]
+    if verbose:
+        print("eprop_names: [%s]" % (", ".join([repr(x) for x in eprop_names])), file=out, flush=True)
 
     for i, p in enumerate(eprops):
-        if eprop_names is not None:
-            ename = eprop_names[i]
-        else:
-            ename = "c%d" % i
+        ename = eprop_names[i]
         g.ep[ename] = p
+        if verbose:
+            print("prop %d name=%s" % (i, repr(ename)), file=out, flush=True)
 
-    if name is not None:
-        g.vp.name = name
     return g
