@@ -8,6 +8,9 @@ data.  Thus, stdin cannot be used as the input file.
 
 TODO: Convert to KgtkReader and read the file only once.
 """
+from argparse import Namespace
+import typing
+
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
@@ -16,79 +19,98 @@ def parser():
     }
 
 
-def add_arguments(parser: KGTKArgumentParser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
             parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
+    _expert: bool = parsed_shared_args._expert
+
     parser.add_input_file(positional=True, optional=False)
     parser.add_output_file(who="Graph tool file to dump the graph too - if empty, it will not be saved.", optional=True)
 
-    parser.add_argument('--directed', action='store_true', dest="directed", help="Is the graph directed or not?")
-    parser.add_argument('--log', action='store', type=str, dest='log_file',
-                        help='Log file for summarized statistics of the graph.', default="./log.txt")
+    parser.add_argument('--undirected', dest="undirected",
+                        help="When True, the graph is undirected. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+    
+    KgtkReader.add_debug_arguments(parser, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
+
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
-        directed, log_file):
-    from kgtk.exceptions import KGTKException
-    def infer_index(h, options=[]):
-        for o in options:
-            if o in h:
-                return h.index(o)
-        return -1
+        undirected: bool,
 
-    def infer_predicate(h, options=[]):
-        for o in options:
-            if o in h:
-                return o
-        return ''
+        errors_to_stdout: bool,
+        errors_to_stderr: bool,
+        show_options: bool,
+        verbose: bool,
+        very_verbose: bool,
+
+        **kwargs, # Whatever KgtkFileOptions and KgtkValueOptions want.
+        ):
+    # import modules locally
+    from pathlib import Path
+    import sys
+
+    from kgtk.exceptions import KGTKException
+    import kgtk.gt.analysis_utils as gtanalysis
+    from kgtk.gt.gt_load import load_graph_from_kgtk
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     try:
-        # import modules locally
-        from pathlib import Path
-        import socket
-        import sys
-        import typing
-        from graph_tool import load_graph_from_csv
-        from graph_tool import centrality
-        import kgtk.gt.analysis_utils as gtanalysis
-        import csv
-        csv.field_size_limit(sys.maxsize)
+        # Select where to send error messages, defaulting to stderr.
+        error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
-        filename: Path = KGTKArgumentParser.get_input_file(input_file)
-        output: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file)
+        # Build the option structures.
+        reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+        value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
-        with open(filename, 'r') as f:
-            header = next(f).split('\t')
-            subj_index = infer_index(header, options=['node1', 'subject'])
-            obj_index = infer_index(header, options=['node2', 'object', 'value'])
-            predicate = infer_predicate(header, options=['relation', 'predicate', 'label', 'relationship'])
+        input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+        output_gt_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(output_file)
 
-            p = []
-            for i, header_col in enumerate(header):
-                if i in [subj_index, obj_index]: continue
-                p.append(header_col)
-        with open(log_file, 'w') as writer:
-            writer.write('loading the TSV graph now ...\n')
-            G2 = load_graph_from_csv(str(filename),
-                                     skip_first=True,
-                                     directed=directed,
-                                     hashed=True,
-                                     ecols=[subj_index, obj_index],
-                                     eprop_names=p,
-                                     csv_options={'delimiter': '\t'})
+        if verbose:
+            print('loading the KGTK input file...\n', file=error_file, flush=True)
+        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
+                                         error_file=error_file,
+                                         options=reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose,
+                                         )
+        sub: int = kr.get_node1_column_index()
+        if sub < 0:
+            print("Missing node1 (subject) column.", file=error_file, flush=True)
+        pred: int = kr.get_label_column_index()
+        if pred < 0:
+            print("Missing label (predicate) column.", file=error_file, flush=True)
+        obj: int = kr.get_node2_column_index()
+        if obj < 0:
+            print("Missing node2 (object) column", file=error_file, flush=True)
+        if sub < 0 or pred < 0 or obj < 0:
+            kr.close()
+            raise KGTKException("Exiting due to missing columns.")
 
-            writer.write('graph loaded! It has %d nodes and %d edges\n' % (G2.num_vertices(), G2.num_edges()))
-            writer.write('\n###Top relations:\n')
-            for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=predicate):
-                writer.write('%s\t%d\n' % (rel, freq))
+        G2 = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
 
-            
+        if verbose:
+            print('graph loaded! It has %d nodes and %d edges.' % (G2.num_vertices(), G2.num_edges()), file=error_file, flush=True)
+            print('\n###Top relations:', file=error_file, flush=True)
+            for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=kr.column_names[pred]):
+                print('%s\t%d' % (rel, freq), file=error_file, flush=True)
 
-            if output:
-                writer.write('now saving the graph to %s\n' % str(output))
-                G2.save(str(output))
+        if output_gt_file is not None:
+            if verbose:
+                print('\nNow saving the graph to %s' % str(output_gt_file), file=error_file, flush=True)
+            G2.save(str(output_gt_file))
+            if verbose:
+                print('Done saving the graph.', file=error_file, flush=True)
     except Exception as e:
         raise KGTKException('Error: ' + str(e))
