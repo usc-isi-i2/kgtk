@@ -617,6 +617,7 @@ def run(input_file: KGTKFiles,
     import simplejson as json
     import csv
     import gzip
+    import hashlib
     import multiprocessing as mp
     import os
     from pathlib import Path
@@ -936,6 +937,8 @@ def run(input_file: KGTKFiles,
                     qnode = obj["id"]
                     row.append(qnode)
 
+                    sitelink_value_collision_map: typing.MutableMapping[str, int] = dict()
+
                     if parse_labels:
                         labels = obj.get("labels")
                         if labels is None:
@@ -1033,17 +1036,30 @@ def run(input_file: KGTKFiles,
                             else:
                                 alias_languages = languages
                             for lang in alias_languages:
-                                seq_no = 1
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
+                                    # The alias sequence number map avoids sequence number collisions caused by hashing.
+                                    alias_seq_no_map: typing.Optional[typing.MutableMapping[str, int]]
+                                    if alias_edges:
+                                        alias_seq_no_map = dict()
+                                    else:
+                                        alias_seq_no_map = None
                                     for item in lang_aliases:
                                         # item['value']=item['value'].replace('|','\\|')
                                         # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
                                         value = KgtkFormat.stringify(item['value'], language=lang)
                                         alias_list.append(value)
-                                        if alias_edges:
-                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + str(seq_no)
-                                            seq_no += 1
+                                        if alias_edges and alias_seq_no_map is not None:
+                                            # Hash the value to save space and avoid syntactiv difficulties.
+                                            # Take a subset of the hash value to save space.
+                                            alias_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                            alias_seq_no: int # In case of hash collision
+                                            if alias_value_hash in alias_seq_no_map:
+                                                alias_seq_no = alias_seq_no_map[alias_value_hash]
+                                            else:
+                                                alias_seq_no = 0
+                                            alias_seq_no_map[alias_value_hash] = alias_seq_no + 1
+                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash + '-' + str(alias_seq_no)
                                             self.erows_append(erows,
                                                               edge_id=sid,
                                                               node1=qnode,
@@ -1100,7 +1116,7 @@ def run(input_file: KGTKFiles,
                     if keep:
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
-                            seq_no = 1
+                            prop_value_hash_collision_map: typing.MutableMapping[str, int] = dict()
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
                                     snaktype = cp['mainsnak']['snaktype']
@@ -1127,8 +1143,6 @@ def run(input_file: KGTKFiles,
                                     # if typ != val_type:
                                     #     print("typ %s != val_type %s" % (typ, val_type), file=sys.stderr, flush=True)
 
-                                    sid = qnode + '-' + \
-                                        prop + '-' + str(seq_no)                             
                                     value = ''
                                     mag = ''
                                     unit = ''
@@ -1193,6 +1207,18 @@ def run(input_file: KGTKFiles,
                                         value = KgtkFormat.stringify(val)
 
                                     if minimal_edge_file is not None or detailed_edge_file is not None:
+                                        prop_value_hash: str
+                                        if value.startswith(('P', 'Q')):
+                                            prop_value_hash = value
+                                        else:
+                                            prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                        prop_seq_no: int # In case of hash collision
+                                        if prop_value_hash in prop_value_hash_collision_map:
+                                            prop_seq_no = prop_value_hash_collision_map[prop_value_hash]
+                                        else:
+                                            prop_seq_no = 0
+                                        prop_value_hash_collision_map[prop_value_hash] = prop_seq_no + 1
+                                        sid = qnode + '-' + prop + '-' + prop_value_hash + '-' + str(prop_seq_no)
                                         self.erows_append(erows,
                                                           edge_id=sid,
                                                           node1=qnode,
@@ -1215,25 +1241,29 @@ def run(input_file: KGTKFiles,
                                                           precision=precision,
                                                           calendar=calendar)
 
-                                    seq_no += 1
+
                                     if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
-                                                qual_seq_no = 1
-                                                for qcp in qual_claim_property:
+                                                qual_value_hash_collision_map: typing.MutableMapping[str, int] = dict()
 
+                                                for qcp in qual_claim_property:
                                                     snaktype = qcp['snaktype']
+
                                                     if snaktype == 'value':
                                                         datavalue = qcp['datavalue']
                                                         val = datavalue.get('value')
                                                         val_type = datavalue.get("type", "")
+
                                                     elif snaktype == 'somevalue':
                                                         val = None
                                                         val_type = "somevalue"
+
                                                     elif snaktype == 'novalue':
                                                         val = None
                                                         val_type = "novalue"
+
                                                     else:
                                                         raise ValueError("Unknown qualifier snaktype %s" % snaktype)
 
@@ -1252,9 +1282,6 @@ def run(input_file: KGTKFiles,
                                                         enttype = ''
                                                         datahash = '"' + qcp['hash'] + '"'
                                                         typ = qcp['datatype']
-                                                        tempid = sid + '-' + qual_prop + \
-                                                            '-' + str(qual_seq_no)
-                                                        qual_seq_no += 1
 
                                                         if val is None:
                                                             value = val_type
@@ -1313,8 +1340,21 @@ def run(input_file: KGTKFiles,
                                                         else:
                                                             # value = '\"' + val.replace('"','\\"') + '\"'
                                                             value = KgtkFormat.stringify(val)
+
+                                                        qual_value_hash: str
+                                                        if value.startswith(('P', 'Q')):
+                                                            qual_value_hash = value
+                                                        else:
+                                                            qual_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                                        qual_seq_no: int # In case of hash collision
+                                                        if qual_value_hash in qual_value_hash_collision_map:
+                                                            qual_seq_no = qual_value_hash_collision_map[qual_value_hash]
+                                                        else:
+                                                            qual_seq_no = 0
+                                                        qual_value_hash_collision_map[qual_value_hash] = qual_seq_no + 1
+                                                        qualid: str  = sid + '-' + qual_prop + '-' + qual_value_hash + '-' + str(qual_seq_no)
                                                         self.qrows_append(qrows,
-                                                                          edge_id=tempid,
+                                                                          edge_id=qualid,
                                                                           node1=sid,
                                                                           label=qual_prop,
                                                                           node2=value,
@@ -1337,21 +1377,16 @@ def run(input_file: KGTKFiles,
                         else:
                             sitelinks = None
                         if sitelinks:
-                            wikipedia_seq_no = 1
                             for link in sitelinks:
                                 # TODO: If the title might contain vertical bar, more work is needed
                                 # to make the sitetitle safe for KGTK.
                                 if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
                                     linklabel = SITELINK_LABEL
-                                    sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
-                                    wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     sitelang=link.split('wiki')[0].replace('_','-')
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
                                 else:
                                     linklabel = ADDL_SITELINK_LABEL
-                                    sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
-                                    wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     if "wiki" in link:
                                         sitelang=link.split("wiki")[0]
@@ -1364,9 +1399,18 @@ def run(input_file: KGTKFiles,
 
                                 if sitelink is not None:
                                     serows = sitelink_erows if collect_seperately else erows
+                                    sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[:8]
+                                    sitelink_seq_no: int = 0
+                                    if linklabel + sitelink_value_hash in sitelink_value_collision_map:
+                                        sitelink_seq_no = sitelink_value_collision_map[linklabel + sitelink_value_hash]
+                                    else:
+                                        sitelink_seq_no = 0
+                                    sitelink_value_collision_map[linklabel + sitelink_value_hash] = sitelink_seq_no + 1
+                                    sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash + '-' + str(sitelink_seq_no)
+
                                     if sitelink_edges:
                                         self.erows_append(serows,
-                                                          edge_id=sid,
+                                                          edge_id=sitelinkid,
                                                           node1=qnode,
                                                           label=linklabel,
                                                           node2=sitelink,
@@ -1374,73 +1418,63 @@ def run(input_file: KGTKFiles,
 
                                     if sitelink_verbose_edges:
                                         if len(sitelang) > 0:
-                                            tempid=sid+'-language-1'
                                             self.erows_append(serows,
-                                                              edge_id=tempid,
-                                                              node1=sid,
+                                                              edge_id=sitelinkid + '-language-0',
+                                                              node1=sitelinkid,
                                                               label=SITELINK_LANGUAGE_LABEL,
                                                               node2=sitelang,
                                                               entrylang=sitelang)
                                             
-                                        tempid=sid+'-site-1'
                                         self.erows_append(serows,
-                                                          edge_id=tempid,
-                                                          node1=sid,
+                                                          edge_id=sitelinkid + '-site-0',
+                                                          node1=sitelinkid,
                                                           label=SITELINK_SITE_LABEL,
                                                           node2=link,
                                                           entrylang=sitelang)
 
-                                        tempid=sid+'-title-1'
                                         self.erows_append(serows,
-                                                          edge_id=tempid,
-                                                          node1=sid,
+                                                          edge_id=sitelinkid + '-title-0',
+                                                          node1=sitelinkid,
                                                           label=SITELINK_TITLE_LABEL,
                                                           node2=KgtkFormat.stringify(sitelinks[link]['title']),
                                                           entrylang=sitelang)
 
-                                        edge_badge_num: int = 0
                                         for badge in sitelinks[link]['badges']:
-                                            tempid=sid+'-badge-'+str(edge_badge_num + 1)
+                                            badgeid = sitelinkid + '-badge-' + badge
                                             self.erows_append(serows,
-                                                              edge_id=tempid,
-                                                              node1=sid,
+                                                              edge_id=badgeid,
+                                                              node1=sitelinkid,
                                                               label=SITELINK_BADGE_LABEL,
-                                                              node2=sitelinks[link]['badges'][edge_badge_num],
+                                                              node2=badge,
                                                               entrylang=sitelang)
-                                            edge_badge_num += 1
 
                                     if sitelink_verbose_qualifiers:
                                         if len(sitelang) > 0:
-                                            tempid=sid+'-language-1'
                                             self.qrows_append(qrows,
-                                                              edge_id=tempid,
-                                                              node1=sid,
+                                                              edge_id=sitelinkid + '-language-0',
+                                                              node1=sitelinkid,
                                                               label=SITELINK_LANGUAGE_LABEL,
                                                               node2=sitelang)
                                             
-                                        tempid=sid+'-site-1'
                                         self.qrows_append(qrows,
-                                                          edge_id=tempid,
-                                                          node1=sid,
+                                                          edge_id=sitelinkid + '-site-0',
+                                                          node1=sitelinkid,
                                                           label=SITELINK_SITE_LABEL,
                                                           node2=link)
 
-                                        tempid=sid+'-title-1'
                                         self.qrows_append(qrows,
-                                                          edge_id=tempid,
-                                                          node1=sid,
+                                                          edge_id=sitelinkid + '-title-0',
+                                                          node1=sitelinkid,
                                                           label=SITELINK_TITLE_LABEL,
                                                           node2=KgtkFormat.stringify(sitelinks[link]['title']))
 
-                                        qual_badge_num: int = 0
                                         for badge in sitelinks[link]['badges']:
-                                            tempid=sid+'-badge-'+str(qual_badge_num + 1)
+                                            badgeid = sitelinkid + '-badge-' + badge
                                             self.qrows_append(qrows,
-                                                              edge_id=tempid,
-                                                              node1=sid,
+                                                              edge_id=badgeid,
+                                                              node1=sielinkid,
                                                               label=SITELINK_BADGE_LABEL,
-                                                              node2=sitelinks[link]['badges'][qual_badge_num])
-                                            qual_badge_num += 1
+                                                              node2=badge)
 
             if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0 or len(description_erows) > 0 or len(sitelink_erows) > 0:
                 if collect_results:
