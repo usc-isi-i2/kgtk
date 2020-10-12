@@ -1059,8 +1059,7 @@ def run(input_file: KGTKFiles,
                                             alias_seq_no: int # In case of hash collision
                                             if aliasid in alias_id_collision_map:
                                                 alias_seq_no = alias_id_collision_map[aliasid]
-                                                if alias_seq_no == 1:
-                                                    print("\n*** Alias collision detected for %s (%s)" % (aliasid, value), file=sys.stderr, flush=True)
+                                                print("\n*** Alias collision #%d detected for %s (%s)" % (alias_seq_no, aliasid, value), file=sys.stderr, flush=True)
                                             else:
                                                 alias_seq_no = 0
                                             alias_id_collision_map[aliasid] = alias_seq_no + 1
@@ -1220,8 +1219,7 @@ def run(input_file: KGTKFiles,
                                         prop_seq_no: int # In case of hash collision
                                         if edgeid in edge_id_collision_map:
                                             prop_seq_no = edge_id_collision_map[edgeid]
-                                            if prop_seq_no == 1:
-                                                print("\n*** Edge collision detected for %s (%s)" % (edgeid, value), file=sys.stderr, flush=True)
+                                            print("\n*** Edge collision #%d detected for %s (%s)" % (prop_seq_no, edgeid, value), file=sys.stderr, flush=True)
                                         else:
                                             prop_seq_no = 0
                                         edge_id_collision_map[edgeid] = prop_seq_no + 1
@@ -1355,8 +1353,7 @@ def run(input_file: KGTKFiles,
                                                         qual_seq_no: int # In case of hash collision
                                                         if qualid in qual_id_collision_map:
                                                             qual_seq_no = qual_id_collision_map[qualid]
-                                                            if qual_seq_no == 1:
-                                                                print("\n*** Qualifier collision detected for %s (%s)" % (qualid, value), file=sys.stderr, flush=True)
+                                                            print("\n*** Qualifier collision #%d detected for %s (%s)" % (qual_seq_no, qualid, value), file=sys.stderr, flush=True)
                                                         else:
                                                             qual_seq_no = 0
                                                         qual_id_collision_map[qualid] = qual_seq_no + 1
@@ -1412,8 +1409,7 @@ def run(input_file: KGTKFiles,
                                     sitelink_seq_no: int = 0
                                     if sitelinkid in sitelink_id_collision_map:
                                         sitelink_seq_no = sitelink_id_collision_map[sitelinkid]
-                                        if sitelink_seq_no == 1:
-                                            print("\n*** Sitelink collision detected for %s (%s)" % (sitelinkid, sitelink), file=sys.stderr, flush=True)
+                                        print("\n*** Sitelink collision #%d detected for %s (%s)" % (sitelink_seq_no, sitelinkid, sitelink), file=sys.stderr, flush=True)
                                     else:
                                         sitelink_seq_no = 0
                                     sitelink_id_collision_map[sitelinkid] = sitelink_seq_no + 1
