@@ -921,6 +921,14 @@ def run(input_file: KGTKFiles,
             description_erows = []
             sitelink_erows = []
 
+            # These maps avoid avoid ID collisions due to hash collision or
+            # repeated values in the input data.  We assume that a top-level
+            # property (obj["id"]) will not occur in multiple input lines.
+            alias_id_collision_map: typing.MutableMapping[str, int] = dict()
+            prop_id_collision_map: typing.MutableMapping[str, int] = dict()
+            qual_id_collision_map: typing.MutableMapping[str, int] = dict()
+            sitelink_id_collision_map: typing.MutableMapping[str, int] = dict()
+
             clean_line = line.strip()
             if clean_line.endswith(b","):
                 clean_line = clean_line[:-1]
@@ -936,8 +944,6 @@ def run(input_file: KGTKFiles,
                     row = []
                     qnode = obj["id"]
                     row.append(qnode)
-
-                    sitelink_value_collision_map: typing.MutableMapping[str, int] = dict()
 
                     if parse_labels:
                         labels = obj.get("labels")
@@ -1038,30 +1044,27 @@ def run(input_file: KGTKFiles,
                             for lang in alias_languages:
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
-                                    # The alias sequence number map avoids sequence number collisions caused by hashing.
-                                    alias_seq_no_map: typing.Optional[typing.MutableMapping[str, int]]
-                                    if alias_edges:
-                                        alias_seq_no_map = dict()
-                                    else:
-                                        alias_seq_no_map = None
                                     for item in lang_aliases:
                                         # item['value']=item['value'].replace('|','\\|')
                                         # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
                                         value = KgtkFormat.stringify(item['value'], language=lang)
                                         alias_list.append(value)
-                                        if alias_edges and alias_seq_no_map is not None:
-                                            # Hash the value to save space and avoid syntactiv difficulties.
+                                        if alias_edges:
+                                            # Hash the value to save space and avoid syntactic difficulties.
                                             # Take a subset of the hash value to save space.
                                             alias_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                            aliasid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash
                                             alias_seq_no: int # In case of hash collision
-                                            if alias_value_hash in alias_seq_no_map:
-                                                alias_seq_no = alias_seq_no_map[alias_value_hash]
+                                            if aliasid in alias_id_collision_map:
+                                                alias_seq_no = alias_id_collision_map[aliasid]
+                                                if alias_seq_no == 1:
+                                                    print("\n*** Alias collision detected for %s" % aliasid, file=sys.stderr, flush=True)
                                             else:
                                                 alias_seq_no = 0
-                                            alias_seq_no_map[alias_value_hash] = alias_seq_no + 1
-                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash + '-' + str(alias_seq_no)
+                                            alias_id_collision_map[aliasid] = alias_seq_no + 1
+                                            aliasid += '-' + str(alias_seq_no)
                                             self.erows_append(erows,
-                                                              edge_id=sid,
+                                                              edge_id=aliasid,
                                                               node1=qnode,
                                                               label=ALIAS_LABEL,
                                                               node2=value,
@@ -1116,7 +1119,6 @@ def run(input_file: KGTKFiles,
                     if keep:
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
-                            prop_value_hash_collision_map: typing.MutableMapping[str, int] = dict()
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
                                     snaktype = cp['mainsnak']['snaktype']
@@ -1212,13 +1214,16 @@ def run(input_file: KGTKFiles,
                                             prop_value_hash = value
                                         else:
                                             prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                        sid: str = qnode + '-' + prop + '-' + prop_value_hash
                                         prop_seq_no: int # In case of hash collision
-                                        if prop_value_hash in prop_value_hash_collision_map:
-                                            prop_seq_no = prop_value_hash_collision_map[prop_value_hash]
+                                        if sid in prop_id_collision_map:
+                                            prop_seq_no = prop_id_collision_map[sid]
+                                            if prop_seq_no == 1:
+                                                print("\n*** Edge collision detected for %s" % sid, file=sys.stderr, flush=True)
                                         else:
                                             prop_seq_no = 0
-                                        prop_value_hash_collision_map[prop_value_hash] = prop_seq_no + 1
-                                        sid = qnode + '-' + prop + '-' + prop_value_hash + '-' + str(prop_seq_no)
+                                        prop_id_collision_map[sid] = prop_seq_no + 1
+                                        sid += '-' + str(prop_seq_no)
                                         self.erows_append(erows,
                                                           edge_id=sid,
                                                           node1=qnode,
@@ -1246,8 +1251,6 @@ def run(input_file: KGTKFiles,
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
-                                                qual_value_hash_collision_map: typing.MutableMapping[str, int] = dict()
-
                                                 for qcp in qual_claim_property:
                                                     snaktype = qcp['snaktype']
 
@@ -1346,13 +1349,16 @@ def run(input_file: KGTKFiles,
                                                             qual_value_hash = value
                                                         else:
                                                             qual_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                                        qualid: str  = sid + '-' + qual_prop + '-' + qual_value_hash
                                                         qual_seq_no: int # In case of hash collision
-                                                        if qual_value_hash in qual_value_hash_collision_map:
-                                                            qual_seq_no = qual_value_hash_collision_map[qual_value_hash]
+                                                        if qualid in qual_id_collision_map:
+                                                            qual_seq_no = qual_id_collision_map[qualid]
+                                                            if qual_seq_no == 1:
+                                                                print("\n*** Qualifier collision detected for %s" % qualid, file=sys.stderr, flush=True)
                                                         else:
                                                             qual_seq_no = 0
-                                                        qual_value_hash_collision_map[qual_value_hash] = qual_seq_no + 1
-                                                        qualid: str  = sid + '-' + qual_prop + '-' + qual_value_hash + '-' + str(qual_seq_no)
+                                                        qual_id_collision_map[qualid] = qual_seq_no + 1
+                                                        qualid += '-' + str(qual_seq_no)
                                                         self.qrows_append(qrows,
                                                                           edge_id=qualid,
                                                                           node1=sid,
@@ -1400,13 +1406,16 @@ def run(input_file: KGTKFiles,
                                 if sitelink is not None:
                                     serows = sitelink_erows if collect_seperately else erows
                                     sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[:8]
+                                    sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash
                                     sitelink_seq_no: int = 0
-                                    if linklabel + sitelink_value_hash in sitelink_value_collision_map:
-                                        sitelink_seq_no = sitelink_value_collision_map[linklabel + sitelink_value_hash]
+                                    if sitelinkid in sitelink_id_collision_map:
+                                        sitelink_seq_no = sitelink_id_collision_map[sitelinkid]
+                                        if sitelink_seq_no == 1:
+                                            print("\n*** Sitelink collision detected for %s" % sitelinkid, file=sys.stderr, flush=True)
                                     else:
                                         sitelink_seq_no = 0
-                                    sitelink_value_collision_map[linklabel + sitelink_value_hash] = sitelink_seq_no + 1
-                                    sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash + '-' + str(sitelink_seq_no)
+                                    sitelink_id_collision_map[sitelinkid] = sitelink_seq_no + 1
+                                    sitelinkid += '-' + str(sitelink_seq_no)
 
                                     if sitelink_edges:
                                         self.erows_append(serows,
