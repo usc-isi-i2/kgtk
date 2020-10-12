@@ -961,6 +961,9 @@ def run(input_file: KGTKFiles,
                             for lang in label_languages:
                                 lang_label = labels.get(lang, None)
                                 if lang_label:
+                                    if lang_label['language'] != lang:
+                                        print("*** Conflicting language key %s for the %s label for %s" % (repr(lang_label['language']), repr(lang), qnode),
+                                              file=sys.stderr, flush=True)
                                     # lang_label['value']=lang_label['value'].replace('|','\\|')
                                     # label_list.append('\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_label['value'], language=lang)
@@ -968,7 +971,6 @@ def run(input_file: KGTKFiles,
                                         
                                     if label_edges:
                                         langid: str = qnode + '-' + LABEL_LABEL + '-' + lang
-                                        # TODO: check for label collisions!
                                         self.erows_append(erows,
                                                           edge_id=langid,
                                                           node1=qnode,
@@ -1010,13 +1012,15 @@ def run(input_file: KGTKFiles,
                             for lang in desc_languages:
                                 lang_descr = descriptions.get(lang, None)
                                 if lang_descr:
+                                    if lang_descr['language'] != lang:
+                                        print("*** Conflicting language key %s for the %s description for %s" % (repr(lang_descr['language']), repr(lang), qnode),
+                                              file=sys.stderr, flush=True)
                                     # lang_descr['value']=lang_descr['value'].replace('|','\\|')
                                     # descr_list.append('\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_descr['value'], language=lang)
                                     descr_list.append(value)
                                     if descr_edges:
                                         descrid: str = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
-                                        # TODO: check for description collisions!
                                         self.erows_append(description_erows if collect_seperately else erows,
                                                               edge_id=descrid,
                                                               node1=qnode,
