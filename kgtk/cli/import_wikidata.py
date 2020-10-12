@@ -1084,7 +1084,7 @@ def run(input_file: KGTKFiles,
                     if not node_id_only:
                         row.append(datatype)
                     if len(datatype) > 0 and datatype_edges:
-                        datadtyeid: str = qnode + '-' + "datatype"
+                        datadtypeid: str = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
                         # there's no need to stringify it.
                         self.erows_append(erows,
