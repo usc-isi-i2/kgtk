@@ -961,9 +961,11 @@ def run(input_file: KGTKFiles,
                             for lang in label_languages:
                                 lang_label = labels.get(lang, None)
                                 if lang_label:
+                                    # We needn't worry about duplicate label entries if this check passes.
                                     if lang_label['language'] != lang:
                                         print("*** Conflicting language key %s for the %s label for %s" % (repr(lang_label['language']), repr(lang), qnode),
                                               file=sys.stderr, flush=True)
+
                                     # lang_label['value']=lang_label['value'].replace('|','\\|')
                                     # label_list.append('\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_label['value'], language=lang)
@@ -1012,6 +1014,7 @@ def run(input_file: KGTKFiles,
                             for lang in desc_languages:
                                 lang_descr = descriptions.get(lang, None)
                                 if lang_descr:
+                                    # We needn't worry about duplicate description entries if this check passes.
                                     if lang_descr['language'] != lang:
                                         print("*** Conflicting language key %s for the %s description for %s" % (repr(lang_descr['language']), repr(lang), qnode),
                                               file=sys.stderr, flush=True)
