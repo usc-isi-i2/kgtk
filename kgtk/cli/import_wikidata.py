@@ -1090,7 +1090,7 @@ def run(input_file: KGTKFiles,
                     if not node_id_only:
                         row.append(datatype)
                     if len(datatype) > 0 and datatype_edges:
-                        datadtypeid: str = qnode + '-' + "datatype"
+                        datatypeid: str = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
                         # there's no need to stringify it.
                         self.erows_append(erows,
@@ -1222,7 +1222,7 @@ def run(input_file: KGTKFiles,
                                             prop_value_hash = value
                                         else:
                                             prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
-                                        edgeid: str = qnode + '-' + prop + '-' + prop_value_hash
+                                        edgeid: str = qnode + '-' + prop + '-' + prop_value_hash + '-' + claim_id.lower()
                                         prop_seq_no: int # In case of hash collision
                                         if edgeid in edge_id_collision_map:
                                             prop_seq_no = edge_id_collision_map[edgeid]
