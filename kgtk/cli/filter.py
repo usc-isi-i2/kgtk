@@ -28,7 +28,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     # '$label == "/r/DefinedAs" && $node2=="/c/en/number_zero"'
     parser.add_input_file(positional=True)
-    parser.add_output_file(who="The KGTK output file for records that pass the filter.", allow_list=True, dest="output_files")
+    parser.add_output_file(who="The KGTK output file for records that pass the filter. Multiple output file may be specified, each with their own pattern.", allow_list=True, dest="output_files")
     parser.add_output_file(who="The KGTK reject file for records that fail the filter.",
                            dest="reject_file",
                            options=["--reject-file"],
@@ -37,7 +37,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     # parser.add_argument('-dt', "--datatype", action="store", type=str, dest="datatype", help="Datatype of the input file, e.g., tsv or csv.", default="tsv")
     parser.add_argument('-p', '--pattern', action="append", nargs="+", type=str, dest="patterns", required=True,
-                        help="Pattern to filter on, for instance, \" ; P154 ; \" ")
+                        help="Pattern to filter on, for instance, \" ; P154 ; \". Multiple patterns may be specified when there are mutiple output files.")
     parser.add_argument('--subj', action="store", type=str, dest='subj_col', help="Subject column, default is node1")
     parser.add_argument('--pred', action="store", type=str, dest='pred_col', help="Predicate column, default is label")
     parser.add_argument('--obj', action="store", type=str, dest='obj_col', help="Object column, default is node2")

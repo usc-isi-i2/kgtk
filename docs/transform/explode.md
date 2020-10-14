@@ -49,7 +49,7 @@ optional arguments:
                         Indicate that it is OK to overwrite existing columns.
                         (default=False).
   --expand [True|False]
-                        Expand the source column if it contains a list, else fail.
+                        When True, expand source cells that contain a lists, else fail if a source cell contains a list.
                         (default=False).
   --show-data-types [True|False]
                         Print the list of data types and exit. (default=False).
