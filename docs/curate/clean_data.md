@@ -25,6 +25,8 @@ optional arguments:
                         The KGTK input file. (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        Reject file (Optional, use '-' for stdout.)
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
@@ -99,6 +101,8 @@ optional arguments:
                         The KGTK input file. (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        Reject file (Optional, use '-' for stdout.)
 
 Error and feedback messages:
   Send error messages and feedback to stderr or stdout, control the amount of feedback and debugging messages.
@@ -114,6 +118,8 @@ File options:
 
   --column-separator COLUMN_SEPARATOR
                         Column separator (default=<TAB>).
+  --input-format INPUT_FORMAT
+                        Specify the input format (default=None).
   --compression-type COMPRESSION_TYPE
                         Specify the compression type (default=None).
   --error-limit ERROR_LIMIT
@@ -205,6 +211,12 @@ Data value parsing:
   --allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]
                         Do not check if single quotes are backslashed inside language
                         qualified strings. (default=False).
+  --allow-wikidata-lq-strings [ALLOW_WIKIDATA_LQ_STRINGS]
+                        Allow Wikidata language qualifiers. (default=False).
+  --require-iso8601-extended [REQUIRE_ISO8601_EXTENDED]
+                        Require colon(:) and hyphen(-) in dates and times. (default=False).
+  --force-iso8601-extended [FORCE_ISO8601_EXTENDED]
+                        Force colon (:) and hyphen(-) in dates and times. (default=False).
   --allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]
                         Allow month or day zero in dates. (default=False).
   --repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]
@@ -223,6 +235,8 @@ Data value parsing:
                         Allow coordinates using scientific notation. (default=False).
   --repair-lax-coordinates [REPAIR_LAX_COORDINATES]
                         Allow coordinates using scientific notation. (default=False).
+  --allow-out-of-range-coordinates [ALLOW_OUT_OF_RANGE_COORDINATES]
+                        Allow coordinates that don't make sense. (default=False).
   --minimum-valid-lat MINIMUM_VALID_LAT
                         The minimum valid latitude. (default=-90.000000).
   --clamp-minimum-lat [CLAMP_MINIMUM_LAT]
