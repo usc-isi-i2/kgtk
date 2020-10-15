@@ -11,18 +11,13 @@ decompression selectin algorithim;  this is useful when reading from piped input
 ```
 usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--header-only [HEADER_ONLY]]
                      [-v]
-                     [INPUT_FILE [INPUT_FILE ...]]
 
-Validate a KGTK file. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
+Validate one or more KGTK files. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
 
 To validate data and pass clean data to an output file or pipe, use the kgtk clean_data command.
 
 Additional options are shown in expert help.
 kgtk --expert validate --help
-
-positional arguments:
-  INPUT_FILE            The KGTK file(s) to validate. (May be omitted or '-' for stdin.)
-                        (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -86,18 +81,13 @@ usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--header-only [HEADE
                      [--clamp-maximum-lon [CLAMP_MAXIMUM_LON]]
                      [--modulo-repair-lon [MODULO_REPAIR_LON]]
                      [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
-                     [INPUT_FILE [INPUT_FILE ...]]
 
-Validate a KGTK file. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
+Validate one or more KGTK files. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
 
 To validate data and pass clean data to an output file or pipe, use the kgtk clean_data command.
 
 Additional options are shown in expert help.
 kgtk --expert validate --help
-
-positional arguments:
-  INPUT_FILE            The KGTK file(s) to validate. (May be omitted or '-' for stdin.)
-                        (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -322,7 +312,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 ### Validate the data, using default options
 
 ```bash
-kgtk validate file1.tsv
+kgtk validate -i file1.tsv
 ```
 
 The following complaint will be issued:
@@ -340,7 +330,7 @@ Instruct the validator to accept month or day 00, even though
 this is not allowed in ISO 6801.
 
 ```bash
-kgtk validate file1.tsv --allow-month-or-day-zero
+kgtk validate -i file1.tsv --allow-month-or-day-zero
 ```
 This results in no error messages.
 
@@ -350,7 +340,7 @@ Sometimes you may wish to get more feedback about what kgtk verbose is
 doing.
 
 ```bash
-kgtk validate file1.tsv --allow-month-or-day-zero --verbose
+kgtk validate -i file1.tsv --allow-month-or-day-zero --verbose
 ```
 
 This results in the following output:

@@ -3,7 +3,7 @@ Convert a KGTK input file to a GitHub markdown table on output.
 ## Usage
 
 ```
-usage: kgtk md [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-v] [INPUT_FILE]
+usage: kgtk md [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-v]
 
 Convert a KGTK input file to a GitHub markdown table on output. 
 
@@ -17,10 +17,6 @@ kgtk md file.tsv
 
 Additional options are shown in expert help.
 kgtk --expert md --help
-
-positional arguments:
-  INPUT_FILE            The KGTK file to convert to a GitHub markdown table. (May be omitted
-                        or '-' for stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
