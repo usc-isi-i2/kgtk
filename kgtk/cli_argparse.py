@@ -53,6 +53,7 @@ class KGTKArgumentParser(ArgumentParser):
                  default_help: str,
                  stdio_name: str,
                  default_stdio: bool,
+                 allow_stdio: bool,
     ):
 
         helpstr: str
@@ -63,14 +64,20 @@ class KGTKArgumentParser(ArgumentParser):
 
         if optional:
             # Not required, no default. Positional output not allowed, lists not allowed.
-            self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr + " (Optional, use '-' for %s.)" % stdio_name)
+            if allow_stdio:
+                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr + " (Optional, use '-' for %s.)" % stdio_name)
+            else:
+                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr + " (Optional)")
             return
 
         # This is a required file, defaulting to stdio.
-        if default_stdio:
-            helpstr += " (May be omitted or '-' for %s.)" % stdio_name
+        if allow_stdio:
+            if default_stdio:
+                helpstr += " (May be omitted or '-' for %s.)" % stdio_name
+            else:
+                helpstr += " (Required, use '-' for %s.)" % stdio_name
         else:
-            helpstr += " (Required, use '-' for %s.)" % stdio_name
+            helpstr += " (Required)"
 
         positional &= self.SUPPORT_POSITIONAL_ARGS
         if positional:
@@ -81,7 +88,7 @@ class KGTKArgumentParser(ArgumentParser):
                 self.add_argument(dest, nargs="*", type=Path, help=helpstr2, metavar=metavar, action="append")
                 self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, action="append")
             else:
-                if default_stdio:
+                if allow_stdio and default_stdio:
                     self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, default=[], action="append")
                 else:
                     self.add_argument(*options, dest=dest, nargs="+", type=Path, metavar=metavar, help=helpstr, required=True, action="append")
@@ -91,7 +98,7 @@ class KGTKArgumentParser(ArgumentParser):
                 self.add_argument(dest, nargs="?", type=Path, help=helpstr2, metavar=metavar, action="append")
                 self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, action="append")
             else:
-                if default_stdio:
+                if allow_stdio and default_stdio:
                     self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, default=Path("-"))
                 else:
                     self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr, required=True)
@@ -106,21 +113,23 @@ class KGTKArgumentParser(ArgumentParser):
                        allow_list: bool = False,
                        positional: bool = False,
                        default_stdin: bool = True,
+                       allow_stdin: bool = True,
     ):
 
-        return self.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_INPUT_FILE_WHO, "stdin", default_stdin)
+        return self.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_INPUT_FILE_WHO, "stdin", default_stdin, allow_stdin)
 
     def add_output_file(self,
-                       who: typing.Optional[str] = None,
-                       dest: str = "output_file",
-                       options: typing.List[str] = ["-o", "--output-file"],
-                       metavar: str = "OUTPUT_FILE",
-                       optional: bool = False,
-                       allow_list: bool = False,
-                       positional: bool = False,
-                       default_stdout: bool = True,
+                        who: typing.Optional[str] = None,
+                        dest: str = "output_file",
+                        options: typing.List[str] = ["-o", "--output-file"],
+                        metavar: str = "OUTPUT_FILE",
+                        optional: bool = False,
+                        allow_list: bool = False,
+                        positional: bool = False,
+                        default_stdout: bool = True,
+                        allow_stdout: bool = True,
     ):
-        return self.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_OUTPUT_FILE_WHO, "stdout", default_stdout)
+        return self.add_file(who, dest, options, metavar, optional, allow_list, positional, self.DEFAULT_OUTPUT_FILE_WHO, "stdout", default_stdout, allow_stdout)
 
     @classmethod
     def get_path_list(cls, paths: KGTKFiles, who: str, default_stdio: bool)->typing.List[Path]:
