@@ -11,7 +11,7 @@ KGTKFiles = typing.Optional[typing.Union[Path,
                                                                   typing.List[Path]]]]]
 
 class KGTKArgumentParser(ArgumentParser):
-    SUPPORT_POSITIONAL_ARGS: bool = True
+    SUPPORT_POSITIONAL_ARGS: bool = False
     DEFAULT_INPUT_FILE_WHO: str = "KGTK input file"
     DEFAULT_OUTPUT_FILE_WHO: str = "KGTK output file"
 
