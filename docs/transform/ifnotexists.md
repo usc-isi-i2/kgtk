@@ -30,16 +30,11 @@ usage: kgtk ifnotexists [-h] [-i INPUT_FILE] [--filter-on FILTER_FILE] [-o OUTPU
                         [--input-keys [INPUT_KEYS [INPUT_KEYS ...]]]
                         [--filter-keys [FILTER_KEYS [FILTER_KEYS ...]]]
                         [--cache-input [True|False]] [--preserve-order [True|False]] [-v]
-                        [INPUT_FILE]
 
 Filter a KGTK file based on whether one or more records do not exist in a second KGTK file with matching values for one or more fields.
 
 Additional options are shown in expert help.
 kgtk --expert ifnotexists --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -102,7 +97,7 @@ Suppose that `file5.tsv` contains the following table in KGTK format:
 | home |
 
 ```bash
-kgtk ifnotexists file1.tsv --filter-on file2.tsv
+kgtk ifnotexists -i file1.tsv --filter-on file2.tsv
 
 ```
 | node1 | label   | node2 | location | years |
@@ -114,7 +109,7 @@ kgtk ifnotexists file1.tsv --filter-on file2.tsv
 
 
 ```bash
-kgtk ifnotexists file1.tsv --filter-on file3.tsv
+kgtk ifnotexists -i file1.tsv --filter-on file3.tsv
 
 ```
 | node1 | label   | node2 | location | years |
@@ -123,7 +118,7 @@ kgtk ifnotexists file1.tsv --filter-on file3.tsv
 | peter | zipcode | 12040 | work     | 6     |
 
 ```bash
-kgtk ifnotexists file4.tsv --filter-on file3.tsv
+kgtk ifnotexists -i file4.tsv --filter-on file3.tsv
 
 ```
 | id    |
@@ -131,7 +126,7 @@ kgtk ifnotexists file4.tsv --filter-on file3.tsv
 | peter  |
 
 ```bash
-kgtk ifexists file1.tsv --filter-on file5.tsv --input-keys location
+kgtk ifexists -i file1.tsv --filter-on file5.tsv --input-keys location
 
 ```
 | node1 | label   | node2 | location | years |

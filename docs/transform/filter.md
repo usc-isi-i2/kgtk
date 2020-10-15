@@ -10,13 +10,8 @@ Each of the patterns can consist of a list of symbols separated using commas.
 usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--reject-file REJECT_FILE] -p
                    PATTERN [--subj SUBJ_COL] [--pred PRED_COL] [--obj OBJ_COL]
                    [--or [True|False]] [--invert [True|False]] [-v]
-                   [INPUT_FILE]
 
 Filter KGTK file based on values in the node1 (subject), label (predicate), and node2 (object) fields.
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -42,25 +37,25 @@ optional arguments:
 
 ## Examples
 
-Select all edges that have property P154. The property is called ‘prop’ in this file
+Select all edges that have property P154. The property is called "prop" in this file
 
 ```bash
-kgtk filter -p “ ; P154 ; “ --pred ‘prop’ INPUT
+kgtk filter -p " ; P154 ; " --pred prop -i INPUT
 ```
 
 Select all edges that have properties P154 or P983
 
 ```bash
-kgtk filter -p “ ; P154, P983 ; “ INPUT
+kgtk filter -p " ; P154, P983 ; " --pred prop -i INPUT
 ```
 
 Select all edges that have properties P154 or P983 and object Q12
 
 ```bash
-kgtk filter -p “ ; P154, P983 ; Q12 “ INPUT
+kgtk filter -p " ; P154, P983 ; Q12 " --pred prop -i INPUT
 ```
 
 Select all edges that have subject Q31 or Q45
 ```bash
-kgtk filter -p “ Q32, Q45 ; ; “ INPUT
+kgtk filter -p " Q32, Q45 ; ; " --pred prop -i INPUT
 ```

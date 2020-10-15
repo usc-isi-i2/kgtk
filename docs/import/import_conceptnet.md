@@ -4,11 +4,6 @@ Import the entire ConceptNet, or just its English part, into KGTK format. Weight
 ```
 usage: kgtk import-conceptnet [-h] [-i INPUT_FILE] [--english_only]
                               [-o OUTPUT_FILE] [--weights-file WEIGHTS_FILE]
-                              [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for
-                        stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit

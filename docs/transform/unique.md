@@ -35,16 +35,11 @@ specified values.
 usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --column COLUMN_NAME
                    [--empty EMPTY_VALUE] [--label LABEL_VALUE] [--where WHERE_COLUMN_NAME]
                    [--in WHERE_VALUES [WHERE_VALUES ...]] [-v]
-                   [INPUT_FILE]
 
 Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.
 
 Additional options are shown in expert help.
 kgtk --expert unique --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -80,7 +75,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 
 
 ```bash
-kgtk unique file1.tsv --column location
+kgtk unique -i file1.tsv --column location
 
 ```
 
@@ -90,7 +85,7 @@ kgtk unique file1.tsv --column location
 | work  | count | 3     |
 
 ```bash
-kgtk unique file1.tsv --column location --empty NONE
+kgtk unique -i file1.tsv --column location --empty NONE
 
 ```
 
@@ -101,7 +96,7 @@ kgtk unique file1.tsv --column location --empty NONE
 | work  | count | 3     |
 
 ```bash
-kgtk unique file1.tsv --column location --empty NONE --format node
+kgtk unique -i file1.tsv --column location --empty NONE --format node
 
 ```
 
@@ -110,7 +105,7 @@ kgtk unique file1.tsv --column location --empty NONE --format node
 | location | 3    | 2    | 3    |
 
 ```bash
-kgtk unique file1.tsv --column location --empty NONE --format node --prefix 'location;'
+kgtk unique -i file1.tsv --column location --empty NONE --format node --prefix 'location;'
 
 ```
 
@@ -119,7 +114,7 @@ kgtk unique file1.tsv --column location --empty NONE --format node --prefix 'loc
 | location | 3    | 2    | 3    |
 
 ```bash
-kgtk unique file1.tsv --column location --where node1 --in peter
+kgtk unique -i file1.tsv --column location --where node1 --in peter
 ```
 
 | node1 | label | node2 |

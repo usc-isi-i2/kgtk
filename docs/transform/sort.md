@@ -4,11 +4,6 @@ This command will sort any KGTK file on one or more columns. If more than one co
 ```
 usage: kgtk sort [-h] [-i INPUT] [-o OUTPUT_FILE] [-c COLUMNS] [-r] [--tsv] [--csv]
                  [--naptime NAPTIME] [--space] [--speed] [-X EXTRA] [-dt _DT]
-                 [INPUT]
-
-positional arguments:
-  INPUT                 Input file to sort. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -36,7 +31,7 @@ Input files can be piped in from stdin or named explicitly.  They can also be op
 ## Examples
 Sort the conceptnet CSKG file based on label and node2
 ```
-kgtk sort -c label,node2 data/conceptnet_first10.tsv
+kgtk sort -c label,node2 -i data/conceptnet_first10.tsv
 ```
 
 Sort a file piped from another command based on label and node2 
@@ -46,7 +41,7 @@ gzcat wikidata_edges.tsv.gz | kgtk sort -c label,node2
 
 Sort a compressed file to a named output file:
 ```
-kgtk sort -c 'label, id' -o nodes-sort.tsv nodes-shuf.tsv.gz
+kgtk sort -c 'label, id' -o nodes-sort.tsv -i nodes-shuf.tsv.gz
 ```
 
 Sort a compressed file from stdin to stdout:

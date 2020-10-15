@@ -12,16 +12,11 @@ copying the rows to the output file.
 usage: kgtk ifnotempty [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --columns FILTER_COLUMN_NAMES
                        [FILTER_COLUMN_NAMES ...] [--count [True|False]] [--all [True|False]]
                        [-v]
-                       [INPUT_FILE]
 
 Filter a KGTK file based on whether one or more fields are not empty. When multiple fields are specified, either any field or all fields must be not empty.
 
 Additional options are shown in expert help.
 kgtk --expert ifnotempty --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -52,7 +47,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | steve | zipcode | 45601 |          |       |
 
 ```bash
-kgtk ifnotempty file1.tsv --columns location
+kgtk ifnotempty -i file1.tsv --columns location
 ```
 | node1 | label   | node2 | location | years |
 | ----- | ------- | ----- | -------- | ----- |
@@ -61,7 +56,7 @@ kgtk ifnotempty file1.tsv --columns location
 | peter | zipcode | 12040 | work     | 6     |
 
 ```bash
-kgtk ifnotempty file1.tsv --columns years
+kgtk ifnotempty -i file1.tsv --columns years
 ```
 | node1 | label   | node2 | location | years |
 | ----- | ------- | ----- | -------- | ----- |
@@ -70,7 +65,7 @@ kgtk ifnotempty file1.tsv --columns years
 | steve | zipcode | 45600 |          | 3     |
 
 ```bash
-kgtk ifnotempty file1.tsv --columns location years
+kgtk ifnotempty -i file1.tsv --columns location years
 ```
 | node1 | label   | node2 | location | years |
 | ----- | ------- | ----- | -------- | ----- |
@@ -81,7 +76,7 @@ kgtk ifnotempty file1.tsv --columns location years
 | steve | zipcode | 45600 |          | 3     |
 
 ```bash
-kgtk ifnotempty file1.tsv --all --columns location years
+kgtk ifnotempty -i file1.tsv --all --columns location years
 ```
 | node1 | label   | node2 | location | years |
 | ----- | ------- | ----- | -------- | ----- |
