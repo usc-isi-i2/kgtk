@@ -27,7 +27,7 @@ def add_arguments_extended(parser, parsed_shared_args):
     parser.accept_shared_argument('_debug')
     parser.accept_shared_argument('_expert')
 
-    parser.add_argument('--input', '-i', metavar='INPUT', action='append', dest='inputs',
+    parser.add_argument('--input', '-i', metavar='INPUT', action='append', dest='inputs', nargs="+",
                         help="one or more named input files to query (maybe compressed)")
     parser.add_argument('--query', default=None, action='store', dest='query',
                         help="complete Kypher query combining all clauses," +
