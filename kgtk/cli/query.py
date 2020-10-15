@@ -10,6 +10,7 @@ import io
 
 from kgtk.exceptions import KGTKException
 
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 DEFAULT_GRAPH_CACHE_FILE = os.path.join(
     tempfile.gettempdir(), 'kgtk-graph-cache-%s.sqlite3.db' % os.environ.get('USER', ''))
@@ -23,12 +24,12 @@ def parser():
 EXPLAIN_MODES = ('plan', 'full', 'expert')
 INDEX_MODES = ('auto', 'expert', 'quad', 'triple', 'node1+label', 'node1', 'label', 'node2', 'none')
 
-def add_arguments_extended(parser, parsed_shared_args):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.accept_shared_argument('_debug')
     parser.accept_shared_argument('_expert')
 
-    parser.add_argument('--input', '-i', metavar='INPUT', action='append', dest='inputs', nargs="+",
-                        help="one or more named input files to query (maybe compressed)")
+    parser.add_input_file(options=["-i", "--input-files"], dest='input_files', allow_list=True, default_stdin=False, allow_stdin=False,
+                        who="one or more named input files to query (maybe compressed)")
     parser.add_argument('--query', default=None, action='store', dest='query',
                         help="complete Kypher query combining all clauses," +
                         " if supplied, all other specialized clause arguments will be ignored")
@@ -100,7 +101,8 @@ def parse_query_parameters(regular=[], string=[], lqstring=[]):
             parameters[name] = value
     return parameters
 
-def run(**options):
+def run(input_files: KGTKFiles,
+        **options):
     """Run Kypher query according to the provided command-line arguments.
     """
     try:
@@ -113,7 +115,8 @@ def run(**options):
             loglevel = 2
             print('OPTIONS:', options)
             
-        inputs = options.get('inputs') or []
+        # inputs = options.get('inputs') or []
+        inputs = KGTKArgumentParser.get_input_file_list(input_files)
         if len(inputs) == 0:
             raise KGTKException('At least one named input file needs to be supplied')
         if '-' in inputs:
