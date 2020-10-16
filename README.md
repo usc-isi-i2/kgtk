@@ -67,7 +67,18 @@ docker run -it -p 8888:8888 uscisii2/kgtk:latest /bin/bash -c "jupyter notebook 
 ```
 Versions 0.3.2 and 0.2.1 require `--allow-root` as part of the jupyter notebook command.
 
+To run KGTK in Docker through the command line, write the following:
+
+```
+docker run -it --rm  --user root -e NB_GID=100 -e GEN_CERT=yes -e GRANT_SUDO=yes uscisii2/kgtk:latest /bin/bash
+```
+
 Note: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
+For example, to mount the current directory and launch KGTK in command line mode:
+
+```
+docker run -it --rm -v $PWD:/out --user root -e NB_GID=100 -e GEN_CERT=yes -e GRANT_SUDO=yes uscisii2/kgtk:latest /bin/bash
+```
 
 More information about versions and tags is available here: https://hub.docker.com/repository/docker/uscisii2/kgtk
 
