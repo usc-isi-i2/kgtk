@@ -24,6 +24,17 @@ pp = pprint.PrettyPrinter(indent=4)
 
 # o automatically run ANALYZE on tables and indexes when they get created
 #   - we decided to only do this for indexes for now
+# - support naming of graphs which would allow deleting of the source data
+#   as well as graphs fed in from stdin
+# - absolute file names are an issue when distributing the store
+# - support some minimal sanity checking such as empty files, etc.
+# - handle column name dealiasing and normalization
+# - support declaring and dropping of (temporary) graphs that are only used
+#   once or a few times
+# - allow in-memory graphs
+# - support other DB maintenance ops such as drop, list, info, etc.
+# - see how we could better support fine-grained querying via prepared statements
+#   and persistent connections that avoid the KGTK startup overhead
 # - check for version of sqlite3, since older versions do not support ascii mode
 # - protect graph data import from failure or aborts through transactions
 # - handle table/index creation locking when we might have parallel invocations,
@@ -32,9 +43,9 @@ pp = pprint.PrettyPrinter(indent=4)
 #   and implement table optimizations based on those categories
 # - support bump_timestamp or similar to better keep track of what's been used
 # - improve table definitions to define core columns as required to be not null
-# - full LRU cache maintainance
+# - full LRU cache maintainance, but maybe abandon the whole LRU concept and
+#   call it a store and not a cache
 # - complete literal accessor functions
-# - graphs fed in from stdin
 # + handle VACUUM and/or AUTO_VACUUM when graph tables get deleted
 #   - actually no, that requires a lot of extra space, so require to do that manually
 
@@ -778,76 +789,116 @@ CREATE INDEX on table graph_1 column node1
 """
 
 
-### SQLite user functions:
+### SQLite KGTK user functions:
 
 # Potentially those should go into their own file, depending on
 # whether we generalize this to other SQL database such as Postgres.
 
-# TO DO: make the demo functions real and complete this for all KGTK literal types
+# Naming convention: a suffix of _string indicates that the resulting
+# value will be additionally converted to a KGTK string literal.  The
+# same could generally be achieved by calling 'kgtk_stringify' explicitly.
+
+# Strings:
+
+def kgtk_string(x):
+    """Return True if 'x' is a KGTK plain string literal."""
+    return isinstance(x, str) and x.startswith('"')
 
 def kgtk_stringify(x):
-    """Just a little demo test driver.
+    """If 'x' is not already surrounded by double quotes, add them.
     """
-    if isinstance(x, str) and not x.startswith('"') and not x.endswith('"'):
-        return sql_quote_ident(x)
+    # TO DO: this also needs to handle escaping of some kind
+    if not isinstance(x, str):
+        x = str(x)
+    if not (x.startswith('"') and x.endswith('"')):
+        return '"' + x + '"'
     else:
         return x
-SqliteStore.register_user_function('kgtk_stringify', 1, kgtk_stringify, deterministic=True)
 
 def kgtk_unstringify(x):
-    """Just a little demo test driver that only removes the surrounding quotes.
+    """If 'x' is surrounded by double quotes, remove them.
     """
+    # TO DO: this also needs to handle unescaping of some kind
     if isinstance(x, str) and x.startswith('"') and x.endswith('"'):
         return x[1:-1]
     else:
         return x
+    
+SqliteStore.register_user_function('kgtk_string', 1, kgtk_string, deterministic=True)
+SqliteStore.register_user_function('kgtk_stringify', 1, kgtk_stringify, deterministic=True)
 SqliteStore.register_user_function('kgtk_unstringify', 1, kgtk_unstringify, deterministic=True)
+
+
+# Regular expressions:
 
 @lru_cache(maxsize=100)
 def _get_regex(regex):
     return re.compile(regex)
     
 def kgtk_regex(x, regex):
-    """Regex matcher that implements the Cypher `=~' semantics which must match the whole string.
+    """Regex matcher that implements the Cypher '=~' semantics which must match the whole string.
     """
     m = isinstance(x, str) and _get_regex(regex).match(x) or None
     return m is not None and m.end() == len(x)
+
 SqliteStore.register_user_function('kgtk_regex', 2, kgtk_regex, deterministic=True)
 
 
 # Language-qualified strings:
 
 def kgtk_lqstring(x):
-    """Return True if `x' is a KGTK language-qualified string literal."""
+    """Return True if 'x' is a KGTK language-qualified string literal.
+    """
     return isinstance(x, str) and x.startswith("'")
 
 # these all return None upon failure without an explicit return:
 def kgtk_lqstring_text(x):
+    """Return the text component of a KGTK language-qualified string literal.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_language_qualified_string_re.match(x)
         if m:
-            return '"' + m.group("text") + '"'
+            return m.group('text')
+        
+def kgtk_lqstring_text_string(x):
+    """Return the text component of a KGTK language-qualified string literal
+    as a KGTK string literal.
+    """
+    text = kgtk_lqstring_text(x)
+    return text and ('"' + text + '"') or None
+
 def kgtk_lqstring_lang(x):
+    """Return the language component of a KGTK language-qualified string literal.
+    This is the first part not including suffixes such as 'en' in 'en-us'.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_language_qualified_string_re.match(x)
         if m:
             # not a string for easier manipulation - assumes valid lang syntax:
-            return m.group("lang")
+            return m.group('lang')
+        
 def kgtk_lqstring_lang_suffix(x):
+    """Return the language+suffix components of a KGTK language-qualified string literal.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_language_qualified_string_re.match(x)
         if m:
             # not a string for easier manipulation - assumes valid lang syntax:
-            return m.group("lang_suffix")
+            return m.group('lang_suffix')
+        
 def kgtk_lqstring_suffix(x):
+    """Return the suffix component of a KGTK language-qualified string literal.
+    This is the second part if it exists such as 'us' in 'en-us', empty otherwise.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_language_qualified_string_re.match(x)
         if m:
             # not a string for easier manipulation - assumes valid lang syntax:
-            return m.group("suffix")
+            return m.group('suffix')
 
 SqliteStore.register_user_function('kgtk_lqstring', 1, kgtk_lqstring, deterministic=True)
 SqliteStore.register_user_function('kgtk_lqstring_text', 1, kgtk_lqstring_text, deterministic=True)
+SqliteStore.register_user_function('kgtk_lqstring_text_string', 1, kgtk_lqstring_text_string, deterministic=True)
 SqliteStore.register_user_function('kgtk_lqstring_lang', 1, kgtk_lqstring_lang, deterministic=True)
 SqliteStore.register_user_function('kgtk_lqstring_lang_suffix', 1, kgtk_lqstring_lang_suffix, deterministic=True)
 SqliteStore.register_user_function('kgtk_lqstring_suffix', 1, kgtk_lqstring_suffix, deterministic=True)
@@ -856,65 +907,105 @@ SqliteStore.register_user_function('kgtk_lqstring_suffix', 1, kgtk_lqstring_suff
 # Date literals:
 
 def kgtk_date(x):
-    """Return True if `x' is a KGTK date literal."""
+    """Return True if 'x' is a KGTK date literal.
+    """
     return isinstance(x, str) and x.startswith('^')
 
 # these all return None upon failure without an explicit return:
 def kgtk_date_date(x):
+    """Return the date component of a KGTK date literal as a KGTK date.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return '^' + m.group("date")
+            return '^' + m.group('date')
+        
 def kgtk_date_time(x):
+    """Return the time component of a KGTK date literal as a KGTK date.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return '^' + m.group("time")
+            return '^' + m.group('time')
+        
 def kgtk_date_and_time(x):
+    """Return the date+time components of a KGTK date literal as a KGTK date.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return '^' + m.group("date_and_time")
+            return '^' + m.group('date_and_time')
+        
 def kgtk_date_year(x):
+    """Return the year component of a KGTK date literal as an int.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return int(m.group("year"))
+            return int(m.group('year'))
+        
 def kgtk_date_month(x):
+    """Return the month component of a KGTK date literal as an int.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return int(m.group("month"))
+            return int(m.group('month'))
+        
 def kgtk_date_day(x):
+    """Return the day component of a KGTK date literal as an int.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return int(m.group("day"))
+            return int(m.group('day'))
+        
 def kgtk_date_hour(x):
+    """Return the hour component of a KGTK date literal as an int.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return int(m.group("hour"))
+            return int(m.group('hour'))
+        
 def kgtk_date_minutes(x):
+    """Return the minutes component of a KGTK date literal as an int.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return int(m.group("minutes"))
+            return int(m.group('minutes'))
+        
 def kgtk_date_seconds(x):
+    """Return the seconds component of a KGTK date literal as an int.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return int(m.group("seconds"))
+            return int(m.group('seconds'))
+        
 def kgtk_date_zone(x):
+    """Return the timezone component of a KGTK date literal.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return '"' + m.group("zone") + '"'
+            return m.group('zone')
+        
+def kgtk_date_zone_string(x):
+    """Return the time zone component (if any) as a KGTK string.  Zones might
+    look like +10:30, for example, which would be illegal KGTK numbers.
+    """
+    zone = kgtk_date_zone(x)
+    return zone and ('"' + zone + '"') or None
+
 def kgtk_date_precision(x):
+    """Return the precision component of a KGTK date literal as an int.
+    """
     if isinstance(x, str):
         m = KgtkValue.lax_date_and_times_re.match(x)
         if m:
-            return int(m.group("precision"))
+            return int(m.group('precision'))
 
 SqliteStore.register_user_function('kgtk_date', 1, kgtk_date, deterministic=True)
 SqliteStore.register_user_function('kgtk_date_date', 1, kgtk_date_date, deterministic=True)
@@ -927,4 +1018,180 @@ SqliteStore.register_user_function('kgtk_date_hour', 1, kgtk_date_hour, determin
 SqliteStore.register_user_function('kgtk_date_minutes', 1, kgtk_date_minutes, deterministic=True)
 SqliteStore.register_user_function('kgtk_date_seconds', 1, kgtk_date_seconds, deterministic=True)
 SqliteStore.register_user_function('kgtk_date_zone', 1, kgtk_date_zone, deterministic=True)
+SqliteStore.register_user_function('kgtk_date_zone_string', 1, kgtk_date_zone_string, deterministic=True)
 SqliteStore.register_user_function('kgtk_date_precision', 1, kgtk_date_precision, deterministic=True)
+
+
+# Number and quantity literals:
+
+def kgtk_number(x):
+    """Return True if 'x' is a dimensionless KGTK number literal.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            return x == m.group('number')
+    return False
+
+def kgtk_quantity(x):
+    """Return True if 'x' is a dimensioned KGTK quantity literal.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            return x != m.group('number')
+    return False
+
+# these all return None upon failure without an explicit return:
+def kgtk_quantity_numeral(x):
+    """Return the numeral component of a KGTK quantity literal.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            return m.group('number')
+        
+def kgtk_quantity_numeral_string(x):
+    """Return the numeral component of a KGTK quantity literal as a KGTK string.
+    """
+    num = kgtk_quantity_numeral(x)
+    return num and ('"' + num + '"') or None
+
+float_numeral_regex = re.compile('.*[.eE]')
+
+def kgtk_quantity_number(x):
+    """Return the number value of a KGTK quantity literal as an int or float.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            numeral = m.group('number')
+            if float_numeral_regex.match(numeral):
+                return float(numeral)
+            else:
+                return int(numeral)
+            
+def kgtk_quantity_number_int(x):
+    """Return the number value of a KGTK quantity literal as an int.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            numeral = m.group('number')
+            if float_numeral_regex.match(numeral):
+                return int(float(numeral))
+            else:
+                return int(numeral)
+            
+def kgtk_quantity_number_float(x):
+    """Return the number value component of a KGTK quantity literal as a float.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            numeral = m.group('number')
+            if float_numeral_regex.match(numeral):
+                return float(numeral)
+            else:
+                # because the numeral could be in octal or hex:
+                return float(int(numeral))
+
+def kgtk_quantity_si_units(x):
+    """Return the SI-units component of a KGTK quantity literal.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            return m.group('si_units')
+        
+def kgtk_quantity_wd_units(x):
+    """Return the Wikidata unit node component of a KGTK quantity literal.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            return m.group('units_node')
+
+def kgtk_quantity_tolerance(x):
+    """Return the full tolerance component of a KGTK quantity literal.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            lowtol = m.group('low_tolerance')
+            hightol = m.group('high_tolerance')
+            if lowtol and hightol:
+                return '[' + lowtol + ',' + hightol + ']'
+            
+def kgtk_quantity_tolerance_string(x):
+    """Return the full tolerance component of a KGTK quantity literal as a KGTK string.
+    """
+    tol = kgtk_quantity_tolerance(x)
+    return tol and ('"' + tol + '"') or None
+
+def kgtk_quantity_low_tolerance(x):
+    """Return the low tolerance component of a KGTK quantity literal as a float.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            lowtol = m.group('low_tolerance')
+            if lowtol:
+                return float(lowtol)
+            
+def kgtk_quantity_high_tolerance(x):
+    """Return the high tolerance component of a KGTK quantity literal as a float.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_number_or_quantity_re.match(x)
+        if m:
+            hightol = m.group('high_tolerance')
+            if hightol:
+                return float(hightol)
+
+SqliteStore.register_user_function('kgtk_number', 1, kgtk_number, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity', 1, kgtk_quantity, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_numeral', 1, kgtk_quantity_numeral, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_numeral_string', 1, kgtk_quantity_numeral_string, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_number', 1, kgtk_quantity_number, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_number_int', 1, kgtk_quantity_number_int, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_number_float', 1, kgtk_quantity_number_float, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_si_units', 1, kgtk_quantity_si_units, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_wd_units', 1, kgtk_quantity_wd_units, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_tolerance', 1, kgtk_quantity_tolerance, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_tolerance_string', 1, kgtk_quantity_tolerance_string, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_low_tolerance', 1, kgtk_quantity_low_tolerance, deterministic=True)
+SqliteStore.register_user_function('kgtk_quantity_high_tolerance', 1, kgtk_quantity_high_tolerance, deterministic=True)
+
+# kgtk_quantity_number_float('12[-0.1,+0.1]m')
+# kgtk_number('0x24F') ...why does this not work?
+
+
+# Geo coordinates:
+
+def kgtk_geo_coords(x):
+    """Return True if 'x' is a KGTK geo coordinates literal.
+    """
+    # Assumes valid KGTK values, thus only tests for initial character:
+    return isinstance(x, str) and x.startswith('@')
+
+# these all return None upon failure without an explicit return:
+def kgtk_geo_coords_lat(x):
+    """Return the latitude component of a KGTK geo coordinates literal as a float.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_location_coordinates_re.match(x)
+        if m:
+            return float(m.group('lat'))
+        
+def kgtk_geo_coords_long(x):
+    """Return the longitude component of a KGTK geo coordinates literal as a float.
+    """
+    if isinstance(x, str):
+        m = KgtkValue.lax_location_coordinates_re.match(x)
+        if m:
+            return float(m.group('lon'))
+
+SqliteStore.register_user_function('kgtk_geo_coords', 1, kgtk_geo_coords, deterministic=True)
+SqliteStore.register_user_function('kgtk_geo_coords_lat', 1, kgtk_geo_coords_lat, deterministic=True)
+SqliteStore.register_user_function('kgtk_geo_coords_long', 1, kgtk_geo_coords_long, deterministic=True)
