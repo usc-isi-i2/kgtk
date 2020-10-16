@@ -55,9 +55,9 @@ pp = pprint.PrettyPrinter(indent=4)
 # TO DO: I am sure some form of this already exists somewhere in Craig's code
 
 def open_to_read(file, mode='rt'):
-    """Version of `open' that is smart about different types of compressed files
-    and file-like objects that are already open to read.  `mode' has to be a
-    valid read mode such as `r', `rb' or `rt'.
+    """Version of 'open' that is smart about different types of compressed files
+    and file-like objects that are already open to read.  'mode' has to be a
+    valid read mode such as 'r', 'rb' or 'rt'.
     """
     assert mode in ('r', 'rb', 'rt'), 'illegal read mode'
     enc = 't' in mode and 'utf8' or None
@@ -76,9 +76,9 @@ def open_to_read(file, mode='rt'):
         return open(file, mode)
 
 def open_to_write(file, mode='wt'):
-    """Version of `open' that is smart about different types of compressed files
-    and file-like objects that are already open to write.  `mode' has to be a
-    valid write mode such as `w', `wb' or `wt'.
+    """Version of 'open' that is smart about different types of compressed files
+    and file-like objects that are already open to write.  'mode' has to be a
+    valid write mode such as 'w', 'wb' or 'wt'.
     """
     assert mode in ('w', 'wb', 'wt'), 'illegal write mode'
     enc = 't' in mode and 'utf8' or None
@@ -97,7 +97,7 @@ def open_to_write(file, mode='wt'):
         return open(file, mode)
 
 def get_cat_command(file, _piped=False):
-    """Return a cat-like sh-command to copy the possibly compressed `file' to stdout.
+    """Return a cat-like sh-command to copy the possibly compressed 'file' to stdout.
     """
     # This works around some cross-platform issues with similar functionality in zconcat.
     if file.endswith('.gz'):
@@ -217,7 +217,7 @@ class SqliteStore(SqlStore):
 
     def get_sqlite_cmd(self):
         # TO DO: this should look more intelligently to find it in the python install path
-        # e.g., check `sys.prefix/bin', `sys.exec_prefix/bin' or do a `which sqlite3';
+        # e.g., check 'sys.prefix/bin', 'sys.exec_prefix/bin' or do a 'which sqlite3';
         # if we use a conda environment we get it automatically.
         return 'sqlite3'
 
@@ -237,7 +237,7 @@ class SqliteStore(SqlStore):
         self.get_conn().commit()
 
     def pragma(self, expression):
-        """Evaluate a PRAGMA `expression' and return the result (if any).
+        """Evaluate a PRAGMA 'expression' and return the result (if any).
         """
         res = list(self.execute('PRAGMA ' + expression))
         if len(res) == 0:
@@ -277,7 +277,7 @@ class SqliteStore(SqlStore):
             raise KGTKException('No user-function has been registered for: ' + str(name))
 
     def is_aggregate_function(self, name):
-        """Return True if `name' is an aggregate function supported by this database.
+        """Return True if 'name' is an aggregate function supported by this database.
         """
         return name.upper() in self.AGGREGATE_FUNCTIONS
 
@@ -287,13 +287,13 @@ class SqliteStore(SqlStore):
     def get_db_size(self):
         """Return the size of all currently allocated data pages in bytes.  This maybe smaller than
         the size of the database file if there were deletions that put pages back on the free list.
-        Free pages can be reclaimed by running `VACUUM', but that might require a substantial amount
+        Free pages can be reclaimed by running 'VACUUM', but that might require a substantial amount
         of available disk space if the current DB file is large.
         """
         return (self.pragma('page_count') - self.pragma('freelist_count')) * self.pragma('page_size')
 
     def has_table(self, table_name):
-        """Return True if a table with name `table_name' exists in the store.
+        """Return True if a table with name 'table_name' exists in the store.
         """
         schema = self.MASTER_TABLE
         columns = schema.columns
@@ -302,7 +302,7 @@ class SqliteStore(SqlStore):
         return cnt > 0
 
     def get_table_header(self, table_name):
-        """Return the column names of `table_name' as a list.  For graph tables, this list will be
+        """Return the column names of 'table_name' as a list.  For graph tables, this list will be
         isomorphic to the parsed header line of the corresponding KGTK file.
         """
         result = self.execute('SELECT * FROM %s LIMIT 0' % table_name)
@@ -323,8 +323,8 @@ class SqliteStore(SqlStore):
         return sdict['_name_': table_name, 'columns': columns]
 
     def get_key_column(self, table_schema, error=True):
-        """Return the name of the first column in `schema' designated as a `key',
-        or raise an error if no key column has been designated (unless `error' is False).
+        """Return the name of the first column in 'schema' designated as a 'key',
+        or raise an error if no key column has been designated (unless 'error' is False).
         """
         for col in table_schema.columns.values():
             if col.get('key') == True:
@@ -338,7 +338,7 @@ class SqliteStore(SqlStore):
         return 'CREATE TABLE %s (%s)' % (table_schema._name_, colspec)
 
     def get_index_name(self, table_schema, column):
-        """Return a global name for the index for `column' on `table_schema'.
+        """Return a global name for the index for 'column' on 'table_schema'.
         """
         table_name = table_schema._name_
         column_name = table_schema.columns[column]._name_
@@ -346,10 +346,10 @@ class SqliteStore(SqlStore):
         return index_name
 
     def get_index_definition(self, table_schema, column, unique=False):
-        """Return a definition statement to create an index for `column' on `table_schema'.
-        Create a `unique' or primary key index if `unique' is True.  We are currently
+        """Return a definition statement to create an index for 'column' on 'table_schema'.
+        Create a 'unique' or primary key index if 'unique' is True.  We are currently
         only considering single-column indexes, however, we might generalize this down
-        the road to two-column indices such as `(node1, label)', `(label, node2)', etc.
+        the road to two-column indices such as '(node1, label)', '(label, node2)', etc.
         """
         table_name = table_schema._name_
         column_name = table_schema.columns[column]._name_
@@ -359,7 +359,7 @@ class SqliteStore(SqlStore):
             unique, sql_quote_ident(index_name), table_name, sql_quote_ident(column_name))
     
     def has_index(self, table_schema, column):
-        """Return True if table `table_schema' has an index defined for `column'.
+        """Return True if table 'table_schema' has an index defined for 'column'.
         """
         table_name = table_schema._name_
         column_name = table_schema.columns[column]._name_
@@ -377,7 +377,7 @@ class SqliteStore(SqlStore):
     ### Generic record access:
     
     def get_record_info(self, schema, key):
-        """Return a dict info structure for the row identified by `key' in table `schema',
+        """Return a dict info structure for the row identified by 'key' in table 'schema',
         or None if this key does not exist in the table.  All column keys will be set
         although some values may be None.
         """
@@ -412,7 +412,7 @@ class SqliteStore(SqlStore):
         self.commit()
 
     def drop_record_info(self, schema, key):
-        """Delete any rows identified by `key' in table `schema'.
+        """Delete any rows identified by 'key' in table 'schema'.
         """
         table = schema._name_
         cols = schema.columns
@@ -425,7 +425,7 @@ class SqliteStore(SqlStore):
     ### File information and access:
     
     def get_file_info(self, file):
-        """Return a dict info structure for the file info for `file' (there can only be one),
+        """Return a dict info structure for the file info for 'file' (there can only be one),
         or None if this file does not exist in the file table.  All column keys will be set
         although some values may be None.
         """
@@ -440,18 +440,18 @@ class SqliteStore(SqlStore):
         self.set_record_info(self.FILE_TABLE, info)
 
     def drop_file_info(self, file):
-        """Delete the file info record for `file'.
-        IMPORTANT: this does not delete any graph data associated with `file'.
+        """Delete the file info record for 'file'.
+        IMPORTANT: this does not delete any graph data associated with 'file'.
         """
         self.drop_record_info(self.FILE_TABLE, os.path.realpath(file))
 
     def get_file_graph(self, file):
-        """Return the graph table name created from the data of `file'.
+        """Return the graph table name created from the data of 'file'.
         """
         return self.get_file_info(file).graph
 
     def get_graph_files(self, table_name):
-        """Return the list of all files whose data is represented by `table_name'.
+        """Return the list of all files whose data is represented by 'table_name'.
         Generally, there will only be one, but it is possible that different versions
         of a file (e.g., compressed vs. uncompressed) created the same underlying data
         which we could detect by running a sha hash command on the resulting tables.
@@ -466,11 +466,11 @@ class SqliteStore(SqlStore):
 
     ### Graph information and access:
 
-    # TO DO: add `bump_timestamp' so we can easily track when this graph was last used
-    #        add `update_xxx_info' methods that only change not None fields
+    # TO DO: add 'bump_timestamp' so we can easily track when this graph was last used
+    #        add 'update_xxx_info' methods that only change not None fields
     
     def get_graph_info(self, table_name):
-        """Return a dict info structure for the graph stored in `table_name' (there can only be one),
+        """Return a dict info structure for the graph stored in 'table_name' (there can only be one),
         or None if this graph does not exist in the graph table.  All column keys will be set
         although some values may be None.
         """
@@ -485,20 +485,20 @@ class SqliteStore(SqlStore):
         self.set_record_info(self.GRAPH_TABLE, info)
     
     def drop_graph_info(self, table_name):
-        """Delete the graph info record for `table_name'.
-        IMPORTANT: this does not delete any graph data stored in `table_name'.
+        """Delete the graph info record for 'table_name'.
+        IMPORTANT: this does not delete any graph data stored in 'table_name'.
         """
         self.drop_record_info(self.GRAPH_TABLE, table_name)
 
     def get_graph_table_schema(self, table_name):
-        """Get a graph table schema definition for graph `table_name'.
+        """Get a graph table schema definition for graph 'table_name'.
         """
         info = self.get_graph_info(table_name)
         header = eval(info.header)
         return self.kgtk_header_to_graph_table_schema(table_name, header)
 
     def ensure_graph_index(self, table_name, column, unique=False, explain=False):
-        """Ensure an index for `table_name' on `column' already exists or gets created.
+        """Ensure an index for 'table_name' on 'column' already exists or gets created.
         """
         schema = self.get_graph_table_schema(table_name)
         if not self.has_index(schema, column):
@@ -520,7 +520,7 @@ class SqliteStore(SqlStore):
                 self.set_record_info(self.GRAPH_TABLE, ginfo)
 
     def number_of_graphs(self):
-        """Return the number of graphs currently stored in `self'.
+        """Return the number of graphs currently stored in 'self'.
         """
         return self.get_table_row_count(self.GRAPH_TABLE._name_)
 
@@ -536,8 +536,8 @@ class SqliteStore(SqlStore):
             graphid += 1
 
     def has_graph(self, file):
-        """Return True if the KGTK graph represented by `file' has already been imported
-        and is up-to-date.  If this returns false, an obsolete graph table for `file'
+        """Return True if the KGTK graph represented by 'file' has already been imported
+        and is up-to-date.  If this returns false, an obsolete graph table for 'file'
         might still exist and will have to be removed before new data gets imported.
         """
         file = os.path.realpath(file)
@@ -573,7 +573,7 @@ class SqliteStore(SqlStore):
         self.set_graph_info(table, header=header, size=graphsize, acctime=time.time())
 
     def drop_graph(self, table_name):
-        """Delete the graph `table_name' and all its associated info records.
+        """Delete the graph 'table_name' and all its associated info records.
         """
         # delete all supporting file infos:
         for file in self.get_graph_files(table_name):
@@ -589,7 +589,7 @@ class SqliteStore(SqlStore):
     ### Data import:
     
     def import_graph_data_via_csv(self, table, file):
-        """Import `file' into `table' using Python's csv.reader.  This is safe and properly
+        """Import 'file' into 'table' using Python's csv.reader.  This is safe and properly
         handles conversion of different kinds of line endings, but 2x slower than direct import.
         """
         self.log(1, 'IMPORT graph via csv.reader into table %s from %s ...' % (table, file))
@@ -603,12 +603,12 @@ class SqliteStore(SqlStore):
             self.commit()
 
     def import_graph_data_via_import(self, table, file):
-        """Use the sqlite shell and its import command to import `file' into `table'.
+        """Use the sqlite shell and its import command to import 'file' into 'table'.
         This will be about 2+ times faster and can exploit parallelism for decompression.
-        This is only supported for Un*x for now and requires a named `file'.
+        This is only supported for Un*x for now and requires a named 'file'.
         """
         if os.name != 'posix':
-            raise KGTKException('not yet implemented for this OS: `%s' % os.name)
+            raise KGTKException("not yet implemented for this OS: '%s'" % os.name)
         if not isinstance(file, str) or not os.path.exists(file):
             raise KGTKException('only implemented for existing, named files')
         # make sure we have the Unix commands we need:
@@ -620,8 +620,8 @@ class SqliteStore(SqlStore):
         # This is slightly more messy than we'd like it to be: sqlite can create a table definition
         # for a non-existing table from the header row, but it doesn't seem to handle just any weird
         # column name we give it there, so we read the header and create the table ourselves;
-        # however, sqlite doesn't have an option to then skip the header, so we need to use `tail';
-        # also, eventually we might want to supply more elaborate table defs such as `without rowid';
+        # however, sqlite doesn't have an option to then skip the header, so we need to use 'tail';
+        # also, eventually we might want to supply more elaborate table defs such as 'without rowid';
         # finally, we have to guard against multi-character line-endings which can't be handled right:
         with open_to_read(file, 'r') as inp:
             #csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
@@ -660,9 +660,9 @@ class SqliteStore(SqlStore):
 
                 
     def shell(self, *commands):
-        """Execute a sequence of sqlite3 shell `commands' in a single invocation
+        """Execute a sequence of sqlite3 shell 'commands' in a single invocation
         and return stdout and stderr as result strings.  These sqlite shell commands
-        are not invokable from a connection object, they have to be entered via `sh'.
+        are not invokable from a connection object, they have to be entered via 'sh'.
         """
         sqlite3 = sh.Command(self.get_sqlite_cmd())
         args = []
@@ -688,11 +688,11 @@ class SqliteStore(SqlStore):
     def suggest_indexes(self, sql_query):
         explanation = self.explain(sql_query, mode='expert')
         indexes = []
-        index_regex = re.compile('\s*CREATE\s+INDEX\s+(?P<name>[^\s]+)'
-                                 + '\s+ON\s+(?P<table>[^\s(]+)'
-                                 + '\s*\(\s*(?P<columns>[^\s,)]+(\s*,\s*[^\s,)]+)*)\s*\)',
+        index_regex = re.compile(r'\s*CREATE\s+INDEX\s+(?P<name>[^\s]+)'
+                                 + r'\s+ON\s+(?P<table>[^\s(]+)'
+                                 + r'\s*\(\s*(?P<columns>[^\s,)]+(\s*,\s*[^\s,)]+)*)\s*\)',
                                  re.IGNORECASE)
-        split_regex = re.compile('\s*,\s*')
+        split_regex = re.compile(r'\s*,\s*')
         for line in explanation.splitlines():
             m = index_regex.match(line)
             if m is not None:
@@ -744,8 +744,8 @@ class SqliteStore(SqlStore):
 # - analyze adds about 10% run/import time for index, 20% run/import time for table
 # - full 4-column index doubles DB size, increases import time by 3.3x
 # Optimizations:
-# - we might be able to build a covering index for `id' to save storage for one index
-# - we could use `id' as the primary key and build a 'without rowid' table
+# - we might be able to build a covering index for 'id' to save storage for one index
+# - we could use 'id' as the primary key and build a 'without rowid' table
 # - we could build two-column indexes: (node1, label), (label, node2), (node2, label)
 # - we might forgo analyzing tables and only do it on indexes
 
@@ -1057,7 +1057,7 @@ def kgtk_quantity_numeral_string(x):
     num = kgtk_quantity_numeral(x)
     return num and ('"' + num + '"') or None
 
-float_numeral_regex = re.compile('.*[.eE]')
+float_numeral_regex = re.compile(r'.*[.eE]')
 
 def kgtk_quantity_number(x):
     """Return the number value of a KGTK quantity literal as an int or float.
