@@ -146,7 +146,7 @@ def main(**kwargs):
         parallel_count = kwargs.get("parallel_count", "1")
         black_list_files = kwargs.get("black_list_files", [])
         all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
-        input_format = kwargs.get("input_format", "kgtk_format")
+        data_format = kwargs.get("data_format", "kgtk_format")
         output_format = kwargs.get("output_format", "kgtk_format")
         property_labels_files = kwargs.get("property_labels_file_uri", [])
         query_server = kwargs.get("query_server")
@@ -213,12 +213,12 @@ def main(**kwargs):
 
         for each_model_name in all_models_names:
             # _logger.info("Running {} model on {}".format(each_model_name, input_file_name))
-            _logger.info("Running {} model on {}".format(each_model_name, str(filename)))
+            _logger.info("Running {} model on {}".format(each_model_name, str(input_file_path)))
             process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
                                       parallel_count=parallel_count)
             process.read_input(input_file_path=input_file_path,
                                skip_nodes_set=black_list_set,
-                               input_format=input_format,
+                               input_format=data_format,
                                target_properties=sentence_properties,
                                property_labels_dict=property_labels_dict,
                                error_file=error_file,
@@ -228,7 +228,7 @@ def main(**kwargs):
             process.get_vectors()
 
             process.plot_result(output_properties=output_properties,
-                                input_format=input_format, output_uri=output_uri,
+                                input_format=data_format, output_uri=output_uri,
                                 dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
                                 output_format=output_format, save_embedding_sentence=save_embedding_sentence)
             # process.evaluate_result()
@@ -260,7 +260,7 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="the model to used for embedding")
     # parser.add_argument('-i', '--input', action='store', nargs='+', dest='input_uris',
     #                     help="input path", )
-    parser.add_argument('-f', '--input-format', action='store', dest='input_format',
+    parser.add_argument('-f', '--data-format', action='store', dest='data_format',
                         choices=("test_format", "kgtk_format"), default="kgtk_format",
                         help="the input file format, could either be `test_format` or `kgtk_format`, default is `kgtk_format`", )
     parser.add_argument('-p', '--property-labels-file', action='store', nargs='+',
