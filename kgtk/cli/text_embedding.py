@@ -1,6 +1,10 @@
 import typing
 from kgtk.exceptions import KGTKException
 from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+from pathlib import Path
 import sys
 
 ALL_EMBEDDING_MODELS_NAMES = [
@@ -23,45 +27,51 @@ ALL_EMBEDDING_MODELS_NAMES = [
 ]
 
 
-def load_property_labels_file(input_files: typing.List[str]):
+def load_property_labels_file(input_files: typing.List[str],
+                              error_file: typing.TextIO,
+                              reader_options: KgtkReaderOptions,
+                              value_options: KgtkValueOptions,
+                              verbose: bool,
+                              ):
     labels_dict: typing.MutableMapping[str, str] = {}
-    headers: typing.Optional[typing.List[str]] = None
     for each_file in input_files:
-        with open(each_file, "r") as f:
-            each_line: str
-            for each_line in f.readlines():
-                fields: typing.List[str] = each_line.replace("\n", "").split("\t")
-                if headers is None:
-                    headers = fields
-                    if len(headers) < 2:
-                        raise KGTKException(
-                            "No enough columns found on given input file. Only {} columns given but at least 2 needed.".format(
-                                len(headers)))
-                    elif "predicate" in headers and "label" in headers:
-                        column_references = {"predicate": headers.index("predicate"),
-                                             "label": headers.index("label")}
-                    elif "label" in headers:
-                        column_references = {"predicate": 0,
-                                             "label": headers.index("label"),
-                                             }
-                    else:
-                        raise KGTKException("Can't determine which column is label column for label file!")
+        kr: KgtkReader = KgtkReader.open(Path(each_file),
+                                         error_file=error_file,
+                                         options=reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         )
+        fail: bool = False
+        if kr.node1_column_idx < 0:
+            fail = True
+            print("Cannot determine which column is the predicate in %s" % each_file, file=error_file, flush=True)
+        if kr.label_column_idx < 0:
+            fail = True
+            print("Cannot determine which column is the label in %s" % each_file, file=error_file, flush=True)
+        raise KGTKException("Cannot identify a required column in %s" % each_file)
+    
+        row: typing.List[str]
+        for row in kr:
+            node_id: str = row[kr.node_column_idx]
+            node_label: str = row[kr.label_column_idx]
+            text: str
+            language: str
+            language_suffix: str
+            text, lannguage, language_suffix = KgtkFormat.destringify(node_label)
 
-                else:
-                    node_id: str = fields[column_references["predicate"]]
-                    node_label: str = fields[column_references["label"]]
-                    if "@en" in node_label:
-                        node_label = node_label.replace("'", "").split("@")[0]
-                        labels_dict[node_id] = node_label
-                    if node_id not in labels_dict:
-                        labels_dict[node_id] = node_label
+            # The following code will take the last-read English label,
+            # otherwise, the first-read non-English label.
+            if language == "en" and language_suffix == "":
+                labels_dict[node_id] = text
+            else:
+                if node_id not in labels_dict:
+                    labels_dict[node_id] = node_label
+
+        kr.close()
     return labels_dict
 
 
-def load_black_list_files(file_path):
-    import tarfile
-    import zipfile
-    import gzip
+def load_black_list_files(file_path: typing.List[str]):
     import logging
     import re
     import numpy as np
@@ -71,25 +81,28 @@ def load_black_list_files(file_path):
     for each_file in file_path:
         try:
             # tar.gz file
-            if each_file.endswith("tar.gz"):
-                tar = tarfile.open("filename.tar.gz", "r:gz")
+            if each_file.endswith(".tar.gz"):
+                import tarfile
+                tar = tarfile.open(each_file, "r:gz")
                 for member in tar.getmembers():
-                    f = tar.extractfile(member)
-                    if f:
-                        content = f.read()
+                    tar_f = tar.extractfile(member)
+                    if tar_f:
+                        content = tar_f.read()
                         input_data = np.loadtxt(content)
             # gz file
             elif each_file.endswith(".gz"):
-                with gzip.open('big_file.txt.gz', 'rb') as f:
-                    input_data = f.readlines()
+                import gzip
+                with gzip.open(each_file, 'rb') as gzip_f:
+                    input_data = gzip_f.readlines()
             # zip file
             elif each_file.endswith(".zip"):
+                import zipfile
                 archive = zipfile.ZipFile(each_file, 'r')
                 input_data = archive.read(each_file.replace(".zip", "")).decode().split("\n")
             # other file, just read directly
             else:
-                with open(each_file, "r") as f:
-                    input_data = f.readlines()
+                with open(each_file, "r") as other_f:
+                    input_data = other_f.readlines()
 
             for each in input_data:
                 each = each.replace("\n", "")
@@ -139,8 +152,16 @@ def main(**kwargs):
         query_server = kwargs.get("query_server")
         save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
 
-        filename: Path = KGTKArgumentParser.get_input_file(kwargs.get("input_file"))
-        input_file = open(filename, "r") if str(filename) != "-" else sys.stdin
+        # Select where to send error messages, defaulting to stderr.
+        error_file: typing.TextIO = sys.stdout if kwargs.get("errors_to_stdout") else sys.stderr
+
+        # Build the option structures.
+        reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+        value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+        verbose: bool = kwargs.get("verbose")
+
+        input_file_path: Path = KGTKArgumentParser.get_input_file(kwargs.get("input_file"))
 
         cache_config = {
             "use_cache": kwargs.get("use_cache", False),
@@ -169,8 +190,6 @@ def main(**kwargs):
         #     input_uris = [input_uris]
         if len(all_models_names) == 0:
             raise KGTKException("No embedding vector model name given!")
-        if not input_file:
-            raise KGTKException("No input file path given!")
 
         if output_uri == "":
             output_uri = os.getenv("HOME")
@@ -179,7 +198,7 @@ def main(**kwargs):
         else:
             black_list_set = set()
         if property_labels_files:
-            property_labels_dict = load_property_labels_file(property_labels_files)
+            property_labels_dict = load_property_labels_file(property_labels_files, error_file, reader_options, value_options, verbose)
             _logger.info("Totally {} property labels loaded.".format(len(property_labels_dict)))
         else:
             property_labels_dict = {}
@@ -197,9 +216,15 @@ def main(**kwargs):
             _logger.info("Running {} model on {}".format(each_model_name, str(filename)))
             process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
                                       parallel_count=parallel_count)
-            process.read_input(input_file=input_file, skip_nodes_set=black_list_set,
-                               input_format=input_format, target_properties=sentence_properties,
-                               property_labels_dict=property_labels_dict)
+            process.read_input(input_file_path=input_file_path,
+                               skip_nodes_set=black_list_set,
+                               input_format=input_format,
+                               target_properties=sentence_properties,
+                               property_labels_dict=property_labels_dict,
+                               error_file=error_file,
+                               reader_options=reader_options,
+                               value_options=value_options,
+                               verbose=verbose)
             process.get_vectors()
 
             process.plot_result(output_properties=output_properties,
@@ -323,6 +348,9 @@ def add_arguments(parser: KGTKArgumentParser):
                              "https://query.wikidata.org/sparql "
                         )
 
+    KgtkReader.add_debug_arguments(parser, expert=False)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
+    KgtkValueOptions.add_arguments(parser, expert=False)
 
 def run(**kwargs):
     main(**kwargs)
