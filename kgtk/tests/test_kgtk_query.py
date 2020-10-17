@@ -171,16 +171,17 @@ class TestKGTKQuery(unittest.TestCase):
 
     def test_kgtk_query_return_columns_modify_functions(self):
         cli_entry("kgtk", "query", "-i", self.file_path, "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "(p)-[r:name]->(n)", "--where", "upper(substr(n,2,1)) >= 'J'", "--return", "lower(p), r.label, n, r",
+                  "(p)-[r:name]->(n)", "--where", "upper(substr(n,2,1)) >= 'J'",
+                  "--return", "lower(p) as node1, r.label, n, r",
                   '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 4)
         columns = list(df.columns)
-        self.assertTrue('lower(graph_1_c1."node1")' in columns)
+        self.assertTrue('node1' in columns)
         self.assertTrue('node2' in columns)
         self.assertTrue('id' in columns)
         self.assertTrue('label' in columns)
-        node1s = list(df['lower(graph_1_c1."node1")'].unique())
+        node1s = list(df['node1'].unique())
         self.assertTrue('otto' in node1s)
         self.assertTrue('joe' in node1s)
         self.assertTrue('molly' in node1s)
@@ -188,16 +189,17 @@ class TestKGTKQuery(unittest.TestCase):
 
     def test_kgtk_query_kgtk_unstringify(self):
         cli_entry("kgtk", "query", "-i", self.file_path, "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "(p)-[r:name]->(n)", "--where", "upper(substr(n,2,1)) >= 'J'", "--return",
-                  "p, r.label, kgtk_unstringify(n), r", '--graph-cache', self.sqldb)
+                  "(p)-[r:name]->(n)", "--where", "upper(substr(n,2,1)) >= 'J'",
+                  "--return", "p, r.label, kgtk_unstringify(n) as node2, r",
+                  '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 4)
         columns = list(df.columns)
-        self.assertTrue('kgtk_unstringify(graph_1_c1."node2")' in columns)
+        self.assertTrue('node2' in columns)
         self.assertTrue('node1' in columns)
         self.assertTrue('id' in columns)
         self.assertTrue('label' in columns)
-        vals = list(df['kgtk_unstringify(graph_1_c1."node2")'].unique())
+        vals = list(df['node2'].unique())
         self.assertTrue('Molly' in vals)
 
     def test_kgtk_query_para(self):
