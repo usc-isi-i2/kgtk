@@ -628,6 +628,7 @@ class EmbeddingVector:
             with open(file_name + ".pkl", "wb") as f:
                 pickle.dump(self.vectors_2D, f)
             dimension = len(self.vectors_2D[0])
+            # TODO: This should probably be converted to KgtkWriter.
             with open(file_name + ".tsv", "w") as f:
                 for each in self.vectors_2D:
                     for i, each_val in enumerate(each):
@@ -642,6 +643,7 @@ class EmbeddingVector:
         else:
             with open(file_name + ".pkl", "wb") as f:
                 pickle.dump(self.vectors_map, f)
+            # TODO: This should probably be converted to KgtkWriter.
             with open(file_name + ".tsv", "w") as f:
                 for each in self.vectors_map.values():
                     for i in each:
