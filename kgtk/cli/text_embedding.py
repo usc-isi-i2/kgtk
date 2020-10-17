@@ -147,7 +147,7 @@ def main(**kwargs):
         black_list_files = kwargs.get("black_list_files", [])
         all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
         data_format = kwargs.get("data_format", "kgtk_format")
-        output_format = kwargs.get("output_format", "kgtk_format")
+        output_format = kwargs.get("output_data_format", "kgtk_format")
         property_labels_files = kwargs.get("property_labels_file_uri", [])
         query_server = kwargs.get("query_server")
         save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
@@ -299,7 +299,7 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="if set, will also save the embedding sentences to output.")
     parser.add_argument('-o', '--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
-    parser.add_argument('--output-data-format', action='store', dest='output_format',
+    parser.add_argument('--output-data-format', action='store', dest='output_data_format',
                         default="kgtk_format", choices=("tsv_format", "kgtk_format"),
                         help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
                              "will be a tsv file, with each row contains only the vector representation of a node. Each "
