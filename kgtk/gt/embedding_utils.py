@@ -516,7 +516,7 @@ class EmbeddingVector:
             a, b = self.process_qnode(current_process_node_id, each_node_attributes, node_id, pp)
         self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
         try:
-            file_path = input_file.name
+            file_path = input_file_path.name
             file_name = file_path[:file_path.rfind(".")]
         except AttributeError:
             file_name = "input_from_memory"

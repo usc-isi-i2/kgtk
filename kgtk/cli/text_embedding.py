@@ -260,7 +260,7 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="the model to used for embedding")
     # parser.add_argument('-i', '--input', action='store', nargs='+', dest='input_uris',
     #                     help="input path", )
-    parser.add_argument('-f', '--data-format', action='store', dest='data_format',
+    parser.add_argument('-f', '--input-data-format', action='store', dest='data_format',
                         choices=("test_format", "kgtk_format"), default="kgtk_format",
                         help="the input file format, could either be `test_format` or `kgtk_format`, default is `kgtk_format`", )
     parser.add_argument('-p', '--property-labels-file', action='store', nargs='+',
@@ -299,7 +299,7 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="if set, will also save the embedding sentences to output.")
     parser.add_argument('-o', '--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
-    parser.add_argument('--output-format', action='store', dest='output_format',
+    parser.add_argument('--output-data-format', action='store', dest='output_format',
                         default="kgtk_format", choices=("tsv_format", "kgtk_format"),
                         help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
                              "will be a tsv file, with each row contains only the vector representation of a node. Each "
