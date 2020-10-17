@@ -30,14 +30,14 @@ You can call the functions directly with given args as
 ```
 kgtk text-embedding \ 
     -input-file / -i <string> \ # * optional, path to the file
-    --format / -f <string> \ # optional, default is `kgtk_format`
+    --input-data-format / -f <string> \ # optional, default is `kgtk_format`
     --model / -m <list_of_string> \  # optional, default is `bert-base-wikipedia-sections-mean-tokens`
     --label-properties <list_of_string> \ # optional, default is ["label"]
     --description-properties <list_of_string> \ # optional, default is ["description"]
     --isa-properties <list_of_string> \ # optional, default is ["P31"]
     --has-properties <list_of_string> \ # optional, default is ["all"]
     --property-labels-file/ -p <string> \ #optional
-    --output-format <string> # optional, default is `kgtk_format`
+    --output-data-format <string> # optional, default is `kgtk_format`
     --output-property <string> \ # optional, default is "text_embedding"
     --embedding-projector-metatada <list_of_string> \ # optional
     --embedding-projector-path/ -o <string> # optional, default is the home directory of current user
@@ -68,14 +68,14 @@ kgtk text-embedding \
     --input-file countries_candidates.csv \
     --model bert-base-wikipedia-sections-mean-tokens bert-base-nli-cls-token \
     --black-list all_instances_of_Q732577.tsv.zip \
-    --output-format tsv_format
+    --output-data-format tsv_format
 ```
 
 #### --input-file / -i (input file)
 The path to the input file. For example: `input_file1.csv`, it also support to send like `< input_file1.csv`
 
-#### --format/ -f (input format)
-The input file should be a CSV file, it support 2 different type of input for different purposes.
+#### --input-data-format/ -f (input format)
+The input file should be a CSV file or a KGTK file.
 
 ##### KGTK edges format (`kgtk_format`)
 This follow KGTK requirement, the file need to have at least following 3 columns. For detail definitions, please refer to KGTK document.
