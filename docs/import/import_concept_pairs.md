@@ -5,11 +5,6 @@ The resulting KGTK file consists of 9 columns.
 ```
 usage: kgtk import-concept-pairs [-h] [-i INPUT_FILE] [--relation RELATION]
                                  [--source SOURCE] [-o OUTPUT_FILE]
-                                 [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for
-                        stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit

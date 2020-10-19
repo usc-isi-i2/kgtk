@@ -9,7 +9,6 @@ usage: kgtk join [-h] [--left-file LEFT_FILE] [--right-file RIGHT_FILE] [-o OUTP
                  [--left-join [LEFT_JOIN]] [--prefix PREFIX]
                  [--right-file-join-columns RIGHT_JOIN_COLUMNS [RIGHT_JOIN_COLUMNS ...]]
                  [--right-join [RIGHT_JOIN]] [-v]
-                 [LEFT_FILE] [RIGHT_FILE]
 
 Join two KGTK edge files or two KGTK node files.
 
@@ -36,12 +35,6 @@ following option (enable expert mode for more information):
 --mode=NONE
 
 Expert mode provides additional command arguments.
-
-positional arguments:
-  LEFT_FILE             The left-side KGTK file to join (required). (May be omitted or '-'
-                        for stdin.) (Deprecated, use --left-file LEFT_FILE)
-  RIGHT_FILE            The right-side KGTK file to join (required). (May be omitted or '-'
-                        for stdin.) (Deprecated, use --right-file RIGHT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -118,7 +111,7 @@ and `file2.tsv` contains the following table in KGTK format:
 Do an inner join on two KGTK files on node1, sending the output to standard output.
 
 ```bash
-kgtk join file1.tsv file2.tsv
+kgtk join --left-file file1.tsv --right-file file2.tsv
 ```
 
 The result will be the following table in KGTK format:
@@ -138,7 +131,7 @@ The result will be the following table in KGTK format:
 Do a left outer join on two KGTK files on node1, sending the output to standard output.
 
 ```bash
-kgtk join file1.tsv file2.tsv --left-join
+kgtk join --left-file file1.tsv --right-file file2.tsv --left-join
 ```
 
 The result will be the following table in KGTK format:
@@ -160,7 +153,7 @@ The result will be the following table in KGTK format:
 Do a right outer join on two KGTK files on node1, sending the output to standard output.
 
 ```bash
-kgtk join file1.tsv file2.tsv --right-join
+kgtk join --left-file file1.tsv --right-file file2.tsv --right-join
 ```
 
 The result will be the following table in KGTK format:
@@ -181,7 +174,7 @@ Do a full outer join on two KGTK files on node1, sending the output to standard 
 This produces the same output as the `kgtk cat` command.
 
 ```bash
-kgtk join file1.tsv file2.tsv --left-join --right-join
+kgtk join --left-file file1.tsv --right-file file2.tsv --left-join --right-join
 ```
 
 The result will be the following table in KGTK format:

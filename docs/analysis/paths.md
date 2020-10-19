@@ -13,10 +13,6 @@ The output, printed to stdout by default, is an edge file with the following col
 ```
 usage: kgtk paths [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--path-file PATH_FILE] [--statistics-only [True|False]] [--undirected [True|False]] [--max_hops MAX_HOPS]
                   [--path-source SOURCE_COLUMN_NAME] [--path-target TARGET_COLUMN_NAME] [-v]
-                  [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit

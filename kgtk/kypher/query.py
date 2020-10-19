@@ -45,7 +45,7 @@ def listify(x):
     return (hasattr(x, '__iter__') and not isinstance(x, str) and list(x)) or (x and [x]) or []
 
 def dwim_to_string_para(x):
-    """Try to coerce `x' to a KGTK string value that can be passed as a query parameter.
+    """Try to coerce 'x' to a KGTK string value that can be passed as a query parameter.
     """
     x = str(x)
     m = KgtkValue.strict_string_re.match(x)
@@ -54,11 +54,11 @@ def dwim_to_string_para(x):
     # if we have an enclosing pair of quotes, remove them:
     if x.startswith('"') and x.endswith('"'):
         x = x[1:-1]
-    x = re.sub(r'(?P<char>["\|])', r"\\\g<char>", x)
+    x = re.sub(r'(?P<char>["\|])', r'\\\g<char>', x)
     return '"%s"' % x
 
 def dwim_to_lqstring_para(x):
-    """Try to coerce `x' to a KGTK LQ-string value that can be passed as a query parameter.
+    """Try to coerce 'x' to a KGTK LQ-string value that can be passed as a query parameter.
     """
     x = str(x)
     m = KgtkValue.strict_language_qualified_string_re.match(x)
@@ -72,14 +72,14 @@ def dwim_to_lqstring_para(x):
         # if we have an enclosing pair of quotes, remove them:
         if text.startswith("'") and text.endswith("'"):
             text = text[1:-1]
-        text = re.sub(r"(?P<char>['\|])", r"\\\g<char>", text)
+        text = re.sub(r"(?P<char>['\|])", r'\\\g<char>', text)
         return "'%s'@%s" % (text, lang)
-    raise Exception("cannot coerce `%s' into a language-qualified string" % x)
+    raise Exception("cannot coerce '%s' into a language-qualified string" % x)
 
 
 ### Query translation:
 
-# An expression in Kypher can be (`+' means handled fully, `o' partially):
+# An expression in Kypher can be ('+' means handled fully, 'o' partially):
 # (from https://neo4j.com/docs/cypher-manual/current/syntax/expressions/)
 #
 # o A decimal (integer or float) literal: 13, -40000, 3.14, 6.022E23.
@@ -188,17 +188,17 @@ class KgtkQuery(object):
             sys.stderr.flush()
 
     def map_graph_handle_to_file(self, handle):
-        """Performes a greedy mapping of `handle' to either a full file name
-        or the first file basename that contains `handle' as a substring.
+        """Performes a greedy mapping of 'handle' to either a full file name
+        or the first file basename that contains 'handle' as a substring.
         If handle contains a numeric suffix, we also check its prefix portion.
-        For example, handle `g12' is also matched as `g' in the file basename.
+        For example, handle 'g12' is also matched as 'g' in the file basename.
         """
         files = self.files
         hmap = self.graph_handle_map
         if handle in hmap:
             return hmap[handle]
         base_handle = handle
-        m = re.search('[0-9]+$', handle)
+        m = re.search(r'[0-9]+$', handle)
         if m is not None and m.start() > 0:
             base_handle = handle[0:m.start()]
         mapped_files = hmap.values()
@@ -212,12 +212,12 @@ class KgtkQuery(object):
                 if key.find(handle) >= 0 or key.find(base_handle) >= 0:
                     hmap[handle] = file
                     return file
-        raise Exception("failed to uniquely map handle `%s' onto one of %s" % (handle, files))
+        raise Exception("failed to uniquely map handle '%s' onto one of %s" % (handle, files))
 
     def get_parameter_value(self, name):
         value = self.parameters.get(name)
         if value is None:
-            raise Exception("undefined query parameter: `%s'" % name)
+            raise Exception("undefined query parameter: '%s'" % name)
         return value
 
     def get_pattern_clause_graph(self, clause):
@@ -240,7 +240,7 @@ class KgtkQuery(object):
         return 'id'
 
     def get_literal_parameter(self, literal, litmap):
-        """Return a parameter placeholder such as `?12?' that will be mapped to `literal'
+        """Return a parameter placeholder such as '?12?' that will be mapped to 'literal'
         and will later be replaced with a query parameter at the appropriate position.
         """
         if literal in litmap:
@@ -251,14 +251,14 @@ class KgtkQuery(object):
             return placeholder
 
     def replace_literal_parameters(self, raw_query, litmap):
-        """Replace the named literal placeholders in `raw_query' with positional
+        """Replace the named literal placeholders in 'raw_query' with positional
         parameters and build a list of actual parameters to substitute for them.
         """
         query = io.StringIO()
         parameters = []
-        # reverse `litmap' to map placeholders onto literal values:
+        # reverse 'litmap' to map placeholders onto literal values:
         litmap = {p: l for l, p in litmap.items()}
-        for token in re.split('\\?\\?', raw_query):
+        for token in re.split(r'\?\?', raw_query):
             if token.startswith('?'):
                 parameters.append(litmap['??' + token + '??'])
                 token = '?'
@@ -266,11 +266,11 @@ class KgtkQuery(object):
         return query.getvalue(), parameters
                  
     def register_clause_variable(self, query_var, sql_var, varmap, joins):
-        """Register a reference to the Kypher variable `query_var' which corresponds to the
-        SQL clause variable `sql_var' represented as `(graph, column)' where `graph' is a
+        """Register a reference to the Kypher variable 'query_var' which corresponds to the
+        SQL clause variable 'sql_var' represented as '(graph, column)' where 'graph' is a
         table alias for the relevant graph specific to the current clause.  If this is the
-        first reference to `query_var', simply add it to `varmap'.  Otherwise, find the best
-        existing reference to equiv-join it with and record the necessary join in `joins'.
+        first reference to 'query_var', simply add it to 'varmap'.  Otherwise, find the best
+        existing reference to equiv-join it with and record the necessary join in 'joins'.
         """
         sql_vars = varmap.get(query_var)
         if sql_vars is None:
@@ -325,7 +325,7 @@ class KgtkQuery(object):
             self.register_clause_variable(rel.variable.name, (graph, idcol), varmap, joins)
 
     def pattern_props_to_sql(self, pattern, graph, column, litmap, varmap, restrictions, joins):
-        # `pattern' is a node or relationship pattern for `graph.column'.  `column' should be 'node1', `node2' or `id'.
+        # 'pattern' is a node or relationship pattern for 'graph.column'.  'column' should be 'node1', 'node2' or 'id'.
         props = getattr(pattern, 'properties', None)
         if props is None or len(props) == 0:
             return
@@ -362,12 +362,12 @@ class KgtkQuery(object):
     }
 
     def is_kgtk_operator(self, op):
-        """Return True if `op' is a special KGTK function or virtual property.
+        """Return True if 'op' is a special KGTK function or virtual property.
         """
         return str(op).upper().startswith('KGTK_')
 
     def expression_to_sql(self, expr, litmap, varmap):
-        """Translate a Kypher expression `expr' into its SQL equivalent.
+        """Translate a Kypher expression 'expr' into its SQL equivalent.
         """
         expr_type = type(expr)
         if expr_type == parser.Literal:
@@ -403,7 +403,7 @@ class KgtkQuery(object):
             op = self.OPERATOR_TABLE[expr_type]
             return '(%s %s %s)' % (arg1, op, arg2)
         elif expr_type == parser.Hat:
-            raise Exception("Unsupported operator: `^'")
+            raise Exception("Unsupported operator: '^'")
         
         elif expr_type in (parser.Eq, parser.Neq, parser.Lt, parser.Gt, parser.Lte, parser.Gte):
             arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
@@ -419,10 +419,10 @@ class KgtkQuery(object):
             op = self.OPERATOR_TABLE[expr_type]
             return '(%s %s %s)' % (arg1, op, arg2)
         elif expr_type == parser.Xor:
-            raise Exception("Unsupported operator: `XOR'")
+            raise Exception("Unsupported operator: 'XOR'")
         elif expr_type == parser.Case:
             # TO DO: implement, has the same syntax as SQL:
-            raise Exception("Unsupported operator: `CASE'")
+            raise Exception("Unsupported operator: 'CASE'")
         
         elif expr_type == parser.Call:
             function = expr.function
@@ -558,10 +558,10 @@ class KgtkQuery(object):
         return indexes
 
     def ensure_relevant_indexes(self, sql, graphs=[], auto_indexes=[], explain=False):
-        """Ensure that relevant indexes for this `sql' query are available on the database.
-        Based on the specified index_mode strategy, either use `auto_indexes', the DB's
-        `expert' mode, or some fixed variant such as `quad' `triple', `node1+label', etc.
-        which will be applied to all `graphs'.  Each element in `auto_indexes' is assumed
+        """Ensure that relevant indexes for this 'sql' query are available on the database.
+        Based on the specified index_mode strategy, either use 'auto_indexes', the DB's
+        'expert' mode, or some fixed variant such as 'quad' 'triple', 'node1+label', etc.
+        which will be applied to all 'graphs'.  Each element in 'auto_indexes' is assumed
         to be an unaliased (graph, column) pair.
         """
         # NOTES
@@ -572,7 +572,7 @@ class KgtkQuery(object):
         #   which one requires knowledge of table size, statistics and other selectivity of the query
         # - skewed distribution of fanout in columns complicates this further, since an average
         #   fanout might be very different from maximum fanouts (e.g., for wikidata node2)
-        # - large fanouts might force us to use two-column indexes such as `label/node2' and `label/node1'
+        # - large fanouts might force us to use two-column indexes such as 'label/node2' and 'label/node1'
         # - to handle this better, we will exploit the SQLite expert command to create (variants) of
         #   the indexes it suggests, since that often wants multi-column indexes which are expensive
         # - we also need some manual control as well to force certain indexing patterns
@@ -589,7 +589,7 @@ class KgtkQuery(object):
         
         elif self.index_mode == 'expert':
             # build indexes as suggested by the database (only first column for now):
-            # TO DO: allow certain two-column indexes such as `label, node1' to handle fanout issues:
+            # TO DO: allow certain two-column indexes such as 'label, node1' to handle fanout issues:
             indexes = self.store.suggest_indexes(sql)
             for name, graph, columns in indexes:
                 column = columns[0]
