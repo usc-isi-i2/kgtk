@@ -921,6 +921,14 @@ def run(input_file: KGTKFiles,
             description_erows = []
             sitelink_erows = []
 
+            # These maps avoid avoid ID collisions due to hash collision or
+            # repeated values in the input data.  We assume that a top-level
+            # property (obj["id"]) will not occur in multiple input lines.
+            alias_id_collision_map: typing.MutableMapping[str, int] = dict()
+            edge_id_collision_map: typing.MutableMapping[str, int] = dict()
+            qual_id_collision_map: typing.MutableMapping[str, int] = dict()
+            sitelink_id_collision_map: typing.MutableMapping[str, int] = dict()
+
             clean_line = line.strip()
             if clean_line.endswith(b","):
                 clean_line = clean_line[:-1]
@@ -936,8 +944,6 @@ def run(input_file: KGTKFiles,
                     row = []
                     qnode = obj["id"]
                     row.append(qnode)
-
-                    sitelink_value_collision_map: typing.MutableMapping[str, int] = dict()
 
                     if parse_labels:
                         labels = obj.get("labels")
@@ -955,15 +961,20 @@ def run(input_file: KGTKFiles,
                             for lang in label_languages:
                                 lang_label = labels.get(lang, None)
                                 if lang_label:
+                                    # We needn't worry about duplicate label entries if this check passes.
+                                    if lang_label['language'] != lang:
+                                        print("*** Conflicting language key %s for the %s label for %s" % (repr(lang_label['language']), repr(lang), qnode),
+                                              file=sys.stderr, flush=True)
+
                                     # lang_label['value']=lang_label['value'].replace('|','\\|')
                                     # label_list.append('\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_label['value'], language=lang)
                                     label_list.append(value)
                                         
                                     if label_edges:
-                                        sid = qnode + '-' + LABEL_LABEL + '-' + lang
+                                        langid: str = qnode + '-' + LABEL_LABEL + '-' + lang
                                         self.erows_append(erows,
-                                                          edge_id=sid,
+                                                          edge_id=langid,
                                                           node1=qnode,
                                                           label=LABEL_LABEL,
                                                           node2=value,
@@ -980,9 +991,9 @@ def run(input_file: KGTKFiles,
                         row.append(entry_type)
                         
                     if entry_type_edges:
-                        sid = qnode + '-' + TYPE_LABEL
+                        typeid: str = qnode + '-' + TYPE_LABEL + '-' + entry_type
                         self.erows_append(erows,
-                                          edge_id=sid,
+                                          edge_id=typeid,
                                           node1=qnode,
                                           label=TYPE_LABEL,
                                           node2=entry_type)
@@ -1003,14 +1014,18 @@ def run(input_file: KGTKFiles,
                             for lang in desc_languages:
                                 lang_descr = descriptions.get(lang, None)
                                 if lang_descr:
+                                    # We needn't worry about duplicate description entries if this check passes.
+                                    if lang_descr['language'] != lang:
+                                        print("*** Conflicting language key %s for the %s description for %s" % (repr(lang_descr['language']), repr(lang), qnode),
+                                              file=sys.stderr, flush=True)
                                     # lang_descr['value']=lang_descr['value'].replace('|','\\|')
                                     # descr_list.append('\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_descr['value'], language=lang)
                                     descr_list.append(value)
                                     if descr_edges:
-                                        sid = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
+                                        descrid: str = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
                                         self.erows_append(description_erows if collect_seperately else erows,
-                                                              edge_id=sid,
+                                                              edge_id=descrid,
                                                               node1=qnode,
                                                               label=DESCRIPTION_LABEL,
                                                               node2=value,
@@ -1038,30 +1053,26 @@ def run(input_file: KGTKFiles,
                             for lang in alias_languages:
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
-                                    # The alias sequence number map avoids sequence number collisions caused by hashing.
-                                    alias_seq_no_map: typing.Optional[typing.MutableMapping[str, int]]
-                                    if alias_edges:
-                                        alias_seq_no_map = dict()
-                                    else:
-                                        alias_seq_no_map = None
                                     for item in lang_aliases:
                                         # item['value']=item['value'].replace('|','\\|')
                                         # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
                                         value = KgtkFormat.stringify(item['value'], language=lang)
                                         alias_list.append(value)
-                                        if alias_edges and alias_seq_no_map is not None:
-                                            # Hash the value to save space and avoid syntactiv difficulties.
+                                        if alias_edges:
+                                            # Hash the value to save space and avoid syntactic difficulties.
                                             # Take a subset of the hash value to save space.
                                             alias_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                            aliasid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash
                                             alias_seq_no: int # In case of hash collision
-                                            if alias_value_hash in alias_seq_no_map:
-                                                alias_seq_no = alias_seq_no_map[alias_value_hash]
+                                            if aliasid in alias_id_collision_map:
+                                                alias_seq_no = alias_id_collision_map[aliasid]
+                                                print("\n*** Alias collision #%d detected for %s (%s)" % (alias_seq_no, aliasid, value), file=sys.stderr, flush=True)
                                             else:
                                                 alias_seq_no = 0
-                                            alias_seq_no_map[alias_value_hash] = alias_seq_no + 1
-                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash + '-' + str(alias_seq_no)
+                                            alias_id_collision_map[aliasid] = alias_seq_no + 1
+                                            aliasid += '-' + str(alias_seq_no)
                                             self.erows_append(erows,
-                                                              edge_id=sid,
+                                                              edge_id=aliasid,
                                                               node1=qnode,
                                                               label=ALIAS_LABEL,
                                                               node2=value,
@@ -1079,11 +1090,11 @@ def run(input_file: KGTKFiles,
                     if not node_id_only:
                         row.append(datatype)
                     if len(datatype) > 0 and datatype_edges:
-                        sid = qnode + '-' + "datatype"
+                        datatypeid: str = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
                         # there's no need to stringify it.
                         self.erows_append(erows,
-                                          edge_id=sid,
+                                          edge_id=datatypeid,
                                           node1=qnode,
                                           label=DATATYPE_LABEL,
                                           node2=datatype)
@@ -1116,7 +1127,6 @@ def run(input_file: KGTKFiles,
                     if keep:
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
-                            prop_value_hash_collision_map: typing.MutableMapping[str, int] = dict()
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
                                     snaktype = cp['mainsnak']['snaktype']
@@ -1212,15 +1222,17 @@ def run(input_file: KGTKFiles,
                                             prop_value_hash = value
                                         else:
                                             prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                        edgeid: str = qnode + '-' + prop + '-' + prop_value_hash + '-' + claim_id.lower()
                                         prop_seq_no: int # In case of hash collision
-                                        if prop_value_hash in prop_value_hash_collision_map:
-                                            prop_seq_no = prop_value_hash_collision_map[prop_value_hash]
+                                        if edgeid in edge_id_collision_map:
+                                            prop_seq_no = edge_id_collision_map[edgeid]
+                                            print("\n*** Edge collision #%d detected for %s (%s)" % (prop_seq_no, edgeid, value), file=sys.stderr, flush=True)
                                         else:
                                             prop_seq_no = 0
-                                        prop_value_hash_collision_map[prop_value_hash] = prop_seq_no + 1
-                                        sid = qnode + '-' + prop + '-' + prop_value_hash + '-' + str(prop_seq_no)
+                                        edge_id_collision_map[edgeid] = prop_seq_no + 1
+                                        edgeid += '-' + str(prop_seq_no)
                                         self.erows_append(erows,
-                                                          edge_id=sid,
+                                                          edge_id=edgeid,
                                                           node1=qnode,
                                                           label=prop,
                                                           node2=value,
@@ -1246,8 +1258,6 @@ def run(input_file: KGTKFiles,
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
-                                                qual_value_hash_collision_map: typing.MutableMapping[str, int] = dict()
-
                                                 for qcp in qual_claim_property:
                                                     snaktype = qcp['snaktype']
 
@@ -1346,16 +1356,18 @@ def run(input_file: KGTKFiles,
                                                             qual_value_hash = value
                                                         else:
                                                             qual_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                                        qualid: str  = edgeid + '-' + qual_prop + '-' + qual_value_hash
                                                         qual_seq_no: int # In case of hash collision
-                                                        if qual_value_hash in qual_value_hash_collision_map:
-                                                            qual_seq_no = qual_value_hash_collision_map[qual_value_hash]
+                                                        if qualid in qual_id_collision_map:
+                                                            qual_seq_no = qual_id_collision_map[qualid]
+                                                            print("\n*** Qualifier collision #%d detected for %s (%s)" % (qual_seq_no, qualid, value), file=sys.stderr, flush=True)
                                                         else:
                                                             qual_seq_no = 0
-                                                        qual_value_hash_collision_map[qual_value_hash] = qual_seq_no + 1
-                                                        qualid: str  = sid + '-' + qual_prop + '-' + qual_value_hash + '-' + str(qual_seq_no)
+                                                        qual_id_collision_map[qualid] = qual_seq_no + 1
+                                                        qualid += '-' + str(qual_seq_no)
                                                         self.qrows_append(qrows,
                                                                           edge_id=qualid,
-                                                                          node1=sid,
+                                                                          node1=edgeid,
                                                                           label=qual_prop,
                                                                           node2=value,
                                                                           magnitude=mag,
@@ -1383,12 +1395,19 @@ def run(input_file: KGTKFiles,
                                 if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
                                     linklabel = SITELINK_LABEL
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
+
+                                    # The following leads to ambuiguity if there are both
+                                    # "afwiki" and "afwikibooks".
+                                    #
+                                    # TODO: Need to research the sitelink structure more fully.
                                     sitelang=link.split('wiki')[0].replace('_','-')
+
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
                                 else:
                                     linklabel = ADDL_SITELINK_LABEL
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     if "wiki" in link:
+                                        # TODO: needs more work here.
                                         sitelang=link.split("wiki")[0]
                                         if sitelang in ("commons", "simple"):
                                             sitelang = "en" # TODO: Need to retain the distinction we lose here.
@@ -1400,13 +1419,15 @@ def run(input_file: KGTKFiles,
                                 if sitelink is not None:
                                     serows = sitelink_erows if collect_seperately else erows
                                     sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[:8]
+                                    sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash
                                     sitelink_seq_no: int = 0
-                                    if linklabel + sitelink_value_hash in sitelink_value_collision_map:
-                                        sitelink_seq_no = sitelink_value_collision_map[linklabel + sitelink_value_hash]
+                                    if sitelinkid in sitelink_id_collision_map:
+                                        sitelink_seq_no = sitelink_id_collision_map[sitelinkid]
+                                        print("\n*** Sitelink collision #%d detected for %s (%s)" % (sitelink_seq_no, sitelinkid, sitelink), file=sys.stderr, flush=True)
                                     else:
                                         sitelink_seq_no = 0
-                                    sitelink_value_collision_map[linklabel + sitelink_value_hash] = sitelink_seq_no + 1
-                                    sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash + '-' + str(sitelink_seq_no)
+                                    sitelink_id_collision_map[sitelinkid] = sitelink_seq_no + 1
+                                    sitelinkid += '-' + str(sitelink_seq_no)
 
                                     if sitelink_edges:
                                         self.erows_append(serows,
