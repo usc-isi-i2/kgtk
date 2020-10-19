@@ -1395,12 +1395,19 @@ def run(input_file: KGTKFiles,
                                 if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
                                     linklabel = SITELINK_LABEL
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
+
+                                    # The following leads to ambuiguity if there are both
+                                    # "afwiki" and "afwikibooks".
+                                    #
+                                    # TODO: Need to research the sitelink structure more fully.
                                     sitelang=link.split('wiki')[0].replace('_','-')
+
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
                                 else:
                                     linklabel = ADDL_SITELINK_LABEL
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     if "wiki" in link:
+                                        # TODO: needs more work here.
                                         sitelang=link.split("wiki")[0]
                                         if sitelang in ("commons", "simple"):
                                             sitelang = "en" # TODO: Need to retain the distinction we lose here.
