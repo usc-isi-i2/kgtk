@@ -6,19 +6,15 @@ This command will find the connected components in a KGTK edge file. The output 
 
 ## Usage
 ```
-sage: kgtk connected-components [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--properties PROPERTIES] [--undirected] [--strong]
+Usage: kgtk connected-components [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--properties PROPERTIES] [--undirected] [--strong]
                                  [--cluster-name-method {cat,hash,first,last,shortest,longest,numbered,prefixed,lowest,highest}]
                                  [--cluster-name-separator CLUSTER_NAME_SEPARATOR] [--cluster-name-prefix CLUSTER_NAME_PREFIX]
                                  [--cluster-name-zfill CLUSTER_NAME_ZFILL] [--minimum-cluster-size MINIMUM_CLUSTER_SIZE] [-v]
-                                 [INPUT_FILE]
 
 Find all the connected components in an undirected or directed Graph.
 
 Additional options are shown in expert help.
 kgtk --expert connected-components --help
-
-positional arguments:
-  INPUT_FILE            The KGTK file to find connected components in. (May be omitted or '-' for stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -58,5 +54,5 @@ optional arguments:
 Find connected URI's that redirect to the same page
 
 ```
-kgtk connected-components Dbpedia_redirects.tsv -o connected-dbpedia_uris.tsv
+kgtk connected-components -i Dbpedia_redirects.tsv -o connected-dbpedia_uris.tsv
 ```

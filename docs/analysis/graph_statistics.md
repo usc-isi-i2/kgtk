@@ -8,10 +8,6 @@ usage: kgtk graph-statistics [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--undirected
                              [--hits [True|False]] [--log LOG_FILE] [--statistics-only [True|False]] [--vertex-in-degree-property VERTEX_IN_DEGREE]
                              [--vertex-out-degree-property VERTEX_OUT_DEGREE] [--page-rank-property VERTEX_PAGERANK] [--vertex-hits-authority-property VERTEX_AUTH]
                              [--vertex-hits-hubs-property VERTEX_HUBS] [-v]
-                             [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -59,7 +55,7 @@ Given this file `input.tsv`:
 We can use the following command to compute degree and PageRank statistics over the graph:
 
 ```
-kgtk graph_statistics --log summary.txt --pagerank --statistics-only input.tsv
+kgtk graph_statistics --log summary.txt --pagerank --statistics-only -i input.tsv
 ```
 
 The output (printed to stdout by default) is as follows:
