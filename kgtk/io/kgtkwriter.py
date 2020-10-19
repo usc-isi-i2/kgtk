@@ -5,13 +5,9 @@ Write a KGTK edge or node file in TSV format.
 
 from argparse import ArgumentParser
 import attr
-import bz2
 from enum import Enum
 import errno
-import gzip
 import json
-import lz4 # type: ignore
-import lzma
 from pathlib import Path
 from multiprocessing import Queue
 import sys
@@ -195,18 +191,25 @@ class KgtkWriter(KgtkBase):
             if file_path.suffix == ".gz":
                 if verbose:
                     print("KgtkWriter: writing gzip %s" % str(file_path), file=error_file, flush=True)
+                import gzip
                 gzip_file = gzip.open(file_path, mode="wt") # type: ignore
+
             elif file_path.suffix == ".bz2":
                 if verbose:
                     print("KgtkWriter: writing bz2 %s" % str(file_path), file=error_file, flush=True)
+                import bz2
                 gzip_file = bz2.open(file_path, mode="wt") # type: ignore
+
             elif file_path.suffix == ".xz":
                 if verbose:
                     print("KgtkWriter: writing lzma %s" % str(file_path), file=error_file, flush=True)
+                import lzma
                 gzip_file = lzma.open(file_path, mode="wt") # type: ignore
+
             elif file_path.suffix ==".lz4":
                 if verbose:
                     print("KgtkWriter: writing lz4 %s" % str(file_path), file=error_file, flush=True)
+                import lz4 # type: ignore
                 gzip_file = lz4.frame.open(file_or_path, mode="wt") # type: ignore
             else:
                 # TODO: throw a better exception.
