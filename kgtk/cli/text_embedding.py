@@ -1,3 +1,13 @@
+# text embedding.
+#
+# TODO: Use KgtkReader to read the property values file.
+#
+# TODO: Provide seperate KgtkReader options (with fallback) for
+# property labels, property values, and the main input files
+# read by EmbeddingVector in "gt/embeddng_utils.py".
+#
+# TODO: Convert EmbeddingVector to use KgtkFormat and KgtkWriter.
+#
 import typing
 from kgtk.exceptions import KGTKException
 from kgtk.cli_argparse import KGTKArgumentParser
@@ -170,6 +180,7 @@ def main(**kwargs):
         }
         property_values = kwargs.get("property_values", [])
         if kwargs.get("property_values_file") is not None:
+            # TODO: Use KgtkReader to read this file.
             _ = pd.read_csv(kwargs.get("property_values_file"), sep='\t')
             property_values = list(_['node1'].unique())
         sentence_properties = {

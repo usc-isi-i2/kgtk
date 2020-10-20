@@ -1,3 +1,4 @@
+# TODO: Conver this code to use KgtkFormat and KgtkWriter in various places.
 import io
 import os
 import re
@@ -654,6 +655,7 @@ class EmbeddingVector:
                      output_format="kgtk_format", save_embedding_sentence=False):
         self._logger.debug("START printing the vectors")
         if output_format == "kgtk_format":
+            # TODO: This should be comverted to use KgtkWriter
             print("node\tproperty\tvalue\n", end="")
             all_nodes = list(self.vectors_map.keys())
             ten_percent_len = math.ceil(len(vectors) / 10)
