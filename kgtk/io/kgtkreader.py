@@ -18,12 +18,8 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 from argparse import ArgumentParser, _ArgumentGroup, Namespace, SUPPRESS
 import attr
-import bz2
 from enum import Enum
-import gzip
 import io
-import lz4 # type: ignore
-import lzma
 from multiprocessing import Process, Queue
 from pathlib import Path
 import sys
@@ -636,22 +632,27 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if compression_type in [".gz", "gz"]:
             if verbose:
                 print("%s: reading gzip %s" % (who, file_name), file=error_file, flush=True)
+            import gzip
             return gzip.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".bz2", "bz2"]:
             if verbose:
                 print("%s: reading bz2 %s" % (who, file_name), file=error_file, flush=True)
+            import bz2
             return bz2.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".xz", "xz"]:
             if verbose:
                 print("%s: reading lzma %s" % (who, file_name), file=error_file, flush=True)
+            import lzma
             return lzma.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".lz4", "lz4"]:
             if verbose:
                 print("%s: reading lz4 %s" % (who, file_name), file=error_file, flush=True)
+            import lz4 # type: ignore
             return lz4.frame.open(file_or_path, mode="rt") # type: ignore
+
         else:
             # TODO: throw a better exception.
                 raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))

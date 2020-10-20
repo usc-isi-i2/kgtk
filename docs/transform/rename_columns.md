@@ -6,7 +6,6 @@ usage: kgtk rename-columns [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                            [--output-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]]
                            [--old-columns OLD_COLUMN_NAME [OLD_COLUMN_NAME ...]]
                            [--new-columns NEW_COLUMN_NAME [NEW_COLUMN_NAME ...]] [-v]
-                           [INPUT_FILE]
 
 This command renames one or more columns in a KGTK file. 
 
@@ -21,10 +20,6 @@ If no input filename is provided, the default is to read standard input.
 
 Additional options are shown in expert help.
 kgtk --expert rename-columns --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -59,7 +54,7 @@ Copy `file1.tsv`, sending the output to standard output, renaming
 the `location` column to `where`
 
 ```
-kgtk rename-columns file1.tsv --old-columns location --new-columns where
+kgtk rename-columns -i file1.tsv --old-columns location --new-columns where
 ```
 
 The result will be the following table in KGTK format:
@@ -76,7 +71,7 @@ Copy `file1.tsv`, sending the output to standard output, naming
 all columns in the output file:
 
 ```
-kgtk rename-columns file1.tsv --output-columns node1 label node2 where
+kgtk rename-columns -i file1.tsv --output-columns node1 label node2 where
 ```
 
 The result will be the following table in KGTK format:

@@ -31,6 +31,7 @@ runs in parallel with the Python process.
 8) The sort command reads the rest of the input stream,
    sorts it, and writes the sorted data ro the output stream.
 """
+from argparse import Namespace
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -41,7 +42,13 @@ def parser():
         'help': 'Sort file based on one or more columns'
     }
 
-def add_arguments(parser: KGTKArgumentParser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
+    _expert: bool = parsed_shared_args._expert
+
     parser.add_input_file(positional=True, metavar="INPUT",
                           who="Input file to sort.")
     parser.add_output_file(options=['-o', '--out', '--output-file'],
@@ -52,15 +59,23 @@ def add_arguments(parser: KGTKArgumentParser):
                         "(defaults to id for node files, " +
                         "(node1, label, node2) for edge files without ID, (id, node1, label, node2) for edge files with ID)")
 
-    parser.add_argument('-r', '--reverse', action='store_true', dest='reverse',
-                        help="generate output in reverse sort order")
+    parser.add_argument(      '--locale', dest='locale', type=str, default='C',
+                              help="LC_ALL locale controls the sorting order. (default=%(default)s)")
+
+    parser.add_argument('-r', '--reverse', dest='reverse', metavar="True|False",
+                        help="When True, generate output in reverse sort order. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      '--pure-python', dest='pure_python', metavar="True|False",
+                        help="When True, sort in-memory with Python code. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument('-X', '--extra', default='', action='store', dest='extra',
-                        help="extra options to supply to the sort program")
+                        help="extra options to supply to the sort program. (default=None)")
 
-    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help="generate debuigging messages")
-
+    KgtkReader.add_debug_arguments(parser, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def custom_progress()->bool:
     return True # We want to start a custom progress monitor.
@@ -120,9 +135,18 @@ def keyboard_interrupt():
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         columns: typing.Optional[typing.List[str]] = None,
-        reverse: bool =False,
+        locale: str = "C",
+        reverse: bool = False,
+        pure_python: bool = False,
         extra: typing.Optional[str] = None,
-        verbose: bool = False
+
+        errors_to_stdout: bool = False,
+        errors_to_stderr: bool = True,
+        show_options: bool = False,
+        verbose: bool = False,
+        very_verbose: bool = False,
+
+        **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.       
 )->int:
     from io import StringIO
     import os
@@ -132,12 +156,99 @@ def run(input_file: KGTKFiles,
     import typing
 
     from kgtk.cli_entry import progress_startup
-    from kgtk.io.kgtkreader import KgtkReader
+    from kgtk.kgtkformat import KgtkFormat
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_path: Path = KGTKArgumentParser.get_input_file(input_file)
     output_path: Path = KGTKArgumentParser.get_output_file(output_file)
 
-    error_file = sys.stderr
+    # Select where to send error messages, defaulting to stderr.
+    error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
+
+    def python_sort():
+        # Build the option structures.
+        reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+        value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+        
+        if verbose:
+            print("Opening the input file: %s" % str(input_path), file=error_file, flush=True)
+        kr: KgtkReader = KgtkReader.open(input_path,
+                                         options=reader_options,
+                                         value_options = value_options,
+                                         error_file=error_file,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose,
+        )
+
+        sort_idx: int
+        key_idxs: typing.List[int] = [ ]
+        if columns is not None and len(columns) > 0:
+            # Process the list of column names, including splitting
+            # comma-separated lists of column names.
+            column_name: str
+            for column_name in columns:
+                column_name_2: str
+                for column_name_2 in column_name.split(","):
+                    column_name_2 = column_name_2.strip()
+                    if len(column_name_2) == 0:
+                        continue
+                    if column_name_2.isdigit():
+                        sort_idx = int(column_name_2)
+                        if sort_idx > len(kr.column_names):
+                            kr.close()
+                            cleanup()
+                            raise KGTKException("Invalid column number %d (max %d)." % (sort_idx, len(kr.column_names)))
+                        key_idxs.append(sort_idx - 1)
+                    else:
+                        if column_name_2 not in kr.column_names:
+                            kr.close()
+                            cleanup()
+                            raise KGTKException("Unknown column_name %s" % column_name_2)
+                        key_idxs.append(kr.column_name_map[column_name_2])
+        else:
+            if kr.is_node_file:
+                key_idxs.append(kr.id_column_idx)
+
+            elif kr.is_edge_file:
+                if kr.id_column_idx >= 0:
+                    key_idxs.append(kr.id_column_idx)
+
+                key_idxs.append(kr.node1_column_idx)
+                key_idxs.append(kr.label_column_idx)
+                key_idxs.append(kr.node2_column_idx)
+            else:
+                cleanup()
+                raise KGTKException("Unknown KGTK file mode, please specify the sorting columns.")
+
+        if verbose:
+            print("sorting keys: %s" % " ".join([str(x) for x in key_idxs]), file=error_file, flush=True)
+
+
+        lines: typing.MutableMapping[str, typing.List[str]] = dict()
+
+        progress_startup()
+        key: str
+        row: typing.List[str]
+        for row in kr:
+            key = KgtkFormat.KEY_FIELD_SEPARATOR.join(row[idx] for idx in key_idxs)
+            lines[key] = row
+        if verbose:
+            print("\nRead %d data lines." % len(lines), file=error_file, flush=True)
+
+        kw = KgtkWriter.open(kr.column_names,
+                             output_path,
+                             mode=KgtkWriter.Mode[kr.mode.name],
+                             verbose=verbose,
+                             very_verbose=very_verbose)
+        for key in sorted(lines.keys()):
+            kw.write(lines[key])
+        kw.close()
+        kr.close()
+
+    if pure_python:
+        return python_sort()
 
     try:
         global header_read_fd
@@ -154,12 +265,13 @@ def run(input_file: KGTKFiles,
         if verbose:
             print("sort options pipe: read_fd=%d write_fd=%d" % (sortopt_read_fd, sortopt_write_fd), file=error_file, flush=True)
 
+        locale_envar: str = "LC_ALL=%s" % locale if len(locale) > 0 else ""
         cmd: str = "".join((
             " { IFS= read -r header ; ", # Read the header line
             " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; ", # Send the header to Python
             " printf \"%s\\n\" \"$header\" ; ", # Send the header to standard output (which may be redirected to a file, below).
             " IFS= read -u " + str(sortopt_read_fd) + " -r options ; ", # Read the sort command options from Python.
-            " LC_ALL=C sort -t '\t' $options ; } ", # Sort the remaining input lines using the options read from Python.
+            " %s sort -t '\t' $options ; } " % (locale_envar), # Sort the remaining input lines using the options read from Python.
         ))
         if str(output_path) != "-":
             # Feed the sorted output to the named file.  Otherwise, the sorted

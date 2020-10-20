@@ -5,11 +5,6 @@ Import Visual Genome into KGTK format.
 usage: kgtk import-visualgenome [-h] [-i INPUT_FILE]
                                 [--attr-synsets ATTR_SYN_FILE]
                                 [-o OUTPUT_FILE]
-                                [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            Visual Genome scene graph file (May be omitted or '-'
-                        for stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit

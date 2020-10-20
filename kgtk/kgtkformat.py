@@ -13,6 +13,11 @@ class KgtkFormat:
     COMMENT_INDICATOR: str = "#"
     LIST_SEPARATOR: str = "|"
 
+    # This value will be used to seperate fields when building a composit
+    # sorting/grouping key.  It will work so long as \0 does not appear as
+    # part of any of the key fields.
+    KEY_FIELD_SEPARATOR: str = '\0'
+
     # These are the required columns in an edge file:
     NODE1_COLUMN_NAMES: typing.List[str] = ["node1", "from", "subject"]
     NODE2_COLUMN_NAMES: typing.List[str] = ["node2", "to", "object"]

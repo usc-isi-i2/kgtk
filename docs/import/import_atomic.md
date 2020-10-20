@@ -2,11 +2,7 @@ Import the entire ATOMIC into KGTK format.
 
 ## Usage
 ```
-usage: kgtk import-atomic [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for
-                        stdin.) (Deprecated, use -i INPUT_FILE)
+usage: kgtk import-atomic [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
 
 optional arguments:
   -h, --help            show this help message and exit
