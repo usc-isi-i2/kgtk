@@ -50,7 +50,7 @@ class KgtkIfExists(KgtkFormat):
     reject_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
-    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
+    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.KEY_FIELD_SEPARATOR)
 
     invert: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     cache_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -68,7 +68,7 @@ class KgtkIfExists(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
+    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.KEY_FIELD_SEPARATOR
     
     def get_primary_key_column(self, kr: KgtkReader, who: str)->typing.List[int]:
         if kr.is_node_file:
