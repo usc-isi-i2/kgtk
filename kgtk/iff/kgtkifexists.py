@@ -559,16 +559,19 @@ def main():
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys (default=%(default)s)",
                               default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
    
-    parser.add_argument(      "--invert", dest="invert", help="Invert the test (if not exists) (default=%(default)s).",
+    parser.add_argument(      "--invert", dest="invert", metavar="True|False",
+                              help="Invert the test (if not exists) (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--cache-input", dest="cache_input", help="Cache the input file instead of the filter keys. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--preserve-order", dest="preserve_order", help="Preserve record order when cacheing the input file. (default=%(default)s).",
+    parser.add_argument(      "--preserve-order", dest="preserve_order", metavar="True|False",
+                              help="Preserve record order when cacheing the input file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--presorted", dest="presorted", help="When True, assume that the input and filter files are both presorted.  Use a merge-style algorithm that does not require caching either file. (default=%(default)s).",
+    parser.add_argument(      "--presorted", dest="presorted", metavar="True|False",
+                              help="When True, assume that the input and filter files are both presorted.  Use a merge-style algorithm that does not require caching either file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--input-keys", dest="input_keys", help="The key columns in the input file (default=None).", nargs='*')

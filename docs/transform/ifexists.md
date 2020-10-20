@@ -5,6 +5,8 @@ This implementation, in Python, builds an in-memory dictionary of the key
 values in the --filter-on file.  Performance will be poor, and execution may
 fail, if the --filter-on file is very large.  Alternatively, the --cache-input
 option causes the code to cache the input file and not the --on-filter-file.
+Optionally, presort the input and filter files and use --presorted to avoid
+caching.
 
 By default, input records are passed in order to the output file.  When                                                                                        
 the input file is cached, the output records are order by key value (alpha                                                                                           
@@ -40,7 +42,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
                         The KGTK input file. (May be omitted or '-' for stdin.)
-  --filter-on FILTER_FILE
+  --filter-on FILTER_FILE, --filter-file FILTER_FILE
                         The KGTK file to filter against (required). (May be omitted or '-'
                         for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
@@ -53,6 +55,10 @@ optional arguments:
                         Cache the input file instead of the filter keys (default=False).
   --preserve-order [True|False]
                         Preserve record order when cacheing the input file. (default=False).
+
+  --presorted [True|False]
+                        When True, assume that the input and filter files are both presorted. Use a merge-style algorithm that does not require caching either
+                        file. (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```

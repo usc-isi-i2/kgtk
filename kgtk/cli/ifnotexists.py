@@ -49,7 +49,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_input_file(positional=True)
     parser.add_input_file(who="The KGTK file to filter against.",
-                          options=["--filter-on"], dest="filter_file", metavar="FILTER_FILE")
+                          options=["--filter-on", "--filter-file"], dest="filter_file", metavar="FILTER_FILE")
     parser.add_output_file()
     parser.add_output_file(who="The KGTK reject file for records that fail the filter.",
                            dest="reject_file",
@@ -71,7 +71,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Preserve record order when cacheing the input file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--presorted", dest="presorted", help="When True, assume that the input and filter files are both presorted.  Use a merge-style algorithm that does not require caching either file. (default=%(default)s).",
+    parser.add_argument(      "--presorted", dest="presorted", metavar="True|False",
+                              help="When True, assume that the input and filter files are both presorted.  Use a merge-style algorithm that does not require caching either file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--field-separator", dest="field_separator",
