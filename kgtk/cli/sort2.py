@@ -232,7 +232,7 @@ def run(input_file: KGTKFiles,
         key: str
         row: typing.List[str]
         for row in kr:
-            key = "\0".join(row[idx] for idx in key_idxs)
+            key = KgtkFormat.KEY_FIELD_SEPARATOR.join(row[idx] for idx in key_idxs)
             lines[key] = row
         if verbose:
             print("\nRead %d data lines." % len(lines), file=error_file, flush=True)
