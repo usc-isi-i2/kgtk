@@ -71,6 +71,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Preserve record order when cacheing the input file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--presorted", dest="presorted", help="When True, assume that the input and filter files are both presorted.  Use a merge-style algorithm that does not require caching either file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--field-separator", dest="field_separator",
                               help=h("Separator for multifield keys (default=%(default)s)"),
                               default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
@@ -91,6 +94,7 @@ def run(input_file: KGTKFiles,
         
         cache_input: bool = False,
         preserve_order: bool = False,
+        presorted: bool = False,
 
         field_separator: typing.Optional[str] = None,
 
@@ -143,6 +147,7 @@ def run(input_file: KGTKFiles,
             print("--filter-keys=%s" % " ".join(filter_keys), file=error_file)
         print("--cache-input=%s" % str(cache_input), file=error_file)
         print("--preserve-order=%s" % str(preserve_order), file=error_file)
+        print("--presortedr=%s" % str(presorted), file=error_file)
         print("--field-separator='%s'" % repr(field_separator), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
@@ -160,6 +165,7 @@ def run(input_file: KGTKFiles,
             invert=True,
             cache_input=cache_input,
             preserve_order=preserve_order,
+            presorted=presorted,
             field_separator=field_separator,
             input_reader_options=input_reader_options,
             filter_reader_options=filter_reader_options,
