@@ -44,6 +44,8 @@ optional arguments:
   --verify-sort [True|False]
                         If the input has been presorted, verify its consistency (disable if
                         only pregrouped). (default=True).
+  --lists-in-input [LISTS_IN_INPUT]
+                        Assume that the input file may contain lists (disable when certain it does not). (default=True).
   --build-id [True|False]
                         Build id values in an id column. (default=False).
   --overwrite-id [optional true|false]

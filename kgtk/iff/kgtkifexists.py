@@ -50,7 +50,7 @@ class KgtkIfExists(KgtkFormat):
     reject_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
-    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
+    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.KEY_FIELD_SEPARATOR)
 
     invert: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     cache_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -68,7 +68,7 @@ class KgtkIfExists(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
+    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.KEY_FIELD_SEPARATOR
     
     def get_primary_key_column(self, kr: KgtkReader, who: str)->typing.List[int]:
         if kr.is_node_file:
@@ -347,7 +347,7 @@ class KgtkIfExists(KgtkFormat):
             print("Accepted %d rows, rejected %d rows." % (accept_line_count, reject_line_count), file=self.error_file, flush=True)
         
     def process(self):
-        UPDATE_VERSION: str = "2020-09-10T22:20:40.887878+00:00#7nlXamYJdHaSdQloi5pdHKCBpHgYiMJMdK2pVohyCdZVlkDLzY9twJeKd0n0W9mk97vba+4l5kd6qubdETpCtA=="
+        UPDATE_VERSION: str = "2020-10-20T00:17:59.814324+00:00#EbuHEPUZTUwEzyNtkR5BuhxPXaSCQze2GEwE595ETRtwEUcrAgPganWGSJiuEW0a3Y1DWNRvQxqgHe+vlColrw=="
         if self.show_version or self.verbose:
             print("KgtkIfEfexists version: %s" % UPDATE_VERSION, file=self.error_file, flush=True)
 

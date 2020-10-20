@@ -2,6 +2,9 @@
 compacting repeated items into | lists.
 
 TODO: Need KgtkWriterOptions
+
+TODO:  --columns should list the columns to compact (default: all except the key columns).
+       --key-columns should set the key columns.
 """
 
 from argparse import Namespace, SUPPRESS

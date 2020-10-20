@@ -1262,7 +1262,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         Get the special column index, unless an overriding column
         index or name name is provided.  Returns -1 if no column found.
 
-        Note: column index values start with 0 for the first column.
+        Note: column index values start with 1 for the first column.
         """
         if column_name_or_idx is None or len(column_name_or_idx) == 0:
             return special_column_idx
@@ -1271,7 +1271,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # precedence to columns with names that are integers.
             return self.column_name_map[column_name_or_idx]
         elif column_name_or_idx.isdigit():
-            column_idx: int = int(column_name_or_idx)
+            column_idx: int = int(column_name_or_idx) - 1
             if column_idx < 0:
                 return -1
             if column_idx >= self.column_count:

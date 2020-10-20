@@ -21,7 +21,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class KgtkJoiner(KgtkFormat):
-    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
+    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.KEY_FIELD_SEPARATOR
 
     LEFT: str = "left"
     RIGHT: str = "right"
@@ -51,7 +51,7 @@ class KgtkJoiner(KgtkFormat):
 
     # The field separator used in multifield joins.  The KGTK list character should be safe.
     # TODO: USE THE COLUMN SEPARATOR !!!!!
-    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=FIELD_SEPARATOR_DEFAULT)
+    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.KEY_FIELD_SEPARATOR)
 
     # TODO: find working validators:
     left_reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)

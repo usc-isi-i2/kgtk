@@ -33,7 +33,7 @@ class KgtkCompact(KgtkFormat):
     compact_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
-    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
+    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.KEY_FIELD_SEPARATOR)
 
     sorted_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     verify_sort: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -60,7 +60,7 @@ class KgtkCompact(KgtkFormat):
     current_row: typing.Optional[typing.List[str]] = None
     current_row_lists: typing.Optional[typing.List[typing.Optional[typing.List[str]]]] = None
 
-    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
+    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.KEY_FIELD_SEPARATOR
 
     def build_key(self, row: typing.List[str], key_columns: typing.List[int])->str:
         key: str = ""
