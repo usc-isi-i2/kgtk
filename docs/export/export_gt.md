@@ -3,11 +3,6 @@ This command loads a TSV edges file into Graph-tool, and exports it to Graph-too
 ## Usage
 ```
 usage: kgtk export-gt [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--directed] [--log LOG_FILE]
-                      [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit

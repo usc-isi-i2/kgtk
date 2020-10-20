@@ -6,13 +6,8 @@ usage: kgtk remove-columns [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] -c COLUMNS [COL
                            [--split-on-commas [SPLIT_ON_COMMAS]]
                            [--split-on-spaces [SPLIT_ON_SPACES]]
                            [--strip-spaces [STRIP_SPACES]] [-v]
-                           [INPUT_FILE]
 
 Remove specific columns from a KGTK file.
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -37,12 +32,12 @@ optional arguments:
 
 Remove the columns 'other' and 'pos' from the conceptnet CSKG file
 ```
-kgtk remove-columns -c "other, pos" data/conceptnet_first10.tsv
+kgtk remove-columns -c "other, pos" -i data/conceptnet_first10.tsv
 ```
 
 Remove id and docid from Wikidata edges file
 ```
-kgtk remove-columns -c 'id, docid' data/wikidata_edges.tsv
+kgtk remove-columns -c 'id, docid' -i data/wikidata_edges.tsv
 ```
 
 Remove id and docid from Wikidata edges file piped from another command

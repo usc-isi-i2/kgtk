@@ -12,10 +12,6 @@ usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--root [ROOT 
                             [--subj SUBJECT_COLUMN_NAME] [--obj OBJECT_COLUMN_NAME] [--pred PREDICATE_COLUMN_NAME] [--props [PROPS [PROPS ...]]]
                             [--undirected [True|False]] [--label LABEL] [--selflink [True|False]] [--show-properties [True|False]] [--breadth-first [True|False]]
                             [-v]
-                            [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK file to find connected components in. (May be omitted or '-' for stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -56,5 +52,5 @@ optional arguments:
 Find all the classes that given root nodes are a subclass of (transitive closure). Root nodes are obtained from node2 of P31.tsv (instance of) file. Command is run on P279.tsv (subclass of) file. Generates P279*.tsv. 
 
 ```
-kgtk reachable-nodes P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279*.tsv
+kgtk -i reachable-nodes P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279*.tsv
 ```

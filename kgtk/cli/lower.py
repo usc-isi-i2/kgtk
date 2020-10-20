@@ -268,7 +268,7 @@ def run(input_file: KGTKFiles,
             input_line_count += 1
 
             if check_existing_labels and row[kr.label_column_idx] == label_value:
-                label_key = row[kr.node1_column_idx] + KgtkFormat.COLUMN_SEPARATOR + row[kr.node2_column_idx]
+                label_key = row[kr.node1_column_idx] + KgtkFormat.KEY_FIELD_SEPARATOR + row[kr.node2_column_idx]
                 if label_key in label_set:
                     continue
                 else:
@@ -295,7 +295,7 @@ def run(input_file: KGTKFiles,
                         continue # Ignore empty node2 values.
 
                     if deduplicate_labels:
-                        label_key = node1_value + KgtkFormat.COLUMN_SEPARATOR + node2_value
+                        label_key = node1_value + KgtkFormat.KEY_FIELD_SEPARATOR + node2_value
                         if label_key in label_set:
                             continue
                         else:

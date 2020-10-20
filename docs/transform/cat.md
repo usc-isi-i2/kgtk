@@ -21,15 +21,11 @@ Optionally, the output can be written in a selection of other formats.
 ```bash
 usage: kgtk cat [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
                 [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}] [-v]
-                [INPUT_FILE [INPUT_FILE ...]]
 
 Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
 
 Additional options are shown in expert help.
 kgtk --expert cat --help
-
-positional arguments:
-  INPUT_FILE            KGTK input files (May be omitted or '-' for stdin.) (Deprecated, use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -66,13 +62,13 @@ optional arguments:
 Combine two or more KGTK files, sending the output to standard output.
 
 ```bash
-kgtk cat file1.tsv file2.tsv
+kgtk cat -i file1.tsv file2.tsv
 ```
 
 Combine two gzipped KGTK files, sending the output to a bzip2 file.
 
 ```bash
-kgtk cat file1.tsv.gz file2.tsv.gz -o ofile.tsv.bz2
+kgtk cat -i file1.tsv.gz file2.tsv.gz -o ofile.tsv.bz2
 ```
 
 Suppose that `file1.tsv` contains the following table in KGTK format:
@@ -119,7 +115,7 @@ For example, assuming that your file(s) are edge files with
 the three required columns:
 
 ```bash
-kgtk cat file1.tsv.gz --force-column-names node 1 label node2
+kgtk cat -i file1.tsv.gz --force-column-names node 1 label node2
 ```
 # Expert Topic: Renaming Column Names
 
@@ -135,14 +131,14 @@ Overriding the column names on input can be done by skipping the existing
 header record and supplying a replacement list of column names.
 
 ```bash
-kgtk cat file1.tsv.gz --skip-header-record --force-column-names node1 label node2
+kgtk cat -i file1.tsv.gz --skip-header-record --force-column-names node1 label node2
 ```
 
 Renaming the column names on output can by done two ways.  First, you can name
 all of the new column names using --output-columns.
 
 ```bash
-kgtk cat file1.tsv.gz --output-columns node1 label node2
+kgtk cat -i file1.tsv.gz --output-columns node1 label node2
 ```
 
 Second, you can rename individual columns using --old-columns and --new-columns.
@@ -158,7 +154,7 @@ You want to rename the `origin` column to `node1`, and the `destination`
 column to `node2`.
 
 ```bash
-kgtk cat file1.tsv.gz --old-columns origin destination --new-columns node1 node2
+kgtk cat -i file1.tsv.gz --old-columns origin destination --new-columns node1 node2
 ```
 
 The result will be the following table in KGTK format:
@@ -179,7 +175,7 @@ names computed by `kgtk cat`.
 Limit the number of records read (like `head`).
 
 ```bash
-kgtk cat file1.tsv.gz --record-limit 4
+kgtk cat -i file1.tsv.gz --record-limit 4
 ```
 
 The result will be the following table in KGTK format:
@@ -194,7 +190,7 @@ The result will be the following table in KGTK format:
 Skip some number of initial records, then begin processing.
 
 ```bash
-kgtk cat file1.tsv.gz --initial-skip-count 4
+kgtk cat -i file1.tsv.gz --initial-skip-count 4
 ```
 
 The result will be the following table in KGTK format:
@@ -209,7 +205,7 @@ You must know the number of data records in the file (the number of lines
 in the file minus the header line).
 
 ```bash
-kgtk cat file1.tsv.gz --record-limit 6 --tail-count 3
+kgtk cat -i file1.tsv.gz --record-limit 6 --tail-count 3
 ```
 
 The result will be the following table in KGTK format:
@@ -225,7 +221,7 @@ the count of data lines read before skipping).  The following example will
 process every second line.
 
 ```bash
-kgtk cat file1.tsv.gz --every-nth-record 2
+kgtk cat -i file1.tsv.gz --every-nth-record 2
 ```
 
 The result will be the following table in KGTK format:

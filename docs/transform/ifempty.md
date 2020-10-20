@@ -12,16 +12,11 @@ copying the rows to the output file.
 sage: kgtk ifempty [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --columns FILTER_COLUMN_NAMES
                     [FILTER_COLUMN_NAMES ...] [--count [True|False]] [--all [True|False]]
                     [-v]
-                    [INPUT_FILE]
 
 Filter a KGTK file based on whether one or more fields are empty. When multiple fields are specified, either any field or all fields must be empty.
 
 Additional options are shown in expert help.
 kgtk --expert ifempty --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -52,7 +47,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | steve | zipcode | 45601 | work     |       |
 
 ```bash
-kgtk ifempty file1.tsv --columns location
+kgtk ifempty -i file1.tsv --columns location
 ```
 | node1 | label   | node2 | location | years |
 | ----- | ------- | ----- | -------- | ----- |
@@ -61,7 +56,7 @@ kgtk ifempty file1.tsv --columns location
 
 
 ```bash
-kgtk ifempty file1.tsv --columns years
+kgtk ifempty -i file1.tsv --columns years
 ```
 
 | node1 | label   | node2 | location | years |
@@ -71,7 +66,7 @@ kgtk ifempty file1.tsv --columns years
 | steve | zipcode | 45601 | work     |       |
 
 ```bash
-kgtk ifempty file1.tsv --columns location years
+kgtk ifempty -i file1.tsv --columns location years
 ```
 | node1 | label   | node2 | location | years |
 | ----- | ------- | ----- | -------- | ----- |
@@ -81,7 +76,7 @@ kgtk ifempty file1.tsv --columns location years
 | steve | zipcode | 45601 | work     |       |
 
 ```bash
-kgtk ifempty file1.tsv --all --columns location years
+kgtk ifempty -i file1.tsv --all --columns location years
 ```
 | node1 | label   | node2 | location | years |
 | ----- | ------- | ----- | -------- | ----- |
