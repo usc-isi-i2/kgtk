@@ -213,6 +213,7 @@ class KgtkIfExists(KgtkFormat):
         if self.verbose:
             print("Processing presorted files.", file=self.error_file, flush=True)
 
+        filter_line_count: int = 0
         input_line_count: int = 0
         accept_line_count: int = 0
         reject_line_count: int = 0
@@ -221,12 +222,21 @@ class KgtkIfExists(KgtkFormat):
         filter_key: typing.Optional[str] = None
         filter_done: bool = False
 
-        # TODO: join these two code paths using xor?
+        # Used to check if the input and filter files are properly sorted.
+        previous_filter_key: typing.Optional[str] = None
+        previous_input_key: typing.Optional[str] = None
+
         row: typing.List[str]
         input_key: str
         for row in input_kr:
             # We have read another row from the input file.
             input_line_count += 1
+            input_key = self.build_key(row, input_key_columns)
+
+            if previous_input_key is not None and previous_input_key > input_key:
+                raise ValueError("The input file is not in sorted order at row [%s]" % ", ".join([item for item in row]))
+            previous_input_key = input_key
+
             if filter_done:
                 if self.very_verbose:
                     print("Draining [%s]" % ", ".join([item for item in row]), file=self.error_file, flush=True)
@@ -241,20 +251,24 @@ class KgtkIfExists(KgtkFormat):
                         rew.write(row)
                 continue
                 
-
-            input_key = self.build_key(row, input_key_columns)
             if filter_key is None or input_key > filter_key:
                 # Either we have not yet read a filter row, or the input
                 # row is beyond the current fiklter row in sorted order.
                 # Read more filter rows.
                 for filter_row in filter_kr:
+                    filter_line_count += 1
                     filter_key = self.build_key(filter_row, filter_key_columns)
+
+                    if previous_filter_key is not None and previous_filter_key > filter_key:
+                        raise ValueError("The filter file is not in sorted order at row [%s]" % ", ".join([item for item in filter_row]))
+                    previous_filter_key = filter_key
+
                     if input_key <= filter_key:
                         # Either we have a match, or the filter row is now beyond
                         # the input row in sorted order.
                         break
                     if self.very_verbose:
-                        print("Skipping filter row [%s]" ", ".join([item for intem in filter_row]), file=self.error_file, flush=True)
+                        print("Skipping filter row [%s]" % ", ".join([item for intem in filter_row]), file=self.error_file, flush=True)
                 else:
                     # The filter file has run out of filter rows.
                     if self.very_verbose:
@@ -289,8 +303,18 @@ class KgtkIfExists(KgtkFormat):
                     if ew is not None:
                         ew.write(row)
 
+        if not filter_done:
+            # Drain the filter file, checking for record order.
+            for filter_row in filter_kr:
+                filter_line_count += 1
+                filter_key = self.build_key(filter_row, filter_key_columns)
+
+                if previous_filter_key is not None and previous_filter_key > filter_key:
+                    raise ValueError("The filter file is not in sorted order at row [%s]" % ", ".join([item for item in filter_row]))
+                previous_filter_key = filter_key
+
         if self.verbose:
-            print("Read %d records, accepted %d records, rejected %d records." % (input_line_count, accept_line_count, reject_line_count),
+            print("Read %d records, accepted %d records, rejected %d records using %d filter records." % (input_line_count, accept_line_count, reject_line_count, filter_line_count),
                   file=self.error_file, flush=True)
         
 
