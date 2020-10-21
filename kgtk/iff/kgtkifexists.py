@@ -565,7 +565,7 @@ class KgtkIfExists(KgtkFormat):
                   file=self.error_file, flush=True)
         
     def process(self):
-        UPDATE_VERSION: str = "2020-10-20T00:17:59.814324+00:00#EbuHEPUZTUwEzyNtkR5BuhxPXaSCQze2GEwE595ETRtwEUcrAgPganWGSJiuEW0a3Y1DWNRvQxqgHe+vlColrw=="
+        UPDATE_VERSION: str = "2020-10-21T20:48:33.736052+00:00#NprtfMUBtblTekUVL3wClpM7cXvWiiqxaDscVnO3Z2F7giWCZNrCOGQHrp+W4HRcQ0BDtKCCIwSxwUK42InURA=="
         if self.show_version or self.verbose:
             print("KgtkIfEfexists version: %s" % UPDATE_VERSION, file=self.error_file, flush=True)
 
