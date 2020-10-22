@@ -16,9 +16,9 @@ echo -e "\nCount unique datatypes in ${DATADIR}/part.property.tsv"
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
      --input-file ${DATADIR}/part.property.tsv \
-     --output-file ${DATADIR}/property.datatypes.tsv \
+     --output-file ${DATADIR}/part.property.datatypes.tsv \
      --column "node2;wikidatatype" \
-    |& tee ${LOGDIR}/property.datatypes.log
+    |& tee ${LOGDIR}/part.property.datatypes.log
 
 # ==============================================================================
 # Split the properties by datatype.
@@ -121,6 +121,23 @@ kgtk ${KGTK_FLAGS} \
     |& tee ${LOGDIR}/edge-datatype-split.log
 
 # ==============================================================================
+for TARGET in \
+    all.datatypes \
+	part.property.datatypes
+do
+    echo -e "\nCompress the sorted ${TARGET} file."
+    time gzip --keep --force --verbose \
+	 ${DATADIR}/${TARGET_NAME}.tsv \
+	|& tee ${LOGDIR}/${TARGET_NAME}-compress.log
+
+    echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
+    time rsync --archive --verbose \
+	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
+	 ${PRODUCTDIR}/ \
+	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
+done
+    
+
 for TARGET in \
     commonsMedia \
 	external-id \
