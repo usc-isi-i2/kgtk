@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, RawDescriptionHelpFormatter, Namespace
+from argparse import ArgumentParser, RawDescriptionHelpFormatter, Namespace, SUPPRESS
 from functools import partial
 from pathlib import Path
 import typing
@@ -59,29 +59,40 @@ class KGTKArgumentParser(ArgumentParser):
         helpstr: str
         if who is None:
             helpstr = "The " + default_help + "."
+        elif who == SUPPRESS:
+            helpstr = SUPPRESS
         else:
             helpstr = who
 
         if optional:
             # Not required, no default. Positional output not allowed, lists not allowed.
             if allow_stdio:
-                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr + " (Optional, use '-' for %s.)" % stdio_name)
+                if helpstr != SUPPRESS:
+                    helpstr += " (Optional, use '-' for %s.)" % stdio_name
+                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr)
             else:
-                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr + " (Optional)")
+                if helpstr != SUPPRESS:
+                    helpstr += " (Optional)"
+                self.add_argument(*options, dest=dest, type=Path, metavar=metavar, help=helpstr)
             return
 
         # This is a required file, defaulting to stdio.
-        if allow_stdio:
-            if default_stdio:
-                helpstr += " (May be omitted or '-' for %s.)" % stdio_name
+        if helpstr != SUPPRESS:
+            if allow_stdio:
+                if default_stdio:
+                    helpstr += " (May be omitted or '-' for %s.)" % stdio_name
+                else:
+                    helpstr += " (Required, use '-' for %s.)" % stdio_name
             else:
-                helpstr += " (Required, use '-' for %s.)" % stdio_name
-        else:
-            helpstr += " (Required)"
+                helpstr += " (Required)"
 
         positional &= self.SUPPORT_POSITIONAL_ARGS
         if positional:
-            helpstr2: str = helpstr + " (Deprecated, use %s %s)" % (options[0], metavar)            
+            helpstr2: str
+            if helpstr == SUPPRESS:
+                helpstr2 = SUPPRESS
+            else:
+                helpstr2 = helpstr + " (Deprecated, use %s %s)" % (options[0], metavar)            
 
         if allow_list:
             if positional:
