@@ -274,6 +274,23 @@ def run(input_file: KGTKFiles,
             " %s sort -t '\t' $options ; } " % (locale_envar), # Sort the remaining input lines using the options read from Python.
         ))
         if str(output_path) != "-":
+            # Do we want to compress the output?
+            output_suffix: str = output_path.suffix.lower()
+            if output_suffix in [".gz", ".z"]:
+                if verbose:
+                    print("gzip output file: %s" % str(output_path), file=error_file, flush=True)
+                cmd += " | gzip -"
+
+            elif output_suffix in [".bz2", ".bz"]:
+                if verbose:
+                    print("bzip2 output file: %s" % str(output_path), file=error_file, flush=True)
+                cmd += " | bzip2 -z"
+
+            elif output_suffix in [".xz", ".lzma"]:
+                if verbose:
+                    print("xz output file: %s" % str(output_path), file=error_file, flush=True)
+                cmd += " | xz -z -"
+
             # Feed the sorted output to the named file.  Otherwise, the sorted
             # output goes to standard output without passing through Python.
             cmd += " > " + repr(str(output_path))
@@ -328,7 +345,8 @@ def run(input_file: KGTKFiles,
 
         else:
             # Feed the named file into the data processing pipeline,
-            if input_path.suffix.lower() in [".gz", ".z"]:
+            input_suffix: str = input_path.suffix.lower()
+            if input_suffix in [".gz", ".z"]:
                 if verbose:
                     print("gunzip input file: %s" % str(input_path), file=error_file, flush=True)
                 cat_proc = sh.gzip(input_path, "-dc",
@@ -336,7 +354,7 @@ def run(input_file: KGTKFiles,
                                    _bg=True, _bg_exc=False, _internal_bufsize=1,
                                    _done=cat_done)
 
-            elif input_path.suffix.lower() in [".bz2", ".bz"]:
+            elif input_suffix in [".bz2", ".bz"]:
                 if verbose:
                     print("bunzip2 input file: %s" % str(input_path), file=error_file, flush=True)
                 cat_proc = sh.bzip2(input_path, "-dc",
@@ -344,7 +362,7 @@ def run(input_file: KGTKFiles,
                                     _bg=True, _bg_exc=False, _internal_bufsize=1,
                                     _done=cat_done)
 
-            elif input_path.suffix.lower() in [".xz", ".lzma"]:
+            elif input_suffix in [".xz", ".lzma"]:
                 if verbose:
                     print("unxz input file: %s" % str(input_path), file=error_file, flush=True)
                 cat_proc = sh.xz(input_path, "-dc",
