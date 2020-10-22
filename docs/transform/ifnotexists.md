@@ -45,6 +45,12 @@ optional arguments:
                         for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        The KGTK reject file for records that fail the filter. (Optional, use '-' for stdout.)
+  --matched-filter-file MATCHED_FILTER_FILE
+                        The KGTK file for filter records that matched at least one input record. (Optional, use '-' for stdout.)
+  --unmatched-filter-file UNMATCHED_FILTER_FILE
+                        The KGTK file for filter records that did not match any input records. (Optional, use '-' for stdout.)
   --input-keys [INPUT_KEYS [INPUT_KEYS ...]], --left-keys [INPUT_KEYS [INPUT_KEYS ...]]
                         The key columns in the file being filtered (default=None).
   --filter-keys [FILTER_KEYS [FILTER_KEYS ...]], --right-keys [FILTER_KEYS [FILTER_KEYS ...]]

@@ -57,6 +57,24 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            metavar="REJECT_FILE",
                            optional=True)
 
+    parser.add_output_file(who="The KGTK file for filter records that matched at least one input record.",
+                           dest="matched_filter_file",
+                           options=["--matched-filter-file"],
+                           metavar="MATCHED_FILTER_FILE",
+                           optional=True)
+
+    parser.add_output_file(who="The KGTK file for filter records that did not match any input records.",
+                           dest="unmatched_filter_file",
+                           options=["--unmatched-filter-file"],
+                           metavar="UNMATCHED_FILTER_FILE",
+                           optional=True)
+
+    parser.add_output_file(who=h("The KGTK file for joined output records (EXPERIMENTAL)."),
+                           dest="join_file",
+                           options=["--join-file"],
+                           metavar="JOIN_FILE",
+                           optional=True)
+
     parser.add_argument(      "--input-keys", "--left-keys", dest="input_keys",
                               help="The key columns in the file being filtered (default=None).", nargs='*')
 
@@ -79,6 +97,20 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("Separator for multifield keys (default=%(default)s)"),
                               default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
 
+    parser.add_argument(      "--left-join", dest="left_join",  metavar="True|False",
+                              help=h("When True, Include all input records in the join (EXPERIMENTAL). (default=%(default)s)."),
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--right-join", dest="right_join",  metavar="True|False",
+                              help=h("When True, Include all filter records in the join (EXPERIMENTAL). (default=%(default)s)."),
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--input-prefix", dest="input_prefix",
+                              help=h("Input file column name prefix for joins (EXPERIMENTAL). (default=%(default)s)"))
+
+    parser.add_argument(      "--filter-prefix", dest="filter_prefix",
+                              help=h("Filter file column name prefix for joins (EXPERIMENTAL). (default=%(default)s)"))
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
@@ -89,6 +121,9 @@ def run(input_file: KGTKFiles,
         filter_file: KGTKFiles,
         output_file: KGTKFiles,
         reject_file: KGTKFiles,
+        matched_filter_file: KGTKFiles,
+        unmatched_filter_file: KGTKFiles,
+        join_file: KGTKFiles,
 
         input_keys: typing.Optional[typing.List[str]],
         filter_keys: typing.Optional[typing.List[str]],
@@ -98,6 +133,11 @@ def run(input_file: KGTKFiles,
         presorted: bool = False,
 
         field_separator: typing.Optional[str] = None,
+
+        left_join: bool = False,
+        right_join: bool = False,
+        input_prefix: typing.Optional[str] = None,
+        filter_prefix: typing.Optional[str] = None,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -121,6 +161,9 @@ def run(input_file: KGTKFiles,
     filter_kgtk_file: Path = KGTKArgumentParser.get_input_file(filter_file, who="KGTK filter file")
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
     reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="KGTK reject file")
+    matched_filter_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(matched_filter_file, who="KGTK matched filter file")
+    unmatched_filter_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(unmatched_filter_file, who="KGTK unmatched filter file")
+    join_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(join_file, who="KGTK join file")
 
     if (str(input_kgtk_file) == "-" and str(filter_kgtk_file) == "-"):
         raise KGTKException("My not use stdin for both --input-file and --filter-on files.")
@@ -138,10 +181,16 @@ def run(input_file: KGTKFiles,
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("input: %s" % (str(input_kgtk_file) if input_kgtk_file is not None else "-"), file=error_file)
+        print("--filter-file=%s" % (str(filter_kgtk_file) if filter_kgtk_file is not None else "-"), file=error_file)
         print("--output-file=%s" % (str(output_kgtk_file) if output_kgtk_file is not None else "-"), file=error_file)
         if reject_kgtk_file is not None:
             print("--reject-file=%s" % str(reject_kgtk_file), file=error_file)
-        print("--filter-on=%s" % (str(filter_kgtk_file) if filter_kgtk_file is not None else "-"), file=error_file)
+        if matched_filter_kgtk_file is not None:
+            print("--matched-filter-file=%s" % str(matched_filter_kgtk_file), file=error_file)
+        if unmatched_filter_kgtk_file is not None:
+            print("--unmatched-filter-file=%s" % str(unmatched_filter_kgtk_file), file=error_file)
+        if join_kgtk_file is not None:
+            print("--join-file=%s" % str(join_kgtk_file), file=error_file)
         if input_keys is not None:
             print("--input-keys=%s" % " ".join(input_keys), file=error_file)
         if filter_keys is not None:
@@ -150,6 +199,12 @@ def run(input_file: KGTKFiles,
         print("--preserve-order=%s" % str(preserve_order), file=error_file)
         print("--presortedr=%s" % str(presorted), file=error_file)
         print("--field-separator='%s'" % repr(field_separator), file=error_file)
+        print("--left-join=%s" % str(left_join), file=error_file)
+        print("--right-join=%s" % str(right_join), file=error_file)
+        if input_prefix is not None:
+            print("--input-prefix=%s" % repr(input_prefix), file=error_file)
+        if filter_prefix is not None:
+            print("--filter-prefix=%s" % repr(filter_prefix), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
         value_options.show(out=error_file)
@@ -163,6 +218,13 @@ def run(input_file: KGTKFiles,
             filter_keys=filter_keys,
             output_file_path=output_kgtk_file,
             reject_file_path=reject_kgtk_file,
+            matched_filter_file_path=matched_filter_kgtk_file,
+            unmatched_filter_file_path=unmatched_filter_kgtk_file,
+            join_file_path=join_kgtk_file,
+            left_join=left_join,
+            right_join=right_join,
+            input_prefix=input_prefix,
+            filter_prefix=filter_prefix,
             invert=True,
             cache_input=cache_input,
             preserve_order=preserve_order,

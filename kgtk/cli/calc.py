@@ -139,6 +139,8 @@ def run(input_file: KGTKFiles,
         ellipses: str = "..." # All unmentioned columns
         ranger: str = ".." # All columns between two columns.
 
+        idx: int
+
         saw_ranger: bool = False
         column_name: str
         for column_name in column_names:
@@ -181,7 +183,7 @@ def run(input_file: KGTKFiles,
                     end_idx = column_name_idx + 1
                     idx_inc = -1
 
-                idx: int = start_idx
+                idx = start_idx
                 while idx <= end_idx:
                     idx_column_name: str = kr.column_names[idx]
                     if idx_column_name not in remaining_names:
@@ -242,7 +244,6 @@ def run(input_file: KGTKFiles,
         )
 
         fs: str = format_string if format_string is not None else "%5.2f"
-        idx: int
         item: str
         
         input_data_lines: int = 0
