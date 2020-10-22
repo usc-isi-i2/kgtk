@@ -10,8 +10,39 @@ source common.sh
 mkdir --verbose ${DATADIR}
 mkdir --verbose ${LOGDIR}
 
+DATATYPES=( \
+	    "commonsMedia" \
+		"external-id" \
+		"geo-shape" \
+		"globe-coordinate" \
+		"math" \
+		"monolingualtext" \
+		"musical-notation" \
+		"quantity" \
+		"string" \
+		"tabular-data" \
+		"time" \
+		"url" \
+		"wikibase-form" \
+		"wikibase-item" \
+		"wikibase-lexeme" \
+		"wikibase-property" \
+		"wikibase-sense" \
+		"other" \
+    )
+
 # ==============================================================================
-# Count the property datatypes.
+# Count the edge datatype distribution.
+echo -e "\nCount unique datatypes in ${DATADIR}/all.tsv"
+kgtk ${KGTK_FLAGS} \
+     unique ${VERBOSE} \
+     --input-file ${DATADIR}/all.tsv \
+     --output-file ${DATADIR}/all.datatypes.tsv \
+     --column "node2;wikidatatype" \
+    |& tee ${LOGDIR}/all.datatypes.log
+
+# ==============================================================================
+# Count the property datatype distribution.
 echo -e "\nCount unique datatypes in ${DATADIR}/part.property.tsv"
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
@@ -20,6 +51,20 @@ kgtk ${KGTK_FLAGS} \
      --column "node2;wikidatatype" \
     |& tee ${LOGDIR}/part.property.datatypes.log
 
+# ==============================================================================
+# Deliver the datatype distributions.  They are small, so don't bother
+# compressing them.
+for TARGET in \
+    all.datatypes \
+	part.property.datatypes
+do
+    echo -e "\nDeliver ${TARGET_NAME} file to the KGTK Google Drive."
+    time rsync --archive --verbose \
+	 ${DATADIR}/${TARGET_NAME}.tsv \
+	 ${PRODUCTDIR}/ \
+	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
+done
+    
 # ==============================================================================
 # Split the properties by datatype.
 echo -e "\nSplit ${DATADIR}/part.property.tsv by datatype"
@@ -66,14 +111,42 @@ kgtk ${KGTK_FLAGS} \
     |& tee ${LOGDIR}/property-datatype-split.log
 
 # ==============================================================================
-# Count the edge datatypes.
-echo -e "\nCount unique datatypes in ${DATADIR}/all.tsv"
-kgtk ${KGTK_FLAGS} \
-     unique ${VERBOSE} \
-     --input-file ${DATADIR}/all.tsv \
-     --output-file ${DATADIR}/all.datatypes.tsv \
-     --column "node2;wikidatatype" \
-    |& tee ${LOGDIR}/all.datatypes.log
+# Compress and deliver the property datatypes.
+for TARGET in ${DATATYPES[@]}
+do
+    TARGET_NAME=part.property.${TARGET}
+    echo -e "\nCompress the sorted ${TARGET} file."
+    time gzip --keep --force --verbose \
+	 ${DATADIR}/${TARGET_NAME}.tsv \
+	|& tee ${LOGDIR}/${TARGET_NAME}-compress.log
+
+    echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
+    time rsync --archive --verbose \
+	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
+	 ${PRODUCTDIR}/ \
+	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
+
+    echo -e "\nExtract any qualifiers for the properties in ${TARGET_NAME}."
+    kgtk ${KGTK_FLAGS} \
+	 ifexists ${VERBOSE} \
+	 --input-file ${DATADIR}/part.property.qual.tsv \
+	 --filter-on ${DATADIR}/${TARGET_NAME}.tsv \
+	 --output-file ${DATADIR}/${TARGET_NAME}.qual.tsv \
+	 --input-keys node1 \
+	 --filter-keys id \
+	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers.log
+	 
+    echo -e "\nCompress the sorted qualifiers for the ${TARGET} properties."
+    time gzip --keep --force --verbose \
+	 ${DATADIR}/${TARGET_NAME}.qual.tsv \
+	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers-compress.log
+
+    echo -e "\nDeliver the compressed qualifiers for ${TARGET_NAME} file to the KGTK Google Drive."
+    time rsync --archive --verbose \
+	 ${DATADIR}/${TARGET_NAME}.qual.tsv.gz \
+	 ${PRODUCTDIR}/ \
+	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers-deliver.log
+done
 
 # ==============================================================================
 # Split the edges by datatype.
@@ -121,75 +194,9 @@ kgtk ${KGTK_FLAGS} \
     |& tee ${LOGDIR}/edge-datatype-split.log
 
 # ==============================================================================
-for TARGET in \
-    all.datatypes \
-	part.property.datatypes
+# Compress and deliver the edge datatypes.
+for TARGET in ${DATATYPES[@]}
 do
-    echo -e "\nCompress the sorted ${TARGET} file."
-    time gzip --keep --force --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv \
-	|& tee ${LOGDIR}/${TARGET_NAME}-compress.log
-
-    echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
-    time rsync --archive --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
-	 ${PRODUCTDIR}/ \
-	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
-done
-    
-
-for TARGET in \
-    commonsMedia \
-	external-id \
-	geo-shape \
-	globe-coordinate \
-	math \
-	monolingualtext \
-	musical-notation \
-	quantity \
-	string \
-	tabular-data \
-	time \
-	url \
-	wikibase-form \
-	wikibase-item \
-	wikibase-lexeme \
-	wikibase-property \
-	wikibase-sense \
-	other
-do
-    TARGET_NAME=part.property.${TARGET}
-    echo -e "\nCompress the sorted ${TARGET} file."
-    time gzip --keep --force --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv \
-	|& tee ${LOGDIR}/${TARGET_NAME}-compress.log
-
-    echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
-    time rsync --archive --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
-	 ${PRODUCTDIR}/ \
-	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
-
-    echo -e "\nExtract any qualifiers for the properties in ${TARGET_NAME}."
-    kgtk ${KGTK_FLAGS} \
-	 ifexists ${VERBOSE} \
-	 --input-file ${DATADIR}/qual.tsv \
-	 --filter-on ${DATADIR}/${TARGET_NAME}.tsv \
-	 --output-file ${DATADIR}/${TARGET_NAME}.qual.tsv \
-	 --input-keys node1 \
-	 --filter-keys id \
-	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers.log
-	 
-    echo -e "\nCompress the sorted qualifiers for the ${TARGET} properties."
-    time gzip --keep --force --verbose \
-	 ${DATADIR}/${TARGET_NAME}-.qual.tsv \
-	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers-compress.log
-
-    echo -e "\nDeliver the compressed qualifiers for ${TARGET_NAME} file to the KGTK Google Drive."
-    time rsync --archive --verbose \
-	 ${DATADIR}/${TARGET_NAME}.qual.tsv.gz \
-	 ${PRODUCTDIR}/ \
-	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers-deliver.log
     TARGET_NAME=part.${TARGET}
     echo -e "\nCompress the sorted ${TARGET} file."
     time gzip --keep --force --verbose \
@@ -214,7 +221,7 @@ do
 	 
     echo -e "\nCompress the sorted qualifiers for the ${TARGET} properties."
     time gzip --keep --force --verbose \
-	 ${DATADIR}/${TARGET_NAME}-.qual.tsv \
+	 ${DATADIR}/${TARGET_NAME}.qual.tsv \
 	|& tee ${LOGDIR}/${TARGET_NAME}-qualifiers-compress.log
 
     echo -e "\nDeliver the compressed qualifiers for ${TARGET_NAME} file to the KGTK Google Drive."
