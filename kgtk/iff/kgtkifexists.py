@@ -23,6 +23,8 @@ the input file's order in the output file.
 TODO: Study the time and space tradeoff between process_cacheing_input(...)
 and process_cacheing_input_preserving_order(...).  Perhaps there's no reason
 for both algorithms?
+
+TODO: The join logic for inverted tests is questionable.
 """
 
 from argparse import ArgumentParser, Namespace
@@ -34,6 +36,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -53,7 +56,20 @@ class KgtkIfExists(KgtkFormat):
     matched_filter_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
     unmatched_filter_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
-    # The field separator used in multifield joins.  The KGHT list character should be safe.
+    join_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
+
+    # left_join == False and right_join == False: inner join
+    # left_join == True and right_join == False: left join
+    # left_join == False and right_join == True: right join
+    # left_join = True and right_join == True: outer join
+    left_join: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    right_join: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # The prefix applied to left and right file column names in the output file:
+    input_prefix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    filter_prefix: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    # The field separator used in multifield joins.
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.KEY_FIELD_SEPARATOR)
 
     invert: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -156,7 +172,9 @@ class KgtkIfExists(KgtkFormat):
                                 rew: typing.Optional[KgtkWriter] = None,
                                 mfew: typing.Optional[KgtkWriter] = None, # matched filters
                                 ufew: typing.Optional[KgtkWriter] = None, # unmatched filters
-    ):
+                                jw: typing.Optional[KgtkWriter] = None, # unmatched filters
+                                join_shuffle_list: typing.Optional[typing.List[int]] = None, # for join output
+                                ):
         if self.verbose:
             print("Processing by cacheing the filter file's key set.", file=self.error_file, flush=True)
 
@@ -165,7 +183,7 @@ class KgtkIfExists(KgtkFormat):
         key_set: typing.Set[str]
         filter_cache: typing.List[typing.List[str]]
         unmatched_key_set: typing.Optional[typing.Set[str]]
-        if mfew is None  and ufew is None:
+        if mfew is None  and ufew is None and jw is None:
             key_set = self.extract_key_set(filter_kr, "filter", filter_key_columns)
             filter_cache = list()
             unmatched_key_set = None
@@ -183,6 +201,7 @@ class KgtkIfExists(KgtkFormat):
         input_line_count: int = 0
         accept_line_count: int = 0
         reject_line_count: int = 0
+        joined_line_count: int = 0
 
         # TODO: join these two code paths using xor?
         row: typing.List[str]
@@ -195,10 +214,16 @@ class KgtkIfExists(KgtkFormat):
                     accept_line_count += 1
                     if ew is not None:
                         ew.write(row)
+                    if jw is not None:
+                        joined_line_count += 1
+                        jw.write(row)
                 else:
                     reject_line_count += 1
                     if rew is not None:
                         rew.write(row)
+                    if jw is not None and self.left_join:
+                        joined_line_count += 1
+                        jw.write(row)
                     if unmatched_key_set is not None:
                         unmatched_key_set.discard(input_key)
         else:
@@ -209,12 +234,18 @@ class KgtkIfExists(KgtkFormat):
                     accept_line_count += 1
                     if ew is not None:
                         ew.write(row)
+                    if jw is not None:
+                        joined_line_count += 1
+                        jw.write(row)
                     if unmatched_key_set is not None:
                         unmatched_key_set.discard(input_key)
                 else:
                     reject_line_count += 1
                     if rew is not None:
                         rew.write(row)
+                    if jw is not None and self.left_join:
+                        joined_line_count += 1
+                        jw.write(row)
 
         if self.verbose:
             print("Read %d input records, accepted %d records, rejected %d records." % (input_line_count, accept_line_count, reject_line_count),
@@ -235,15 +266,24 @@ class KgtkIfExists(KgtkFormat):
                     unmatched_filter_line_count += 1
                     if ufew is not None:
                         ufew.write(row)
+                    if jw is not None and self.right_join:
+                        joined_line_count += 1
+                        jw.write(row, shuffle_list=join_shuffle_list)
                 else:
                     matched_filter_line_count += 1
                     if mfew is not None:
                         mfew.write(row)
+                    if jw is not None:
+                        joined_line_count += 1
+                        jw.write(row, shuffle_list=join_shuffle_list)
             if self.verbose:
                 print("Read %d filter records, %d found matching input records, %d did not find matches." % (filter_line_count,
                                                                                                              matched_filter_line_count,
                                                                                                              unmatched_filter_line_count),
                       file=self.error_file, flush=True)
+
+        if self.verbose and jw is not None:
+            print("Wrote %d joined records." % joined_line_count, file=self.error_file, flush=True)
         
 
     def process_presorted_files(self,
@@ -255,6 +295,8 @@ class KgtkIfExists(KgtkFormat):
                                 rew: typing.Optional[KgtkWriter] = None,
                                 mfew: typing.Optional[KgtkWriter] = None, # matched filters
                                 ufew: typing.Optional[KgtkWriter] = None, # unmatched filters
+                                jw: typing.Optional[KgtkWriter] = None, # unmatched filters
+                                join_shuffle_list: typing.Optional[typing.List[int]] = None, # for join output
     ):
         if self.verbose:
             print("Processing presorted files.", file=self.error_file, flush=True)
@@ -263,6 +305,7 @@ class KgtkIfExists(KgtkFormat):
         input_line_count: int = 0
         accept_line_count: int = 0
         reject_line_count: int = 0
+        joined_line_count: int = 0
 
         filter_row: typing.Optional[typing.List[str]] = None
         filter_key: typing.Optional[str] = None
@@ -295,20 +338,29 @@ class KgtkIfExists(KgtkFormat):
                     accept_line_count += 1
                     if ew is not None:
                         ew.write(row)
+                    if jw is not None:
+                        joined_line_count += 1
+                        jw.write(row)
                 else:
                     reject_line_count += 1
                     if rew is not None:
                         rew.write(row)
+                    if jw is not None and self.left_join:
+                        joined_line_count += 1
+                        jw.write(row)
                 continue
                 
             if filter_key is None or input_key > filter_key:
                 # Either we have not yet read a filter row, or the input
                 # row is beyond the current filter row in sorted order.
-                if filter_key is not None and not saw_match:
+                if filter_key is not None and filter_row is not None and not saw_match:
                     # We read a filter row, but did not find a match for it.
                     unmatched_filter_line_count += 1
                     if ufew is not None and filter_row is not None:
                         ufew.write(filter_row)
+                    if jw is not None and self.right_join:
+                        joined_line_count += 1
+                        jw.write(filter_row, shuffle_list=join_shuffle_list)
                         
                 # Read more filter rows.
                 for filter_row in filter_kr:
@@ -329,6 +381,10 @@ class KgtkIfExists(KgtkFormat):
                     unmatched_filter_line_count += 1
                     if ufew is not None:
                         ufew.write(filter_row)
+                    if jw is not None and self.right_join:
+                        joined_line_count += 1
+                        jw.write(filter_row, shuffle_list=join_shuffle_list)
+
                 else:
                     # The filter file has run out of filter rows.
                     if self.very_verbose:
@@ -345,10 +401,16 @@ class KgtkIfExists(KgtkFormat):
                     accept_line_count += 1
                     if ew is not None:
                         ew.write(row)
+                    if jw is not None:
+                        joined_line_count += 1
+                        jw.write(row)
                 else:
                     reject_line_count += 1
                     if rew is not None:
                         rew.write(row)
+                    if jw is not None and self.left_join:
+                        joined_line_count += 1
+                        jw.write(row)
                         
             else: # input_key == filter_key
                 # If we get here, the input row has a matching filter row.
@@ -357,6 +419,9 @@ class KgtkIfExists(KgtkFormat):
                     matched_filter_line_count += 1
                     if mfew is not None and filter_row is not None:
                         mfew.write(filter_row)
+                    if jw is not None and filter_row is not None:
+                        joined_line_count += 1
+                        jw.write(filter_row, shuffle_list=join_shuffle_list)
                     saw_match = True
                 if self.very_verbose:
                     print("Keep this input row: [%s]" % ", ".join([item for item in row]), file=self.error_file, flush=True)
@@ -364,10 +429,16 @@ class KgtkIfExists(KgtkFormat):
                     reject_line_count += 1
                     if rew is not None:
                         rew.write(row)
+                    if jw is not None and self.left_join:
+                        joined_line_count += 1
+                        jw.write(row)
                 else:
                     accept_line_count += 1
                     if ew is not None:
                         ew.write(row)
+                    if jw is not None:
+                        joined_line_count += 1
+                        jw.write(row)
 
         if not filter_done:
             # Drain the filter file, checking for record order.
@@ -382,6 +453,9 @@ class KgtkIfExists(KgtkFormat):
                 unmatched_filter_line_count += 1
                 if ufew is not None:
                     ufew.write(filter_row)
+                if jw is not None and self.right_join:
+                    joined_line_count += 1
+                    jw.write(filter_row, shuffle_list=join_shuffle_list)
 
         if self.verbose:
             print("Read %d input records, accepted %d records, rejected %d records." % (input_line_count, accept_line_count, reject_line_count),
@@ -390,7 +464,10 @@ class KgtkIfExists(KgtkFormat):
                                                                                                          matched_filter_line_count,
                                                                                                          unmatched_filter_line_count),
                   file=self.error_file, flush=True)
-        
+
+        if self.verbose and jw is not None:
+            print("Wrote %d joined records." % joined_line_count, file=self.error_file, flush=True)
+
 
     def process_cacheing_input(self,
                                input_kr: KgtkReader,
@@ -401,12 +478,15 @@ class KgtkIfExists(KgtkFormat):
                                rew: typing.Optional[KgtkWriter] = None,
                                mfew: typing.Optional[KgtkWriter] = None, # matched filters
                                ufew: typing.Optional[KgtkWriter] = None, # unmatched filters
+                               jw: typing.Optional[KgtkWriter] = None, # unmatched filters
+                               join_shuffle_list: typing.Optional[typing.List[int]] = None, # for join output
     ):
         if self.verbose:
             print("Processing by cacheing the input file.")
         input_line_count: int = 0
         accept_line_count: int = 0
         reject_line_count: int = 0
+        joined_line_count: int = 0
         
         filter_line_count: int = 0
         matched_filter_line_count: int = 0
@@ -441,6 +521,9 @@ class KgtkIfExists(KgtkFormat):
                 matched_filter_line_count += 1
                 if mfew is not None:
                     mfew.write(row)
+                if jw is not None:
+                    joined_line_count += 1
+                    jw.write(row, shuffle_list=join_shuffle_list)
                 if self.invert:
                     if filter_key in outputmap:
                         del outputmap[filter_key]
@@ -450,6 +533,9 @@ class KgtkIfExists(KgtkFormat):
                 unmatched_filter_line_count += 1
                 if ufew is not None:
                     ufew.write(row)
+                if jw is not None and self.right_join:
+                    joined_line_count += 1
+                    jw.write(row, shuffle_list=join_shuffle_list)
 
         # To simplify debugging, write the output data in sorted order (keys,
         # then input order).
@@ -461,6 +547,9 @@ class KgtkIfExists(KgtkFormat):
                 accept_line_count += 1
                 if ew is not None:
                     ew.write(row)
+                if jw is not None:
+                    joined_line_count += 1
+                    jw.write(row)
 
         # To simplify debugging, write the reject data in sorted order (keys,
         # then input order).
@@ -472,7 +561,9 @@ class KgtkIfExists(KgtkFormat):
                     reject_line_count += 1
                     if rew is not None:
                         rew.write(row)
-            
+                    if jw is not None and self.left_join:
+                        joined_line_count += 1
+                        jw.write(row)
 
         if self.verbose:
             print("Read %d input records, accepted %d records, rejected %d records." % (input_line_count, accept_line_count, reject_line_count),
@@ -481,6 +572,9 @@ class KgtkIfExists(KgtkFormat):
                                                                                                          matched_filter_line_count,
                                                                                                          unmatched_filter_line_count),
                   file=self.error_file, flush=True)
+
+        if self.verbose and jw is not None:
+            print("Wrote %d joined records." % joined_line_count, file=self.error_file, flush=True)
 
     def process_cacheing_input_preserving_order(self,
                                                 input_kr: KgtkReader,
@@ -491,6 +585,8 @@ class KgtkIfExists(KgtkFormat):
                                                 rew: typing.Optional[KgtkWriter] = None,
                                                 mfew: typing.Optional[KgtkWriter] = None, # matched filters
                                                 ufew: typing.Optional[KgtkWriter] = None, # unmatched filters
+                                                jw: typing.Optional[KgtkWriter] = None, # unmatched filters
+                                                join_shuffle_list: typing.Optional[typing.List[int]] = None, # for join output
                                                 ):
         # This algorithm preserves the input file's record order in the output file,
         # at the cost of extra work building keys.
@@ -520,6 +616,7 @@ class KgtkIfExists(KgtkFormat):
         filter_line_count: int = 0
         matched_filter_line_count: int = 0
         unmatched_filter_line_count: int = 0
+        joined_line_count: int = 0
         row: typing.List[str]
         for row in filter_kr:
             filter_line_count += 1
@@ -528,6 +625,9 @@ class KgtkIfExists(KgtkFormat):
                 matched_filter_line_count += 1
                 if mfew is not None:
                     mfew.write(row)
+                if jw is not None:
+                    joined_line_count += 1
+                    jw.write(row, shuffle_list=join_shuffle_list)
                 if self.invert:
                     if filter_key in output_key_set:
                         output_key_set.remove(filter_key)
@@ -537,6 +637,9 @@ class KgtkIfExists(KgtkFormat):
                 unmatched_filter_line_count += 1
                 if ufew is not None:
                     ufew.write(row)
+                if jw is not None and self.right_join:
+                    joined_line_count += 1
+                    jw.write(row, shuffle_list=join_shuffle_list)
 
         if self.verbose:
             print("Read %d filter records, %d found matching input records, %d did not find matches." % (filter_line_count,
@@ -555,17 +658,24 @@ class KgtkIfExists(KgtkFormat):
                 accept_line_count += 1
                 if ew is not None:
                     ew.write(row)
+                if jw is not None:
+                    jw.write(row)
             else:
                 reject_line_count += 1
                 if rew is not None:
                     rew.write(row)
+                if jw is not None and self.left_join:
+                    jw.write(row)
 
         if self.verbose:
             print("Read %d input records, accepted %d records, rejected %d records." % (input_line_count, accept_line_count, reject_line_count),
                   file=self.error_file, flush=True)
         
+        if self.verbose and jw is not None:
+            print("Wrote %d joined records." % joined_line_count, file=self.error_file, flush=True)
+
     def process(self):
-        UPDATE_VERSION: str = "2020-10-21T20:48:33.736052+00:00#NprtfMUBtblTekUVL3wClpM7cXvWiiqxaDscVnO3Z2F7giWCZNrCOGQHrp+W4HRcQ0BDtKCCIwSxwUK42InURA=="
+        UPDATE_VERSION: str = "2020-10-22T00:12:42.315315+00:00#lvdUWtORKIQXLoPJ3IRnwChc5tofcem9uwXrdTjJnncqK26K5s6QCSLZevkaP6j0zwdr7e5GMeMm8OCdM26WpQ=="
         if self.show_version or self.verbose:
             print("KgtkIfEfexists version: %s" % UPDATE_VERSION, file=self.error_file, flush=True)
 
@@ -610,7 +720,7 @@ class KgtkIfExists(KgtkFormat):
                 print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
             ew = KgtkWriter.open(input_kr.column_names,
                                  self.output_file_path,
-                                 mode=input_kr.mode,
+                                 mode=KgtkWriter.Mode[input_kr.mode.name],
                                  require_all_columns=False,
                                  prohibit_extra_columns=True,
                                  fill_missing_columns=True,
@@ -624,7 +734,7 @@ class KgtkIfExists(KgtkFormat):
                 print("Opening the reject file: %s" % self.reject_file_path, file=self.error_file, flush=True)
             rew = KgtkWriter.open(input_kr.column_names,
                                   self.reject_file_path,
-                                  mode=input_kr.mode,
+                                  mode=KgtkWriter.Mode[input_kr.mode.name],
                                   require_all_columns=False,
                                   prohibit_extra_columns=True,
                                   fill_missing_columns=True,
@@ -638,7 +748,7 @@ class KgtkIfExists(KgtkFormat):
                 print("Opening the matched filter file: %s" % self.matched_filter_file_path, file=self.error_file, flush=True)
             mfew = KgtkWriter.open(filter_kr.column_names,
                                   self.matched_filter_file_path,
-                                  mode=input_kr.mode,
+                                  mode=KgtkWriter.Mode[filter_kr.mode.name],
                                   require_all_columns=False,
                                   prohibit_extra_columns=True,
                                   fill_missing_columns=True,
@@ -652,13 +762,44 @@ class KgtkIfExists(KgtkFormat):
                 print("Opening the unmatched filter file: %s" % self.unmatched_filter_file_path, file=self.error_file, flush=True)
             ufew = KgtkWriter.open(filter_kr.column_names,
                                   self.unmatched_filter_file_path,
-                                  mode=input_kr.mode,
+                                  mode=KgtkWriter.Mode[filter_kr.mode.name],
                                   require_all_columns=False,
                                   prohibit_extra_columns=True,
                                   fill_missing_columns=True,
                                   gzip_in_parallel=False,
                                   verbose=self.verbose,
                                   very_verbose=self.very_verbose)
+            
+        jw: typing.Optional[KgtkWriter] = None
+        join_shuffle_list: typing.Optional[typing.List[int]] = None
+        if self.join_file_path is not None:
+            if (input_kr.is_edge_file and filter_kr.is_node_file) or (input_kr.is_node_file and filter_kr.is_edge_file):
+                raise ValueError("Cannot join an edge file to a node file.")
+
+            if self.verbose:
+                print("Opening the join file: %s" % self.join_file_path, file=self.error_file, flush=True)
+            kmc: KgtkMergeColumns = KgtkMergeColumns()
+            kmc.merge(input_kr.column_names, prefix=self.input_prefix)
+            right_column_names: typing.List[str] = kmc.merge(filter_kr.column_names, prefix=self.filter_prefix)
+            joined_column_names: typing.List[str] = kmc.column_names
+
+            if self.verbose:
+                print("       input  columns: %s" % " ".join(input_kr.column_names), file=self.error_file, flush=True)
+                print("       filter columns: %s" % " ".join(filter_kr.column_names), file=self.error_file, flush=True)
+                print("mapped filter columns: %s" % " ".join(right_column_names), file=self.error_file, flush=True)
+                print("       joined columns: %s" % " ".join(joined_column_names), file=self.error_file, flush=True)
+
+
+            jw = KgtkWriter.open(joined_column_names,
+                                  self.join_file_path,
+                                  mode=KgtkWriter.Mode[input_kr.mode.name],
+                                  require_all_columns=False,
+                                  prohibit_extra_columns=True,
+                                  fill_missing_columns=True,
+                                  gzip_in_parallel=False,
+                                  verbose=self.verbose,
+                                  very_verbose=self.very_verbose)
+            join_shuffle_list = jw.build_shuffle_list(right_column_names)
             
         if self.presorted:
             self.process_presorted_files(input_kr=input_kr,
@@ -668,7 +809,9 @@ class KgtkIfExists(KgtkFormat):
                                          ew=ew,
                                          rew=rew,
                                          mfew=mfew,
-                                         ufew=ufew)
+                                         ufew=ufew,
+                                         jw=jw,
+                                         join_shuffle_list=join_shuffle_list)
             
         elif self.cache_input:
             if self.preserve_order:
@@ -679,7 +822,9 @@ class KgtkIfExists(KgtkFormat):
                                                              ew=ew,
                                                              rew=rew,
                                                              mfew=mfew,
-                                                             ufew=ufew)
+                                                             ufew=ufew,
+                                                             jw=jw,
+                                                             join_shuffle_list=join_shuffle_list)
             else:
                 self.process_cacheing_input(input_kr=input_kr,
                                             filter_kr=filter_kr,
@@ -688,7 +833,9 @@ class KgtkIfExists(KgtkFormat):
                                             ew=ew,
                                             rew=rew,
                                             mfew=mfew,
-                                            ufew=ufew)
+                                            ufew=ufew,
+                                            jw=jw,
+                                            join_shuffle_list=join_shuffle_list)
         else:
             self.process_cacheing_filter(input_kr=input_kr,
                                          filter_kr=filter_kr,
@@ -697,7 +844,9 @@ class KgtkIfExists(KgtkFormat):
                                          ew=ew,
                                          rew=rew,
                                          mfew=mfew,
-                                         ufew=ufew)
+                                         ufew=ufew,
+                                         jw=jw,
+                                         join_shuffle_list=join_shuffle_list)
 
         if ew is not None:
             ew.close()
@@ -720,12 +869,25 @@ def main():
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file for accepted records. (default=%(default)s).", type=Path, default="-")
     
-    parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file for rejected records.(default=%(default)s).", type=Path, default=None)
+    parser.add_argument(      "--reject-file", dest="reject_file_path", help="The KGTK file for rejected records. (default=%(default)s).", type=Path, default=None)
     
-    parser.add_argument(      "--matched-filter-file", dest="matched_filter_file_path", help="The KGTK file for matched filter records.(default=%(default)s).", type=Path, default=None)
+    parser.add_argument(      "--matched-filter-file", dest="matched_filter_file_path", help="The KGTK file for matched filter records. (default=%(default)s).", type=Path, default=None)
     
-    parser.add_argument(      "--unmatched-filter-file", dest="unmatched_filter_file_path", help="The KGTK file for unmatched filter records.(default=%(default)s).", type=Path, default=None)
+    parser.add_argument(      "--unmatched-filter-file", dest="unmatched_filter_file_path", help="The KGTK file for unmatched filter records. (default=%(default)s).", type=Path, default=None)
     
+    parser.add_argument(      "--join-file", dest="join_file_path", help="The KGTK file for joined output records. (default=%(default)s).", type=Path, default=None)
+
+    parser.add_argument(      "--left-join", dest="left_join", metavar="True|False",
+                              help="When True, include all input records in the join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--right-join", dest="right_join", metavar="True|False",
+                              help="When True, include all filter records in the join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+    
+    parser.add_argument(      "--input-prefix", dest="input_prefix", help="Input file column name prefix for joins. (default=%(default)s)")
+    parser.add_argument(      "--filter-prefix", dest="filter_prefix", help="Filter file column name prefix for joins. (default=%(default)s)")
+
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys (default=%(default)s)",
                               default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
    
@@ -772,7 +934,14 @@ def main():
             print("--matched-filter-file=%s" % str(args.matched_filter_file_path), file=error_file)
         if args.unmatched_filter_file_path is not None:
             print("--unmatched-filter-file=%s" % str(args.unmatched_filter_file_path), file=error_file)
-        print("--field-separator=%s" % repr(args.field_separator), file=error_file)
+        if args.join_file_path is not None:
+            print("--join-file=%s" % str(args.join_file_path), file=error_file)
+        print("--left-join=%s" % str(args.left_join), file=error_file)
+        print("--right-join=%s" % str(args.right_join), file=error_file)
+        if args.input_prefix is not None:
+            print("--input-prefix=%s" % repr(args.input_prefix), file=error_file)
+        if args.filter_prefix is not None:
+            print("--filter-prefix=%s" % repr(args.filter_prefix), file=error_file)
         print("--invert=%s" % str(args.invert), file=error_file)
         print("--cache-input=%s" % str(args.cache_input), file=error_file)
         print("--preserve-order=%s" % str(args.preserve_order), file=error_file)
@@ -794,6 +963,11 @@ def main():
         reject_file_path=args.reject_file_path,
         matched_filter_file_path=args.matched_filter_file_path,
         unmatched_filter_file_path=args.unmatched_filter_file_path,
+        join_file_path=args.join_file_path,
+        left_join=args.left_join,
+        right_join=args.right_join,
+        input_prefix=args.input_prefix,
+        filter_prefix=args.filter_prefix,
         field_separator=args.field_separator,
         invert=args.invert,
         cache_input=args.cache_input,
