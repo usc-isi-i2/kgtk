@@ -1241,7 +1241,7 @@ def run(input_file: KGTKFiles,
                                         else:
                                             prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:value_hash_width]
                                         edgeid: str = qnode + '-' + prop + '-' + prop_value_hash + '-'
-                                        if claim_id_has_width == 0:
+                                        if claim_id_hash_width == 0:
                                             edgeid += claim_id.lower()
                                         else:
                                             edgeid += hashlib.sha256(claim_id.lower().encode('utf-8')).hexdigest()[:claim_id_hash_width]
