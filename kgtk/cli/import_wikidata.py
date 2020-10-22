@@ -105,7 +105,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="use_shm",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, use ShmQueue. (default=%(default)s).")
 
