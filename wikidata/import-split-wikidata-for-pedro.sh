@@ -45,6 +45,8 @@ kgtk ${KGTK_FLAGS} \
      --split-en-sitelink-file ${DATADIR}/part.wikipedia_sitelink.en.unsorted.tsv \
      --split-property-edge-file ${DATADIR}/part.property.unsorted.tsv \
      --split-property-qual-file ${DATADIR}/part.property.qual.unsorted.tsv \
+     --value-hash-width 6 \
+     --claim-id-hash-width 8 \
      --use-kgtkwriter True \
      --use-shm True \
      --procs 5 \
