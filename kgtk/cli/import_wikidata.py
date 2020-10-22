@@ -549,6 +549,22 @@ def add_arguments(parser: KGTKArgumentParser):
         metavar="True/False",
         help="If true, use KgtkWriter instead of csv.writer. (default=%(default)s).")
 
+    parser.add_argument(
+        '--value-hash-width',
+        action="store",
+        type=int,
+        dest="value_hash_width",
+        default=8,
+        help='How many characters should be used in a value hash? (default=%(default)d)')
+
+    parser.add_argument(
+        '--claim-id-hash-width',
+        action="store",
+        type=int,
+        dest="claim_id_hash_width",
+        default=0,
+        help='How many characters should be used to hash the claim ID? 0 means do not hash the claim ID. (default=%(default)d)')
+
 def custom_progress()->bool:
     return True # We want to start a custom progress monitor.
 
@@ -610,6 +626,8 @@ def run(input_file: KGTKFiles,
         collector_batch_size: int,
         single_mapper_queue: bool,
         use_kgtkwriter: bool,
+        value_hash_width: int,
+        claim_id_hash_width: int,
         ):
 
     # import modules locally
@@ -1061,7 +1079,7 @@ def run(input_file: KGTKFiles,
                                         if alias_edges:
                                             # Hash the value to save space and avoid syntactic difficulties.
                                             # Take a subset of the hash value to save space.
-                                            alias_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                            alias_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[:value_hash_width]
                                             aliasid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash
                                             alias_seq_no: int # In case of hash collision
                                             if aliasid in alias_id_collision_map:
@@ -1221,8 +1239,12 @@ def run(input_file: KGTKFiles,
                                         if value.startswith(('P', 'Q')):
                                             prop_value_hash = value
                                         else:
-                                            prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
-                                        edgeid: str = qnode + '-' + prop + '-' + prop_value_hash + '-' + claim_id.lower()
+                                            prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:value_hash_width]
+                                        edgeid: str = qnode + '-' + prop + '-' + prop_value_hash + '-'
+                                        if claim_id_has_width == 0:
+                                            edgeid += claim_id.lower()
+                                        else:
+                                            edgeid += hashlib.sha256(claim_id.lower().encode('utf-8')).hexdigest()[:claim_id_hash_width]
                                         prop_seq_no: int # In case of hash collision
                                         if edgeid in edge_id_collision_map:
                                             prop_seq_no = edge_id_collision_map[edgeid]
@@ -1355,7 +1377,7 @@ def run(input_file: KGTKFiles,
                                                         if value.startswith(('P', 'Q')):
                                                             qual_value_hash = value
                                                         else:
-                                                            qual_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+                                                            qual_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:value_hash_width]
                                                         qualid: str  = edgeid + '-' + qual_prop + '-' + qual_value_hash
                                                         qual_seq_no: int # In case of hash collision
                                                         if qualid in qual_id_collision_map:
@@ -1418,7 +1440,7 @@ def run(input_file: KGTKFiles,
 
                                 if sitelink is not None:
                                     serows = sitelink_erows if collect_seperately else erows
-                                    sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[:8]
+                                    sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[:value_hash_width]
                                     sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash
                                     sitelink_seq_no: int = 0
                                     if sitelinkid in sitelink_id_collision_map:
