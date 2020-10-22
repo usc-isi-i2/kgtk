@@ -266,6 +266,10 @@ def run(input_file: KGTKFiles,
             print("sort options pipe: read_fd=%d write_fd=%d" % (sortopt_read_fd, sortopt_write_fd), file=error_file, flush=True)
 
         locale_envar: str = "LC_ALL=%s" % locale if len(locale) > 0 else ""
+
+        # Note: "read -u n", used below, is not supported by some shells.
+        # bash and zsh support it.
+        # csh and tcsh do not.
         cmd: str = "".join((
             " { IFS= read -r header ; ", # Read the header line
             " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; ", # Send the header to Python
@@ -335,9 +339,9 @@ def run(input_file: KGTKFiles,
             # Read from standard input.
             #
             # Sh version 1.13 or greater is required for _pass_fds.
-            cmd_proc = sh.sh("-c", cmd, _in=sys.stdin, _out=sys.stdout, _err=sys.stderr,
-                             _bg=True, _bg_exc=False, _internal_bufsize=1,
-                             _pass_fds={header_write_fd, sortopt_read_fd})
+            cmd_proc = sh.bash("-c", cmd, _in=sys.stdin, _out=sys.stdout, _err=sys.stderr,
+                               _bg=True, _bg_exc=False, _internal_bufsize=1,
+                               _pass_fds={header_write_fd, sortopt_read_fd})
 
             # It would be nice to monitor the sort command here.  Unfortunately, there
             # is a race condition that makes this difficult.  We could loop until the
@@ -383,9 +387,9 @@ def run(input_file: KGTKFiles,
             progress_startup(pid=cat_proc.pid)
 
             # Sh version 1.13 or greater is required for _pass_fds.
-            cmd_proc = sh.sh(cat_proc, "-c", cmd, _out=sys.stdout, _err=sys.stderr,
-                             _bg=True, _bg_exc=False, _internal_bufsize=1,
-                             _pass_fds={header_write_fd, sortopt_read_fd})
+            cmd_proc = sh.bash(cat_proc, "-c", cmd, _out=sys.stdout, _err=sys.stderr,
+                               _bg=True, _bg_exc=False, _internal_bufsize=1,
+                               _pass_fds={header_write_fd, sortopt_read_fd})
             # Since we do not have access to the pid of the sort command,
             # we cannot monitor the progress of the merge phases.
 
