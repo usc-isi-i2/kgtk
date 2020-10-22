@@ -32,7 +32,7 @@ kgtk ${KGTK_FLAGS} \
      --description-edges True \
      --split-description-file ${DATADIR}/part.description.unsorted.tsv \
      --split-en-description-file ${DATADIR}/part.description.en.unsorted.tsv \
-     --label-edges True \     
+     --label-edges True \
      --split-label-file ${DATADIR}/part.label.unsorted.tsv \
      --split-en-label-file ${DATADIR}/part.label.en.unsorted.tsv \
      --datatype-edges True \
