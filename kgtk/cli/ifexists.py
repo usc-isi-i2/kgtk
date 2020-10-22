@@ -69,7 +69,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            metavar="UNMATCHED_FILTER_FILE",
                            optional=True)
 
-    parser.add_output_file(who="The KGTK file for joined output records.",
+    parser.add_output_file(who=h("The KGTK file for joined output records (EXPERIMENTAL)."),
                            dest="join_file",
                            options=["--join-file"],
                            metavar="JOIN_FILE",
@@ -98,18 +98,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
 
     parser.add_argument(      "--left-join", dest="left_join",  metavar="True|False",
-                              help=h("When True, Include all input records in the join. (default=%(default)s)."),
+                              help=h("When True, Include all input records in the join (EXPERIMENTAL). (default=%(default)s)."),
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--right-join", dest="right_join",  metavar="True|False",
-                              help=h("When True, Include all filter records in the join. (default=%(default)s)."),
+                              help=h("When True, Include all filter records in the join (EXPERIMENTAL). (default=%(default)s)."),
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--input-prefix", dest="input_prefix",
-                              help=h("Input file column name prefix for joins. (default=%(default)s)"))
+                              help=h("Input file column name prefix for joins (EXPERIMENTAL). (default=%(default)s)"))
 
     parser.add_argument(      "--filter-prefix", dest="filter_prefix",
-                              help=h("Filter file column name prefix for joins. (default=%(default)s)"))
+                              help=h("Filter file column name prefix for joins (EXPERIMENTAL). (default=%(default)s)"))
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
