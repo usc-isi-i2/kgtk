@@ -353,7 +353,7 @@ def main():
     Test the KGTK file joiner.
 
     Edge files can be joined to edge files.
-    Node files can also be joined to node files.
+    Node files can be joined to node files.
 
     TODO: Add more KgtkReader parameters, especially mode.
     """

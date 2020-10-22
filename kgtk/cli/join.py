@@ -22,9 +22,26 @@ The output file contains the union of the columns in the two
 input files, adjusted for predefined name aliasing.
 
 Specify --left-join to get a left outer join.
+        The output file will contain all records from the
+        left input file, along with records from the right
+        input file with matching join column values.
+
 Specify --right-join to get a right outer join.
-Specify both to get a full outer join (equivalent to cat).
-Specify neither to get an inner join.
+        The output file will contain all records from the
+        right input file, along with records from the left
+        input file with matching join column values.
+
+Specify both --left-join and --right-join to get a full outer
+join (equivalent to cat or set union).
+        The output file will contain all records from both
+        the left input file and the right input file.
+
+Specify neither --left-join nor --right-join to get an inner
+join.  If there are no columns beyond the join columns, then
+this is equivalent to set intersection.
+        The output file will contain records from the left
+        input file and from the right input file for which
+        the join column value match.
 
 By default, node files are joined on the id column, while edge files are joined
 on the node1 column. The label and node2 columns may be added to the edge file
