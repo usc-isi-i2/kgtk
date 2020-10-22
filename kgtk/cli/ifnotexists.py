@@ -163,7 +163,7 @@ def run(input_file: KGTKFiles,
     reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="KGTK reject file")
     matched_filter_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(matched_filter_file, who="KGTK matched filter file")
     unmatched_filter_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(unmatched_filter_file, who="KGTK unmatched filter file")
-    join_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(unmatched_filter_file, who="KGTK join file")
+    join_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(join_file, who="KGTK join file")
 
     if (str(input_kgtk_file) == "-" and str(filter_kgtk_file) == "-"):
         raise KGTKException("My not use stdin for both --input-file and --filter-on files.")
