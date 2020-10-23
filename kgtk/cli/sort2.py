@@ -269,7 +269,9 @@ def run(input_file: KGTKFiles,
 
         # Note: "read -u n", used below, is not supported by some shells.
         # bash and zsh support it.
-        # csh and tcsh do not.
+        # ash, csh, dash, and tcsh do not.
+        # The original standard Bourne shell, sh, does not.
+        # ksh might do it, if the FD number is a single digit.
         cmd: str = "".join((
             " { IFS= read -r header ; ", # Read the header line
             " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; ", # Send the header to Python
