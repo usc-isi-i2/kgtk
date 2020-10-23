@@ -6,14 +6,14 @@
 source common.sh
 
 # ==============================================================================
-# Deliver the edge datatypes splits.
+# Deliver the qualifiers for the edge datatypes splits.
 for TARGET in ${WIKIDATATYPES[@]}
 do
     TARGET_NAME=part.${TARGET}
 
-    echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
+    echo -e "\nDeliver the compressed qualifiers for ${TARGET_NAME} file to the KGTK Google Drive."
     time rsync --archive --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
+	 ${DATADIR}/${TARGET_NAME}.qual.tsv.gz \
 	 ${PRODUCTDIR}/ \
-	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
+	|& tee ${LOGDIR}/${TARGET_NAME}.qual-deliver.log
 done

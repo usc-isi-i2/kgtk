@@ -6,11 +6,6 @@
 source common.sh
 
 # ==============================================================================
-# Setup working directories:
-mkdir --verbose ${DATADIR}
-mkdir --verbose ${LOGDIR}
-
-# ==============================================================================
 # Extract the qualifiers for the edge datatypes splits.
 for TARGET in ${WIKIDATATYPES[@]}
 do

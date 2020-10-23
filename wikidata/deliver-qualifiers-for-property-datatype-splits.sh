@@ -6,13 +6,14 @@
 source common.sh
 
 # ==============================================================================
-# Deliver the property datatype splits.
+# Deliver the qualifiers for the property datatype splits.
 for TARGET in ${DATATYPES[@]}
 do
     TARGET_NAME=part.property.${TARGET}
-    echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
+
+    echo -e "\nDeliver the compressed qualifiers for ${TARGET_NAME} file to the KGTK Google Drive."
     time rsync --archive --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
+	 ${DATADIR}/${TARGET_NAME}.qual.tsv.gz \
 	 ${PRODUCTDIR}/ \
-	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
+	|& tee ${LOGDIR}/${TARGET_NAME}.qual-deliver.log
 done
