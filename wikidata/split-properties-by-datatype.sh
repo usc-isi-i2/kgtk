@@ -6,11 +6,6 @@
 source common.sh
 
 # ==============================================================================
-# Setup working directories:
-mkdir --verbose ${DATADIR}
-mkdir --verbose ${LOGDIR}
-
-# ==============================================================================
 # Split the properties by datatype.
 echo -e "\nSplit ${DATADIR}/part.property.tsv by datatype"
 kgtk ${KGTK_FLAGS} \

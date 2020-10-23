@@ -6,11 +6,6 @@
 source common.sh
 
 # ==============================================================================
-# Setup working directories:
-mkdir --verbose ${DATADIR}
-mkdir --verbose ${LOGDIR}
-
-# ==============================================================================
 # Count the edge datatype distribution.
 echo -e "\nCount unique datatypes in ${DATADIR}/all.tsv"
 kgtk ${KGTK_FLAGS} \

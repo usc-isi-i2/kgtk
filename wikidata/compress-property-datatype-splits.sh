@@ -6,13 +6,12 @@
 source common.sh
 
 # ==============================================================================
-# Deliver the property datatype splits.
+# Compress the property datatype splits.
 for TARGET in ${DATATYPES[@]}
 do
     TARGET_NAME=part.property.${TARGET}
-    echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."
-    time rsync --archive --verbose \
-	 ${DATADIR}/${TARGET_NAME}.tsv.gz \
-	 ${PRODUCTDIR}/ \
-	|& tee ${LOGDIR}/${TARGET_NAME}-deliver.log
+    echo -e "\nCompress the sorted ${TARGET} file."
+    time gzip --keep --force --verbose \
+	 ${DATADIR}/${TARGET_NAME}.tsv \
+	|& tee ${LOGDIR}/${TARGET_NAME}-compress.log
 done
