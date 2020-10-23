@@ -6,14 +6,14 @@
 source common.sh
 
 # ==============================================================================
-echo -e "\nCount the properties in ${DATADIR}/${WIKIDATA_ALL_EDGES}-sorted.tsv."
+echo -e "\nCount the properties in ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv."
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
-     --input-file ${DATADIR}/${WIKIDATA_ALL}-properties.tsv \
-     --output-file ${DATADIR}${WIKIDATA_ALL}-property-counts.tsv \
+     --input-file ${DATADIR}/part.property.tsv \
+     --output-file ${DATADIR}/part.property.counts.tsv \
      --column label \
      --label total-count \
-     |& tee ${LOGDIR}/${WIKIDATA_ALL}-property-counts.log
+     |& tee ${LOGDIR}/part.property.counts.log
 
 
 # ==============================================================================
@@ -24,25 +24,25 @@ echo -e "\nLift the property labels:"
 # as of 05-Oct-2020).
 kgtk ${KGTK_FLAGS} \
      lift ${VERBOSE} \
-     --input-file ${DATADIR}${WIKIDATA_ALL}-property-counts.tsv \
-     --label-file ${DATADIR}/${WIKIDATA_ALL}-labels-en-only-sorted.tsv \
-     --output-file ${DATADIR}/${WIKIDATA_ALL}-property-counts-with-labels.tsv \
+     --input-file ${DATADIR}/part.property.counts.tsv \
+     --label-file ${DATADIR}/part.label.en.tsv \
+     --output-file ${DATADIR}/part.property.counts-with-labels.tsv \
      --columns-to-lift node1 \
      --prefilter-labels \
-     |& tee ${LOGDIR}/${WIKIDATA_ALL}-property-counts-with-labels.log
+     |& tee ${LOGDIR}/part.property.counts-with-labels.log
 
 # ==============================================================================
 echo -e "\nCompress the data product files."
 time gzip --keep --force --verbose \
-     ${DATADIR}/${WIKIDATA_ALL}-property-counts-with-labels.tsv \
-    |& tee ${LOGDIR}/count-properties-compress.log
+     ${DATADIR}/part.property.counts-with-labels.tsv \
+    |& tee ${LOGDIR}/part.property.counts-with-labels-compress.log
 
 # ==============================================================================
 echo -e "\nDeliver the compressed data products to the KGTK Google Drive."
-time rsync --archive \
-     ${DATADIR}/${WIKIDATA_ALL}-property-counts-with-labels.tsv.gz \
+time rsync --archive --verbose \
+     ${DATADIR}/part.property.counts-with-labels.tsv.gz \
      ${PRODUCTDIR}/ \
-    |& tee ${LOGDIR}/count-properties-deliver.log
+    |& tee ${LOGDIR}/part.property.counts-with-labels-deliver.log
 
      
      
