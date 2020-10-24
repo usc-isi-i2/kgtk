@@ -69,3 +69,26 @@ WIKIDATATYPES=( \
 		"other" \
     )
 
+# The wikidata import split files:
+WIKIDATA_IMPORT_SPLIT_FILES=( \
+    "node" \
+	"all.full" \
+	"all" \
+	"qual.full" \
+	"qual" \
+	"part.alias" \
+	"part.alias.en" \
+	"part.description" \
+	"part.description.en" \
+	"part.label" \
+	"part.label.en" \
+	"property.datatype" \
+	"types" \
+	"part.wikipedia_sitelink" \
+	"part.wikipedia_sitelink.en" \
+	"part.property" \
+	"part.property.qual" \
+    )
+
+# GZIP_CMD=gzip
+GZIP_CMD=pigz

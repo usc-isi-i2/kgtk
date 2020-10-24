@@ -11,7 +11,7 @@ for TARGET in ${DATATYPES[@]}
 do
     TARGET_NAME=part.property.${TARGET}
     echo -e "\nCompress the sorted ${TARGET} file."
-    time gzip --keep --force --verbose \
+    time ${GZIP_CMD} --keep --force --verbose \
 	 ${DATADIR}/${TARGET_NAME}.tsv \
 	|& tee ${LOGDIR}/${TARGET_NAME}-compress.log
 done
