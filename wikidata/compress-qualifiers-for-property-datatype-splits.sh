@@ -12,7 +12,7 @@ do
     TARGET_NAME=part.property.${TARGET}
 
     echo -e "\nCompress the sorted qualifiers for the ${TARGET} properties."
-    time gzip --keep --force --verbose \
+    time ${GZIP_CMD} --keep --force --verbose \
 	 ${DATADIR}/${TARGET_NAME}.qual.tsv \
 	|& tee ${LOGDIR}/${TARGET_NAME}.qual-compress.log
 done

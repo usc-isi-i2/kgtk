@@ -10,7 +10,7 @@ source common.sh
 echo -e "\nSplit ${DATADIR}/${WIKIDATA_ALL}-properties-sorted.tsv by datatype"
 kgtk ${KGTK_FLAGS} \
      filter ${VERBOSE} \
-     --input-file ${DATADIR}/parttsv \
+     --input-file ${DATADIR}/all.tsv \
      --obj "node2;wikidatatype" \
      --first-match-only \
      --pattern ";;commonsMedia" \
