@@ -33,9 +33,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
-    parser.add_output_file(who="Label file",
+    parser.add_output_file(who="An optional output file for lowered edges. If omitted, lowered edges will go in the main output file.",
                            dest="label_file",
-                           options=["--label-file"],
+                           options=["--lowered-edges-file", "--label-file"],
                            metavar="LABEL_FILE",
                            optional=True)
 
@@ -48,7 +48,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Columns to lower and remove as a space-separated list. (default=all columns with the lift pattern)")
 
     parser.add_argument(      "--label-value", action="store", type=str, dest="label_value",
-                              help="The label value to use for lowered values. (default=%(default)s)",
+                              help="The label value to use for lowered edges. (default=%(default)s)",
                               default=KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE)
 
     parser.add_argument(      "--lift-suffix", dest="lift_suffix",
