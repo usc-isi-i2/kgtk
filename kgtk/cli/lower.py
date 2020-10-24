@@ -57,7 +57,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--deduplicate-labels", dest="deduplicate_labels",
                               help="When True, deduplicate the labels. " +
-                              "Note: When new labels are written to a new label file, only theose labels labels will be deduplicated. " +
+                              "Note: When new labels are written to a new label file, only those labels will be deduplicated. " +
                               "When labels are written to the output file, existing labels in the input file are deduplicated as well. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
