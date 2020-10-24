@@ -217,6 +217,10 @@ def run(input_file: KGTKFiles,
                 base_name = kr.column_names[lower_map[idx]]
                 print(" %s from %s" % (column_name, base_name), file=error_file, flush=True)
 
+        node1_column_name: str = kr.get_node1_column_actual_name()
+        label_column_name: str = kr.get_label_column_actual_name()
+        node2_column_name: str = kr.get_node2_column_actual_name()
+
         output_column_names: typing.List[str] = list()
         for idx, column_name in enumerate(kr.column_names):
             if idx not in lower_map:
@@ -239,7 +243,7 @@ def run(input_file: KGTKFiles,
             if verbose:
                 print("Opening the label output file: %s" % str(label_kgtk_file), file=error_file, flush=True)
 
-            label_column_names = [ KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2 ]                
+            label_column_names = [ node1_column_name, label_column_name, node2_column_name ]                
             lkw = KgtkWriter.open(label_column_names,
                                   label_kgtk_file,
                                   mode=KgtkWriter.Mode.EDGE,
@@ -302,9 +306,9 @@ def run(input_file: KGTKFiles,
                             label_set.add(label_key)
 
                     output_map: typing.Mapping[str, str] = {
-                        KgtkFormat.NODE1: node1_value,
-                        KgtkFormat.LABEL: label_value,
-                        KgtkFormat.NODE2: node2_value,
+                       node1_column_name: node1_value,
+                        label_column_name: label_value,
+                        node2_column_name: node2_value,
                     }
                     if lkw is None:
                         kw.writemap(output_map)
