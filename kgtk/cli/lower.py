@@ -131,14 +131,38 @@ def run(input_file: KGTKFiles,
         # Map the index of a column being removed to the index of the base column that supplies its node1 value.
         lower_map: typing.MutableMapping[int, int] = dict()
 
-        # These columns will never be removed:
-        key_column_idxs: typing.Set[int] = set((kr.node1_column_idx,
-                                                kr.label_column_idx,
-                                                kr.node2_column_idx,
-                                                kr.id_column_idx))
-        key_column_idxs.discard(-1)
-        key_column_names: typing.Set[str] = set((kr.column_names[idx] for idx in key_column_idxs))
+        node1_column_name: str = kr.get_node1_column_actual_name()
+        label_column_name: str = kr.get_label_column_actual_name()
+        node2_column_name: str = kr.get_node2_column_actual_name()
+        id_column_name: str = kr.get_id_column_actual_name()
 
+        key_column_names: typing.List[str] = list()
+        key_column_idxs: typing.Set[int] = set()
+
+        if node1_column_name != "":
+            if verbose:
+                print("Node1 column name: %s" % node1_column_name, file=error_file, flush=True)
+            key_column_names.append(node1_column_name)
+            key_column_idxs.add(kr.node1_column_idx)
+            
+        if label_column_name != "":
+            if verbose:
+                print("Label column name: %s" % label_column_name, file=error_file, flush=True)
+            key_column_names.append(label_column_name)
+            key_column_idxs.add(kr.label_column_idx)
+            
+        if node2_column_name != "":
+            if verbose:
+                print("Node2 column name: %s" % node2_column_name, file=error_file, flush=True)
+            key_column_names.append(node2_column_name)
+            key_column_idxs.add(kr.node2_column_idx)
+            
+        if id_column_name != "":
+            if verbose:
+                print("Id column name: %s" % id_column_name, file=error_file, flush=True)
+            key_column_names.append(id_column_name)
+            key_column_idxs.add(kr.id_column_idx)
+  
         base_name: str
         column_name: str
         idx: int
@@ -216,10 +240,6 @@ def run(input_file: KGTKFiles,
                 column_name = kr.column_names[idx]
                 base_name = kr.column_names[lower_map[idx]]
                 print(" %s from %s" % (column_name, base_name), file=error_file, flush=True)
-
-        node1_column_name: str = kr.get_node1_column_actual_name()
-        label_column_name: str = kr.get_label_column_actual_name()
-        node2_column_name: str = kr.get_node2_column_actual_name()
 
         output_column_names: typing.List[str] = list()
         for idx, column_name in enumerate(kr.column_names):
