@@ -6,13 +6,8 @@
 source common.sh
 
 # ==============================================================================
-# Setup working directories:
-mkdir --verbose ${DATADIR}
-mkdir --verbose ${LOGDIR}
-
-# ==============================================================================
 # Extract the qualifiers for the property datatype splits.
-for TARGET in ${DATATYPES[@]}
+for TARGET in ${WIKIDATATYPES[@]}
 do
     TARGET_NAME=part.property.${TARGET}
     echo -e "\nExtract any qualifiers for the properties in ${TARGET_NAME}."

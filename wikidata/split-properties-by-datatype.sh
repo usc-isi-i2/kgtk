@@ -49,4 +49,3 @@ kgtk ${KGTK_FLAGS} \
      --output-file ${DATADIR}/part.property.wikibase-sense.tsv \
      --reject-file ${DATADIR}/part.property.other.tsv \
     |& tee ${LOGDIR}/property-datatype-split.log
-

@@ -7,10 +7,10 @@ source common.sh
 
 # ==============================================================================
 # Compress the property datatype splits.
-for TARGET in ${DATATYPES[@]}
+for TARGET in ${WIKIDATATYPES[@]}
 do
     TARGET_NAME=part.property.${TARGET}
-    echo -e "\nCompress the sorted ${TARGET} file."
+    echo -e "\nCompress the sorted ${TARGET_NAME} file."
     time ${GZIP_CMD} --keep --force --verbose \
 	 ${DATADIR}/${TARGET_NAME}.tsv \
 	|& tee ${LOGDIR}/${TARGET_NAME}-compress.log
