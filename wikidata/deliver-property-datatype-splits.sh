@@ -7,7 +7,7 @@ source common.sh
 
 # ==============================================================================
 # Deliver the property datatype splits.
-for TARGET in ${DATATYPES[@]}
+for TARGET in ${WIKIDATATYPES[@]}
 do
     TARGET_NAME=part.property.${TARGET}
     echo -e "\nDeliver the compressed ${TARGET_NAME} file to the KGTK Google Drive."

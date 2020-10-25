@@ -7,7 +7,7 @@ source common.sh
 
 # ==============================================================================
 # Deliver the qualifiers for the property datatype splits.
-for TARGET in ${DATATYPES[@]}
+for TARGET in ${WIKIDATATYPES[@]}
 do
     TARGET_NAME=part.property.${TARGET}
 
