@@ -129,7 +129,7 @@ def run(input_file: KGTKFiles,
         )
 
         # Map the index of a column being removed to the index of the base column that supplies its node1 value.
-        lower_map: typing.MutableMapping[int, int] = dict()
+        lower_map: typing.MutableMapping[int, typing.Tuple[int, str]] = dict()
 
         node1_column_name: str = kr.get_node1_column_actual_name()
         label_column_name: str = kr.get_label_column_actual_name()
@@ -185,7 +185,7 @@ def run(input_file: KGTKFiles,
                 if base_name not in kr.column_names:
                     raise KGTKException("For column name %s, base name %s is unknown" % (repr(column_name), repr(base_name)))
 
-                lower_map[kr.column_name_map[column_name]] = kr.column_name_map[base_name]
+                lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], label_value)
 
         elif columns_to_remove is not None and len(columns_to_remove) > 0 and (base_columns is None or len(base_columns) == 0):
             # Pattern 2: len(columns_to_remove) > 0 and len(base_columns) == 0
@@ -208,7 +208,7 @@ def run(input_file: KGTKFiles,
                 if base_name not in kr.column_names:
                     raise KGTKException("For column name %s, base name %s is not known" % (repr(column_name), repr(base_name)))
 
-                lower_map[kr.column_name_map[column_name]] = kr.column_name_map[base_name]
+                lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], label_value)
 
         elif columns_to_remove is None or len(columns_to_remove) == 0:
             # Pattern 3: len(columns_to_remove) == 0.
@@ -229,7 +229,7 @@ def run(input_file: KGTKFiles,
                     if len(base_name) == 0:
                         continue
                     if column_name == base_name + lift_suffix:
-                        lower_map[idx] = kr.column_name_map[base_name]
+                        lower_map[idx] = (kr.column_name_map[base_name], label_value)
 
         if len(lower_map) == 0:
             raise KGTKException("There are no columns to lower.")
@@ -238,8 +238,9 @@ def run(input_file: KGTKFiles,
             print("The following columns will be lowered", file=error_file, flush=True)
             for idx in sorted(lower_map.keys()):
                 column_name = kr.column_names[idx]
-                base_name = kr.column_names[lower_map[idx]]
-                print(" %s from %s" % (column_name, base_name), file=error_file, flush=True)
+                base_idx, label_name = lower_map[idx]
+                base_name = kr.column_names[base_idx]
+                print(" %s from %s (label %s)" % (column_name, base_name, label_name), file=error_file, flush=True)
 
         output_column_names: typing.List[str] = list()
         for idx, column_name in enumerate(kr.column_names):
@@ -291,6 +292,7 @@ def run(input_file: KGTKFiles,
         for row in kr:
             input_line_count += 1
 
+            # TODO: Need to rework this for multiple label values:
             if check_existing_labels and row[kr.label_column_idx] == label_value:
                 label_key = row[kr.node1_column_idx] + KgtkFormat.KEY_FIELD_SEPARATOR + row[kr.node2_column_idx]
                 if label_key in label_set:
@@ -303,7 +305,11 @@ def run(input_file: KGTKFiles,
 
             column_idx: int
             for column_idx in lower_map.keys():
-                node1_value: str = row[lower_map[column_idx]]
+                node1_idx: int
+                new_label_value: str
+                node1_idx, new_label_value = lower_map[column_idx]
+                node1_value: str
+                node1_value = row[node1_idx]
                 if len(node1_value) == 0:
                     continue # TODO: raise an exception
 
@@ -319,7 +325,7 @@ def run(input_file: KGTKFiles,
                         continue # Ignore empty node2 values.
 
                     if deduplicate_labels:
-                        label_key = node1_value + KgtkFormat.KEY_FIELD_SEPARATOR + node2_value
+                        label_key = node1_value + KgtkFormat.KEY_FIELD_SEPARATOR + new_label_value + KgtkFormat.KEY_FIELD_SEPARATOR + node2_value
                         if label_key in label_set:
                             continue
                         else:
@@ -327,7 +333,7 @@ def run(input_file: KGTKFiles,
 
                     output_map: typing.Mapping[str, str] = {
                        node1_column_name: node1_value,
-                        label_column_name: label_value,
+                        label_column_name: new_label_value,
                         node2_column_name: node2_value,
                     }
                     if lkw is None:
