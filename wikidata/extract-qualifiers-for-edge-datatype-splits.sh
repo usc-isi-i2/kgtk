@@ -19,5 +19,6 @@ do
 	 --output-file ${DATADIR}/${TARGET_NAME}.qual.tsv \
 	 --input-keys node1 \
 	 --filter-keys id \
+	 --presorted \
 	|& tee ${LOGDIR}/${TARGET_NAME}.qual.log
 done
