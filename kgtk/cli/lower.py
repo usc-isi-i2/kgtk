@@ -44,16 +44,24 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="The columns for which matching labels are to be lifted. " +
                               "The default is [node1, label, node2] or their aliases.", nargs='*')
 
-    parser.add_argument(      "--columns-to-remove", action="store", type=str, dest="columns_to_remove", nargs='+',
-                              help="Columns to lower and remove as a space-separated list. (default=all columns with the lift pattern)")
+    parser.add_argument(      "--columns", "--columns-to-remove", action="store", type=str, dest="columns_to_remove", nargs='+',
+                              help="Columns to lower and remove as a space-separated list. (default=all columns other than key columns)")
 
     parser.add_argument(      "--label-value", action="store", type=str, dest="label_value",
-                              help="The label value to use for lowered edges. (default=%(default)s)",
+                              help="The label value to use for lowered edges whhen --base-columns is used. (default=%(default)s)",
                               default=KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE)
 
-    parser.add_argument(      "--lift-suffix", dest="lift_suffix",
-                              help="The suffix used for lifts. (default=%(default)s).",
-                              default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
+    parser.add_argument(      "--lift-separator", dest="lift_separator",
+                              help="The separator between the base column and the label value. (default=%(default)s).",
+                              default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR)
+
+    parser.add_argument(      "--lower", dest="lower",
+                              help="When True, lower columns that match a lift pattern. (default=%(default)s)",
+                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+
+    parser.add_argument(      "--normalize", dest="normalize",
+                              help="When True, normalize columns that do not match a lift pattern. (default=%(default)s)",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
     parser.add_argument(      "--deduplicate-labels", dest="deduplicate_labels",
                               help="When True, deduplicate the labels. " +
@@ -72,7 +80,9 @@ def run(input_file: KGTKFiles,
         base_columns: typing.Optional[typing.List[str]] = None,
         columns_to_remove: typing.Optional[typing.List[str]] = None,
         label_value: str = KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE,
-        lift_suffix: str = KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX,
+        lift_separator: str = KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR,
+        lower: bool = False,
+        normalize: bool = False,
         deduplicate_labels: bool = True,
 
         errors_to_stdout: bool = False,
@@ -109,13 +119,18 @@ def run(input_file: KGTKFiles,
         if columns_to_remove is not None:
             print("--columns-to-lower=%s" % " ".join(columns_to_remove), file=error_file)
         print("--label-value=%s" % label_value, file=error_file)
-        print("--lift-suffix=%s" % lift_suffix, file=error_file)
+        print("--lift-separator=%s" % lift_separator, file=error_file)
+        print("--lower=%s" % lower, file=error_file)
+        print("--normalize=%s" % normalize, file=error_file)
         print("--deduplicate-labels=%s" % deduplicate_labels, file=error_file)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+
+    if not lower and not normalize:
+        raise KGTKException("One or both of --lower and --normalize must be requested.")
 
     try:
         if verbose:
@@ -162,18 +177,24 @@ def run(input_file: KGTKFiles,
                 print("Id column name: %s" % id_column_name, file=error_file, flush=True)
             key_column_names.append(id_column_name)
             key_column_idxs.add(kr.id_column_idx)
+        elif normalize:
+            raise KGTKException("--normalize was requested but the ID column was not found.")
   
         base_name: str
+        new_label_value: str
         column_name: str
         idx: int
         # There are three option patterns.
 
         if columns_to_remove is not None and len(columns_to_remove) > 0 and base_columns is not None and len(base_columns) > 0:
             # Pattern 1: len(columns_to_remove) > 0 and len(base_columns) == len(columns_to_remove)
-            # column_names and base_columns are paired.
+            # column_names and base_columns are paired. New records use label_value.
             if len(columns_to_remove) != len(base_columns):
                 raise KGTKException("There are %d columns to remove but only %d base columns." % (len(columns_to_remove), len(base_columns)))
         
+            if len(label_value) == 0:
+                raise KGTKException("The --label-value must not be empty.")
+
             for idx, column_name in enumerate(columns_to_remove):
                 base_name = base_columns[idx]
                 if column_name not in kr.column_names:
@@ -185,13 +206,18 @@ def run(input_file: KGTKFiles,
                 if base_name not in kr.column_names:
                     raise KGTKException("For column name %s, base name %s is unknown" % (repr(column_name), repr(base_name)))
 
-                lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], label_value)
+                if normalize and base_name == id_column_name:
+                    lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], column_name)
+                else:
+                    if not lower:
+                        raise KGTKException("--lower is not enabled for column %s, base name %s" % (repr(column_name), repr(base_name)))
+                    lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], label_value)
 
         elif columns_to_remove is not None and len(columns_to_remove) > 0 and (base_columns is None or len(base_columns) == 0):
             # Pattern 2: len(columns_to_remove) > 0 and len(base_columns) == 0
-            # Each column name is stripped of the lift suffix to determine the base name.
-            if len(lift_suffix) == 0:
-                raise KGTKException("The --lift-suffix must not be empty.")
+            # Each column name is split at the lift separator to determine the base name and label value.
+            if len(lift_separator) == 0:
+                raise KGTKException("The --lift-separator must not be empty.")
 
             for idx, column_name in enumerate(columns_to_remove):
                 if column_name not in kr.column_names:
@@ -200,36 +226,65 @@ def run(input_file: KGTKFiles,
                 if column_name in key_column_names:
                     raise KGTKException("Column %s is a key column, cannot remove it." % repr(column_name))
 
-                if not column_name.endswith(lift_suffix):
-                   raise KGTKException("Unable to parse column name %s." % repr(column_name))
+                if lower and lift_separator in column_name:
+                    base_name, new_label_value = column_name.split(lift_separator, 1)
+                    if base_name not in kr.column_names:
+                        raise KGTKException("For column name %s, base name %s is not known" % (repr(column_name), repr(base_name)))
 
-                base_name = column_name[:-len(lift_suffix)]
+                elif normalize:
+                    base_name = id_column_name
+                    new_label_value = column_name
 
-                if base_name not in kr.column_names:
-                    raise KGTKException("For column name %s, base name %s is not known" % (repr(column_name), repr(base_name)))
+                else:
+                    raise KGTKException("Unable to parse column name %s, no separator (%s)." % (repr(column_name), repr(lift_separator)))
 
-                lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], label_value)
+                lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], new_label_value)
 
         elif columns_to_remove is None or len(columns_to_remove) == 0:
             # Pattern 3: len(columns_to_remove) == 0.
-            if len(lift_suffix) == 0:
-                raise KGTKException("The --lift-suffix must not be empty.")
+            # Any column that matches a lift pattern against one of the
+            # key columns (node1, label, node2, id, or their aliases)
+            # will be lowered.
+            if len(lift_separator) == 0:
+                raise KGTKException("The --lift-separator must not be empty.")
 
             if base_columns is None or len(base_columns) == 0:
                 # The base name list wasn't supplied.  Use [node1, label, node2, id]
                 base_columns = list(key_column_names)
+                if verbose:
+                    print("Using the default base columns: %s" % " ".join(base_columns), file=error_file, flush=True)
+            else:
+                if verbose:
+                    print("Using these base columns: %s" % " ".join(base_columns), file=error_file, flush=True)
 
             for idx, column_name in enumerate(kr.column_names):
                 # Skip the node1, label, node12, and id columns
                 if idx in key_column_idxs:
+                    if verbose:
+                        print("column %s is a key column, skipping." % repr(column_name), file=error_file, flush=True)
                     continue
 
                 # Does this column match a lifting pattern?
-                for base_name in base_columns:
-                    if len(base_name) == 0:
+                if lower and lift_separator in column_name:
+                    base_name, new_label_value = column_name.split(lift_separator, 1)
+
+                    if base_name not in base_columns:
+                        if verbose:
+                            print("Column %s contains base name %s, which is not a base column." % (repr(column_name), repr(base_name)),  file=error_file, flush=True)
                         continue
-                    if column_name == base_name + lift_suffix:
-                        lower_map[idx] = (kr.column_name_map[base_name], label_value)
+                                  
+                elif normalize:
+                    base_name = id_column_name
+                    new_label_value = column_name
+
+                else:
+                    if verbose:
+                        print("Column %s does not contain the sepatator %s, skipping." % (repr(column_name), repr(lift_separator)), file=error_file, flush=True)
+                    continue
+
+                # This test should be redundant.
+                if base_name in kr.column_names:
+                    lower_map[idx] = (kr.column_name_map[base_name], new_label_value)
 
         if len(lower_map) == 0:
             raise KGTKException("There are no columns to lower.")
@@ -238,9 +293,9 @@ def run(input_file: KGTKFiles,
             print("The following columns will be lowered", file=error_file, flush=True)
             for idx in sorted(lower_map.keys()):
                 column_name = kr.column_names[idx]
-                base_idx, label_name = lower_map[idx]
+                base_idx, new_label_value = lower_map[idx]
                 base_name = kr.column_names[base_idx]
-                print(" %s from %s (label %s)" % (column_name, base_name, label_name), file=error_file, flush=True)
+                print(" %s from %s (label %s)" % (column_name, base_name, repr(new_label_value)), file=error_file, flush=True)
 
         output_column_names: typing.List[str] = list()
         for idx, column_name in enumerate(kr.column_names):
@@ -278,12 +333,13 @@ def run(input_file: KGTKFiles,
         label_key: str
 
         # If labels will be written to the output file and deduplication is enabled:
-        check_existing_labels: bool = \
-            deduplicate_labels and \
-            lkw is None and \
-            kr.node1_column_idx >= 0 and \
-            kr.label_column_idx >= 0 and \
-            kr.node2_column_idx >= 0
+        # check_existing_labels: bool = \
+        #    deduplicate_labels and \
+        #    lkw is None and \
+        #    kr.node1_column_idx >= 0 and \
+        #    kr.label_column_idx >= 0 and \
+        #    kr.node2_column_idx >= 0
+        check_existing_labels: bool = False # Need to rewrite this code.
 
         input_line_count: int = 0
         output_line_count: int = 0
@@ -306,7 +362,6 @@ def run(input_file: KGTKFiles,
             column_idx: int
             for column_idx in lower_map.keys():
                 node1_idx: int
-                new_label_value: str
                 node1_idx, new_label_value = lower_map[column_idx]
                 node1_value: str
                 node1_value = row[node1_idx]
@@ -332,7 +387,7 @@ def run(input_file: KGTKFiles,
                             label_set.add(label_key)
 
                     output_map: typing.Mapping[str, str] = {
-                       node1_column_name: node1_value,
+                        node1_column_name: node1_value,
                         label_column_name: new_label_value,
                         node2_column_name: node2_value,
                     }
