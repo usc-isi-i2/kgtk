@@ -42,10 +42,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
-    parser.add_output_file(who="An optional output file for lowered edges. If omitted, lowered edges will go in the main output file.",
-                           dest="label_file",
-                           options=["--lowered-edges-file", "--label-file"],
-                           metavar="LABEL_FILE",
+    parser.add_output_file(who="An optional output file for new edges (normalized and/or lowered). " +
+                           "If omitted, new edges will go in the main output file.",
+                           dest="new_edges_file",
+                           options=["--new-edges-file"],
+                           metavar="NEW_EDGES_FILE",
                            optional=True)
 
 
@@ -70,12 +71,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--normalize", dest="normalize",
                               help="When True, normalize columns that do not match a lift pattern. (default=%(default)s)",
-                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
-    parser.add_argument(      "--deduplicate-labels", dest="deduplicate_labels",
-                              help="When True, deduplicate the labels. " +
-                              "Note: When new labels are written to a new label file, only those labels will be deduplicated. " +
-                              "When labels are written to the output file, existing labels in the input file are deduplicated as well. (default=%(default)s).",
+    parser.add_argument(      "--deduplicate-new-edges", dest="deduplicate_new_edges",
+                              help="When True, deduplicate new edges written to a new edges file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -84,7 +83,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
-        label_file: KGTKFiles,
+        new_edges_file: KGTKFiles,
 
         base_columns: typing.Optional[typing.List[str]] = None,
         columns_to_lower: typing.Optional[typing.List[str]] = None,
@@ -92,7 +91,7 @@ def run(input_file: KGTKFiles,
         lift_separator: str = KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR,
         lower: bool = False,
         normalize: bool = False,
-        deduplicate_labels: bool = True,
+        deduplicate_new_edges: bool = True,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -107,7 +106,7 @@ def run(input_file: KGTKFiles,
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
-    label_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(label_file, who="Label file")
+    new_edges_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(new_edges_file, who="Label file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -120,8 +119,8 @@ def run(input_file: KGTKFiles,
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
-        if label_kgtk_file is not None:
-            print("--label-file=%s" % str(label_kgtk_file), file=error_file)
+        if new_edges_kgtk_file is not None:
+            print("--label-file=%s" % str(new_edges_kgtk_file), file=error_file)
 
         if base_columns is not None:
             print("--base-columns=%s" % " ".join(base_columns), file=error_file)
@@ -131,7 +130,7 @@ def run(input_file: KGTKFiles,
         print("--lift-separator=%s" % lift_separator, file=error_file)
         print("--lower=%s" % lower, file=error_file)
         print("--normalize=%s" % normalize, file=error_file)
-        print("--deduplicate-labels=%s" % deduplicate_labels, file=error_file)
+        print("--deduplicate-labels=%s" % deduplicate_new_edges, file=error_file)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -324,13 +323,13 @@ def run(input_file: KGTKFiles,
         shuffle_list: typing.List[int] = kw.build_shuffle_list(kr.column_names)
 
         lkw: typing.Optional[KgtkWriter] = None
-        if label_kgtk_file is not None:
+        if new_edges_kgtk_file is not None:
             if verbose:
-                print("Opening the label output file: %s" % str(label_kgtk_file), file=error_file, flush=True)
+                print("Opening the label output file: %s" % str(new_edges_kgtk_file), file=error_file, flush=True)
 
             label_column_names = [ node1_column_name, label_column_name, node2_column_name ]                
             lkw = KgtkWriter.open(label_column_names,
-                                  label_kgtk_file,
+                                  new_edges_kgtk_file,
                                   mode=KgtkWriter.Mode.EDGE,
                                   verbose=verbose,
                                   very_verbose=very_verbose)
@@ -341,29 +340,12 @@ def run(input_file: KGTKFiles,
         label_set: typing.Set[str] = set()
         label_key: str
 
-        # If labels will be written to the output file and deduplication is enabled:
-        # check_existing_labels: bool = \
-        #    deduplicate_labels and \
-        #    lkw is None and \
-        #    kr.node1_column_idx >= 0 and \
-        #    kr.label_column_idx >= 0 and \
-        #    kr.node2_column_idx >= 0
-        check_existing_labels: bool = False # Need to rewrite this code.
-
         input_line_count: int = 0
         output_line_count: int = 0
         label_line_count: int = 0
         row: typing.List[str]
         for row in kr:
             input_line_count += 1
-
-            # TODO: Need to rework this for multiple label values:
-            if check_existing_labels and row[kr.label_column_idx] == label_value:
-                label_key = row[kr.node1_column_idx] + KgtkFormat.KEY_FIELD_SEPARATOR + row[kr.node2_column_idx]
-                if label_key in label_set:
-                    continue
-                else:
-                    label_set.add(label_key)
 
             kw.write(row, shuffle_list=shuffle_list)
             output_line_count += 1
@@ -388,7 +370,7 @@ def run(input_file: KGTKFiles,
                     if len(node2_value) == 0:
                         continue # Ignore empty node2 values.
 
-                    if deduplicate_labels:
+                    if deduplicate_new_edges:
                         label_key = node1_value + KgtkFormat.KEY_FIELD_SEPARATOR + new_label_value + KgtkFormat.KEY_FIELD_SEPARATOR + node2_value
                         if label_key in label_set:
                             continue
