@@ -68,7 +68,12 @@ def load_property_labels_file(input_files: typing.List[str],
             text: str
             language: str
             language_suffix: str
-            text, lannguage, language_suffix = KgtkFormat.destringify(node_label)
+            if node_label.startswith(("'", '"')):
+                text, language, language_suffix = KgtkFormat.destringify(node_label)
+            else:
+                text = node_label
+                language = ""
+                language_suffix = ""
 
             # The following code will take the last-read English label,
             # otherwise, the first-read non-English label.
