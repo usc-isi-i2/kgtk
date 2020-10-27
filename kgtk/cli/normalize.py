@@ -17,8 +17,8 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Normalize a KGTK edge file by reversing the "lift" pattern.',
-        'description': 'Normalize a KGTK edge file by removing columns that match a "lift" pattern.'
+        'help': 'Normalize a KGTK edge file by reversing the "lift" pattern or converting escondary edge columns to new edges.',
+        'description': 'Normalize a KGTK edge file by removing columns that match a "lift" pattern and converting remaining additional columns to new edges.'
     }
 
 
@@ -74,7 +74,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     parser.add_argument(      "--deduplicate-new-edges", dest="deduplicate_new_edges",
-                              help="When True, deduplicate new edges written to a new edges file. (default=%(default)s).",
+                              help="When True, deduplicate new edges. Not suitable for large files. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -287,18 +287,20 @@ def run(input_file: KGTKFiles,
 
                 else:
                     if verbose:
-                        print("Column %s does not contain the sepatator %s, skipping." % (repr(column_name), repr(lift_separator)), file=error_file, flush=True)
+                        print("Column %s does not contain the separator %s and not normalizing, skipping." % (repr(column_name), repr(lift_separator)), file=error_file, flush=True)
                     continue
 
                 # This test should be redundant.
                 if base_name in kr.column_names:
                     lower_map[idx] = (kr.column_name_map[base_name], new_label_value)
+                else:
+                    raise KGTKException("Base name %s was unexpectedly not found." % repr(base_name))
 
         if len(lower_map) == 0:
-            raise KGTKException("There are no columns to lower.")
+            raise KGTKException("There are no columns to lower or normalize.")
 
         if verbose:
-            print("The following columns will be lowered", file=error_file, flush=True)
+            print("The following columns will be lowered or normalized", file=error_file, flush=True)
             for idx in sorted(lower_map.keys()):
                 column_name = kr.column_names[idx]
                 base_idx, new_label_value = lower_map[idx]
