@@ -58,11 +58,12 @@ def load_property_labels_file(input_files: typing.List[str],
         if kr.label_column_idx < 0:
             fail = True
             print("Cannot determine which column is the label in %s" % each_file, file=error_file, flush=True)
-        raise KGTKException("Cannot identify a required column in %s" % each_file)
+        if fail:
+            raise KGTKException("Cannot identify a required column in %s" % each_file)
     
         row: typing.List[str]
         for row in kr:
-            node_id: str = row[kr.node_column_idx]
+            node_id: str = row[kr.node1_column_idx]
             node_label: str = row[kr.label_column_idx]
             text: str
             language: str
