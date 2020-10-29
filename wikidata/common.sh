@@ -46,3 +46,49 @@ CLEAN=0
 KGTK_FLAGS="--debug --timing --progress --progress-tty `tty`"
 VERBOSE="--verbose"
 SORT_EXTRAS="--parallel 8 --buffer-size 50% -T /data1/rogers/tmp -T /data2/rogers/tmp"
+
+# The Wikidata datatypes:
+WIKIDATATYPES=( \
+	    "commonsMedia" \
+		"external-id" \
+		"geo-shape" \
+		"globe-coordinate" \
+		"math" \
+		"monolingualtext" \
+		"musical-notation" \
+		"quantity" \
+		"string" \
+		"tabular-data" \
+		"time" \
+		"url" \
+		"wikibase-form" \
+		"wikibase-item" \
+		"wikibase-lexeme" \
+		"wikibase-property" \
+		"wikibase-sense" \
+		"other" \
+    )
+
+# The wikidata import split files:
+WIKIDATA_IMPORT_SPLIT_FILES=( \
+    "node" \
+	"all.full" \
+	"all" \
+	"qual.full" \
+	"qual" \
+	"part.alias" \
+	"part.alias.en" \
+	"part.description" \
+	"part.description.en" \
+	"part.label" \
+	"part.label.en" \
+	"property.datatype" \
+	"types" \
+	"part.wikipedia_sitelink" \
+	"part.wikipedia_sitelink.en" \
+	"part.property" \
+	"part.property.qual" \
+    )
+
+# GZIP_CMD=gzip
+GZIP_CMD=pigz
