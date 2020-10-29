@@ -54,20 +54,26 @@ def load_property_labels_file(input_files: typing.List[str],
         fail: bool = False
         if kr.node1_column_idx < 0:
             fail = True
-            print("Cannot determine which column is the predicate in %s" % each_file, file=error_file, flush=True)
-        if kr.label_column_idx < 0:
+            print("Cannot determine which column is node1 in %s" % each_file, file=error_file, flush=True)
+        if kr.node2_column_idx < 0:
             fail = True
-            print("Cannot determine which column is the label in %s" % each_file, file=error_file, flush=True)
-        raise KGTKException("Cannot identify a required column in %s" % each_file)
+            print("Cannot determine which column is node2 in %s" % each_file, file=error_file, flush=True)
+        if fail:
+            raise KGTKException("Cannot identify a required column in %s" % each_file)
     
         row: typing.List[str]
         for row in kr:
-            node_id: str = row[kr.node_column_idx]
-            node_label: str = row[kr.label_column_idx]
+            node_id: str = row[kr.node1_column_idx]
+            node_label: str = row[kr.node2_column_idx]
             text: str
             language: str
             language_suffix: str
-            text, lannguage, language_suffix = KgtkFormat.destringify(node_label)
+            if node_label.startswith(("'", '"')):
+                text, language, language_suffix = KgtkFormat.destringify(node_label)
+            else:
+                text = node_label
+                language = ""
+                language_suffix = ""
 
             # The following code will take the last-read English label,
             # otherwise, the first-read non-English label.
