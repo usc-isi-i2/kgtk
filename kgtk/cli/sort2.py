@@ -31,7 +31,7 @@ runs in parallel with the Python process.
 8) The sort command reads the rest of the input stream,
    sorts it, and writes the sorted data ro the output stream.
 """
-from argparse import Namespace
+from argparse import Namespace, SUPPRESS
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -48,6 +48,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
+
+    # This helper function makes it easy to suppress options from
+    # The help message.  The options are still there, and initialize
+    # what they need to initialize.
+    def h(msg: str)->str:
+        if _expert:
+            return msg
+        else:
+            return SUPPRESS
 
     parser.add_input_file(positional=True, metavar="INPUT",
                           who="Input file to sort.")
@@ -72,6 +81,24 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('-X', '--extra', default='', action='store', dest='extra',
                         help="extra options to supply to the sort program. (default=None)")
+
+    parser.add_argument(      '--bash-command', dest='bash_command', type=str, default="bash",
+                        help=h("The bash command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--bzip2-command', dest='bzip2_command', type=str, default="bzip2",
+                        help=h("The bzip2 command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--gzip-command', dest='gzip_command', type=str, default="gzip",
+                        help=h("The gzip command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--pgrep-command', dest='pgrep_command', type=str, default="pgrep",
+                        help=h("The pgrep command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--sort-command', dest='sort_command', type=str, default="sort",
+                        help=h("The sort command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--xz-command', dest='xz_command', type=str, default="xz",
+                        help=h("The xz command or its substitute. (default=%(default)s)"))
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -139,6 +166,13 @@ def run(input_file: KGTKFiles,
         reverse: bool = False,
         pure_python: bool = False,
         extra: typing.Optional[str] = None,
+
+        bash_command: str = "bash",
+        bzip2_command: str = "bzip2",
+        gzip_command: str = "gzip",
+        pgrep_command: str = "pgrep",
+        sort_command: str = "sort",
+        xz_command: str = "xz",
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -277,7 +311,7 @@ def run(input_file: KGTKFiles,
             " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; ", # Send the header to Python
             " printf \"%s\\n\" \"$header\" ; ", # Send the header to standard output (which may be redirected to a file, below).
             " IFS= read -u " + str(sortopt_read_fd) + " -r options ; ", # Read the sort command options from Python.
-            " %s sort -t '\t' $options ; } " % (locale_envar), # Sort the remaining input lines using the options read from Python.
+            " %s %s -t '\t' $options ; } " % (locale_envar, sort_command), # Sort the remaining input lines using the options read from Python.
         ))
         if str(output_path) != "-":
             # Do we want to compress the output?
@@ -285,17 +319,17 @@ def run(input_file: KGTKFiles,
             if output_suffix in [".gz", ".z"]:
                 if verbose:
                     print("gzip output file: %s" % str(output_path), file=error_file, flush=True)
-                cmd += " | gzip -"
+                cmd += " | " + gzip_command + " -"
 
             elif output_suffix in [".bz2", ".bz"]:
                 if verbose:
                     print("bzip2 output file: %s" % str(output_path), file=error_file, flush=True)
-                cmd += " | bzip2 -z"
+                cmd += " | " + bzip2_command + " -z"
 
             elif output_suffix in [".xz", ".lzma"]:
                 if verbose:
                     print("xz output file: %s" % str(output_path), file=error_file, flush=True)
-                cmd += " | xz -z -"
+                cmd += " | " + xz_command + " -z -"
 
             # Feed the sorted output to the named file.  Otherwise, the sorted
             # output goes to standard output without passing through Python.
@@ -319,9 +353,10 @@ def run(input_file: KGTKFiles,
             # Locate the sort command using pgrep
             buf = StringIO()
             try:
-                sh.pgrep("-g", cmd_proc.pgid, "--newest", "sort", _out=buf)
+                sh_pgrep = sh.Command(pgrep_command)
+                sh_pgrep("-g", cmd_proc.pgid, "--newest", sort_command, _out=buf)
                 pgrep_output = buf.getvalue()
-                if len(pgrep_output) ==0:
+                if len(pgrep_output) == 0:
                     if verbose:
                         print("Unable to locate the sort command.", file=error_file, flush=True)
                     return
@@ -341,7 +376,8 @@ def run(input_file: KGTKFiles,
             # Read from standard input.
             #
             # Sh version 1.13 or greater is required for _pass_fds.
-            cmd_proc = sh.bash("-c", cmd, _in=sys.stdin, _out=sys.stdout, _err=sys.stderr,
+            sh_bash = sh.Command(bash_command)
+            cmd_proc = sh_bash("-c", cmd, _in=sys.stdin, _out=sys.stdout, _err=sys.stderr,
                                _bg=True, _bg_exc=False, _internal_bufsize=1,
                                _pass_fds={header_write_fd, sortopt_read_fd})
 
@@ -355,7 +391,8 @@ def run(input_file: KGTKFiles,
             if input_suffix in [".gz", ".z"]:
                 if verbose:
                     print("gunzip input file: %s" % str(input_path), file=error_file, flush=True)
-                cat_proc = sh.gzip(input_path, "-dc",
+                sh_gzip = sh.Command(gzip_command)
+                cat_proc = sh_gzip(input_path, "-dc",
                                    _in=sys.stdin, _piped=True, _err=sys.stderr,
                                    _bg=True, _bg_exc=False, _internal_bufsize=1,
                                    _done=cat_done)
@@ -363,7 +400,8 @@ def run(input_file: KGTKFiles,
             elif input_suffix in [".bz2", ".bz"]:
                 if verbose:
                     print("bunzip2 input file: %s" % str(input_path), file=error_file, flush=True)
-                cat_proc = sh.bzip2(input_path, "-dc",
+                sh_bzip2 = sh.Command(bzip2_command)
+                cat_proc = sh_bzip2(input_path, "-dc",
                                     _in=sys.stdin, _piped=True, _err=sys.stderr,
                                     _bg=True, _bg_exc=False, _internal_bufsize=1,
                                     _done=cat_done)
@@ -371,7 +409,8 @@ def run(input_file: KGTKFiles,
             elif input_suffix in [".xz", ".lzma"]:
                 if verbose:
                     print("unxz input file: %s" % str(input_path), file=error_file, flush=True)
-                cat_proc = sh.xz(input_path, "-dc",
+                sh_xz = sh.Command(xz_command)
+                cat_proc = sh_xz(input_path, "-dc",
                                  _in=sys.stdin, _piped=True, _err=sys.stderr,
                                  _bg=True, _bg_exc=False, _internal_bufsize=1,
                                  _done=cat_done)
@@ -389,7 +428,8 @@ def run(input_file: KGTKFiles,
             progress_startup(pid=cat_proc.pid)
 
             # Sh version 1.13 or greater is required for _pass_fds.
-            cmd_proc = sh.bash(cat_proc, "-c", cmd, _out=sys.stdout, _err=sys.stderr,
+            sh_bash = sh.Command(bash_command)
+            cmd_proc = sh_bash(cat_proc, "-c", cmd, _out=sys.stdout, _err=sys.stderr,
                                _bg=True, _bg_exc=False, _internal_bufsize=1,
                                _pass_fds={header_write_fd, sortopt_read_fd})
             # Since we do not have access to the pid of the sort command,
