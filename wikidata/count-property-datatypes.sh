@@ -10,16 +10,8 @@ source common.sh
 echo -e "\nCount unique datatypes in ${DATADIR}/part.property.tsv"
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
-     --input-file ${DATADIR}/part.property.tsv \
-     --output-file ${DATADIR}/part.property.datatypes.tsv \
+     --input-file ${DATADIR}/part.property.${SORTED_KGTK} \
+     --output-file ${DATADIR}/part.property.datatypes.${SORTED_KGTK} \
      --column "node2;wikidatatype" \
+     --use-mgzip ${USE_MGZIP} \
     |& tee ${LOGDIR}/part.property.datatypes.log
-
-# ==============================================================================
-# Deliver the property datatype distribution.  It is small, so don't bother
-# compressing it.
-echo -e "\nDeliver the part.property.datatypes file to the KGTK Google Drive."
-time rsync --archive --verbose \
-     ${DATADIR}/part.property.datatypes.tsv \
-     ${PRODUCTDIR}/ \
-    |& tee ${LOGDIR}/part.property.datatypes-deliver.log

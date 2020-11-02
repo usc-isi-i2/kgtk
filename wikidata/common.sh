@@ -5,16 +5,19 @@
 # This is the Wikidata version we will analyze:
 WIKIDATA_VERSION=wikidata-20200803
 
+KGTK_WORK_DIR1=/data3/rogers
+KGTK_WORK_DIR2=/data4/rogers
+
 # This script expects to see the wikidata dump JSON file in the
 # following location:
-WIKIDATA_JSON_DIR=/data1/rogers/elicit/cache/datasets/${WIKIDATA_VERSION}
+WIKIDATA_JSON_DIR=${KGTK_WORK_DIR1}/elicit/cache/datasets/${WIKIDATA_VERSION}
 
 # The `kgtk validate-properties` pattern files are expected to
 # be in:
 PATTERNDIR=/data1/rogers/elicit/github/kgtk/wikidata/patterns
 
 # This will be our working directory:
-WIKIDATA_WORK_DIR=/data1/rogers/elicit/cache/datasets/${WIKIDATA_VERSION}
+WIKIDATA_WORK_DIR=${KGTK_WORK_DIR2}/elicit/cache/datasets/${WIKIDATA_VERSION}
 
 # The working data files will be stored in:
 DATADIR=${WIKIDATA_WORK_DIR}/data
@@ -23,19 +26,26 @@ DATADIR=${WIKIDATA_WORK_DIR}/data
 LOGDIR=${WIKIDATA_WORK_DIR}/logs
 
 # Completed data products will be stored in:
-PRODUCTDIR=/data1/rogers/elicit/drive/datasets/${WIKIDATA_VERSION}-v3
+PRODUCTDIR=/data1/rogers/elicit/drive/datasets/${WIKIDATA_VERSION}-v4
 
 # The Wikidata JSON file is named as follows:
 WIKIDATA_ALL=${WIKIDATA_VERSION}-all
-WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json
+WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json.gz
 
 # We will import the following files first:
 WIKIDATA_ALL_NODES=${WIKIDATA_ALL}-nodes # a node file
 WIKIDATA_ALL_EDGES=${WIKIDATA_ALL}-edges # the main edge file
 WIKIDATA_ALL_QUALIFIERS=${WIKIDATA_ALL}-qualifiers # the qualifiers
 
+# Work file extensions
+UNSORTED_KGTK=unsorted.tsv
+SORTED_KGTK=tsv.gz
+
+# Use mgzip in some cases?
+USE_MGZIP=True
+
 # Ensure that sort has enough space for its temporary files.
-TMPDIR=/data1/rogers/tmp
+TMPDIR=${KGTK_WORK_DIR1}/tmp
 export TMPDIR
 
 # Skip cleaning for now.  When we enable it, we will need to adjust some file
@@ -45,7 +55,7 @@ CLEAN=0
 # Some common flags:
 KGTK_FLAGS="--debug --timing --progress --progress-tty `tty`"
 VERBOSE="--verbose"
-SORT_EXTRAS="--parallel 8 --buffer-size 50% -T /data1/rogers/tmp -T /data2/rogers/tmp"
+SORT_EXTRAS="--parallel 24 --buffer-size 75% -T ${KGTK_WORK_DIR1}/tmp -T ${KGTK_WORK_DIR2}/tmp"
 
 # The Wikidata datatypes:
 WIKIDATATYPES=( \

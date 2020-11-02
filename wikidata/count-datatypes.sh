@@ -10,17 +10,8 @@ source common.sh
 echo -e "\nCount unique datatypes in ${DATADIR}/all.tsv"
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
-     --input-file ${DATADIR}/all.tsv \
-     --output-file ${DATADIR}/all.datatypes.tsv \
+     --input-file ${DATADIR}/all.${SORTED_KGTK} \
+     --output-file ${DATADIR}/all.datatypes.${SORTED_KGTK} \
      --column "node2;wikidatatype" \
+     --use-mgzip ${USE_MGZIP} \
     |& tee ${LOGDIR}/all.datatypes.log
-
-# ==============================================================================
-# Deliver the edge datatype distribution.  It is small, so don't bother
-# compressing it.
-echo -e "\nDeliver the all.datatypes file to the KGTK Google Drive."
-time rsync --archive --verbose \
-     ${DATADIR}/all.datatypes.tsv \
-     ${PRODUCTDIR}/ \
-    |& tee ${LOGDIR}/all.datatypes-deliver.log
-    

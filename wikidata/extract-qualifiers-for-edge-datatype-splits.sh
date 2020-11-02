@@ -14,11 +14,12 @@ do
     echo -e "\nExtract any qualifiers for the properties in ${TARGET_NAME}."
     kgtk ${KGTK_FLAGS} \
 	 ifexists ${VERBOSE} \
-	 --input-file ${DATADIR}/qual.tsv \
-	 --filter-on ${DATADIR}/${TARGET_NAME}.tsv \
-	 --output-file ${DATADIR}/${TARGET_NAME}.qual.tsv \
+	 --input-file ${DATADIR}/qual.${SORTED_KGTK} \
+	 --filter-on ${DATADIR}/${TARGET_NAME}.${SORTED_KGTK} \
+	 --output-file ${DATADIR}/${TARGET_NAME}.qual.${SORTED_KGTK} \
 	 --input-keys node1 \
 	 --filter-keys id \
 	 --presorted \
+	 --use-mgzip ${USE_MGZIP} \
 	|& tee ${LOGDIR}/${TARGET_NAME}.qual.log
 done

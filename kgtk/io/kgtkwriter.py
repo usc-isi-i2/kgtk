@@ -83,6 +83,7 @@ class KgtkWriter(KgtkBase):
     header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXIT)
 
     # Other implementation options?
+    use_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_thread: typing.Optional[GzipProcess] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(GzipProcess)), default=None)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
@@ -113,6 +114,7 @@ class KgtkWriter(KgtkBase):
              fill_missing_columns: bool = False,
              error_file: typing.TextIO = sys.stderr,
              header_error_action: ValidationAction = ValidationAction.EXIT,
+             use_mgzip: bool = False,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
@@ -140,6 +142,7 @@ class KgtkWriter(KgtkBase):
                               fill_missing_columns=fill_missing_columns,
                               error_file=error_file,
                               header_error_action=header_error_action,
+                              use_mgzip=use_mgzip,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -169,6 +172,7 @@ class KgtkWriter(KgtkBase):
                               fill_missing_columns=fill_missing_columns,
                               error_file=error_file,
                               header_error_action=header_error_action,
+                              use_mgzip=use_mgzip,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -189,10 +193,16 @@ class KgtkWriter(KgtkBase):
             # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
             gzip_file: typing.TextIO
             if file_path.suffix == ".gz":
-                if verbose:
-                    print("KgtkWriter: writing gzip %s" % str(file_path), file=error_file, flush=True)
-                import gzip
-                gzip_file = gzip.open(file_path, mode="wt") # type: ignore
+                if use_mgzip:
+                    if verbose:
+                        print("KgtkWriter: writing multithreaded gzip %s" % str(file_path), file=error_file, flush=True)
+                    import mgzip
+                    gzip_file = mgzip.open(str(file_path), mode="wt") # type: ignore
+                else:
+                    if verbose:
+                        print("KgtkWriter: writing gzip %s" % str(file_path), file=error_file, flush=True)
+                    import gzip
+                    gzip_file = gzip.open(file_path, mode="wt") # type: ignore
 
             elif file_path.suffix == ".bz2":
                 if verbose:
@@ -240,6 +250,7 @@ class KgtkWriter(KgtkBase):
                               fill_missing_columns=fill_missing_columns,
                               error_file=error_file,
                               header_error_action=header_error_action,
+                              use_mgzip=use_mgzip,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -276,6 +287,7 @@ class KgtkWriter(KgtkBase):
                               fill_missing_columns=fill_missing_columns,
                               error_file=error_file,
                               header_error_action=header_error_action,
+                              use_mgzip=use_mgzip,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -299,6 +311,7 @@ class KgtkWriter(KgtkBase):
                fill_missing_columns: bool,
                error_file: typing.TextIO,
                header_error_action: ValidationAction,
+               use_mgzip: bool,
                gzip_in_parallel: bool,
                gzip_queue_size: int,
                column_separator: str,
@@ -410,6 +423,7 @@ class KgtkWriter(KgtkBase):
                              fill_missing_columns=fill_missing_columns,
                              error_file=error_file,
                              header_error_action=header_error_action,
+                             use_mgzip=use_mgzip,
                              gzip_in_parallel=gzip_in_parallel,
                              gzip_thread=gzip_thread,
                              gzip_queue_size=gzip_queue_size,

@@ -550,6 +550,26 @@ def add_arguments(parser: KGTKArgumentParser):
         help="If true, use KgtkWriter instead of csv.writer. (default=%(default)s).")
 
     parser.add_argument(
+        "--use-mgzip-for-input",
+        nargs='?',
+        type=optional_bool,
+        dest="use_mgzip_for_input",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, use the multithreaded gzip package, mgzip, for input. (default=%(default)s).")
+
+    parser.add_argument(
+        "--use-mgzip-for-output",
+        nargs='?',
+        type=optional_bool,
+        dest="use_mgzip_for_output",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, use the multithreaded gzip package, mgzip, for output. (default=%(default)s).")
+
+    parser.add_argument(
         '--value-hash-width',
         action="store",
         type=int,
@@ -626,6 +646,8 @@ def run(input_file: KGTKFiles,
         collector_batch_size: int,
         single_mapper_queue: bool,
         use_kgtkwriter: bool,
+        use_mgzip_for_input: bool,
+        use_mgzip_for_output: bool,
         value_hash_width: int,
         claim_id_hash_width: int,
         ):
@@ -634,7 +656,6 @@ def run(input_file: KGTKFiles,
     import bz2
     import simplejson as json
     import csv
-    import gzip
     import hashlib
     import multiprocessing as mp
     import os
@@ -646,7 +667,6 @@ def run(input_file: KGTKFiles,
     from kgtk.cli_argparse import KGTKArgumentParser
     from kgtk.cli_entry import progress_startup
     from kgtk.exceptions import KGTKException
-    from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
 
     languages=lang.split(',')
@@ -1753,8 +1773,9 @@ def run(input_file: KGTKFiles,
             f: typing.Optional[typing.TextIO]
             wr: typing.Any
             if use_kgtkwriter:
+                from kgtk.io.kgtkwriter import KgtkWriter
                 print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file), file=sys.stderr, flush=True)
-                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector")
+                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector", use_mgzip=use_mgzip_for_output)
                 return None, wr
                 
             else:
@@ -2138,9 +2159,15 @@ def run(input_file: KGTKFiles,
                     input_f = bz2.open(input_f)
 
                 elif str(inp_path).endswith(".gz"):
-                    print('Decompressing (gzip)', file=sys.stderr, flush=True)
                     # TODO: Optionally use a system decompression program.
-                    input_f = gzip.open(input_f)
+                    if use_mgzip_for_input:
+                        import mgzip
+                        print('Decompressing (mgzip)', file=sys.stderr, flush=True)
+                        input_f = mgzip.open(input_f)
+                    else:
+                        import gzip
+                        print('Decompressing (gzip)', file=sys.stderr, flush=True)
+                        input_f = gzip.open(input_f)
 
             collector_p = None
             node_collector_p = None

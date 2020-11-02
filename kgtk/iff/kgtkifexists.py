@@ -724,6 +724,7 @@ class KgtkIfExists(KgtkFormat):
                                  require_all_columns=False,
                                  prohibit_extra_columns=True,
                                  fill_missing_columns=True,
+                                 use_mgzip=self.input_reader_options.use_mgzip, # Hack!
                                  gzip_in_parallel=False,
                                  verbose=self.verbose,
                                  very_verbose=self.very_verbose)
@@ -738,6 +739,7 @@ class KgtkIfExists(KgtkFormat):
                                   require_all_columns=False,
                                   prohibit_extra_columns=True,
                                   fill_missing_columns=True,
+                                  use_mgzip=self.input_reader_options.use_mgzip, # Hack!
                                   gzip_in_parallel=False,
                                   verbose=self.verbose,
                                   very_verbose=self.very_verbose)
@@ -752,6 +754,7 @@ class KgtkIfExists(KgtkFormat):
                                   require_all_columns=False,
                                   prohibit_extra_columns=True,
                                   fill_missing_columns=True,
+                                   use_mgzip=self.input_reader_options.use_mgzip, # Hack!
                                   gzip_in_parallel=False,
                                   verbose=self.verbose,
                                   very_verbose=self.very_verbose)
@@ -766,6 +769,7 @@ class KgtkIfExists(KgtkFormat):
                                   require_all_columns=False,
                                   prohibit_extra_columns=True,
                                   fill_missing_columns=True,
+                                   use_mgzip=self.input_reader_options.use_mgzip, # Hack!
                                   gzip_in_parallel=False,
                                   verbose=self.verbose,
                                   very_verbose=self.very_verbose)
@@ -791,14 +795,15 @@ class KgtkIfExists(KgtkFormat):
 
 
             jw = KgtkWriter.open(joined_column_names,
-                                  self.join_file_path,
-                                  mode=KgtkWriter.Mode[input_kr.mode.name],
-                                  require_all_columns=False,
-                                  prohibit_extra_columns=True,
-                                  fill_missing_columns=True,
-                                  gzip_in_parallel=False,
-                                  verbose=self.verbose,
-                                  very_verbose=self.very_verbose)
+                                 self.join_file_path,
+                                 mode=KgtkWriter.Mode[input_kr.mode.name],
+                                 require_all_columns=False,
+                                 prohibit_extra_columns=True,
+                                 fill_missing_columns=True,
+                                 use_mgzip=self.input_reader_options.use_mgzip, # Hack!
+                                 gzip_in_parallel=False,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose)
             join_shuffle_list = jw.build_shuffle_list(right_column_names)
             
         if self.presorted:
