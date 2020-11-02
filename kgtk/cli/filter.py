@@ -558,6 +558,7 @@ def run(input_file: KGTKFiles,
             kw = KgtkWriter.open(kr.column_names,
                                  output_kgtk_file,
                                  mode=KgtkWriter.Mode[kr.mode.name],
+                                 use_mgzip=reader_options.use_mgzip, # Hack!
                                  verbose=verbose,
                                  very_verbose=very_verbose)
             kws.append(kw)
@@ -569,6 +570,7 @@ def run(input_file: KGTKFiles,
             rw = KgtkWriter.open(kr.column_names,
                                  reject_kgtk_file,
                                  mode=KgtkWriter.Mode[kr.mode.name],
+                                 use_mgzip=reader_options.use_mgzip, # Hack!
                                  verbose=verbose,
                                  very_verbose=very_verbose)
 

@@ -115,6 +115,7 @@ class KgtkReaderOptions():
     # Other implementation options?
     input_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
     compression_type: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
+    use_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
@@ -181,15 +182,21 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "The maximum number of errors to report before failing (default=%(default)s)"),
                             type=int, **d(default=cls.ERROR_LIMIT_DEFAULT))
 
+        fgroup.add_argument(prefix1 + "use-mgzip",
+                            dest=prefix2 + "use_mgzip",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "Execute multithreaded gzip. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
+
         fgroup.add_argument(prefix1 + "gzip-in-parallel",
                             dest=prefix2 + "gzip_in_parallel",
                             metavar="optional True|False",
-                            help=h(prefix3 + "Execute gzip in parallel (default=%(default)s)."),
+                            help=h(prefix3 + "Execute gzip in parallel. (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=False))
 
         fgroup.add_argument(prefix1 + "gzip-queue-size",
                             dest=prefix2 + "gzip_queue_size",
-                            help=h(prefix3 + "Queue size for parallel gzip (default=%(default)s)."),
+                            help=h(prefix3 + "Queue size for parallel gzip. (default=%(default)s)."),
                             type=int, **d(default=cls.GZIP_QUEUE_SIZE_DEFAULT))
 
         if mode_options:
@@ -350,6 +357,7 @@ class KgtkReaderOptions():
             every_nth_record=lookup("every_nth_record", 1),
             fill_short_lines=lookup("fill_short_lines", False),
             force_column_names=lookup("force_column_names", None),
+            use_mgzip=lookup("use_mgzip", False),
             gzip_in_parallel=lookup("gzip_in_parallel", False),
             gzip_queue_size=lookup("gzip_queue_size", KgtkReaderOptions.GZIP_QUEUE_SIZE_DEFAULT),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
@@ -412,6 +420,7 @@ class KgtkReaderOptions():
             print("%sinput-format=%s" % (prefix, str(self.input_format)), file=out)
         if self.compression_type is not None:
             print("%scompression-type=%s" % (prefix, str(self.compression_type)), file=out)
+        print("%suse-mgzip=%s" % (prefix, str(self.use_mgzip)), file=out)
         print("%sgzip-in-parallel=%s" % (prefix, str(self.gzip_in_parallel)), file=out)
         print("%sgzip-queue-size=%s" % (prefix, str(self.gzip_queue_size)), file=out)
               
@@ -625,15 +634,25 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                               file_name: str,
                               file_or_path: typing.Union[Path, typing.TextIO],
                               who: str,
+                              use_mgzip: bool,
                               error_file: typing.TextIO,
                               verbose: bool)->typing.TextIO:
         
         # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
         if compression_type in [".gz", "gz"]:
-            if verbose:
-                print("%s: reading gzip %s" % (who, file_name), file=error_file, flush=True)
-            import gzip
-            return gzip.open(file_or_path, mode="rt") # type: ignore
+            if use_mgzip:
+                if verbose:
+                    print("%s: reading multithreaded gzip %s" % (who, file_name), file=error_file, flush=True)
+                import mgzip
+                if isinstance(file_or_path, Path):
+                    return mgzip.open(str(file_or_path), mode="rt") # type: ignore
+                else:
+                    return mgzip.open(file_or_path, mode="rt") # type: ignore
+            else:
+                if verbose:
+                    print("%s: reading gzip %s" % (who, file_name), file=error_file, flush=True)
+                import gzip
+                return gzip.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".bz2", "bz2"]:
             if verbose:
@@ -666,7 +685,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         who: str = cls.__name__
         if file_path is None or str(file_path) == "-":
             if options.compression_type is not None and len(options.compression_type) > 0:
-                return ClosableIterTextIOWrapper(cls._open_compressed_file(options.compression_type, "-", sys.stdin, who, error_file, verbose))
+                return ClosableIterTextIOWrapper(cls._open_compressed_file(options.compression_type, "-", sys.stdin, who, options.use_mgzip, error_file, verbose))
             else:
                 if verbose:
                     print("%s: reading stdin" % who, file=error_file, flush=True)
@@ -683,9 +702,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         gzip_file: typing.TextIO
         if options.compression_type is not None and len(options.compression_type) > 0:
-            gzip_file = cls._open_compressed_file(options.compression_type, str(file_path), file_path, who, error_file, verbose)
+            gzip_file = cls._open_compressed_file(options.compression_type, str(file_path), file_path, who, options.use_mgzip, error_file, verbose)
         elif file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
-            gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, error_file, verbose)
+            gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, options.use_mgzip, error_file, verbose)
         else:
             if verbose:
                 print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)

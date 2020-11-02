@@ -9,10 +9,11 @@ source common.sh
 echo -e "\nCount the properties in ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv."
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
-     --input-file ${DATADIR}/part.property.tsv \
-     --output-file ${DATADIR}/part.property.counts.tsv \
+     --input-file ${DATADIR}/part.property.${SORTED_KGTK} \
+     --output-file ${DATADIR}/part.property.counts.${SORTED_KGTK} \
      --column label \
      --label total-count \
+     --use-mgzip ${USE_MGZIP} \
      |& tee ${LOGDIR}/part.property.counts.log
 
 
@@ -20,29 +21,15 @@ kgtk ${KGTK_FLAGS} \
 echo -e "\nLift the property labels:"
 #
 # CMR: This step takes 10 minutes on my home workstation because
-# ${DATADIR}/${WIKIDATA_ALL}-labels-en-only-sorted.tsv is fairly large (6.6G
+# ${DATADIR}/part.label.en.${SORTED_KGTK} is fairly large (6.6G
 # as of 05-Oct-2020).
 kgtk ${KGTK_FLAGS} \
      lift ${VERBOSE} \
-     --input-file ${DATADIR}/part.property.counts.tsv \
-     --label-file ${DATADIR}/part.label.en.tsv \
-     --output-file ${DATADIR}/part.property.counts-with-labels.tsv \
+     --input-file ${DATADIR}/part.property.counts.${SORTED_KGTK} \
+     --label-file ${DATADIR}/part.label.en.${SORTED_KGTK} \
+     --output-file ${DATADIR}/part.property.counts-with-labels.${SORTED_KGTK} \
      --columns-to-lift node1 \
      --prefilter-labels \
+     --use-mgzip ${USE_MGZIP} \
      |& tee ${LOGDIR}/part.property.counts-with-labels.log
 
-# ==============================================================================
-echo -e "\nCompress the data product files."
-time gzip --keep --force --verbose \
-     ${DATADIR}/part.property.counts-with-labels.tsv \
-    |& tee ${LOGDIR}/part.property.counts-with-labels-compress.log
-
-# ==============================================================================
-echo -e "\nDeliver the compressed data products to the KGTK Google Drive."
-time rsync --archive --verbose \
-     ${DATADIR}/part.property.counts-with-labels.tsv.gz \
-     ${PRODUCTDIR}/ \
-    |& tee ${LOGDIR}/part.property.counts-with-labels-deliver.log
-
-     
-     

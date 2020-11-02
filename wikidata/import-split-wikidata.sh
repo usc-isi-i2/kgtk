@@ -49,14 +49,14 @@ kgtk ${KGTK_FLAGS} \
      --claim-id-hash-width 8 \
      --use-kgtkwriter True \
      --use-shm True \
-     --procs 5 \
+     --procs 12 \
      --mapper-batch-size 5 \
-     --max-size-per-mapper-queue 10 \
+     --max-size-per-mapper-queue 3 \
      --single-mapper-queue True \
      --collect-results True \
      --collect-seperately True\
      --collector-batch-size 10 \
-     --collector-queue-per-proc-size 15 \
+     --collector-queue-per-proc-size 3 \
      --progress-interval 500000 \
     |& tee ${LOGDIR}/import-split-wikidata.log
 
