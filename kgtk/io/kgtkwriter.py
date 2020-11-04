@@ -408,7 +408,7 @@ class KgtkWriter(KgtkBase):
         gzip_thread: typing.Optional[GzipProcess] = None
         if gzip_in_parallel:
             if verbose:
-                print("Starting the gzip process.", file=error_file, flush=True)
+                print("KgtkWriter: File %s: Starting the gzip process." % (repr(self.file_path)), file=error_file, flush=True)
             gzip_thread = GzipProcess(file_out, Queue(gzip_queue_size))
             gzip_thread.start()
 
@@ -495,7 +495,7 @@ class KgtkWriter(KgtkBase):
                     try:
                         value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
                     except ValueError as e:
-                        print("Error unstringifying %s" % repr(value), file=self.error_file, flush=True)
+                        print("KgtkWriter: File %s: Error unstringifying %s" % (repr(self.file_path), repr(value)), file=self.error_file, flush=True)
                         raise e
                 elif csvlike:
                     # What if the value is a list? unstringify(...) will be
@@ -506,7 +506,7 @@ class KgtkWriter(KgtkBase):
                     try:
                         value = KgtkFormat.unstringify(value, unescape_pipe=unescape_pipe) # Lose the language code.
                     except ValueError as e:
-                        print("Error unstringifying %s" % repr(value), file=self.error_file, flush=True)
+                        print("KgtkWriter: File %s: Error unstringifying %s" % (repr(self.file_path), repr(value)), file=self.error_file, flush=True)
                         raise e
                     value = '"' + value.replace('"', '""') + '"'
                     
@@ -615,7 +615,7 @@ class KgtkWriter(KgtkBase):
                                     ]:
             header = self.column_separator.join(column_names)
         else:
-            raise ValueError("KgtkWriter: header: Unrecognized output format '%s'." % self.output_format)
+            raise ValueError("KgtkWriter: File %s: header: Unrecognized output format '%s'." % (repr(self.file_path), self.output_format))
 
         # Write the column names to the first line.
         if self.verbose:
@@ -665,7 +665,9 @@ class KgtkWriter(KgtkBase):
         if shuffle_list is not None:
             if len(shuffle_list) != len(values):
                 # TODO: throw a better exception
-                raise ValueError("The shuffle list is %d long but the values are %d long" % (len(shuffle_list), len(values)))
+                raise ValueError("KgtkWriter: File %s: The shuffle list is %d long but the values are %d long" % (repr(self.file_path),
+                                                                                                                  len(shuffle_list),
+                                                                                                                  len(values)))
 
             shuffled_values: typing.List[str] = [""] * self.column_count
             idx: int
@@ -686,11 +688,21 @@ class KgtkWriter(KgtkBase):
         line: str
         if self.require_all_columns and len(values) < self.column_count:
             line = self.column_separator.join(values)
-            raise ValueError("Required %d columns in input line %d, saw %d: '%s'" % (self.column_count, self.line_count, len(values), line))
+            raise ValueError("KgtkWriter: File %s: Required %d columns (%s) in output line %d, saw %d: %s" % (repr(self.file_path),
+                                                                                                              self.column_count,
+                                                                                                              repr(self.column_separator.join(self.column_names)),
+                                                                                                              self.line_count,
+                                                                                                              len(values),
+                                                                                                              repr(line)))
         if self.prohibit_extra_columns and len(values) > self.column_count:
             line = self.column_separator.join(values)
-            raise ValueError("Required %d columns in input line %d, saw %d (%d extra): '%s'" % (self.column_count, self.line_count, len(values),
-                                                                                                len(values) - self.column_count, line))
+            raise ValueError("KgtkWriter: File %s: Required %d columns (%s)in output line %d, saw %d (%d extra): %s" % (repr(self.file_path),
+                                                                                                                        self.column_count,
+                                                                                                                        repr(self.column_separator.join(self.column_names)),
+                                                                                                                        self.line_count,
+                                                                                                                        len(values),
+                                                                                                                        len(values) - self.column_count,
+                                                                                                                        repr(line)))
         if self.output_format == self.OUTPUT_FORMAT_KGTK:
             self.writeline(self.column_separator.join(values))
         elif self.output_format == self.OUTPUT_FORMAT_TSV:
@@ -727,7 +739,7 @@ class KgtkWriter(KgtkBase):
         elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP_COMPACT:
             self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
         else:
-            raise ValueError("Unrecognized output format '%s'." % self.output_format)
+            raise ValueError("KgtkWriter: File %s: Unrecognized output format '%s'." % (repr(self.file_path), self.output_format))
 
         self.line_count += 1
         if self.very_verbose:
@@ -744,7 +756,7 @@ class KgtkWriter(KgtkBase):
                 newrow.append(str(item))
             self.write(newrow)
         except TypeError:
-            print("TypeError on %s" % "[" + ", ".join([repr(x) for x in row]) + "]", file=self.error_file, flush=True)
+            print("KgtkWriter: File %s: TypeError on %s" % (repr(self.file_path), "[" + ", ".join([repr(x) for x in row]) + "]"), file=self.error_file, flush=True)
             raise
 
     def writerows(self, rows: typing.List[typing.List[typing.Union[str, int, float, bool]]]):
@@ -792,7 +804,7 @@ class KgtkWriter(KgtkBase):
         if self.prohibit_extra_columns:
             for column_name in value_map.keys():
                 if column_name not in self.column_name_map:
-                    raise ValueError("Unexpected column name %s at data record %d" % (column_name, self.line_count))
+                    raise ValueError("KgtkWriter: File %s: Unexpected column name %s at data record %d" % (repr(self.file_path), column_name, self.line_count))
 
         values: typing.List[str] = [ ]
         for column_name in self.column_names:
@@ -800,7 +812,7 @@ class KgtkWriter(KgtkBase):
                 values.append(value_map[column_name])
             elif self.require_all_columns:
                 # TODO: throw a better exception.
-                raise ValueError("Missing column %s at data record %d" % (column_name, self.line_count))
+                raise ValueError("KgtkWriter: File %s: Missing column %s at data record %d" % (repr(self.file_path), column_name, self.line_count))
             else:
                 values.append("")
                 
