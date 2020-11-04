@@ -1440,27 +1440,33 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # or choices.  That will avoid the argparse bug, too.
         if expert:
             errors_to = egroup.add_mutually_exclusive_group()
-            errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+            errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout", metavar="optional True|False",
                                          help="Send errors to stdout instead of stderr",
-                                         action="store_true")
-            errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+                                         type=optional_bool, nargs='?', const=True, default=False)
+
+            errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr", metavar="optional True|False",
                                          help="Send errors to stderr instead of stdout",
-                                         action="store_true")
+                                         type=optional_bool, nargs='?', const=True, default=False)
         else:
-            egroup.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+            egroup.add_argument(      "--errors-to-stderr", dest="errors_to_stderr", metavar="optional True|False",
                                       help=h("Send errors to stderr instead of stdout"),
-                                      action="store_true")
-            egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                                      type=optional_bool, nargs='?', const=True, default=False)
+
+            egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout", metavar="optional True|False",
                                       help=h("Send errors to stdout instead of stderr"),
-                                      action="store_true")
+                                      type=optional_bool, nargs='?', const=True, default=False)
 
-        egroup.add_argument(      "--show-options", dest="show_options", help=h("Print the options selected (default=%(default)s)."), action='store_true')
+        egroup.add_argument(      "--show-options", dest="show_options", metavar="optional True|False",
+                                  help=h("Print the options selected (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, default=False)
 
-        egroup.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages (default=%(default)s).", action='store_true')
+        egroup.add_argument("-v", "--verbose", dest="verbose", metavar="optional True|False",
+                            help="Print additional progress messages (default=%(default)s).",
+                            type=optional_bool, nargs='?', const=True, default=False)
 
-        egroup.add_argument(      "--very-verbose", dest="very_verbose",
+        egroup.add_argument(      "--very-verbose", dest="very_verbose", metavar="optional True|False",
                                   help=h("Print additional progress messages (default=%(default)s)."),
-                                  action='store_true')
+                                  type=optional_bool, nargs='?', const=True, default=False)
 
     @classmethod
     def show_debug_arguments(cls,
