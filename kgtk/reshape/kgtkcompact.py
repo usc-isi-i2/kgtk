@@ -262,6 +262,8 @@ class KgtkCompact(KgtkFormat):
         elif kr.is_node_file:
             # Add the KGTK node file required column:
             key_idx_list.append(kr.id_column_idx)
+        elif len(self.key_column_names) == 0:
+            raise ValueError("The input file is neither an edge nor a node file.  Key columns must be supplied.")
 
         # Append additional columns to the list of key column indices,
         # silently removing duplicates, but complaining about unknown names.
