@@ -167,6 +167,7 @@ class KgtkCompact(KgtkFormat):
                 if item2 not in current_item_list:
                     current_item_list.append(item2) # Add unique items.
 
+    # TODO: Create an optimized version of this routine without the very verbose debugginng messages.
     def process_row(self,
                     input_key: str,
                     row: typing.List[str],
@@ -174,13 +175,24 @@ class KgtkCompact(KgtkFormat):
                     idb: typing.Optional[KgtkIdBuilder],
                     ew: KgtkWriter,
                     flush: bool = False):
+        if self.very_verbose:
+            print("Input key %s" % repr(input_key), file=self.error_file, flush=True)
         # Note:  This code makes the assumption that row lengths do not vary!
         if self.current_key is not None:
+            if self.very_verbose:
+                print("No current key", file=self.error_file, flush=True)
             # We have a record being built.  Write it?
             if flush or self.current_key != input_key:
+                if self.very_verbose:
+                    if flush:
+                        print("flush", file=self.error_file, flush=True)
+                    else:
+                        print("current_key %s != input_key %s" % (repr(self.current_key), repr(input_key)), file=self.error_file, flush=True)
                 # self.current_key != input_key means that the key is changing.
                 self.compact_row()
                 if self.current_row is not None:
+                    if self.very_verbose:
+                        print("writing %s" % repr(self.field_separator.join(self.current_row)), file=self.error_file, flush=True)
                     if idb is None:
                         ew.write(self.current_row)
                     else:
@@ -196,10 +208,16 @@ class KgtkCompact(KgtkFormat):
         # Are we starting a new key?
         if self.current_key is None:
             # Save the new row.
+            if self.very_verbose:
+                print("New current_key %s" % repr(self.current_key), file=self.error_file, flush=True)
             self.current_key = input_key
+            if self.very_verbose:
+                print("Expand row %s" % self.field_separator.join(row), file=self.error_file, flush=True)
             self.expand_row(row)
         else:
             # Merge into an existing row.
+            if self.very_verbose:
+                print("Merge row", file=self.error_file, flush=True)
             self.merge_row(row)
 
     def process(self):
@@ -270,6 +288,7 @@ class KgtkCompact(KgtkFormat):
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
+                                         use_mgzip=self.reader_options.use_mgzip, # Hack!
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
