@@ -675,7 +675,7 @@ class KgtkIfExists(KgtkFormat):
             print("Wrote %d joined records." % joined_line_count, file=self.error_file, flush=True)
 
     def process(self):
-        UPDATE_VERSION: str = "2020-10-22T00:53:40.395898+00:00#qvhQ90/whSpML7zW9J1HheLbvQfwervD630I8fuXAp8IIXNFGoLt2YeLB/liMMtM+E2IJlSh8hWmCu8h9veZfw=="
+        UPDATE_VERSION: str = "2020-11-06T00:59:40.274908+00:00#cNmH1b03HDkSjTYEEPKR4+y9tEPTxqMDKqMTcEJbKG19aWFrf2vwfEIlFLRX8u41X0DWx48YB7qyPOZVxqVWNw=="
         if self.show_version or self.verbose:
             print("KgtkIfEfexists version: %s" % UPDATE_VERSION, file=self.error_file, flush=True)
 
