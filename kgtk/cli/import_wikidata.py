@@ -13,6 +13,11 @@ TODO: Incorporate URLs into the KGTK data model.
 
 TODO: Node type needs to be optional in the edge file.
 
+See:
+https://www.mediawiki.org/wiki/Wikibase/DataModel/JSON
+https://www.wikidata.org/wiki/Special:ListDatatypes
+https://www.wikidata.org/wiki/Help:Data_type
+
 """
 
 import typing
