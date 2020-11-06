@@ -13,7 +13,7 @@ mkdir --verbose ${LOGDIR}
 
 # ==============================================================================
 # Import the Wikidata dump file, getting labels, aliases, and descriptions
-# in Englisn and in all languages.
+# in English and in all languages.
 echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in English and all languages"
 kgtk ${KGTK_FLAGS} \
      import-wikidata \
