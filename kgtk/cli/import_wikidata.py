@@ -2126,7 +2126,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2020-10-22T23:24:19.308339+00:00#v4Mmux4V942dnke58GvplGUu+JdBKqFI2sF/F8BWa59ZvqFBF7VAu1ZTJw9r8yX4cqRst1PqUkogTjA0av2IdA=="
+        UPDATE_VERSION: str = "2020-11-06T00:59:40.256966+00:00#FuBoremux4RzEiPrhXz8nSQTjLKc7nq4OVSK8aFk0FxsObN5zRNjJzPTSGO+iiw4Z0HfRzNE3nEkGuvrS5NkkA=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
