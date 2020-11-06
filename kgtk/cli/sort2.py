@@ -201,11 +201,11 @@ def run(input_file: KGTKFiles,
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
+    # Build the option structures.
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
     def python_sort():
-        # Build the option structures.
-        reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
-        value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
-        
         if verbose:
             print("Opening the input file: %s" % str(input_path), file=error_file, flush=True)
         kr: KgtkReader = KgtkReader.open(input_path,
@@ -440,7 +440,13 @@ def run(input_file: KGTKFiles,
 
         if verbose:
             print("Reading the KGTK input file header line with KgtkReader", file=error_file, flush=True)
-        kr: KgtkReader = KgtkReader.open(Path("<%d" % header_read_fd))
+        kr: KgtkReader = KgtkReader.open(Path("<%d" % header_read_fd),
+                                         options=reader_options,
+                                         value_options = value_options,
+                                         error_file=error_file,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose,
+                                         )
         if verbose:
             print("KGTK header: %s" % " ".join(kr.column_names), file=error_file, flush=True)
 
