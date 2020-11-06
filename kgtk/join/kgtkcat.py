@@ -161,6 +161,7 @@ class KgtkCat():
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
+                                         use_mgzip=self.reader_options.use_mgzip, # Hack!
                                          gzip_in_parallel=False,
                                          mode=output_mode,
                                          output_format=self.output_format,
