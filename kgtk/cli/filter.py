@@ -412,6 +412,86 @@ def run(input_file: KGTKFiles,
             print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count))
             print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count))
 
+    def multiple_general_filter(kr: KgtkReader,
+                                kws: typing.List[KgtkWriter],
+                                rw: typing.Optional[KgtkWriter],
+                                subj_idx: int,
+                                subj_filters: typing.List[typing.Set[str]],
+                                pred_idx: int,
+                                pred_filters: typing.List[typing.Set[str]],
+                                obj_idx: int,
+                                obj_filters: typing.List[typing.Set[str]]):
+        if verbose:
+            print("Applying a multiple-output general filter", file=error_file, flush=True)
+
+        input_line_count: int = 0
+        reject_line_count: int = 0
+        output_line_count: int = 0
+        subj_filter_keep_count: int = 0
+        pred_filter_keep_count: int = 0
+        obj_filter_keep_count: int = 0
+        subj_filter_reject_count: int = 0
+        pred_filter_reject_count: int = 0
+        obj_filter_reject_count: int = 0
+
+        row: typing.List[str]
+        for row in kr:
+            input_line_count += 1
+
+            written: bool = False
+
+            idx: int = 0
+            for kw in kws:
+                subj_filter: typing.Set[str] = subj_filters[idx]
+                pred_filter: typing.Set[str] = pred_filters[idx]
+                obj_filter: typing.Set[str] = obj_filters[idx]
+                idx += 1
+                
+
+                keep: bool = False
+                reject: bool = False 
+                if len(subj_filter) > 0:
+                    if row[subj_idx] in subj_filter:
+                        keep = True
+                        subj_filter_keep_count += 1
+                    else:
+                        reject = True
+                        subj_filter_reject_count += 1
+
+                if len(pred_filter) > 0:
+                    if row[pred_idx] in pred_filter:
+                        keep = True
+                        pred_filter_keep_count += 1
+                    else:
+                        reject = True
+                        pred_filter_reject_count += 1
+
+                if len(obj_filter) > 0:
+                    if row[obj_idx] in obj_filter:
+                        keep = True
+                        obj_filter_keep_count += 1
+                    else:
+                        reject = True
+                        obj_filter_reject_count += 1
+
+                if (keep if or_pattern else not reject) ^ invert:
+                    kw.write(row)
+                    if not written:
+                        output_line_count += 1 # Count this only once.
+                        written = True
+                        if first_match_only:
+                            break
+                    
+            if not written:
+                if rw is not None:
+                    rw.write(row)
+                reject_line_count += 1
+
+        if verbose:
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count))
+            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count))
+
     def process_plain()->int:
 
         subj_filters: typing.List[typing.Set[str]] = [ ]
@@ -544,86 +624,6 @@ def run(input_file: KGTKFiles,
             rw.close()
 
         return 0
-
-    def multiple_general_filter(kr: KgtkReader,
-                                kws: typing.List[KgtkWriter],
-                                rw: typing.Optional[KgtkWriter],
-                                subj_idx: int,
-                                subj_filters: typing.List[typing.Set[str]],
-                                pred_idx: int,
-                                pred_filters: typing.List[typing.Set[str]],
-                                obj_idx: int,
-                                obj_filters: typing.List[typing.Set[str]]):
-        if verbose:
-            print("Applying a multiple-output general filter", file=error_file, flush=True)
-
-        input_line_count: int = 0
-        reject_line_count: int = 0
-        output_line_count: int = 0
-        subj_filter_keep_count: int = 0
-        pred_filter_keep_count: int = 0
-        obj_filter_keep_count: int = 0
-        subj_filter_reject_count: int = 0
-        pred_filter_reject_count: int = 0
-        obj_filter_reject_count: int = 0
-
-        row: typing.List[str]
-        for row in kr:
-            input_line_count += 1
-
-            written: bool = False
-
-            idx: int = 0
-            for kw in kws:
-                subj_filter: typing.Set[str] = subj_filters[idx]
-                pred_filter: typing.Set[str] = pred_filters[idx]
-                obj_filter: typing.Set[str] = obj_filters[idx]
-                idx += 1
-                
-
-                keep: bool = False
-                reject: bool = False 
-                if len(subj_filter) > 0:
-                    if row[subj_idx] in subj_filter:
-                        keep = True
-                        subj_filter_keep_count += 1
-                    else:
-                        reject = True
-                        subj_filter_reject_count += 1
-
-                if len(pred_filter) > 0:
-                    if row[pred_idx] in pred_filter:
-                        keep = True
-                        pred_filter_keep_count += 1
-                    else:
-                        reject = True
-                        pred_filter_reject_count += 1
-
-                if len(obj_filter) > 0:
-                    if row[obj_idx] in obj_filter:
-                        keep = True
-                        obj_filter_keep_count += 1
-                    else:
-                        reject = True
-                        obj_filter_reject_count += 1
-
-                if (keep if or_pattern else not reject) ^ invert:
-                    kw.write(row)
-                    if not written:
-                        output_line_count += 1 # Count this only once.
-                        written = True
-                        if first_match_only:
-                            break
-                    
-            if not written:
-                if rw is not None:
-                    rw.write(row)
-                reject_line_count += 1
-
-        if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
-            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count))
-            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count))
 
     def multiple_general_regex(kr: KgtkReader,
                                 kws: typing.List[KgtkWriter],
