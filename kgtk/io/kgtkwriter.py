@@ -23,6 +23,7 @@ from kgtk.utils.validationaction import ValidationAction
 @attr.s(slots=True, frozen=False)
 class KgtkWriter(KgtkBase):
     GZIP_QUEUE_SIZE_DEFAULT: int = GzipProcess.GZIP_QUEUE_SIZE_DEFAULT
+    MGZIP_THREAD_COUNT_DEFAULT: int = 3
 
     # TODO: use an enum
     OUTPUT_FORMAT_CSV: str = "csv"
@@ -84,6 +85,7 @@ class KgtkWriter(KgtkBase):
 
     # Other implementation options?
     use_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    mgzip_threads: int = attr.ib(validator=attr.validators.instance_of(int), default=MGZIP_THREAD_COUNT_DEFAULT)
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_thread: typing.Optional[GzipProcess] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(GzipProcess)), default=None)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
@@ -115,6 +117,7 @@ class KgtkWriter(KgtkBase):
              error_file: typing.TextIO = sys.stderr,
              header_error_action: ValidationAction = ValidationAction.EXIT,
              use_mgzip: bool = False,
+             mgzip_threads: int = MGZIP_THREAD_COUNT_DEFAULT,
              gzip_in_parallel: bool = False,
              gzip_queue_size: int = GZIP_QUEUE_SIZE_DEFAULT,
              column_separator: str = KgtkFormat.COLUMN_SEPARATOR,
@@ -143,6 +146,7 @@ class KgtkWriter(KgtkBase):
                               error_file=error_file,
                               header_error_action=header_error_action,
                               use_mgzip=use_mgzip,
+                              mgzip_threads=mgzip_threads,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -173,6 +177,7 @@ class KgtkWriter(KgtkBase):
                               error_file=error_file,
                               header_error_action=header_error_action,
                               use_mgzip=use_mgzip,
+                              mgzip_threads=mgzip_threads,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -195,9 +200,9 @@ class KgtkWriter(KgtkBase):
             if file_path.suffix == ".gz":
                 if use_mgzip:
                     if verbose:
-                        print("KgtkWriter: writing multithreaded gzip %s" % str(file_path), file=error_file, flush=True)
+                        print("KgtkWriter: writing gzip with %d threads: %s" % (mgzip_threads, str(file_path)), file=error_file, flush=True)
                     import mgzip
-                    gzip_file = mgzip.open(str(file_path), mode="wt") # type: ignore
+                    gzip_file = mgzip.open(str(file_path), mode="wt", thread=mgzip_threads) # type: ignore
                 else:
                     if verbose:
                         print("KgtkWriter: writing gzip %s" % str(file_path), file=error_file, flush=True)
@@ -251,6 +256,7 @@ class KgtkWriter(KgtkBase):
                               error_file=error_file,
                               header_error_action=header_error_action,
                               use_mgzip=use_mgzip,
+                              mgzip_threads=mgzip_threads,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -288,6 +294,7 @@ class KgtkWriter(KgtkBase):
                               error_file=error_file,
                               header_error_action=header_error_action,
                               use_mgzip=use_mgzip,
+                              mgzip_threads=mgzip_threads,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
                               column_separator=column_separator,
@@ -312,6 +319,7 @@ class KgtkWriter(KgtkBase):
                error_file: typing.TextIO,
                header_error_action: ValidationAction,
                use_mgzip: bool,
+               mgzip_threads: int,
                gzip_in_parallel: bool,
                gzip_queue_size: int,
                column_separator: str,
@@ -408,7 +416,7 @@ class KgtkWriter(KgtkBase):
         gzip_thread: typing.Optional[GzipProcess] = None
         if gzip_in_parallel:
             if verbose:
-                print("KgtkWriter: File %s: Starting the gzip process." % (repr(self.file_path)), file=error_file, flush=True)
+                print("KgtkWriter: File %s: Starting the gzip process." % (repr(file_path)), file=error_file, flush=True)
             gzip_thread = GzipProcess(file_out, Queue(gzip_queue_size))
             gzip_thread.start()
 
@@ -424,6 +432,7 @@ class KgtkWriter(KgtkBase):
                              error_file=error_file,
                              header_error_action=header_error_action,
                              use_mgzip=use_mgzip,
+                             mgzip_threads=mgzip_threads,
                              gzip_in_parallel=gzip_in_parallel,
                              gzip_thread=gzip_thread,
                              gzip_queue_size=gzip_queue_size,
