@@ -675,7 +675,7 @@ class KgtkIfExists(KgtkFormat):
             print("Wrote %d joined records." % joined_line_count, file=self.error_file, flush=True)
 
     def process(self):
-        UPDATE_VERSION: str = "2020-11-06T00:59:40.274908+00:00#cNmH1b03HDkSjTYEEPKR4+y9tEPTxqMDKqMTcEJbKG19aWFrf2vwfEIlFLRX8u41X0DWx48YB7qyPOZVxqVWNw=="
+        UPDATE_VERSION: str = "2020-11-07T00:10:46.621454+00:00#owKgVcE9VX706rd/XZ3/ufbSo84OexENWhtC7/Re16wrEh0fKjFqN5PWgcE4i4BGnjNx0Vmuqa6Q4S3ltAFtdA=="
         if self.show_version or self.verbose:
             print("KgtkIfEfexists version: %s" % UPDATE_VERSION, file=self.error_file, flush=True)
 
@@ -725,7 +725,7 @@ class KgtkIfExists(KgtkFormat):
                                  prohibit_extra_columns=True,
                                  fill_missing_columns=True,
                                  use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                 mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
                                  gzip_in_parallel=False,
                                  verbose=self.verbose,
                                  very_verbose=self.very_verbose)
@@ -741,7 +741,7 @@ class KgtkIfExists(KgtkFormat):
                                   prohibit_extra_columns=True,
                                   fill_missing_columns=True,
                                   use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                  mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                  mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
                                   gzip_in_parallel=False,
                                   verbose=self.verbose,
                                   very_verbose=self.very_verbose)
@@ -757,7 +757,7 @@ class KgtkIfExists(KgtkFormat):
                                    prohibit_extra_columns=True,
                                    fill_missing_columns=True,
                                    use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                   mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                   mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
                                    gzip_in_parallel=False,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)
@@ -773,7 +773,7 @@ class KgtkIfExists(KgtkFormat):
                                    prohibit_extra_columns=True,
                                    fill_missing_columns=True,
                                    use_mgzip=self.input_reader_options.use_mgzip, # Hack! 
-                                   mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                   mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
                                    gzip_in_parallel=False,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)
@@ -805,7 +805,7 @@ class KgtkIfExists(KgtkFormat):
                                  prohibit_extra_columns=True,
                                  fill_missing_columns=True,
                                  use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                 mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
                                  gzip_in_parallel=False,
                                  verbose=self.verbose,
                                  very_verbose=self.very_verbose)
