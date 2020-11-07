@@ -725,6 +725,7 @@ class KgtkIfExists(KgtkFormat):
                                  prohibit_extra_columns=True,
                                  fill_missing_columns=True,
                                  use_mgzip=self.input_reader_options.use_mgzip, # Hack!
+                                 mgzip_threads=self.reader_options.mgzip_threads, # Hack!
                                  gzip_in_parallel=False,
                                  verbose=self.verbose,
                                  very_verbose=self.very_verbose)
@@ -740,6 +741,7 @@ class KgtkIfExists(KgtkFormat):
                                   prohibit_extra_columns=True,
                                   fill_missing_columns=True,
                                   use_mgzip=self.input_reader_options.use_mgzip, # Hack!
+                                  mgzip_threads=self.reader_options.mgzip_threads, # Hack!
                                   gzip_in_parallel=False,
                                   verbose=self.verbose,
                                   very_verbose=self.very_verbose)
@@ -749,30 +751,32 @@ class KgtkIfExists(KgtkFormat):
             if self.verbose:
                 print("Opening the matched filter file: %s" % self.matched_filter_file_path, file=self.error_file, flush=True)
             mfew = KgtkWriter.open(filter_kr.column_names,
-                                  self.matched_filter_file_path,
-                                  mode=KgtkWriter.Mode[filter_kr.mode.name],
-                                  require_all_columns=False,
-                                  prohibit_extra_columns=True,
-                                  fill_missing_columns=True,
+                                   self.matched_filter_file_path,
+                                   mode=KgtkWriter.Mode[filter_kr.mode.name],
+                                   require_all_columns=False,
+                                   prohibit_extra_columns=True,
+                                   fill_missing_columns=True,
                                    use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                  gzip_in_parallel=False,
-                                  verbose=self.verbose,
-                                  very_verbose=self.very_verbose)
+                                   mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                   gzip_in_parallel=False,
+                                   verbose=self.verbose,
+                                   very_verbose=self.very_verbose)
             
         ufew: typing.Optional[KgtkWriter] = None
         if self.unmatched_filter_file_path is not None:
             if self.verbose:
                 print("Opening the unmatched filter file: %s" % self.unmatched_filter_file_path, file=self.error_file, flush=True)
             ufew = KgtkWriter.open(filter_kr.column_names,
-                                  self.unmatched_filter_file_path,
-                                  mode=KgtkWriter.Mode[filter_kr.mode.name],
-                                  require_all_columns=False,
-                                  prohibit_extra_columns=True,
-                                  fill_missing_columns=True,
-                                   use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                  gzip_in_parallel=False,
-                                  verbose=self.verbose,
-                                  very_verbose=self.very_verbose)
+                                   self.unmatched_filter_file_path,
+                                   mode=KgtkWriter.Mode[filter_kr.mode.name],
+                                   require_all_columns=False,
+                                   prohibit_extra_columns=True,
+                                   fill_missing_columns=True,
+                                   use_mgzip=self.input_reader_options.use_mgzip, # Hack! 
+                                   mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                   gzip_in_parallel=False,
+                                   verbose=self.verbose,
+                                   very_verbose=self.very_verbose)
             
         jw: typing.Optional[KgtkWriter] = None
         join_shuffle_list: typing.Optional[typing.List[int]] = None
@@ -801,6 +805,7 @@ class KgtkIfExists(KgtkFormat):
                                  prohibit_extra_columns=True,
                                  fill_missing_columns=True,
                                  use_mgzip=self.input_reader_options.use_mgzip, # Hack!
+                                 mgzip_threads=self.reader_options.mgzip_threads, # Hack!
                                  gzip_in_parallel=False,
                                  verbose=self.verbose,
                                  very_verbose=self.very_verbose)

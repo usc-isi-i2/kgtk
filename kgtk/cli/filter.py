@@ -685,6 +685,7 @@ def run(input_file: KGTKFiles,
                                  output_kgtk_file,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
+                                 mgzip_threads=reader_options.mgzip_threads, # Hack!
                                  verbose=verbose,
                                  very_verbose=very_verbose)
             kws.append(kw)
@@ -697,6 +698,7 @@ def run(input_file: KGTKFiles,
                                  reject_kgtk_file,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
+                                 mgzip_threads=reader_options.mgzip_threads, # Hack!
                                  verbose=verbose,
                                  very_verbose=very_verbose)
 
@@ -929,6 +931,7 @@ def run(input_file: KGTKFiles,
                                  output_kgtk_file,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
+                                 mgzip_threads=reader_options.mgzip_threads, # Hack!
                                  verbose=verbose,
                                  very_verbose=very_verbose)
             kws.append(kw)
@@ -941,6 +944,7 @@ def run(input_file: KGTKFiles,
                                  reject_kgtk_file,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
+                                 mgzip_threads=reader_options.mgzip_threads, # Hack!
                                  verbose=verbose,
                                  very_verbose=very_verbose)
 

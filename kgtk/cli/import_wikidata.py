@@ -36,6 +36,8 @@ def add_arguments(parser: KGTKArgumentParser):
         parser (argparse.ArgumentParser)
     """
     from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.io.KgtkReader import KgtkReaderOptions
+    from kgtk.io.KgtkWriter import KgtkWriter
     
     parser.add_input_file(positional=True, who='input path file (may be .bz2)')
 
@@ -575,6 +577,20 @@ def add_arguments(parser: KGTKArgumentParser):
         help="If true, use the multithreaded gzip package, mgzip, for output. (default=%(default)s).")
 
     parser.add_argument(
+        "--mgzip-threads-for-input",
+        type=int,
+        default=KgtkReaderOptions.MGZIP_THREAD_COUNT_DEFAULT,
+        dest="mgzip_threads_for_input",
+        help="The number of threads per mgzip input streama. (default=%(default)s).")
+
+    parser.add_argument(
+        "--mgzip-threads-for-output",
+        type=int,
+        default=KgtkWriter.MGZIP_THREAD_COUNT_DEFAULT,
+        dest="mgzip_threads_for_output",
+        help="The number of threads per mgzip output streama. (default=%(default)s).")
+
+    parser.add_argument(
         '--value-hash-width',
         action="store",
         type=int,
@@ -653,6 +669,8 @@ def run(input_file: KGTKFiles,
         use_kgtkwriter: bool,
         use_mgzip_for_input: bool,
         use_mgzip_for_output: bool,
+        mgzip_threads_for_input: int,
+        mgzip_threads_for_output: int,
         value_hash_width: int,
         claim_id_hash_width: int,
         ):
@@ -1780,7 +1798,7 @@ def run(input_file: KGTKFiles,
             if use_kgtkwriter:
                 from kgtk.io.kgtkwriter import KgtkWriter
                 print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file), file=sys.stderr, flush=True)
-                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector", use_mgzip=use_mgzip_for_output)
+                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector", use_mgzip=use_mgzip_for_output, mgzip_threads=mgzip_threads_for_output)
                 return None, wr
                 
             else:
@@ -2131,7 +2149,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2020-11-06T00:59:40.256966+00:00#FuBoremux4RzEiPrhXz8nSQTjLKc7nq4OVSK8aFk0FxsObN5zRNjJzPTSGO+iiw4Z0HfRzNE3nEkGuvrS5NkkA=="
+        UPDATE_VERSION: str = "2020-11-06T23:49:00.030880+00:00#6YvwzoIu006Qb/rp/HsP0fEXFF/SSL1v3+9c49IrqJ+pWPFkRd2maefZjlkOnD1e8TD1Gf9sv2KA2e9o8W0EkQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -2141,10 +2159,11 @@ def run(input_file: KGTKFiles,
         start=time.time()
 
         if not skip_processing:
+            from gzip import GzipFile
             print("Processing.", file=sys.stderr, flush=True)
 
             # Open the input file first to make it easier to monitor with "pv".
-            input_f: typing.IO[typing.Any]
+            input_f: typing.Union[GzipFile, typing.IO[typing.Any]]
             if str(inp_path) == "-":
                 print('Processing wikidata from standard input', file=sys.stderr, flush=True)
                 # It is not well documented, but this is how you read binary data
@@ -2168,7 +2187,7 @@ def run(input_file: KGTKFiles,
                     if use_mgzip_for_input:
                         import mgzip
                         print('Decompressing (mgzip)', file=sys.stderr, flush=True)
-                        input_f = mgzip.open(input_f)
+                        input_f = mgzip.open(input_f, thread=mgzip_threads_for_input)
                     else:
                         import gzip
                         print('Decompressing (gzip)', file=sys.stderr, flush=True)
