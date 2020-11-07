@@ -111,7 +111,7 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
-    UPDATE_VERSION: str = "2020-11-06T01:32:19.507117+00:00#nReULICGW+aQG+eEkHfHhZzu/bNX4814GKObbc8huaBQkBD4MOiDPiHhfixeNYLXPkhCktk8apOkgM1LhvUY/w=="
+    UPDATE_VERSION: str = "2020-11-07T00:06:18.672326+00:00#pITaI1X5E06A9vDdSeUUZObybGWrp0gh86XOFGM431y3KmQ7Gbg6OngTWFLLuBaA4HLhSEVol+XZZIF1LkXf/Q=="
     if show_version or verbose:
         print("kgtk filter version: %s" % UPDATE_VERSION, file=error_file, flush=True)
 
