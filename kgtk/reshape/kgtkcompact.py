@@ -291,6 +291,7 @@ class KgtkCompact(KgtkFormat):
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
                                          use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                         mgzip_threads=self.reader_options.mgzip_threads, # Hack!
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
