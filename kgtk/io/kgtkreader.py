@@ -190,8 +190,9 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "Execute multithreaded gzip. (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=False))
 
-        fgroup.add_argument(prefix1 + "mgzip-threads", dest=prefix2 + "mgzip_threads", type=int,
-                            help=h(prefix3 + "Multithreaded gzip thread  count. (default=%(default)s)."))
+        fgroup.add_argument(prefix1 + "mgzip-threads", dest=prefix2 + "mgzip_threads",
+                            help=h(prefix3 + "Multithreaded gzip thread  count. (default=%(default)s)."),
+                            type=int, **d(default=cls.MGZIP_THREAD_COUNT_DEFAULT))
 
         fgroup.add_argument(prefix1 + "gzip-in-parallel",
                             dest=prefix2 + "gzip_in_parallel",
