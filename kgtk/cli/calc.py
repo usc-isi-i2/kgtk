@@ -18,6 +18,15 @@ def parser():
     }
 
 
+AVERAGE_OP: str = "average"
+PERCENTAGE_OP: str = "percentage"
+SUM_OP: str = "sum"
+
+OPERATIONS: typing.List[str] = [ AVERAGE_OP,
+                                 PERCENTAGE_OP,
+                                 SUM_OP,
+                                ]
+
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
@@ -51,7 +60,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         "and '...' for column names not explicitly mentioned.")
     parser.add_argument(      "--into", dest="into_column_name", help="The name of the column to receive the result of the calculation.", required=True)
     parser.add_argument(      "--do", dest="operation", help="The name of the operation.", required=True,
-                              choices=["percentage"])
+                              choices=OPERATIONS)
 
     parser.add_argument(      "--format", dest="format_string", help="The format string for the calculation.")
 
@@ -130,6 +139,8 @@ def run(input_file: KGTKFiles,
         ellipses: str = "..." # All unmentioned columns
         ranger: str = ".." # All columns between two columns.
 
+        idx: int
+
         saw_ranger: bool = False
         column_name: str
         for column_name in column_names:
@@ -172,7 +183,7 @@ def run(input_file: KGTKFiles,
                     end_idx = column_name_idx + 1
                     idx_inc = -1
 
-                idx: int = start_idx
+                idx = start_idx
                 while idx <= end_idx:
                     idx_column_name: str = kr.column_names[idx]
                     if idx_column_name not in remaining_names:
@@ -232,6 +243,9 @@ def run(input_file: KGTKFiles,
                                          very_verbose=very_verbose,
         )
 
+        fs: str = format_string if format_string is not None else "%5.2f"
+        item: str
+        
         input_data_lines: int = 0
         row: typing.List[str]
         for row in kr:
@@ -241,12 +255,31 @@ def run(input_file: KGTKFiles,
             if new_column:
                 output_row.append("") # Easiest way to add a new column.
 
-            if operation == "percentage":
+            if operation == PERCENTAGE_OP:
                 if len(selected_names) != 2:
                     raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
                 
-                fs: str = format_string if format_string is not None else "%5.2f"
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
+
+            elif operation == SUM_OP:
+                total: float = 0
+                for idx in sources:
+                    item = row[idx]
+                    if len(item) > 0:
+                        total += float(item)
+                
+                output_row[into_column_idx] = fs % total
+                
+            elif operation == AVERAGE_OP:
+                atotal: float = 0
+                acount: int = 0
+                for idx in sources:
+                    item = row[idx]
+                    if len(item) > 0:
+                        atotal += float(item)
+                        acount += 1
+                
+                output_row[into_column_idx] = (fs % (atotal / float(acount))) if acount > 0 else ""                
 
             kw.write(output_row)
 

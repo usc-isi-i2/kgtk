@@ -1,23 +1,28 @@
-import logging
-import re
-import redis
-import typing
-import hashlib
-import pandas as pd  # type: ignore
-import numpy as np
+# TODO: Conver this code to use KgtkFormat and KgtkWriter in various places.
 import io
-import math
-import pickle
 import os
+import re
+import math
+import sys
 import time
-
-from pyrallel import ParallelProcessor
-from collections import defaultdict, OrderedDict
+import redis
+from pathlib import Path
+import pickle
+import typing
+import logging
+import hashlib
+import numpy as np
+import pandas as pd  # type: ignore
 from tqdm import tqdm  # type: ignore
 from ast import literal_eval
-from sentence_transformers import SentenceTransformer, SentencesDataset, LoggingHandler, losses, models  # type: ignore
-from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
+from pyrallel import ParallelProcessor
 from kgtk.exceptions import KGTKException
+from collections import defaultdict, OrderedDict
+from sentence_transformers import SentenceTransformer
+from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+from kgtk.kgtkformat import KgtkFormat
 
 
 class EmbeddingVector:
@@ -25,15 +30,6 @@ class EmbeddingVector:
         self._logger = logging.getLogger(__name__)
         if not model_name:
             self.model_name = 'bert-base-nli-mean-tokens'
-        # xlnet need to be trained before using, we can't use this for now
-        # elif model_name == "xlnet-base-cased":
-        #     word_embedding_model = models.XLNet('xlnet-base-cased')
-        # # Apply mean pooling to get one fixed sized sentence vector
-        #     pooling_model = models.Pooling(word_embedding_model.get_word_embedding_dimension(),
-        #                                pooling_mode_mean_tokens=True,
-        #                                pooling_mode_cls_token=False,
-        #                                pooling_mode_max_tokens=False)
-        #     self.model = SentenceTransformer(modules=[word_embedding_model, pooling_model])
         else:
             self.model_name = model_name
         self._logger.info("Using model {}".format(self.model_name))
@@ -55,7 +51,7 @@ class EmbeddingVector:
         self.node_labels = dict()  # this is used to store {node:label} pairs
         self.candidates = defaultdict(dict)  # this is used to store all node {node:dict()} information
         self.vectors_2D = None
-        self.vector_dump_file = None
+        self.vector_dump_file: typing.Optional[str] = None
         self.gt_nodes = set()
         self.metadata = []
         self.gt_indexes = set()
@@ -252,7 +248,8 @@ class EmbeddingVector:
 
         self._logger.debug("Cached for those nodes {} / {}".format(len(sentences_cache_dict), len(qnodes)))
         self._logger.debug(str(set(sentences_cache_dict.keys())))
-        self._logger.debug("Need run query for those nodes {} / {}:".format(len(qnodes) - len(sentences_cache_dict), len(qnodes)))
+        self._logger.debug(
+            "Need run query for those nodes {} / {}:".format(len(qnodes) - len(sentences_cache_dict), len(qnodes)))
 
         # we do not need to get those node again
         if len(sentences_cache_dict) > 0:
@@ -311,9 +308,17 @@ class EmbeddingVector:
                 k = k.replace("c_", "")
                 self.candidates[k] = v
 
-    def read_input(self, input_file: io.TextIOWrapper, target_properties: dict, property_labels_dict: dict,
-                   skip_nodes_set: set = None, input_format: str = "kgtk_format",
-                   black_list_set: typing.Optional[set] = None
+    def read_input(self,
+                   input_file_path: Path,
+                   target_properties: dict,
+                   property_labels_dict: dict,
+                   skip_nodes_set: set = None,
+                   input_format: str = "kgtk_format",
+                   black_list_set: typing.Optional[set] = None,
+                   error_file: typing.TextIO = sys.stderr,
+                   reader_options: typing.Optional[KgtkReaderOptions] = None,
+                   value_options: typing.Optional[KgtkValueOptions] = None,
+                   verbose: bool = False,
                    ):
         """
             load the input candidates files
@@ -321,12 +326,21 @@ class EmbeddingVector:
         self.node_labels.update(property_labels_dict)
         # reverse sentence property to be {property : role)
         properties_reversed = defaultdict(set)
+        pp: typing.Optional[ParallelProcessor] = None
+
+        # This type union becomes painful to work with, below.
+        each_node_attributes: typing.Optional[typing.Mapping[str, typing.Union[typing.List, typing.Set]]] = None
+
+        current_process_node_id = None
+        node_id = None
+
         for k, v in target_properties.items():
             for each_property in v:
                 properties_reversed[each_property].add(k)
 
         if input_format == "test_format":
             self.input_format = input_format
+            input_file = open(input_file_path, "r") if str(input_file_path) != "-" else sys.stdin
             input_df = pd.read_csv(input_file, dtype=object)
             gt = {}
             count = 0
@@ -335,7 +349,8 @@ class EmbeddingVector:
             elif "kg_id" in input_df.columns:
                 gt_column_id = "kg_id"
             else:
-                raise KGTKException("Can't find ground truth id column! It should either named as `GT_kg_id` or `kg_id`")
+                raise KGTKException(
+                    "Can't find ground truth id column! It should either named as `GT_kg_id` or `kg_id`")
 
             for _, each in input_df.iterrows():
                 temp = []
@@ -361,7 +376,7 @@ class EmbeddingVector:
                 for each_q in temp:
                     if skip_nodes_set is not None and each_q in skip_nodes_set:
                         to_remove_q.add(each_q)
-                temp = set(temp) - to_remove_q
+                temp = list(set(temp) - to_remove_q)
                 count += len(temp)
                 self.gt_nodes.add(each[gt_column_id])
                 self.get_item_description(target_properties, properties_reversed, temp)
@@ -378,39 +393,31 @@ class EmbeddingVector:
 
             self.input_format = input_format
 
-            # get header
-            headers = input_file.readline().replace("\n", "").split("\t")
-            if len(headers) < 3:
-                raise KGTKException(
-                    "No enough columns found on given input file. Only {} columns given but at least 3 needed.".format(
-                        len(headers)))
-            elif "node" in headers and "property" in headers and "value" in headers:
-                column_references = {"node": headers.index("node"),
-                                     "property": headers.index("property"),
-                                     "value": headers.index("value")}
+            kr: KgtkReader = KgtkReader.open(input_file_path,
+                                             error_file=error_file,
+                                             options=reader_options,
+                                             value_options=value_options,
+                                             verbose=verbose,
+                                             )
+            if kr.node1_column_idx < 0:
+                raise KGTKException("Missing column: node1 or alias")
+            if kr.label_column_idx < 0:
+                raise KGTKException("Missing column: label or alias")
+            if kr.node2_column_idx < 0:
+                raise KGTKException("Missing column: nodee or alias")
 
-            elif "node1" in headers and "label" in headers and "node2" in headers:
-                column_references = {"node": headers.index("node1"),
-                                     "property": headers.index("label"),
-                                     "value": headers.index("node2")}
+            self._logger.debug("node1 column index = {}".format(kr.node1_column_idx))
+            self._logger.debug("label column index = {}".format(kr.label_column_idx))
+            self._logger.debug("node2 column index = {}".format(kr.node2_column_idx))
 
-            elif len(headers) == 3:
-                column_references = {"node": 0,
-                                     "property": 1,
-                                     "value": 2}
-            else:
-                missing_column1 = {"node", "property", "value"} - set(headers)
-                missing_column2 = {"node1", "label", "node2"} - set(headers)
-                missing_column = missing_column1 if len(missing_column1) < len(missing_column2) else missing_column2
-                raise KGTKException("Missing column: {}".format(missing_column))
-
-            self._logger.debug("column index information: ")
-            self._logger.debug(str(column_references))
             # read contents
-            each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
-                                    "description_properties": [], "has_properties_values": []}
-
-            current_process_node_id = None
+            each_node_attributes = {
+                "has_properties": set(),
+                "isa_properties": set(),
+                "label_properties": [],
+                "description_properties": [],
+                "has_properties_values": [],
+            }
 
             if self._parallel_count > 1:
                 # need to set with spawn mode to initialize with multiple cuda in multiprocess
@@ -419,24 +426,32 @@ class EmbeddingVector:
                 pp = ParallelProcessor(self._parallel_count, self._process_one, collector=self._multiprocess_collector)
                 pp.start()
 
-            for each_line in input_file:
-                each_line = each_line.replace("\n", "").split("\t")
-                node_id = each_line[column_references["node"]]
+            row: typing.List[str]
+            for row in kr:
+                node_id = row[kr.node1_column_idx]
                 # skip nodes id in black list
                 if black_list_set and node_id in black_list_set:
                     continue
 
-                node_property = each_line[column_references["property"]]
-                node_value = each_line[column_references["value"]]
+                node_property = row[kr.label_column_idx]
+                node_value = row[kr.node2_column_idx]
+
+                # CMR: the following code looks like it was intended to remove
+                # any language code and language suffix.  It would have the
+                # side effect of removing location coordinates entirely.
+                #
                 # remove @ mark
                 if "@" in node_value and node_value[0] != "@":
                     node_value = node_value[:node_value.index("@")]
 
                 # in case we meet an empty value, skip it
                 if node_value == "":
-                    self._logger.warning("""Skip line "{}" because of empty value.""".format(each_line))
+                    self._logger.warning("""Skip line "{}" because of empty value.""".format(row))
                     continue
 
+                # CMR: Better to use KgtkFormat.unstringify(node_value), as it will remove escapes from
+                # internal doubel or single quotes.
+                #
                 # remove extra double quote " and single quote '
                 while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
                     node_value = node_value[1:-1]
@@ -449,21 +464,9 @@ class EmbeddingVector:
                     else:
                         # if we get to next id, concat all properties into one sentence to represent the Q node
 
-                        # for multi process
-                        if self._parallel_count > 1:
-                            each_arg = {"node_id": current_process_node_id, "attribute": each_node_attributes}
-                            pp.add_task(each_arg)
-                        # for single process
-                        else:
-                            concat_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
-                            each_node_attributes["sentence"] = concat_sentence
-                            self.candidates[current_process_node_id] = each_node_attributes
-
-                        # after write down finish, we can clear and start parsing next one
-                        each_node_attributes = {"has_properties": [], "isa_properties": [], "label_properties": [],
-                                                "description_properties": [], "has_properties_values": []}
-                        # update to new id
-                        current_process_node_id = node_id
+                        current_process_node_id, each_node_attributes = self.process_qnode(current_process_node_id,
+                                                                                           each_node_attributes,
+                                                                                           node_id, pp)
 
                 if node_property in properties_reversed:
                     roles = properties_reversed[node_property].copy()
@@ -472,34 +475,75 @@ class EmbeddingVector:
                     if "property_values" in roles:
                         # for property values part, changed to be "{property} {value}"
                         node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
+                        if each_node_attributes is None:
+                            raise ValueError("each_node_attributes is missing")
+                        if not isinstance(each_node_attributes["has_properties_values"], list):
+                            raise ValueError('each_node_attributes["has_properties_values"] is not a list.')
                         each_node_attributes["has_properties_values"].append(node_value_combine)
                         # remove those 2 roles in case we have duplicate using of this node later
                         roles.discard("property_values")
                         roles.discard("has_properties")
                     for each_role in roles:
-                        each_node_attributes[each_role].append(node_value)
+                        attrs: typing.Union[typing.List, typing.Set] = each_node_attributes[each_role]
+                        if isinstance(attrs, set):
+                            attrs.add(node_value)
+                        elif isinstance(attrs, list):
+                            attrs.append(node_value)
+                        else:
+                            raise ValueError('each_node_attributes[%s] is not a list or set.' % repr(each_role))
+
                 elif add_all_properties:  # add remained properties if need all properties
-                    each_node_attributes["has_properties"].append(self.get_real_label_name(node_property))
+                    attrs2: typing.Union[typing.List, typing.Set] = each_node_attributes["has_properties"]
+                    if isinstance(attrs2, list):
+                        attrs2.append(self.get_real_label_name(node_property))
+                    else:
+                        raise ValueError('each_node_attributes["has_properties"] is not a list.')
 
                 # close multiprocess pool
-                if self._parallel_count > 1:
+                if self._parallel_count > 1 and pp is not None:
                     pp.task_done()
                     pp.join()
         else:
             raise KGTKException("Unknown input format {}".format(input_format))
 
+        # case where there was a single qnode in the input file
+        unprocessed_qnode = False
+        if each_node_attributes:
+            for k in each_node_attributes:
+                if each_node_attributes[k]:
+                    unprocessed_qnode = True
+                    break
+        if unprocessed_qnode:
+            a, b = self.process_qnode(current_process_node_id, each_node_attributes, node_id, pp)
         self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
         try:
-            file_path = input_file.name
+            file_path = input_file_path.name
             file_name = file_path[:file_path.rfind(".")]
         except AttributeError:
             file_name = "input_from_memory"
         self.vector_dump_file = "dump_vectors_{}_{}.pkl".format(file_name, self.model_name)
         # self._logger.debug("The cache file name will be {}".format(self.vector_dump_file))
 
-    def get_real_label_name(self, node):
+    def process_qnode(self, current_process_node_id, each_node_attributes, node_id, pp):
+        # for multi process
+        if self._parallel_count > 1:
+            each_arg = {"node_id": current_process_node_id, "attribute": each_node_attributes}
+            pp.add_task(each_arg)
+        # for single process
+        else:
+            concat_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
+            each_node_attributes["sentence"] = concat_sentence
+            self.candidates[current_process_node_id] = each_node_attributes
+        # after write down finish, we can clear and start parsing next one
+        each_node_attributes = {"has_properties": set(), "isa_properties": set(), "label_properties": [],
+                                "description_properties": [], "has_properties_values": []}
+        # update to new id
+        current_process_node_id = node_id
+        return current_process_node_id, each_node_attributes
+
+    def get_real_label_name(self, node: str)->str:
         if node in self.node_labels:
-            return self.node_labels[node]
+            return self.node_labels[node].replace('"', "")
         else:
             return node
 
@@ -517,7 +561,7 @@ class EmbeddingVector:
             concated_sentence += self.get_real_label_name(attribute_dict["description_properties"][0])
         if "isa_properties" in attribute_dict and len(attribute_dict["isa_properties"]) > 0:
             have_isa_properties = True
-            temp = ""
+            temp_str: str = ""
             for each in attribute_dict["isa_properties"]:
                 each = self.get_real_label_name(each)
                 if "||" in each:
@@ -525,15 +569,15 @@ class EmbeddingVector:
                         each = each.split("||")[1]
                     else:
                         each = each.replace("||", " ")
-                temp += each + ", "
-            if concated_sentence != "" and temp != "":
+                temp_str += each + ", "
+            if concated_sentence != "" and temp_str != "":
                 concated_sentence += " is "
             elif concated_sentence == "":
                 concated_sentence += "It is "
             # remove last ", "
-            concated_sentence += temp[:-2]
+            concated_sentence += temp_str[:-2]
         if "has_properties_values" in attribute_dict and len(attribute_dict["has_properties_values"]) > 0:
-            temp = [self.get_real_label_name(each) for each in attribute_dict["has_properties_values"]]
+            temp_list: typing.List[str] = [self.get_real_label_name(each) for each in attribute_dict["has_properties_values"]]
             if concated_sentence != "":
                 if not have_isa_properties:
                     concated_sentence += " "
@@ -541,18 +585,18 @@ class EmbeddingVector:
                     concated_sentence += ", "
             else:
                 concated_sentence += "It "
-            concated_sentence += " and ".join(temp)
+            concated_sentence += " and ".join(temp_list)
         if "has_properties" in attribute_dict and len(attribute_dict["has_properties"]) > 0:
-            temp = [self.get_real_label_name(each) for each in attribute_dict["has_properties"]]
-            temp = list(set(temp))
-            if concated_sentence != "" and temp[0] != "":
+            temp_list2: typing.List[str] = [self.get_real_label_name(each) for each in attribute_dict["has_properties"]]
+            temp_list2 = list(set(temp_list2))
+            if concated_sentence != "" and temp_list2[0] != "":
                 if have_isa_properties:
                     concated_sentence += ", and has "
                 else:
                     concated_sentence += " has "
-            elif temp[0] != "":
+            elif temp_list2[0] != "":
                 concated_sentence += "It has "
-            concated_sentence += " and ".join(temp)
+            concated_sentence += " and ".join(temp_list2)
         # add ending period
         if concated_sentence != "":
             concated_sentence += "."
@@ -585,6 +629,7 @@ class EmbeddingVector:
             with open(file_name + ".pkl", "wb") as f:
                 pickle.dump(self.vectors_2D, f)
             dimension = len(self.vectors_2D[0])
+            # TODO: This should probably be converted to KgtkWriter.
             with open(file_name + ".tsv", "w") as f:
                 for each in self.vectors_2D:
                     for i, each_val in enumerate(each):
@@ -599,6 +644,7 @@ class EmbeddingVector:
         else:
             with open(file_name + ".pkl", "wb") as f:
                 pickle.dump(self.vectors_map, f)
+            # TODO: This should probably be converted to KgtkWriter.
             with open(file_name + ".tsv", "w") as f:
                 for each in self.vectors_map.values():
                     for i in each:
@@ -609,6 +655,7 @@ class EmbeddingVector:
                      output_format="kgtk_format", save_embedding_sentence=False):
         self._logger.debug("START printing the vectors")
         if output_format == "kgtk_format":
+            # TODO: This should be comverted to use KgtkWriter
             print("node\tproperty\tvalue\n", end="")
             all_nodes = list(self.vectors_map.keys())
             ten_percent_len = math.ceil(len(vectors) / 10)
@@ -621,7 +668,8 @@ class EmbeddingVector:
                     print(str(each_dimension) + ",", end="")
                 print(str(each_vector[-1]))
                 if save_embedding_sentence:
-                    print("{}\t{}\t{}".format(all_nodes[i], "embedding_sentence", self.candidates[all_nodes[i]]["sentence"]))
+                    print("{}\t{}\t{}".format(all_nodes[i], "embedding_sentence",
+                                              self.candidates[all_nodes[i]]["sentence"]))
 
         elif output_format == "tsv_format":
             for each_vector in vectors:
@@ -663,6 +711,9 @@ class EmbeddingVector:
             if not os.path.exists(output_uri):
                 raise ValueError("The given metadata output folder does not exist!")
 
+            if self.vector_dump_file is None:
+                raise ValueError("vector_dump_file is None")
+
             metadata_output_path = os.path.join(output_uri, self.vector_dump_file.split("/")[-1])
             if input_format == "test_format":
                 gt_indexes = set()
@@ -700,10 +751,17 @@ class EmbeddingVector:
                         self.metadata.append(each_metadata)
             self.dump_vectors(metadata_output_path, "metadata")
 
+        output_props: str = output_properties.get("output_properties", "text_embedding")
         if self.vectors_2D is not None:
-            self.print_vector(self.vectors_2D, output_properties.get("output_properties"), output_format, save_embedding_sentence)
+            self.print_vector(self.vectors_2D,
+                              output_props,
+                              output_format,
+                              save_embedding_sentence)
         else:
-            self.print_vector(vectors, output_properties.get("output_properties"), output_format, save_embedding_sentence)
+            self.print_vector(vectors,
+                              output_props,
+                              output_format,
+                              save_embedding_sentence)
 
     def evaluate_result(self):
         """
@@ -728,7 +786,8 @@ class EmbeddingVector:
         distance_sum = 0
         for each in gt_nodes_vectors:
             distance_sum += self.calculate_distance(each, centroid)
-        self._logger.info("The average distance for the ground truth nodes to centroid is {}".format(distance_sum / len(points)))
+        self._logger.info(
+            "The average distance for the ground truth nodes to centroid is {}".format(distance_sum / len(points)))
 
     @staticmethod
     def calculate_distance(a, b):
