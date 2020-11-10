@@ -33,7 +33,7 @@ class KgtkCompact(KgtkFormat):
     compact_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # The field separator used in multifield joins.  The KGHT list character should be safe.
-    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.LIST_SEPARATOR)
+    field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.KEY_FIELD_SEPARATOR)
 
     sorted_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     verify_sort: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -60,7 +60,7 @@ class KgtkCompact(KgtkFormat):
     current_row: typing.Optional[typing.List[str]] = None
     current_row_lists: typing.Optional[typing.List[typing.Optional[typing.List[str]]]] = None
 
-    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.LIST_SEPARATOR
+    FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.KEY_FIELD_SEPARATOR
 
     def build_key(self, row: typing.List[str], key_columns: typing.List[int])->str:
         key: str = ""
@@ -167,6 +167,7 @@ class KgtkCompact(KgtkFormat):
                 if item2 not in current_item_list:
                     current_item_list.append(item2) # Add unique items.
 
+    # TODO: Create an optimized version of this routine without the very verbose debugginng messages.
     def process_row(self,
                     input_key: str,
                     row: typing.List[str],
@@ -174,13 +175,24 @@ class KgtkCompact(KgtkFormat):
                     idb: typing.Optional[KgtkIdBuilder],
                     ew: KgtkWriter,
                     flush: bool = False):
+        if self.very_verbose:
+            print("Input key %s" % repr(input_key), file=self.error_file, flush=True)
         # Note:  This code makes the assumption that row lengths do not vary!
         if self.current_key is not None:
+            if self.very_verbose:
+                print("No current key", file=self.error_file, flush=True)
             # We have a record being built.  Write it?
             if flush or self.current_key != input_key:
+                if self.very_verbose:
+                    if flush:
+                        print("flush", file=self.error_file, flush=True)
+                    else:
+                        print("current_key %s != input_key %s" % (repr(self.current_key), repr(input_key)), file=self.error_file, flush=True)
                 # self.current_key != input_key means that the key is changing.
                 self.compact_row()
                 if self.current_row is not None:
+                    if self.very_verbose:
+                        print("writing %s" % repr(self.field_separator.join(self.current_row)), file=self.error_file, flush=True)
                     if idb is None:
                         ew.write(self.current_row)
                     else:
@@ -196,10 +208,16 @@ class KgtkCompact(KgtkFormat):
         # Are we starting a new key?
         if self.current_key is None:
             # Save the new row.
+            if self.very_verbose:
+                print("New current_key %s" % repr(self.current_key), file=self.error_file, flush=True)
             self.current_key = input_key
+            if self.very_verbose:
+                print("Expand row %s" % self.field_separator.join(row), file=self.error_file, flush=True)
             self.expand_row(row)
         else:
             # Merge into an existing row.
+            if self.very_verbose:
+                print("Merge row", file=self.error_file, flush=True)
             self.merge_row(row)
 
     def process(self):
@@ -244,6 +262,8 @@ class KgtkCompact(KgtkFormat):
         elif kr.is_node_file:
             # Add the KGTK node file required column:
             key_idx_list.append(kr.id_column_idx)
+        elif len(self.key_column_names) == 0:
+            raise ValueError("The input file is neither an edge nor a node file.  Key columns must be supplied.")
 
         # Append additional columns to the list of key column indices,
         # silently removing duplicates, but complaining about unknown names.
@@ -270,6 +290,8 @@ class KgtkCompact(KgtkFormat):
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
+                                         use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                         mgzip_threads=self.reader_options.mgzip_threads, # Hack!
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        

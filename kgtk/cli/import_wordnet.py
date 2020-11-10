@@ -1,10 +1,7 @@
 """
 Import WordNet to KGTK.
 
-TODO: Add --output-file
-
 """
-
 
 import sys
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -30,6 +27,7 @@ def run(output_file: KGTKFiles):
     from kgtk.exceptions import kgtk_exception_auto_handler
     import json
     import nltk
+    nltk.download("wordnet")
     from nltk.corpus import wordnet as wn
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.io.kgtkwriter import KgtkWriter
@@ -131,6 +129,9 @@ def run(output_file: KGTKFiles):
 
         for edge in all_edges:
             ew.write(edge)
+
+        # Clean up.
+        ew.close()
 
     except Exception as e:
             kgtk_exception_auto_handler(e)

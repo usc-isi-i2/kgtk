@@ -1,10 +1,10 @@
 """
 Import FrameNet to KGTK.
-TODO: Add --output-file
 """
 
 
 import sys
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
@@ -18,8 +18,9 @@ def add_arguments(parser):
     Args:
             parser (argparse.ArgumentParser)
     """
+    parser.add_output_file()
 
-def run():
+def run(output_file: KGTKFiles):
     # import modules locally
 
     from typing import Tuple, List, Union, Dict
@@ -29,10 +30,7 @@ def run():
     from nltk.corpus import framenet as fn
     import re
     from kgtk.kgtkformat import KgtkFormat
-
-    def header_to_edge(row):
-        row=[r.replace('_', ';') for r in row]
-        return '\t'.join(row) + '\n'
+    from kgtk.io.kgtkwriter import KgtkWriter
 
     def edge2KGTK(edge: Tuple[str, str, str]) -> pd.Series:
         """
@@ -175,13 +173,25 @@ def run():
 
     try:
         edges=load_framenet()
-        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
-        sys.stdout.write(header_to_edge(out_columns))
+        out_columns=['node1', 'relation', 'node2', 'node1;label', 'node2;label','relation;label', 'relation;dimension', 'source', 'sentence']
 
+        output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+        ew: KgtkWriter = KgtkWriter.open(out_columns,
+                                         output_kgtk_file,
+                                         #mode=input_kr.mode,
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         gzip_in_parallel=False,
+                                         #verbose=self.verbose,
+                                         #very_verbose=self.very_verbose
+                                         )
         df_ = pd.DataFrame(map(edge2KGTK, edges))
 
         for i, row in df_.iterrows():
-            sys.stdout.write('\t'.join(row) + '\n')
+            ew.write(row)
+
+        ew.close()
 
     except Exception as e:
             kgtk_exception_auto_handler(e)

@@ -47,6 +47,13 @@ class Unique(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    EDGE_FORMAT: str = "edge"
+    NODE_FORMAT: str = "node"
+    NODE_COUNTS_FORMAT: str = "node-counts"
+    NODE_ONLY_FORMAT: str = "node-only"
+    OUTPUT_FORMATS: typing.List[str] = [EDGE_FORMAT, NODE_FORMAT, NODE_COUNTS_FORMAT, NODE_ONLY_FORMAT]
+    DEFAULT_FORMAT: str = EDGE_FORMAT
+
     def process(self):
         # Open the input file.
         if self.verbose:
@@ -113,15 +120,23 @@ class Unique(KgtkFormat):
         # the input file, because we need the list of uniqueue values to
         # build the column list.
         output_columns: typing.List[str]
-        if self.output_format == "edge":
+        if self.output_format == self.EDGE_FORMAT:
             output_columns = ["node1", "label", "node2"]
-        elif self.output_format == "node":
+
+        elif self.output_format == self.NODE_ONLY_FORMAT:
+            output_columns = [ "id" ]
+
+        elif self.output_format == self.NODE_COUNTS_FORMAT:
+            output_columns = [ "id", self.label_value ]
+
+        elif self.output_format == self.NODE_FORMAT:
             output_columns = [ "id" ]
             for value in sorted(value_counts.keys()):
                 # TODO: provide a way to override this check.
                 if value in KgtkFormat.NODE1_COLUMN_NAMES:
                     raise ValueError("Cannot write a KGTK node file with a column named '%s'." % value)
                 output_columns.append(value)
+
         else:
             raise ValueError("Unknown output format %s" % str(self.output_format))
         
@@ -133,18 +148,30 @@ class Unique(KgtkFormat):
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
+                                         use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                         mgzip_threads=self.reader_options.mgzip_threads, # Hack!
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
 
-        if self.output_format == "edge":
+        if self.output_format == self.EDGE_FORMAT:
             for value in sorted(value_counts.keys()):
                 ew.write([value, self.label_value, str(value_counts[value])])
-        elif self.output_format == "node":
+
+        elif self.output_format == self.NODE_ONLY_FORMAT:
+            for value in sorted(value_counts.keys()):
+                ew.write([value])
+
+        elif self.output_format == self.NODE_COUNTS_FORMAT:
+            for value in sorted(value_counts.keys()):
+                ew.write([value, str(value_counts[value])])
+
+        elif self.output_format == NODE_FORMAT:
             row = [ self.column_name ]
             for value in sorted(value_counts.keys()):
                 row.append(str(value_counts[value]))
             ew.write(row)
+
         else:
             raise ValueError("Unknown output format %s" % str(self.output_format))
 
@@ -171,7 +198,7 @@ def main():
 
     # TODO: use an enum
     parser.add_argument(      "--format", dest="output_format", help="The output file format and mode (default=%(default)s).",
-                              default="edge", choices=["edge", "node"])
+                              default=Unique.DEFAULT_FORMAT, choices=Unique.OUTPUT_FORMATS)
 
     parser.add_argument(      "--prefix", dest="prefix", help="The value prefix (default=%(default)s).", default="")
 

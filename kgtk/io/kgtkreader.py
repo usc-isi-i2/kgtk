@@ -18,12 +18,8 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 from argparse import ArgumentParser, _ArgumentGroup, Namespace, SUPPRESS
 import attr
-import bz2
 from enum import Enum
-import gzip
 import io
-import lz4 # type: ignore
-import lzma
 from multiprocessing import Process, Queue
 from pathlib import Path
 import sys
@@ -52,6 +48,7 @@ class KgtkReaderMode(Enum):
 class KgtkReaderOptions():
     ERROR_LIMIT_DEFAULT: int = 1000
     GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
+    MGZIP_THREAD_COUNT_DEFAULT: int = 3
 
     # TODO: use an enum
     INPUT_FORMAT_CSV: str = "csv"
@@ -119,6 +116,8 @@ class KgtkReaderOptions():
     # Other implementation options?
     input_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
     compression_type: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an Enum
+    use_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    mgzip_threads: int = attr.ib(validator=attr.validators.instance_of(int), default=MGZIP_THREAD_COUNT_DEFAULT)
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
@@ -185,15 +184,25 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "The maximum number of errors to report before failing (default=%(default)s)"),
                             type=int, **d(default=cls.ERROR_LIMIT_DEFAULT))
 
+        fgroup.add_argument(prefix1 + "use-mgzip",
+                            dest=prefix2 + "use_mgzip",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "Execute multithreaded gzip. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
+
+        fgroup.add_argument(prefix1 + "mgzip-threads", dest=prefix2 + "mgzip_threads",
+                            help=h(prefix3 + "Multithreaded gzip thread  count. (default=%(default)s)."),
+                            type=int, **d(default=cls.MGZIP_THREAD_COUNT_DEFAULT))
+
         fgroup.add_argument(prefix1 + "gzip-in-parallel",
                             dest=prefix2 + "gzip_in_parallel",
                             metavar="optional True|False",
-                            help=h(prefix3 + "Execute gzip in parallel (default=%(default)s)."),
+                            help=h(prefix3 + "Execute gzip in parallel. (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=False))
 
         fgroup.add_argument(prefix1 + "gzip-queue-size",
                             dest=prefix2 + "gzip_queue_size",
-                            help=h(prefix3 + "Queue size for parallel gzip (default=%(default)s)."),
+                            help=h(prefix3 + "Queue size for parallel gzip. (default=%(default)s)."),
                             type=int, **d(default=cls.GZIP_QUEUE_SIZE_DEFAULT))
 
         if mode_options:
@@ -354,6 +363,8 @@ class KgtkReaderOptions():
             every_nth_record=lookup("every_nth_record", 1),
             fill_short_lines=lookup("fill_short_lines", False),
             force_column_names=lookup("force_column_names", None),
+            use_mgzip=lookup("use_mgzip", False),
+            mgzip_threads=lookup("mgzip_threads", cls.MGZIP_THREAD_COUNT_DEFAULT),
             gzip_in_parallel=lookup("gzip_in_parallel", False),
             gzip_queue_size=lookup("gzip_queue_size", KgtkReaderOptions.GZIP_QUEUE_SIZE_DEFAULT),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
@@ -416,6 +427,8 @@ class KgtkReaderOptions():
             print("%sinput-format=%s" % (prefix, str(self.input_format)), file=out)
         if self.compression_type is not None:
             print("%scompression-type=%s" % (prefix, str(self.compression_type)), file=out)
+        print("%suse-mgzip=%s" % (prefix, str(self.use_mgzip)), file=out)
+        print("%smgzip-threads=%s" % (prefix, str(self.mgzip_threads)), file=out)
         print("%sgzip-in-parallel=%s" % (prefix, str(self.gzip_in_parallel)), file=out)
         print("%sgzip-queue-size=%s" % (prefix, str(self.gzip_queue_size)), file=out)
               
@@ -629,29 +642,45 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                               file_name: str,
                               file_or_path: typing.Union[Path, typing.TextIO],
                               who: str,
+                              use_mgzip: bool,
+                              mgzip_threads: int,
                               error_file: typing.TextIO,
                               verbose: bool)->typing.TextIO:
         
         # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
         if compression_type in [".gz", "gz"]:
-            if verbose:
-                print("%s: reading gzip %s" % (who, file_name), file=error_file, flush=True)
-            return gzip.open(file_or_path, mode="rt") # type: ignore
+            if use_mgzip:
+                if verbose:
+                    print("%s: reading gzip with %d threads: %s" % (who, mgzip_threads, file_name), file=error_file, flush=True)
+                import mgzip
+                if isinstance(file_or_path, Path):
+                    return mgzip.open(str(file_or_path), mode="rt", thread=mgzip_threads) # type: ignore
+                else:
+                    return mgzip.open(file_or_path, mode="rt", thread=mgzip_threads) # type: ignore
+            else:
+                if verbose:
+                    print("%s: reading gzip %s" % (who, file_name), file=error_file, flush=True)
+                import gzip
+                return gzip.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".bz2", "bz2"]:
             if verbose:
                 print("%s: reading bz2 %s" % (who, file_name), file=error_file, flush=True)
+            import bz2
             return bz2.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".xz", "xz"]:
             if verbose:
                 print("%s: reading lzma %s" % (who, file_name), file=error_file, flush=True)
+            import lzma
             return lzma.open(file_or_path, mode="rt") # type: ignore
         
         elif compression_type in [".lz4", "lz4"]:
             if verbose:
                 print("%s: reading lz4 %s" % (who, file_name), file=error_file, flush=True)
+            import lz4 # type: ignore
             return lz4.frame.open(file_or_path, mode="rt") # type: ignore
+
         else:
             # TODO: throw a better exception.
                 raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))
@@ -665,7 +694,14 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         who: str = cls.__name__
         if file_path is None or str(file_path) == "-":
             if options.compression_type is not None and len(options.compression_type) > 0:
-                return ClosableIterTextIOWrapper(cls._open_compressed_file(options.compression_type, "-", sys.stdin, who, error_file, verbose))
+                return ClosableIterTextIOWrapper(cls._open_compressed_file(options.compression_type,
+                                                                           "-",
+                                                                           sys.stdin,
+                                                                           who,
+                                                                           options.use_mgzip,
+                                                                           options.mgzip_threads,
+                                                                           error_file,
+                                                                           verbose))
             else:
                 if verbose:
                     print("%s: reading stdin" % who, file=error_file, flush=True)
@@ -682,9 +718,23 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         gzip_file: typing.TextIO
         if options.compression_type is not None and len(options.compression_type) > 0:
-            gzip_file = cls._open_compressed_file(options.compression_type, str(file_path), file_path, who, error_file, verbose)
+            gzip_file = cls._open_compressed_file(options.compression_type,
+                                                  str(file_path),
+                                                  file_path,
+                                                  who,
+                                                  options.use_mgzip,
+                                                  options.mgzip_threads,
+                                                  error_file,
+                                                  verbose)
         elif file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
-            gzip_file = cls._open_compressed_file(file_path.suffix, str(file_path), file_path, who, error_file, verbose)
+            gzip_file = cls._open_compressed_file(file_path.suffix,
+                                                  str(file_path),
+                                                  file_path,
+                                                  who,
+                                                  options.use_mgzip,
+                                                  options.mgzip_threads,
+                                                  error_file,
+                                                  verbose)
         else:
             if verbose:
                 print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
@@ -1256,20 +1306,43 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         return merged_columns
 
-    def get_node1_column_index(self, column_name: typing.Optional[str] = None)->int:
+    def _get_special_column_index(self, column_name_or_idx: typing.Optional[str], special_column_idx: int)->int:
+        """
+        Get the special column index, unless an overriding column
+        index or name name is provided.  Returns -1 if no column found.
+
+        Note: column index values start with 1 for the first column.
+        """
+        if column_name_or_idx is None or len(column_name_or_idx) == 0:
+            return special_column_idx
+        elif column_name_or_idx in self.column_name_map:
+            # By performing this test before the isdigit() test, we give
+            # precedence to columns with names that are integers.
+            return self.column_name_map[column_name_or_idx]
+        elif column_name_or_idx.isdigit():
+            column_idx: int = int(column_name_or_idx) - 1
+            if column_idx < 0:
+                return -1
+            if column_idx >= self.column_count:
+                return -1
+            else:
+                return column_idx
+        else:
+            return -1
+
+    def get_node1_column_index(self, column_name_or_idx: typing.Optional[str] = None)->int:
         """
         Get the node1 column index, unless an overriding column
-        name is provided.  Returns -1 if no column found.
+        index or name is provided.  Returns -1 if no column found.
         """
-        if column_name is None or len(column_name) == 0:
-            return self.node1_column_idx
-        else:
-            return self.column_name_map.get(column_name, -1)
+        return self._get_special_column_index(column_name_or_idx, self.node1_column_idx)
 
     def get_node1_canonical_name(self, column_name: typing.Optional[str]=None)->str:
         """
         Get the canonical name for the node1 column, unless an
         overriding name is provided.
+
+        TODO: Should we convert column indexes to column names?
         """
         if column_name is not None and len(column_name) > 0:
             return column_name
@@ -1287,15 +1360,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             return ""
             
-    def get_label_column_index(self, column_name: typing.Optional[str] = None)->int:
+    def get_label_column_index(self, column_name_or_idx: typing.Optional[str] = None)->int:
         """
         Get the label column index, unless an overriding column
-        name is provided.  Returns -1 if no column found.
+        index or name is provided.  Returns -1 if no column found.
         """
-        if column_name is None or len(column_name) == 0:
-            return self.label_column_idx
-        else:
-            return self.column_name_map.get(column_name, -1)
+        return self._get_special_column_index(column_name_or_idx, self.label_column_idx)
             
     def get_label_canonical_name(self, column_name: typing.Optional[str]=None)->str:
         """
@@ -1318,15 +1388,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             return ""
 
-    def get_node2_column_index(self, column_name: typing.Optional[str] = None)->int:
+    def get_node2_column_index(self, column_name_or_idx: typing.Optional[str] = None)->int:
         """
         Get the node2 column index, unless an overriding column
-        name is provided.  Returns -1 if no column found.
+        index or name is provided.  Returns -1 if no column found.
         """
-        if column_name is None or len(column_name) == 0:
-            return self.node2_column_idx
-        else:
-            return self.column_name_map.get(column_name, -1)
+        return self._get_special_column_index(column_name_or_idx, self.node2_column_idx)
             
 
     def get_node2_canonical_name(self, column_name: typing.Optional[str]=None)->str:
@@ -1350,15 +1417,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             return ""
             
-    def get_id_column_index(self, column_name: typing.Optional[str] = None)->int:
+    def get_id_column_index(self, column_name_or_idx: typing.Optional[str] = None)->int:
         """
         Get the id column index, unless an overriding column
-        name is provided.  Returns -1 if no column found.
+        index or name is provided.  Returns -1 if no column found.
         """
-        if column_name is None or len(column_name) == 0:
-            return self.id_column_idx
-        else:
-            return self.column_name_map.get(column_name, -1)
+        return self._get_special_column_index(column_name_or_idx, self.id_column_idx)
             
     def get_id_canonical_name(self, column_name: typing.Optional[str]=None)->str:
         """
@@ -1406,27 +1470,53 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # or choices.  That will avoid the argparse bug, too.
         if expert:
             errors_to = egroup.add_mutually_exclusive_group()
-            errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+            errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout", metavar="optional True|False",
                                          help="Send errors to stdout instead of stderr",
-                                         action="store_true")
-            errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+                                         type=optional_bool, nargs='?', const=True, default=False)
+
+            errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr", metavar="optional True|False",
                                          help="Send errors to stderr instead of stdout",
-                                         action="store_true")
+                                         type=optional_bool, nargs='?', const=True, default=False)
         else:
-            egroup.add_argument(      "--errors-to-stderr", dest="errors_to_stderr",
+            egroup.add_argument(      "--errors-to-stderr", dest="errors_to_stderr", metavar="optional True|False",
                                       help=h("Send errors to stderr instead of stdout"),
-                                      action="store_true")
-            egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout",
+                                      type=optional_bool, nargs='?', const=True, default=False)
+
+            egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout", metavar="optional True|False",
                                       help=h("Send errors to stdout instead of stderr"),
-                                      action="store_true")
+                                      type=optional_bool, nargs='?', const=True, default=False)
 
-        egroup.add_argument(      "--show-options", dest="show_options", help=h("Print the options selected (default=%(default)s)."), action='store_true')
+        egroup.add_argument(      "--show-options", dest="show_options", metavar="optional True|False",
+                                  help=h("Print the options selected (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, default=False)
 
-        egroup.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages (default=%(default)s).", action='store_true')
+        egroup.add_argument("-v", "--verbose", dest="verbose", metavar="optional True|False",
+                            help="Print additional progress messages (default=%(default)s).",
+                            type=optional_bool, nargs='?', const=True, default=False)
 
-        egroup.add_argument(      "--very-verbose", dest="very_verbose",
+        egroup.add_argument(      "--very-verbose", dest="very_verbose", metavar="optional True|False",
                                   help=h("Print additional progress messages (default=%(default)s)."),
-                                  action='store_true')
+                                  type=optional_bool, nargs='?', const=True, default=False)
+
+    @classmethod
+    def show_debug_arguments(cls,
+                             errors_to_stdout: bool = False,
+                             errors_to_stderr: bool = True,
+                             show_options: bool = False,
+                             verbose: bool = False,
+                             very_verbose: bool = False,
+                             out: typing.TextIO = sys.stderr):
+        if errors_to_stdout:
+            print("--errors-to-stdout", file=out)
+        if errors_to_stderr:
+            print("--errors-to-stderr", file=out)
+        if show_options:
+            print("--show-options", file=out)
+        if verbose:
+            print("--verbose", file=out)
+        if very_verbose:
+            print("--very-verbose", file=out)
+
         
 def main():
     """
