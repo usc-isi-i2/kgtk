@@ -92,6 +92,7 @@ WIKIDATA_IMPORT_SPLIT_FILES=( \
 	"labels.en" \
 	"sitelinks" \
 	"sitelinks.en" \
+	"metadata.node" \
 	"metadata.property.datatypes" \
 	"metadata.types" \
     )
