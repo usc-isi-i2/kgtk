@@ -36,8 +36,8 @@ def add_arguments(parser: KGTKArgumentParser):
         parser (argparse.ArgumentParser)
     """
     from kgtk.utils.argparsehelpers import optional_bool
-    from kgtk.io.KgtkReader import KgtkReaderOptions
-    from kgtk.io.KgtkWriter import KgtkWriter
+    from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
     
     parser.add_input_file(positional=True, who='input path file (may be .bz2)')
 

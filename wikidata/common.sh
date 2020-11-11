@@ -82,22 +82,18 @@ WIKIDATATYPES=( \
 # The wikidata import split files:
 WIKIDATA_IMPORT_SPLIT_FILES=( \
     "node" \
-	"all.full" \
-	"all" \
-	"qual.full" \
-	"qual" \
-	"part.alias" \
-	"part.alias.en" \
-	"part.description" \
-	"part.description.en" \
-	"part.label" \
-	"part.label.en" \
-	"property.datatype" \
-	"types" \
-	"part.wikipedia_sitelink" \
-	"part.wikipedia_sitelink.en" \
-	"part.property" \
-	"part.property.qual" \
+	"claims" \
+	"qualifiers" \
+	"aliases" \
+	"aliases.en" \
+	"descriptions" \
+	"descriptions.en" \
+	"labels" \
+	"labels.en" \
+	"sitelinks" \
+	"sitelinks.en" \
+	"metadata.property.datatypes" \
+	"metadata.types" \
     )
 
 # GZIP_CMD=gzip
