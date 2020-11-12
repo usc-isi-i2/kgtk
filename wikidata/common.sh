@@ -81,7 +81,6 @@ WIKIDATATYPES=( \
 
 # The wikidata import split files:
 WIKIDATA_IMPORT_SPLIT_FILES=( \
-    "node" \
 	"claims" \
 	"qualifiers" \
 	"aliases" \
