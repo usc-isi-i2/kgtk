@@ -9,7 +9,7 @@ source common.sh
 # Extract the qualifiers for the edge datatypes splits.
 for TARGET in ${WIKIDATATYPES[@]}
 do
-    echo -e "\nExtract any qualifiers for the properties in ${TARGET_NAME}."
+    echo -e "\nExtract any qualifiers for the properties in claims.${TARGET}."
     kgtk ${KGTK_FLAGS} \
 	 ifexists ${VERBOSE} \
 	 --input-file ${DATADIR}/qualifiers.${SORTED_KGTK} \
