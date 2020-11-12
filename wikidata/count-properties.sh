@@ -6,7 +6,7 @@
 source common.sh
 
 # ==============================================================================
-echo -e "\nCount the properties in ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv."
+echo -e "\nCount the properties in ${DATADIR}/claims.properties.tsv."
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
      --input-file ${DATADIR}/claims.properties.${SORTED_KGTK} \
