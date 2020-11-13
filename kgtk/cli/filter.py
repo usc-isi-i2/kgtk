@@ -686,6 +686,7 @@ def run(input_file: KGTKFiles,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
                                  mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                 error_file=error_file,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
             kws.append(kw)
@@ -699,6 +700,7 @@ def run(input_file: KGTKFiles,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
                                  mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                 error_file=error_file,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
 
@@ -796,6 +798,8 @@ def run(input_file: KGTKFiles,
                 keep: bool = False
                 reject: bool = False 
                 if subj_filter is not None:
+                    if len(row) < subj_idx:
+                        raise ValueError("Line %d: filter %d: short(len(row)=%d, subj_idx=%d): %s" % (input_line_count, idx, len(row), subj_idx, repr(row)))
                     subj_match: typing.Optional[typing.Match] = subj_filter.match(row[subj_idx])
                     if subj_match is not None:
                         keep = True
@@ -805,6 +809,8 @@ def run(input_file: KGTKFiles,
                         subj_filter_reject_count += 1
 
                 if pred_filter is not None:
+                    if len(row) < pred_idx:
+                        raise ValueError("Line %d: filter %d: short(len(row)=%d, pred_idx=%d): %s" % (input_line_count, idx, len(row), pred_idx, repr(row)))
                     pred_match: typing.Optional[typing.Match] = pred_filter.match(row[pred_idx])
                     if pred_match is not None:
                         keep = True
@@ -814,6 +820,8 @@ def run(input_file: KGTKFiles,
                         pred_filter_reject_count += 1
 
                 if obj_filter is not None:
+                    if len(row) < obj_idx:
+                        raise ValueError("Line %d: filter %d: short(len(row)=%d, obj_idx=%d): %s" % (input_line_count, idx, len(row), obj_idx, repr(row)))
                     obj_match: typing.Optional[typing.Match] = obj_filter.match(row[obj_idx])
                     if obj_match is not None:
                         keep = True
@@ -910,10 +918,10 @@ def run(input_file: KGTKFiles,
         if subj_idx < 0 and subj_needed:
             trouble = True
             print("Error: Cannot find the subject column '%s'." % kr.get_node1_canonical_name(subj_col), file=error_file, flush=True)
-        if pred_idx < 0 and pred_needed > 0:
+        if pred_idx < 0 and pred_needed:
             trouble = True
             print("Error: Cannot find the predicate column '%s'." % kr.get_label_canonical_name(pred_col), file=error_file, flush=True)
-        if obj_idx < 0 and obj_needed > 0:
+        if obj_idx < 0 and obj_needed:
             trouble = True
             print("Error: Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col), file=error_file, flush=True)
         if trouble:
@@ -932,6 +940,7 @@ def run(input_file: KGTKFiles,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
                                  mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                 error_file=error_file,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
             kws.append(kw)
@@ -945,6 +954,7 @@ def run(input_file: KGTKFiles,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
                                  mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                 error_file=error_file,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
 
