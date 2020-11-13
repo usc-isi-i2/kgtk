@@ -100,6 +100,8 @@ class Unique(KgtkFormat):
                 if row[where_column_idx] not in where_value_set:
                     skip_line_count += 1
                     continue
+            if len(row) <= column_idx:
+                raise ValueError("Line %d: Short row (len(row)=%d, column_idx=%d): %s" % (input_line_count, len(row), column_idx, repr(row)))
             value: str = row[column_idx]
             if len(value) == 0:
                 value = self.empty_value
