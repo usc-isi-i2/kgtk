@@ -798,7 +798,7 @@ def run(input_file: KGTKFiles,
                 keep: bool = False
                 reject: bool = False 
                 if subj_filter is not None:
-                    if len(row) < subj_idx:
+                    if len(row) <= subj_idx:
                         raise ValueError("Line %d: filter %d: short(len(row)=%d, subj_idx=%d): %s" % (input_line_count, idx, len(row), subj_idx, repr(row)))
                     subj_match: typing.Optional[typing.Match] = subj_filter.match(row[subj_idx])
                     if subj_match is not None:
@@ -809,7 +809,7 @@ def run(input_file: KGTKFiles,
                         subj_filter_reject_count += 1
 
                 if pred_filter is not None:
-                    if len(row) < pred_idx:
+                    if len(row) <= pred_idx:
                         raise ValueError("Line %d: filter %d: short(len(row)=%d, pred_idx=%d): %s" % (input_line_count, idx, len(row), pred_idx, repr(row)))
                     pred_match: typing.Optional[typing.Match] = pred_filter.match(row[pred_idx])
                     if pred_match is not None:
@@ -820,7 +820,7 @@ def run(input_file: KGTKFiles,
                         pred_filter_reject_count += 1
 
                 if obj_filter is not None:
-                    if len(row) < obj_idx:
+                    if len(row) <= obj_idx:
                         raise ValueError("Line %d: filter %d: short(len(row)=%d, obj_idx=%d): %s" % (input_line_count, idx, len(row), obj_idx, repr(row)))
                     obj_match: typing.Optional[typing.Match] = obj_filter.match(row[obj_idx])
                     if obj_match is not None:
