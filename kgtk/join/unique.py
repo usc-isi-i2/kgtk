@@ -38,6 +38,8 @@ class Unique(KgtkFormat):
     output_format: str = attr.ib(validator=attr.validators.instance_of(str), default="edge")
     prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="")
 
+    presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
     reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
@@ -62,6 +64,22 @@ class Unique(KgtkFormat):
             else:
                 print("Reading the input data from stdin", file=self.error_file, flush=True)
 
+        output_columns: typing.List[str]
+        if self.output_format == self.EDGE_FORMAT:
+            output_columns = ["node1", "label", "node2"]
+
+        elif self.output_format == self.NODE_ONLY_FORMAT:
+            output_columns = [ "id" ]
+
+        elif self.output_format == self.NODE_COUNTS_FORMAT:
+            output_columns = [ "id", self.label_value ]
+
+        elif self.output_format == self.NODE_FORMAT:
+            output_columns = [ "id" ] # Add more later
+
+        else:
+            raise ValueError("Unknown output format %s" % str(self.output_format))
+        
         kr: KgtkReader =  KgtkReader.open(self.input_file_path,
                                           error_file=self.error_file,
                                           options=self.reader_options,
@@ -118,29 +136,15 @@ class Unique(KgtkFormat):
                                                                                                        empty_value_count),
                   file=self.error_file, flush=True)
 
-        # No node mode we can't open the output file until we are done reading
-        # the input file, because we need the list of uniqueue values to
+        # In node format we can't open the output file until we are done
+        # reading the input file, because we need the list of unique values to
         # build the column list.
-        output_columns: typing.List[str]
-        if self.output_format == self.EDGE_FORMAT:
-            output_columns = ["node1", "label", "node2"]
-
-        elif self.output_format == self.NODE_ONLY_FORMAT:
-            output_columns = [ "id" ]
-
-        elif self.output_format == self.NODE_COUNTS_FORMAT:
-            output_columns = [ "id", self.label_value ]
-
-        elif self.output_format == self.NODE_FORMAT:
-            output_columns = [ "id" ]
+        if self.output_format == self.NODE_FORMAT:
             for value in sorted(value_counts.keys()):
                 # TODO: provide a way to override this check.
                 if value in KgtkFormat.NODE1_COLUMN_NAMES:
                     raise ValueError("Cannot write a KGTK node file with a column named '%s'." % value)
                 output_columns.append(value)
-
-        else:
-            raise ValueError("Unknown output format %s" % str(self.output_format))
         
         if self.verbose:
             print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
