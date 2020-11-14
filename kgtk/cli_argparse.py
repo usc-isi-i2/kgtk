@@ -1,9 +1,9 @@
-from argparse import ArgumentParser, RawDescriptionHelpFormatter, Namespace, SUPPRESS
+from argparse import ArgumentParser, RawDescriptionHelpFormatter, Namespace, SUPPRESS, _StoreTrueAction
 from functools import partial
 from pathlib import Path
 import typing
 
-from kgtk.exceptions import KGTKArgumentParseException, KGTKSyntaxException
+from kgtk.exceptions import KGTKArgumentParseException, KGTKSyntaxException, KGTKDependencyException
 
 
 KGTKFiles = typing.Optional[typing.Union[Path,
@@ -273,6 +273,15 @@ class KGTKArgumentParser(ArgumentParser):
             who = cls.DEFAULT_OUTPUT_FILE_WHO
 
         return cls.get_path_list(paths, who, default_stdio=default_stdout)
+
+
+class CheckDepsAction(_StoreTrueAction):
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        from kgtk.dependencies import check_dependencies
+        if check_dependencies():
+            parser.exit()
+        parser.exit(KGTKDependencyException.return_code)
 
 
 def add_shared_arguments(parser):
