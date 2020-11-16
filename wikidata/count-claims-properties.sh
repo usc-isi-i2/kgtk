@@ -28,7 +28,7 @@ kgtk ${KGTK_FLAGS} \
      --label label-property-count \
      / lift ${VERBOSE} --use-mgzip=$USE_MGZIP \
      --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
-     --output-file ${DATADIR}/claims.node1.property.counts.${SORTED_KGTK} \
+     --output-file ${DATADIR}/claims.label.property.counts.${SORTED_KGTK} \
      --columns-to-lift node1 \
      --input-file-is-presorted \
      --label-file-is-presorted \
