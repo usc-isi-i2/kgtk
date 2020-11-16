@@ -16,7 +16,6 @@ usage: kgtk compact [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--verify-sort [True|False]] [--build-id [True|False]]
                     [--overwrite-id [optional true|false]]
                     [--verify-id-unique [optional true|false]] [-v]
-                    [INPUT_FILE]
 
 Copy a KGTK file, compacting multiple records into | lists. 
 
@@ -24,10 +23,6 @@ By default, the input file is sorted in memory to achieve the grouping necessary
 
 Additional options are shown in expert help.
 kgtk --expert compact --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -49,6 +44,8 @@ optional arguments:
   --verify-sort [True|False]
                         If the input has been presorted, verify its consistency (disable if
                         only pregrouped). (default=True).
+  --lists-in-input [LISTS_IN_INPUT]
+                        Assume that the input file may contain lists (disable when certain it does not). (default=True).
   --build-id [True|False]
                         Build id values in an id column. (default=False).
   --overwrite-id [optional true|false]
@@ -84,7 +81,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | steve | zipcode | 45601 | cabin     |       |
 
 ```bash
-kgtk compact file1.tsv
+kgtk compact -i file1.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -116,7 +113,7 @@ Suppose that `file2.tsv` contains the following table in KGTK format
 
 Compacting with built-in sorting:
 ```bash
-kgtk compact file2.tsv
+kgtk compact -i file2.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -130,7 +127,7 @@ The output will be the following table in KGTK format:
 
 Compacting with built-in sorting disabled:
 ```bash
-kgtk compact file2.tsv --presorted
+kgtk compact -i file2.tsv --presorted
 ```
 The output will be the following table in KGTK format (which is not
 a complate compaction):
@@ -168,7 +165,7 @@ Suppose that `file3.tsv` contains the following table in KGTK format:
 Compacting with the tuple (`node1`, `label`, `node2`, `id`) (the default
 for a KGTK edge file) as the key:
 ```bash
-kgtk compact file3.tsv
+kgtk compact -i file3.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -186,7 +183,7 @@ Since the `id` values are not duplicated between (`node1`, `label`, `node2`)
 tuples in this examplee, compacting on just the `id` column yields the same results:
 
 ```bash
-kgtk compact file3.tsv --mode=NONE --columns id
+kgtk compact -i file3.tsv --mode=NONE --columns id
 ```
 
 The output will be the following table in KGTK format:
@@ -204,7 +201,7 @@ Compacting with the tuple (`node1`, `label`, `node2`) as the key (removing
 the `id` column from the default for a KGTK edge file):
 
 ```bash
-kgtk compact file3.tsv --compact-id
+kgtk compact -i file3.tsv --compact-id
 ```
 
 The output will be the following table in KGTK format:
@@ -219,7 +216,7 @@ The output will be the following table in KGTK format:
 
 Suppose you want to build new, unique IDs for your compacted edges:
 ```bash
-kgtk compact file3.tsv --build-id --overwrite-id
+kgtk compact -i file3.tsv --build-id --overwrite-id
 ```
 
 The output will be the following table in KGTK format:
@@ -235,7 +232,7 @@ The output will be the following table in KGTK format:
 
 Compacting the ID column, too:
 ```bash
-kgtk compact file3.tsv --build-id --overwrite-id --compact-id
+kgtk compact -i file3.tsv --build-id --overwrite-id --compact-id
 ```
 
 The output will be the following table in KGTK format:
@@ -252,7 +249,7 @@ Using the expert option --id-style=concat, you can generate IDs
 that concatenate (node1, label, node2).
 
 ```bash
-kgtk compact file3.tsv --build-id --overwrite-id --compact-id --id-style=concat
+kgtk compact -i file3.tsv --build-id --overwrite-id --compact-id --id-style=concat
 ```
 
 The output will be the following table in KGTK format:

@@ -6,16 +6,11 @@ expanding | lists into multiple records.
 ```
 usage: kgtk expand [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                    [--columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]] [-v]
-                   [INPUT_FILE]
 
 Copy a KGTK file, expanding | lists into multiple records. 
 
 Additional options are shown in expert help.
 kgtk --expert expand --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -45,7 +40,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | steve | zipcode | 45601 | home\|work\|cabin | 1\|2    |
 
 ```bash
-kgtk expand file1.tsv
+kgtk expand -i file1.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -72,5 +67,5 @@ of an edge file.  The following command will expand the `node2` values, resultin
 in a valid (all else being valid) KGTK edge file:
 
 ```bash
-kgtk expand file.tsv --mode=NONE --columns node1 label
+kgtk expand -i file.tsv --mode=NONE --columns node1 label
 ```

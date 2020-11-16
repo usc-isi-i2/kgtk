@@ -18,9 +18,9 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
-        'help': 'Validate a KGTK file ',
+        'help': 'Validate one or more KGTK files ',
         
-        'description': 'Validate a KGTK file. ' +
+        'description': 'Validate one or more KGTK files. ' +
         'Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. ' +
         'Header errors cause an immediate exception. Data value errors are reported. ' +
 

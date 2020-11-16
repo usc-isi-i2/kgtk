@@ -26,7 +26,6 @@ usage: kgtk add-id [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--old-id-column-name C
                    [--id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###}]
                    [--id-prefix PREFIX] [--initial-id INTEGER]
                    [--id-prefix-num-width INTEGER] [--id-concat-num-width INTEGER] [-v]
-                   [INPUT_FILE]
 
 Copy a KGTK file, adding ID values.
 
@@ -36,10 +35,6 @@ Several ID styles are supported.
 
 Additional options are shown in expert help.
 kgtk --expert add-id --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -94,7 +89,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 Add an ID column using the default ID style (prefixed):
 
 ```bash
-kgtk add-id file1.tsv
+kgtk add-id -i file1.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -117,7 +112,7 @@ The output will be the following table in KGTK format:
 Add an ID column using the node1-label-num ID style:
 
 ```bash
-kgtk add-id file1.tsv --id-style node1-label-num
+kgtk add-id -i file1.tsv --id-style node1-label-num
 ```
 
 The output will be the following table in KGTK format:

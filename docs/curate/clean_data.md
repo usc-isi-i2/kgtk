@@ -6,18 +6,12 @@ by the file extension: .bz2 .gz .lz4 .xy
 
 ## Usage
 ```
-usage: kgtk clean-data [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-v] [INPUT_FILE] [OUTPUT_FILE]
+usage: kgtk clean-data [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-v]
 
 Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
 
 Additional options are shown in expert help.
 kgtk --expert clean-data --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
-  OUTPUT_FILE           The KGTK output file. (May be omitted or '-' for stdout.)
-                        (Deprecated, use -o OUTPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -25,6 +19,8 @@ optional arguments:
                         The KGTK input file. (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        Reject file (Optional, use '-' for stdout.)
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
@@ -80,18 +76,11 @@ usage: kgtk clean-data [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                        [--clamp-maximum-lon [CLAMP_MAXIMUM_LON]]
                        [--modulo-repair-lon [MODULO_REPAIR_LON]]
                        [--escape-list-separators [ESCAPE_LIST_SEPARATORS]]
-                       [INPUT_FILE] [OUTPUT_FILE]
 
 Validate a KGTK file and output a clean copy. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported and the line containing them skipped. 
 
 Additional options are shown in expert help.
 kgtk --expert clean-data --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
-  OUTPUT_FILE           The KGTK output file. (May be omitted or '-' for stdout.)
-                        (Deprecated, use -o OUTPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -99,6 +88,8 @@ optional arguments:
                         The KGTK input file. (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        Reject file (Optional, use '-' for stdout.)
 
 Error and feedback messages:
   Send error messages and feedback to stderr or stdout, control the amount of feedback and debugging messages.
@@ -114,6 +105,8 @@ File options:
 
   --column-separator COLUMN_SEPARATOR
                         Column separator (default=<TAB>).
+  --input-format INPUT_FORMAT
+                        Specify the input format (default=None).
   --compression-type COMPRESSION_TYPE
                         Specify the compression type (default=None).
   --error-limit ERROR_LIMIT
@@ -205,6 +198,12 @@ Data value parsing:
   --allow-lax-lq-strings [ALLOW_LAX_LQ_STRINGS]
                         Do not check if single quotes are backslashed inside language
                         qualified strings. (default=False).
+  --allow-wikidata-lq-strings [ALLOW_WIKIDATA_LQ_STRINGS]
+                        Allow Wikidata language qualifiers. (default=False).
+  --require-iso8601-extended [REQUIRE_ISO8601_EXTENDED]
+                        Require colon(:) and hyphen(-) in dates and times. (default=False).
+  --force-iso8601-extended [FORCE_ISO8601_EXTENDED]
+                        Force colon (:) and hyphen(-) in dates and times. (default=False).
   --allow-month-or-day-zero [ALLOW_MONTH_OR_DAY_ZERO]
                         Allow month or day zero in dates. (default=False).
   --repair-month-or-day-zero [REPAIR_MONTH_OR_DAY_ZERO]
@@ -223,6 +222,8 @@ Data value parsing:
                         Allow coordinates using scientific notation. (default=False).
   --repair-lax-coordinates [REPAIR_LAX_COORDINATES]
                         Allow coordinates using scientific notation. (default=False).
+  --allow-out-of-range-coordinates [ALLOW_OUT_OF_RANGE_COORDINATES]
+                        Allow coordinates that don't make sense. (default=False).
   --minimum-valid-lat MINIMUM_VALID_LAT
                         The minimum valid latitude. (default=-90.000000).
   --clamp-minimum-lat [CLAMP_MINIMUM_LAT]
@@ -285,7 +286,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 ### Clean the data, using default options
 
 ```bash
-kgtk clean-data file1.tsv
+kgtk clean-data -i file1.tsv
 ```
 
 Standard output will get the following data:
@@ -308,7 +309,7 @@ field, which violates the ISO 8601 specification.
 Change day "00" to day "01:
 
 ```bash
-kgtk clean-data file1.tsv --repair-month-or-day-zero
+kgtk clean-data -i file1.tsv --repair-month-or-day-zero
 ```
 
 Standard output will get the following data, and no errors will be issued:

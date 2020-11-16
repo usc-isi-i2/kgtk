@@ -3,11 +3,6 @@ This command concatenates any mixture of plain or gzip/bzip2/xz-compressed files
 ## Usage
 ```
 usage: kgtk zconcat [-h] [-o OUTPUT] [--gz] [--bz2] [--xz] [-i INPUT_FILE [INPUT_FILE ...]]
-                    [INPUT_FILE [INPUT_FILE ...]]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -29,20 +24,20 @@ named files with input from stdin.
 ## Examples
 Concatenate 2 unzipped files and store them in a file:
 ```
-kgtk zconcat -o dest.tsv file1.tsv file2.tsv
+kgtk zconcat -o dest.tsv -i file1.tsv file2.tsv
 ```
 
 Concatenate 2 unzipped files and output to stdout:
 ```
-kgtk zconcat file1.tsv file2.tsv
+kgtk zconcat -i file1.tsv file2.tsv
 ```
 
 Concatenate 2 gzipped files and store as gzip 
 ```
-kgtk zconcat --gz -o dest.tsv.gz file1.tsv.gz file2.tsv.gz
+kgtk zconcat --gz -o dest.tsv.gz -i file1.tsv.gz file2.tsv.gz
 ```
 
 Concatenate a mixture of compressed and plain files to a compressed result:
 ```
-cat file1.gz  |  kgtk zconcat --gz  -o dest.gz file2.bz2 - file3
+cat file1.gz  |  kgtk zconcat --gz  -o dest.gz -i file2.bz2 - file3
 ```

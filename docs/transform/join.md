@@ -9,7 +9,6 @@ usage: kgtk join [-h] [--left-file LEFT_FILE] [--right-file RIGHT_FILE] [-o OUTP
                  [--left-join [LEFT_JOIN]] [--prefix PREFIX]
                  [--right-file-join-columns RIGHT_JOIN_COLUMNS [RIGHT_JOIN_COLUMNS ...]]
                  [--right-join [RIGHT_JOIN]] [-v]
-                 [LEFT_FILE] [RIGHT_FILE]
 
 Join two KGTK edge files or two KGTK node files.
 
@@ -21,9 +20,26 @@ The output file contains the union of the columns in the two
 input files, adjusted for predefined name aliasing.
 
 Specify --left-join to get a left outer join.
+        The output file will contain all records from the
+        left input file, along with records from the right
+        input file with matching join column values.
+
 Specify --right-join to get a right outer join.
-Specify both to get a full outer join (equivalent to cat).
-Specify neither to get an inner join.
+        The output file will contain all records from the
+        right input file, along with records from the left
+        input file with matching join column values.
+
+Specify both --left-join and --right-join to get a full outer
+join (equivalent to cat or set union).
+        The output file will contain all records from both
+        the left input file and the right input file.
+
+Specify neither --left-join nor --right-join to get an inner
+join.  If there are no columns beyond the join columns, then
+this is equivalent to set intersection.
+        The output file will contain records from the left
+        input file and from the right input file for which
+        the join column value match.
 
 By default, node files are joined on the id column, while edge files are joined
 on the node1 column. The label and node2 columns may be added to the edge file
@@ -36,12 +52,6 @@ following option (enable expert mode for more information):
 --mode=NONE
 
 Expert mode provides additional command arguments.
-
-positional arguments:
-  LEFT_FILE             The left-side KGTK file to join (required). (May be omitted or '-'
-                        for stdin.) (Deprecated, use --left-file LEFT_FILE)
-  RIGHT_FILE            The right-side KGTK file to join (required). (May be omitted or '-'
-                        for stdin.) (Deprecated, use --right-file RIGHT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -118,7 +128,7 @@ and `file2.tsv` contains the following table in KGTK format:
 Do an inner join on two KGTK files on node1, sending the output to standard output.
 
 ```bash
-kgtk join file1.tsv file2.tsv
+kgtk join --left-file file1.tsv --right-file file2.tsv
 ```
 
 The result will be the following table in KGTK format:
@@ -138,7 +148,7 @@ The result will be the following table in KGTK format:
 Do a left outer join on two KGTK files on node1, sending the output to standard output.
 
 ```bash
-kgtk join file1.tsv file2.tsv --left-join
+kgtk join --left-file file1.tsv --right-file file2.tsv --left-join
 ```
 
 The result will be the following table in KGTK format:
@@ -160,7 +170,7 @@ The result will be the following table in KGTK format:
 Do a right outer join on two KGTK files on node1, sending the output to standard output.
 
 ```bash
-kgtk join file1.tsv file2.tsv --right-join
+kgtk join --left-file file1.tsv --right-file file2.tsv --right-join
 ```
 
 The result will be the following table in KGTK format:
@@ -181,7 +191,7 @@ Do a full outer join on two KGTK files on node1, sending the output to standard 
 This produces the same output as the `kgtk cat` command.
 
 ```bash
-kgtk join file1.tsv file2.tsv --left-join --right-join
+kgtk join --left-file file1.tsv --right-file file2.tsv --left-join --right-join
 ```
 
 The result will be the following table in KGTK format:

@@ -22,6 +22,7 @@ from etk.wikidata.value import (
     URLValue
 )
 from etk.knowledge_graph.node import LiteralType
+import warnings
 
 BAD_CHARS = [":", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
@@ -327,7 +328,7 @@ class TripleGenerator(Generator):
         return True
 
     def generate_normal_triple(
-            self, node1: str, property: str, node2: str, is_qualifier_edge: bool, e_id: str) -> bool:
+            self, node1: str, property: str, node2: str, is_qualifier_edge: bool, e_id: str, line_number: int) -> bool:
         if self.use_id:
             e_id = TripleGenerator.replace_illegal_string(e_id)
         entity = self._node_2_entity(node1)
@@ -388,7 +389,21 @@ class TripleGenerator(Generator):
 
         elif edge_type == QuantityValue:
             # +70[+60,+80]Q743895
-            res = self.quantity_pattern.match(node2).groups()
+            try:
+                res = self.quantity_pattern.match(node2)
+                if self.warning and res == None:
+                    warnings.warn("Node2 [{}] at line [{}] is not a legal quantity. Skipping it.\n".format(
+                        node2, line_number))
+                    
+                    return False
+                res = res.groups()
+
+            except:
+                raise KGTKException(
+                    "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
+                        node2, line_number)
+                )
+
             amount, lower_bound, upper_bound, unit = res
 
             amount = TripleGenerator.clean_number_string(amount)
@@ -490,7 +505,7 @@ class TripleGenerator(Generator):
         else:
             if prop in self.prop_types:
                 success = self.generate_normal_triple(
-                    node1, prop, node2, is_qualifier_edge, e_id)
+                    node1, prop, node2, is_qualifier_edge, e_id, line_number)
             else:
                 raise KGTKException(
                     "property [{}]'s type is unknown at line [{}].\n".format(

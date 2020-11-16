@@ -29,15 +29,15 @@ Q2        text_embedding    “0.444, 0.555, ..”
 You can call the functions directly with given args as 
 ```
 kgtk text-embedding \ 
-    <string> \ # * required, path to the file
-    --format / -f <string> \ # optional, default is `kgtk_format`
+    -input-file / -i <string> \ # * optional, path to the file
+    --input-data-format / -f <string> \ # optional, default is `kgtk_format`
     --model / -m <list_of_string> \  # optional, default is `bert-base-wikipedia-sections-mean-tokens`
     --label-properties <list_of_string> \ # optional, default is ["label"]
     --description-properties <list_of_string> \ # optional, default is ["description"]
     --isa-properties <list_of_string> \ # optional, default is ["P31"]
     --has-properties <list_of_string> \ # optional, default is ["all"]
     --property-labels-file/ -p <string> \ #optional
-    --output-format <string> # optional, default is `kgtk_format`
+    --output-data-format <string> # optional, default is `kgtk_format`
     --output-property <string> \ # optional, default is "text_embedding"
     --embedding-projector-metatada <list_of_string> \ # optional
     --embedding-projector-path/ -o <string> # optional, default is the home directory of current user
@@ -55,7 +55,7 @@ For easiest running, just give the input file and let it write output to `output
 Running with more specific parameters and then run TSNE to reduce output dimension:
 ```
 kgtk text-embedding --debug \ 
-    test_edges_file.tsv \
+    --input-file test_edges_file.tsv \
     --model bert-base-wikipedia-sections-mean-tokens bert-base-nli-cls-token \
     --label-properties P1449 P1559 \
     --description-properties P94 \
@@ -65,17 +65,17 @@ kgtk text-embedding --debug \
 Running with test format input and tsv output(for visulization at google embedding projector)
 ```
 kgtk text-embedding \ 
-    countries_candidates.csv \
+    --input-file countries_candidates.csv \
     --model bert-base-wikipedia-sections-mean-tokens bert-base-nli-cls-token \
     --black-list all_instances_of_Q732577.tsv.zip \
-    --output-format tsv_format
+    --output-data-format tsv_format
 ```
 
-#### (input files)
+#### --input-file / -i (input file)
 The path to the input file. For example: `input_file1.csv`, it also support to send like `< input_file1.csv`
 
-#### --format/ -f (input format)
-The input file should be a CSV file, it support 2 different type of input for different purposes.
+#### --input-data-format/ -f (input format)
+The input file should be a CSV file or a KGTK file.
 
 ##### KGTK edges format (`kgtk_format`)
 This follow KGTK requirement, the file need to have at least following 3 columns. For detail definitions, please refer to KGTK document.

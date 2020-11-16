@@ -26,7 +26,6 @@ usage: kgtk implode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--reject-file REJECT_
                     [--build-id [BUILD_ID]] [--show-data-types [SHOW_DATA_TYPES]]
                     [--overwrite-id [optional true|false]]
                     [--verify-id-unique [optional true|false]] [-v]
-                    [INPUT_FILE]
 
 Copy a KGTK file, building one column (usually node2) from seperate columns for each subfield. 
 
@@ -36,10 +35,6 @@ Date and times subfields and symbol subfields may be optionally quoted. Triple q
 
 Additional options are shown in expert help.
 kgtk --expert implode --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -286,7 +281,7 @@ Suppose that `file2.tsv` contains the following table in KGTK format:
 | john | lqstring-with-triple-double-quotes | 'John'@en | language_qualified_string | True | 0 |  |  |  |  |  | """John""" | en |  |  |  |  |  |  |  |
 
 ```bash
-kgtk explode file2.tsv --mode=NONE
+kgtk explode -i file2.tsv --mode=NONE
 ```
 The output will be the following table in KGTK format:
 
@@ -348,7 +343,7 @@ The existing `node2` column, which is empty, will be overwritten with the
 imploded data.
 
 ```bash
-kgtk implode file1.tsv -v --without si_units language_suffix
+kgtk implode -i file1.tsv -v --without si_units language_suffix
 ```
 
 The output will be the following table in KGTK format:
@@ -370,7 +365,7 @@ The output will be the following table in KGTK format:
 Suppose you now wish to remove the exploded columns from the final output file.
 
 ```bash
-kgtk implode file1.tsv -v --without si_units language_suffix --remove-prefixed-columns
+kgtk implode -i file1.tsv -v --without si_units language_suffix --remove-prefixed-columns
 ```
 
 The output will be the following table in KGTK format:

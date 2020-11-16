@@ -1,6 +1,20 @@
+# text embedding.
+#
+# TODO: Use KgtkReader to read the property values file.
+#
+# TODO: Provide seperate KgtkReader options (with fallback) for
+# property labels, property values, and the main input files
+# read by EmbeddingVector in "gt/embeddng_utils.py".
+#
+# TODO: Convert EmbeddingVector to use KgtkFormat and KgtkWriter.
+#
 import typing
 from kgtk.exceptions import KGTKException
-from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
+from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+from pathlib import Path
 import sys
 
 ALL_EMBEDDING_MODELS_NAMES = [
@@ -23,45 +37,57 @@ ALL_EMBEDDING_MODELS_NAMES = [
 ]
 
 
-def load_property_labels_file(input_files: typing.List[str]):
+def load_property_labels_file(input_files: typing.List[str],
+                              error_file: typing.TextIO,
+                              reader_options: KgtkReaderOptions,
+                              value_options: KgtkValueOptions,
+                              verbose: bool,
+                              ):
     labels_dict: typing.MutableMapping[str, str] = {}
-    headers: typing.Optional[typing.List[str]] = None
     for each_file in input_files:
-        with open(each_file, "r") as f:
-            each_line: str
-            for each_line in f.readlines():
-                fields: typing.List[str] = each_line.replace("\n", "").split("\t")
-                if headers is None:
-                    headers = fields
-                    if len(headers) < 2:
-                        raise KGTKException(
-                            "No enough columns found on given input file. Only {} columns given but at least 2 needed.".format(
-                                len(headers)))
-                    elif "predicate" in headers and "label" in headers:
-                        column_references = {"predicate": headers.index("predicate"),
-                                             "label": headers.index("label")}
-                    elif "label" in headers:
-                        column_references = {"predicate": 0,
-                                             "label": headers.index("label"),
-                                             }
-                    else:
-                        raise KGTKException("Can't determine which column is label column for label file!")
+        kr: KgtkReader = KgtkReader.open(Path(each_file),
+                                         error_file=error_file,
+                                         options=reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         )
+        fail: bool = False
+        if kr.node1_column_idx < 0:
+            fail = True
+            print("Cannot determine which column is node1 in %s" % each_file, file=error_file, flush=True)
+        if kr.node2_column_idx < 0:
+            fail = True
+            print("Cannot determine which column is node2 in %s" % each_file, file=error_file, flush=True)
+        if fail:
+            raise KGTKException("Cannot identify a required column in %s" % each_file)
+    
+        row: typing.List[str]
+        for row in kr:
+            node_id: str = row[kr.node1_column_idx]
+            node_label: str = row[kr.node2_column_idx]
+            text: str
+            language: str
+            language_suffix: str
+            if node_label.startswith(("'", '"')):
+                text, language, language_suffix = KgtkFormat.destringify(node_label)
+            else:
+                text = node_label
+                language = ""
+                language_suffix = ""
 
-                else:
-                    node_id: str = fields[column_references["predicate"]]
-                    node_label: str = fields[column_references["label"]]
-                    if "@en" in node_label:
-                        node_label = node_label.replace("'", "").split("@")[0]
-                        labels_dict[node_id] = node_label
-                    if node_id not in labels_dict:
-                        labels_dict[node_id] = node_label
+            # The following code will take the last-read English label,
+            # otherwise, the first-read non-English label.
+            if language == "en" and language_suffix == "":
+                labels_dict[node_id] = text
+            else:
+                if node_id not in labels_dict:
+                    labels_dict[node_id] = node_label
+
+        kr.close()
     return labels_dict
 
 
-def load_black_list_files(file_path):
-    import tarfile
-    import zipfile
-    import gzip
+def load_black_list_files(file_path: typing.List[str]):
     import logging
     import re
     import numpy as np
@@ -71,25 +97,28 @@ def load_black_list_files(file_path):
     for each_file in file_path:
         try:
             # tar.gz file
-            if each_file.endswith("tar.gz"):
-                tar = tarfile.open("filename.tar.gz", "r:gz")
+            if each_file.endswith(".tar.gz"):
+                import tarfile
+                tar = tarfile.open(each_file, "r:gz")
                 for member in tar.getmembers():
-                    f = tar.extractfile(member)
-                    if f:
-                        content = f.read()
+                    tar_f = tar.extractfile(member)
+                    if tar_f:
+                        content = tar_f.read()
                         input_data = np.loadtxt(content)
             # gz file
             elif each_file.endswith(".gz"):
-                with gzip.open('big_file.txt.gz', 'rb') as f:
-                    input_data = f.readlines()
+                import gzip
+                with gzip.open(each_file, 'rb') as gzip_f:
+                    input_data = gzip_f.readlines()
             # zip file
             elif each_file.endswith(".zip"):
+                import zipfile
                 archive = zipfile.ZipFile(each_file, 'r')
                 input_data = archive.read(each_file.replace(".zip", "")).decode().split("\n")
             # other file, just read directly
             else:
-                with open(each_file, "r") as f:
-                    input_data = f.readlines()
+                with open(each_file, "r") as other_f:
+                    input_data = other_f.readlines()
 
             for each in input_data:
                 each = each.replace("\n", "")
@@ -124,16 +153,8 @@ def main(**kwargs):
     _logger.warning("Running with logging level {}".format(_logger.getEffectiveLevel()))
 
     try:
-        import time
-        import torch
-        import typing
         import pandas as pd
-        import string
-        import math
-        import re
-        import argparse
-        import pickle
-        from collections import defaultdict
+        from pathlib import Path
         from kgtk.gt.embedding_utils import EmbeddingVector
 
         # get input parameters from kwargs
@@ -141,42 +162,51 @@ def main(**kwargs):
         parallel_count = kwargs.get("parallel_count", "1")
         black_list_files = kwargs.get("black_list_files", [])
         all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
-        input_format = kwargs.get("input_format", "kgtk_format")
-        output_format = kwargs.get("output_format", "kgtk_format")
+        data_format = kwargs.get("data_format", "kgtk_format")
+        output_format = kwargs.get("output_data_format", "kgtk_format")
         property_labels_files = kwargs.get("property_labels_file_uri", [])
         query_server = kwargs.get("query_server")
         save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
 
-        filename: Path = KGTKArgumentParser.get_input_file(kwargs.get("input_file"))
-        input_file = open(filename, "r") if str(filename) != "-" else sys.stdin
+        # Select where to send error messages, defaulting to stderr.
+        error_file: typing.TextIO = sys.stdout if kwargs.get("errors_to_stdout") else sys.stderr
+
+        # Build the option structures.
+        reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+        value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+        verbose: bool = kwargs.get("verbose")
+
+        input_file_path: Path = KGTKArgumentParser.get_input_file(kwargs.get("input_file"))
 
         cache_config = {
             "use_cache": kwargs.get("use_cache", False),
             "host": kwargs.get("cache_host", "dsbox01.isi.edu"),
             "port": kwargs.get("cache_port", 6379)
         }
-
+        property_values = kwargs.get("property_values", [])
+        if kwargs.get("property_values_file") is not None:
+            # TODO: Use KgtkReader to read this file.
+            _ = pd.read_csv(kwargs.get("property_values_file"), sep='\t')
+            property_values = list(_['node1'].unique())
         sentence_properties = {
             "label_properties": kwargs.get("label_properties", ["label"]),
             "description_properties": kwargs.get("description_properties", ["description"]),
             "isa_properties": kwargs.get("isa_properties", ["P31"]),
             "has_properties": kwargs.get("has_properties", ["all"]),
-            "property_values": kwargs.get("property_values", [])
+            "property_values": property_values
         }
 
         output_properties = {
             "metadata_properties": kwargs.get("metadata_properties", []),
             "output_properties": kwargs.get("output_properties", "text_embedding")
         }
-
         if isinstance(all_models_names, str):
             all_models_names = [all_models_names]
         # if isinstance(input_uris, str):
         #     input_uris = [input_uris]
         if len(all_models_names) == 0:
             raise KGTKException("No embedding vector model name given!")
-        if not input_file:
-            raise KGTKException("No input file path given!")
 
         if output_uri == "":
             output_uri = os.getenv("HOME")
@@ -185,7 +215,7 @@ def main(**kwargs):
         else:
             black_list_set = set()
         if property_labels_files:
-            property_labels_dict = load_property_labels_file(property_labels_files)
+            property_labels_dict = load_property_labels_file(property_labels_files, error_file, reader_options, value_options, verbose)
             _logger.info("Totally {} property labels loaded.".format(len(property_labels_dict)))
         else:
             property_labels_dict = {}
@@ -200,16 +230,22 @@ def main(**kwargs):
 
         for each_model_name in all_models_names:
             # _logger.info("Running {} model on {}".format(each_model_name, input_file_name))
-            _logger.info("Running {} model on {}".format(each_model_name, str(filename)))
+            _logger.info("Running {} model on {}".format(each_model_name, str(input_file_path)))
             process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
                                       parallel_count=parallel_count)
-            process.read_input(input_file=input_file, skip_nodes_set=black_list_set,
-                               input_format=input_format, target_properties=sentence_properties,
-                               property_labels_dict=property_labels_dict)
+            process.read_input(input_file_path=input_file_path,
+                               skip_nodes_set=black_list_set,
+                               input_format=data_format,
+                               target_properties=sentence_properties,
+                               property_labels_dict=property_labels_dict,
+                               error_file=error_file,
+                               reader_options=reader_options,
+                               value_options=value_options,
+                               verbose=verbose)
             process.get_vectors()
 
             process.plot_result(output_properties=output_properties,
-                                input_format=input_format, output_uri=output_uri,
+                                input_format=data_format, output_uri=output_uri,
                                 dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
                                 output_format=output_format, save_embedding_sentence=save_embedding_sentence)
             # process.evaluate_result()
@@ -227,8 +263,7 @@ def parser():
 
 def add_arguments(parser: KGTKArgumentParser):
     from kgtk.utils.argparsehelpers import optional_bool
-    import sys
-    import argparse
+
     parser.accept_shared_argument('_debug')
 
     # input file
@@ -242,7 +277,7 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="the model to used for embedding")
     # parser.add_argument('-i', '--input', action='store', nargs='+', dest='input_uris',
     #                     help="input path", )
-    parser.add_argument('-f', '--input-format', action='store', dest='input_format',
+    parser.add_argument('-f', '--input-data-format', action='store', dest='data_format',
                         choices=("test_format", "kgtk_format"), default="kgtk_format",
                         help="the input file format, could either be `test_format` or `kgtk_format`, default is `kgtk_format`", )
     parser.add_argument('-p', '--property-labels-file', action='store', nargs='+',
@@ -262,13 +297,16 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="""The names of the edges for `isa` properties, Default is ["P31"] (the `instance of` node in 
                         wikidata).""")
     parser.add_argument('--has-properties', action='store', nargs='+',
-                        dest='has_properties', default=["all"],
+                        dest='has_properties', default=[],
                         help="""The names of the edges for `has` properties, Default is ["all"] (will automatically append all 
                         properties found for each node).""")
     parser.add_argument('--property-value', action='store', nargs='+',
                         dest='property_values', default=[],
                         help="""For those edges found in `has` properties, the nodes specified here will display with 
                         corresponding edge(property) values. instead of edge name. """)
+    parser.add_argument('--property-value-file', action='store',
+                        dest='property_values_file',
+                        help="""Read the properties for --property-value option from an KGTK edge file""")
     parser.add_argument('--output-property', action='store',
                         dest='output_properties', default="text_embedding",
                         help="""The output property name used to record the embedding. Default is `output_properties`. \n
@@ -278,7 +316,7 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="if set, will also save the embedding sentences to output.")
     parser.add_argument('-o', '--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
-    parser.add_argument('--output-format', action='store', dest='output_format',
+    parser.add_argument('--output-data-format', action='store', dest='output_data_format',
                         default="kgtk_format", choices=("tsv_format", "kgtk_format"),
                         help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
                              "will be a tsv file, with each row contains only the vector representation of a node. Each "
@@ -327,6 +365,9 @@ def add_arguments(parser: KGTKArgumentParser):
                              "https://query.wikidata.org/sparql "
                         )
 
+    KgtkReader.add_debug_arguments(parser, expert=False)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
+    KgtkValueOptions.add_arguments(parser, expert=False)
 
 def run(**kwargs):
     main(**kwargs)

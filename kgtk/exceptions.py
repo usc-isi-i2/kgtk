@@ -25,6 +25,10 @@ class KGTKArgumentParseException(KGTKException):
     return_code = 2
 
 
+class KGTKDependencyException(KGTKException):
+    return_code = 5
+
+
 class KGTKSyntaxException(KGTKException):
     return_code = 900
 
@@ -45,6 +49,8 @@ class KGTKExceptionHandler(object):
             return return_code
         except (sh.SignalException_SIGPIPE, BrokenPipeError):
             pass
+        except KeyboardInterrupt:
+            raise
         except BaseException:
             type_, exc_val, exc_tb = sys.exc_info()
             return self.handle_exception(type_, exc_val, exc_tb)

@@ -1,7 +1,6 @@
 """
 Import an ATOMIC file to KGTK.
 
-TODO: Add --output-file
 """
 
 import sys
@@ -19,8 +18,9 @@ def add_arguments(parser: KGTKArgumentParser):
             parser (argparse.ArgumentParser)
     """
     parser.add_input_file(positional=True)
+    parser.add_output_file()
 
-def run(input_file: KGTKFiles):
+def run(input_file: KGTKFiles, output_file: KGTKFiles):
 
     # import modules locally
     import sys # type: ignore
@@ -32,10 +32,7 @@ def run(input_file: KGTKFiles):
     from string import Template
     import pandas as pd
     from kgtk.kgtkformat import KgtkFormat
-
-    def header_to_edge(row):
-        row=[r.replace('_', ';') for r in row]
-        return '\t'.join(row) + '\n'
+    from kgtk.io.kgtkwriter import KgtkWriter
 
     def make_node(x):
         und_x=x.replace(' ', '_')
@@ -86,15 +83,26 @@ def run(input_file: KGTKFiles):
 
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
-        out_columns=['node1', 'relation', 'node2', 'node1_label', 'node2_label','relation_label', 'relation_dimension', 'source', 'sentence']
+        out_columns=['node1', 'relation', 'node2', 'node1;label', 'node2;label','relation;label', 'relation;dimension', 'source', 'sentence']
+
+        output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+        ew: KgtkWriter = KgtkWriter.open(out_columns,
+                                         output_kgtk_file,
+                                         #mode=input_kr.mode,
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         gzip_in_parallel=False,
+                                         #verbose=self.verbose,
+                                         #very_verbose=self.very_verbose
+                                         )
+
 
         df = pd.read_csv(filename,index_col=0)
         df.iloc[:,:9] = df.iloc[:,:9].apply(lambda col: col.apply(json.loads))
 
         df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
         df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
-
-        sys.stdout.write(header_to_edge(out_columns))
 
         for event, row in df.iterrows():
             event_label=produce_node_labels(event)
@@ -115,8 +123,10 @@ def run(input_file: KGTKFiles):
                     relation=make_node(c)
 
                     this_row=[n1, relation, n2, event_label, value_label, rel_label, '', KgtkFormat.stringify('AT'), sentence]
+                    ew.write(this_row)
 
-                    sys.stdout.write('\t'.join(this_row) + '\n')
+        # Clean up.
+        ew.close()
 
     except Exception as e:
         raise KGTKException('Error: ' + str(e))

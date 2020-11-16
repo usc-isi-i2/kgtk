@@ -67,7 +67,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--expand", dest="expand_list", metavar="True|False",
-                              help="Expand the source column if it contains a list, else fail. (default=%(default)s).",
+                              help="When True, expand source cells that contain a lists, else fail if a source cell contains a list. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--show-data-types", dest="show_data_types", metavar="True|False",

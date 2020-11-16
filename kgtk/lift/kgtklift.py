@@ -31,8 +31,9 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class KgtkLift(KgtkFormat):
-    DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX: str = ";label"
+    DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR: str = ";"
     DEFAULT_LABEL_SELECT_COLUMN_VALUE: str = "label"
+    DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX: str = DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR + DEFAULT_LABEL_SELECT_COLUMN_VALUE
 
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
@@ -434,6 +435,8 @@ class KgtkLift(KgtkFormat):
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
+                                         use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
+                                         mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        

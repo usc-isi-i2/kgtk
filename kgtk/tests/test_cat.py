@@ -4,8 +4,6 @@ import unittest
 import tempfile
 import pandas as pd
 from kgtk.cli_entry import cli_entry
-from kgtk.exceptions import KGTKException
-from pathlib import Path
 
 
 class TestKGTKCat(unittest.TestCase):
@@ -47,11 +45,19 @@ class TestKGTKCat(unittest.TestCase):
         for i, row in df_r.iterrows():
             self.assertEqual(row["id"], lines[i + 1].split('\t')[0])
 
-    # def test_kgtk_cat_output_json_map(self):
-    #     cli_entry("kgtk", "cat", "-i", self.file_path, "-o", f'/tmp/cat.json', "--output-format", "json-map")
-    #
-    #     obj = json.load(open(f'{self.temp_dir}/cat.json'))
-    #     self.assertEqual(len(obj), 287)
+    def test_kgtk_cat_output_json_map(self):
+        cli_entry("kgtk", "cat", "-i", self.file_path, "-o", f'{self.temp_dir}/cat.json', "--output-format", "json-map")
+
+        f = open(f'{self.temp_dir}/cat.json')
+        obj = json.load(f)
+        f.close()
+        self.assertEqual(len(obj), 287)
+        for x in obj:
+            self.assertTrue('id' in x)
+            self.assertTrue('node1' in x)
+            self.assertTrue('label' in x)
+            self.assertTrue('node2' in x)
+            self.assertTrue('rank' in x)
 
     def test_kgtk_cat_output_json_line(self):
         cli_entry("kgtk", "cat", "-i", self.file_path, "-o", f'{self.temp_dir}/cat.jl', "--output-format", "jsonl")
