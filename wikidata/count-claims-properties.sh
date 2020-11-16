@@ -7,7 +7,7 @@ kgtk ${KGTK_FLAGS} \
      filter $VERBOSE --use-mgzip=$USE_MGZIP --regex \
      --input-file $DATADIR/claims.$SORTED_KGTK \
      -p '^P.*$ ;;' -o - \
-     / unique ${VERBOSE} --use-mgzip=$USE_MGZIP \
+     / unique ${VERBOSE} --use-mgzip=$USE_MGZIP --presorted \
      --column node1 \
      --label node1-property-count \
      / lift ${VERBOSE} --use-mgzip=$USE_MGZIP \
