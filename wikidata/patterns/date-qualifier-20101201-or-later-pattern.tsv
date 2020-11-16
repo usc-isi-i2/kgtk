@@ -1,0 +1,4 @@
+node1	label	node2
+P580	isa	date_qualifier
+P585	isa	date_qualifier
+date_qualifier	mindate	^2010-12-01T00:00:00Z

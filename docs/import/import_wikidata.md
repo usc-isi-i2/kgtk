@@ -9,11 +9,6 @@ This command will import Wikidata into KGTK format and generates 3 files.
 usage: kgtk import-wikidata [-h] [-i INPUT_FILE] [--procs PROCS] [--node NODE_FILE]
                             [--edge EDGE_FILE] [--qual QUAL_FILE] [--limit LIMIT]
                             [--lang LANG] [--source SOURCE] [--deprecated]
-                            [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            input path file (May be omitted or '-' for stdin.) (Deprecated, use
-                        -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit

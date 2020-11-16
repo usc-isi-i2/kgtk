@@ -30,26 +30,27 @@ usage: kgtk ifnotexists [-h] [-i INPUT_FILE] [--filter-on FILTER_FILE] [-o OUTPU
                         [--input-keys [INPUT_KEYS [INPUT_KEYS ...]]]
                         [--filter-keys [FILTER_KEYS [FILTER_KEYS ...]]]
                         [--cache-input [True|False]] [--preserve-order [True|False]] [-v]
-                        [INPUT_FILE]
 
 Filter a KGTK file based on whether one or more records do not exist in a second KGTK file with matching values for one or more fields.
 
 Additional options are shown in expert help.
 kgtk --expert ifnotexists --help
 
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
-
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
                         The KGTK input file. (May be omitted or '-' for stdin.)
-  --filter-on FILTER_FILE
+  --filter-on FILTER_FILE, --filter-file FILTER_FILE
                         The KGTK file to filter against (required). (May be omitted or '-'
                         for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for stdout.)
+  --reject-file REJECT_FILE
+                        The KGTK reject file for records that fail the filter. (Optional, use '-' for stdout.)
+  --matched-filter-file MATCHED_FILTER_FILE
+                        The KGTK file for filter records that matched at least one input record. (Optional, use '-' for stdout.)
+  --unmatched-filter-file UNMATCHED_FILTER_FILE
+                        The KGTK file for filter records that did not match any input records. (Optional, use '-' for stdout.)
   --input-keys [INPUT_KEYS [INPUT_KEYS ...]], --left-keys [INPUT_KEYS [INPUT_KEYS ...]]
                         The key columns in the file being filtered (default=None).
   --filter-keys [FILTER_KEYS [FILTER_KEYS ...]], --right-keys [FILTER_KEYS [FILTER_KEYS ...]]
@@ -58,6 +59,10 @@ optional arguments:
                         Cache the input file instead of the filter keys (default=False).
   --preserve-order [True|False]
                         Preserve record order when cacheing the input file. (default=False).
+
+  --presorted [True|False]
+                        When True, assume that the input and filter files are both presorted. Use a merge-style algorithm that does not require caching either
+                        file. (default=False).
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
@@ -102,7 +107,7 @@ Suppose that `file5.tsv` contains the following table in KGTK format:
 | home |
 
 ```bash
-kgtk ifnotexists file1.tsv --filter-on file2.tsv
+kgtk ifnotexists -i file1.tsv --filter-on file2.tsv
 
 ```
 | node1 | label   | node2 | location | years |
@@ -114,7 +119,7 @@ kgtk ifnotexists file1.tsv --filter-on file2.tsv
 
 
 ```bash
-kgtk ifnotexists file1.tsv --filter-on file3.tsv
+kgtk ifnotexists -i file1.tsv --filter-on file3.tsv
 
 ```
 | node1 | label   | node2 | location | years |
@@ -123,7 +128,7 @@ kgtk ifnotexists file1.tsv --filter-on file3.tsv
 | peter | zipcode | 12040 | work     | 6     |
 
 ```bash
-kgtk ifnotexists file4.tsv --filter-on file3.tsv
+kgtk ifnotexists -i file4.tsv --filter-on file3.tsv
 
 ```
 | id    |
@@ -131,7 +136,7 @@ kgtk ifnotexists file4.tsv --filter-on file3.tsv
 | peter  |
 
 ```bash
-kgtk ifexists file1.tsv --filter-on file5.tsv --input-keys location
+kgtk ifexists -i file1.tsv --filter-on file5.tsv --input-keys location
 
 ```
 | node1 | label   | node2 | location | years |

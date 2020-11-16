@@ -6,33 +6,36 @@ This command will find the connected components in a KGTK edge file. The output 
 
 ## Usage
 ```
-usage: kgtk connected-components [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--no-header]
-                                 [--properties PROPERTIES] [--undirected] [--strong] [-v]
-                                 [INPUT_FILE]
+Usage: kgtk connected-components [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--properties PROPERTIES] [--undirected] [--strong]
+                                 [--cluster-name-method {cat,hash,first,last,shortest,longest,numbered,prefixed,lowest,highest}]
+                                 [--cluster-name-separator CLUSTER_NAME_SEPARATOR] [--cluster-name-prefix CLUSTER_NAME_PREFIX]
+                                 [--cluster-name-zfill CLUSTER_NAME_ZFILL] [--minimum-cluster-size MINIMUM_CLUSTER_SIZE] [-v]
 
 Find all the connected components in an undirected or directed Graph.
 
 Additional options are shown in expert help.
 kgtk --expert connected-components --help
 
-positional arguments:
-  INPUT_FILE            The KGTK file to find connected components in. (May be omitted or
-                        '-' for stdin.) (Deprecated, use -i INPUT_FILE)
-
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK file to find connected components in. (May be omitted or
-                        '-' for stdin.)
+                        The KGTK file to find connected components in. (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for stdout.)
-  --no-header           Specify if the input file does not have a header, default FALSE
   --properties PROPERTIES
-                        A comma separated list of properties to traverse while finding
-                        connected components, by default all properties will be considered
+                        A comma separated list of properties to traverse while finding connected components, by default all properties will be considered
   --undirected          Specify if the input graph is undirected, default FALSE
-  --strong              Treat graph as directed or not, independent of its actual
-                        directionality.
+  --strong              Treat graph as directed or not, independent of its actual directionality.
+  --cluster-name-method {cat,hash,first,last,shortest,longest,numbered,prefixed,lowest,highest}
+                        Determine the naming method for clusters. (default=Method.HASH)
+  --cluster-name-separator CLUSTER_NAME_SEPARATOR
+                        Specify the separator to be used in cat and hash cluster name methods. (default=+)
+  --cluster-name-prefix CLUSTER_NAME_PREFIX
+                        Specify the prefix to be used in the prefixed and hash cluster name methods. (default=CLUS)
+  --cluster-name-zfill CLUSTER_NAME_ZFILL
+                        Specify the zfill to be used in the numbered and prefixed cluster name methods. (default=4)
+  --minimum-cluster-size MINIMUM_CLUSTER_SIZE
+                        Specify the minimum cluster size. (default=2)
 
   -v, --verbose         Print additional progress messages (default=False).
 ```
@@ -40,9 +43,7 @@ optional arguments:
 
 `-o {string}`: Path to the output edge file.
 
-`--noheader`: Option to specify that the input file does not contain a header.
-
-`--props {p1, p2, ...}`: Properties to consider while finding connected components. Default: All properties are considered. 
+`--properties {p1, p2, ...}`: Properties to consider while finding connected components. Default: All properties are considered. 
 
 `--undirected`: Option to specify that input file contains undirected graph.
 
@@ -53,5 +54,5 @@ optional arguments:
 Find connected URI's that redirect to the same page
 
 ```
-kgtk connected-components Dbpedia_redirects.tsv -o connected-dbpedia_uris.tsv
+kgtk connected-components -i Dbpedia_redirects.tsv -o connected-dbpedia_uris.tsv
 ```

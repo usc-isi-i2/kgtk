@@ -1,49 +1,53 @@
-Import the entire ConceptNet, or just its English part, into KGTK format. 
+Import the entire ConceptNet, or just its English part, into KGTK format. Weights could optionally be stored in an auxiliary KGTK file. 
 
 ## Usage
 ```
-usage: kgtk import-conceptnet [-h] [-i INPUT_FILE] [--english_only] [INPUT_FILE]
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
+usage: kgtk import-conceptnet [-h] [-i INPUT_FILE] [--english_only]
+                              [-o OUTPUT_FILE] [--weights-file WEIGHTS_FILE]
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   --english_only        Only english conceptnet?
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
+  --weights-file WEIGHTS_FILE
+                        A KGTK output file that will contain only the weights.
+                        (Optional, use '-' for stdout.)
 ```
 
 ## Examples
 
-Import the English part of ConceptNet into KGTK. 
+Import the English part of ConceptNet into KGTK. Don't import the weights. 
 
 ```
-kgtk import-conceptnet --english_only examples/conceptnet-assertions-5.7.0.csv
+kgtk import-conceptnet --english_only -i examples/conceptnet-assertions-5.7.0.csv -o conceptnet_en.tsv
 ```
 
 Example output (first and last 10 lines):
 ```
-node1	relation	node2	node1;label	node2;label	relation;label	relation;dimension	weight	source	origin	sentence	question
-/c/en/0/n	/r/Antonym	/c/en/1	0	1	antonym		1.0	CN	/d/wiktionary/fr		What is the opposite from 0?
-/c/en/12_hour_clock/n	/r/Antonym	/c/en/24_hour_clock	12 hour clock	24 hour clock	antonym		1.0	CN	/d/wiktionary/en		What is the opposite from 12 hour clock?
-/c/en/24_hour_clock/n	/r/Antonym	/c/en/12_hour_clock	24 hour clock	12 hour clock	antonym		1.0	CN	/d/wiktionary/en		What is the opposite from 24 hour clock?
-/c/en/5/n	/r/Antonym	/c/en/3	5	3	antonym		1.0	CN	/d/wiktionary/en		What is the opposite from 5?
-/c/en/a.c/n	/r/Antonym	/c/en/d.c	a.c	d.c	antonym		1.0	CN	/d/wiktionary/fr		What is the opposite from a.c?
-/c/en/a.m/r	/r/Antonym	/c/en/afternoon	a.m	afternoon	antonym		1.0	CN	/d/wiktionary/en		What is the opposite from a.m?
-/c/en/a.m/r	/r/Antonym	/c/en/p.m	a.m	p.m	antonym		3.464	CN	/d/wiktionary/en		What is the opposite from a.m?
-/c/en/a.m/r	/r/Antonym	/c/en/pm	a.m	pm	antonym		1.0	CN	/d/wiktionary/fr		What is the opposite from a.m?
-/c/en/ab_extra/r	/r/Antonym	/c/en/ab_intra	ab extra	ab intra	antonym		1.0	CN	/d/wiktionary/en		What is the opposite from ab extra?
+node1	relation	node2	node1;label	node2;label	relation;label	relation;dimension	source	sentence
+/c/en/0/n	/r/Antonym	/c/en/1	"0"	"1"	"antonym"		"CN"	
+/c/en/12_hour_clock/n	/r/Antonym	/c/en/24_hour_clock	"12 hour clock"	"24 hour clock"	"antonym"		"CN"	
+/c/en/24_hour_clock/n	/r/Antonym	/c/en/12_hour_clock	"24 hour clock"	"12 hour clock"	"antonym"		"CN"	
+/c/en/5/n	/r/Antonym	/c/en/3	"5"	"3"	"antonym"		"CN"	
+/c/en/a.c/n	/r/Antonym	/c/en/d.c	"a.c"	"d.c"	"antonym"		"CN"	
+/c/en/a.m/r	/r/Antonym	/c/en/afternoon	"a.m"	"afternoon"	"antonym"		"CN"	
+/c/en/a.m/r	/r/Antonym	/c/en/p.m	"a.m"	"p.m"	"antonym"		"CN"	
+/c/en/a.m/r	/r/Antonym	/c/en/pm	"a.m"	"pm"	"antonym"		"CN"	
+/c/en/ab_extra/r	/r/Antonym	/c/en/ab_intra	"ab extra"	"ab intra"	"antonym"		"CN"	
 ...
-/c/en/zoom_lens	/r/UsedFor	/c/en/examine_in_greater_detail	zoom lens	examine in greater detail	used for		1.0	CN	/d/conceptnet/4/en	You can use [[a zoom lens]] to [[examine in greater detail]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/get_better_photographs	zoom lens	get better photographs	used for		1.0	CN	/d/conceptnet/4/en	You can use [[a zoom lens]] to [[get better photographs]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/making_objects_appear_closer	zoom lens	making objects appear closer	used for		1.0	CN	/d/conceptnet/4/en	[[a zoom lens]] is used for [[making objects appear closer]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/observing_distant_object	zoom lens	observing distant object	used for		1.0	CN	/d/conceptnet/4/en	[[a zoom lens]] is for [[observing a distant object]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/photography	zoom lens	photography	used for		1.0	CN	/d/conceptnet/4/en	[[a zoom lens]] is used for [[photography]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/procure_better_shot	zoom lens	procure better shot	used for		1.0	CN	/d/conceptnet/4/en	You can use [[a zoom lens]] to [[procure a better shot]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/see_things_bigger	zoom lens	see things bigger	used for		1.0	CN	/d/conceptnet/4/en	You can use [[a zoom lens]] to [[see things bigger]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/seeing_distant_object_more_closely	zoom lens	seeing distant object more closely	used for		1.0	CN	/d/conceptnet/4/en	[[a zoom lens]] is for [[seeing a distant object more closely]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/take_pictures	zoom lens	take pictures	used for		1.0	CN	/d/conceptnet/4/en	You can use [[a zoom lens]] to [[take pictures]]	What is zoom lens used for?
-/c/en/zoom_lens	/r/UsedFor	/c/en/varying_camera_focal_point	zoom lens	varying camera focal point	used for		1.0	CN	/d/conceptnet/4/en	[[a zoom lens]] is used for [[varying a camera focal point]]	What is zoom lens used for?
+/c/en/xebec/n/wp/studio	/r/dbpedia/product	/c/en/film	"xebec"	"film"	"product"		"CN"	
+/c/en/xerox	/r/dbpedia/product	/c/en/image_scanner	"xerox"	"image scanner"	"product"		"CN"	
+/c/en/xerox	/r/dbpedia/product	/c/en/management_consulting	"xerox"	"management consulting"	"product"		"CN"	
+/c/en/xerox	/r/dbpedia/product	/c/en/outsourcing	"xerox"	"outsourcing"	"product"		"CN"	
+/c/en/xerox	/r/dbpedia/product	/c/en/printer/n/wp/computing	"xerox"	"printer"	"product"		"CN"	
+/c/en/xerox	/r/dbpedia/product	/c/en/projector	"xerox"	"projector"	"product"		"CN"	
+/c/en/zanella	/r/dbpedia/product	/c/en/moped	"zanella"	"moped"	"product"		"CN"	
+/c/en/zanella	/r/dbpedia/product	/c/en/motorcycle	"zanella"	"motorcycle"	"product"		"CN"	
+/c/en/zara/n/wp/retailer	/r/dbpedia/product	/c/en/clothing	"zara"	"clothing"	"product"		"CN"	
+/c/en/zeeman/n/wp/store	/r/dbpedia/product	/c/en/clothing	"zeeman"	"clothing"	"product"		"CN"
 ```
