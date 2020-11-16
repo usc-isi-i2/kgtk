@@ -57,6 +57,9 @@ extra_css:
   - stylesheets/extra.css
 repo_url: https://github.com/usc-isi-i2/kgtk
 
+plugins:
+  - mknotebooks
+
 markdown_extensions:
   - admonition
   - codehilite:
