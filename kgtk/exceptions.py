@@ -25,6 +25,10 @@ class KGTKArgumentParseException(KGTKException):
     return_code = 2
 
 
+class KGTKDependencyException(KGTKException):
+    return_code = 5
+
+
 class KGTKSyntaxException(KGTKException):
     return_code = 900
 

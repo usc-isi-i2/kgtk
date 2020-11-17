@@ -10,9 +10,9 @@ import time
 import typing
 
 from kgtk import cli
-from kgtk.exceptions import KGTKExceptionHandler, KGTKArgumentParseException
+from kgtk.exceptions import KGTKException, KGTKExceptionHandler, KGTKArgumentParseException
 from kgtk import __version__
-from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments, add_default_arguments
+from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments, add_default_arguments, CheckDepsAction
 import sh # type: ignore
 
 
@@ -101,6 +101,11 @@ def cli_entry(*args):
         version='KGTK %s' % __version__,
         help='show KGTK version number and exit.'
     )
+    base_parser.add_argument(
+        '--check-deps',
+        action=CheckDepsAction,
+        help='check dependencies',
+    )
     shared_args = base_parser.add_argument_group('shared optional arguments')
     shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
     shared_args.add_argument('--expert', dest='_expert', action='store_true', default=False, help='enable expert mode')
@@ -114,7 +119,6 @@ def cli_entry(*args):
     parsed_shared_args, rest_args = base_parser.parse_known_args(args)
     shared_args = tuple(filter(lambda a: a not in rest_args, args))
     args = tuple(rest_args)
-
 
     # complete parser, load sub-parser of each module
     parser = KGTKArgumentParser(

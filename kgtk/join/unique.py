@@ -38,6 +38,8 @@ class Unique(KgtkFormat):
     output_format: str = attr.ib(validator=attr.validators.instance_of(str), default="edge")
     prefix: str = attr.ib(validator=attr.validators.instance_of(str), default="")
 
+    presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
     reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
@@ -54,6 +56,200 @@ class Unique(KgtkFormat):
     OUTPUT_FORMATS: typing.List[str] = [EDGE_FORMAT, NODE_FORMAT, NODE_COUNTS_FORMAT, NODE_ONLY_FORMAT]
     DEFAULT_FORMAT: str = EDGE_FORMAT
 
+    def process_presorted(self,
+                         output_columns: typing.List[str],
+                         kr: KgtkReader,
+                         column_idx: int,
+                         where_column_idx: int,
+                         where_value_set: typing.Set[str]):
+
+        if self.verbose:
+            print("Counting unique values from the %s column in presorted %s" % (self.column_name, self.input_file_path), file=self.error_file, flush=True)
+        input_line_count: int = 0
+        skip_line_count: int = 0
+        empty_value_count: int = 0
+        unique_value_count: int = 0
+
+        previous_value: typing.Optional[str] = None
+        value_count: int
+
+        if self.verbose:
+            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+
+        ew: KgtkWriter = KgtkWriter.open(output_columns,
+                                         self.output_file_path,
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         use_mgzip=self.reader_options.use_mgzip if self.reader_options is not None else False, # Hack!
+                                         mgzip_threads=self.reader_options.mgzip_threads if self.reader_options is not None else 3, # Hack!
+                                         gzip_in_parallel=False,
+                                         verbose=self.verbose,
+                                         very_verbose=self.very_verbose)        
+
+        row: typing.List[str]
+        for row in kr:
+            input_line_count += 1
+            if where_column_idx >= 0:
+                if row[where_column_idx] not in where_value_set:
+                    skip_line_count += 1
+                    continue
+            if len(row) <= column_idx:
+                raise ValueError("Line %d: Short row (len(row)=%d, column_idx=%d): %s" % (input_line_count, len(row), column_idx, repr(row)))
+            value: str = row[column_idx]
+            if len(value) == 0:
+                value = self.empty_value
+            if len(value) > 0:
+                value = self.prefix + value
+
+            if previous_value is None:
+                previous_value = value
+                value_count = 1
+                unique_value_count += 1
+
+            else:
+                if value < previous_value:
+                    raise ValueError("Line %d: input is not presorted: value %s < previous value %s" % (input_line_count, repr(previous_value), repr(value)))
+
+                if value == previous_value:
+                    value_count += 1
+
+                else:
+                    if len(previous_value) == 0:
+                        empty_value_count = value_count
+
+                    elif self.output_format == self.EDGE_FORMAT:
+                        ew.write([previous_value, self.label_value, str(value_count)])
+
+                    elif self.output_format == self.NODE_ONLY_FORMAT:
+                        ew.write([previous_value])
+
+                    elif self.output_format == self.NODE_COUNTS_FORMAT:
+                        ew.write([previous_value, str(value_count)])
+
+                    else:
+                        raise ValueError("Unknown output format %s" % str(self.output_format))
+
+                    previous_value = value
+                    value_count = 1
+                    unique_value_count += 1
+
+        if previous_value is not None:
+            if len(previous_value) == 0:
+                empty_value_count = value_count
+
+            elif self.output_format == self.EDGE_FORMAT:
+                ew.write([previous_value, self.label_value, str(value_count)])
+
+            elif self.output_format == self.NODE_ONLY_FORMAT:
+                ew.write([previous_value])
+
+            elif self.output_format == self.NODE_COUNTS_FORMAT:
+                ew.write([previous_value, str(value_count)])
+
+            else:
+                raise ValueError("Unknown output format %s" % str(self.output_format))
+            
+
+        if self.verbose:
+            print("Read %d records, skipped %d, found %d unique non-empty values, %d empty values." % (input_line_count,
+                                                                                                       skip_line_count,
+                                                                                                       unique_value_count,
+                                                                                                       empty_value_count),
+                  file=self.error_file, flush=True)
+
+        ew.close()
+
+    def process_unsorted(self,
+                         output_columns: typing.List[str],
+                         kr: KgtkReader,
+                         column_idx: int,
+                         where_column_idx: int,
+                         where_value_set: typing.Set[str]):
+
+        if self.verbose:
+            print("Counting unique values from the %s column in %s" % (self.column_name, self.input_file_path), file=self.error_file, flush=True)
+        input_line_count: int = 0
+        skip_line_count: int = 0
+        empty_value_count: int = 0
+
+        value_counts: typing.MutableMapping[str, int] = { }
+        
+        row: typing.List[str]
+        for row in kr:
+            input_line_count += 1
+            if where_column_idx >= 0:
+                if row[where_column_idx] not in where_value_set:
+                    skip_line_count += 1
+                    continue
+            if len(row) <= column_idx:
+                raise ValueError("Line %d: Short row (len(row)=%d, column_idx=%d): %s" % (input_line_count, len(row), column_idx, repr(row)))
+            value: str = row[column_idx]
+            if len(value) == 0:
+                value = self.empty_value
+            if len(value) > 0:
+                value = self.prefix + value
+                value_counts[value] = value_counts.get(value, 0) + 1
+            else:
+                empty_value_count += 1
+                
+        if self.verbose:
+            print("Read %d records, skipped %d, found %d unique non-empty values, %d empty values." % (input_line_count,
+                                                                                                       skip_line_count,
+                                                                                                       len(value_counts),
+                                                                                                       empty_value_count),
+                  file=self.error_file, flush=True)
+
+        # In node format we can't open the output file until we are done
+        # reading the input file, because we need the list of unique values to
+        # build the column list.
+        if self.output_format == self.NODE_FORMAT:
+            for value in sorted(value_counts.keys()):
+                # TODO: provide a way to override this check.
+                if value in KgtkFormat.NODE1_COLUMN_NAMES:
+                    raise ValueError("Cannot write a KGTK node file with a column named '%s'." % value)
+                output_columns.append(value)
+        
+        if self.verbose:
+            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+
+        ew: KgtkWriter = KgtkWriter.open(output_columns,
+                                         self.output_file_path,
+                                         require_all_columns=False,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=True,
+                                         use_mgzip=self.reader_options.use_mgzip if self.reader_options is not None else False, # Hack!
+                                         mgzip_threads=self.reader_options.mgzip_threads if self.reader_options is not None else 3, # Hack!
+                                         gzip_in_parallel=False,
+                                         verbose=self.verbose,
+                                         very_verbose=self.very_verbose)        
+
+        if self.output_format == self.EDGE_FORMAT:
+            for value in sorted(value_counts.keys()):
+                ew.write([value, self.label_value, str(value_counts[value])])
+
+        elif self.output_format == self.NODE_ONLY_FORMAT:
+            for value in sorted(value_counts.keys()):
+                ew.write([value])
+
+        elif self.output_format == self.NODE_COUNTS_FORMAT:
+            for value in sorted(value_counts.keys()):
+                ew.write([value, str(value_counts[value])])
+
+        elif self.output_format == self.NODE_FORMAT:
+            row = [ self.column_name ]
+            for value in sorted(value_counts.keys()):
+                row.append(str(value_counts[value]))
+            ew.write(row)
+
+        else:
+            raise ValueError("Unknown output format %s" % str(self.output_format))
+
+        if self.verbose:
+            print("There were %d unique values." % len(value_counts), file=self.error_file, flush=True)
+
+        ew.close()
+       
     def process(self):
         # Open the input file.
         if self.verbose:
@@ -62,6 +258,22 @@ class Unique(KgtkFormat):
             else:
                 print("Reading the input data from stdin", file=self.error_file, flush=True)
 
+        output_columns: typing.List[str]
+        if self.output_format == self.EDGE_FORMAT:
+            output_columns = ["node1", "label", "node2"]
+
+        elif self.output_format == self.NODE_ONLY_FORMAT:
+            output_columns = [ "id" ]
+
+        elif self.output_format == self.NODE_COUNTS_FORMAT:
+            output_columns = [ "id", self.label_value ]
+
+        elif self.output_format == self.NODE_FORMAT:
+            output_columns = [ "id" ] # Add more later
+
+        else:
+            raise ValueError("Unknown output format %s" % str(self.output_format))
+        
         kr: KgtkReader =  KgtkReader.open(self.input_file_path,
                                           error_file=self.error_file,
                                           options=self.reader_options,
@@ -85,100 +297,10 @@ class Unique(KgtkFormat):
             else:
                 where_value_set = set(self.where_values)
 
-        if self.verbose:
-            print("Counting unique values from the %s column in %s" % (self.column_name, self.input_file_path), file=self.error_file, flush=True)
-        input_line_count: int = 0
-        skip_line_count: int = 0
-        empty_value_count: int = 0
-
-        value_counts: typing.MutableMapping[str, int] = { }
-        
-        row: typing.list[str]
-        for row in kr:
-            input_line_count += 1
-            if where_column_idx >= 0:
-                if row[where_column_idx] not in where_value_set:
-                    skip_line_count += 1
-                    continue
-            value: str = row[column_idx]
-            if len(value) == 0:
-                value = self.empty_value
-            if len(value) > 0:
-                value = self.prefix + value
-                value_counts[value] = value_counts.get(value, 0) + 1
-            else:
-                empty_value_count += 1
-                
-        if self.verbose:
-            print("Read %d records, skipped %d, found %d unique non-empty values, %d empty values." % (input_line_count,
-                                                                                                       skip_line_count,
-                                                                                                       len(value_counts),
-                                                                                                       empty_value_count),
-                  file=self.error_file, flush=True)
-
-        # No node mode we can't open the output file until we are done reading
-        # the input file, because we need the list of uniqueue values to
-        # build the column list.
-        output_columns: typing.List[str]
-        if self.output_format == self.EDGE_FORMAT:
-            output_columns = ["node1", "label", "node2"]
-
-        elif self.output_format == self.NODE_ONLY_FORMAT:
-            output_columns = [ "id" ]
-
-        elif self.output_format == self.NODE_COUNTS_FORMAT:
-            output_columns = [ "id", self.label_value ]
-
-        elif self.output_format == self.NODE_FORMAT:
-            output_columns = [ "id" ]
-            for value in sorted(value_counts.keys()):
-                # TODO: provide a way to override this check.
-                if value in KgtkFormat.NODE1_COLUMN_NAMES:
-                    raise ValueError("Cannot write a KGTK node file with a column named '%s'." % value)
-                output_columns.append(value)
-
+        if self.presorted and self.output_format != self.NODE_FORMAT:
+            self.process_presorted(output_columns, kr, column_idx, where_column_idx, where_value_set)
         else:
-            raise ValueError("Unknown output format %s" % str(self.output_format))
-        
-        if self.verbose:
-            print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
-
-        ew: KgtkWriter = KgtkWriter.open(output_columns,
-                                         self.output_file_path,
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         use_mgzip=self.reader_options.use_mgzip, # Hack!
-                                         mgzip_threads=self.reader_options.mgzip_threads, # Hack!
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)        
-
-        if self.output_format == self.EDGE_FORMAT:
-            for value in sorted(value_counts.keys()):
-                ew.write([value, self.label_value, str(value_counts[value])])
-
-        elif self.output_format == self.NODE_ONLY_FORMAT:
-            for value in sorted(value_counts.keys()):
-                ew.write([value])
-
-        elif self.output_format == self.NODE_COUNTS_FORMAT:
-            for value in sorted(value_counts.keys()):
-                ew.write([value, str(value_counts[value])])
-
-        elif self.output_format == NODE_FORMAT:
-            row = [ self.column_name ]
-            for value in sorted(value_counts.keys()):
-                row.append(str(value_counts[value]))
-            ew.write(row)
-
-        else:
-            raise ValueError("Unknown output format %s" % str(self.output_format))
-
-        if self.verbose:
-            print("There were %d unique values." % len(value_counts), file=self.error_file, flush=True)
-
-        ew.close()
+            self.process_unsorted(output_columns, kr, column_idx, where_column_idx, where_value_set)
        
 def main():
     """
@@ -208,6 +330,10 @@ def main():
     parser.add_argument(      "--in", dest="where_values", nargs="+",
                               help="The list of values for a record selection test. (default=%(default)s).", default=None)
 
+    parser.add_argument(      "--presorted", dest="presorted", metavar="True|False",
+                              help="When True, the input file is presorted. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
     KgtkValueOptions.add_arguments(parser)
@@ -233,6 +359,7 @@ def main():
             print("--where=%s" % args.where_column_name, file=error_file)
         if args.where_values is not None and len(args.where_values) > 0:
             print("--in=%s" % " ".join(args.where_values), file=error_file)
+        print("--prefix=%s" % repr(args.presorted), file=error_file)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -247,6 +374,7 @@ def main():
         prefix=args.prefix,
         where_column_name=args.where_column_name,
         where_values=args.where_values,
+        presorted=args.presorted,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
