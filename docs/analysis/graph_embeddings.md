@@ -252,10 +252,10 @@ For easiest running, just give the input file and let it write output to `output
 
 The output_file.tsv may look like:
 ```
+172131    100
 "work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
 "home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
 ```
-
 
 
 ## Example 2:
@@ -273,12 +273,29 @@ kgtk graph-embeddings
 
 The output_file.tsv may look like:
 ```
+172131    100
+"work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
+"home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
+```
+
+## Example 3 :
+Using glove format to generate graph embeddings
+```
+kgtk graph-embeddings 
+    --input-file input_file.tsv \
+    --output-file output_file.tsv \
+    --output_format glove
+```
+
+The output_file.tsv may look like:
+```
 "work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
 "home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
 ```
 
 
-## Example 3 :
+
+## Example 4 :
 Using kgtk format to generate graph embeddings
 ```
 kgtk graph-embeddings 
@@ -292,6 +309,8 @@ The output_file.tsv may look like:
 "work"    graph_embeddings   -0.014022544,-0.062030070,-0.012535412,-0.023111001,-0.038317516 ...
 "home"    graph_embeddings   -0.014021411,-0.090830070,-0.012534120,-0.073111301,-0.068317516 ...
 ```
+
+
 
 
 
