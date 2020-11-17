@@ -1,6 +1,7 @@
 #! /bin/bash
 
+source common.sh
+
+./extract-properties.sh
 ./count-properties.sh
 ./count-property-datatypes.sh
-./split-properties-by-datatype.sh
-./extract-qualifiers-for-property-datatype-splits.sh

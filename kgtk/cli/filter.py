@@ -111,7 +111,7 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
-    UPDATE_VERSION: str = "2020-11-07T00:06:18.672326+00:00#pITaI1X5E06A9vDdSeUUZObybGWrp0gh86XOFGM431y3KmQ7Gbg6OngTWFLLuBaA4HLhSEVol+XZZIF1LkXf/Q=="
+    UPDATE_VERSION: str = "2020-11-14T00:59:29.561898+00:00#EZtLdydr/DcD9xZokCK3GQPRqh08DCyUBnBc9VzU2NlQvl0SRWAoj43Jv4TUG7Nk/eEHN+fI2E8LYTqTDnLOsA=="
     if show_version or verbose:
         print("kgtk filter version: %s" % UPDATE_VERSION, file=error_file, flush=True)
 
@@ -186,7 +186,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def single_subject_filter_inverted(kr: KgtkReader,
                                        kw: KgtkWriter,
@@ -217,7 +217,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def single_predicate_filter(kr: KgtkReader,
                                 kw: KgtkWriter,
@@ -248,7 +248,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def single_predicate_filter_inverted(kr: KgtkReader,
                                          kw: KgtkWriter,
@@ -279,7 +279,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def single_object_filter(kr: KgtkReader,
                              kw: KgtkWriter,
@@ -310,7 +310,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def single_object_filter_inverted(kr: KgtkReader,
                                       kw: KgtkWriter,
@@ -341,7 +341,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def single_general_filter(kr: KgtkReader,
                               kw: KgtkWriter,
@@ -408,9 +408,9 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
-            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count))
-            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
+            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count), file=error_file, flush=True)
+            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count), file=error_file, flush=True)
 
     def dispatch_subject_filter(kr: KgtkReader,
                                 kws: typing.List[KgtkWriter],
@@ -447,7 +447,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def dispatch_predicate_filter(kr: KgtkReader,
                                   kws: typing.List[KgtkWriter],
@@ -484,7 +484,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def dispatch_object_filter(kr: KgtkReader,
                                kws: typing.List[KgtkWriter],
@@ -521,7 +521,7 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
 
     def multiple_general_filter(kr: KgtkReader,
                                 kws: typing.List[KgtkWriter],
@@ -599,9 +599,9 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
-            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count))
-            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
+            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count), file=error_file, flush=True)
+            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count), file=error_file, flush=True)
 
     def process_plain()->int:
 
@@ -642,7 +642,7 @@ def run(input_file: KGTKFiles,
 
         if nfilters != len(output_kgtk_files):
             if verbose:
-                print("output files: %s" % " ".join([str(x) for x in output_kgtk_files]))
+                print("output files: %s" % " ".join([str(x) for x in output_kgtk_files]), file=error_file, flush=True)
             raise KGTKException("There were %d filters and %d output files." % (nfilters, len(output_kgtk_files)))
 
         if verbose:
@@ -686,6 +686,7 @@ def run(input_file: KGTKFiles,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
                                  mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                 error_file=error_file,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
             kws.append(kw)
@@ -699,6 +700,7 @@ def run(input_file: KGTKFiles,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
                                  mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                 error_file=error_file,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
 
@@ -796,6 +798,8 @@ def run(input_file: KGTKFiles,
                 keep: bool = False
                 reject: bool = False 
                 if subj_filter is not None:
+                    if len(row) <= subj_idx:
+                        raise ValueError("Line %d: filter %d: short(len(row)=%d, subj_idx=%d): %s" % (input_line_count, idx, len(row), subj_idx, repr(row)))
                     subj_match: typing.Optional[typing.Match] = subj_filter.match(row[subj_idx])
                     if subj_match is not None:
                         keep = True
@@ -805,6 +809,8 @@ def run(input_file: KGTKFiles,
                         subj_filter_reject_count += 1
 
                 if pred_filter is not None:
+                    if len(row) <= pred_idx:
+                        raise ValueError("Line %d: filter %d: short(len(row)=%d, pred_idx=%d): %s" % (input_line_count, idx, len(row), pred_idx, repr(row)))
                     pred_match: typing.Optional[typing.Match] = pred_filter.match(row[pred_idx])
                     if pred_match is not None:
                         keep = True
@@ -814,6 +820,8 @@ def run(input_file: KGTKFiles,
                         pred_filter_reject_count += 1
 
                 if obj_filter is not None:
+                    if len(row) <= obj_idx:
+                        raise ValueError("Line %d: filter %d: short(len(row)=%d, obj_idx=%d): %s" % (input_line_count, idx, len(row), obj_idx, repr(row)))
                     obj_match: typing.Optional[typing.Match] = obj_filter.match(row[obj_idx])
                     if obj_match is not None:
                         keep = True
@@ -836,9 +844,9 @@ def run(input_file: KGTKFiles,
                 reject_line_count += 1
 
         if verbose:
-            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count))
-            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count))
-            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count))
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
+            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count), file=error_file, flush=True)
+            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count), file=error_file, flush=True)
 
     def process_regex()->int:
         subj_regexes: typing.List[typing.Optional[typing.Pattern]] = [ ]
@@ -888,7 +896,7 @@ def run(input_file: KGTKFiles,
 
         if nfilters != len(output_kgtk_files):
             if verbose:
-                print("output files: %s" % " ".join([str(x) for x in output_kgtk_files]))
+                print("output files: %s" % " ".join([str(x) for x in output_kgtk_files]), file=error_file, flush=True)
             raise KGTKException("There were %d filters and %d output files." % (nfilters, len(output_kgtk_files)))
 
         if verbose:
@@ -910,10 +918,10 @@ def run(input_file: KGTKFiles,
         if subj_idx < 0 and subj_needed:
             trouble = True
             print("Error: Cannot find the subject column '%s'." % kr.get_node1_canonical_name(subj_col), file=error_file, flush=True)
-        if pred_idx < 0 and pred_needed > 0:
+        if pred_idx < 0 and pred_needed:
             trouble = True
             print("Error: Cannot find the predicate column '%s'." % kr.get_label_canonical_name(pred_col), file=error_file, flush=True)
-        if obj_idx < 0 and obj_needed > 0:
+        if obj_idx < 0 and obj_needed:
             trouble = True
             print("Error: Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col), file=error_file, flush=True)
         if trouble:
@@ -932,6 +940,7 @@ def run(input_file: KGTKFiles,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
                                  mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                 error_file=error_file,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
             kws.append(kw)
@@ -945,6 +954,7 @@ def run(input_file: KGTKFiles,
                                  mode=KgtkWriter.Mode[kr.mode.name],
                                  use_mgzip=reader_options.use_mgzip, # Hack!
                                  mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                 error_file=error_file,
                                  verbose=verbose,
                                  very_verbose=very_verbose)
 

@@ -6,15 +6,15 @@
 source common.sh
 
 # ==============================================================================
-echo -e "\nCount the properties in ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv."
+echo -e "\nCount the properties in ${DATADIR}/claims.properties.tsv."
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
-     --input-file ${DATADIR}/part.property.${SORTED_KGTK} \
-     --output-file ${DATADIR}/part.property.counts.${SORTED_KGTK} \
+     --input-file ${DATADIR}/claims.properties.${SORTED_KGTK} \
+     --output-file ${DATADIR}/claims.properties.counts.${SORTED_KGTK} \
      --column label \
      --label total-count \
      --use-mgzip ${USE_MGZIP} \
-     |& tee ${LOGDIR}/part.property.counts.log
+     |& tee ${LOGDIR}/claims.properties.counts.log
 
 
 # ==============================================================================
@@ -25,11 +25,11 @@ echo -e "\nLift the property labels:"
 # as of 05-Oct-2020).
 kgtk ${KGTK_FLAGS} \
      lift ${VERBOSE} \
-     --input-file ${DATADIR}/part.property.counts.${SORTED_KGTK} \
-     --label-file ${DATADIR}/part.label.en.${SORTED_KGTK} \
-     --output-file ${DATADIR}/part.property.counts-with-labels.${SORTED_KGTK} \
+     --input-file ${DATADIR}/claims.properties.counts.${SORTED_KGTK} \
+     --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
+     --output-file ${DATADIR}/claims.properties.counts-with-labels.${SORTED_KGTK} \
      --columns-to-lift node1 \
      --prefilter-labels \
      --use-mgzip ${USE_MGZIP} \
-     |& tee ${LOGDIR}/part.property.counts-with-labels.log
+     |& tee ${LOGDIR}/claims.properties.counts-with-labels.log
 

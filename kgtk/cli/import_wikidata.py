@@ -36,8 +36,8 @@ def add_arguments(parser: KGTKArgumentParser):
         parser (argparse.ArgumentParser)
     """
     from kgtk.utils.argparsehelpers import optional_bool
-    from kgtk.io.KgtkReader import KgtkReaderOptions
-    from kgtk.io.KgtkWriter import KgtkWriter
+    from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
     
     parser.add_input_file(positional=True, who='input path file (may be .bz2)')
 
@@ -2149,7 +2149,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2020-11-07T00:06:18.675745+00:00#TL9X8zJA2iCS3DUiZK5h6qeuZz26vWpw4StFRgLX4EpAe2GLCyd74gMhcAZCkNszBkxU7t9rDJ9agqyyDdBzGw=="
+        UPDATE_VERSION: str = "2020-11-14T00:59:29.565298+00:00#glPOEYBuemBamDcd6Q+n/oxz/xpC5KgzcCsM7KNOwcl4eP4A1XyvT/stvsEFOtXY9iWyZCRfbeza9auKEYzyuA=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
