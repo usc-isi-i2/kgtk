@@ -16,6 +16,10 @@ from kgtk.kgtkformat import KgtkFormat
 from pathlib import Path
 import sys
 
+import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True' # remove the Issue: Initializing libiomp5.dylib, but found libiomp5.dylib already initialized.
+
+
 @attr.s(slots=True, frozen=False)
 class KgtkCreateTmpTsv(KgtkFormat):
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
