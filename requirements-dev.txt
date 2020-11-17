@@ -1,5 +1,8 @@
 tox
 coverage
+coveralls
 mkdocs
 mkdocs-material
+mknotebooks
+ipykernel
 

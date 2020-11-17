@@ -25,6 +25,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.join.unique import Unique
+    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -60,6 +61,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--in", dest="where_values", nargs="+",
                               help="The list of values for a record selection test. (default=%(default)s).", default=None)
 
+    parser.add_argument(      "--presorted", dest="presorted", metavar="True|False",
+                              help="When True, the input file is presorted. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -76,6 +81,8 @@ def run(input_file: KGTKFiles,
 
         where_column_name: typing.Optional[str] = None,
         where_values: typing.Optional[typing.List[str]] = None,
+
+        presorted: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -118,6 +125,7 @@ def run(input_file: KGTKFiles,
             print("--where=%s" % where_column_name, file=error_file)
         if where_values is not None and len(where_values) > 0:
             print("--in=%s" % " ".join(where_values), file=error_file)
+        print("--prefix=%s" % repr(presorted), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -133,6 +141,7 @@ def run(input_file: KGTKFiles,
             prefix=prefix,
             where_column_name=where_column_name,
             where_values=where_values,
+            presorted=presorted,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,

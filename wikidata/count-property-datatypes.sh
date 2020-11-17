@@ -10,8 +10,8 @@ source common.sh
 echo -e "\nCount unique datatypes in ${DATADIR}/part.property.tsv"
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
-     --input-file ${DATADIR}/part.property.${SORTED_KGTK} \
-     --output-file ${DATADIR}/part.property.datatypes.${SORTED_KGTK} \
+     --input-file ${DATADIR}/claims.properties.${SORTED_KGTK} \
+     --output-file ${DATADIR}/claims.properties.datatypes.${SORTED_KGTK} \
      --column "node2;wikidatatype" \
      --use-mgzip ${USE_MGZIP} \
-    |& tee ${LOGDIR}/part.property.datatypes.log
+    |& tee ${LOGDIR}/claims.properties.datatypes.log
