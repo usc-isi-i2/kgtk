@@ -37,6 +37,9 @@ Q5    graph_embeddings   014022544,-0.062030070,-0.012535412,0.038317516
 Q6    graph_embeddings   014022544,-0.062030070,-0.012535412,0.038317516 
 ```
 
+## Algorithm
+
+The algorithm is defined with the `operator` (`-op`) parameter. By default, it is `complex_diagonal`, corresponding to the ComplEx algorithm. It could be switched to: `translation` (TransE-like), `diagonal` (DistMult), or `linear` (for RESCAL). For more details and pointers, see [this documentation page](https://torchbiggraph.readthedocs.io/en/latest/related.html).
 
 ## Usage
 You can call the functions directly with given args as 
