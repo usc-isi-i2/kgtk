@@ -3,11 +3,6 @@
 ## Overview
 Given a kgtk format file, this command will compute the the embeddings of this files' entities. We are using structure of nodes and their relations to compute embeddings of nodes. The set of metrics to compute are specified by the user. 
 
-
-## Prerequisite
-This module is based on PyTorch-BigGraph(https://github.com/facebookresearch/PyTorch-BigGraph). Make sure you have `pip install torchbiggraph`, if there exists some issues, we encourage you to go to PyTorch-BigGraph's repository and clone the repository (or download it as an archive) and, inside the top-level directory, run: `pip install .`
-
-
 ## Input format
 The input is an kgtk format .tsv file where each line of these files contains information about nodes and relation. Each line is separated by tabs into columns which contains the node and relation data. For example:
 
@@ -243,7 +238,15 @@ Line parsing:
 
 ## Example 1:
 For easiest running, just give the input file and let it write output to `output_embeddings.csv` at current folder
-`kgtk graph-embeddings < input_file.tsv > output_embeddings.csv`
+`kgtk graph-embeddings -i input_file.tsv  -o output_file.tsv`
+
+The output_file.tsv may look like:
+```
+"work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
+"home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
+```
+
+
 
 ## Example 2:
 Running with more specific parameters and then run graph embeddings:
@@ -258,13 +261,26 @@ kgtk graph-embeddings
     --learning_rate 0.1
 ```
 
-## ## Example 3 :
+The output_file.tsv may look like:
+```
+"work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
+"home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
+```
+
+
+## Example 3 :
 Using kgtk format to generate graph embeddings
 ```
 kgtk graph-embeddings 
     --input-file input_file.tsv \
     --output-file output_file.tsv \
     --output_format kgtk
+```
+
+The output_file.tsv may look like:
+```
+"work"    graph_embeddings   -0.014022544,-0.062030070,-0.012535412,-0.023111001,-0.038317516 ...
+"home"    graph_embeddings   -0.014021411,-0.090830070,-0.012534120,-0.073111301,-0.068317516 ...
 ```
 
 
