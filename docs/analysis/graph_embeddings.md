@@ -21,7 +21,7 @@ When using this format, the output is a .tsv file where each line is the embeddi
 "work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
 ```
 
-### w2v format (Default format)
+### w2v format (default)
 When using this format, the output is a .tsv file which it is almost the same as glove format, the only difference is that the word2vec format has a first line which indicates the shape of the embedding (e.g., "9 4" for 9 entities with 4 dimensions), each column of first line is separated by tabs. Here we use w2v as our default output format. For example:
 ```
 16213    100 
@@ -246,8 +246,9 @@ Line parsing:
                         (default=ValidationAction.EXCLUDE).
 
 ```
+## Examples
 
-## Example 1:
+### Example 1
 For easiest running, just give the input file and let it write its output to `output_embeddings.csv` at current folder
 `kgtk graph-embeddings -i input_file.tsv  -o output_file.tsv`
 
@@ -259,7 +260,7 @@ The output_file.tsv may look like:
 ```
 
 
-## Example 2:
+### Example 2
 Running with more specific parameters (TransE algorithm and 200-dimensional vectors):
 ```
 kgtk graph-embeddings 
@@ -279,7 +280,7 @@ The `output_file.tsv` may look like:
 "home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
 ```
 
-## Example 3 :
+### Example 3
 Using glove format to generate graph embeddings
 ```
 kgtk graph-embeddings 
@@ -294,7 +295,7 @@ The `output_file.tsv` may look like:
 "home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
 ```
 
-## Example 4 :
+### Example 4
 Using kgtk format to generate graph embeddings
 ```
 kgtk graph-embeddings 
