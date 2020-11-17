@@ -478,6 +478,49 @@ class TestKGTKQuery(unittest.TestCase):
                 self.assertEqual(row['trel'], 'starts')
                 self.assertEqual(row['time'], '^1984-12-17T00:03:12Z/11')
 
+    def test_kgtk_query_mod_operator(self):
+        cli_entry('kgtk', 'query', '-i', self.file_path,
+                  '--graph-cache', self.sqldb,
+                  '-o', f'{self.temp_dir}/out.tsv',
+                  '--match', '(n1)-[r:name]->(n2)',
+                  '--return', 'r, n1, r.label, n2, length(n2) % 3 as rem')
+                  
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 5)
+        for i, row in df.iterrows():
+            if row['id'] == 'e21':
+                self.assertEqual(int(row['rem']), 0)
+            if row['id'] == 'e22':
+                self.assertEqual(int(row['rem']), 0)
+            if row['id'] == 'e23':
+                self.assertEqual(int(row['rem']), 2)
+            if row['id'] == 'e24':
+                self.assertEqual(int(row['rem']), 1)
+            if row['id'] == 'e25':
+                self.assertEqual(int(row['rem']), 0)
+
+    def test_kgtk_query_order_by_alias(self):
+        cli_entry('kgtk', 'query', '-i', self.file_path,
+                  '--graph-cache', self.sqldb,
+                  '-o', f'{self.temp_dir}/out.tsv',
+                  '--match', '(n1)-[r:name]->(n2)',
+                  '--return', 'r, n1, r.label, n2, length(n2) as `node2;len`',
+                  '--order-by', '`node2;len`')
+                  
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 5)
+        for i, row in df.iterrows():
+            if i == 0:
+                self.assertEqual(int(row['node2;len']), 5)
+            if i == 1:
+                self.assertEqual(int(row['node2;len']), 6)
+            if i == 2:
+                self.assertEqual(int(row['node2;len']), 7)
+            if i == 3:
+                self.assertEqual(int(row['node2;len']), 9)
+            if i == 4:
+                self.assertEqual(int(row['node2;len']), 9)
+
 
     ### Testing literal accessors:
     
