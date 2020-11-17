@@ -157,8 +157,8 @@ def add_arguments(parser: KGTKArgumentParser):
                              help="Sepecify the directory location to store temporary file",
                              type=Path,default=Path('tmp/'), metavar='')
     parser.add_argument(     '-ot','--output_format', dest='output_format',
-                             help="Outputformat for embeddings [Default: wv] Choice: kgtk | wc",
-                             default='wv', metavar='')
+                             help="Outputformat for embeddings [Default: w2v] Choice: kgtk | w2v | glove",
+                             default='w2v', metavar='')
     parser.add_argument(     '-r','--retain_temporary_data', dest='retain_temporary_data',
                             help="When opearte graph, some tempory files will be generated, set True to retain these files ",
                             type=bool,default=True, metavar='True|False')
@@ -431,10 +431,17 @@ def run(verbose: bool = False,
             make_tsv(config, entities_tf, relation_types_tf)
 
         # output  correct format for embeddings
-        if kwargs['output_format'] == 'wv': # wv format output
+        if kwargs['output_format'] == 'glove': # glove format output 
             shutil.copyfile(entities_output,output_kgtk_file)
-        else:
-            # write to the kgtk output format tsv 
+        elif kwargs['output_format'] == 'w2v': # w2v format output
+            shutil.copyfile(entities_output,output_kgtk_file)
+            with open(output_kgtk_file,'r+') as f:
+                entity_num = len(f.readlines())
+                content = f.read()
+                f.seek(0, 0)
+                f.write(str(entity_num) + '\t' + str(kwargs['dimension_num']) + '\n')
+                f.write(content)
+        else: # write to the kgtk output format tsv 
             generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose)
 
         logging.info(f'Embeddings has been generated in {output_kgtk_file}.')
@@ -447,9 +454,11 @@ def run(verbose: bool = False,
             # tmp_tsv_path.unlink() # delete temporay tsv file
             # shutil.rmtree(tmp_output_folder) # deleter temporay output folder   
 
-        print(f'''Process Finished.\nOutput has been saved in {kwargs['output_file_path']}.\
-        \nDetails hase been save in {kwargs['log_file_path']}.
-        ''')
+        if kwargs["log_file_path"] != None:
+            print('Processed Finished.')
+            logging.info(f"Process Finished.\nOutput has been saved in {kwargs['output_file_path']}")
+        else:
+            print(f"Process Finished.\nOutput has been saved in {kwargs['output_file_path']}")
 
     except Exception as e:
         raise KGTKException(str(e))
