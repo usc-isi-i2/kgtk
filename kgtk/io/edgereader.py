@@ -109,7 +109,7 @@ def main():
     row: typing.List[str]
     for row in er:
         line_count += 1
-    print("Read %d lines" % line_count)
+    print("Read %d lines" % line_count, file=error_file, flush=True)
 
 if __name__ == "__main__":
     main()
