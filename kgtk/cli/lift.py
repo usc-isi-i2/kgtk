@@ -79,6 +79,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The suffix used for newly created output columns. (default=%(default)s)."),
                               default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
 
+    parser.add_argument(      "--default-value", dest="default_value",
+                              help="The value to use if a lifted label is not found. (default=%(default)s)", default="")
+
     parser.add_argument(      "--update-select-value", "--target-new-label-value", dest="output_select_column_value",
                               help=h("A new value for the select (label) column for records that received lifted values. " +
                               "The default is not to update the select(label) column."), default=None)
@@ -165,6 +168,8 @@ def run(input_file: KGTKFiles,
         label_match_column_name: typing.Optional[str],
         label_value_column_name: typing.Optional[str],
 
+        default_value: str,
+
         remove_label_records: bool = False,
         sort_lifted_labels: bool = True,
         suppress_duplicate_labels: bool = True,
@@ -232,14 +237,15 @@ def run(input_file: KGTKFiles,
         if label_value_column_name is not None:
             print("--label-value-column=%s" % label_value_column_name, file=error_file, flush=True)
 
-        print("--remove-label-records=%s" % str(remove_label_records))
-        print("--sort-lifted-labels=%s" % str(sort_lifted_labels))
-        print("--suppress-duplicate-labels=%s" % str(suppress_duplicate_labels))
-        print("--suppress-empty-columns=%s" % str(suppress_empty_columns))
-        print("--ok-if-no-labels=%s" % str(ok_if_no_labels))
-        print("--prefilter-labels=%s" % str(prefilter_labels))
-        print("--input-file-is-presorted=%s" % str(input_is_presorted))
-        print("--label-file-is-presorted=%s" % str(labels_are_presorted))
+        print("--default_value=%s" % repr(remove_label_records))
+        print("--remove-label-records=%s" % repr(remove_label_records))
+        print("--sort-lifted-labels=%s" % repr(sort_lifted_labels))
+        print("--suppress-duplicate-labels=%s" % repr(suppress_duplicate_labels))
+        print("--suppress-empty-columns=%s" % repr(suppress_empty_columns))
+        print("--ok-if-no-labels=%s" % repr(ok_if_no_labels))
+        print("--prefilter-labels=%s" % repr(prefilter_labels))
+        print("--input-file-is-presorted=%s" % repr(input_is_presorted))
+        print("--label-file-is-presorted=%s" % repr(labels_are_presorted))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -262,6 +268,8 @@ def run(input_file: KGTKFiles,
             label_select_column_value=label_select_column_value,
             label_match_column_name=label_match_column_name,
             label_value_column_name=label_value_column_name,
+
+            default_value=default_value,
 
             remove_label_records=remove_label_records,
             sort_lifted_labels=sort_lifted_labels,
