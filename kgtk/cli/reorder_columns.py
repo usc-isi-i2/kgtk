@@ -195,7 +195,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("No ellipses, and the following columns not accounted for: %s" % " ".join(remaining_names))
             else:
                 if verbose:
-                    print("Omitting the following columns: %s" % " ".join(remaining_names))
+                    print("Omitting the following columns: %s" % " ".join(remaining_names), file=error_file, flush=True)
         if save_reordered_names is not None:
             if len(remaining_names) > 0:
                 save_reordered_names.extend(remaining_names)
@@ -229,7 +229,7 @@ def run(input_file: KGTKFiles,
         kw.flush()
 
         if verbose:
-            print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file))
+            print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file), file=error_file, flush=True)
 
         kw.close()
 
