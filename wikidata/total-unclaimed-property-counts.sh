@@ -44,5 +44,3 @@ kgtk ${KGTK_FLAGS} \
      --input-file-is-presorted \
      --label-file-is-presorted \
      --output-file ${DATADIR}/all.total.property.counts.unclaimed.${SORTED_KGTK}
-
-
