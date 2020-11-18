@@ -10,7 +10,7 @@ kgtk ${KGTK_FLAGS} \
      -p '^P[^-]*$ ;;' -o - \
      / unique ${VERBOSE} --use-mgzip=$USE_MGZIP --presorted \
      --column node1 \
-     --label node1-entity-count \
+     --label node1-property-count \
      / lift ${VERBOSE} --use-mgzip=$USE_MGZIP \
      --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
      --output-file ${DATADIR}/all.node1.property.counts.${SORTED_KGTK} \
@@ -26,7 +26,7 @@ kgtk ${KGTK_FLAGS} \
      -p '; ^P[^-]*$ ;' -o - \
      / unique ${VERBOSE} --use-mgzip=$USE_MGZIP \
      --column label \
-     --label label-entity-count \
+     --label label-property-count \
      / lift ${VERBOSE} --use-mgzip=$USE_MGZIP \
      --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
      --output-file ${DATADIR}/all.label.property.counts.${SORTED_KGTK} \
@@ -42,7 +42,7 @@ kgtk ${KGTK_FLAGS} \
      -p ';; ^P[^-]*$' -o - \
      / unique ${VERBOSE} --use-mgzip=$USE_MGZIP \
      --column node2 \
-     --label node2-entity-count \
+     --label node2-property-count \
      / lift ${VERBOSE} --use-mgzip=$USE_MGZIP \
      --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
      --output-file ${DATADIR}/all.node2.property.counts.${SORTED_KGTK} \
