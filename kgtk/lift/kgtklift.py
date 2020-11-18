@@ -231,7 +231,7 @@ class KgtkLift(KgtkFormat):
                 # This is a label definition row.
                 label_key = row[label_match_column_idx]
                 label_value: str = row[label_value_column_idx]
-                if len(label_value) > 0:
+                if label_value != self.default_value:
                     if label_key in labels:
                         # This label already exists in the table.
                         if self.suppress_duplicate_labels:
@@ -663,7 +663,7 @@ class KgtkLift(KgtkFormat):
                     if label_select_column_idx < 0 or current_label_row[label_select_column_idx] == self.label_select_column_value:
                         label_value: str = current_label_row[label_value_column_idx]
                         if len(label_value) > 0:
-                            if len(lifted_label_value) > 0:
+                            if lifted_label_value != self.default_value:
                                 if self.suppress_duplicate_labels:
                                     lifted_label_value = KgtkValue.merge_values(lifted_label_value, label_value)
                                 else:

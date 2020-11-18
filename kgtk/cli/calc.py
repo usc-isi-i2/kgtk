@@ -201,7 +201,7 @@ def run(input_file: KGTKFiles,
 
         if len(remaining_names) > 0 and save_selected_names is None:
             if verbose:
-                print("Omitting the following columns: %s" % " ".join(remaining_names))
+                print("Omitting the following columns: %s" % " ".join(remaining_names), file=error_file, flush=True)
         if save_selected_names is not None:
             if len(remaining_names) > 0:
                 save_selected_names.extend(remaining_names)
@@ -287,7 +287,7 @@ def run(input_file: KGTKFiles,
         kw.flush()
 
         if verbose:
-            print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file))
+            print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file), file=error_file, flush=True)
 
         kw.close()
 
