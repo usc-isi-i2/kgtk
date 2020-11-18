@@ -404,7 +404,7 @@ class EmbeddingVector:
             if kr.label_column_idx < 0:
                 raise KGTKException("Missing column: label or alias")
             if kr.node2_column_idx < 0:
-                raise KGTKException("Missing column: nodee or alias")
+                raise KGTKException("Missing column: node2 or alias")
 
             self._logger.debug("node1 column index = {}".format(kr.node1_column_idx))
             self._logger.debug("label column index = {}".format(kr.label_column_idx))

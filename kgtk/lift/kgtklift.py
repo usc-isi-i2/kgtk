@@ -71,6 +71,8 @@ class KgtkLift(KgtkFormat):
     input_is_presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     labels_are_presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    default_value: str = attr.ib(validator=attr.validators.instance_of(str), default="")
+
     # TODO: add rewind logic here and KgtkReader
 
     # TODO: find working validators
@@ -364,7 +366,7 @@ class KgtkLift(KgtkFormat):
         )->bool:
         output_row: typing.List[str] = row.copy()
         if new_columns > 0:
-            output_row.extend([""] * new_columns)
+            output_row.extend([self.default_value] * new_columns)
         output_select_column_idx: int = input_select_column_idx
                 
         do_write: bool = True
@@ -621,7 +623,7 @@ class KgtkLift(KgtkFormat):
         # iterations in case the input file has multiple records with
         # the same value to lift.
         last_value_to_lift: typing.Optional[str] = None
-        lifted_label_value: str = ""
+        lifted_label_value: str = self.default_value
 
         if self.verbose:
             print("Processing the input records.", file=self.error_file, flush=True)
@@ -635,7 +637,7 @@ class KgtkLift(KgtkFormat):
                 if row[input_select_column_idx] != self.input_select_column_value:
                     if new_columns > 0:
                         output_row = row.copy()
-                        output_row.append("")
+                        output_row.append(self.default_value)
                     else:
                         output_row = row
                     ew.write(output_row)
@@ -644,7 +646,7 @@ class KgtkLift(KgtkFormat):
             value_to_lift: str = row[lift_column_idx]
             if last_value_to_lift is None or value_to_lift != last_value_to_lift:
                 last_value_to_lift = value_to_lift
-                lifted_label_value = ""
+                lifted_label_value = self.default_value
 
                 # Read label records until we come to the first record that
                 # has a node1 value equal to or greater than the value we we want to lift.
@@ -677,7 +679,7 @@ class KgtkLift(KgtkFormat):
 
             output_row = row.copy()
             if new_columns > 0:
-                output_row.append("")
+                output_row.append(self.default_value)
             if len(lifted_label_value) > 0:
                 output_row[lifted_output_column_idx] = lifted_label_value
                 if self.output_select_column_value is not None and input_select_column_idx >= 0:
@@ -770,6 +772,9 @@ def main():
                               help="The suffix used for newly created output columns. (default=%(default)s).",
                               default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SUFFIX)
 
+    parser.add_argument(      "--default-value", dest="default_value",
+                              help="The value to use if a lifted label is not found. (default=%(default)s)", default="")
+
     parser.add_argument(      "--update-select-value", "--target-new-label-value", dest="output_select_column_value",
                               help="A new value for the select (label) column for records that received lifted values. " +
                               "The default is not to update the select(label) column.", default=None)
@@ -792,8 +797,6 @@ def main():
                               help="The name of the column in the label record that contains the value " +
                               "to be lifted into the input record that is receiving lifted values. " +
                               "The default is 'node2' or its alias.", default=None)
-
-
 
     parser.add_argument(      "--remove-label-records", dest="remove_label_records",
                               help="If true, remove label records from the output. (default=%(default)s).",
@@ -871,14 +874,15 @@ def main():
             print("--label-value-column=%s" % args.label_value_column_name, file=error_file, flush=True)
 
 
-        print("--remove-label-records=%s" % str(args.remove_label_records))
-        print("--sort-lifted-labels-labels=%s" % str(args.sort_lifted_labels))
-        print("--suppress-duplicate-labels=%s" % str(args.suppress_duplicate_labels))
-        print("--suppress-empty-columns=%s" % str(args.suppress_empty_columns))
-        print("--ok-if-no-labels=%s" % str(args.ok_if_no_labels))
-        print("--prefilter-labels=%s" % str(args.prefilter_labels))
-        print("--input-file-is-presorted=%s" % str(args.input_is_presorted))
-        print("--label-file-is-presorted=%s" % str(args.labels_are_presorted))
+        print("--default-value=%s" % repr(args.default_value))
+        print("--remove-label-records=%s" % repr(args.remove_label_records))
+        print("--sort-lifted-labels-labels=%s" % repr(args.sort_lifted_labels))
+        print("--suppress-duplicate-labels=%s" % repr(args.suppress_duplicate_labels))
+        print("--suppress-empty-columns=%s" % repr(args.suppress_empty_columns))
+        print("--ok-if-no-labels=%s" % repr(args.ok_if_no_labels))
+        print("--prefilter-labels=%s" % repr(args.prefilter_labels))
+        print("--input-file-is-presorted=%s" % repr(args.input_is_presorted))
+        print("--label-file-is-presorted=%s" % repr(args.labels_are_presorted))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -899,6 +903,8 @@ def main():
         label_select_column_value=args.label_select_column_value,
         label_match_column_name=args.label_match_column_name,
         label_value_column_name=args.label_value_column_name,
+
+        default_value=args.default_value,
         
         remove_label_records=args.remove_label_records,
         sort_lifted_labels=args.sort_lifted_labels,
