@@ -11,7 +11,7 @@ echo -e "\nCount unique datatypes in ${DATADIR}/claims.properties.tsv"
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
      --input-file ${DATADIR}/claims.properties.${SORTED_KGTK} \
-     --output-file ${DATADIR}/claims.properties.datatypes.${SORTED_KGTK} \
+     --output-file ${DATADIR}/claims.properties.datatypes.counts.${SORTED_KGTK} \
      --column "node2;wikidatatype" \
      --use-mgzip ${USE_MGZIP} \
-    |& tee ${LOGDIR}/claims.properties.datatypes.log
+    |& tee ${LOGDIR}/claims.properties.datatypes.counts.log
