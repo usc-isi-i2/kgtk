@@ -76,7 +76,7 @@ def run(input_file: KGTKFiles,
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
-        print("--to-file=%s" % str(tee_to_kgtk_file), file=error_file)
+        print("--to-file=%s" % str(into_kgtk_file), file=error_file)
         print("--enable=%s" % str(enable), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
