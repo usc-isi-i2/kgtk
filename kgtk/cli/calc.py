@@ -123,10 +123,10 @@ def run(input_file: KGTKFiles,
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
-        print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
-        print("--into %s" % " ".join(into_column_names), file=error_file, flush=True)
         if column_names is not None:
             print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
+        if into_column_names is not None:
+            print("--into %s" % " ".join(into_column_names), file=error_file, flush=True)
         print("--operation=%s" % str(operation), file=error_file, flush=True)
         if values is not None:
             print("--values %s" % " ".join(values), file=error_file, flush=True)
@@ -270,6 +270,48 @@ def run(input_file: KGTKFiles,
         if values is None:
             values = [ ]
 
+        if operation == AVERAGE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Average needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Average needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == COPY_OP:
+            if len(sources) == 0:
+                raise KGTKException("Copy needs at least one source, got %d" % len(sources))
+            if len(selected_names) != len(into_column_idxs):
+                raise KGTKException("Copy needs the same number of input columns and into columns, got %d and %d" % (len(selected_names), len(into_column_idxs)))
+
+        elif operation == JOIN_OP:
+            if len(sources) == 0:
+                raise KGTKException("Join needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Join needs 1 destination columns, got %d" % len(into_column_idxs))
+            if len(values) != 1:
+                raise KGTKException("Join needs 1 value, got %d" % len(values))
+
+        elif operation == PERCENTAGE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Percent needs 1 destination columns, got %d" % len(into_column_idxs))
+            if len(selected_names) != 2:
+                raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
+
+        elif operation == SET_OP:
+            if len(sources) != 0:
+                raise KGTKException("Set needs no sources, got %d" % len(sources))
+            if len(into_column_idxs) == 0:
+                raise KGTKException("Set needsat least one destination column, got %d" % len(into_column_idxs))
+            if len(values) == 0:
+                raise KGTKException("Set needsat least one value, got %d" % len(values))
+            if len(into_column_idxs) != len(values):
+                raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
+
+        elif operation == SUM_OP:
+            if len(sources) == 0:
+                raise KGTKException("Sum needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Sum needs 1 destination columns, got %d" % len(into_column_idxs))
+
         fs: str = format_string if format_string is not None else "%5.2f"
         item: str
         
@@ -285,10 +327,6 @@ def run(input_file: KGTKFiles,
                 output_row.append("") # Easiest way to add a new column.
 
             if operation == AVERAGE_OP:
-                if len(sources) == 0:
-                    raise KGTKException("Average needs at least one source, got %d" % len(sources))
-                if len(into_column_idxs) != 1:
-                    raise KGTKException("Average needs 1 destination columns, got %d" % len(into_column_idxs))
                 atotal: float = 0
                 acount: int = 0
                 for idx in sources:
@@ -296,53 +334,28 @@ def run(input_file: KGTKFiles,
                     if len(item) > 0:
                         atotal += float(item)
                         acount += 1
-                
                 output_row[into_column_idx] = (fs % (atotal / float(acount))) if acount > 0 else ""                
 
             elif operation == COPY_OP:
-                if len(sources) == 0:
-                    raise KGTKException("Copy needs at least one source, got %d" % len(sources))
-                if len(selected_names) != len(into_column_idxs):
-                    raise KGTKException("Copy needs the same number of input columns and into columns, got %d and %d" % (len(selected_names), len(into_column_idxs)))
                 for idx in range(len(sources)):
                     output_row[into_column_idxs[idx]] = row[sources[idx]]
 
             elif operation == JOIN_OP:
-                if len(sources) == 0:
-                    raise KGTKException("Join needs at least one source, got %d" % len(sources))
-                if len(into_column_idxs) != 1:
-                    raise KGTKException("Join needs 1 destination columns, got %d" % len(into_column_idxs))
-                if len(values) != 1:
-                    raise KGTKException("Join needs 1 value, got %d" % len(values))
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
 
             elif operation == PERCENTAGE_OP:
-                if len(into_column_idxs) != 1:
-                    raise KGTKException("Percent needs 1 destination columns, got %d" % len(into_column_idxs))
-                if len(selected_names) != 2:
-                    raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
-                
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
 
             elif operation == SET_OP:
-                if len(sources) != 0:
-                    raise KGTKException("Set needs no sources, got %d" % len(sources))
-                if len(into_column_idxs) != len(values):
-                    raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
-                for idx in range(len(sources)):
+                for idx in range(len(values)):
                     output_row[into_column_idxs[idx]] = values[idx]
 
             elif operation == SUM_OP:
-                if len(sources) == 0:
-                    raise KGTKException("Sum needs at least one source, got %d" % len(sources))
-                if len(into_column_idxs) != 1:
-                    raise KGTKException("Sum needs 1 destination columns, got %d" % len(into_column_idxs))
                 total: float = 0
                 for idx in sources:
                     item = row[idx]
                     if len(item) > 0:
                         total += float(item)
-                
                 output_row[into_column_idx] = fs % total
                 
 
