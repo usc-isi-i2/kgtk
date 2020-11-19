@@ -692,6 +692,8 @@ class KgtkLift(KgtkFormat):
         if self.verbose:
             print("Read %d input records." % (input_line_count), file=self.error_file, flush=True)
              
+        ew.close()
+
     
     def process(self):
         # Open the input file.
