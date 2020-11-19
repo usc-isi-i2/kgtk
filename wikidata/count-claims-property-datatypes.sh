@@ -6,8 +6,8 @@
 source common.sh
 
 # ==============================================================================
-# Count the property datatype distribution.
-echo -e "\nCount unique datatypes in ${DATADIR}/part.property.tsv"
+# Count the property datatype distribution in the claims.
+echo -e "\nCount unique datatypes in ${DATADIR}/claims.properties.tsv"
 kgtk ${KGTK_FLAGS} \
      unique ${VERBOSE} \
      --input-file ${DATADIR}/claims.properties.${SORTED_KGTK} \
