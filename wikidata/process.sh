@@ -1,6 +1,7 @@
 #! /bin/bash
 
 ./import-split-wikidata-gzipped.sh
+./split-sitelink-qualifiers.sh
 ./sort-split-wikidata.sh
 ./build-all-edges-file.sh
 

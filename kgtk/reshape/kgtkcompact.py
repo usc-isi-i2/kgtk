@@ -281,7 +281,7 @@ class KgtkCompact(KgtkFormat):
             key_idx_list_str: typing.List[str] = [ ]
             for key_idx in key_idx_list:
                 key_idx_list_str.append(str(key_idx))
-            print("key indexes: %s" % " ".join(key_idx_list_str))
+            print("key indexes: %s" % " ".join(key_idx_list_str), file=self.error_file, flush=True)
             
         # Open the output file.
         ew: KgtkWriter = KgtkWriter.open(output_column_names,
