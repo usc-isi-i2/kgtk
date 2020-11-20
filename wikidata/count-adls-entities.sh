@@ -46,9 +46,12 @@ kgtk ${KGTK_FLAGS} \
      |& tee ${LOGDIR}/labels.node1.entity.counts.log
 
 echo -e "\nCount the entities in the node1 column in ${DATADIR}/sitelinks.${SORTED_KGTK} and lift labels."
+# The filter is needed until the sitelink qualifiers are separated.
 kgtk ${KGTK_FLAGS} \
-     unique ${VERBOSE} --use-mgzip=${USE_MGZIP} --presorted \
+     filter $VERBOSE --use-mgzip=$USE_MGZIP --regex \
      --input-file ${DATADIR}/sitelinks.${SORTED_KGTK} \
+     -p '; ^[PQ][^-]*$ ;' \
+     / unique ${VERBOSE} --use-mgzip=${USE_MGZIP} --presorted \
      --column node1 \
      --label node1-entity-count \
      / lift ${VERBOSE} --use-mgzip=${USE_MGZIP} \
