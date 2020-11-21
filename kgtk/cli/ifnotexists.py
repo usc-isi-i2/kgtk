@@ -115,6 +115,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("When True, send the join records to the main output (EXPERIMENTAL). (default=%(default)s)."),
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--right-join-first", dest="right_first",  metavar="True|False",
+                              help=h("When True, send the filter record to join output before the first matching input record. " +
+                              " Otherwise, send the first matching input record, then the filter record, then othe rmatching input records. " +
+                              "(EXPERIMENTAL). (default=%(default)s)."),
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
@@ -143,6 +149,7 @@ def run(input_file: KGTKFiles,
         input_prefix: typing.Optional[str] = None,
         filter_prefix: typing.Optional[str] = None,
         join_output: bool = False,
+        right_first: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -211,6 +218,7 @@ def run(input_file: KGTKFiles,
         if filter_prefix is not None:
             print("--filter-prefix=%s" % repr(filter_prefix), file=error_file)
         print("--join-output=%s" % str(join_output), file=error_file)
+        print("--right-join-first=%s" % str(right_first), file=error_file)
         input_reader_options.show(out=error_file, who="input")
         filter_reader_options.show(out=error_file, who="filter")
         value_options.show(out=error_file)
@@ -232,6 +240,7 @@ def run(input_file: KGTKFiles,
             input_prefix=input_prefix,
             filter_prefix=filter_prefix,
             join_output=join_output,
+            right_first=right_first,
             invert=True,
             cache_input=cache_input,
             preserve_order=preserve_order,

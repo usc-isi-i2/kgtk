@@ -74,6 +74,9 @@ class KgtkIfExists(KgtkFormat):
     # When True, send the results of the join to the primary output stream.
     join_output: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # When True, send the filter line to join output before the input line on first filter match.
+    right_first: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # The field separator used in multifield joins.
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.KEY_FIELD_SEPARATOR)
 
@@ -452,6 +455,20 @@ class KgtkIfExists(KgtkFormat):
                         
             else: # input_key == filter_key
                 # If we get here, the input row has a matching filter row.
+                if not saw_match and self.right_first:
+                    # This is the first match for this filter row.
+                    matched_filter_line_count += 1
+                    if filter_row is not None:
+                        if mfew is not None:
+                            mfew.write(filter_row)
+                        if self.join_output and ew is not None:
+                            joined_line_count += 1
+                            ew.write(filter_row, shuffle_list=join_shuffle_list)
+                        elif jw is not None:
+                            joined_line_count += 1
+                            jw.write(filter_row, shuffle_list=join_shuffle_list)
+                    saw_match = True
+
                 if self.very_verbose:
                     print("Keep this input row: [%s]" % ", ".join([item for item in row]), file=self.error_file, flush=True)
                 if self.invert:
@@ -473,7 +490,7 @@ class KgtkIfExists(KgtkFormat):
                         joined_line_count += 1
                         jw.write(row)
 
-                if not saw_match:
+                if not saw_match and not self.right_first:
                     # This is the first match for this filter row.
                     matched_filter_line_count += 1
                     if filter_row is not None:
@@ -969,6 +986,12 @@ def main():
                               help="When True, send the join records to the main output (EXPERIMENTAL). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--right-join-first", dest="right_first",  metavar="True|False",
+                              help="When True, send the filter record to join output before the first matching input record. " +
+                              " Otherwise, send the first matching input record, then the filter record, then othe rmatching input records. " +
+                              "(EXPERIMENTAL). (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys (default=%(default)s)",
                               default=KgtkIfExists.FIELD_SEPARATOR_DEFAULT)
    
@@ -1024,6 +1047,7 @@ def main():
         if args.filter_prefix is not None:
             print("--filter-prefix=%s" % repr(args.filter_prefix), file=error_file)
         print("--join-output=%s" % str(args.join_output), file=error_file)
+        print("--left-join-first=%s" % str(args.right_first), file=error_file)
         print("--invert=%s" % str(args.invert), file=error_file)
         print("--cache-input=%s" % str(args.cache_input), file=error_file)
         print("--preserve-order=%s" % str(args.preserve_order), file=error_file)
@@ -1051,6 +1075,7 @@ def main():
         input_prefix=args.input_prefix,
         filter_prefix=args.filter_prefix,
         join_output=args.join_output,
+        right_first=args.right_first,
         field_separator=args.field_separator,
         invert=args.invert,
         cache_input=args.cache_input,
