@@ -34,7 +34,6 @@ kgtk ${KGTK_FLAGS} \
      --filter-on ${DATADIR}/qualifiers.sorted-by-node1.${SORTED_KGTK} \
      --filter-keys node1 \
      --left-join --join-output \
-     --left-join \
      --output-file ${DATADIR}/claims-and-qualifiers.${SORTED_KGTK} \
 
 
