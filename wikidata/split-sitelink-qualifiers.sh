@@ -5,20 +5,20 @@ source common.sh
 
 # ==============================================================================
 # Split the sitelink qualifiers.
-echo -e "\nSplit ${DATADIR}/sitelinksraw.${SORTED_KGTK}"
+echo -e "\nSplit ${TEMPDIR}/sitelinksraw.${SORTED_KGTK}"
 kgtk ${KGTK_FLAGS} \
      filter ${VERBOSE} --use-mgzip=${USE_MGZIP} \
-     --input-file ${DATADIR}/sitelinksraw.${UNSORTED_KGTK} \
+     --input-file ${TEMPDIR}/sitelinksraw.${UNSORTED_KGTK} \
      --pattern "; sitelink-badge,sitelink-language,sitelink-site,sitelink-title ;" \
-     --output-file ${DATADIR}/sitelinks.qualifiers.${UNSORTED_KGTK} \
-     --reject-file ${DATADIR}/sitelinks.${UNSORTED_KGTK} \
+     --output-file ${TEMPDIR}/sitelinks.qualifiers.${UNSORTED_KGTK} \
+     --reject-file ${TEMPDIR}/sitelinks.${UNSORTED_KGTK} \
     |& tee ${LOGDIR}/split-sitelink-qualifiers.log
 
-echo -e "\nSplit ${DATADIR}/sitelinksraw.en.${SORTED_KGTK}"
+echo -e "\nSplit ${TEMPDIR}/sitelinksraw.en.${SORTED_KGTK}"
 kgtk ${KGTK_FLAGS} \
      filter ${VERBOSE} --use-mgzip=${USE_MGZIP} \
-     --input-file ${DATADIR}/sitelinksraw.en.${UNSORTED_KGTK} \
+     --input-file ${TEMPDIR}/sitelinksraw.en.${UNSORTED_KGTK} \
      --pattern "; sitelink-badge,sitelink-language,sitelink-site,sitelink-title ;" \
-     --output-file ${DATADIR}/sitelinks.en.qualifiers.${UNSORTED_KGTK} \
-     --reject-file ${DATADIR}/sitelinks.en.${UNSORTED_KGTK} \
+     --output-file ${TEMPDIR}/sitelinks.en.qualifiers.${UNSORTED_KGTK} \
+     --reject-file ${TEMPDIR}/sitelinks.en.${UNSORTED_KGTK} \
     |& tee ${LOGDIR}/split-sitelink-en-qualifiers.log
