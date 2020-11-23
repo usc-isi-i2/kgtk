@@ -7,11 +7,10 @@ source common.sh
 
 # ==============================================================================
 # Count the edge datatype distribution.
-echo -e "\nCount unique datatypes in ${DATADIR}/all.tsv"
+echo -e "\nCount unique datatypes in ${DATADIR}/claims.tsv"
 kgtk ${KGTK_FLAGS} \
-     unique ${VERBOSE} \
+     unique ${VERBOSE} --use-mgzip ${USE_MGZIP} \
      --input-file ${DATADIR}/claims.${SORTED_KGTK} \
-     --output-file ${DATADIR}/claims.datatypes.${SORTED_KGTK} \
      --column "node2;wikidatatype" \
-     --use-mgzip ${USE_MGZIP} \
+     --output-file ${COUNTDIR}/claims.datatypes.counts.${SORTED_KGTK} \
     |& tee ${LOGDIR}/claims.datatypes.log
