@@ -18,29 +18,29 @@ echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in English and all l
 kgtk ${KGTK_FLAGS} \
      import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \
-     --node-file ${DATADIR}/metadata.node.${UNSORTED_KGTK} \
-     --minimal-edge-file ${DATADIR}/claims.${UNSORTED_KGTK} \
-     --minimal-qual-file ${DATADIR}/qualifiers.${UNSORTED_KGTK} \
+     --node-file ${TEMPDIR}/metadata.node.${UNSORTED_KGTK} \
+     --minimal-edge-file ${TEMPDIR}/claims.${UNSORTED_KGTK} \
+     --minimal-qual-file ${TEMPDIR}/qualifiers.${UNSORTED_KGTK} \
      --node-file-id-only \
      --explode-values False \
      --all-languages \
      --alias-edges True \
-     --split-alias-file ${DATADIR}/aliases.${UNSORTED_KGTK} \
-     --split-en-alias-file ${DATADIR}/aliases.en.${UNSORTED_KGTK} \
+     --split-alias-file ${TEMPDIR}/aliases.${UNSORTED_KGTK} \
+     --split-en-alias-file ${TEMPDIR}/aliases.en.${UNSORTED_KGTK} \
      --description-edges True \
-     --split-description-file ${DATADIR}/descriptions.${UNSORTED_KGTK} \
-     --split-en-description-file ${DATADIR}/descriptions.en.${UNSORTED_KGTK} \
+     --split-description-file ${TEMPDIR}/descriptions.${UNSORTED_KGTK} \
+     --split-en-description-file ${TEMPDIR}/descriptions.en.${UNSORTED_KGTK} \
      --label-edges True \
-     --split-label-file ${DATADIR}/labels.${UNSORTED_KGTK} \
-     --split-en-label-file ${DATADIR}/labels.en.${UNSORTED_KGTK} \
+     --split-label-file ${TEMPDIR}/labels.${UNSORTED_KGTK} \
+     --split-en-label-file ${TEMPDIR}/labels.en.${UNSORTED_KGTK} \
      --datatype-edges True \
-     --split-datatype-file ${DATADIR}/metadata.property.datatypes.${UNSORTED_KGTK} \
+     --split-datatype-file ${TEMPDIR}/metadata.property.datatypes.${UNSORTED_KGTK} \
      --entry-type-edges True \
-     --split-type-file ${DATADIR}/metadata.types.${UNSORTED_KGTK} \
+     --split-type-file ${TEMPDIR}/metadata.types.${UNSORTED_KGTK} \
      --sitelink-edges True \
      --sitelink-verbose-edges True \
-     --split-sitelink-file ${DATADIR}/sitelinks.${UNSORTED_KGTK} \
-     --split-en-sitelink-file ${DATADIR}/sitelinks.en.${UNSORTED_KGTK} \
+     --split-sitelink-file ${TEMPDIR}/sitelinks.${UNSORTED_KGTK} \
+     --split-en-sitelink-file ${TEMPDIR}/sitelinks.en.${UNSORTED_KGTK} \
      --value-hash-width 6 \
      --claim-id-hash-width 8 \
      --use-kgtkwriter True \
