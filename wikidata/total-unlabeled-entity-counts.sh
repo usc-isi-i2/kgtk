@@ -6,43 +6,43 @@ source common.sh
 echo -e "\nTotal the unlabeled entity counts."
 kgtk ${KGTK_FLAGS} \
      cat $VERBOSE --use-mgzip=$USE_MGZIP \
-     --input-file ${DATADIR}/all.node1.entity.counts.unlabeled.${SORTED_KGTK} \
-     --input-file ${DATADIR}/all.label.entity.counts.unlabeled.${SORTED_KGTK} \
-     --input-file ${DATADIR}/all.node2.entity.counts.unlabeled.${SORTED_KGTK} \
+     --input-file ${COUNTDIR}/all.node1.entity.counts.unlabeled.${SORTED_KGTK} \
+     --input-file ${COUNTDIR}/all.label.entity.counts.unlabeled.${SORTED_KGTK} \
+     --input-file ${COUNTDIR}/all.node2.entity.counts.unlabeled.${SORTED_KGTK} \
      / unique $VERBOSE --use-mgzip=$USE_MGZIP \
      --column node1 \
      / lift $VERBOSE --use-mgzip=$USE_MGZIP \
-     --label-file ${DATADIR}/all.node1.entity.counts.unlabeled.${SORTED_KGTK} \
+     --input-file-is-presorted \
      --columns-to-lift node1 \
+     --label-file ${COUNTDIR}/all.node1.entity.counts.unlabeled.${SORTED_KGTK} \
+     --label-file-is-presorted \
      --property node1-entity-count \
      --columns-to-write 'node1;node1-entity-count' \
      --default-value 0 \
-     --input-file-is-presorted \
-     --label-file-is-presorted \
     / lift $VERBOSE --use-mgzip=$USE_MGZIP \
-     --label-file ${DATADIR}/all.label.entity.counts.unlabeled.${SORTED_KGTK} \
+     --input-file-is-presorted \
      --columns-to-lift node1 \
+     --label-file ${COUNTDIR}/all.label.entity.counts.unlabeled.${SORTED_KGTK} \
+     --label-file-is-presorted \
      --property label-entity-count \
      --columns-to-write 'node1;label-entity-count' \
      --default-value 0 \
-     --input-file-is-presorted \
-     --label-file-is-presorted \
      / lift $VERBOSE --use-mgzip=$USE_MGZIP \
-     --label-file ${DATADIR}/all.node2.entity.counts.unlabeled.${SORTED_KGTK} \
+     --input-file-is-presorted \
      --columns-to-lift node1 \
+     --label-file ${COUNTDIR}/all.node2.entity.counts.unlabeled.${SORTED_KGTK} \
+     --label-file-is-presorted \
      --property node2-entity-count \
      --columns-to-write 'node1;node2-entity-count' \
      --default-value 0 \
-     --input-file-is-presorted \
-     --label-file-is-presorted \
      / calc $VERBOSE --use-mgzip=$USE_MGZIP \
      --columns 'node1;node1-entity-count' 'node1;label-entity-count' 'node1;node2-entity-count' \
      --do sum --into 'node1;total-entity-count' --format '%d' \
      / lift $VERBOSE --use-mgzip=$USE_MGZIP \
-     --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
-     --columns-to-lift node1 \
      --input-file-is-presorted \
+     --columns-to-lift node1 \
+     --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
      --label-file-is-presorted \
-     --output-file ${DATADIR}/all.total.entity.counts.unlabeled.${SORTED_KGTK}
+     --output-file ${COUNTDIR}/all.total.entity.counts.unlabeled.${SORTED_KGTK}
 
 

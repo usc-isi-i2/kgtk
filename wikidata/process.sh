@@ -4,6 +4,7 @@
 ./split-sitelink-qualifiers.sh
 ./sort-split-wikidata.sh
 ./build-all-edges-file.sh
+./check-for-unclaimed-qualifiers.sh
 
 ./process-edges.sh
 ./process-properties.sh

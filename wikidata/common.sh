@@ -16,6 +16,9 @@ WIKIDATA_WORK_DIR=${KGTK_WORK_DIR}/kgtk/gd/kgtk/cache/datasets/${WIKIDATA_VERSIO
 # The working data files will be stored in:
 DATADIR=${WIKIDATA_WORK_DIR}/data
 
+# Temporary files (unsorted) will be stored in in:
+TEMPDIR=${WIKIDATA_WORK_DIR}/temp
+
 # The working log files will be stored in:
 LOGDIR=${WIKIDATA_WORK_DIR}/logs
 
