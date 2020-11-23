@@ -4,20 +4,14 @@
 
 # This is the Wikidata version we will analyze:
 WIKIDATA_VERSION=wikidata-20200803
-
-KGTK_WORK_DIR1=/data3/rogers
-KGTK_WORK_DIR2=/data4/rogers
-
-# This script expects to see the wikidata dump JSON file in the
-# following location:
-WIKIDATA_JSON_DIR=${KGTK_WORK_DIR1}/elicit/cache/datasets/${WIKIDATA_VERSION}
+KGTK_WORK_DIR=/data3/rogers
 
 # The `kgtk validate-properties` pattern files are expected to
 # be in:
-PATTERNDIR=/data1/rogers/elicit/github/kgtk/wikidata/patterns
+PATTERNDIR=/data1/rogers/kgtk/github/kgtk/wikidata/patterns
 
 # This will be our working directory:
-WIKIDATA_WORK_DIR=${KGTK_WORK_DIR2}/elicit/cache/datasets/${WIKIDATA_VERSION}
+WIKIDATA_WORK_DIR=${KGTK_WORK_DIR}/kgtk/gd/kgtk/cache/datasets/${WIKIDATA_VERSION}
 
 # The working data files will be stored in:
 DATADIR=${WIKIDATA_WORK_DIR}/data
@@ -25,17 +19,19 @@ DATADIR=${WIKIDATA_WORK_DIR}/data
 # The working log files will be stored in:
 LOGDIR=${WIKIDATA_WORK_DIR}/logs
 
+# The count validation files will be stored in:
+COUNTDIR=${WIKIDATA_WORK_DIR}/counts
+
 # Completed data products will be stored in:
-PRODUCTDIR=/data1/rogers/elicit/drive/datasets/${WIKIDATA_VERSION}-v4
+PRODUCTDIR=/data1/rogers/kgtk/gd/kgtk/drive/datasets/${WIKIDATA_VERSION}-v4
+
+# This script expects to see the wikidata dump JSON file in the
+# following location:
+WIKIDATA_JSON_DIR=${WIKIDATA_WORK_DIR}/json
 
 # The Wikidata JSON file is named as follows:
 WIKIDATA_ALL=${WIKIDATA_VERSION}-all
 WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json.gz
-
-# We will import the following files first:
-WIKIDATA_ALL_NODES=${WIKIDATA_ALL}-nodes # a node file
-WIKIDATA_ALL_EDGES=${WIKIDATA_ALL}-edges # the main edge file
-WIKIDATA_ALL_QUALIFIERS=${WIKIDATA_ALL}-qualifiers # the qualifiers
 
 # Work file extensions
 UNSORTED_KGTK=unsorted.tsv
@@ -43,6 +39,10 @@ SORTED_KGTK=tsv.gz
 
 # Use mgzip in some cases?
 USE_MGZIP=True
+
+# Select on of the following gzip implementations:
+# GZIP_CMD=gzip
+GZIP_CMD=pigz
 
 # Ensure that sort has enough space for its temporary files.
 TMPDIR=${KGTK_WORK_DIR1}/tmp
@@ -97,6 +97,3 @@ WIKIDATA_IMPORT_SPLIT_FILES=( \
 	"metadata.property.datatypes" \
 	"metadata.types" \
     )
-
-# GZIP_CMD=gzip
-GZIP_CMD=pigz
