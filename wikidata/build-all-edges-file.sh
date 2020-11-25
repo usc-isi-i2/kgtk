@@ -10,6 +10,7 @@ kgtk ${KGTK_FLAGS} \
      --input-file ${TEMPDIR}/descriptions.${UNSORTED_KGTK} \
      --input-file ${TEMPDIR}/labels.${UNSORTED_KGTK} \
      --input-file ${TEMPDIR}/sitelinks.${UNSORTED_KGTK} \
+     --input-file ${TEMPDIR}/sitelinks.qualifiers.${UNSORTED_KGTK} \
      --input-file ${TEMPDIR}/metadata.types.${UNSORTED_KGTK} \
      --input-file ${TEMPDIR}/metadata.property.datatypes.${UNSORTED_KGTK} \
 / sort2 ${VERBOSE} \
