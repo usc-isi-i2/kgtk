@@ -39,8 +39,8 @@ kgtk ${KGTK_FLAGS} \
      --split-type-file ${TEMPDIR}/metadata.types.${UNSORTED_KGTK} \
      --sitelink-edges True \
      --sitelink-verbose-edges True \
-     --split-sitelink-file ${TEMPDIR}/sitelinks.${UNSORTED_KGTK} \
-     --split-en-sitelink-file ${TEMPDIR}/sitelinks.en.${UNSORTED_KGTK} \
+     --split-sitelink-file ${TEMPDIR}/sitelinksraw.${UNSORTED_KGTK} \
+     --split-en-sitelink-file ${TEMPDIR}/sitelinksraw.en.${UNSORTED_KGTK} \
      --value-hash-width 6 \
      --claim-id-hash-width 8 \
      --use-kgtkwriter True \
