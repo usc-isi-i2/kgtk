@@ -19,8 +19,8 @@ kgtk ${KGTK_FLAGS} \
      import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \
      --node-file ${TEMPDIR}/metadata.node.${UNSORTED_KGTK} \
-     --minimal-edge-file ${TEMPDIR}/claims.${UNSORTED_KGTK} \
-     --minimal-qual-file ${TEMPDIR}/qualifiers.${UNSORTED_KGTK} \
+     --minimal-edge-file ${TEMPDIR}/claims.raw.${UNSORTED_KGTK} \
+     --minimal-qual-file ${TEMPDIR}/qualifiers.raw.${UNSORTED_KGTK} \
      --node-file-id-only \
      --explode-values False \
      --all-languages \
@@ -39,8 +39,8 @@ kgtk ${KGTK_FLAGS} \
      --split-type-file ${TEMPDIR}/metadata.types.${UNSORTED_KGTK} \
      --sitelink-edges True \
      --sitelink-verbose-edges True \
-     --split-sitelink-file ${TEMPDIR}/sitelinks.${UNSORTED_KGTK} \
-     --split-en-sitelink-file ${TEMPDIR}/sitelinks.en.${UNSORTED_KGTK} \
+     --split-sitelink-file ${TEMPDIR}/sitelinks.raw.${UNSORTED_KGTK} \
+     --split-en-sitelink-file ${TEMPDIR}/sitelinks.en.raw.${UNSORTED_KGTK} \
      --value-hash-width 6 \
      --claim-id-hash-width 8 \
      --use-kgtkwriter True \
