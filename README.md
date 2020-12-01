@@ -102,6 +102,16 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 4. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
 
+5. Python library rdflib has a known [issue](https://github.com/RDFLib/rdflib/issues/1043), where the ttl serialization of decimal values is incorrect. The library will add a `.0` at the end of decimal values in scientific notation. This will make the ttl invalid and cannot be loaded into a triplestore.
+
+To solve this issue, run the following commands after the `kgtk` installation is complete.
+```
+pip uninstall rdflib
+pip install git+https://github.com/RDFLib/rdflib.git@master
+```
+
+The code fix for this bug is already merged into the library, but has not been released as a `pypi` package. This step will be removed after `rdflib` version 6 is released. 
+
 ### Updating your KGTK installation
 To update your version of KGTK, just follow the instructions below:
 
