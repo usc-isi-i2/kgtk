@@ -77,6 +77,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         default='vertex_hubs',
                         help='Label for edge: vertex hits hubs. (default=%(default)s)')
 
+    parser.add_argument('--print-top-n', action='store', dest='top_n',
+                        default=5, type=int,
+                        help='Number of top centrality nodes to print. (default=%(default)d)')
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -95,6 +99,7 @@ def run(input_file: KGTKFiles,
         vertex_pagerank: str,
         vertex_auth: str,
         vertex_hubs: str,
+        top_n: int,
 
         errors_to_stdout: bool,
         errors_to_stderr: bool,
@@ -196,7 +201,7 @@ def run(input_file: KGTKFiles,
                 centrality.pagerank(G2, prop=v_pr)
                 G2.properties[('v', 'vertex_pagerank')] = v_pr
                 writer.write('Max pageranks\n')
-                result = gtanalysis.get_topn_indices(G2, 'vertex_pagerank', 5, id_col)
+                result = gtanalysis.get_topn_indices(G2, 'vertex_pagerank', top_n, id_col)
                 for n_id, n_label, pr in result:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, pr))
 
@@ -204,11 +209,11 @@ def run(input_file: KGTKFiles,
                 writer.write('\n###HITS\n')
                 hits_eig, G2.vp['vertex_hubs'], G2.vp['vertex_auth'] = gtanalysis.compute_hits(G2)
                 writer.write('HITS hubs\n')
-                main_hubs = gtanalysis.get_topn_indices(G2, 'vertex_hubs', 5, id_col)
+                main_hubs = gtanalysis.get_topn_indices(G2, 'vertex_hubs', top_n, id_col)
                 for n_id, n_label, hubness in main_hubs:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, hubness))
                 writer.write('HITS auth\n')
-                main_auth = gtanalysis.get_topn_indices(G2, 'vertex_auth', 5, id_col)
+                main_auth = gtanalysis.get_topn_indices(G2, 'vertex_auth', top_n, id_col)
                 for n_id, n_label, authority in main_auth:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 
