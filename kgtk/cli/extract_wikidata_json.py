@@ -164,6 +164,7 @@ def run(input_file: KGTKFiles,
             if entity in entity_ids:
                 if first:
                     output_f.write(b"[\n")
+                    first = False
                 else:
                     output_f.write(b",\n")
                 output_f.write(clean_line)
