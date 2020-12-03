@@ -121,6 +121,8 @@ class KgtkReaderOptions():
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
+    prohibit_whitespace_in_column_names: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     @classmethod
     def add_arguments(cls,
                       parser: ArgumentParser,
@@ -234,6 +236,12 @@ class KgtkReaderOptions():
                             dest=prefix2 + "unsafe_column_name_action",
                             help=h(prefix3 + "The action to take when a column name is unsafe (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.REPORT))
+
+        fgroup.add_argument(prefix1 + "prohibit-whitespace-in-column-names",
+                            dest=prefix2 + "prohibit_whitespace_in_column_names",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "Prohibit whitespace in column names. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
 
         sgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Pre-validation sampling"),
                                                            h("Options affecting " + prefix4 + "pre-validation data line sampling."))
@@ -382,6 +390,7 @@ class KgtkReaderOptions():
             truncate_long_lines=lookup("truncate_long_lines", False),
             unsafe_column_name_action=lookup("unsafe_column_name_action", ValidationAction.REPORT),
             whitespace_line_action=lookup("whitespace_line_action", ValidationAction.EXCLUDE),
+            prohibit_whitespace_in_column_names=lookup("prohibit_whitespace_in_column_names", False)
         )
 
     # Build the value parsing option structure.
@@ -431,6 +440,7 @@ class KgtkReaderOptions():
         print("%smgzip-threads=%s" % (prefix, str(self.mgzip_threads)), file=out)
         print("%sgzip-in-parallel=%s" % (prefix, str(self.gzip_in_parallel)), file=out)
         print("%sgzip-queue-size=%s" % (prefix, str(self.gzip_queue_size)), file=out)
+        print("%sprohibit-whitespace-in-column-names=%s" % (prefix, str(self.prohibit_whitespace_in_column_names)), file=out)
               
 
 DEFAULT_KGTK_READER_OPTIONS: KgtkReaderOptions = KgtkReaderOptions()
@@ -533,7 +543,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                header_line=header,
                                who=who,
                                error_action=options.unsafe_column_name_action,
-                               error_file=error_file)
+                               error_file=error_file,
+                               prohibit_whitespace_in_column_names=options.prohibit_whitespace_in_column_names)
 
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,

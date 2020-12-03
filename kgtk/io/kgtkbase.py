@@ -70,12 +70,14 @@ class KgtkBase(KgtkFormat):
                           column_name: str,
                           header_line: str,
                           error_action: ValidationAction,
-                          error_file: typing.TextIO = sys.stderr)->typing.List[str]:
+                          error_file: typing.TextIO = sys.stderr,
+                          prohibit_whitespace_in_column_names=False,
+                          )->typing.List[str]:
         # Returns a list of complaints.
         # Check for valid column names.
         # 1) Check for leading white space
         # 2) Check for trailing white space
-        # 3) Check for internal white space
+        # 3) Check for internal white space if prohibited
         #    1) except inside "" and '' quoted strings
         # 4) Check for commas
         # 5) Check for vertical bars
@@ -87,7 +89,7 @@ class KgtkBase(KgtkFormat):
             results.append("Column name '%s' starts with leading white space" % column_name)
         if column_name.rstrip() != column_name:
             results.append("Column name '%s' ends with leading white space" % column_name)
-        if not (column_name.startswith('"') or column_name.startswith("'")):
+        if prohibit_whitespace_in_column_names and not (column_name.startswith('"') or column_name.startswith("'")):
             if ''.join(column_name.split()) != column_name.strip():
                 results.append("Column name '%s' contains internal white space" % column_name)
         if "," in column_name:
@@ -107,14 +109,17 @@ class KgtkBase(KgtkFormat):
                            header_line: str,
                            who: str,
                            error_action: ValidationAction,
-                           error_file: typing.TextIO = sys.stderr)->bool:
+                           error_file: typing.TextIO = sys.stderr,
+                           prohibit_whitespace_in_column_names=False,
+                           )->bool:
         """
         Returns True if the column names are OK.
         """
         complaints: typing.List[str] = [ ]
         column_name: str
         for column_name in column_names:
-            gripes: typing.List[str] = cls.check_column_name(column_name, header_line, error_action, error_file)
+            gripes: typing.List[str] = cls.check_column_name(column_name, header_line, error_action, error_file,
+                                                             prohibit_whitespace_in_column_names=prohibit_whitespace_in_column_names)
             complaints.extend(gripes)
         if len(complaints) == 0:
             return True
