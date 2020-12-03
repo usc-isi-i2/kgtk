@@ -11,7 +11,7 @@ KGTK is a Python library for easy manipulation with knowledge graphs. It provide
 
 * Import/output files in commonly used data formats (TSV, N-Triples, Neo4J, etc.)
 * Curators and transformers to validate, join, filter, sort and concatenate KGTK files
-* Graph querying and analytics over knoweldge graphs: reachable objects, centrality, text embeddings, page rank, etc.
+* Graph querying and analytics over knowledge graphs: reachable objects, centrality, text embeddings, page rank, etc.
 * A framework for composing multiple KG operations, based on Unix pipes. The framework uses the KGTK file format on the standard input and output to combine tools written in different programming languages
 
 ## How to cite
