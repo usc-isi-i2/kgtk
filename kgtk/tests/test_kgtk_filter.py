@@ -101,13 +101,13 @@ class TestKGTKFilter(unittest.TestCase):
             run(input_file=Path(self.file_path), output_files=[[Path(f'{self.temp_dir}/one_row.tsv')]],
                 reject_file=None, patterns=[["Q65695069;P577;^2019-07-19T00:00:00Z/11;bla"]],
                 subj_col=None, pred_col=None, obj_col=None, or_pattern=False,
-                invert=False, first_match_only=False, regex=False, show_version=False)
+                invert=False, match_type="match", first_match_only=False, regex=False, show_version=False)
 
     def test_kgtk_filter_column_indexes(self):
         run(input_file=Path(self.file_path2), output_files=[[Path(f'{self.temp_dir}/one_row.tsv')]],
             reject_file=None, patterns=[["Q;P;O"]],
             subj_col='1', pred_col='2', obj_col='3', or_pattern=False,
-            invert=False, first_match_only=False, regex=False, show_version=False)
+            invert=False, match_type="match", first_match_only=False, regex=False, show_version=False)
         df = pd.read_csv(f'{self.temp_dir}/one_row.tsv', sep='\t')
         self.assertEqual(len(df), 0)
         

@@ -20,7 +20,8 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### TO DO:
 
-# - support parameters in lists, maybe positional parameters $0, $1,...
+# + support parameters in lists
+# - maybe support positional parameters $0, $1,...
 # - intelligent interpretation of ^ and $ when regex-matching to string literals?
 #   - one can use kgtk_unstringify first to get to the text content
 # - allow |-alternatives in relationship and node patterns (the latter being an
@@ -29,7 +30,7 @@ pp = pprint.PrettyPrinter(indent=4)
 # - investigate redundant join clauses
 # - header column dealiasing/normalization, checking for required columns
 # - bump graph timestamps when they get queried
-# - allow order-by on column aliases (currently they are undefined variables)
+# + allow order-by on column aliases (currently they are undefined variables)
 # - (not) exists pattern handling
 # - null-value handling and testing
 # - handle properties that are ambiguous across graphs
@@ -150,11 +151,13 @@ def dwim_to_lqstring_para(x):
 
 class KgtkQuery(object):
 
-    def __init__(self, files, store, query=None,
-                 match='()', where=None, ret='*',
+    def __init__(self, files, store, options=None,
+                 query=None, match='()', where=None, ret='*',
                  order=None, skip=None, limit=None,
                  parameters={}, index='auto', loglevel=0):
-        self.files = [os.path.realpath(f) for f in listify(files)]
+        # normalize to strings in case we get path objects:
+        self.files = [str(f) for f in listify(files)]
+        self.options = options or {}
         self.store = store
         self.loglevel = loglevel
         self.parameters = parameters
@@ -176,12 +179,20 @@ class KgtkQuery(object):
         self.order_clause = self.query.get_order_clause()
         self.skip_clause = self.query.get_skip_clause()
         self.limit_clause = self.query.get_limit_clause()
-        self.default_graph = self.files[0]
         # do this after we parsed the query, so we get syntax errors right away:
         for file in self.files:
-            store.add_graph(file)
+            store.add_graph(file, alias=self.get_input_option(file, 'alias'))
+        # since we potentially renamed some files via aliases, recompute the list:
+        self.files = [self.get_input_option(file, 'alias', file) for file in self.files]
+        self.default_graph = self.files[0]
         self.graph_handle_map = {}
         self.result_header = None
+
+    def get_input_option(self, file, option, dflt=None):
+        for input, opts in self.options.items():
+            if input == file or opts.get('alias') == file:
+                return opts.get(option, dflt)
+        return dflt
 
     def log(self, level, message):
         if self.loglevel >= level:
