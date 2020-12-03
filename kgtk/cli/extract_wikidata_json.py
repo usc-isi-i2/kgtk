@@ -106,6 +106,7 @@ def run(input_file: KGTKFiles,
         input_f = open(in_path, mode='rb')
             
         if str(in_path).endswith(".bz2"):
+            import bz2
             print('Decompressing (bz2)', file=sys.stderr, flush=True)
             # TODO: Optionally use a system decompression program.
             input_f = bz2.open(input_f)
@@ -134,6 +135,7 @@ def run(input_file: KGTKFiles,
         output_f = open(out_path, mode='wb')
             
         if str(out_path).endswith(".bz2"):
+            import bz2
             print('Compressing (bz2)', file=sys.stderr, flush=True)
             # TODO: Optionally use a system decompression program.
             output_f = bz2.open(output_f, "wb")
@@ -149,6 +151,8 @@ def run(input_file: KGTKFiles,
                 print('Compressing (gzip)', file=sys.stderr, flush=True)
                 output_f = gzip.open(output_f, "wb")
 
+    entity_id_set: typing.Set[str] = set(entity_ids)
+
     first: bool = True
     count: int
     line: bytes
@@ -161,7 +165,7 @@ def run(input_file: KGTKFiles,
         if len(clean_line) > 1:
             obj = json.loads(clean_line)
             entity = obj["id"]
-            if entity in entity_ids:
+            if entity in entity_id_set:
                 if first:
                     output_f.write(b"[\n")
                     first = False
