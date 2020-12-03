@@ -9,5 +9,5 @@ kgtk ${KGTK_FLAGS} \
      --input-file ${DATADIR}/qualifiers.${SORTED_KGTK} \
      --input-keys node1 \
      --filter-file ${DATADIR}/claims.${SORTED_KGTK} \
-     --filter-keys id
+     --filter-keys id \
      --output-file ${DATADIR}/qualifiers.unclaimed.${SORTED_KGTK} \

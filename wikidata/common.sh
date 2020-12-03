@@ -37,7 +37,7 @@ WIKIDATA_ALL=${WIKIDATA_VERSION}-all
 WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json.gz
 
 # Work file extensions
-UNSORTED_KGTK=unsorted.tsv
+UNSORTED_KGTK=unsorted.tsv.gz
 SORTED_KGTK=tsv.gz
 
 # Use mgzip in some cases?
@@ -58,7 +58,7 @@ CLEAN=0
 # Some common flags:
 KGTK_FLAGS="--debug --timing --progress --progress-tty `tty`"
 VERBOSE="--verbose"
-SORT_EXTRAS="--parallel 24 --buffer-size 30% -T ${KGTK_WORK_DIR1}/tmp -T ${KGTK_WORK_DIR2}/tmp"
+SORT_EXTRAS="--parallel 24 --buffer-size 60% -T ${KGTK_WORK_DIR}/tmp"
 
 # The Wikidata datatypes:
 WIKIDATATYPES=( \
@@ -82,10 +82,12 @@ WIKIDATATYPES=( \
 		"other" \
     )
 
-# The wikidata import split files:
+# The wikidata import split files to be sorted:
 WIKIDATA_IMPORT_SPLIT_FILES=( \
 	"claims" \
+	"claims.missingValues" \
 	"qualifiers" \
+	"qualifiers.missingValues" \
 	"aliases" \
 	"aliases.en" \
 	"descriptions" \
