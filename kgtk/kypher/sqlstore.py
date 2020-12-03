@@ -29,6 +29,9 @@ pp = pprint.PrettyPrinter(indent=4)
 # - absolute file names are an issue when distributing the store
 # - support some minimal sanity checking such as empty files, etc.
 # - handle column name dealiasing and normalization
+# - explanation runs outside the sqlite connection and thus does not see
+#   user functions such as kgtk_stringify and friends which causes errors;
+#   see if we can fix this somehow
 # - support declaring and dropping of (temporary) graphs that are only used
 #   once or a few times
 # - allow in-memory graphs
@@ -45,7 +48,7 @@ pp = pprint.PrettyPrinter(indent=4)
 # - improve table definitions to define core columns as required to be not null
 # - full LRU cache maintainance, but maybe abandon the whole LRU concept and
 #   call it a store and not a cache
-# - complete literal accessor functions
+# + complete literal accessor functions
 # + handle VACUUM and/or AUTO_VACUUM when graph tables get deleted
 #   - actually no, that requires a lot of extra space, so require to do that manually
 
@@ -423,17 +426,37 @@ class SqliteStore(SqlStore):
         
 
     ### File information and access:
+
+    # Each fileinfo record is identified by a name key which defaults to the full
+    # dereferenced realpath of the file from which the graph data was loaded.
+    # If an alias was provided that name will be stored as the key instead.
+
+    def normalize_file_path(self, file):
+        if os.path.basename(file) in ('-', 'stdin'):
+            return '/dev/stdin'
+        else:
+            return os.path.realpath(file)
+
+    def is_standard_input(self, file):
+        return self.normalize_file_path(file) == '/dev/stdin'
     
-    def get_file_info(self, file):
-        """Return a dict info structure for the file info for 'file' (there can only be one),
-        or None if this file does not exist in the file table.  All column keys will be set
-        although some values may be None.
+    def get_file_info(self, file, alias=None, exact=False):
+        """Return a dict info structure for the file info for 'file' (or 'alias') or None
+        if this file does not exist in the file table.  All column keys will be set in
+        the result although some values may be None.  If 'exact', use 'file' as is and
+        do not try to normalize it to an absolute path.
         """
-        return self.get_record_info(self.FILE_TABLE, os.path.realpath(file))
+        info = self.get_record_info(self.FILE_TABLE, file)
+        if info is None and alias is not None:
+            info = self.get_record_info(self.FILE_TABLE, alias)
+        if info is None and not exact:
+            file = self.normalize_file_path(file)
+            info = self.get_record_info(self.FILE_TABLE, file)
+        return info
 
     def set_file_info(self, file, size=None, modtime=None, graph=None):
         info = sdict()
-        info.file = os.path.realpath(file)
+        info.file = file
         info.size = size
         info.modtime = modtime
         info.graph = graph
@@ -443,7 +466,24 @@ class SqliteStore(SqlStore):
         """Delete the file info record for 'file'.
         IMPORTANT: this does not delete any graph data associated with 'file'.
         """
-        self.drop_record_info(self.FILE_TABLE, os.path.realpath(file))
+        self.drop_record_info(self.FILE_TABLE, file)
+
+    def set_file_alias(self, file, alias):
+        """Set the file column of the file info identified by 'file' (or 'alias') to 'alias'.
+        Raises an error if no relevant file info could be found, or if 'alias' is already
+        used in a different file info (in which case it wouldn't be a unique key anymore).
+        """
+        finfo = self.get_file_info(file, alias=alias)
+        if finfo is None:
+            raise KGTKException('cannot set alias for non-existent file: %s' % file)
+        ainfo = self.get_file_info(alias, exact=True)
+        if ainfo is not None and ainfo != finfo:
+            # this can happen if we imported 'file' without an alias, then another file
+            # with 'alias', and then we try to associate 'alias' to 'file':
+            raise KGTKException('alias %s is already in use for different file' % alias)
+        # we don't have an update yet, instead we delete first and then create the new record:
+        self.drop_file_info(finfo.file)
+        self.set_file_info(alias, size=finfo.size, modtime=finfo.modtime, graph=finfo.graph)
 
     def get_file_graph(self, file):
         """Return the graph table name created from the data of 'file'.
@@ -535,29 +575,44 @@ class SqliteStore(SqlStore):
                 return table
             graphid += 1
 
-    def has_graph(self, file):
-        """Return True if the KGTK graph represented by 'file' has already been imported
-        and is up-to-date.  If this returns false, an obsolete graph table for 'file'
-        might still exist and will have to be removed before new data gets imported.
+    def has_graph(self, file, alias=None):
+        """Return True if the KGTK graph represented/named by 'file' (or its 'alias' if not None)
+        has already been imported and is up-to-date.  If this returns false, an obsolete graph
+        table for 'file' might exist and will have to be removed before new data gets imported.
+        This returns True iff a matching file info was found (named by 'file' or 'alias'), and
+        'file' is an existing regular file whose properties match exactly what was previously loaded,
+        or 'file' is not an existing regular file in which case its properties cannot be checked.
+        This latter case allows us to delete large files used for import without losing the ability
+        to query them, or to query files by using their alias only instead of a real filename.
         """
-        file = os.path.realpath(file)
-        info = self.get_file_info(file)
+        info = self.get_file_info(file, alias=alias)
         if info is not None:
-            if info.size !=  os.path.getsize(file):
+            if self.is_standard_input(file):
+                # we never reuse plain stdin, it needs to be aliased to a new name for that:
                 return False
-            if info.modtime != os.path.getmtime(file):
-                return False
+            if os.path.exists(file):
+                if info.size !=  os.path.getsize(file):
+                    return False
+                if info.modtime != os.path.getmtime(file):
+                    return False
             # don't check md5sum for now:
             return True
         return False
 
-    def add_graph(self, file):
-        if self.has_graph(file):
+    def add_graph(self, file, alias=None):
+        """Import a graph from 'file' (and optionally named by 'alias') unless a matching
+        graph has already been imported earlier according to 'has_graph' (which see).
+        """
+        if self.has_graph(file, alias=alias):
+            if alias is not None:
+                # this allows us to do multiple renamings:
+                self.set_file_alias(file, alias)
             return
-        file_info = self.get_file_info(file)
+        file_info = self.get_file_info(file, alias=alias)
         if file_info is not None:
             # we already have an earlier version of the file in store, delete its graph data:
             self.drop_graph(file_info.graph)
+        file = self.normalize_file_path(file)
         table = self.new_graph_table()
         oldsize = self.get_db_size()
         try:
@@ -569,8 +624,13 @@ class SqliteStore(SqlStore):
         graphsize = self.get_db_size() - oldsize
         # this isn't really needed, but we store it for now - maybe use JSON-encoding instead:
         header = str(self.get_table_header(table))
-        self.set_file_info(file, size=os.path.getsize(file), modtime=os.path.getmtime(file), graph=table)
+        if self.is_standard_input(file):
+            self.set_file_info(file, size=0, modtime=time.time(), graph=table)
+        else:
+            self.set_file_info(file, size=os.path.getsize(file), modtime=os.path.getmtime(file), graph=table)
         self.set_graph_info(table, header=header, size=graphsize, acctime=time.time())
+        if alias is not None:
+            self.set_file_alias(file, alias)
 
     def drop_graph(self, table_name):
         """Delete the graph 'table_name' and all its associated info records.
@@ -593,6 +653,8 @@ class SqliteStore(SqlStore):
         handles conversion of different kinds of line endings, but 2x slower than direct import.
         """
         self.log(1, 'IMPORT graph via csv.reader into table %s from %s ...' % (table, file))
+        if self.is_standard_input(file):
+            file = sys.stdin
         with open_to_read(file) as inp:
             csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
             header = next(csvreader)
@@ -609,7 +671,10 @@ class SqliteStore(SqlStore):
         """
         if os.name != 'posix':
             raise KGTKException("not yet implemented for this OS: '%s'" % os.name)
-        if not isinstance(file, str) or not os.path.exists(file):
+        # generalizing this to work for stdin would be possible, but it would significantly complicate
+        # matters, since we also have to check for multi-char line endings at which point we can't
+        # simply abort to 'import_graph_data_via_csv' but would have to buffer and resupply the read data:
+        if not isinstance(file, str) or not os.path.exists(file) or self.is_standard_input(file):
             raise KGTKException('only implemented for existing, named files')
         # make sure we have the Unix commands we need:
         catcmd = get_cat_command(file, _piped=True)
