@@ -21,6 +21,7 @@ kgtk ${KGTK_FLAGS} \
      --node-file ${TEMPDIR}/metadata.node.${UNSORTED_KGTK} \
      --minimal-edge-file ${TEMPDIR}/claims.raw.${UNSORTED_KGTK} \
      --minimal-qual-file ${TEMPDIR}/qualifiers.raw.${UNSORTED_KGTK} \
+     --exclude-statements-with-certain-claims False \
      --node-file-id-only \
      --explode-values False \
      --all-languages \
