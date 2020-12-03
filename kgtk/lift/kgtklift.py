@@ -73,6 +73,9 @@ class KgtkLift(KgtkFormat):
 
     default_value: str = attr.ib(validator=attr.validators.instance_of(str), default="")
 
+    clear_before_lift: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    overwrite: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     # TODO: add rewind logic here and KgtkReader
 
     # TODO: find working validators
@@ -387,10 +390,14 @@ class KgtkLift(KgtkFormat):
             did_lift: bool = False
             lifted_column_idx: int
             for idx, lifted_column_idx in enumerate(lifted_column_idxs):
-                label_key: str = row[lifted_column_idx]
-                if label_key in labels:
-                    output_row[lifted_output_column_idxs[idx]] = labels[label_key]
-                    did_lift = True # What if we want to note if we lifted all columns?
+                if self.clear_before_lift:
+                    output_row[lifted_output_column_idxs[idx]] = self.default_value
+                if self.overwrite or output_row[lifted_output_column_idxs[idx]] == self.default_value:
+                    label_key: str = row[lifted_column_idx]
+                    if label_key in labels:
+                        label_value: str = labels[label_key]
+                        output_row[lifted_output_column_idxs[idx]] = label_value
+                        did_lift = True # What if we want to note if we lifted all columns?
             if did_lift and output_select_column_idx >= 0 and self.output_select_column_value is not None:
                 output_row[output_select_column_idx] = self.output_select_column_value
 
@@ -634,6 +641,7 @@ class KgtkLift(KgtkFormat):
             input_line_count += 1
 
             if self.input_select_column_value is not None and input_select_column_idx >= 0:
+                # Skip input rows that do not meet the selection criterion.
                 if row[input_select_column_idx] != self.input_select_column_value:
                     if new_columns > 0:
                         output_row = row.copy()
@@ -680,10 +688,13 @@ class KgtkLift(KgtkFormat):
             output_row = row.copy()
             if new_columns > 0:
                 output_row.append(self.default_value)
-            if len(lifted_label_value) > 0:
-                output_row[lifted_output_column_idx] = lifted_label_value
-                if self.output_select_column_value is not None and input_select_column_idx >= 0:
-                    output_row[input_select_column_idx] = self.output_select_column_value
+            if self.clear_before_lift:
+                output_row[lifted_output_column_idx] = self.default_value
+            if self.overwrite or output_row[lifted_output_column_idx] != self.default_value:
+                if lifted_label_value != self.default_value:
+                    output_row[lifted_output_column_idx] = lifted_label_value
+                    if self.output_select_column_value is not None and input_select_column_idx >= 0:
+                        output_row[input_select_column_idx] = self.output_select_column_value
             ew.write(output_row)
 
         if more_labels:
@@ -832,6 +843,15 @@ def main():
                               help="If true, the label file is presorted on the node1 column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--clear-before-lift", dest="clear_before_lift",
+                              help="If true, set columns to write to the default value before lifting. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--overwrite", dest="overwrite",
+                              help="If true, overwrite non-default values in the columns to write. " +
+                              "If false, do not overwrite non-default values in the columns to write. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
 
     KgtkReader.add_debug_arguments(parser)
     # TODO: seperate reader options for the label file.
@@ -885,6 +905,8 @@ def main():
         print("--prefilter-labels=%s" % repr(args.prefilter_labels))
         print("--input-file-is-presorted=%s" % repr(args.input_is_presorted))
         print("--label-file-is-presorted=%s" % repr(args.labels_are_presorted))
+        print("--clear-before-lift=%s" % repr(args.clear_before_lift))
+        print("--overwrite=%s" % repr(args.overwrite))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
@@ -916,6 +938,10 @@ def main():
         prefilter_labels=args.prefilter_labels,
         input_is_presorted=args.input_is_presorted,
         labels_are_presorted=args.labels_are_presorted,
+
+        clear_before_lift=args.clear_before_lift,
+        overwrite=args.overwrite,
+
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,
