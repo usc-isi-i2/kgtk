@@ -708,6 +708,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 return ClosableIterTextIOWrapper(sys.stdin)
 
         if str(file_path).startswith("<"):
+            # Note: compression is not currently supported for fd input files.
             fd: int = int(str(file_path)[1:])
             if verbose:
                 print("%s: reading file descriptor %d" % (who, fd), file=error_file, flush=True)
@@ -716,36 +717,36 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if verbose:
             print("%s: File_path.suffix: %s" % (who, file_path.suffix), file=error_file, flush=True)
 
-        gzip_file: typing.TextIO
+        input_file: typing.TextIO
         if options.compression_type is not None and len(options.compression_type) > 0:
-            gzip_file = cls._open_compressed_file(options.compression_type,
-                                                  str(file_path),
-                                                  file_path,
-                                                  who,
-                                                  options.use_mgzip,
-                                                  options.mgzip_threads,
-                                                  error_file,
-                                                  verbose)
+            input_file = cls._open_compressed_file(options.compression_type,
+                                                   str(file_path),
+                                                   file_path,
+                                                   who,
+                                                   options.use_mgzip,
+                                                   options.mgzip_threads,
+                                                   error_file,
+                                                   verbose)
         elif file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
-            gzip_file = cls._open_compressed_file(file_path.suffix,
-                                                  str(file_path),
-                                                  file_path,
-                                                  who,
-                                                  options.use_mgzip,
-                                                  options.mgzip_threads,
-                                                  error_file,
-                                                  verbose)
+            input_file = cls._open_compressed_file(file_path.suffix,
+                                                   str(file_path),
+                                                   file_path,
+                                                   who,
+                                                   options.use_mgzip,
+                                                   options.mgzip_threads,
+                                                   error_file,
+                                                   verbose)
         else:
             if verbose:
                 print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
             return ClosableIterTextIOWrapper(open(file_path, "r"))
 
         if options.gzip_in_parallel:
-            gzip_thread: GunzipProcess = GunzipProcess(gzip_file, Queue(options.gzip_queue_size))
+            gzip_thread: GunzipProcess = GunzipProcess(input_file, Queue(options.gzip_queue_size))
             gzip_thread.start()
             return gzip_thread
         else:
-            return ClosableIterTextIOWrapper(gzip_file)
+            return ClosableIterTextIOWrapper(input_file)
             
 
     @classmethod
