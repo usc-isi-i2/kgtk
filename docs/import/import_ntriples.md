@@ -119,7 +119,7 @@ There four categories of files:
 The input files are listed after the `--input-files` option (the short form is `-i`).
 Multiple files may be listed, and will be combined into a single output file.
 
-The input files are not KGTK formatted files.  Here a few lines from an ntriples file:
+The input files are not KGTK formatted files.  Here are a few lines from an ntriples file:
 ```
 _:g12 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#CompoundJustification> .
 _:g12 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#confidence> _:g13 .
@@ -139,7 +139,7 @@ _:g14 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#pr
  * There are four columns, which are separated by spaces.
    * There may be internal spaces in quoted strings.
  * The last column contains a period, which is ignored.
- * Columns mane include blanks nodes, beginning with "_:", which
+ * Columns may include blank nodes, beginning with "_:", which
    are file-local IDs.
  * Many fields contain URI identifiers, which often contain long, unchanging
    prefixes and shorted unique sections at the end.
@@ -401,7 +401,7 @@ unexpected import conversion failures.
 
 ### Examples
 
-Import the entire given ntriple file into kgtk forma, using default settings.
+Import the entire given ntriple file into kgtk format, using default settings.
 
 ```
 kgtk import-ntriples -i dbpedia_wikipedia_links.nt -o DbpediaWikipediaLinks.tsv

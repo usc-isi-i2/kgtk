@@ -31,14 +31,20 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('-c', "--columns", action="store", type=str, dest="columns", nargs='+', required=True,
                         help="Columns to remove as a comma- or space-separated strings, e.g., id,docid or id docid")
 
-    parser.add_argument(      "--split-on-commas", dest="split_on_commas", help="Parse the list of columns, splitting on commas. (default=%(default)s).",
+    parser.add_argument(      "--split-on-commas", dest="split_on_commas", help="When True, parse the list of columns, splitting on commas. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
-    parser.add_argument(      "--split-on-spaces", dest="split_on_spaces", help="Parse the list of columns, splitting on spaces. (default=%(default)s).",
+    parser.add_argument(      "--split-on-spaces", dest="split_on_spaces", help="When True, parse the list of columns, splitting on spaces. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--strip-spaces", dest="strip_spaces", help="Parse the list of columns, stripping whitespace. (default=%(default)s).",
+    parser.add_argument(      "--strip-spaces", dest="strip_spaces", help="When True, parse the list of columns, stripping whitespace. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
+
+    parser.add_argument(      "--all-except", dest="all_except", help="When True, remove all columns except the listed ones. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--ignore-missing-columns", dest="ignore_missing_columns", help="When True, ignore missing columns. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NONE, expert=_expert)
@@ -52,6 +58,9 @@ def run(input_file: KGTKFiles,
         split_on_commas: bool,
         split_on_spaces: bool,
         strip_spaces: bool,
+
+        all_except: bool,
+        ignore_missing_columns: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -89,6 +98,8 @@ def run(input_file: KGTKFiles,
         print("--split-on-commas=%s" % str(split_on_commas), file=error_file)
         print("--split-on-spaces=%s" % str(split_on_spaces), file=error_file)
         print("--strip-spaces=%s" % str(strip_spaces), file=error_file)
+        print("--all-except=%s" % str(all_except), file=error_file)
+        print("--ignore-missing-columns=%s" % str(ignore_missing_columns), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -123,7 +134,10 @@ def run(input_file: KGTKFiles,
                 if len(arg) > 0:
                     remove_columns.append(arg)
         if verbose:
-            print("Removing %d columns: %s" % (len(remove_columns), " ".join(remove_columns)), file=error_file, flush=True)
+            if all_except:
+                print("Removing all columns except %d columns: %s" % (len(remove_columns), " ".join(remove_columns)), file=error_file, flush=True)
+            else:
+                print("Removing %d columns: %s" % (len(remove_columns), " ".join(remove_columns)), file=error_file, flush=True)
         if len(remove_columns) == 0:
             raise KGTKException("No columns to remove")
 
@@ -137,15 +151,31 @@ def run(input_file: KGTKFiles,
                                          very_verbose=very_verbose,
         )
 
-        output_column_names: typing.List[str] = kr.column_names.copy()
+        output_column_names: typing.List[str]
 
         trouble_column_names: typing.List[str] = [ ]
-        for column_name in remove_columns:
-            if column_name in output_column_names:
-                output_column_names.remove(column_name)
-            else:
-                print("Error: cannot remove unknown column '%s'." % column_name, file=error_file, flush=True)
-                trouble_column_names.append(column_name)
+        if all_except:
+            if not ignore_missing_columns:
+                for column_name in remove_columns:
+                    if column_name not in kr.column_names:
+                        print("Error: cannot retain unknown column '%s'." % column_name, file=error_file, flush=True)
+                        trouble_column_names.append(column_name)
+
+            output_column_names = [ ]
+            for column_name in kr.column_names:
+                if column_name in remove_columns:
+                    output_column_names.append(column_name)
+                
+        else:
+            output_column_names = kr.column_names.copy()
+            for column_name in remove_columns:
+                if column_name in output_column_names:
+                    output_column_names.remove(column_name)
+
+                elif not ignore_missing_columns:
+                    print("Error: cannot remove unknown column '%s'." % column_name, file=error_file, flush=True)
+                    trouble_column_names.append(column_name)
+
         if len(trouble_column_names) > 0:
             raise KGTKException("Unknown columns %s" % " ".join(trouble_column_names))
 

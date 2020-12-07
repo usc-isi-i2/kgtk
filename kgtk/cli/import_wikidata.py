@@ -606,6 +606,16 @@ def add_arguments(parser: KGTKArgumentParser):
         default=0,
         help='How many characters should be used to hash the claim ID? 0 means do not hash the claim ID. (default=%(default)d)')
 
+    parser.add_argument(
+        "--exclude-statements-with-certain-claims",
+        nargs='?',
+        type=optional_bool,
+        dest="exclude_statements_with_certain_claims",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, certain P31 and P279 claims are excluded from the import. (default=%(default)s).")
+
 def custom_progress()->bool:
     return True # We want to start a custom progress monitor.
 
@@ -673,6 +683,7 @@ def run(input_file: KGTKFiles,
         mgzip_threads_for_output: int,
         value_hash_width: int,
         claim_id_hash_width: int,
+        exclude_statements_with_certain_claims: bool,
         ):
 
     # import modules locally
@@ -753,6 +764,13 @@ def run(input_file: KGTKFiles,
                 'P31': exclude_list,    # instance of
                 'P279': exclude_list    # subclass
             }
+            # CMR: The exclude_list and neg_prop_filter processing, when
+            # enabled by exclude_statements_with_certain_claims, excludes any statement
+            # containing a claim where the label is P31 or P279 and the node2
+            # value is in the exclude list.  In other words, if at least one claim
+            # matches an excluding pattern, all claims for that statement will
+            # be excluded.
+
             self.first=True
             self.cnt=0
             self.write_mode='w'
@@ -1172,19 +1190,20 @@ def run(input_file: KGTKFiles,
                     
                 if parse_claims and "claims" in obj:
                     claims = obj["claims"]
-                    for prop, value_set in self.neg_prop_filter.items():
-                        claim_property = claims.get(prop, None)
-                        if claim_property:
-                            for cp in claim_property:
-                                cp_id = (
-                                    cp["mainsnak"]
-                                    .get("datavalue", {})
-                                    .get("value", {})
-                                    .get("id")
-                                )
-                                cp_rank = cp["rank"]
-                                if cp_rank != "deprecated" and cp_id in value_set:
-                                    keep = False
+                    if exclude_statements_with_certain_claims:
+                        for prop, value_set in self.neg_prop_filter.items():
+                            claim_property = claims.get(prop, None)
+                            if claim_property:
+                                for cp in claim_property:
+                                    cp_id = (
+                                        cp["mainsnak"]
+                                        .get("datavalue", {})
+                                        .get("value", {})
+                                        .get("id")
+                                    )
+                                    cp_rank = cp["rank"]
+                                    if cp_rank != "deprecated" and cp_id in value_set:
+                                        keep = False
                     if keep:
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
@@ -2149,7 +2168,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2020-11-14T00:59:29.565298+00:00#glPOEYBuemBamDcd6Q+n/oxz/xpC5KgzcCsM7KNOwcl4eP4A1XyvT/stvsEFOtXY9iWyZCRfbeza9auKEYzyuA=="
+        UPDATE_VERSION: str = "2020-12-03T17:23:24.868178+00:00#bjqvG1yVVDk34zBukpmssNEZjxZCmvs0BeUG/MWWuH8oiXvvV3asu39ySlNf/sDOnysmLpC64uHctTIsOJTroQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
