@@ -13,7 +13,8 @@ id    node1    relation    node2    node1;label    node2;label    relation;label
 For further format details, please refer to the KGTK data specification.
 
 ## Output format
-There are three types of format: glove, wv, and kgtk:
+
+There are three  supported formats: glove, w2v, and kgtk.
 
 ### glove format
 When using this format, the output is a .tsv file where each line is the embedding for a node.  Each line is represented by a single node followed respectively by the components of its embedding, each in a different column, all separated by tabs. For example: 
