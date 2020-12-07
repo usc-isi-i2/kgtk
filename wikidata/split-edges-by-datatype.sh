@@ -7,7 +7,7 @@ source common.sh
 
 # ==============================================================================
 # Split the edges by datatype.
-echo -e "\nSplit ${DATADIR}/${WIKIDATA_ALL}-properties-sorted.tsv by datatype"
+echo -e "\nSplit ${DATADIR}/claims.${SORTED_KGTK} by datatype"
 kgtk ${KGTK_FLAGS} \
      filter ${VERBOSE} \
      --input-file ${DATADIR}/claims.${SORTED_KGTK} \
