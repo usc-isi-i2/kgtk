@@ -606,16 +606,6 @@ def add_arguments(parser: KGTKArgumentParser):
         default=0,
         help='How many characters should be used to hash the claim ID? 0 means do not hash the claim ID. (default=%(default)d)')
 
-    parser.add_argument(
-        "--exclude-statements-with-certain-claims",
-        nargs='?',
-        type=optional_bool,
-        dest="exclude_statements_with_certain_claims",
-        const=True,
-        default=True,
-        metavar="True/False",
-        help="If true, certain P31 and P279 claims are excluded from the import. (default=%(default)s).")
-
 def custom_progress()->bool:
     return True # We want to start a custom progress monitor.
 
@@ -683,7 +673,6 @@ def run(input_file: KGTKFiles,
         mgzip_threads_for_output: int,
         value_hash_width: int,
         claim_id_hash_width: int,
-        exclude_statements_with_certain_claims: bool,
         ):
 
     # import modules locally
@@ -729,47 +718,6 @@ def run(input_file: KGTKFiles,
 
         def enter(self):
             print("Starting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
-            WD_META_ITEMS = [
-                "Q163875",
-                "Q191780",
-                "Q224414",
-                "Q4167836",
-                "Q4167410",
-                "Q4663903",
-                "Q11266439",
-                "Q13406463",
-                "Q15407973",
-                "Q18616576",
-                "Q19887878",
-                "Q22808320",
-                "Q23894233",
-                "Q33120876",
-                "Q42104522",
-                "Q47460393",
-                "Q64875536",
-                "Q66480449",
-            ]
-            # filter: currently defined as OR: one hit suffices to be removed from
-            # further processing
-            exclude_list = WD_META_ITEMS
-
-            # punctuation
-            exclude_list.extend(["Q1383557", "Q10617810"])
-
-            # letters etc
-            exclude_list.extend(["Q188725", "Q19776628", "Q3841820",
-                                 "Q17907810", "Q9788", "Q9398093"])
-
-            self.neg_prop_filter = {
-                'P31': exclude_list,    # instance of
-                'P279': exclude_list    # subclass
-            }
-            # CMR: The exclude_list and neg_prop_filter processing, when
-            # enabled by exclude_statements_with_certain_claims, excludes any statement
-            # containing a claim where the label is P31 or P279 and the node2
-            # value is in the exclude list.  In other words, if at least one claim
-            # matches an excluding pattern, all claims for that statement will
-            # be excluded.
 
             self.first=True
             self.cnt=0
@@ -1014,6 +962,7 @@ def run(input_file: KGTKFiles,
             if len(clean_line) > 1:
                 obj = json.loads(clean_line)
                 entry_type = obj["type"]
+                keep: bool = False
                 if entry_type == "item" or entry_type == "property":
                     keep = True
                 elif warn_if_missing:
@@ -1190,20 +1139,6 @@ def run(input_file: KGTKFiles,
                     
                 if parse_claims and "claims" in obj:
                     claims = obj["claims"]
-                    if exclude_statements_with_certain_claims:
-                        for prop, value_set in self.neg_prop_filter.items():
-                            claim_property = claims.get(prop, None)
-                            if claim_property:
-                                for cp in claim_property:
-                                    cp_id = (
-                                        cp["mainsnak"]
-                                        .get("datavalue", {})
-                                        .get("value", {})
-                                        .get("id")
-                                    )
-                                    cp_rank = cp["rank"]
-                                    if cp_rank != "deprecated" and cp_id in value_set:
-                                        keep = False
                     if keep:
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
