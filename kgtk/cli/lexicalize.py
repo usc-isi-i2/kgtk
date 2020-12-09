@@ -40,6 +40,21 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--label-properties", dest="label_properties", nargs="*",
                         help="The label properties. (default=%s)" % repr(DEFAULT_LABEL_PROPERTIES))
 
+    parser.add_argument("--description-properties", dest="description_properties", nargs="*",
+                        help="The description properties. (default=%s)" % repr(DEFAULT_DESCRIPTION_PROPERTIES))
+
+    parser.add_argument("--isa-properties", dest="isa_properties", nargs="*",
+                        help="The isa properties. (default=%s)" % repr(DEFAULT_ISA_PROPERTIES))
+
+    parser.add_argument("--has-properties", dest="has_properties", nargs="*",
+                        help="The has properties. (default=%s)" % repr(DEFAULT_HAS_PROPERTIES))
+
+    parser.add_argument("--property-values", dest="property_values", nargs="*",
+                        help="The property values. (default=%s)" % repr(DEFAULT_PROPERTY_VALUES))
+
+    parser.add_argument("--metadata-properties", dest="metadata_properties", nargs="*",
+                        help="The metadata properties. (default=%s)" % repr(DEFAULT_METADATA_PROPERTIES))
+
     KgtkReader.add_debug_arguments(parser, expert=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
     KgtkValueOptions.add_arguments(parser, expert=False)
@@ -49,6 +64,11 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
 
         label_properties: typing.Optional[typing.List[str]],
+        description_properties: typing.Optional[typing.List[str]],
+        isa_properties: typing.Optional[typing.List[str]],
+        has_properties: typing.Optional[typing.List[str]],
+        property_values: typing.Optional[typing.List[str]],
+        metadata_properties: typing.Optional[typing.List[str]],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -82,6 +102,21 @@ def run(input_file: KGTKFiles,
     if label_properties is None:
         label_properties = DEFAULT_LABEL_PROPERTIES
 
+    if description_properties is None:
+        description_properties = DEFAULT_DESCRIPTION_PROPERTIES
+
+    if isa_properties is None:
+        isa_properties = DEFAULT_ISA_PROPERTIES
+
+    if has_properties is None:
+        has_properties = DEFAULT_HAS_PROPERTIES
+
+    if property_values is None:
+        property_values = DEFAULT_PROPERTY_VALUES
+
+    if metadata_properties is None:
+        metadata_properties = DEFAULT_METADATA_PROPERTIES
+
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
@@ -89,6 +124,21 @@ def run(input_file: KGTKFiles,
 
         if len(label_properties) > 0:
             print("--label-properties %s" % " ".join(label_properties), file=error_file, flush=True)
+
+        if len(description_properties) > 0:
+            print("--description-properties %s" % " ".join(description_properties), file=error_file, flush=True)
+
+        if len(isa_properties) > 0:
+            print("--isa-properties %s" % " ".join(isa_properties), file=error_file, flush=True)
+
+        if len(has_properties) > 0:
+            print("--has-properties %s" % " ".join(has_properties), file=error_file, flush=True)
+
+        if len(property_values) > 0:
+            print("--property-values %s" % " ".join(property_values), file=error_file, flush=True)
+
+        if len(metadata_properties) > 0:
+            print("--metadata-properties %s" % " ".join(metadata_properties), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
