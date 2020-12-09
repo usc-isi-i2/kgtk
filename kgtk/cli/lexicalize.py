@@ -20,6 +20,8 @@ DEFAULT_HAS_PROPERTIES: typing.List[str] = [ ]
 DEFAULT_PROPERTY_VALUES: typing.List[str] = [ "P17" ]
 DEFAULT_METADATA_PROPERTIES: typing.List[str] = [ "label", "P31"]
 
+OUTPUT_COLUMNS: typing.List[str] = [ "node1", "label", "node2" ]
+
 def parser():
     return {
         'help': """Produce sentences from a KGTK file."""
@@ -144,8 +146,41 @@ def run(input_file: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+    kr: typing.Optional[KgtkReader] = None
+    kw: typing.Optional[KgtkWriter] = None
+
     try:
+        if verbose:
+            print("Opening the input file %s" % str(input_kgtk_file), file=error_file, flush=True)
+        kr = KgtkReader.open(input_kgtk_file,
+                             options=reader_options,
+                             value_options = value_options,
+                             error_file=error_file,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
+                             )
+
+        if verbose:
+            print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
+            kw: KgtkWriter = KgtkWriter.open(OUTPUT_COLUMNS,
+                                             output_kgtk_file,
+                                             require_all_columns=True,
+                                             prohibit_extra_columns=True,
+                                             fill_missing_columns=False,
+                                             gzip_in_parallel=False,
+                                             verbose=verbose,
+                                             very_verbose=very_verbose,
+                                             )
+
+
         return 0
 
     except Exception as e:
         raise KGTKException(str(e))
+
+    finally:
+        if kw is not None:
+            kw.close()
+            
+        if kr is not None:
+            kr.close()
