@@ -21,16 +21,11 @@ usage: kgtk explode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--column COLUMN_NAME]
                     [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]]
                     [--prefix PREFIX] [--overwrite [True|False]] [--expand [True|False]]
                     [--show-data-types [True|False]] [-v]
-                    [INPUT_FILE]
 
 Copy a KGTK file, exploding one column (usually node2) into seperate columns for each subfield. If a cell in the column being exploded contains a list, that record is optionally expanded into multiple records before explosion, with all other columns copied-as is.
 
 Additional options are shown in expert help.
 kgtk --expert explode --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -49,7 +44,7 @@ optional arguments:
                         Indicate that it is OK to overwrite existing columns.
                         (default=False).
   --expand [True|False]
-                        Expand the source column if it contains a list, else fail.
+                        When True, expand source cells that contain a lists, else fail if a source cell contains a list.
                         (default=False).
   --show-data-types [True|False]
                         Print the list of data types and exit. (default=False).
@@ -98,7 +93,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 
 
 ```bash
-kgtk explode file1.tsv
+kgtk explode -i file1.tsv
 ```
 
 The output will be the following table in KGTK format:

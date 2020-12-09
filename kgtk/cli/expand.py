@@ -2,6 +2,9 @@
 expanding | lists.
 
 TODO: Need KgtkWriterOptions
+
+TODO: --columns should list the columns to expand. 
+      --key-columns should force the key columns.
 """
 
 from argparse import Namespace, SUPPRESS

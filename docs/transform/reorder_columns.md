@@ -56,7 +56,7 @@ Copy `file1.tsv`, sending the output to standard output, swapping
 the positions of the `location` and `years` columns.
 
 ```
-kgtk -i reorder-columns file1.tsv --columns ... years location
+kgtk reorder-columns -i file1.tsv --columns ... years location
 ```
 
 The result will be the following table in KGTK format:
@@ -80,7 +80,7 @@ Copy `file1.tsv`, sending the output to standard output, with
 the `location` column first:
 
 ```
-kgtk -i reorder-columns file1.tsv --columns location ...
+kgtk reorder-columns -i file1.tsv --columns location ...
 ```
 
 The result will be the following table in KGTK format:
@@ -104,7 +104,7 @@ Copy `file1.tsv`, sending the output to standard output, giving
 the complete list of columns:
 
 ```
-kgtk -i reorder-columns file1.tsv --columns label node1 node2 years location
+kgtk reorder-columns -i file1.tsv --columns label node1 node2 years location
 ```
 The result will be the following table in KGTK format:
 

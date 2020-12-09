@@ -11,16 +11,11 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--label-file INPUT_FILE]
                  [--suppress-empty-columns [True/False]] [--ok-if-no-labels [True/False]]
                  [--prefilter-labels [True/False]] [--input-file-is-presorted [True/False]]
                  [--label-file-is-presorted [True/False]] [-v]
-                 [INPUT_FILE]
 
 Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
 
 Additional options are shown in expert help.
 kgtk --expert lift --help
-
-positional arguments:
-  INPUT_FILE            The KGTK input file. (May be omitted or '-' for stdin.) (Deprecated,
-                        use -i INPUT_FILE)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -66,7 +61,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 
 
 ```bash
-kgtk lift file1.tsv
+kgtk lift -i file1.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -99,7 +94,7 @@ Suppose that `file4.tsv` contains the following table in KGTK format:
 | Q6 | label | "Fred" |
 
 ```bash
-kgtk lift file4.tsv
+kgtk lift -i file4.tsv
 ```
 
 
@@ -142,7 +137,7 @@ And `file6.tsv` contains the following table in KGTK format:
 
 
 ```bash
-kgtk lift file5.tsv --label-file file6.tsv --columns-to-lift node1 --input-file-is-presorted --label-file-is-presorted
+kgtk lift -i file5.tsv --label-file file6.tsv --columns-to-lift node1 --input-file-is-presorted --label-file-is-presorted
 ```
 The output will be the following table in KGTK format:
 
@@ -163,10 +158,8 @@ copy of the input file and the labels.  Multiple columns may be lifted in a
 single pass with this approach.
 
 ```bash
-kgtk lift file5.tsv --label-file file6.tsv --prefilter-labels
+kgtk lift -i file5.tsv --label-file file6.tsv --prefilter-labels
 ```
-
-
 Suppose that `file7.tsv` contains the following table in KGTK format,
 which is sorted on the `node1` column:
 
@@ -182,7 +175,7 @@ which is sorted on the `node1` column:
 | Q6 | label | "Wilma" |
 
 ```bash
-kgtk lift lift-file5.tsv --label-file lift-file7.tsv --columns-to-lift node1  --input-file-is-presorted --label-file-is-presorted
+kgtk lift -i lift-file5.tsv --label-file lift-file7.tsv --columns-to-lift node1  --input-file-is-presorted --label-file-is-presorted
 
 ```
 
@@ -218,7 +211,7 @@ and suppose that `file9.tsv` contains the following file in KGTK format:
 Let's start with a default lift:
 
 ```bash
-kgtk lift lift-file8.tsv --label-file lift-file9.tsv
+kgtk lift -i lift-file8.tsv --label-file lift-file9.tsv
 
 ```
 | node1 | label | node2 | confident | node1;label | label;label | node2;label |
@@ -244,7 +237,7 @@ kgtk lift lift-file8.tsv --label-file lift-file9.tsv --property name
 Now, let's lift the `name` property, using ";name" as the column name suffix:
 
 ```bash
-kgtk lift lift-file8.tsv --label-file lift-file9.tsv --property name --lift-suffix ";name"
+kgtk lift -i lift-file8.tsv --label-file lift-file9.tsv --property name --lift-suffix ";name"
 
 ```
 
@@ -258,7 +251,7 @@ kgtk lift lift-file8.tsv --label-file lift-file9.tsv --property name --lift-suff
 Let's lift the full names.
 
 ```bash
-kgtk lift lift-file8.tsv --label-file lift-file9.tsv -p name --lift-from full-name
+kgtk lift -i lift-file8.tsv --label-file lift-file9.tsv -p name --lift-from full-name
 
 ```
 
@@ -273,7 +266,7 @@ Let's lift the full names again, this time using ";full-name" as the column
 name suffix instead of "label".
 
 ```bash
-kgtk lift lift-file8.tsv --label-file lift-file9.tsv -p name --lift-from full-name --lift-suffix ";full-name"
+kgtk lift -i lift-file8.tsv --label-file lift-file9.tsv -p name --lift-from full-name --lift-suffix ";full-name"
 
 ```
 | node1 | label | node2 | confident | node1;full-name | label;full-name | node2;full-name |
@@ -288,7 +281,7 @@ Let's list the full names only when we are confident in the relationship.
 
 
 ```bash
-kgtk lift lift-file8.tsv \
+kgtk lift -i lift-file8.tsv \
           --label-file lift-file9.tsv \
           -p name \
 	  -label-value-column full-name \
@@ -305,7 +298,7 @@ kgtk lift lift-file8.tsv \
 Let's lift full names into the node2 column.
 
 ```bash
-kgtk lift lift-file8.tsv --label-file lift-file9.tsv --proerty name --lift-from full-name --columns-to-lift node2 --lift-suffix ""
+kgtk lift -i lift-file8.tsv --label-file lift-file9.tsv --proerty name --lift-from full-name --columns-to-lift node2 --lift-suffix ""
 
 ```
 | node1 | label | node2 | confident |
@@ -319,7 +312,7 @@ kgtk lift lift-file8.tsv --label-file lift-file9.tsv --proerty name --lift-from 
 Let's lift full names into the node2 column, changing the label of the relationahip when we do so.
 
 ```bash
-kgtk lift lift-file8.tsv \
+kgtk lift -i lift-file8.tsv \
           --label-file lift-file9.tsv \
 	  --property name \
 	  --lift-from full-name \
@@ -351,7 +344,7 @@ but with the `node1` and `node2` columns swapped and with an additional column, 
 Let's lift full names from this file.  We'll swap the function of the node1 and node2 columns in the label file:
 
 ```bash
-kgtk lift lift-file8.tsv \
+kgtk lift -i lift-file8.tsv \
           --label-file lift-file10.tsv \
 	  --property name \
 	  --lift-from full-name \
@@ -368,7 +361,7 @@ kgtk lift lift-file8.tsv \
 
 Let's pick up all labels using the `action` column's `go` value:
 ```bash
-kgtk lift lift-file8.tsv \
+kgtk lift -i lift-file8.tsv \
           --label-file lift-file10.tsv \
 	  --label-select-column action \
 	  --label-select-value go \
