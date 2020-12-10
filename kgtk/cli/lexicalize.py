@@ -131,7 +131,8 @@ def run(input_file: KGTKFiles,
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
-        print("--entity-label-files %s" % " ".join([str(f) for f in entity_label_kgtk_files]), file=error_file, flush=True)
+        if len(entity_label_kgtk_files) > 0:
+            print("--entity-label-files %s" % " ".join([str(f) for f in entity_label_kgtk_files]), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
 
         if len(label_properties) > 0:
@@ -157,12 +158,13 @@ def run(input_file: KGTKFiles,
 
 
     lexer: Lexicalize = Lexicalize()
-    lexer.load_entity_label_files(entity_label_kgtk_files,
-                                  error_file,
-                                  reader_options,
-                                  value_options,
-                                  label_properties=label_properties,
-                                  verbose=verbose)
+    if len(entity_label_kgtk_files) > 0:
+        lexer.load_entity_label_files(entity_label_kgtk_files,
+                                      error_file,
+                                      reader_options,
+                                      value_options,
+                                      label_properties=label_properties,
+                                      verbose=verbose)
         
     kr: typing.Optional[KgtkReader] = None
     kw: typing.Optional[KgtkWriter] = None
