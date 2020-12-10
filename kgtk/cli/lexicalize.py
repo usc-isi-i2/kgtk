@@ -99,7 +99,7 @@ def run(input_file: KGTKFiles,
     
     from kgtk.exceptions import KGTKException
 
-    from kgtk.gt.lexicalize_utils import Lexicalize, load_property_labels_file
+    from kgtk.gt.lexicalize_utils import Lexicalize
 
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
@@ -167,13 +167,13 @@ def run(input_file: KGTKFiles,
         print("=======", file=error_file, flush=True)
 
 
-    property_labels_dict: typing.Mapping[str, str] = load_property_labels_file(property_labels_kgtk_files,
-                                                                               error_file,
-                                                                               reader_options,
-                                                                               value_options,
-                                                                               label_filter=property_labels_filter,
-                                                                               verbose=verbose)
     lexer: Lexicalize = Lexicalize()
+    lexer.load_property_labels_file(property_labels_kgtk_files,
+                                    error_file,
+                                    reader_options,
+                                    value_options,
+                                    label_filter=property_labels_filter,
+                                    verbose=verbose)
         
     kr: typing.Optional[KgtkReader] = None
     kw: typing.Optional[KgtkWriter] = None
@@ -220,7 +220,6 @@ def run(input_file: KGTKFiles,
                             isa_properties,
                             has_properties,
                             property_values,
-                            property_labels_dict,
                             sentence_label)
 
         return 0
