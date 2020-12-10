@@ -9,66 +9,6 @@ from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
-def load_property_labels_file(input_files: typing.List[Path],
-                              error_file: typing.TextIO,
-                              reader_options: KgtkReaderOptions,
-                              value_options: KgtkValueOptions,
-                              label_filter: typing.List[str],
-                              verbose: bool = False,
-                              )->typing.Mapping[str, str]:
-
-    labels_dict: typing.MutableMapping[str, str] = {}
-    each_file: Path
-    for each_file in input_files:
-        kr: KgtkReader = KgtkReader.open(each_file,
-                                         error_file=error_file,
-                                         options=reader_options,
-                                         value_options=value_options,
-                                         verbose=verbose,
-                                         )
-        fail: bool = False
-        if kr.node1_column_idx < 0:
-            fail = True
-            print("Cannot determine which column is node1 in %s" % each_file, file=error_file, flush=True)
-        if len(label_filter) > 0 and kr.label_column_idx < 0:
-            fail = True
-            print("Cannot determine which column is label in %s" % each_file, file=error_file, flush=True)
-        if kr.node2_column_idx < 0:
-            fail = True
-            print("Cannot determine which column is node2 in %s" % each_file, file=error_file, flush=True)
-        if fail:
-            raise KGTKException("Cannot identify a required column in %s" % each_file)
-    
-        row: typing.List[str]
-        for row in kr:
-            if len(label_filter) > 0:
-                if row[kr.label_column_idx] not in label_filter:
-                    continue
-
-            node_id: str = row[kr.node1_column_idx]
-            node_label: str = row[kr.node2_column_idx]
-            text: str
-            language: str
-            language_suffix: str
-            if node_label.startswith(("'", '"')):
-                text, language, language_suffix = KgtkFormat.destringify(node_label)
-            else:
-                text = node_label
-                language = ""
-                language_suffix = ""
-
-            # The following code will take the last-read English label,
-            # otherwise, the first-read non-English label.
-            if language == "en" and language_suffix == "":
-                labels_dict[node_id] = text
-            else:
-                if node_id not in labels_dict:
-                    labels_dict[node_id] = node_label
-
-        kr.close()
-    return labels_dict
-
-
 class Lexicalize:
     def __init__(self):
         self._logger = logging.getLogger(__name__)
@@ -86,6 +26,65 @@ class Lexicalize:
             "has_properties_values": [],
         }
 
+    def load_property_labels_file(self,
+                                  input_files: typing.List[Path],
+                                  error_file: typing.TextIO,
+                                  reader_options: KgtkReaderOptions,
+                                  value_options: KgtkValueOptions,
+                                  label_filter: typing.List[str],
+                                  verbose: bool = False,
+                                  ):
+
+        each_file: Path
+        for each_file in input_files:
+            kr: KgtkReader = KgtkReader.open(each_file,
+                                             error_file=error_file,
+                                             options=reader_options,
+                                             value_options=value_options,
+                                             verbose=verbose,
+                                             )
+            fail: bool = False
+            if kr.node1_column_idx < 0:
+                fail = True
+                print("Cannot determine which column is node1 in %s" % each_file, file=error_file, flush=True)
+            if len(label_filter) > 0 and kr.label_column_idx < 0:
+                fail = True
+                print("Cannot determine which column is label in %s" % each_file, file=error_file, flush=True)
+            if kr.node2_column_idx < 0:
+                fail = True
+                print("Cannot determine which column is node2 in %s" % each_file, file=error_file, flush=True)
+            if fail:
+                kr.close()
+                raise KGTKException("Cannot identify a required column in %s" % each_file)
+    
+            row: typing.List[str]
+            for row in kr:
+                if len(label_filter) > 0:
+                    if row[kr.label_column_idx] not in label_filter:
+                        continue
+
+                node_id: str = row[kr.node1_column_idx]
+                node_label: str = row[kr.node2_column_idx]
+                text: str
+                language: str
+                language_suffix: str
+                if node_label.startswith(("'", '"')):
+                    text, language, language_suffix = KgtkFormat.destringify(node_label)
+                else:
+                    text = node_label
+                    language = ""
+                    language_suffix = ""
+
+                # The following code will take the last-read English label,
+                # otherwise, the first-read non-English label.
+                if language == "en" and language_suffix == "":
+                    self.node_labels[node_id] = text
+                else:
+                    if node_id not in self.node_labels:
+                        self.node_labels[node_id] = node_label
+
+            kr.close()
+
     def process_input(self,
                       kr: KgtkReader,
                       kw: KgtkWriter,
@@ -94,11 +93,9 @@ class Lexicalize:
                       isa_properties: typing.List[str],
                       has_properties: typing.List[str],
                       property_values: typing.List[str],
-                      property_labels_dict: typing.Mapping[str, str],
                       sentence_label: str,
                       ):
 
-        self.node_labels.update(property_labels_dict)
         # reverse sentence property to be {property : role)
         properties_reversed = defaultdict(set)
 
