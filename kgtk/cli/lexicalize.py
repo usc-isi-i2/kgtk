@@ -41,6 +41,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                           dest="entity_label_files",
                           options=['--entity-label-file'],
                           metavar="ENTITY_LABEL_FILE",
+                          optional=True,
                           allow_list=True,
                           default_stdin=False)
     parser.add_output_file()
