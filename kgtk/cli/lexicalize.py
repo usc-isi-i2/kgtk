@@ -65,7 +65,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="The relationships to extract from the property labels file. (default=%s)" % repr(DEFAULT_PROPERTY_LABELS_FILTER))
 
     parser.add_argument('--sentence-label', action='store', type=str, dest='sentence_label', default=DEFAULT_SENTENCE_LABEL,
-                        help="The relationships to extract from the property labels file. (default=%(default)s)")
+                        help="The relationship to write in the output file. (default=%(default)s)")
 
     KgtkReader.add_debug_arguments(parser, expert=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
