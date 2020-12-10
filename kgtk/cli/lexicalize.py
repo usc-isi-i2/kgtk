@@ -59,7 +59,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--property-values", dest="property_values", nargs="*",
                         help="The property values. (default=%s)" % repr(DEFAULT_PROPERTY_VALUES))
 
-    parser.add_argument('--property-labels-filter', action='store', nargs='*',
+    parser.add_argument('--property-label-relationships', action='store', nargs='*',
                         dest='property_labels_filter',
                         help="The relationships to extract from the property labels file. (default=%s)" % repr(DEFAULT_PROPERTY_LABELS_FILTER))
 
@@ -153,7 +153,7 @@ def run(input_file: KGTKFiles,
             print("--property-values %s" % " ".join(property_values), file=error_file, flush=True)
 
         if len(property_labels_filter) > 0:
-            print("--property-labels_filter %s" % " ".join(property_labels_filter), file=error_file, flush=True)
+            print("--property-label-relationships %s" % " ".join(property_labels_filter), file=error_file, flush=True)
 
 
         reader_options.show(out=error_file)
