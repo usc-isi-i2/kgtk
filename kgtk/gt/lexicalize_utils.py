@@ -1,21 +1,99 @@
-import typing
-import logging
-from kgtk.exceptions import KGTKException
 from collections import defaultdict
+import logging
+from pathlib import Path
+import typing
+
+from kgtk.exceptions import KGTKException
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.kgtkformat import KgtkFormat
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
+def load_property_labels_file(input_files: typing.List[Path],
+                              error_file: typing.TextIO,
+                              reader_options: KgtkReaderOptions,
+                              value_options: KgtkValueOptions,
+                              label_filter: typing.List[str],
+                              verbose: bool = False,
+                              )->typing.Mapping[str, str]:
+
+    labels_dict: typing.MutableMapping[str, str] = {}
+    each_file: Path
+    for each_file in input_files:
+        kr: KgtkReader = KgtkReader.open(each_file,
+                                         error_file=error_file,
+                                         options=reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         )
+        fail: bool = False
+        if kr.node1_column_idx < 0:
+            fail = True
+            print("Cannot determine which column is node1 in %s" % each_file, file=error_file, flush=True)
+        if len(label_filter) > 0 and kr.label_column_idx < 0:
+            fail = True
+            print("Cannot determine which column is label in %s" % each_file, file=error_file, flush=True)
+        if kr.node2_column_idx < 0:
+            fail = True
+            print("Cannot determine which column is node2 in %s" % each_file, file=error_file, flush=True)
+        if fail:
+            raise KGTKException("Cannot identify a required column in %s" % each_file)
+    
+        row: typing.List[str]
+        for row in kr:
+            if len(label_filter) > 0:
+                if row[kr.label_column_idx] not in label_filter:
+                    continue
+
+            node_id: str = row[kr.node1_column_idx]
+            node_label: str = row[kr.node2_column_idx]
+            text: str
+            language: str
+            language_suffix: str
+            if node_label.startswith(("'", '"')):
+                text, language, language_suffix = KgtkFormat.destringify(node_label)
+            else:
+                text = node_label
+                language = ""
+                language_suffix = ""
+
+            # The following code will take the last-read English label,
+            # otherwise, the first-read non-English label.
+            if language == "en" and language_suffix == "":
+                labels_dict[node_id] = text
+            else:
+                if node_id not in labels_dict:
+                    labels_dict[node_id] = node_label
+
+        kr.close()
+    return labels_dict
 
 
 class Lexicalize:
     def __init__(self):
         self._logger = logging.getLogger(__name__)
-        self.node_labels = dict()  # this is used to store {node:label} pairs
+        self.node_labels: typing.MutableMapping[str, str] = dict()  # this is used to store {node:label} pairs
         self.candidates = defaultdict(dict)  # this is used to store all node {node:dict()} information
+
+    ATTRIBUTE_TYPES = typing.Union[typing.List, typing.Set, str]
+    EACH_NODE_ATTRIBUTES = typing.MutableMapping[str, ATTRIBUTE_TYPES]
+
+    def new_each_node_attributes(self)->Lexicalize.EACH_NODE_ATTRIBUTES:
+        return {
+            "has_properties": set(),
+            "isa_properties": set(),
+            "label_properties": [],
+            "description_properties": [],
+            "has_properties_values": [],
+        }
 
     def read_input(self,
                    kr: KgtkReader,
-                   target_properties: dict,
-                   property_labels_dict: dict,
+                   label_properties: typing.List[str],
+                   description_properties: typing.List[str],
+                   isa_properties: typing.List[str],
+                   has_properties: typing.List[str],
+                   property_values: typing.List[str],
+                   property_labels_dict: typing.Mapping[str, str],
                    ):
         """
             load the input candidates files
@@ -24,8 +102,18 @@ class Lexicalize:
         # reverse sentence property to be {property : role)
         properties_reversed = defaultdict(set)
 
-        current_process_node_id = None
-        node_id = None
+        current_process_node_id: typing.Optional[str] = None
+        node_id: typing.Optional[str] = None
+
+
+
+        target_properties = {
+            "label_properties": label_properties,
+            "description_properties": description_properties,
+            "isa_properties": isa_properties,
+            "has_properties": has_properties,
+            "property_values": property_values,
+        }
 
         for k, v in target_properties.items():
             for each_property in v:
@@ -40,20 +128,13 @@ class Lexicalize:
 
         # read contents
         # This type union becomes painful to work with, below.
-        each_node_attributes: typing.Mapping[str, typing.Union[typing.List, typing.Set]] = {
-            "has_properties": set(),
-            "isa_properties": set(),
-            "label_properties": [],
-            "description_properties": [],
-            "has_properties_values": [],
-        }
+        each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes()
 
         row: typing.List[str]
         for row in kr:
             node_id = row[kr.node1_column_idx]
-
-            node_property = row[kr.label_column_idx]
-            node_value = row[kr.node2_column_idx]
+            node_property: str = row[kr.label_column_idx]
+            node_value: str = row[kr.node2_column_idx]
 
             # CMR: the following code looks like it was intended to remove
             # any language code and language suffix.  It would have the
@@ -102,7 +183,7 @@ class Lexicalize:
                     roles.discard("property_values")
                     roles.discard("has_properties")
                 for each_role in roles:
-                    attrs: typing.Union[typing.List, typing.Set] = each_node_attributes[each_role]
+                    attrs: Lexicalize.ATTRIBUTE_TYPES = each_node_attributes[each_role]
                     if isinstance(attrs, set):
                         attrs.add(node_value)
                     elif isinstance(attrs, list):
@@ -111,13 +192,21 @@ class Lexicalize:
                         raise ValueError('each_node_attributes[%s] is not a list or set.' % repr(each_role))
 
             elif add_all_properties:  # add remained properties if need all properties
-                attrs2: typing.Union[typing.List, typing.Set] = each_node_attributes["has_properties"]
+                attrs2: Lexicalize.ATTRIBUTE_TYPES = each_node_attributes["has_properties"]
                 if isinstance(attrs2, list):
                     attrs2.append(self.get_real_label_name(node_property))
                 else:
                     raise ValueError('each_node_attributes["has_properties"] is not a list.')
 
-        # case where there was a single qnode in the input file
+        if current_process_node_id is None:
+            self._logger.info("current_processed_node_id is NONE, no data?")
+            return
+
+        if node_id is None:
+            self._logger.info("node_id is NONE, no data?")
+            return
+
+        # Processing the final qnode in the input file
         unprocessed_qnode = False
         if each_node_attributes:
             for k in each_node_attributes:
@@ -128,36 +217,38 @@ class Lexicalize:
             a, b = self.process_qnode(current_process_node_id, each_node_attributes, node_id)
         self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
 
-    def process_qnode(self, current_process_node_id, each_node_attributes, node_id):
-        concat_sentence = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
+    def process_qnode(self,
+                      current_process_node_id: str,
+                      each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES,
+                      node_id: str):
+        concat_sentence: str = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
         each_node_attributes["sentence"] = concat_sentence
         self.candidates[current_process_node_id] = each_node_attributes
         # after write down finish, we can clear and start parsing next one
-        each_node_attributes = {"has_properties": set(), "isa_properties": set(), "label_properties": [],
-                                "description_properties": [], "has_properties_values": []}
+        each_node_attributes = self.new_each_node_attributes()
         # update to new id
         current_process_node_id = node_id
         return current_process_node_id, each_node_attributes
 
     def get_real_label_name(self, node: str)->str:
         if node in self.node_labels:
-            return self.node_labels[node].replace('"', "")
+            return self.node_labels[node].replace('"', "") # Should use KgtkFormat.unstringify(node)
         else:
             return node
 
-    def attribute_to_sentence(self, attribute_dict: dict, node_id=None):
-        concated_sentence = ""
+    def attribute_to_sentence(self, attribute_dict: Lexicalize.EACH_NODE_ATTRIBUTES, node_id: str)->str:
+        concated_sentence: str = ""
         have_isa_properties = False
 
         # sort the properties to ensure the sentence always same
         attribute_dict = {key: sorted(list(value)) for key, value in attribute_dict.items() if len(value) > 0}
-        if "label_properties" in attribute_dict and len(attribute_dict["label_properties"]) > 0:
+        if "label_properties" in attribute_dict and isinstance(attribute_dict["label_properties"], list) and len(attribute_dict["label_properties"]) > 0:
             concated_sentence += self.get_real_label_name(attribute_dict["label_properties"][0])
-        if "description_properties" in attribute_dict and len(attribute_dict["description_properties"]) > 0:
+        if "description_properties" in attribute_dict and isinstance(attribute_dict["description_properties"], list) and len(attribute_dict["description_properties"]) > 0:
             if concated_sentence != "" and attribute_dict["description_properties"][0] != "":
                 concated_sentence += ", "
             concated_sentence += self.get_real_label_name(attribute_dict["description_properties"][0])
-        if "isa_properties" in attribute_dict and len(attribute_dict["isa_properties"]) > 0:
+        if "isa_properties" in attribute_dict and isinstance(attribute_dict["isa_properties"], set) and len(attribute_dict["isa_properties"]) > 0:
             have_isa_properties = True
             temp_str: str = ""
             for each in attribute_dict["isa_properties"]:
