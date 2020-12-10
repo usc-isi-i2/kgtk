@@ -26,41 +26,42 @@ class Lexicalize:
             "has_properties_values": [],
         }
 
-    def load_property_labels_file(self,
-                                  input_files: typing.List[Path],
-                                  error_file: typing.TextIO,
-                                  reader_options: KgtkReaderOptions,
-                                  value_options: KgtkValueOptions,
-                                  label_filter: typing.List[str],
-                                  verbose: bool = False,
-                                  ):
-
-        each_file: Path
-        for each_file in input_files:
-            kr: KgtkReader = KgtkReader.open(each_file,
-                                             error_file=error_file,
-                                             options=reader_options,
-                                             value_options=value_options,
-                                             verbose=verbose,
-                                             )
+    def load_entity_label_file(self,
+                               entity_label_file: Path,
+                               error_file: typing.TextIO,
+                               reader_options: KgtkReaderOptions,
+                               value_options: KgtkValueOptions,
+                               label_properties: typing.List[str],
+                               verbose: bool = False,
+                               ):
+        """Load entity labels before processing the input file."""
+        kr: KgtkReader = KgtkReader.open(entity_label_file,
+                                         error_file=error_file,
+                                         options=reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         )
+        english_labels_loaded: int = 0
+        english_labels_reloaded: int = 0
+        non_english_labels_loaded: int = 0
+        try:
             fail: bool = False
             if kr.node1_column_idx < 0:
                 fail = True
-                print("Cannot determine which column is node1 in %s" % each_file, file=error_file, flush=True)
-            if len(label_filter) > 0 and kr.label_column_idx < 0:
+                print("Cannot determine which column is node1 in %s" % repr(entity_label_file), file=error_file, flush=True)
+            if len(label_properties) > 0 and kr.label_column_idx < 0:
                 fail = True
-                print("Cannot determine which column is label in %s" % each_file, file=error_file, flush=True)
+                print("Cannot determine which column is label in %s" % repr(entity_label_file), file=error_file, flush=True)
             if kr.node2_column_idx < 0:
                 fail = True
-                print("Cannot determine which column is node2 in %s" % each_file, file=error_file, flush=True)
+                print("Cannot determine which column is node2 in %s" % repr(entity_label_file), file=error_file, flush=True)
             if fail:
-                kr.close()
-                raise KGTKException("Cannot identify a required column in %s" % each_file)
+                raise KGTKException("Cannot identify a required column in %s" % repr(entity_label_file))
     
             row: typing.List[str]
             for row in kr:
-                if len(label_filter) > 0:
-                    if row[kr.label_column_idx] not in label_filter:
+                if len(label_properties) > 0:
+                    if row[kr.label_column_idx] not in label_properties:
                         continue
 
                 node_id: str = row[kr.node1_column_idx]
@@ -78,12 +79,40 @@ class Lexicalize:
                 # The following code will take the last-read English label,
                 # otherwise, the first-read non-English label.
                 if language == "en" and language_suffix == "":
+                    if node_id in self.node_labels:
+                        english_labels_reloaded += 1
+                    else:
+                        english_labels_loaded += 1
                     self.node_labels[node_id] = text
                 else:
                     if node_id not in self.node_labels:
                         self.node_labels[node_id] = node_label
-
+                        non_english_labels_loaded += 1
+        finally:
             kr.close()
+            if verbose:
+                print("%d English labels loaded, %d reloaded, %d non-English labels loaded from %s" % (english_labels_loaded,
+                                                                                                       english_labels_reloaded,
+                                                                                                       non_english_labels_loaded,
+                                                                                                       repr(entity_label_file)),
+                      file=error_file, flush=True)
+
+    def load_entity_label_files(self,
+                                entity_label_files: typing.List[Path],
+                                error_file: typing.TextIO,
+                                reader_options: KgtkReaderOptions,
+                                value_options: KgtkValueOptions,
+                                label_properties: typing.List[str],
+                                verbose: bool = False,
+                                ):
+        entity_label_file: Path
+        for entity_label_file in entity_label_files:
+            self.load_entity_label_file(entity_label_file=entity_label_file,
+                                        error_file=error_file,
+                                        reader_options=reader_options,
+                                        value_options=value_options,
+                                        label_properties=label_properties,
+                                        verbose=verbose)
 
     def process_input(self,
                       kr: KgtkReader,
@@ -95,14 +124,13 @@ class Lexicalize:
                       property_values: typing.List[str],
                       sentence_label: str,
                       ):
+        """The input file must be grouped (or ordered) by node1."""
 
         # reverse sentence property to be {property : role)
         properties_reversed = defaultdict(set)
 
         current_process_node_id: typing.Optional[str] = None
         node_id: typing.Optional[str] = None
-
-
 
         target_properties = {
             "label_properties": label_properties,

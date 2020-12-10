@@ -37,10 +37,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     _expert: bool = parsed_shared_args._expert
 
     parser.add_input_file()
-    parser.add_input_file(who="The property labels file(s)",
-                          dest="property_labels_files",
-                          options=['--property-labels-file'],
-                          metavar="PROPERTY_LABEL_FILE",
+    parser.add_input_file(who="The entity label file(s)",
+                          dest="entity_label_files",
+                          options=['--entity-label-file'],
+                          metavar="ENTITY_LABEL_FILE",
                           allow_list=True,
                           default_stdin=False)
     parser.add_output_file()
@@ -60,10 +60,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--property-values", dest="property_values", nargs="*",
                         help="The property values. (default=%s)" % repr(DEFAULT_PROPERTY_VALUES))
 
-    parser.add_argument('--property-label-relationships', action='store', nargs='*',
-                        dest='property_labels_filter',
-                        help="The relationships to extract from the property labels file. (default=%s)" % repr(DEFAULT_PROPERTY_LABELS_FILTER))
-
     parser.add_argument('--sentence-label', action='store', type=str, dest='sentence_label', default=DEFAULT_SENTENCE_LABEL,
                         help="The relationship to write in the output file. (default=%(default)s)")
 
@@ -73,7 +69,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 
 def run(input_file: KGTKFiles,
-        property_labels_files: KGTKFiles,
+        entity_label_files: KGTKFiles,
         output_file: KGTKFiles,
 
         label_properties: typing.Optional[typing.List[str]],
@@ -81,7 +77,6 @@ def run(input_file: KGTKFiles,
         isa_properties: typing.Optional[typing.List[str]],
         has_properties: typing.Optional[typing.List[str]],
         property_values: typing.Optional[typing.List[str]],
-        property_labels_filter: typing.Optional[typing.List[str]],
         sentence_label: str,
 
         errors_to_stdout: bool = False,
@@ -106,9 +101,9 @@ def run(input_file: KGTKFiles,
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
-    property_labels_kgtk_files: typing.List[Path] = KGTKArgumentParser.get_input_file_list(property_labels_files,
-                                                                                           who="The property labels file(s)",
-                                                                                           default_stdin=False)
+    entity_label_kgtk_files: typing.List[Path] = KGTKArgumentParser.get_input_file_list(entity_label_files,
+                                                                                        who="The entity label file(s)",
+                                                                                        default_stdin=False)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
@@ -133,13 +128,10 @@ def run(input_file: KGTKFiles,
     if property_values is None:
         property_values = DEFAULT_PROPERTY_VALUES
 
-    if property_labels_filter is None:
-        property_labels_filter = DEFAULT_PROPERTY_LABELS_FILTER
-
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
-        print("--property-label-files %s" % " ".join([str(f) for f in property_labels_kgtk_files]), file=error_file, flush=True)
+        print("--entity-label-files %s" % " ".join([str(f) for f in entity_label_kgtk_files]), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
 
         if len(label_properties) > 0:
@@ -157,9 +149,6 @@ def run(input_file: KGTKFiles,
         if len(property_values) > 0:
             print("--property-values %s" % " ".join(property_values), file=error_file, flush=True)
 
-        if len(property_labels_filter) > 0:
-            print("--property-label-relationships %s" % " ".join(property_labels_filter), file=error_file, flush=True)
-
         print("--sentence-label=%s" % str(sentence_label), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
@@ -168,12 +157,12 @@ def run(input_file: KGTKFiles,
 
 
     lexer: Lexicalize = Lexicalize()
-    lexer.load_property_labels_file(property_labels_kgtk_files,
-                                    error_file,
-                                    reader_options,
-                                    value_options,
-                                    label_filter=property_labels_filter,
-                                    verbose=verbose)
+    lexer.load_entity_label_files(entity_label_kgtk_files,
+                                  error_file,
+                                  reader_options,
+                                  value_options,
+                                  label_properties=label_properties,
+                                  verbose=verbose)
         
     kr: typing.Optional[KgtkReader] = None
     kw: typing.Optional[KgtkWriter] = None
