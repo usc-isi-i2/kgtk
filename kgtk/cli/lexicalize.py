@@ -1,12 +1,19 @@
-# text embedding.
-#
-# TODO: Use KgtkReader to read the property values file.
+# text embedding lexicalization.
 #
 # TODO: Provide seperate KgtkReader options (with fallback) for
-# property labels, property values, and the main input files
-# read by EmbeddingVector in "gt/embeddng_utils.py".
+# the entity label files, and the main input files.
 #
-# TODO: Convert EmbeddingVector to use KgtkFormat and KgtkWriter.
+# Approach:
+# The input file is assumed to be groupe dby node1 value.  Ordering the
+# records by node1 value suffices. Read eadh group of records and construct
+# an English sentence that describes the entity and its properties.
+#
+# Processing an entity may need English labels for the relationships (label column)
+# and other entities (node2 column) to which it is related. The lable values must
+# be loaded into memory first.  This can be accomplished by splitting the English labels
+# into a separate file and passing it to  --entity-label-file, or by reading
+# the input file twice (once as --input-file and once as --entity-label-file, both
+# of which must be specified on the command line).
 #
 from argparse import Namespace, SUPPRESS
 import typing
