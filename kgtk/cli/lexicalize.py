@@ -18,7 +18,7 @@ DEFAULT_DESCRIPTION_PROPERTIES: typing.List[str] = [ "description" ]
 DEFAULT_ISA_PROPERTIES: typing.List[str] = [ "P21", "P31", "P39", "P106", "P279" ]
 DEFAULT_HAS_PROPERTIES: typing.List[str] = [ ]
 DEFAULT_PROPERTY_VALUES: typing.List[str] = [ "P17" ]
-DEFAULT_METADATA_PROPERTIES: typing.List[str] = [ "label", "P31"]
+DEFAULT_PROPERTY_LABELS_FILTER: typing.List[str] = [ "label" ]
 
 OUTPUT_COLUMNS: typing.List[str] = [ "node1", "label", "node2" ]
 
@@ -29,7 +29,6 @@ def parser():
 
 
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace ):
-
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -37,6 +36,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     _expert: bool = parsed_shared_args._expert
 
     parser.add_input_file()
+    parser.add_input_file(who="The property labels file(s)",
+                          dest="property_labels_files",
+                          options=['--property-labels-file'],
+                          metavar="PROPERTY_LABEL_FILE",
+                          allow_list=True,
+                          default_stdin=False)
     parser.add_output_file()
 
     parser.add_argument("--label-properties", dest="label_properties", nargs="*",
@@ -54,8 +59,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--property-values", dest="property_values", nargs="*",
                         help="The property values. (default=%s)" % repr(DEFAULT_PROPERTY_VALUES))
 
-    parser.add_argument("--metadata-properties", dest="metadata_properties", nargs="*",
-                        help="The metadata properties. (default=%s)" % repr(DEFAULT_METADATA_PROPERTIES))
+    parser.add_argument('--property-labels-filter', action='store', nargs='*',
+                        dest='property_labels_filter',
+                        help="The relationships to extract from the property labels file. (default=%s)" % repr(DEFAULT_PROPERTY_LABELS_FILTER))
 
     KgtkReader.add_debug_arguments(parser, expert=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
@@ -63,6 +69,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 
 def run(input_file: KGTKFiles,
+        property_labels_files: KGTKFiles,
         output_file: KGTKFiles,
 
         label_properties: typing.Optional[typing.List[str]],
@@ -70,7 +77,7 @@ def run(input_file: KGTKFiles,
         isa_properties: typing.Optional[typing.List[str]],
         has_properties: typing.Optional[typing.List[str]],
         property_values: typing.Optional[typing.List[str]],
-        metadata_properties: typing.Optional[typing.List[str]],
+        property_labels_filter: typing.Optional[typing.List[str]],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -87,11 +94,16 @@ def run(input_file: KGTKFiles,
     
     from kgtk.exceptions import KGTKException
 
+    from kgtk.gt.lexicalize_utils import Lexicalize, load_property_labels_file
+
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    property_labels_kgtk_files: typing.List[Path] = KGTKArgumentParser.get_input_file_list(property_labels_files,
+                                                                                           who="The property labels file(s)",
+                                                                                           default_stdin=False)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
@@ -116,12 +128,13 @@ def run(input_file: KGTKFiles,
     if property_values is None:
         property_values = DEFAULT_PROPERTY_VALUES
 
-    if metadata_properties is None:
-        metadata_properties = DEFAULT_METADATA_PROPERTIES
+    if property_labels_filter is None:
+        property_labels_filter = DEFAULT_PROPERTY_LABELS_FILTER
 
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
+        print("--property-label-files %s" % " ".join([str(f) for f in property_labels_kgtk_files]), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
 
         if len(label_properties) > 0:
@@ -139,13 +152,23 @@ def run(input_file: KGTKFiles,
         if len(property_values) > 0:
             print("--property-values %s" % " ".join(property_values), file=error_file, flush=True)
 
-        if len(metadata_properties) > 0:
-            print("--metadata-properties %s" % " ".join(metadata_properties), file=error_file, flush=True)
+        if len(property_labels_filter) > 0:
+            print("--property-labels_filter %s" % " ".join(property_labels_filter), file=error_file, flush=True)
+
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+
+    property_labels_dict: typing.Mapping[str, str] = load_property_labels_file(property_labels_kgtk_files,
+                                                                               error_file,
+                                                                               reader_options,
+                                                                               value_options,
+                                                                               label_filter=property_labels_filter,
+                                                                               verbose=verbose)
+    lexer: Lexicalize = Lexicalize()
+        
     kr: typing.Optional[KgtkReader] = None
     kw: typing.Optional[KgtkWriter] = None
 
@@ -160,18 +183,31 @@ def run(input_file: KGTKFiles,
                              very_verbose=very_verbose,
                              )
 
+        if kr.node1_column_idx < 0:
+            raise KGTKException("Missing column: node1 or alias")
+        if kr.label_column_idx < 0:
+            raise KGTKException("Missing column: label or alias")
+        if kr.node2_column_idx < 0:
+            raise KGTKException("Missing column: node2 or alias")
+
+        if verbose:
+            print("node1 column index = {}".format(kr.node1_column_idx),  file=error_file, flush=True)
+            print("label column index = {}".format(kr.label_column_idx),  file=error_file, flush=True)
+            print("node2 column index = {}".format(kr.node2_column_idx),  file=error_file, flush=True)
+
         if verbose:
             print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
-            kw: KgtkWriter = KgtkWriter.open(OUTPUT_COLUMNS,
-                                             output_kgtk_file,
-                                             require_all_columns=True,
-                                             prohibit_extra_columns=True,
-                                             fill_missing_columns=False,
-                                             gzip_in_parallel=False,
-                                             verbose=verbose,
-                                             very_verbose=very_verbose,
-                                             )
+            kw = KgtkWriter.open(OUTPUT_COLUMNS,
+                                 output_kgtk_file,
+                                 require_all_columns=True,
+                                 prohibit_extra_columns=True,
+                                 fill_missing_columns=False,
+                                 gzip_in_parallel=False,
+                                 verbose=verbose,
+                                 very_verbose=very_verbose,
+                                 )
 
+        lexer.read_input(kr, label_properties, description_properties, isa_properties, has_properties, property_values, property_labels_dict)
 
         return 0
 
