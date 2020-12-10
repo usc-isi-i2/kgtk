@@ -5,6 +5,7 @@ import typing
 
 from kgtk.exceptions import KGTKException
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -72,9 +73,8 @@ class Lexicalize:
     def __init__(self):
         self._logger = logging.getLogger(__name__)
         self.node_labels: typing.MutableMapping[str, str] = dict()  # this is used to store {node:label} pairs
-        self.candidates = defaultdict(dict)  # this is used to store all node {node:dict()} information
 
-    ATTRIBUTE_TYPES = typing.Union[typing.List, typing.Set, str]
+    ATTRIBUTE_TYPES = typing.Union[typing.List, typing.Set]
     EACH_NODE_ATTRIBUTES = typing.MutableMapping[str, ATTRIBUTE_TYPES]
 
     def new_each_node_attributes(self)->Lexicalize.EACH_NODE_ATTRIBUTES:
@@ -86,18 +86,18 @@ class Lexicalize:
             "has_properties_values": [],
         }
 
-    def read_input(self,
-                   kr: KgtkReader,
-                   label_properties: typing.List[str],
-                   description_properties: typing.List[str],
-                   isa_properties: typing.List[str],
-                   has_properties: typing.List[str],
-                   property_values: typing.List[str],
-                   property_labels_dict: typing.Mapping[str, str],
-                   ):
-        """
-            load the input candidates files
-        """
+    def process_input(self,
+                      kr: KgtkReader,
+                      kw: KgtkWriter,
+                      label_properties: typing.List[str],
+                      description_properties: typing.List[str],
+                      isa_properties: typing.List[str],
+                      has_properties: typing.List[str],
+                      property_values: typing.List[str],
+                      property_labels_dict: typing.Mapping[str, str],
+                      sentence_label: str,
+                      ):
+
         self.node_labels.update(property_labels_dict)
         # reverse sentence property to be {property : role)
         properties_reversed = defaultdict(set)
@@ -163,7 +163,9 @@ class Lexicalize:
                     current_process_node_id = node_id
                 else:
                     # if we get to next id, concat all properties into one sentence to represent the Q node
-                    current_process_node_id, each_node_attributes = self.process_qnode(current_process_node_id,
+                    current_process_node_id, each_node_attributes = self.process_qnode(kw,
+                                                                                       sentence_label,
+                                                                                       current_process_node_id,
                                                                                        each_node_attributes,
                                                                                        node_id)
 
@@ -214,16 +216,18 @@ class Lexicalize:
                     unprocessed_qnode = True
                     break
         if unprocessed_qnode:
-            a, b = self.process_qnode(current_process_node_id, each_node_attributes, node_id)
-        self._logger.info("Totally {} Q nodes loaded.".format(len(self.candidates)))
+            a, b = self.process_qnode(kw, sentence_label, current_process_node_id, each_node_attributes, node_id)
+
 
     def process_qnode(self,
+                      kw: KgtkWriter,
+                      sentence_label: str,
                       current_process_node_id: str,
                       each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES,
                       node_id: str):
         concat_sentence: str = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
-        each_node_attributes["sentence"] = concat_sentence
-        self.candidates[current_process_node_id] = each_node_attributes
+        kw.write([ current_process_node_id, sentence_label, KgtkFormat.stringify(concat_sentence)])
+
         # after write down finish, we can clear and start parsing next one
         each_node_attributes = self.new_each_node_attributes()
         # update to new id

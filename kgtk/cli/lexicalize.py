@@ -19,6 +19,7 @@ DEFAULT_ISA_PROPERTIES: typing.List[str] = [ "P21", "P31", "P39", "P106", "P279"
 DEFAULT_HAS_PROPERTIES: typing.List[str] = [ ]
 DEFAULT_PROPERTY_VALUES: typing.List[str] = [ "P17" ]
 DEFAULT_PROPERTY_LABELS_FILTER: typing.List[str] = [ "label" ]
+DEFAULT_SENTENCE_LABEL: str = "sentence"
 
 OUTPUT_COLUMNS: typing.List[str] = [ "node1", "label", "node2" ]
 
@@ -63,6 +64,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         dest='property_labels_filter',
                         help="The relationships to extract from the property labels file. (default=%s)" % repr(DEFAULT_PROPERTY_LABELS_FILTER))
 
+    parser.add_argument('--sentence-label', action='store', type=str, dest='sentence_label', default=DEFAULT_SENTENCE_LABEL,
+                        help="The relationships to extract from the property labels file. (default=%(default)s)")
+
     KgtkReader.add_debug_arguments(parser, expert=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
     KgtkValueOptions.add_arguments(parser, expert=False)
@@ -78,6 +82,7 @@ def run(input_file: KGTKFiles,
         has_properties: typing.Optional[typing.List[str]],
         property_values: typing.Optional[typing.List[str]],
         property_labels_filter: typing.Optional[typing.List[str]],
+        sentence_label: str,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -155,6 +160,7 @@ def run(input_file: KGTKFiles,
         if len(property_labels_filter) > 0:
             print("--property-label-relationships %s" % " ".join(property_labels_filter), file=error_file, flush=True)
 
+        print("--sentence-label=%s" % str(sentence_label), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -197,17 +203,25 @@ def run(input_file: KGTKFiles,
 
         if verbose:
             print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
-            kw = KgtkWriter.open(OUTPUT_COLUMNS,
-                                 output_kgtk_file,
-                                 require_all_columns=True,
-                                 prohibit_extra_columns=True,
-                                 fill_missing_columns=False,
-                                 gzip_in_parallel=False,
-                                 verbose=verbose,
-                                 very_verbose=very_verbose,
-                                 )
+        kw = KgtkWriter.open(OUTPUT_COLUMNS,
+                             output_kgtk_file,
+                             require_all_columns=True,
+                             prohibit_extra_columns=True,
+                             fill_missing_columns=False,
+                             gzip_in_parallel=False,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
+                             )
 
-        lexer.read_input(kr, label_properties, description_properties, isa_properties, has_properties, property_values, property_labels_dict)
+        lexer.process_input(kr,
+                            kw,
+                            label_properties,
+                            description_properties,
+                            isa_properties,
+                            has_properties,
+                            property_values,
+                            property_labels_dict,
+                            sentence_label)
 
         return 0
 
