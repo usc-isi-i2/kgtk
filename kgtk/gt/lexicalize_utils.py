@@ -136,21 +136,13 @@ class Lexicalize:
                                         label_properties=label_properties,
                                         verbose=verbose)
 
-    def process_input(self,
-                      kr: KgtkReader,
-                      kw: KgtkWriter,
-                      label_properties: typing.List[str],
-                      description_properties: typing.List[str],
-                      isa_properties: typing.List[str],
-                      has_properties: typing.List[str],
-                      property_values: typing.List[str],
-                      sentence_label: str,
-                      ):
-        """The input file must be grouped (or ordered) by node1."""
-
-        current_process_node_id: typing.Optional[str] = None
-        node_id: typing.Optional[str] = None
-
+    def reverse_properties(self,
+                           label_properties: typing.List[str],
+                           description_properties: typing.List[str],
+                           isa_properties: typing.List[str],
+                           has_properties: typing.List[str],
+                           property_values: typing.List[str],
+                           ):
         # reverse sentence property to be {property : role)
         target_properties = {
             "label_properties": label_properties,
@@ -165,22 +157,64 @@ class Lexicalize:
             for each_property in v:
                 properties_reversed[each_property].add(k)
 
+        return properties_reversed
+
+    def get_add_all_properties(self, properties_reversed)->bool:
         # assume the input edge file is sorted
         if "all" in properties_reversed:
             _ = properties_reversed.pop("all")
-            add_all_properties = True
+            return True
         else:
-            add_all_properties = False
+            return False
+        
+                           
+
+    def process_input(self,
+                      kr: KgtkReader,
+                      kw: KgtkWriter,
+                      label_properties: typing.List[str],
+                      description_properties: typing.List[str],
+                      isa_properties: typing.List[str],
+                      has_properties: typing.List[str],
+                      property_values: typing.List[str],
+                      sentence_label: str,
+                      ):
+        """The input file must be sorted by node1."""
+
+        current_process_node_id: typing.Optional[str] = None
+        node_id: typing.Optional[str] = None
+
+        # reverse sentence property to be {property : role)
+        target_properties = {
+            "label_properties": label_properties,
+            "description_properties": description_properties,
+            "isa_properties": isa_properties,
+            "has_properties": has_properties,
+            "property_values": property_values,
+        }
+
+        properties_reversed = self.reverse_properties(label_properties, description_properties, isa_properties, has_properties, property_values)
+
+        # assume the input edge file is sorted
+        add_all_properties: bool = self.get_add_all_properties(properties_reversed)
 
         # read contents
         # This type union becomes painful to work with, below.
         each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes()
 
+        previous_node_id: typing.Optional[str] = None
+        rownum: int
         row: typing.List[str]
-        for row in kr:
+        for rownum, row in enumerate(kr):
             node_id = row[kr.node1_column_idx]
             node_property: str = row[kr.label_column_idx]
             node_value: str = row[kr.node2_column_idx]
+
+            # Ensure that the input file is sorted (node1 lowest to highest):
+            if previous_node_id is not None and previous_node_id > node_id:
+                raise KGTKException("Row %d is out of order: %s > %s" % (rownum + 1, previous_node_id, node_id))
+            else:
+                previous_node_id = node_id
 
             # CMR: the following code looks like it was intended to remove
             # any language code and language suffix.  It would have the
