@@ -120,42 +120,12 @@ def run(input_file: KGTKFiles,
                 prev = node
 
             if not prev.strip() == node.strip():
-
-                if split_by_qnode:
+                if split_by_qnode or len(lines_to_write) >= lines:
                     write_files(error_file, file_number, file_prefix, kr, lines_to_write, output_path, prev,
                                 reader_options, split_by_qnode, suffix)
-                    # output_kgtk_file = Path(f'{output_path}/{prev}{suffix}')
-                    # kw = KgtkWriter.open(kr.column_names,
-                    #                      output_kgtk_file,
-                    #                      mode=KgtkWriter.Mode[kr.mode.name],
-                    #                      use_mgzip=reader_options.use_mgzip,  # Hack!
-                    #                      mgzip_threads=reader_options.mgzip_threads,  # Hack!
-                    #                      error_file=error_file,
-                    #                      verbose=False,
-                    #                      very_verbose=False)
-                    # for r in lines_to_write:
-                    #     kw.write(r)
-                    # kw.close()
+
                     lines_to_write = list()
-                else:
-                    if len(lines_to_write) >= lines:
-                        write_files(error_file, file_number, file_prefix, kr, lines_to_write, output_path, prev,
-                                    reader_options, split_by_qnode, suffix)
-                        # output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}{suffix}')
-                        # kw = KgtkWriter.open(kr.column_names,
-                        #                      output_kgtk_file,
-                        #                      mode=KgtkWriter.Mode[kr.mode.name],
-                        #                      use_mgzip=reader_options.use_mgzip,  # Hack!
-                        #                      mgzip_threads=reader_options.mgzip_threads,  # Hack!
-                        #                      error_file=error_file,
-                        #                      verbose=False,
-                        #                      very_verbose=False)
-                        #
-                        # for r in lines_to_write:
-                        #     kw.write(r)
-                        # kw.close()
-                        lines_to_write = list()
-                        file_number += 1
+                    file_number += 1
 
                 prev = node
 
