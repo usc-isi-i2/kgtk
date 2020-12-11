@@ -1,6 +1,5 @@
-from argparse import Namespace
 import typing
-
+from argparse import Namespace
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 
@@ -18,9 +17,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -33,8 +31,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="file name prefix, will be appended to output file names before a number")
 
     parser.add_argument('--split-by-qnode', default=False, action="store_true", dest='split_by_qnode',
-                        help="If True, all edges for a qnode will be written to a separate file,  "
-                             "qnode will be added to the file name. Default [FALSE]")
+                        help="If specified, all edges for a qnode will be written to a separate file,  "
+                             "qnode will be added to the file name. WARNING: If there are millions of Qnodes, "
+                             "this option will create millions of file."
+                             " Default [FALSE]")
+
+    parser.add_argument('--gzipped-output', default=False, action="store_true", dest='gzipped_output',
+                        help="If specified, the output split files will be gzipped. Default FALSE")
 
     parser.add_argument('--lines', action='store', dest='lines', type=int, default=1000000, required=False,
                         help="number of lines in each split file. The actual number of lines will exceed this number, "
@@ -50,17 +53,34 @@ def run(input_file: KGTKFiles,
         file_prefix: str,
         split_by_qnode: bool,
         lines: int,
+        gzipped_output: bool,
         errors_to_stdout: bool = False,
-        **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
+        **kwargs
         ) -> int:
-    # import modules locally
-    from pathlib import Path
-
     import sys
-    from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from pathlib import Path
     from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.exceptions import KGTKException
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
+    def write_files(error_file, file_number, file_prefix, kr, lines_to_write, output_path, Qnode, reader_options,
+                    split_by_qnode, suffix):
+        if split_by_qnode:
+            output_kgtk_file = Path(f'{output_path}/{Qnode}{suffix}')
+        else:
+            output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}{suffix}')
+        kw = KgtkWriter.open(kr.column_names,
+                             output_kgtk_file,
+                             mode=KgtkWriter.Mode[kr.mode.name],
+                             use_mgzip=reader_options.use_mgzip,  # Hack!
+                             mgzip_threads=reader_options.mgzip_threads,  # Hack!
+                             error_file=error_file,
+                             verbose=False,
+                             very_verbose=False)
+        for r in lines_to_write:
+            kw.write(r)
+        kw.close()
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
 
@@ -68,6 +88,8 @@ def run(input_file: KGTKFiles,
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+
+    suffix = ".tsv.gz" if gzipped_output else ".tsv"
 
     kr: KgtkReader = KgtkReader.open(input_kgtk_file,
                                      options=reader_options,
@@ -100,34 +122,38 @@ def run(input_file: KGTKFiles,
             if not prev.strip() == node.strip():
 
                 if split_by_qnode:
-                    output_kgtk_file = Path(f'{output_path}/{prev}.tsv')
-                    kw = KgtkWriter.open(kr.column_names,
-                                         output_kgtk_file,
-                                         mode=KgtkWriter.Mode[kr.mode.name],
-                                         use_mgzip=reader_options.use_mgzip,  # Hack!
-                                         mgzip_threads=reader_options.mgzip_threads,  # Hack!
-                                         error_file=error_file,
-                                         verbose=False,
-                                         very_verbose=False)
-                    for r in lines_to_write:
-                        kw.write(r)
-                    kw.close()
+                    write_files(error_file, file_number, file_prefix, kr, lines_to_write, output_path, prev,
+                                reader_options, split_by_qnode, suffix)
+                    # output_kgtk_file = Path(f'{output_path}/{prev}{suffix}')
+                    # kw = KgtkWriter.open(kr.column_names,
+                    #                      output_kgtk_file,
+                    #                      mode=KgtkWriter.Mode[kr.mode.name],
+                    #                      use_mgzip=reader_options.use_mgzip,  # Hack!
+                    #                      mgzip_threads=reader_options.mgzip_threads,  # Hack!
+                    #                      error_file=error_file,
+                    #                      verbose=False,
+                    #                      very_verbose=False)
+                    # for r in lines_to_write:
+                    #     kw.write(r)
+                    # kw.close()
                     lines_to_write = list()
                 else:
                     if len(lines_to_write) >= lines:
-                        output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}.tsv')
-                        kw = KgtkWriter.open(kr.column_names,
-                                             output_kgtk_file,
-                                             mode=KgtkWriter.Mode[kr.mode.name],
-                                             use_mgzip=reader_options.use_mgzip,  # Hack!
-                                             mgzip_threads=reader_options.mgzip_threads,  # Hack!
-                                             error_file=error_file,
-                                             verbose=False,
-                                             very_verbose=False)
-
-                        for r in lines_to_write:
-                            kw.write(r)
-                        kw.close()
+                        write_files(error_file, file_number, file_prefix, kr, lines_to_write, output_path, prev,
+                                    reader_options, split_by_qnode, suffix)
+                        # output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}{suffix}')
+                        # kw = KgtkWriter.open(kr.column_names,
+                        #                      output_kgtk_file,
+                        #                      mode=KgtkWriter.Mode[kr.mode.name],
+                        #                      use_mgzip=reader_options.use_mgzip,  # Hack!
+                        #                      mgzip_threads=reader_options.mgzip_threads,  # Hack!
+                        #                      error_file=error_file,
+                        #                      verbose=False,
+                        #                      very_verbose=False)
+                        #
+                        # for r in lines_to_write:
+                        #     kw.write(r)
+                        # kw.close()
                         lines_to_write = list()
                         file_number += 1
 
@@ -136,19 +162,6 @@ def run(input_file: KGTKFiles,
             lines_to_write.append(row)
 
     if len(lines_to_write) > 0:
-        if split_by_qnode:
-            output_kgtk_file = Path(f'{output_path}/{prev}.tsv')
-        else:
-            output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}.tsv')
-        kw = KgtkWriter.open(kr.column_names,
-                             output_kgtk_file,
-                             mode=KgtkWriter.Mode[kr.mode.name],
-                             use_mgzip=reader_options.use_mgzip,  # Hack!
-                             mgzip_threads=reader_options.mgzip_threads,  # Hack!
-                             error_file=error_file,
-                             verbose=False,
-                             very_verbose=False)
-
-        for r in lines_to_write:
-            kw.write(r)
-        kw.close()
+        write_files(error_file, file_number, file_prefix, kr, lines_to_write, output_path, prev, reader_options,
+                    split_by_qnode, suffix)
+        return 0
