@@ -17,7 +17,7 @@ class Lexicalize:
     ATTRIBUTE_TYPES = typing.Union[typing.List, typing.Set]
     EACH_NODE_ATTRIBUTES = typing.MutableMapping[str, ATTRIBUTE_TYPES]
 
-    def new_each_node_attributes(self)->Lexicalize.EACH_NODE_ATTRIBUTES:
+    def new_each_node_attributes(self)->EACH_NODE_ATTRIBUTES:
         return {
             "has_properties": set(),
             "isa_properties": set(),
@@ -25,6 +25,44 @@ class Lexicalize:
             "description_properties": [],
             "has_properties_values": [],
         }
+
+    def add_entity_label(self, node_id: str, node_label: str):
+        text: str
+        language: str
+        language_suffix: str
+        if node_label.startswith(("'", '"')):
+            text, language, language_suffix = KgtkFormat.destringify(node_label)
+        else:
+            text = node_label
+            language = ""
+            language_suffix = ""
+
+        # The following code will take the last-read English label,
+        # otherwise, the first-read non-English label.
+        if language == "en" and language_suffix == "":
+            if node_id in self.node_labels:
+                self.english_labels_reloaded += 1
+            else:
+                self.english_labels_loaded += 1
+            self.node_labels[node_id] = text
+        else:
+            if node_id not in self.node_labels:
+                self.node_labels[node_id] = node_label
+                self.non_english_labels_loaded += 1
+
+
+    def maybe_add_entity_label(self,
+                               node_id: str,
+                               relationship: str,
+                               node_label: str,
+                               label_properties: typing.List[str],
+                               ):
+        if len(label_properties) > 0:
+            if relationship not in label_properties:
+                return
+
+        self.add_entity_label(node_id, node_label)
+
 
     def load_entity_label_file(self,
                                entity_label_file: Path,
@@ -41,60 +79,39 @@ class Lexicalize:
                                          value_options=value_options,
                                          verbose=verbose,
                                          )
-        english_labels_loaded: int = 0
-        english_labels_reloaded: int = 0
-        non_english_labels_loaded: int = 0
+        self.english_labels_loaded: int = 0
+        self.english_labels_reloaded: int = 0
+        self.non_english_labels_loaded: int = 0
         try:
             fail: bool = False
             if kr.node1_column_idx < 0:
                 fail = True
-                print("Cannot determine which column is node1 in %s" % repr(entity_label_file), file=error_file, flush=True)
+                print("Cannot determine which column is node1 in %s" % repr(str(entity_label_file)), file=error_file, flush=True)
             if len(label_properties) > 0 and kr.label_column_idx < 0:
                 fail = True
-                print("Cannot determine which column is label in %s" % repr(entity_label_file), file=error_file, flush=True)
+                print("Cannot determine which column is label in %s" % repr(str(entity_label_file)), file=error_file, flush=True)
             if kr.node2_column_idx < 0:
                 fail = True
-                print("Cannot determine which column is node2 in %s" % repr(entity_label_file), file=error_file, flush=True)
+                print("Cannot determine which column is node2 in %s" % repr(str(entity_label_file)), file=error_file, flush=True)
             if fail:
-                raise KGTKException("Cannot identify a required column in %s" % repr(entity_label_file))
+                raise KGTKException("Cannot identify a required column in %s" % repr(str(entity_label_file)))
     
             row: typing.List[str]
             for row in kr:
-                if len(label_properties) > 0:
-                    if row[kr.label_column_idx] not in label_properties:
-                        continue
+                self.maybe_add_entity_label(row[kr.node1_column_idx],
+                                            row[kr.label_column_idx],
+                                            row[kr.node2_column_idx],
+                                            label_properties
+                                            )
 
-                node_id: str = row[kr.node1_column_idx]
-                node_label: str = row[kr.node2_column_idx]
-                text: str
-                language: str
-                language_suffix: str
-                if node_label.startswith(("'", '"')):
-                    text, language, language_suffix = KgtkFormat.destringify(node_label)
-                else:
-                    text = node_label
-                    language = ""
-                    language_suffix = ""
 
-                # The following code will take the last-read English label,
-                # otherwise, the first-read non-English label.
-                if language == "en" and language_suffix == "":
-                    if node_id in self.node_labels:
-                        english_labels_reloaded += 1
-                    else:
-                        english_labels_loaded += 1
-                    self.node_labels[node_id] = text
-                else:
-                    if node_id not in self.node_labels:
-                        self.node_labels[node_id] = node_label
-                        non_english_labels_loaded += 1
         finally:
             kr.close()
             if verbose:
-                print("%d English labels loaded, %d reloaded, %d non-English labels loaded from %s" % (english_labels_loaded,
-                                                                                                       english_labels_reloaded,
-                                                                                                       non_english_labels_loaded,
-                                                                                                       repr(entity_label_file)),
+                print("%d English labels loaded, %d reloaded, %d non-English labels loaded from %s" % (self.english_labels_loaded,
+                                                                                                       self.english_labels_reloaded,
+                                                                                                       self.non_english_labels_loaded,
+                                                                                                       repr(str(entity_label_file))),
                       file=error_file, flush=True)
 
     def load_entity_label_files(self,
@@ -248,7 +265,7 @@ class Lexicalize:
                       kw: KgtkWriter,
                       sentence_label: str,
                       current_process_node_id: str,
-                      each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES,
+                      each_node_attributes: EACH_NODE_ATTRIBUTES,
                       node_id: str):
         concat_sentence: str = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
         kw.write([ current_process_node_id, sentence_label, KgtkFormat.stringify(concat_sentence)])
@@ -265,7 +282,7 @@ class Lexicalize:
         else:
             return node
 
-    def attribute_to_sentence(self, attribute_dict: Lexicalize.EACH_NODE_ATTRIBUTES, node_id: str)->str:
+    def attribute_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, node_id: str)->str:
         concated_sentence: str = ""
         have_isa_properties = False
 
