@@ -49,19 +49,22 @@ class Lexicalize:
             if node_id not in self.node_labels:
                 self.node_labels[node_id] = node_label
                 self.non_english_labels_loaded += 1
+            else:
+                self.non_english_labels_ignored += 1
 
 
-    def maybe_add_entity_label(self,
-                               node_id: str,
-                               relationship: str,
-                               node_label: str,
-                               label_properties: typing.List[str],
-                               ):
+    def add_entity_if_label(self,
+                            node_id: str,
+                            relationship: str,
+                            node_label: str,
+                            label_properties: typing.List[str],
+                            )->bool:
         if len(label_properties) > 0:
             if relationship not in label_properties:
-                return
+                return False
 
         self.add_entity_label(node_id, node_label)
+        return True
 
 
     def load_entity_label_file(self,
@@ -82,6 +85,7 @@ class Lexicalize:
         self.english_labels_loaded: int = 0
         self.english_labels_reloaded: int = 0
         self.non_english_labels_loaded: int = 0
+        self.non_english_labels_ignored: int = 0
         try:
             fail: bool = False
             if kr.node1_column_idx < 0:
@@ -98,20 +102,21 @@ class Lexicalize:
     
             row: typing.List[str]
             for row in kr:
-                self.maybe_add_entity_label(row[kr.node1_column_idx],
-                                            row[kr.label_column_idx],
-                                            row[kr.node2_column_idx],
-                                            label_properties
-                                            )
+                self.add_entity_if_label(row[kr.node1_column_idx],
+                                         row[kr.label_column_idx],
+                                         row[kr.node2_column_idx],
+                                         label_properties
+                                         )
 
 
         finally:
             kr.close()
             if verbose:
-                print("%d English labels loaded, %d reloaded, %d non-English labels loaded from %s" % (self.english_labels_loaded,
-                                                                                                       self.english_labels_reloaded,
-                                                                                                       self.non_english_labels_loaded,
-                                                                                                       repr(str(entity_label_file))),
+                print("%d English labels loaded, %d reloaded, %d non-English labels loaded, %d ignored from %s" % (self.english_labels_loaded,
+                                                                                                                   self.english_labels_reloaded,
+                                                                                                                   self.non_english_labels_loaded,
+                                                                                                                   self.non_english_labels_ignored,
+                                                                                                                   repr(str(entity_label_file))),
                       file=error_file, flush=True)
 
     def load_entity_label_files(self,
@@ -143,12 +148,10 @@ class Lexicalize:
                       ):
         """The input file must be grouped (or ordered) by node1."""
 
-        # reverse sentence property to be {property : role)
-        properties_reversed = defaultdict(set)
-
         current_process_node_id: typing.Optional[str] = None
         node_id: typing.Optional[str] = None
 
+        # reverse sentence property to be {property : role)
         target_properties = {
             "label_properties": label_properties,
             "description_properties": description_properties,
@@ -157,6 +160,7 @@ class Lexicalize:
             "property_values": property_values,
         }
 
+        properties_reversed = defaultdict(set)
         for k, v in target_properties.items():
             for each_property in v:
                 properties_reversed[each_property].add(k)
