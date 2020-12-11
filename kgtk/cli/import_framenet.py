@@ -138,37 +138,29 @@ def run(output_file: KGTKFiles):
     def pretty_frame_edge(edges, s, o, p):
         pn = nosp(p)
         if pn == 'inheritance':
-            edges.append([s, 'fn:IsInheritedBy', o])
-            edges.append([o, 'fn:InheritsFrom', s])
+            edges.append([o, '/r/IsA', s])
         elif pn == 'using':
-            edges.append([s, 'fn:IsUsedBy', o])
-            edges.append([o, 'fn:Uses', s])
+            edges.append([s, '/r/UsedFor', o])
         elif pn == 'subframe':
-            edges.append([s, 'fn:HasSubframe', o])
-            edges.append([o, 'fn:SubframeOf', s])
+            edges.append([s, '/r/HasSubevent', o])
         elif pn == 'precedes':
-            edges.append([s, 'fn:Precedes', o])
-            edges.append([o, 'fn:IsPrecededBy', s])
+            edges.append([o, '/r/HasPrerequisite', s])
         elif pn == 'perspective_on':
-            edges.append([s, 'fn:IsPerspectivizedIn', o])
-            edges.append([o, 'fn:PerspectiveOn', s])
+            edges.append([o, '/r/IsA', s])
         else:
-            # 'Is Inchoative of:'
-            # 'Is Causative of:'
-            # 'See also:'
             name = {
-                'is_inchoative_of': 'IsInchoativeOf',
-                'inchoative_of': 'IsInchoativeOf',
+                'is_inchoative_of': '/r/Causes',
+                'inchoative_of': '/r/Causes',
                 #
-                'is_causative_of': 'IsCausativeOf',
-                'causative_of': 'IsCausativeOf',
+                'is_causative_of': '/r/Causes',
+                'causative_of': '/r/Causes',
                 #
-                'see_also': 'SeeAlso',
+                'see_also': '/r/RelatedTo',
                 #
-                'reframing_mapping': 'ReframingMapping',
-                'metaphor': 'Metaphor',
+                'reframing_mapping': '/r/SimilarTo',
+                'metaphor': '/r/SimilarTo',
             }[pn]
-            edges.append([s, f'fn:{name}', o])
+            edges.append([s, name, o])
         return edges
 
     try:
