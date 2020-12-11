@@ -4,8 +4,8 @@
 # the entity label files, and the main input files.
 #
 # Approach:
-# The input file is assumed to be groupe dby node1 value.  Ordering the
-# records by node1 value suffices. Read eadh group of records and construct
+# The input file is assumed to be sorted by node1 value (lowest to highest).
+# Read each group of records with the same node1 value and construct
 # an English sentence that describes the entity and its properties.
 #
 # Processing an entity may need English labels for the relationships (label column)
