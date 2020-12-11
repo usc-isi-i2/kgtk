@@ -32,10 +32,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--file-prefix', action='store', type=str, default='split_', dest='file_prefix', required=False,
                         help="file name prefix, will be appended to output file names before a number")
 
-    parser.add_argument('--split-by-qnode', type=optional_bool, default=False,
-                        dest='split_by_qnode', metavar='True|False',
+    parser.add_argument('--split-by-qnode', default=False, action="store_true", dest='split_by_qnode',
                         help="If True, all edges for a qnode will be written to a separate file,  "
-                             "qnode will be added to the file name")
+                             "qnode will be added to the file name. Default [FALSE]")
 
     parser.add_argument('--lines', action='store', dest='lines', type=int, default=1000000, required=False,
                         help="number of lines in each split file. The actual number of lines will exceed this number, "
@@ -99,9 +98,9 @@ def run(input_file: KGTKFiles,
                 prev = node
 
             if not prev.strip() == node.strip():
-                prev = node
-                if len(lines_to_write) >= lines:
-                    output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}.tsv')
+
+                if split_by_qnode:
+                    output_kgtk_file = Path(f'{output_path}/{prev}.tsv')
                     kw = KgtkWriter.open(kr.column_names,
                                          output_kgtk_file,
                                          mode=KgtkWriter.Mode[kr.mode.name],
@@ -110,18 +109,37 @@ def run(input_file: KGTKFiles,
                                          error_file=error_file,
                                          verbose=False,
                                          very_verbose=False)
-
-                    # kw.write(lines_to_write)
                     for r in lines_to_write:
                         kw.write(r)
                     kw.close()
                     lines_to_write = list()
-                    file_number += 1
+                else:
+                    if len(lines_to_write) >= lines:
+                        output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}.tsv')
+                        kw = KgtkWriter.open(kr.column_names,
+                                             output_kgtk_file,
+                                             mode=KgtkWriter.Mode[kr.mode.name],
+                                             use_mgzip=reader_options.use_mgzip,  # Hack!
+                                             mgzip_threads=reader_options.mgzip_threads,  # Hack!
+                                             error_file=error_file,
+                                             verbose=False,
+                                             very_verbose=False)
+
+                        for r in lines_to_write:
+                            kw.write(r)
+                        kw.close()
+                        lines_to_write = list()
+                        file_number += 1
+
+                prev = node
 
             lines_to_write.append(row)
 
     if len(lines_to_write) > 0:
-        output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}.tsv')
+        if split_by_qnode:
+            output_kgtk_file = Path(f'{output_path}/{prev}.tsv')
+        else:
+            output_kgtk_file = Path(f'{output_path}/{file_prefix}{file_number}.tsv')
         kw = KgtkWriter.open(kr.column_names,
                              output_kgtk_file,
                              mode=KgtkWriter.Mode[kr.mode.name],
