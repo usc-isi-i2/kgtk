@@ -10,9 +10,29 @@ from kgtk.kgtkformat import KgtkFormat
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 class Lexicalize:
-    def __init__(self):
+    def __init__(self,
+                 label_properties: typing.List[str],
+                 description_properties: typing.List[str],
+                 isa_properties: typing.List[str],
+                 has_properties: typing.List[str],
+                 property_values: typing.List[str],
+                 sentence_label: str,
+                 ):
+        self.sentence_label: str = sentence_label
+        self.label_properties: typing.List[str] = label_properties
+        self.description_properties: typing.List[str] = description_properties
+        self.isa_properties: typing.List[str] = isa_properties
+        self. has_properties: typing.List[str] = has_properties
+        self.property_values: typing.List[str] = property_values
+
         self._logger = logging.getLogger(__name__)
         self.node_labels: typing.MutableMapping[str, str] = dict()  # this is used to store {node:label} pairs
+
+        self.properties_reversed = self.reverse_properties()
+
+        # assume the input edge file is sorted
+        self.add_all_properties: bool = self.get_add_all_properties()
+
 
     ATTRIBUTE_TYPES = typing.Union[typing.List, typing.Set]
     EACH_NODE_ATTRIBUTES = typing.MutableMapping[str, ATTRIBUTE_TYPES]
@@ -136,20 +156,14 @@ class Lexicalize:
                                         label_properties=label_properties,
                                         verbose=verbose)
 
-    def reverse_properties(self,
-                           label_properties: typing.List[str],
-                           description_properties: typing.List[str],
-                           isa_properties: typing.List[str],
-                           has_properties: typing.List[str],
-                           property_values: typing.List[str],
-                           ):
+    def reverse_properties(self):
         # reverse sentence property to be {property : role)
         target_properties = {
-            "label_properties": label_properties,
-            "description_properties": description_properties,
-            "isa_properties": isa_properties,
-            "has_properties": has_properties,
-            "property_values": property_values,
+            "label_properties": self.label_properties,
+            "description_properties": self.description_properties,
+            "isa_properties": self.isa_properties,
+            "has_properties": self.has_properties,
+            "property_values": self.property_values,
         }
 
         properties_reversed = defaultdict(set)
@@ -159,10 +173,10 @@ class Lexicalize:
 
         return properties_reversed
 
-    def get_add_all_properties(self, properties_reversed)->bool:
+    def get_add_all_properties(self)->bool:
         # assume the input edge file is sorted
-        if "all" in properties_reversed:
-            _ = properties_reversed.pop("all")
+        if "all" in self.properties_reversed:
+            _ = self.properties_reversed.pop("all")
             return True
         else:
             return False
@@ -176,9 +190,6 @@ class Lexicalize:
                     node_value: str,
                     current_process_node_id: typing.Optional[str],
                     each_node_attributes: EACH_NODE_ATTRIBUTES,
-                    properties_reversed,
-                    add_all_properties: bool,
-                    sentence_label: str,
                     ):
         # CMR: the following code looks like it was intended to remove
         # any language code and language suffix.  It would have the
@@ -208,13 +219,12 @@ class Lexicalize:
             else:
                 # if we get to next id, concat all properties into one sentence to represent the Q node
                 current_process_node_id, each_node_attributes = self.process_qnode(kw,
-                                                                                   sentence_label,
                                                                                    current_process_node_id,
                                                                                    each_node_attributes,
                                                                                    node_id)
 
-        if node_property in properties_reversed:
-            roles = properties_reversed[node_property].copy()
+        if node_property in self.properties_reversed:
+            roles = self.properties_reversed[node_property].copy()
             node_value = self.get_real_label_name(node_value)
             # if we get property_values, it should be saved to isa-properties part
             if "property_values" in roles:
@@ -237,7 +247,7 @@ class Lexicalize:
                 else:
                     raise ValueError('each_node_attributes[%s] is not a list or set.' % repr(each_role))
 
-        elif add_all_properties:  # add remained properties if need all properties
+        elif self.add_all_properties:  # add remained properties if need all properties
             attrs2: Lexicalize.ATTRIBUTE_TYPES = each_node_attributes["has_properties"]
             if isinstance(attrs2, list):
                 attrs2.append(self.get_real_label_name(node_property))
@@ -249,28 +259,8 @@ class Lexicalize:
     def process_input(self,
                       kr: KgtkReader,
                       kw: KgtkWriter,
-                      label_properties: typing.List[str],
-                      description_properties: typing.List[str],
-                      isa_properties: typing.List[str],
-                      has_properties: typing.List[str],
-                      property_values: typing.List[str],
-                      sentence_label: str,
                       ):
         """The input file must be sorted by node1."""
-
-        # reverse sentence property to be {property : role)
-        target_properties = {
-            "label_properties": label_properties,
-            "description_properties": description_properties,
-            "isa_properties": isa_properties,
-            "has_properties": has_properties,
-            "property_values": property_values,
-        }
-
-        properties_reversed = self.reverse_properties(label_properties, description_properties, isa_properties, has_properties, property_values)
-
-        # assume the input edge file is sorted
-        add_all_properties: bool = self.get_add_all_properties(properties_reversed)
 
         # read contents
         # This type union becomes painful to work with, below.
@@ -298,10 +288,7 @@ class Lexicalize:
                                                                              node_property,
                                                                              node_value,
                                                                              current_process_node_id,
-                                                                             each_node_attributes,
-                                                                             properties_reversed,
-                                                                             add_all_properties,
-                                                                             sentence_label)
+                                                                             each_node_attributes)
 
         if current_process_node_id is None:
             self._logger.info("current_processed_node_id is NONE, no data?")
@@ -319,17 +306,16 @@ class Lexicalize:
                     unprocessed_qnode = True
                     break
         if unprocessed_qnode:
-            a, b = self.process_qnode(kw, sentence_label, current_process_node_id, each_node_attributes, node_id)
+            a, b = self.process_qnode(kw, current_process_node_id, each_node_attributes, node_id)
 
 
     def process_qnode(self,
                       kw: KgtkWriter,
-                      sentence_label: str,
                       current_process_node_id: str,
                       each_node_attributes: EACH_NODE_ATTRIBUTES,
                       node_id: str):
         concat_sentence: str = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
-        kw.write([ current_process_node_id, sentence_label, KgtkFormat.stringify(concat_sentence)])
+        kw.write([ current_process_node_id, self.sentence_label, KgtkFormat.stringify(concat_sentence)])
 
         # after write down finish, we can clear and start parsing next one
         each_node_attributes = self.new_each_node_attributes()
