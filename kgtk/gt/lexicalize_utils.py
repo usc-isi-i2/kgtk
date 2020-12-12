@@ -169,6 +169,83 @@ class Lexicalize:
         
                            
 
+    def process_row(self,
+                    kw: KgtkWriter,
+                    node_id: str,
+                    node_property: str,
+                    node_value: str,
+                    current_process_node_id: typing.Optional[str],
+                    each_node_attributes: EACH_NODE_ATTRIBUTES,
+                    properties_reversed,
+                    add_all_properties: bool,
+                    sentence_label: str,
+                    ):
+        # CMR: the following code looks like it was intended to remove
+        # any language code and language suffix.  It would have the
+        # side effect of removing location coordinates entirely.
+        #
+        # remove @ mark
+        if "@" in node_value and node_value[0] != "@":
+            node_value = node_value[:node_value.index("@")]
+
+        # in case we meet an empty value, skip it
+        if node_value == "":
+            self._logger.warning("""Skip line "{}" because of empty value.""".format(row))
+            return
+
+        # CMR: Better to use KgtkFormat.unstringify(node_value), as it will remove escapes from
+        # internal double or single quotes.
+        #
+        # remove extra double quote " and single quote '
+        while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
+            node_value = node_value[1:-1]
+        while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
+            node_value = node_value[1:-1]
+
+        if current_process_node_id != node_id:
+            if current_process_node_id is None:
+                current_process_node_id = node_id
+            else:
+                # if we get to next id, concat all properties into one sentence to represent the Q node
+                current_process_node_id, each_node_attributes = self.process_qnode(kw,
+                                                                                   sentence_label,
+                                                                                   current_process_node_id,
+                                                                                   each_node_attributes,
+                                                                                   node_id)
+
+        if node_property in properties_reversed:
+            roles = properties_reversed[node_property].copy()
+            node_value = self.get_real_label_name(node_value)
+            # if we get property_values, it should be saved to isa-properties part
+            if "property_values" in roles:
+                # for property values part, changed to be "{property} {value}"
+                node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
+                if each_node_attributes is None:
+                    raise ValueError("each_node_attributes is missing")
+                if not isinstance(each_node_attributes["has_properties_values"], list):
+                    raise ValueError('each_node_attributes["has_properties_values"] is not a list.')
+                each_node_attributes["has_properties_values"].append(node_value_combine)
+                # remove those 2 roles in case we have duplicate using of this node later
+                roles.discard("property_values")
+                roles.discard("has_properties")
+            for each_role in roles:
+                attrs: Lexicalize.ATTRIBUTE_TYPES = each_node_attributes[each_role]
+                if isinstance(attrs, set):
+                    attrs.add(node_value)
+                elif isinstance(attrs, list):
+                    attrs.append(node_value)
+                else:
+                    raise ValueError('each_node_attributes[%s] is not a list or set.' % repr(each_role))
+
+        elif add_all_properties:  # add remained properties if need all properties
+            attrs2: Lexicalize.ATTRIBUTE_TYPES = each_node_attributes["has_properties"]
+            if isinstance(attrs2, list):
+                attrs2.append(self.get_real_label_name(node_property))
+            else:
+                raise ValueError('each_node_attributes["has_properties"] is not a list.')
+
+        return current_process_node_id, each_node_attributes
+
     def process_input(self,
                       kr: KgtkReader,
                       kw: KgtkWriter,
@@ -180,9 +257,6 @@ class Lexicalize:
                       sentence_label: str,
                       ):
         """The input file must be sorted by node1."""
-
-        current_process_node_id: typing.Optional[str] = None
-        node_id: typing.Optional[str] = None
 
         # reverse sentence property to be {property : role)
         target_properties = {
@@ -203,6 +277,9 @@ class Lexicalize:
         each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes()
 
         previous_node_id: typing.Optional[str] = None
+        current_process_node_id: typing.Optional[str] = None
+        node_id: typing.Optional[str] = None
+
         rownum: int
         row: typing.List[str]
         for rownum, row in enumerate(kr):
@@ -216,69 +293,15 @@ class Lexicalize:
             else:
                 previous_node_id = node_id
 
-            # CMR: the following code looks like it was intended to remove
-            # any language code and language suffix.  It would have the
-            # side effect of removing location coordinates entirely.
-            #
-            # remove @ mark
-            if "@" in node_value and node_value[0] != "@":
-                node_value = node_value[:node_value.index("@")]
-
-            # in case we meet an empty value, skip it
-            if node_value == "":
-                self._logger.warning("""Skip line "{}" because of empty value.""".format(row))
-                continue
-
-            # CMR: Better to use KgtkFormat.unstringify(node_value), as it will remove escapes from
-            # internal double or single quotes.
-            #
-            # remove extra double quote " and single quote '
-            while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
-                node_value = node_value[1:-1]
-            while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
-                node_value = node_value[1:-1]
-
-            if current_process_node_id != node_id:
-                if current_process_node_id is None:
-                    current_process_node_id = node_id
-                else:
-                    # if we get to next id, concat all properties into one sentence to represent the Q node
-                    current_process_node_id, each_node_attributes = self.process_qnode(kw,
-                                                                                       sentence_label,
-                                                                                       current_process_node_id,
-                                                                                       each_node_attributes,
-                                                                                       node_id)
-
-            if node_property in properties_reversed:
-                roles = properties_reversed[node_property].copy()
-                node_value = self.get_real_label_name(node_value)
-                # if we get property_values, it should be saved to isa-properties part
-                if "property_values" in roles:
-                    # for property values part, changed to be "{property} {value}"
-                    node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
-                    if each_node_attributes is None:
-                        raise ValueError("each_node_attributes is missing")
-                    if not isinstance(each_node_attributes["has_properties_values"], list):
-                        raise ValueError('each_node_attributes["has_properties_values"] is not a list.')
-                    each_node_attributes["has_properties_values"].append(node_value_combine)
-                    # remove those 2 roles in case we have duplicate using of this node later
-                    roles.discard("property_values")
-                    roles.discard("has_properties")
-                for each_role in roles:
-                    attrs: Lexicalize.ATTRIBUTE_TYPES = each_node_attributes[each_role]
-                    if isinstance(attrs, set):
-                        attrs.add(node_value)
-                    elif isinstance(attrs, list):
-                        attrs.append(node_value)
-                    else:
-                        raise ValueError('each_node_attributes[%s] is not a list or set.' % repr(each_role))
-
-            elif add_all_properties:  # add remained properties if need all properties
-                attrs2: Lexicalize.ATTRIBUTE_TYPES = each_node_attributes["has_properties"]
-                if isinstance(attrs2, list):
-                    attrs2.append(self.get_real_label_name(node_property))
-                else:
-                    raise ValueError('each_node_attributes["has_properties"] is not a list.')
+            current_process_node_id, each_node_attributes = self.process_row(kw,
+                                                                             node_id,
+                                                                             node_property,
+                                                                             node_value,
+                                                                             current_process_node_id,
+                                                                             each_node_attributes,
+                                                                             properties_reversed,
+                                                                             add_all_properties,
+                                                                             sentence_label)
 
         if current_process_node_id is None:
             self._logger.info("current_processed_node_id is NONE, no data?")
