@@ -166,6 +166,7 @@ class TripleGenerator(Generator):
             # nomenclature from https://w.wiki/Tfn
             "item": Item,
             "WikibaseItem":Item,
+            "wikibase-item":Item,
 
             "time": TimeValue,
             "Time":TimeValue,
@@ -184,13 +185,15 @@ class TripleGenerator(Generator):
 
             "external-identifier": ExternalIdentifier,
             "ExternalId":ExternalIdentifier,
+            "external-id":ExternalIdentifier,
 
             "url": StringValue, #TODO bug potentially in rdflib
             "Url": StringValue,
 
 
             "property":WDProperty,
-            "WikibaseProperty": WDProperty
+            "WikibaseProperty": WDProperty,
+            "wikibase-property": WDProperty
         }
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
@@ -544,9 +547,11 @@ class JsonGenerator(Generator):
         self.datatype_mapping = {
             "item": "wikibase-item",
             "WikibaseItem": "wikibase-item",
+            "wikibase-item": "wikibase-item",
 
             "property":"wikibase-item",
             "WikibaseProperty":"wikibase-item",
+            "wikibase-property":"wikibase-item",
 
             "time": "time",
             "Time": "time",
@@ -565,6 +570,8 @@ class JsonGenerator(Generator):
 
             "external-identifier": "external-id",
             "ExternalId": "external-id",
+            "external-id": "external-id",
+
 
             "url": "url",
             "Url": "url"
