@@ -165,7 +165,12 @@ def run(input_file: KGTKFiles,
         print("=======", file=error_file, flush=True)
 
 
-    lexer: Lexicalize = Lexicalize()
+    lexer: Lexicalize = Lexicalize(label_properties,
+                                   description_properties,
+                                   isa_properties,
+                                   has_properties,
+                                   property_values,
+                                   sentence_label)
     if len(entity_label_kgtk_files) > 0:
         lexer.load_entity_label_files(entity_label_kgtk_files,
                                       error_file,
@@ -213,13 +218,7 @@ def run(input_file: KGTKFiles,
                              )
 
         lexer.process_input(kr,
-                            kw,
-                            label_properties,
-                            description_properties,
-                            isa_properties,
-                            has_properties,
-                            property_values,
-                            sentence_label)
+                            kw)
 
         return 0
 
