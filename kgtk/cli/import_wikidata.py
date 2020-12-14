@@ -1144,15 +1144,22 @@ def run(input_file: KGTKFiles,
                         for prop, claim_property in claims.items():
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
-                                    snaktype = cp['mainsnak']['snaktype']
+                                    mainsnak = cp['mainsnak']
+                                    snaktype = mainsnak.get('snaktype')
                                     rank=cp['rank']
                                     claim_id = cp['id']
                                     claim_type = cp['type']
                                     if claim_type != "statement":
-                                        print("Unknown claim type %s" % claim_type, file=sys.stderr, flush=True)
+                                        print("Unknown claim type %s, ignoring claim_property for (%s, %s)." % (repr(claim_type), repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
 
+                                    if snaktype is None:
+                                        print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
                                     if snaktype == 'value':
-                                        datavalue = cp['mainsnak']['datavalue']
+                                        datavalue = mainsnak['datavalue']
                                         val = datavalue.get('value')
                                         val_type = datavalue.get("type", "")
                                     elif snaktype == 'somevalue':
@@ -1162,9 +1169,15 @@ def run(input_file: KGTKFiles,
                                         val = None
                                         val_type = "novalue"
                                     else:
-                                        raise ValueError("Unknown snaktype %s" % snaktype)
-
-                                    typ = cp['mainsnak']['datatype']
+                                        print("Unknown snaktype %s, ignoring claim_property for (%s, %s)." % (repr(snaktype), repr(qnode), repr(prop)),
+                                                                                                        file=sys.stderr, flush=True)
+                                        continue
+                                    
+                                    typ = mainsnak.get('datatype')
+                                    if typ is None:
+                                        print("Mainsnak without datatype, ignoring claim_property for (%s, %s)" % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
                                     # if typ != val_type:
                                     #     print("typ %s != val_type %s" % (typ, val_type), file=sys.stderr, flush=True)
 
