@@ -5,7 +5,7 @@ isa	description	"Instance or subclass relationship"@en	isa-description-"Instance
 isa	P31	Q18616576	isa-P31-Q18616576-0000
 isa	P31	Q28326461	isa-P31-Q28326461-0000
 isa	P31	Q18647519	isa-P31-Q18647519-0000
-isa	data_type	item	isa-data_type-item-0000
+isa	data_type	wikibase-item	isa-data_type-item-0000
 P279star	label	"is a"@en	P279star-label-"is a"@en-0000
 P279star	alias	"isa"@en	P279star-alias-"isa"@en-0000
 P279star	description	"Instance or subclass relationship"@en	P279star-description-"Instance or subclass relationship"@en-0000
@@ -13,7 +13,7 @@ P279star	P31	Q18616576	P279star-P31-Q18616576-0000
 P279star	P31	Q28326461	P279star-P31-Q28326461-0000
 P279star	P31	Q18647519	P279star-P31-Q18647519-0000
 P279star	P31	Q18647521	P279star-P31-Q18647521-0000
-P279star	data_type	item	P279star-data_type-item-0000
+P279star	data_type	wikibase-item	P279star-data_type-item-0000
 directed_pagerank	label	"pagerank"@en	directed_pagerank-label-"pagerank"@en-0000
 directed_pagerank	alias	"page rank"@en	directed_pagerank-alias-"page rank"@en-0000
 directed_pagerank	description	"pagerank canculated on the directed graph"@en	directed_pagerank-description-"pagerank canculated on the directed graph"@en-0000
