@@ -41,7 +41,8 @@ def load_property_labels_file(input_files: typing.List[str],
                               error_file: typing.TextIO,
                               reader_options: KgtkReaderOptions,
                               value_options: KgtkValueOptions,
-                              verbose: bool,
+                              label_filter: typing.List[str],
+                              verbose: bool = False,
                               ):
     labels_dict: typing.MutableMapping[str, str] = {}
     for each_file in input_files:
@@ -55,6 +56,9 @@ def load_property_labels_file(input_files: typing.List[str],
         if kr.node1_column_idx < 0:
             fail = True
             print("Cannot determine which column is node1 in %s" % each_file, file=error_file, flush=True)
+        if len(label_filter) > 0 and kr.label_column_idx < 0:
+            fail = True
+            print("Cannot determine which column is label in %s" % each_file, file=error_file, flush=True)
         if kr.node2_column_idx < 0:
             fail = True
             print("Cannot determine which column is node2 in %s" % each_file, file=error_file, flush=True)
@@ -63,6 +67,10 @@ def load_property_labels_file(input_files: typing.List[str],
     
         row: typing.List[str]
         for row in kr:
+            if len(label_filter) > 0:
+                if row[kr.label_column_idx] not in label_filter:
+                    continue
+
             node_id: str = row[kr.node1_column_idx]
             node_label: str = row[kr.node2_column_idx]
             text: str
@@ -165,6 +173,7 @@ def main(**kwargs):
         data_format = kwargs.get("data_format", "kgtk_format")
         output_format = kwargs.get("output_data_format", "kgtk_format")
         property_labels_files = kwargs.get("property_labels_file_uri", [])
+        property_labels_filter = kwargs.get("property_labels_filter", [])
         query_server = kwargs.get("query_server")
         save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
 
@@ -215,7 +224,8 @@ def main(**kwargs):
         else:
             black_list_set = set()
         if property_labels_files:
-            property_labels_dict = load_property_labels_file(property_labels_files, error_file, reader_options, value_options, verbose)
+            property_labels_dict = load_property_labels_file(property_labels_files, error_file, reader_options, value_options,
+                                                             label_filter=property_labels_filter, verbose=verbose)
             _logger.info("Totally {} property labels loaded.".format(len(property_labels_dict)))
         else:
             property_labels_dict = {}
@@ -282,6 +292,11 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="the input file format, could either be `test_format` or `kgtk_format`, default is `kgtk_format`", )
     parser.add_argument('-p', '--property-labels-file', action='store', nargs='+',
                         dest='property_labels_file_uri', help="the path to the property labels file.", )
+
+    # This should probably default to "--label-properties" if not specified.
+    parser.add_argument('--property-labels-filter', action='store', nargs='+',
+                        dest='property_labels_filter', default=["label"],
+                        help="The label columns value(s) of the edges to process in the property labels file. Default is [\"label\"].")
 
     # properties (only valid for kgtk format input/output data)
     parser.add_argument('--label-properties', action='store', nargs='+',

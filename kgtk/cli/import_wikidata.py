@@ -36,8 +36,8 @@ def add_arguments(parser: KGTKArgumentParser):
         parser (argparse.ArgumentParser)
     """
     from kgtk.utils.argparsehelpers import optional_bool
-    from kgtk.io.KgtkReader import KgtkReaderOptions
-    from kgtk.io.KgtkWriter import KgtkWriter
+    from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
     
     parser.add_input_file(positional=True, who='input path file (may be .bz2)')
 
@@ -718,41 +718,7 @@ def run(input_file: KGTKFiles,
 
         def enter(self):
             print("Starting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
-            WD_META_ITEMS = [
-                "Q163875",
-                "Q191780",
-                "Q224414",
-                "Q4167836",
-                "Q4167410",
-                "Q4663903",
-                "Q11266439",
-                "Q13406463",
-                "Q15407973",
-                "Q18616576",
-                "Q19887878",
-                "Q22808320",
-                "Q23894233",
-                "Q33120876",
-                "Q42104522",
-                "Q47460393",
-                "Q64875536",
-                "Q66480449",
-            ]
-            # filter: currently defined as OR: one hit suffices to be removed from
-            # further processing
-            exclude_list = WD_META_ITEMS
 
-            # punctuation
-            exclude_list.extend(["Q1383557", "Q10617810"])
-
-            # letters etc
-            exclude_list.extend(["Q188725", "Q19776628", "Q3841820",
-                                 "Q17907810", "Q9788", "Q9398093"])
-
-            self.neg_prop_filter = {
-                'P31': exclude_list,    # instance of
-                'P279': exclude_list    # subclass
-            }
             self.first=True
             self.cnt=0
             self.write_mode='w'
@@ -996,6 +962,7 @@ def run(input_file: KGTKFiles,
             if len(clean_line) > 1:
                 obj = json.loads(clean_line)
                 entry_type = obj["type"]
+                keep: bool = False
                 if entry_type == "item" or entry_type == "property":
                     keep = True
                 elif warn_if_missing:
@@ -1172,33 +1139,27 @@ def run(input_file: KGTKFiles,
                     
                 if parse_claims and "claims" in obj:
                     claims = obj["claims"]
-                    for prop, value_set in self.neg_prop_filter.items():
-                        claim_property = claims.get(prop, None)
-                        if claim_property:
-                            for cp in claim_property:
-                                cp_id = (
-                                    cp["mainsnak"]
-                                    .get("datavalue", {})
-                                    .get("value", {})
-                                    .get("id")
-                                )
-                                cp_rank = cp["rank"]
-                                if cp_rank != "deprecated" and cp_id in value_set:
-                                    keep = False
                     if keep:
                         qnode = obj["id"]
                         for prop, claim_property in claims.items():
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
-                                    snaktype = cp['mainsnak']['snaktype']
+                                    mainsnak = cp['mainsnak']
+                                    snaktype = mainsnak.get('snaktype')
                                     rank=cp['rank']
                                     claim_id = cp['id']
                                     claim_type = cp['type']
                                     if claim_type != "statement":
-                                        print("Unknown claim type %s" % claim_type, file=sys.stderr, flush=True)
+                                        print("Unknown claim type %s, ignoring claim_property for (%s, %s)." % (repr(claim_type), repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
 
+                                    if snaktype is None:
+                                        print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
                                     if snaktype == 'value':
-                                        datavalue = cp['mainsnak']['datavalue']
+                                        datavalue = mainsnak['datavalue']
                                         val = datavalue.get('value')
                                         val_type = datavalue.get("type", "")
                                     elif snaktype == 'somevalue':
@@ -1208,9 +1169,15 @@ def run(input_file: KGTKFiles,
                                         val = None
                                         val_type = "novalue"
                                     else:
-                                        raise ValueError("Unknown snaktype %s" % snaktype)
-
-                                    typ = cp['mainsnak']['datatype']
+                                        print("Unknown snaktype %s, ignoring claim_property for (%s, %s)." % (repr(snaktype), repr(qnode), repr(prop)),
+                                                                                                        file=sys.stderr, flush=True)
+                                        continue
+                                    
+                                    typ = mainsnak.get('datatype')
+                                    if typ is None:
+                                        print("Mainsnak without datatype, ignoring claim_property for (%s, %s)" % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
                                     # if typ != val_type:
                                     #     print("typ %s != val_type %s" % (typ, val_type), file=sys.stderr, flush=True)
 
@@ -2149,7 +2116,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2020-11-07T00:06:18.675745+00:00#TL9X8zJA2iCS3DUiZK5h6qeuZz26vWpw4StFRgLX4EpAe2GLCyd74gMhcAZCkNszBkxU7t9rDJ9agqyyDdBzGw=="
+        UPDATE_VERSION: str = "2020-12-08T23:35:07.113207+00:00#g4xo5tTabYAJX0cxMKB6wjezb1k3fGAPtNPYELzeAmrESNU2wiKR2wQVS4cBMsjz9KGTL0J0Mmp0pE+iLSTYOQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)

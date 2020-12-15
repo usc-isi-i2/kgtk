@@ -44,10 +44,11 @@ nav:
       - 'validate': 'curate/validate.md'
   - 'Analysis commands':
       - 'connected-components': 'analysis/connected_components.md'
+      - 'graph-embeddings': 'analysis/graph_embeddings.md'         
       - 'graph-statistics': 'analysis/graph_statistics.md'
       - 'paths': 'analysis/paths.md'
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
-      - 'text-embeddings': 'analysis/text_embedding.md'         
+      - 'text-embeddings': 'analysis/text_embedding.md'
 
 theme:
   name: material
@@ -55,6 +56,9 @@ theme:
 extra_css:
   - stylesheets/extra.css
 repo_url: https://github.com/usc-isi-i2/kgtk
+
+plugins:
+  - mknotebooks
 
 markdown_extensions:
   - admonition

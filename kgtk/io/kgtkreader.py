@@ -121,6 +121,8 @@ class KgtkReaderOptions():
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
+    prohibit_whitespace_in_column_names: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     @classmethod
     def add_arguments(cls,
                       parser: ArgumentParser,
@@ -234,6 +236,12 @@ class KgtkReaderOptions():
                             dest=prefix2 + "unsafe_column_name_action",
                             help=h(prefix3 + "The action to take when a column name is unsafe (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.REPORT))
+
+        fgroup.add_argument(prefix1 + "prohibit-whitespace-in-column-names",
+                            dest=prefix2 + "prohibit_whitespace_in_column_names",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "Prohibit whitespace in column names. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
 
         sgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Pre-validation sampling"),
                                                            h("Options affecting " + prefix4 + "pre-validation data line sampling."))
@@ -382,6 +390,7 @@ class KgtkReaderOptions():
             truncate_long_lines=lookup("truncate_long_lines", False),
             unsafe_column_name_action=lookup("unsafe_column_name_action", ValidationAction.REPORT),
             whitespace_line_action=lookup("whitespace_line_action", ValidationAction.EXCLUDE),
+            prohibit_whitespace_in_column_names=lookup("prohibit_whitespace_in_column_names", False)
         )
 
     # Build the value parsing option structure.
@@ -431,6 +440,7 @@ class KgtkReaderOptions():
         print("%smgzip-threads=%s" % (prefix, str(self.mgzip_threads)), file=out)
         print("%sgzip-in-parallel=%s" % (prefix, str(self.gzip_in_parallel)), file=out)
         print("%sgzip-queue-size=%s" % (prefix, str(self.gzip_queue_size)), file=out)
+        print("%sprohibit-whitespace-in-column-names=%s" % (prefix, str(self.prohibit_whitespace_in_column_names)), file=out)
               
 
 DEFAULT_KGTK_READER_OPTIONS: KgtkReaderOptions = KgtkReaderOptions()
@@ -533,7 +543,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                header_line=header,
                                who=who,
                                error_action=options.unsafe_column_name_action,
-                               error_file=error_file)
+                               error_file=error_file,
+                               prohibit_whitespace_in_column_names=options.prohibit_whitespace_in_column_names)
 
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
@@ -708,6 +719,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 return ClosableIterTextIOWrapper(sys.stdin)
 
         if str(file_path).startswith("<"):
+            # Note: compression is not currently supported for fd input files.
             fd: int = int(str(file_path)[1:])
             if verbose:
                 print("%s: reading file descriptor %d" % (who, fd), file=error_file, flush=True)
@@ -716,36 +728,36 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if verbose:
             print("%s: File_path.suffix: %s" % (who, file_path.suffix), file=error_file, flush=True)
 
-        gzip_file: typing.TextIO
+        input_file: typing.TextIO
         if options.compression_type is not None and len(options.compression_type) > 0:
-            gzip_file = cls._open_compressed_file(options.compression_type,
-                                                  str(file_path),
-                                                  file_path,
-                                                  who,
-                                                  options.use_mgzip,
-                                                  options.mgzip_threads,
-                                                  error_file,
-                                                  verbose)
+            input_file = cls._open_compressed_file(options.compression_type,
+                                                   str(file_path),
+                                                   file_path,
+                                                   who,
+                                                   options.use_mgzip,
+                                                   options.mgzip_threads,
+                                                   error_file,
+                                                   verbose)
         elif file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
-            gzip_file = cls._open_compressed_file(file_path.suffix,
-                                                  str(file_path),
-                                                  file_path,
-                                                  who,
-                                                  options.use_mgzip,
-                                                  options.mgzip_threads,
-                                                  error_file,
-                                                  verbose)
+            input_file = cls._open_compressed_file(file_path.suffix,
+                                                   str(file_path),
+                                                   file_path,
+                                                   who,
+                                                   options.use_mgzip,
+                                                   options.mgzip_threads,
+                                                   error_file,
+                                                   verbose)
         else:
             if verbose:
                 print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
             return ClosableIterTextIOWrapper(open(file_path, "r"))
 
         if options.gzip_in_parallel:
-            gzip_thread: GunzipProcess = GunzipProcess(gzip_file, Queue(options.gzip_queue_size))
+            gzip_thread: GunzipProcess = GunzipProcess(input_file, Queue(options.gzip_queue_size))
             gzip_thread.start()
             return gzip_thread
         else:
-            return ClosableIterTextIOWrapper(gzip_file)
+            return ClosableIterTextIOWrapper(input_file)
             
 
     @classmethod

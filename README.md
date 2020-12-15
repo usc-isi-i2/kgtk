@@ -27,9 +27,9 @@ https://kgtk.readthedocs.io/en/latest/
 ### Demo: try KGTK online with MyBinder
 The easiest, no-cost way of trying out KGTK is through [MyBinder](https://mybinder.org/). We have made available several **example notebooks** to show some of the features of KGTK, which can be run in two environments: 
 
-* Basic KGTK functionality: This notebook may take 5-10 minutes to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) **will not run**. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/master?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
+* **Basic KGTK functionality**: This notebook may take **5-10 minutes** to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) **will not run**. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/master?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
 
-* Advanced KGTK functionality: This notebook may take 10-20 minutes to launch. It includes basic KGTK functionality and **graph analytics and embedding capabilities** of KGTK:  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
+* **Advanced KGTK functionality**: This notebook may take **10-20 minutes to launch**. It includes basic KGTK functionality and **graph analytics and embedding capabilities** of KGTK:  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
 
 For executing KGTK with large datasets, **we recommend a Docker/local installation**.
 
@@ -101,6 +101,16 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
 3. Download the English model of SpaCY: `python -m spacy download en_core_web_sm`
 
 4. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions). 
+
+5. Python library rdflib has a known [issue](https://github.com/RDFLib/rdflib/issues/1043), where the ttl serialization of decimal values is incorrect. The library will add a `.0` at the end of decimal values in scientific notation. This will make the ttl invalid and cannot be loaded into a triplestore.
+
+To solve this issue, run the following commands after the `kgtk` installation is complete.
+```
+pip uninstall rdflib
+pip install git+https://github.com/RDFLib/rdflib.git@master
+```
+
+The code fix for this bug is already merged into the library, but has not been released as a `pypi` package. This step will be removed after `rdflib` version 6 is released. 
 
 ### Updating your KGTK installation
 To update your version of KGTK, just follow the instructions below:
