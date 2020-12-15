@@ -409,12 +409,14 @@ class KgtkLift(KgtkFormat):
         # Build the output column names.
         output_column_names: typing.List[str] = ikr.column_names.copy()
         lifted_output_column_idxs: typing.List[int] = [ ]
-        for idx in lifted_column_idxs:
+        lifted_idx: int
+        column_idx: int
+        for lifted_idx, column_idx in enumerate(lifted_column_idxs):
             lifted_column_name: str
-            if self.output_lifted_column_names is not None and idx < len(self.output_lifted_column_names):
-                lifted_column_name = self.output_lifted_column_names[idx]
+            if self.output_lifted_column_names is not None and lifted_idx < len(self.output_lifted_column_names):
+                lifted_column_name = self.output_lifted_column_names[lifted_idx]
             else:
-                lifted_column_name = ikr.column_names[idx] + self.output_lifted_column_suffix
+                lifted_column_name = ikr.column_names[column_idx] + self.output_lifted_column_suffix
 
             if lifted_column_name in ikr.column_name_map:
                 # Overwrite an existing lifted output column.
