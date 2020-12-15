@@ -24,6 +24,8 @@ handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
 # signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 pipe_delimiter = '/'
+sequential_delimiter = '/,'
+parallel_delimiter = '/:'
 ret_code = 0
 
 def cmd_done(cmd, success, exit_code):
@@ -77,75 +79,20 @@ def progress_shutdown():
             pass
         _save_progress_command = None
     
-def cli_entry(*args):
+def split_list(sequence, sep):
+    """From stack overflow;
+    https://stackoverflow.com/questions/54372218/how-to-split-a-list-into-sublists-based-on-a-separator-similar-to-str-split
     """
-    Usage:
-        kgtk <command> [options]
-    """
-    global ret_code
+    chunk = []
+    for val in sequence:
+        if val == sep:
+            yield chunk
+            chunk = []
+        else:
+            chunk.append(val)
+    yield chunk
 
-    # Capture the initial time for timing measurements.
-    start_time: float = time.time()
-    process_start_time: float = time.process_time()
-
-    # get all arguments
-    if not args:
-        args = tuple(sys.argv)
-    args = args[1:]
-
-    # base parser for shared arguments
-    base_parser = KGTKArgumentParser(add_help=False)
-    base_parser.add_argument(
-        '-V', '--version',
-        action='version',
-        version='KGTK %s' % __version__,
-        help='show KGTK version number and exit.'
-    )
-    base_parser.add_argument(
-        '--check-deps',
-        action=CheckDepsAction,
-        help='check dependencies',
-    )
-    shared_args = base_parser.add_argument_group('shared optional arguments')
-    shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
-    shared_args.add_argument('--expert', dest='_expert', action='store_true', default=False, help='enable expert mode')
-    shared_args.add_argument('--pipedebug', dest='_pipedebug', action='store_true', default=False, help='enable pipe debug mode')
-    shared_args.add_argument('--progress', dest='_progress', action='store_true', default=False, help='enable progress monitoring')
-    shared_args.add_argument('--progress-tty', dest='_progress_tty', action='store', default="/dev/tty", help='progress monitoring output tty')
-    shared_args.add_argument('--timing', dest='_timing', action='store_true', default=False, help='enable timing measurements')
-    add_shared_arguments(shared_args)
-
-    # parse shared arguments
-    parsed_shared_args, rest_args = base_parser.parse_known_args(args)
-    shared_args = tuple(filter(lambda a: a not in rest_args, args))
-    args = tuple(rest_args)
-
-    # complete parser, load sub-parser of each module
-    parser = KGTKArgumentParser(
-        parents=[base_parser], prog='kgtk',
-        description='kgtk --- Knowledge Graph Toolkit',
-    )
-    sub_parsers = parser.add_subparsers(
-        metavar='command',
-        dest='cmd'
-    )
-    subparser_lookup = {}
-    sub_parsers.required = True
-    for h in handlers:
-        mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
-        subp = mod.parser()
-        # only create sub-parser with sub-command name and defer full build
-        cmd: str = h.replace("_", "-")
-        sub_parser = sub_parsers.add_parser(cmd, **subp)
-        subparser_lookup[cmd] = (mod, sub_parser)
-        if 'aliases' in subp:
-            for alias in subp['aliases']:
-                subparser_lookup[alias] = (mod, sub_parser)
-
-    # add root level usage after sub-parsers are created
-    # this won't pollute help info in sub-parsers
-    parser.usage = '%(prog)s [options] command [ / command]*'
-
+def cli_entry_pipe(args, parsed_shared_args, parser, sub_parsers, subparser_lookup, subparsers_built):
     # parse internal pipe
     pipe = [list(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
     if len(pipe) == 0:
@@ -159,10 +106,12 @@ def cli_entry(*args):
         if cmd_name in subparser_lookup:
             mod, sub_parser = subparser_lookup[cmd_name]
             add_default_arguments(sub_parser)  # call this before adding other arguments
-            if hasattr(mod, 'add_arguments_extended'):
-                mod.add_arguments_extended(sub_parser, parsed_shared_args)
-            else:
-                mod.add_arguments(sub_parser)
+            if cmd_name not in subparsers_built:
+                if hasattr(mod, 'add_arguments_extended'):
+                    mod.add_arguments_extended(sub_parser, parsed_shared_args)
+                else:
+                    mod.add_arguments(sub_parser)
+                subparsers_built.add(cmd_name)
         parsed_args = parser.parse_args(cmd_args)
 
         # load module
@@ -275,6 +224,84 @@ def cli_entry(*args):
                 print("\npipe: sh.ErrorReturnCode", file=sys.stderr, flush=True)
             # mimic parser exit
             parser.exit(KGTKArgumentParseException.return_code, e.stderr.decode('utf-8'))
+    
+
+def cli_entry_sequential_commands(args, parsed_shared_args, parser, sub_parsers, subparser_lookup, subparsers_built):
+    # parse internal sequence of pipes
+    for commands in split_list(args, sequential_delimiter):
+        cli_entry_pipe(commands, parsed_shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+
+def cli_entry(*args):
+    """
+    Usage:
+        kgtk <command> [options]
+    """
+    global ret_code
+
+    # Capture the initial time for timing measurements.
+    start_time: float = time.time()
+    process_start_time: float = time.process_time()
+
+    # get all arguments
+    if not args:
+        args = tuple(sys.argv)
+    args = args[1:]
+
+    # base parser for shared arguments
+    base_parser = KGTKArgumentParser(add_help=False)
+    base_parser.add_argument(
+        '-V', '--version',
+        action='version',
+        version='KGTK %s' % __version__,
+        help='show KGTK version number and exit.'
+    )
+    base_parser.add_argument(
+        '--check-deps',
+        action=CheckDepsAction,
+        help='check dependencies',
+    )
+    shared_args = base_parser.add_argument_group('shared optional arguments')
+    shared_args.add_argument('--debug', dest='_debug', action='store_true', default=False, help='enable debug mode')
+    shared_args.add_argument('--expert', dest='_expert', action='store_true', default=False, help='enable expert mode')
+    shared_args.add_argument('--pipedebug', dest='_pipedebug', action='store_true', default=False, help='enable pipe debug mode')
+    shared_args.add_argument('--progress', dest='_progress', action='store_true', default=False, help='enable progress monitoring')
+    shared_args.add_argument('--progress-tty', dest='_progress_tty', action='store', default="/dev/tty", help='progress monitoring output tty')
+    shared_args.add_argument('--timing', dest='_timing', action='store_true', default=False, help='enable timing measurements')
+    add_shared_arguments(shared_args)
+
+    # parse shared arguments
+    parsed_shared_args, rest_args = base_parser.parse_known_args(args)
+    shared_args = tuple(filter(lambda a: a not in rest_args, args))
+    args = tuple(rest_args)
+
+    # complete parser, load sub-parser of each module
+    parser = KGTKArgumentParser(
+        parents=[base_parser], prog='kgtk',
+        description='kgtk --- Knowledge Graph Toolkit',
+    )
+    sub_parsers = parser.add_subparsers(
+        metavar='command',
+        dest='cmd'
+    )
+    subparsers_built = set()
+    subparser_lookup = {}
+    sub_parsers.required = True
+    for h in handlers:
+        mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
+        subp = mod.parser()
+        # only create sub-parser with sub-command name and defer full build
+        cmd: str = h.replace("_", "-")
+        sub_parser = sub_parsers.add_parser(cmd, **subp)
+        subparser_lookup[cmd] = (mod, sub_parser)
+        if 'aliases' in subp:
+            for alias in subp['aliases']:
+                subparser_lookup[alias] = (mod, sub_parser)
+
+    # add root level usage after sub-parsers are created
+    # this won't pollute help info in sub-parsers
+    parser.usage = '%(prog)s [options] command [ / command]*'
+
+    cli_entry_sequential_commands(args, parsed_shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
 
     if parsed_shared_args._timing:
         end_time: float = time.time()
