@@ -204,7 +204,7 @@ class KgtkCat():
             ew.flush()
 
             if self.verbose:
-                print("Read %d data lines from file %d: %s" % (input_data_lines, idx + 1, input_file_path))
+                print("Read %d data lines from file %d: %s" % (input_data_lines, idx + 1, input_file_path), file=self.error_file, flush=True)
         
         if self.verbose:
             print("Wrote %d lines total from %d files" % (output_data_lines, len(krs)), file=self.error_file, flush=True)

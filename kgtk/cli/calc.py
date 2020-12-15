@@ -19,11 +19,17 @@ def parser():
 
 
 AVERAGE_OP: str = "average"
+COPY_OP: str = "copy"
+JOIN_OP: str = "join"
 PERCENTAGE_OP: str = "percentage"
+SET_OP: str = "set"
 SUM_OP: str = "sum"
 
 OPERATIONS: typing.List[str] = [ AVERAGE_OP,
+                                 COPY_OP,
+                                 JOIN_OP,
                                  PERCENTAGE_OP,
+                                 SET_OP,
                                  SUM_OP,
                                 ]
 
@@ -54,13 +60,19 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
 
-    parser.add_argument('-c', "--columns", dest="column_names", required=True, nargs='+',
+    parser.add_argument('-c', "--columns", dest="column_names", nargs='*',
                         metavar="COLUMN_NAME",
                         help="The list of source column names, optionally containing '..' for column ranges " +
                         "and '...' for column names not explicitly mentioned.")
-    parser.add_argument(      "--into", dest="into_column_name", help="The name of the column to receive the result of the calculation.", required=True)
+    parser.add_argument(      "--into", dest="into_column_names",
+                              help="The name of the column to receive the result of the calculation.",
+                              required=True, nargs="+")
     parser.add_argument(      "--do", dest="operation", help="The name of the operation.", required=True,
                               choices=OPERATIONS)
+
+    parser.add_argument(      "--values", dest="values", nargs='*',
+                        metavar="VALUES",
+                        help="An optional list of values")
 
     parser.add_argument(      "--format", dest="format_string", help="The format string for the calculation.")
 
@@ -72,9 +84,10 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         output_format: typing.Optional[str],
 
-        column_names: typing.List[str],
-        into_column_name: str,
+        column_names: typing.Optional[typing.List[str]],
+        into_column_names: typing.List[str],
         operation: str,
+        values: typing.Optional[typing.List[str]],
         format_string: typing.Optional[str],
 
         errors_to_stdout: bool = False,
@@ -110,9 +123,13 @@ def run(input_file: KGTKFiles,
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
-        print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
-        print("--into=%s" % str(into_column_name), file=error_file, flush=True)
+        if column_names is not None:
+            print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
+        if into_column_names is not None:
+            print("--into %s" % " ".join(into_column_names), file=error_file, flush=True)
         print("--operation=%s" % str(operation), file=error_file, flush=True)
+        if values is not None:
+            print("--values %s" % " ".join(values), file=error_file, flush=True)
         if format_string is not None:
             print("--format=%s" % format_string, file=error_file, flush=True)
 
@@ -140,6 +157,9 @@ def run(input_file: KGTKFiles,
         ranger: str = ".." # All columns between two columns.
 
         idx: int
+
+        if column_names is None:
+            column_names = [ ]
 
         saw_ranger: bool = False
         column_name: str
@@ -201,7 +221,7 @@ def run(input_file: KGTKFiles,
 
         if len(remaining_names) > 0 and save_selected_names is None:
             if verbose:
-                print("Omitting the following columns: %s" % " ".join(remaining_names))
+                print("Omitting the following columns: %s" % " ".join(remaining_names), file=error_file, flush=True)
         if save_selected_names is not None:
             if len(remaining_names) > 0:
                 save_selected_names.extend(remaining_names)
@@ -214,20 +234,24 @@ def run(input_file: KGTKFiles,
         for name in selected_names:
             sources.append(kr.column_name_map[name])
 
-        new_column: bool = False
+        new_column_count: int = 0
+        into_column_idxs: typing.List[int] = [ ]
         into_column_idx: int
-        output_column_names: typing.List[str] = kr.column_names
-        if into_column_name in kr.column_name_map:
-            into_column_idx = kr.column_name_map[into_column_name]
-            if verbose:
-                print("Putting the result of the calculation into old column %d (%s)." % (into_column_idx, into_column_name), file=error_file, flush=True)
-        else:
-            new_column = True
-            output_column_names = output_column_names.copy()
-            into_column_idx = len(output_column_names)
-            output_column_names.append(into_column_name)
-            if verbose:
-                print("Putting the result of the calculation into new column %d (%s)." % (into_column_idx, into_column_name), file=error_file, flush=True)
+        output_column_names: typing.List[str] = kr.column_names.copy()
+        into_column_name: str
+        for idx, into_column_name in enumerate(into_column_names):
+            if into_column_name in kr.column_name_map:
+                into_column_idx = kr.column_name_map[into_column_name]
+                into_column_idxs.append(into_column_idx)
+                if verbose:
+                    print("Putting result %d of the calculation into old column %d (%s)." % (idx + 1, into_column_idx, into_column_name), file=error_file, flush=True)
+            else:
+                new_column_count += 1
+                into_column_idx = len(output_column_names)
+                into_column_idxs.append(into_column_idx)
+                output_column_names.append(into_column_name)
+                if verbose:
+                    print("Putting result %d of the calculation into new column %d (%s)." % (idx + 1, into_column_idx, into_column_name), file=error_file, flush=True)
 
         if verbose:
             print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
@@ -243,34 +267,66 @@ def run(input_file: KGTKFiles,
                                          very_verbose=very_verbose,
         )
 
+        if values is None:
+            values = [ ]
+
+        if operation == AVERAGE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Average needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Average needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == COPY_OP:
+            if len(sources) == 0:
+                raise KGTKException("Copy needs at least one source, got %d" % len(sources))
+            if len(selected_names) != len(into_column_idxs):
+                raise KGTKException("Copy needs the same number of input columns and into columns, got %d and %d" % (len(selected_names), len(into_column_idxs)))
+
+        elif operation == JOIN_OP:
+            if len(sources) == 0:
+                raise KGTKException("Join needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Join needs 1 destination columns, got %d" % len(into_column_idxs))
+            if len(values) != 1:
+                raise KGTKException("Join needs 1 value, got %d" % len(values))
+
+        elif operation == PERCENTAGE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Percent needs 1 destination columns, got %d" % len(into_column_idxs))
+            if len(selected_names) != 2:
+                raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
+
+        elif operation == SET_OP:
+            if len(sources) != 0:
+                raise KGTKException("Set needs no sources, got %d" % len(sources))
+            if len(into_column_idxs) == 0:
+                raise KGTKException("Set needsat least one destination column, got %d" % len(into_column_idxs))
+            if len(values) == 0:
+                raise KGTKException("Set needsat least one value, got %d" % len(values))
+            if len(into_column_idxs) != len(values):
+                raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
+
+        elif operation == SUM_OP:
+            if len(sources) == 0:
+                raise KGTKException("Sum needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Sum needs 1 destination columns, got %d" % len(into_column_idxs))
+
         fs: str = format_string if format_string is not None else "%5.2f"
         item: str
         
+        into_column_idx = into_column_idxs[0] # for convenience
+
         input_data_lines: int = 0
         row: typing.List[str]
         for row in kr:
             input_data_lines += 1
 
             output_row: typing.List[str] = row.copy()
-            if new_column:
+            for idx in range(new_column_count):
                 output_row.append("") # Easiest way to add a new column.
 
-            if operation == PERCENTAGE_OP:
-                if len(selected_names) != 2:
-                    raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
-                
-                output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
-
-            elif operation == SUM_OP:
-                total: float = 0
-                for idx in sources:
-                    item = row[idx]
-                    if len(item) > 0:
-                        total += float(item)
-                
-                output_row[into_column_idx] = fs % total
-                
-            elif operation == AVERAGE_OP:
+            if operation == AVERAGE_OP:
                 atotal: float = 0
                 acount: int = 0
                 for idx in sources:
@@ -278,8 +334,30 @@ def run(input_file: KGTKFiles,
                     if len(item) > 0:
                         atotal += float(item)
                         acount += 1
-                
                 output_row[into_column_idx] = (fs % (atotal / float(acount))) if acount > 0 else ""                
+
+            elif operation == COPY_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]]
+
+            elif operation == JOIN_OP:
+                output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
+
+            elif operation == PERCENTAGE_OP:
+                output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
+
+            elif operation == SET_OP:
+                for idx in range(len(values)):
+                    output_row[into_column_idxs[idx]] = values[idx]
+
+            elif operation == SUM_OP:
+                total: float = 0
+                for idx in sources:
+                    item = row[idx]
+                    if len(item) > 0:
+                        total += float(item)
+                output_row[into_column_idx] = fs % total
+                
 
             kw.write(output_row)
 
@@ -287,7 +365,7 @@ def run(input_file: KGTKFiles,
         kw.flush()
 
         if verbose:
-            print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file))
+            print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file), file=error_file, flush=True)
 
         kw.close()
 
