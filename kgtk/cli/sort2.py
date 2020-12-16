@@ -307,7 +307,7 @@ def run(input_file: KGTKFiles,
         # The original standard Bourne shell, sh, does not.
         # ksh might do it, if the FD number is a single digit.
         cmd: str = "".join((
-            " { IFS= read -r header ; ", # Read the header line
+            "{ IFS= read -r header ; ", # Read the header line
             " { printf \"%s\\n\" \"$header\" >&" +  str(header_write_fd) + " ; } ; ", # Send the header to Python
             " printf \"%s\\n\" \"$header\" ; ", # Send the header to standard output (which may be redirected to a file, below).
             " IFS= read -u " + str(sortopt_read_fd) + " -r options ; ", # Read the sort command options from Python.
@@ -318,17 +318,17 @@ def run(input_file: KGTKFiles,
             output_suffix: str = output_path.suffix.lower()
             if output_suffix in [".gz", ".z"]:
                 if verbose:
-                    print("gzip output file: %s" % str(output_path), file=error_file, flush=True)
+                    print("gzip output file: %s" % repr(str(output_path)), file=error_file, flush=True)
                 cmd += " | " + gzip_command + " -"
 
             elif output_suffix in [".bz2", ".bz"]:
                 if verbose:
-                    print("bzip2 output file: %s" % str(output_path), file=error_file, flush=True)
+                    print("bzip2 output file: %s" % repr(str(output_path)), file=error_file, flush=True)
                 cmd += " | " + bzip2_command + " -z"
 
             elif output_suffix in [".xz", ".lzma"]:
                 if verbose:
-                    print("xz output file: %s" % str(output_path), file=error_file, flush=True)
+                    print("xz output file: %s" % repr(str(output_path)), file=error_file, flush=True)
                 cmd += " | " + xz_command + " -z -"
 
             # Feed the sorted output to the named file.  Otherwise, the sorted
@@ -390,36 +390,49 @@ def run(input_file: KGTKFiles,
             input_suffix: str = input_path.suffix.lower()
             if input_suffix in [".gz", ".z"]:
                 if verbose:
-                    print("gunzip input file: %s" % str(input_path), file=error_file, flush=True)
+                    print("gunzip input file: %s" % repr(str(input_path)), file=error_file, flush=True)
                 sh_gzip = sh.Command(gzip_command)
                 cat_proc = sh_gzip(input_path, "-dc",
                                    _in=sys.stdin, _piped=True, _err=sys.stderr,
                                    _bg=True, _bg_exc=False, _internal_bufsize=1,
                                    _done=cat_done)
 
+                if verbose:
+                    print("full command: %s -dc %s | %s" % (gzip_command, repr(str(input_path)), cmd), file=error_file, flush=True)
+
             elif input_suffix in [".bz2", ".bz"]:
                 if verbose:
-                    print("bunzip2 input file: %s" % str(input_path), file=error_file, flush=True)
+                    print("bunzip2 input file: %s" % repr(str(input_path)), file=error_file, flush=True)
                 sh_bzip2 = sh.Command(bzip2_command)
                 cat_proc = sh_bzip2(input_path, "-dc",
                                     _in=sys.stdin, _piped=True, _err=sys.stderr,
                                     _bg=True, _bg_exc=False, _internal_bufsize=1,
                                     _done=cat_done)
 
+                if verbose:
+                    print("full command: %s -dc %s | %s" % (bzip2_command, repr(str(input_path)), cmd), file=error_file, flush=True)
+
             elif input_suffix in [".xz", ".lzma"]:
                 if verbose:
-                    print("unxz input file: %s" % str(input_path), file=error_file, flush=True)
+                    print("unxz input file: %s" % repr(str(input_path)), file=error_file, flush=True)
                 sh_xz = sh.Command(xz_command)
                 cat_proc = sh_xz(input_path, "-dc",
                                  _in=sys.stdin, _piped=True, _err=sys.stderr,
                                  _bg=True, _bg_exc=False, _internal_bufsize=1,
                                  _done=cat_done)
+                if verbose:
+                    print("full command: %s -dc %s | %s" % (xz_command, repr(str(input_path)), cmd), file=error_file, flush=True)
+
             else:
                 if verbose:
-                    print("input file: %s" % str(input_path), file=error_file, flush=True)
+                    print("input file: %s" % repr(str(input_path)), file=error_file, flush=True)
                 cat_proc = sh.cat(input_path, _in=sys.stdin, _piped=True, _err=sys.stderr,
                                   _bg=True, _bg_exc=False, _internal_bufsize=1,
                                   _done=cat_done)
+                if verbose:
+                    print("full command: cat %s | %s" % (repr(str(input_path)), cmd), file=error_file, flush=True)
+
+
             # If enabled, monitor the progress of reading the input file.
             # Since we do not have access to the pid of the sort command,
             # we cannot monitor the progress of the merge phases.
