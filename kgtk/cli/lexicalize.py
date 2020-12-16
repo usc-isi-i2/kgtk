@@ -217,8 +217,7 @@ def run(input_file: KGTKFiles,
                              very_verbose=very_verbose,
                              )
 
-        lexer.process_input(kr,
-                            kw)
+        lexer.process_input(kr, kw)
 
         return 0
 

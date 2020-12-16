@@ -256,10 +256,7 @@ class Lexicalize:
 
         return current_process_node_id, each_node_attributes
 
-    def process_input(self,
-                      kr: KgtkReader,
-                      kw: KgtkWriter,
-                      ):
+    def process_input(self, kr: KgtkReader, kw: KgtkWriter):
         """The input file must be sorted by node1."""
 
         # read contents
