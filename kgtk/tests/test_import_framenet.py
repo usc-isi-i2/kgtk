@@ -19,5 +19,5 @@ class TestImportFrameNet(unittest.TestCase):
 
         self.assertEqual(len(df.columns), 9) # Make sure that the amount of columns is as expected
 
-        self.assertEqual(len(df), 50741) # Make sure that the amount of rows is as expected
+        self.assertEqual(len(df), 29873) # Make sure that the amount of rows is as expected
 
