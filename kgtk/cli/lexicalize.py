@@ -171,7 +171,9 @@ def run(input_file: KGTKFiles,
                                    has_properties,
                                    property_values,
                                    sentence_label,
-                                   error_file)
+                                   error_file=error_file,
+                                   verbose=verbose,
+                                   very_verbose=very_verbose)
     if len(entity_label_kgtk_files) > 0:
         lexer.load_entity_label_files(entity_label_kgtk_files,
                                       error_file,

@@ -19,6 +19,8 @@ class Lexicalize:
                  property_values: typing.List[str],
                  sentence_label: str,
                  error_file: typing.TextIO = sys.stderr,
+                 verbose: bool = False,
+                 very_verbose: bool = False,
                  ):
         self.sentence_label: str = sentence_label
         self.label_properties: typing.List[str] = label_properties
@@ -28,6 +30,8 @@ class Lexicalize:
         self.property_values: typing.List[str] = property_values
 
         self.error_file: typing.TextIO = error_file
+        self.verbose: bool = verbose
+        self.very_verbose: bool = very_verbose
 
         self._logger = logging.getLogger(__name__)
         self.node_labels: typing.MutableMapping[str, str] = dict()  # this is used to store {node:label} pairs
@@ -201,7 +205,8 @@ class Lexicalize:
                     current_process_node_id: typing.Optional[str],
                     each_node_attributes: EACH_NODE_ATTRIBUTES,
                     ):
-        print("Processing row (%s, %s, %s)" % (repr(node_id), repr(node_property), repr(node_value)), file=self.error_file, flush=True) # ***
+        if self.very_verbose:
+            print("Processing row (%s, %s, %s)" % (repr(node_id), repr(node_property), repr(node_value)), file=self.error_file, flush=True)
 
         # CMR: the following code looks like it was intended to remove
         # any language code and language suffix.  It would have the
@@ -225,7 +230,8 @@ class Lexicalize:
         while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
             node_value = node_value[1:-1]
 
-        print("Revised node_value = %s" % repr(node_value), file=self.error_file, flush=True) # ***
+        if self.very_verbose:
+            print("Revised node_value = %s" % repr(node_value), file=self.error_file, flush=True)
 
         if current_process_node_id != node_id:
             if current_process_node_id is None:
@@ -238,16 +244,20 @@ class Lexicalize:
                                                                                    node_id)
 
         if node_property in self.properties_reversed:
-            print("node_property %s is in self.properties_reversed" % repr(node_property), file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print("node_property %s is in self.properties_reversed" % repr(node_property), file=self.error_file, flush=True)
             roles = self.properties_reversed[node_property].copy()
             node_value = self.get_real_label_name(node_value)
-            print("node_value label = %s" % repr(node_value), file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print("node_value label = %s" % repr(node_value), file=self.error_file, flush=True)
             # if we get property_values, it should be saved to isa-properties part
             if self.PROPERTY_VALUES in roles:
-                print("property_values is in roles", file=self.error_file, flush=True) # ***
+                if self.very_verbose:
+                    print("property_values is in roles", file=self.error_file, flush=True)
                 # for property values part, changed to be "{property} {value}"
                 node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
-                print("node_value_combine = %s" % repr(node_value_combine), file=self.error_file, flush=True) # ***
+                if self.very_verbose:
+                    print("node_value_combine = %s" % repr(node_value_combine), file=self.error_file, flush=True)
                 if each_node_attributes is None:
                     raise ValueError("each_node_attributes is missing")
 
@@ -256,7 +266,8 @@ class Lexicalize:
                     property_values.append(node_value_combine)
                 else:
                     raise ValueError('each_node_attributes["property_values"] is not a list.')
-                print('each_node_attributes["property_values"] = %s' % repr(property_values), file=self.error_file, flush=True) # ***
+                if self.very_verbose:
+                    print('each_node_attributes["property_values"] = %s' % repr(property_values), file=self.error_file, flush=True)
 
                 # remove those 2 roles in case we have duplicate using of this node later
                 roles.discard(self.PROPERTY_VALUES)
@@ -269,14 +280,17 @@ class Lexicalize:
                     attrs.append(node_value)
                 else:
                     raise ValueError('each_node_attributes[%s] is not a list or set.' % repr(each_role))
-                print("%s: %s" % (each_role, repr(attrs)), file=self.error_file, flush=True) # ***
+                if self.very_verbose:
+                    print("%s: %s" % (each_role, repr(attrs)), file=self.error_file, flush=True)
 
         elif self.add_all_properties:  # add remained properties if need all properties
-            print("self.add_all_properties is True", file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print("self.add_all_properties is True", file=self.error_file, flush=True)
             attrs2: Lexicalize.ATTRIBUTE_TYPES = each_node_attributes[self.HAS_PROPERTIES]
             if isinstance(attrs2, list):
                 attrs2.append(self.get_real_label_name(node_property))
-                print("has_properties: %s" % repr(attrs2), file=self.error_file, flush=True) # ***
+                if self.very_verbose:
+                    print("has_properties: %s" % repr(attrs2), file=self.error_file, flush=True)
             else:
                 raise ValueError('each_node_attributes["has_properties"] is not a list.')
 
@@ -353,74 +367,106 @@ class Lexicalize:
             return node
 
     def attribute_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, node_id: str)->str:
-        print("*** Converting attributes to a sentence", file=self.error_file, flush=True) # ***
+        if self.very_verbose:
+            print("*** Converting attributes to a sentence", file=self.error_file, flush=True)
         concated_sentence: str = ""
         have_isa_properties = False
 
         label_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES]= attribute_dict.get(self.LABEL_PROPERTIES)
         if label_properties is not None and  isinstance(label_properties, list) and len(label_properties) > 0:
             label_properties = sorted(label_properties)
-            print('attribute_dict["label_properties"][0] = %s' % repr(label_properties[0]), file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('attribute_dict["label_properties"][0] = %s' % repr(label_properties[0]), file=self.error_file, flush=True)
             concated_sentence += self.get_real_label_name(label_properties[0])
-            print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
 
         description_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.DESCRIPTION_PROPERTIES)
         if description_properties is not None and isinstance(description_properties, list) and len(description_properties) > 0:
-            description_properties = sorted(description_properties)
-            print('attribute_dict["description_properties"][0] = %s' % repr(description_properties[0]), file=self.error_file, flush=True) # ***
-            if concated_sentence != "" and description_properties[0] != "":
-                concated_sentence += ", "
-            concated_sentence += self.get_real_label_name(description_properties[0])
-            print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True) # ***
+            description_property: str = sorted(description_properties)[0]
+            if self.very_verbose:
+                print('attribute_dict["description_properties"][0] = %s' % repr(description_property), file=self.error_file, flush=True)
+            if len(description_property) > 0:
+                description_label =  self.get_real_label_name(description_property)
+                if len(concated_sentence) == 0:
+                    concated_sentence = description_label
+                else:
+                    concated_sentence += ", " + description_label + ", "
+
+            if self.very_verbose:
+                print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
 
         isa_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.ISA_PROPERTIES)
         if isa_properties is not None and isinstance(isa_properties, set) and len(isa_properties) > 0:
-            print('isa_properties is in attribute_dict', file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('isa_properties is in attribute_dict', file=self.error_file, flush=True)
             have_isa_properties = True
             temp_str: str = ""
-            for each in sorted(isa_properties):
-                orig_each = each # ***
+            isa_property_count: int = len(isa_properties)
+            for idx, each in enumerate(sorted(isa_properties)):
+                orig_each = each
                 each = self.get_real_label_name(each)
-                print("isa_property %s has label %s" % (repr(orig_each), repr(each)), file=self.error_file, flush=True) # ***
+                if self.very_verbose:
+                    print("isa_property %s has label %s" % (repr(orig_each), repr(each)), file=self.error_file, flush=True)
                 if "||" in each:
                     if "instance of" in each:
                         each = each.split("||")[1]
                     else:
                         each = each.replace("||", " ")
-                temp_str += each + ", "
-            print('temp_str = %s' % repr(temp_str), file=self.error_file, flush=True) # ***
+                if idx == 0:
+                    temp_str = each
+                elif idx + 1 == isa_property_count:
+                    if isa_property_count == 2:
+                        temp_str += " and " + each
+                    else:
+                        temp_str += ", and " + each
+                else:
+                    temp_str += ", " + each
+            if self.very_verbose:
+                print('temp_str = %s' % repr(temp_str), file=self.error_file, flush=True)
             if concated_sentence != "" and temp_str != "":
-                print("Adding 'is'", file=self.error_file, flush=True) # ***
-                concated_sentence += " is "
+                if self.very_verbose:
+                    print("Adding 'is'", file=self.error_file, flush=True)
+                if not concated_sentence.endswith(" "):
+                    concated_sentence += " "
+                concated_sentence += "is "
             elif concated_sentence == "":
                 concated_sentence += "It is "
-                print("Adding 'It is'", file=self.error_file, flush=True) # ***
-            # remove last ", "
-            concated_sentence += temp_str[:-2]
-            print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True) # ***
+                if self.very_verbose:
+                    print("Adding 'It is'", file=self.error_file, flush=True)
+
+            concated_sentence += temp_str
+            if self.very_verbose:
+                print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
 
         property_values: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.PROPERTY_VALUES)
         if property_values is not None and len(property_values) > 0:
-            print('property_values is in attribute_dict', file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('property_values is in attribute_dict', file=self.error_file, flush=True)
             temp_list: typing.List[str] = [self.get_real_label_name(each) for each in sorted(property_values)]
-            print('temp_list = %s' % repr(temp_list), file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('temp_list = %s' % repr(temp_list), file=self.error_file, flush=True)
             if concated_sentence != "":
                 if not have_isa_properties:
                     concated_sentence += " "
                 else:
                     concated_sentence += ", "
             else:
-                print('Starting with "It "', file=self.error_file, flush=True) # ***
+                if self.very_verbose:
+                    print('Starting with "It "', file=self.error_file, flush=True)
                 concated_sentence += "It "
             concated_sentence += " and ".join(temp_list)
-            print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
 
         has_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.HAS_PROPERTIES)
         if has_properties is not None and len(has_properties) > 0:
-            print('has_properties is in attribute_dict', file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('has_properties is in attribute_dict', file=self.error_file, flush=True)
             temp_list2: typing.List[str] = [self.get_real_label_name(each) for each in sorted(has_properties)]
             temp_list2 = list(set(temp_list2))
-            print('temp_list2 = %s' % repr(temp_list2), file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('temp_list2 = %s' % repr(temp_list2), file=self.error_file, flush=True)
             if concated_sentence != "" and temp_list2[0] != "":
                 if have_isa_properties:
                     concated_sentence += ", and has "
@@ -429,7 +475,8 @@ class Lexicalize:
             elif temp_list2[0] != "":
                 concated_sentence += "It has "
             concated_sentence += " and ".join(temp_list2)
-            print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True) # ***
+            if self.very_verbose:
+                print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
 
         # add ending period
         if concated_sentence != "":
