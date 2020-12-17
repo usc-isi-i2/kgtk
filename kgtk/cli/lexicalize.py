@@ -170,7 +170,8 @@ def run(input_file: KGTKFiles,
                                    isa_properties,
                                    has_properties,
                                    property_values,
-                                   sentence_label)
+                                   sentence_label,
+                                   error_file)
     if len(entity_label_kgtk_files) > 0:
         lexer.load_entity_label_files(entity_label_kgtk_files,
                                       error_file,
