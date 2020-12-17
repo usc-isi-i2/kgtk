@@ -499,10 +499,12 @@ class Lexicalize:
                 if self.very_verbose:
                     print('temp_list after country mangling = %s' % repr(temp_list), file=self.error_file, flush=True)
             if concated_sentence != "":
-                if not have_isa_properties:
+                # if not have_isa_properties:
+                #     concated_sentence += " "
+                # else:
+                #     concated_sentence += ", "
+                if not concated_sentence.endswith(" "):
                     concated_sentence += " "
-                else:
-                    concated_sentence += ", "
             else:
                 if self.very_verbose:
                     print('Starting with "It "', file=self.error_file, flush=True)
@@ -547,6 +549,9 @@ class Lexicalize:
 
         # add ending period
         if concated_sentence != "":
+            concated_sentence = concated_sentence.rstrip()
+            if concated_sentence.endswith(","):
+                concated_sentence = concated_sentence[:-1]
             concated_sentence += "."
         self._logger.debug("Transform node {} --> {}".format(node_id, concated_sentence))
         return concated_sentence
