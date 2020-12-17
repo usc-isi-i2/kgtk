@@ -449,6 +449,43 @@ class Lexicalize:
 
         return concated_sentence, have_isa_properties
 
+    def mangle_country_name(self, country_phrase: str)->str:
+        country_word: str
+        country_name: str
+        country_word, country_name = country_phrase.split(" ", 1)
+
+        # Refernce:
+        # https://everything2.com/title/Countries+that+start+with+the+word+%2522the%2522
+        if country_name in ("Bahamas",
+                            "Dominican Republic",
+                            "Ivory Coast",
+                            "Cote d'Ivoire",
+                            "Côte d'Ivoire",
+                            "Gambia",
+                            "Marshall Islands",
+                            "Netherlands",
+                            "Netherlands Antilles",
+                            "Northern Marianas Islands",
+                            "Philippines",
+                            "Seychelles",
+                            "Solomon Islands",
+                            "Sudan"
+                            "Unitated Arab Emirates"
+                            "UAE",
+                            "Ukraine",
+                            "United Kingdom",
+                            "United Kingdom of Great Britain and Northern Ireland",
+                            "UK",
+                            "United States of America",
+                            "United States",
+                            "USA"
+                            "Vatican City"
+                            "Holy See",
+                            "Czech Republic"):
+            return "in the " + country_name
+        else:
+            return "in " + country_name
+
     def add_property_values_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str, have_isa_properties: bool)->str:
         property_values: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.PROPERTY_VALUES)
         if property_values is not None and len(property_values) > 0:
@@ -457,10 +494,10 @@ class Lexicalize:
             temp_list: typing.List[str] = [self.get_real_label_name(each) for each in sorted(property_values)]
             if self.very_verbose:
                 print('temp_list = %s' % repr(temp_list), file=self.error_file, flush=True)
-            if temp_list[0].startswith("country"):
-                temp_list[0] = temp_list[0].replace("country", "in the country of", 1)
+            if temp_list[0].startswith("country "):
+                temp_list[0] = self.mangle_country_name(temp_list[0])
                 if self.very_verbose:
-                    print('temp_list = %s' % repr(temp_list), file=self.error_file, flush=True)
+                    print('temp_list after country mangling = %s' % repr(temp_list), file=self.error_file, flush=True)
             if concated_sentence != "":
                 if not have_isa_properties:
                     concated_sentence += " "
