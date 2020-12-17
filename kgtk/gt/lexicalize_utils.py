@@ -366,12 +366,7 @@ class Lexicalize:
         else:
             return node
 
-    def attribute_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, node_id: str)->str:
-        if self.very_verbose:
-            print("*** Converting attributes to a sentence", file=self.error_file, flush=True)
-        concated_sentence: str = ""
-        have_isa_properties = False
-
+    def add_label_properties_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str)->str:
         label_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES]= attribute_dict.get(self.LABEL_PROPERTIES)
         if label_properties is not None and  isinstance(label_properties, list) and len(label_properties) > 0:
             label_properties = sorted(label_properties)
@@ -380,7 +375,9 @@ class Lexicalize:
             concated_sentence += self.get_real_label_name(label_properties[0])
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
+        return concated_sentence
 
+    def add_description_properties_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str)->str:
         description_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.DESCRIPTION_PROPERTIES)
         if description_properties is not None and isinstance(description_properties, list) and len(description_properties) > 0:
             description_property: str = sorted(description_properties)[0]
@@ -399,7 +396,10 @@ class Lexicalize:
 
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
+        return concated_sentence
 
+    def add_isa_properties_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str)->typing.Tuple[str, bool]:
+        have_isa_properties: bool = False
         isa_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.ISA_PROPERTIES)
         if isa_properties is not None and isinstance(isa_properties, set) and len(isa_properties) > 0:
             if self.very_verbose:
@@ -447,6 +447,9 @@ class Lexicalize:
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
 
+        return concated_sentence, have_isa_properties
+
+    def add_property_values_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str, have_isa_properties: bool)->str:
         property_values: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.PROPERTY_VALUES)
         if property_values is not None and len(property_values) > 0:
             if self.very_verbose:
@@ -470,7 +473,9 @@ class Lexicalize:
             concated_sentence += " and ".join(temp_list)
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
+        return concated_sentence
 
+    def add_has_properties_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str, have_isa_properties: bool)->str:
         has_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.HAS_PROPERTIES)
         if has_properties is not None and len(has_properties) > 0:
             if self.very_verbose:
@@ -489,6 +494,19 @@ class Lexicalize:
             concated_sentence += " and ".join(temp_list2)
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
+        return concated_sentence
+
+    def attribute_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, node_id: str)->str:
+        if self.very_verbose:
+            print("*** Converting attributes to a sentence", file=self.error_file, flush=True)
+        concated_sentence: str = ""
+        have_isa_properties: bool = False
+
+        concated_sentence = self.add_label_properties_to_sentence(attribute_dict, concated_sentence)
+        concated_sentence = self.add_description_properties_to_sentence(attribute_dict, concated_sentence)
+        concated_sentence, have_isa_properties = self.add_isa_properties_to_sentence(attribute_dict, concated_sentence)
+        concated_sentence = self.add_property_values_to_sentence(attribute_dict, concated_sentence, have_isa_properties)
+        concated_sentence = self.add_has_properties_to_sentence(attribute_dict, concated_sentence, have_isa_properties)
 
         # add ending period
         if concated_sentence != "":
