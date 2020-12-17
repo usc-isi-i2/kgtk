@@ -390,6 +390,10 @@ class Lexicalize:
                 description_label =  self.get_real_label_name(description_property)
                 if len(concated_sentence) == 0:
                     concated_sentence = description_label
+                elif description_label.startswith("(") and description_label.endswith(")"):
+                    if not concated_sentence.endswith(" "):
+                        concated_sentence += " "
+                    concated_sentence += description_label
                 else:
                     concated_sentence += ", " + description_label + ", "
 
@@ -414,7 +418,11 @@ class Lexicalize:
                     else:
                         each = each.replace("||", " ")
                 if idx == 0:
-                    temp_str = each
+                    if each.lower().startswith(("a", "e", "i", "o", "u")):
+                        temp_str = "an " + each
+                    else:
+                        temp_str = "a " + each
+                        
                 elif idx + 1 == isa_property_count:
                     if isa_property_count == 2:
                         temp_str += " and " + each
@@ -446,6 +454,10 @@ class Lexicalize:
             temp_list: typing.List[str] = [self.get_real_label_name(each) for each in sorted(property_values)]
             if self.very_verbose:
                 print('temp_list = %s' % repr(temp_list), file=self.error_file, flush=True)
+            if temp_list[0].startswith("country"):
+                temp_list[0] = temp_list[0].replace("country", "in the country of", 1)
+                if self.very_verbose:
+                    print('temp_list = %s' % repr(temp_list), file=self.error_file, flush=True)
             if concated_sentence != "":
                 if not have_isa_properties:
                     concated_sentence += " "
