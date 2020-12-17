@@ -213,22 +213,24 @@ class Lexicalize:
         # side effect of removing location coordinates entirely.
         #
         # remove @ mark
-        if "@" in node_value and node_value[0] != "@":
-            node_value = node_value[:node_value.index("@")]
-
-        # in case we meet an empty value, skip it
-        if node_value == "":
-            self._logger.warning("""Skip line ({}, {}, {}) because of empty value.""".format(node_id, node_property, node_value))
-            return
+        # if "@" in node_value and node_value[0] != "@":
+        #    node_value = node_value[:node_value.index("@")]
 
         # CMR: Better to use KgtkFormat.unstringify(node_value), as it will remove escapes from
         # internal double or single quotes.
         #
         # remove extra double quote " and single quote '
-        while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
-            node_value = node_value[1:-1]
-        while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
-            node_value = node_value[1:-1]
+        # while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
+        #     node_value = node_value[1:-1]
+        # while len(node_value) >= 3 and node_value[0] == "'" and node_value[-1] == "'":
+        #     node_value = node_value[1:-1]
+        if node_value.startswith(("'", '"')):
+            node_value = KgtkFormat.unstringify(node_value)
+
+        # in case we meet an empty value, skip it
+        if node_value == "":
+            self._logger.warning("""Skip line ({}, {}, {}) because of empty value.""".format(node_id, node_property, node_value))
+            return
 
         if self.very_verbose:
             print("Revised node_value = %s" % repr(node_value), file=self.error_file, flush=True)
