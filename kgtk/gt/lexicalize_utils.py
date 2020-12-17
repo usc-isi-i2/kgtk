@@ -450,11 +450,13 @@ class Lexicalize:
         return concated_sentence, have_isa_properties
 
     def mangle_country_name(self, country_phrase: str)->str:
+        """The input is a string of the form 'country xxx', where xxx is a country name. Change that string to something nicer looking."""
         country_word: str
         country_name: str
         country_word, country_name = country_phrase.split(" ", 1)
 
-        # Refernce:
+        # Add the word "the" before certain country names.
+        # Reference:
         # https://everything2.com/title/Countries+that+start+with+the+word+%2522the%2522
         if country_name in ("Bahamas",
                             "Dominican Republic",
@@ -547,11 +549,15 @@ class Lexicalize:
         concated_sentence = self.add_property_values_to_sentence(attribute_dict, concated_sentence, have_isa_properties)
         concated_sentence = self.add_has_properties_to_sentence(attribute_dict, concated_sentence, have_isa_properties)
 
-        # add ending period
         if concated_sentence != "":
+            # Strip any trailing spaces.
             concated_sentence = concated_sentence.rstrip()
+
+            # Strip any trailing commas:
             if concated_sentence.endswith(","):
                 concated_sentence = concated_sentence[:-1]
+
+            # add ending period
             concated_sentence += "."
         self._logger.debug("Transform node {} --> {}".format(node_id, concated_sentence))
         return concated_sentence
