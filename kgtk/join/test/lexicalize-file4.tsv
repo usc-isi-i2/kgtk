@@ -1,0 +1,62 @@
+id	node1	label	node2	rank	node2;wikidatatype
+Q75952970-P1082-03dec1-fba17a75-0	Q75952970	P1082	+5	normal	quantity
+Q75952970-P1082-311711-b326776a-0	Q75952970	P1082	+2	normal	quantity
+Q75952970-P1082-3375d0-cf981096-0	Q75952970	P1082	+1258	normal	quantity
+Q75952970-P1082-90208f-75c8f635-0	Q75952970	P1082	+1260	normal	quantity
+Q75952970-P1082-baf507-d75f8753-0	Q75952970	P1082	+1255	normal	quantity
+Q75952970-P1082-c2a0b3-022883c3-0	Q75952970	P1082	+0	normal	quantity
+Q75952970-P1082-c2a0b3-0dd04a59-0	Q75952970	P1082	+0	normal	quantity
+Q75952970-P1082-c2a0b3-7fde199b-0	Q75952970	P1082	+0	normal	quantity
+Q75952970-P131-Q1023849-1b1a6cab-0	Q75952970	P131	Q1023849	normal	wikibase-item
+Q75952970-P1448-34f3f8-98ddddc8-0	Q75952970	P1448	'Steurowitz, Gross-'@de	normal	monolingualtext
+Q75952970-P1448-cff5d3-47eae9c7-0	Q75952970	P1448	'Starovice'@cs	normal	monolingualtext
+Q75952970-P17-Q28513-33ddd57d-0	Q75952970	P17	Q28513	normal	wikibase-item
+Q75952970-P31-Q39825-02449944-0	Q75952970	P31	Q39825		
+Q75952970-P31-Q39825-02449944-0	Q75952970	P31	Q39825	normal	wikibase-item
+Q75952970-P361-Q75945124-20c32c43-0	Q75952970	P361	Q75945124	normal	wikibase-item
+Q75952970-P4080-1babda-25d29b1f-0	Q75952970	P4080	+269	normal	quantity
+Q75952970-P585-176b93-6bb6c324-0	Q75952970	P585	^1890-12-31T00:00:00Z/11	normal	time
+Q75952970-directed_pagerank-75491546	Q75952970	directed_pagerank	6.993174781985127e-09		
+Q75952970-isa-Q39825-0000	Q75952970	isa	Q39825		
+Q75952970-out_degree-16-0000	Q75952970	out_degree	16		
+Q75952970-undirected_pagerank-75491546	Q75952970	undirected_pagerank	6.993174781985126e-09		
+Q75952970-vertex_in_degree-75491544	Q75952970	vertex_in_degree	0		
+Q75952970-vertex_in_degree-75491544	Q75952970	vertex_in_degree	0		
+Q75952970-vertex_out_degree-75491545	Q75952970	vertex_out_degree	4		
+Q75952970-vertex_out_degree-75491545	Q75952970	vertex_out_degree	4		
+Q75952971-P21-Q6581097-018e8019-0	Q75952971	P21	Q6581097	normal	wikibase-item
+Q75952971-P22-Q75952965-2ce70ded-0	Q75952971	P22	Q75952965	normal	wikibase-item
+Q75952971-P25-Q75952967-5859068f-0	Q75952971	P25	Q75952967	normal	wikibase-item
+Q75952971-P31-Q5-d020ba0c-0	Q75952971	P31	Q5		
+Q75952971-P31-Q5-d020ba0c-0	Q75952971	P31	Q5	normal	wikibase-item
+Q75952971-P4638-13b4a3-30988440-0	Q75952971	P4638	"p42618.htm#i426176"	normal	external-id
+Q75952971-P569-edb303-58cb0bf4-0	Q75952971	P569	^1991-01-01T00:00:00Z/9	normal	time
+Q75952971-description-en	Q75952971	description	'born 1991'@en		
+Q75952971-directed_pagerank-75491537	Q75952971	directed_pagerank	1.1084465237456854e-08		
+Q75952971-in_degree-2-0000	Q75952971	in_degree	2		
+Q75952971-isa-Q5-0000	Q75952971	isa	Q5		
+Q75952971-label-en	Q75952971	label	'Philippe Greenway'@en		
+Q75952971-out_degree-6-0000	Q75952971	out_degree	6		
+Q75952971-undirected_pagerank-75491537	Q75952971	undirected_pagerank	1.1084465237456852e-08		
+Q75952971-vertex_in_degree-75491535	Q75952971	vertex_in_degree	2		
+Q75952971-vertex_in_degree-75491535	Q75952971	vertex_in_degree	2		
+Q75952971-vertex_out_degree-75491536	Q75952971	vertex_out_degree	4		
+Q75952971-vertex_out_degree-75491536	Q75952971	vertex_out_degree	4		
+Q75952972-P21-Q6581097-cc030bb0-0	Q75952972	P21	Q6581097	normal	wikibase-item
+Q75952972-P31-Q5-1f32c3b2-0	Q75952972	P31	Q5		
+Q75952972-P31-Q5-1f32c3b2-0	Q75952972	P31	Q5	normal	wikibase-item
+Q75952972-P40-Q75952960-bdbff4fe-0	Q75952972	P40	Q75952960	normal	wikibase-item
+Q75952972-P4638-9345ee-4fc82075-0	Q75952972	P4638	"p42618.htm#i426177"	normal	external-id
+Q75952972-P511-Q209690-3c7f0c62-0	Q75952972	P511	Q209690	normal	wikibase-item
+Q75952972-P735-Q18002623-51f0faf6-0	Q75952972	P735	Q18002623	normal	wikibase-item
+Q75952972-description-en	Q75952972	description	'Peerage person ID=426177'@en		
+Q75952972-directed_pagerank-75491528	Q75952972	directed_pagerank	8.7970156094952e-09		
+Q75952972-in_degree-1-0000	Q75952972	in_degree	1		
+Q75952972-isa-Q5-0000	Q75952972	isa	Q5		
+Q75952972-label-en	Q75952972	label	'Sir Patrick Hastings'@en		
+Q75952972-out_degree-6-0000	Q75952972	out_degree	6		
+Q75952972-undirected_pagerank-75491528	Q75952972	undirected_pagerank	8.7970156094952e-09		
+Q75952972-vertex_in_degree-75491526	Q75952972	vertex_in_degree	1		
+Q75952972-vertex_in_degree-75491526	Q75952972	vertex_in_degree	1		
+Q75952972-vertex_out_degree-75491527	Q75952972	vertex_out_degree	5		
+Q75952972-vertex_out_degree-75491527	Q75952972	vertex_out_degree	5		

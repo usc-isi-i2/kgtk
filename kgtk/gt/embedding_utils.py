@@ -450,7 +450,7 @@ class EmbeddingVector:
                     continue
 
                 # CMR: Better to use KgtkFormat.unstringify(node_value), as it will remove escapes from
-                # internal doubel or single quotes.
+                # internal double or single quotes.
                 #
                 # remove extra double quote " and single quote '
                 while len(node_value) >= 3 and node_value[0] == '"' and node_value[-1] == '"':
