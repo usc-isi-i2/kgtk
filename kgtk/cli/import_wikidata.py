@@ -2558,7 +2558,7 @@ def run(input_file: KGTKFiles,
         raise KGTKException(str(e))
 
 def validate(row: typing.List[str], who: str)->bool:
-    """Ensure that output rows meet minimal validation criterion."""
+    """Ensure that output edge rows meet minimal validation criteria."""
     import sys
 
     # There must be at least four fields (id, node1, label, node2):
