@@ -18,6 +18,7 @@ class Lexicalize:
                  has_properties: typing.List[str],
                  property_values: typing.List[str],
                  sentence_label: str,
+                 explain: bool = False,
                  error_file: typing.TextIO = sys.stderr,
                  verbose: bool = False,
                  very_verbose: bool = False,
@@ -28,6 +29,8 @@ class Lexicalize:
         self.isa_properties: typing.List[str] = isa_properties
         self.has_properties: typing.List[str] = has_properties
         self.property_values: typing.List[str] = property_values
+
+        self.explain: bool = explain
 
         self.error_file: typing.TextIO = error_file
         self.verbose: bool = verbose
@@ -353,8 +356,13 @@ class Lexicalize:
                       current_process_node_id: str,
                       each_node_attributes: EACH_NODE_ATTRIBUTES,
                       node_id: str):
-        concat_sentence: str = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
-        kw.write([ current_process_node_id, self.sentence_label, KgtkFormat.stringify(concat_sentence)])
+        concat_sentence: str
+        explanation: str
+        concat_sentence, explanation = self.attribute_to_sentence(each_node_attributes, current_process_node_id)
+        if self.explain:
+            kw.write([ current_process_node_id, self.sentence_label, KgtkFormat.stringify(concat_sentence), KgtkFormat.stringify(explanation)])
+        else:
+            kw.write([ current_process_node_id, self.sentence_label, KgtkFormat.stringify(concat_sentence)])
 
         # after write down finish, we can clear and start parsing next one
         each_node_attributes = self.new_each_node_attributes()
@@ -368,18 +376,31 @@ class Lexicalize:
         else:
             return node
 
-    def add_label_properties_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str)->str:
+    def add_label_properties_to_sentence(self,
+                                         attribute_dict: EACH_NODE_ATTRIBUTES,
+                                         concated_sentence: str,
+                                         explanation: str)->typing.Tuple[str, str]:
         label_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES]= attribute_dict.get(self.LABEL_PROPERTIES)
         if label_properties is not None and  isinstance(label_properties, list) and len(label_properties) > 0:
             label_properties = sorted(label_properties)
+            label_property: str = label_properties[0]
             if self.very_verbose:
-                print('attribute_dict["label_properties"][0] = %s' % repr(label_properties[0]), file=self.error_file, flush=True)
-            concated_sentence += self.get_real_label_name(label_properties[0])
+                print('attribute_dict["label_properties"][0] = %s' % repr(label_property), file=self.error_file, flush=True)
+            label_value: str = self.get_real_label_name(label_property)
+            concated_sentence += label_value
+            if self.explain:
+                if label_value == label_property:
+                    explanation += "label(%s)" % (repr(label_property))
+                else:
+                    explanation += "label(%s->%s)" % (repr(label_property), repr(label_value))
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
-        return concated_sentence
+        return concated_sentence, explanation
 
-    def add_description_properties_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str)->str:
+    def add_description_properties_to_sentence(self,
+                                               attribute_dict: EACH_NODE_ATTRIBUTES,
+                                               concated_sentence: str,
+                                               explanation: str)->typing.Tuple[str, str]:
         description_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.DESCRIPTION_PROPERTIES)
         if description_properties is not None and isinstance(description_properties, list) and len(description_properties) > 0:
             description_property: str = sorted(description_properties)[0]
@@ -396,11 +417,22 @@ class Lexicalize:
                 else:
                     concated_sentence += ", " + description_label + ", "
 
+                if self.explain:
+                    if len(explanation) > 0:
+                        explanation += "+"
+                    if description_label == description_property:
+                        explanation += "description(%s)" % (repr(description_property))
+                    else:
+                        explanation += "description(%s->%s)" % (repr(description_property), repr(description_label))
+
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
-        return concated_sentence
+        return concated_sentence, explanation
 
-    def add_isa_properties_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str)->typing.Tuple[str, bool]:
+    def add_isa_properties_to_sentence(self,
+                                       attribute_dict: EACH_NODE_ATTRIBUTES,
+                                       concated_sentence: str,
+                                       explanation: str)->typing.Tuple[str, str, bool]:
         have_isa_properties: bool = False
         isa_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.ISA_PROPERTIES)
         if isa_properties is not None and isinstance(isa_properties, set) and len(isa_properties) > 0:
@@ -432,6 +464,10 @@ class Lexicalize:
                         temp_str += ", and " + each
                 else:
                     temp_str += ", " + each
+            if self.explain:
+                if len(explanation) > 0:
+                    explanation += "+"
+                explanation += "isa(" + ",".join([repr(x) for x in sorted(isa_properties)]) + "->" + repr(temp_str) + ")"
             if self.very_verbose:
                 print('temp_str = %s' % repr(temp_str), file=self.error_file, flush=True)
             if concated_sentence != "" and temp_str != "":
@@ -449,7 +485,7 @@ class Lexicalize:
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
 
-        return concated_sentence, have_isa_properties
+        return concated_sentence, explanation, have_isa_properties
 
     def mangle_country_name(self, country_phrase: str)->str:
         """The input is a string of the form 'country xxx', where xxx is a country name. Change that string to something nicer looking."""
@@ -490,7 +526,11 @@ class Lexicalize:
         else:
             return "in " + country_name
 
-    def add_property_values_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str, have_isa_properties: bool)->str:
+    def add_property_values_to_sentence(self,
+                                        attribute_dict: EACH_NODE_ATTRIBUTES,
+                                        concated_sentence: str,
+                                        explanation: str,
+                                        have_isa_properties: bool)->typing.Tuple[str, str]:
         property_values: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.PROPERTY_VALUES)
         if property_values is not None and len(property_values) > 0:
             if self.very_verbose:
@@ -514,11 +554,19 @@ class Lexicalize:
                     print('Starting with "It "', file=self.error_file, flush=True)
                 concated_sentence += "It "
             concated_sentence += " and ".join(temp_list)
+            if self.explain:
+                if len(explanation) > 0:
+                    explanation += "+"
+                explanation += "property_values(" + ",".join([repr(x) for x in sorted(property_values)]) + "->" + repr(temp_list) + ")"
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
-        return concated_sentence
+        return concated_sentence, explanation
 
-    def add_has_properties_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, concated_sentence: str, have_isa_properties: bool)->str:
+    def add_has_properties_to_sentence(self,
+                                       attribute_dict: EACH_NODE_ATTRIBUTES,
+                                       concated_sentence: str,
+                                       explanation: str,
+                                       have_isa_properties: bool)->typing.Tuple[str, str]:
         has_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES] = attribute_dict.get(self.HAS_PROPERTIES)
         if has_properties is not None and len(has_properties) > 0:
             if self.very_verbose:
@@ -535,21 +583,26 @@ class Lexicalize:
             elif temp_list2[0] != "":
                 concated_sentence += "It has "
             concated_sentence += " and ".join(temp_list2)
+            if self.explain:
+                if len(explanation) > 0:
+                    explanation += "+"
+                explanation += "has_properties(" + ",".join([repr(x) for x in sorted(has_properties)]) + "->" + repr(temp_list2) + ")"
             if self.very_verbose:
                 print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
-        return concated_sentence
+        return concated_sentence, explanation
 
-    def attribute_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, node_id: str)->str:
+    def attribute_to_sentence(self, attribute_dict: EACH_NODE_ATTRIBUTES, node_id: str)->typing.Tuple[str, str]:
         if self.very_verbose:
             print("*** Converting attributes to a sentence", file=self.error_file, flush=True)
         concated_sentence: str = ""
+        explanation: str = ""
         have_isa_properties: bool = False
 
-        concated_sentence = self.add_label_properties_to_sentence(attribute_dict, concated_sentence)
-        concated_sentence = self.add_description_properties_to_sentence(attribute_dict, concated_sentence)
-        concated_sentence, have_isa_properties = self.add_isa_properties_to_sentence(attribute_dict, concated_sentence)
-        concated_sentence = self.add_property_values_to_sentence(attribute_dict, concated_sentence, have_isa_properties)
-        concated_sentence = self.add_has_properties_to_sentence(attribute_dict, concated_sentence, have_isa_properties)
+        concated_sentence, explanation = self.add_label_properties_to_sentence(attribute_dict, concated_sentence, explanation)
+        concated_sentence, explanation = self.add_description_properties_to_sentence(attribute_dict, concated_sentence, explanation)
+        concated_sentence, explanation, have_isa_properties = self.add_isa_properties_to_sentence(attribute_dict, concated_sentence, explanation)
+        concated_sentence , explanation = self.add_property_values_to_sentence(attribute_dict, concated_sentence, explanation, have_isa_properties)
+        concated_sentence, explanation = self.add_has_properties_to_sentence(attribute_dict, concated_sentence, explanation, have_isa_properties)
 
         if concated_sentence != "":
             # Strip any trailing spaces.
@@ -562,5 +615,5 @@ class Lexicalize:
             # add ending period
             concated_sentence += "."
         self._logger.debug("Transform node {} --> {}".format(node_id, concated_sentence))
-        return concated_sentence
+        return concated_sentence, explanation
 
