@@ -606,6 +606,17 @@ def add_arguments(parser: KGTKArgumentParser):
         default=0,
         help='How many characters should be used to hash the claim ID? 0 means do not hash the claim ID. (default=%(default)d)')
 
+    parser.add_argument(
+        "--skip-validation",
+        nargs='?',
+        type=optional_bool,
+        dest="skip_validation",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, skip output record validation. (default=%(default)s).",
+    )
+
 def custom_progress()->bool:
     return True # We want to start a custom progress monitor.
 
@@ -673,6 +684,7 @@ def run(input_file: KGTKFiles,
         mgzip_threads_for_output: int,
         value_hash_width: int,
         claim_id_hash_width: int,
+        skip_validation: bool,
         ):
 
     # import modules locally
@@ -1199,6 +1211,14 @@ def run(input_file: KGTKFiles,
                                     elif typ.startswith('wikibase'):
                                         enttype = val.get('entity-type')
                                         value = val.get('id', '')
+                                        # Older Wikidata dumps do not have an 'id' here.
+                                        if len(value) == 0 and 'numeric-id' in val:
+                                            if enttype == "item":
+                                                value = 'Q' + str(val['numeric-id'])
+                                            elif enttype == "property":
+                                                value = 'P' + str(val['numeric-id'])
+                                            else:
+                                                raise ValueError('Unknown entity type %s' % enttype)
                                         item=value
                                     elif typ == 'quantity':
                                         value = val['amount']
@@ -1328,12 +1348,17 @@ def run(input_file: KGTKFiles,
                                                         if val is None:
                                                             value = val_type
 
-                                                        elif typ.startswith(
-                                                                'wikibase'):
-                                                            enttype = val.get(
-                                                                'entity-type')
-                                                            value = val.get(
-                                                                'id', '')
+                                                        elif typ.startswith('wikibase'):
+                                                            enttype = val.get('entity-type')
+                                                            value = val.get('id', '')
+                                                            # Older Wikidata dumps do not have an 'id' here.
+                                                            if len(value) == 0 and 'numeric-id' in val:
+                                                                if enttype == "item":
+                                                                    value = 'Q' + str(val['numeric-id'])
+                                                                elif enttype == "property":
+                                                                    value = 'P' + str(val['numeric-id'])
+                                                                else:
+                                                                    raise ValueError('Unknown entity type %s' % enttype)
                                                             item=value
                                                         elif typ == 'quantity':
                                                             value = val['amount']
@@ -1594,11 +1619,13 @@ def run(input_file: KGTKFiles,
 
                     if detailed_edge_file:
                         for row in erows:
-                            self.edge_wr.writerow(row)
+                            if skip_validation or validate(row, "detailed edge uncollected"):
+                                self.edge_wr.writerow(row)
 
                     if detailed_qual_file:
                         for row in qrows:
-                            self.qual_wr.writerow(row)
+                            if skip_validation or validate(row, "detailed qual uncollected"):
+                                self.qual_wr.writerow(row)
     
     class MyCollector:
 
@@ -1975,7 +2002,8 @@ def run(input_file: KGTKFiles,
                         if self.detailed_edge_wr is None:
                             raise ValueError("Unexpected edge rows in the %s collector." % who)
                         for row in erows:
-                            self.detailed_edge_wr.write(row)
+                            if skip_validation or validate(row, "unsplit detailed edge"):
+                                self.detailed_edge_wr.write(row)
                     else:
                         for row in erows:
                             split: bool = False
@@ -1989,38 +2017,53 @@ def run(input_file: KGTKFiles,
 
                                 if self.split_property_edge_wr is not None and row[1].startswith("P"): # Hack: knows the structure of the row.
                                     # For now, split property files are minimal.
-                                    self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+                                    if skip_validation or validate(row, "split property edge"):
+                                        self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
 
                                 elif self.minimal_edge_wr is not None:
-                                    self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+                                    if skip_validation or validate(row, "minimal edge"):
+                                        self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
 
                                 if self.detailed_edge_wr is not None:
-                                    self.detailed_edge_wr.write(row)
+                                    if skip_validation or validate(row, "split detailed edge"):
+                                        self.detailed_edge_wr.write(row)
                 else:
                     if self.minimal_edge_wr is None:
                         raise ValueError("Unexpected edge rows in the %s collector." % who)
 
-                    self.minimal_edge_wr.writerows(erows)
+                    if skip_validation:
+                        self.minimal_edge_wr.writerows(erows)
+                    else:
+                        for row in erows:
+                            if validate(row, "minimal edge csv"):
+                                self.minimal_edge_wr.write(row)
 
             if len(qrows) > 0:
-
                 if use_kgtkwriter:
                     if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
                         raise ValueError("Unexpected qual rows in the %s collector." % who)
                     
                     for row in qrows:
                         if self.split_property_qual_wr is not None and row[0].startswith("P"): # Hack: knows the structure of the row.
-                            self.split_property_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+                            if skip_validation or validate(row, "split property qual"):
+                                self.split_property_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
                                                               
                         elif self.minimal_qual_wr is not None:
-                            self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+                            if skip_validation or validate(row, "minimal qual"):
+                                self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
 
                         if self.detailed_qual_wr is not None:
-                            self.detailed_qual_wr.write(row)
+                            if skip_validation or validate(row, "detailed qual"):
+                                self.detailed_qual_wr.write(row)
                 else:
                     if self.detailed_qual_wr is None:
                         raise ValueError("Unexpected qual rows in the %s collector." % who)
-                    self.detailed_qual_wr.writerows(qrows)
+                    if skip_validation:
+                        self.detailed_qual_wr.writerows(qrows)
+                    else:
+                        for row in qrows:
+                            if validate(row, "detailed qual csv"):
+                                self.detailed_qual_wr.write(row)
 
         def setup_split_dispatcher(self):
             self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
@@ -2526,4 +2569,21 @@ def run(input_file: KGTKFiles,
         print('time taken : {}s'.format(end-start), file=sys.stderr, flush=True)
     except Exception as e:
         raise KGTKException(str(e))
+
+def validate(row: typing.List[str], who: str)->bool:
+    """Ensure that output edge rows meet minimal validation criteria."""
+    import sys
+
+    # There must be at least four fields (id, node1, label, node2):
+    if len(row) < 4:
+        print("%s row too short: %s" % (who, repr(row)), file=sys.stderr, flush=True)
+        return False
+
+    # Ensure that the first four fields (id, node1, label, node2) are all
+    # non-empty.
+    if len(row[0]) == 0 or len(row[1]) == 0 or len(row[2]) == 0 or len(row[3]) ==0:
+        print("Invalid %s row: (%s, %s, %s, %s)" % (who, repr(row[0]), repr(row[1]), repr(row[2]), repr(row[3])), file=sys.stderr, flush=True)
+        return False
+
+    return True
 
