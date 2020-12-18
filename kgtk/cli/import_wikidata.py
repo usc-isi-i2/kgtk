@@ -1211,6 +1211,14 @@ def run(input_file: KGTKFiles,
                                     elif typ.startswith('wikibase'):
                                         enttype = val.get('entity-type')
                                         value = val.get('id', '')
+                                        # Older Wikidata dumps do not have an 'id' here.
+                                        if len(value) == 0 and 'numeric-id' in val:
+                                            if enttype == "item":
+                                                value = 'Q' + str(val['numeric-id'])
+                                            elif enttype == "property":
+                                                value = 'P' + str(val['numeric-id'])
+                                            else:
+                                                raise ValueError('Unknown entity type %s' % enttype)
                                         item=value
                                     elif typ == 'quantity':
                                         value = val['amount']
@@ -1340,12 +1348,17 @@ def run(input_file: KGTKFiles,
                                                         if val is None:
                                                             value = val_type
 
-                                                        elif typ.startswith(
-                                                                'wikibase'):
-                                                            enttype = val.get(
-                                                                'entity-type')
-                                                            value = val.get(
-                                                                'id', '')
+                                                        elif typ.startswith('wikibase'):
+                                                            enttype = val.get('entity-type')
+                                                            value = val.get('id', '')
+                                                            # Older Wikidata dumps do not have an 'id' here.
+                                                            if len(value) == 0 and 'numeric-id' in val:
+                                                                if enttype == "item":
+                                                                    value = 'Q' + str(val['numeric-id'])
+                                                                elif enttype == "property":
+                                                                    value = 'P' + str(val['numeric-id'])
+                                                                else:
+                                                                    raise ValueError('Unknown entity type %s' % enttype)
                                                             item=value
                                                         elif typ == 'quantity':
                                                             value = val['amount']
