@@ -301,11 +301,14 @@ class Lexicalize:
 
         return current_process_node_id, each_node_attributes
 
-    def process_input(self, kr: KgtkReader, kw: KgtkWriter):
+    def process_presorted_input(self, kr: KgtkReader, kw: KgtkWriter):
         """The input file must be sorted by node1."""
 
-        # read contents
-        # This type union becomes painful to work with, below.
+        if self.verbose:
+            print("Processing presorted input.", file=self.error_file, flush=True)
+
+        input_rows: int = 0
+
         each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes()
 
         previous_node_id: typing.Optional[str] = None
@@ -315,6 +318,7 @@ class Lexicalize:
         rownum: int
         row: typing.List[str]
         for rownum, row in enumerate(kr):
+            input_rows += 1
             node_id = row[kr.node1_column_idx]
             node_property: str = row[kr.label_column_idx]
             node_value: str = row[kr.node2_column_idx]
@@ -348,8 +352,77 @@ class Lexicalize:
                     unprocessed_qnode = True
                     break
         if unprocessed_qnode:
-            a, b = self.process_qnode(kw, current_process_node_id, each_node_attributes, node_id)
+            _, _ = self.process_qnode(kw, current_process_node_id, each_node_attributes, node_id)
 
+        if self.verbose:
+            print("Processed %d input rows." % (input_rows), file=self.error_file, flush=True)
+
+
+    def process_unsorted_input(self, kr: KgtkReader, kw: KgtkWriter):
+        """The input file is sorted in memory by node1."""
+
+        if self.verbose:
+            print("Processing unsorted input.", file=self.error_file, flush=True)
+
+        input_rows: int = 0
+
+        rows_by_node_id: typing.MutableMapping[str, typing.List[typing.List[str]]] = dict()
+
+        node_id: str
+        node_id_list: typing.List[typing.List[str]]
+
+        # Read the rows into memory and sort by node1:
+        row: typing.List[str]
+        for row in kr:
+            input_rows += 1
+            node_id = row[kr.node1_column_idx]
+            if node_id in rows_by_node_id:
+                node_id_list = rows_by_node_id[node_id]
+            else:
+                node_id_list = list()
+                rows_by_node_id[node_id] = node_id_list
+            node_id_list.append(row)
+            
+        if self.verbose:
+            print("Read %d input rows with %d unique node_id values." % (input_rows, len(rows_by_node_id)), file=self.error_file, flush=True)
+            print("Producing sentences.", file=self.error_file, flush=True)
+
+        # Process the data using self.process_row...)
+        #
+        # TODO: The process_row(...)/process_qnode(...) dance isn't really needed,
+        # refactor this code to simplify it.
+
+        for node_id in sorted(rows_by_node_id.keys()):
+            node_id_list = rows_by_node_id[node_id]
+            current_process_node_id: typing.Optional[str] = None
+            each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes()
+            for row in node_id_list:
+                node_property: str = row[kr.label_column_idx]
+                node_value: str = row[kr.node2_column_idx]
+                
+                current_process_node_id, each_node_attributes = self.process_row(kw,
+                                                                                 node_id,
+                                                                                 node_property,
+                                                                                 node_value,
+                                                                                 current_process_node_id,
+                                                                                 each_node_attributes)
+                
+            if current_process_node_id is None:
+                self._logger.info("current_processed_node_id is NONE for %s, no data?" % repr(node_id))
+                break
+
+            # Processing the final qnode in the input file
+            unprocessed_qnode = False
+            if each_node_attributes:
+                for k in each_node_attributes:
+                    if each_node_attributes[k]:
+                        unprocessed_qnode = True
+                        break
+            if unprocessed_qnode:
+                _, _ = self.process_qnode(kw, current_process_node_id, each_node_attributes, node_id)
+        
+        if self.verbose:
+            print("Done producing sentences.", file=self.error_file, flush=True)
 
     def process_qnode(self,
                       kw: KgtkWriter,
