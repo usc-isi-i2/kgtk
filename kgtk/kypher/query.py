@@ -21,6 +21,7 @@ pp = pprint.PrettyPrinter(indent=4)
 ### TO DO:
 
 # + support parameters in lists
+# - support concat function (|| operator in sqlite)
 # - maybe support positional parameters $0, $1,...
 # - intelligent interpretation of ^ and $ when regex-matching to string literals?
 #   - one can use kgtk_unstringify first to get to the text content
@@ -32,10 +33,10 @@ pp = pprint.PrettyPrinter(indent=4)
 # - bump graph timestamps when they get queried
 # + allow order-by on column aliases (currently they are undefined variables)
 # - (not) exists pattern handling
-# - null-value handling and testing
+# + null-value handling and testing
 # - handle properties that are ambiguous across graphs
-# - graphs fed in from stdin
-# - graph naming independent from files, so we don't have to have source data files
+# + graphs fed in from stdin
+# + graph naming independent from files, so we don't have to have source data files
 #   available after import for querying, e.g.: ... -i $FILE1 --as g1 -i $FILE2 --as g2 ...
 # - with named graphs, we probably also need some kind of --info command to list content
 # - --create and --remove to instantiate and add/remove edge patterns from result bindings
@@ -482,8 +483,12 @@ class KgtkQuery(object):
         
         elif expr_type == parser.Expression3:
             arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
-            arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
             op = expr.operator.upper()
+            if op in ('IS_NULL', 'IS_NOT_NULL'):
+                return '(%s %s)' % (arg1, op.replace('_', ' '))
+            if expr.arg2 is None:
+                raise Exception('Unhandled operator: %s' % str(op))
+            arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
             if op in ('IN'):
                 return '(%s %s %s)' % (arg1, op, arg2)
             elif op in ('REGEX'):
