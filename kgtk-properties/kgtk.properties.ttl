@@ -1,0 +1,301 @@
+@prefix wikibase: <http://wikiba.se/ontology#> .
+@prefix wd: <http://www.wikidata.org/entity/> .
+@prefix wdt: <http://www.wikidata.org/prop/direct/> .
+@prefix wdtn: <http://www.wikidata.org/prop/direct-normalized/> .
+@prefix wdno: <http://www.wikidata.org/prop/novalue/> .
+@prefix wds: <http://www.wikidata.org/entity/statement/> .
+@prefix wdv: <http://www.wikidata.org/value/> .
+@prefix wdref: <http://www.wikidata.org/reference/> .
+@prefix p: <http://www.wikidata.org/prop/> .
+@prefix pr: <http://www.wikidata.org/prop/reference/> .
+@prefix prv: <http://www.wikidata.org/prop/reference/value/> .
+@prefix prn: <http://www.wikidata.org/prop/reference/value-normalized/> .
+@prefix ps: <http://www.wikidata.org/prop/statement/> .
+@prefix psv: <http://www.wikidata.org/prop/statement/value/> .
+@prefix psn: <http://www.wikidata.org/prop/statement/value-normalized/> .
+@prefix pq: <http://www.wikidata.org/prop/qualifier/> .
+@prefix pqv: <http://www.wikidata.org/prop/qualifier/value/> .
+@prefix pqn: <http://www.wikidata.org/prop/qualifier/value-normalized/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix schema: <http://schema.org/> .
+
+wd:P279star a wikibase:Item,
+        wikibase:Property ;
+    rdfs:label "is a"@en ;
+    schema:description "Instance or subclass relationship"@en ;
+    schema:name "is a"@en ;
+    wikibase:claim p:P279star ;
+    wikibase:directClaim wdt:P279star ;
+    wikibase:directClaimNormalized wdtn:P279star ;
+    wikibase:novalue wdno:P279star ;
+    wikibase:propertyType wikibase:WikibaseItem ;
+    wikibase:qualifier pq:P279star ;
+    wikibase:qualifierValue pqv:P279star ;
+    wikibase:qualifierValueNormalized pqn:P279star ;
+    wikibase:reference pr:P279star ;
+    wikibase:referenceValue prv:P279star ;
+    wikibase:referenceValueNormalized prn:P279star ;
+    wikibase:statementProperty ps:P279star ;
+    wikibase:statementValue psv:P279star ;
+    wikibase:statementValueNormalized psn:P279star ;
+    skos:altLabel "isa"@en ;
+    skos:prefLabel "is a"@en ;
+    p:P31 wds:P279star-18c7bafe-e406-4bd8-bd84-a7c541e9e503,
+        wds:P279star-bc542a11-fb7b-4c9c-9230-7e7b6378f8d0,
+        wds:P279star-cf4e7865-e51b-480d-9c00-16c4ffcb4ecf,
+        wds:P279star-da8fb49a-1734-447e-968a-d4a912a94e50 ;
+    wdt:P31 wd:Q18616576,
+        wd:Q18647519,
+        wd:Q18647521,
+        wd:Q28326461 .
+
+wd:directed_pagerank a wikibase:Item,
+        wikibase:Property ;
+    rdfs:label "pagerank"@en ;
+    schema:description "pagerank canculated on the directed graph"@en ;
+    schema:name "pagerank"@en ;
+    wikibase:claim p:directed_pagerank ;
+    wikibase:directClaim wdt:directed_pagerank ;
+    wikibase:directClaimNormalized wdtn:directed_pagerank ;
+    wikibase:novalue wdno:directed_pagerank ;
+    wikibase:propertyType wikibase:Quantity ;
+    wikibase:qualifier pq:directed_pagerank ;
+    wikibase:qualifierValue pqv:directed_pagerank ;
+    wikibase:qualifierValueNormalized pqn:directed_pagerank ;
+    wikibase:reference pr:directed_pagerank ;
+    wikibase:referenceValue prv:directed_pagerank ;
+    wikibase:referenceValueNormalized prn:directed_pagerank ;
+    wikibase:statementProperty ps:directed_pagerank ;
+    wikibase:statementValue psv:directed_pagerank ;
+    wikibase:statementValueNormalized psn:directed_pagerank ;
+    skos:altLabel "page rank"@en ;
+    skos:prefLabel "pagerank"@en ;
+    p:P1629 wds:directed_pagerank-bc7ac29c-1480-4f23-8b51-42415ec5c930 ;
+    p:P31 wds:directed_pagerank-d2bbf915-05a0-444f-90ba-902e8e9f1db8,
+        wds:directed_pagerank-e8902ebe-d480-4391-972b-0ce29d2bbe4d ;
+    wdt:P1629 wd:Q184316 ;
+    wdt:P31 wd:Q18616576,
+        wd:Q47512165 .
+
+wd:in_degree a wikibase:Item,
+        wikibase:Property ;
+    rdfs:label "in degree"@en ;
+    schema:description "in degree of a node in a graph"@en ;
+    schema:name "in degree"@en ;
+    wikibase:claim p:in_degree ;
+    wikibase:directClaim wdt:in_degree ;
+    wikibase:directClaimNormalized wdtn:in_degree ;
+    wikibase:novalue wdno:in_degree ;
+    wikibase:propertyType wikibase:Quantity ;
+    wikibase:qualifier pq:in_degree ;
+    wikibase:qualifierValue pqv:in_degree ;
+    wikibase:qualifierValueNormalized pqn:in_degree ;
+    wikibase:reference pr:in_degree ;
+    wikibase:referenceValue prv:in_degree ;
+    wikibase:referenceValueNormalized prn:in_degree ;
+    wikibase:statementProperty ps:in_degree ;
+    wikibase:statementValue psv:in_degree ;
+    wikibase:statementValueNormalized psn:in_degree ;
+    skos:altLabel "degree"@en ;
+    skos:prefLabel "in degree"@en ;
+    p:P1629 wds:in_degree-2eaa9eaa-f947-4701-af89-b255dd66a431 ;
+    p:P31 wds:in_degree-30d8cfc8-0740-44dd-9391-ff3b0253ec88,
+        wds:in_degree-7d902794-bbab-454a-a377-0a6def4295fc ;
+    wdt:P1629 wd:Q383444 ;
+    wdt:P31 wd:Q18616576,
+        wd:Q47512165 .
+
+wd:isa a wikibase:Item,
+        wikibase:Property ;
+    rdfs:label "is a"@en ;
+    schema:description "Instance or subclass relationship"@en ;
+    schema:name "is a"@en ;
+    wikibase:claim p:isa ;
+    wikibase:directClaim wdt:isa ;
+    wikibase:directClaimNormalized wdtn:isa ;
+    wikibase:novalue wdno:isa ;
+    wikibase:propertyType wikibase:WikibaseItem ;
+    wikibase:qualifier pq:isa ;
+    wikibase:qualifierValue pqv:isa ;
+    wikibase:qualifierValueNormalized pqn:isa ;
+    wikibase:reference pr:isa ;
+    wikibase:referenceValue prv:isa ;
+    wikibase:referenceValueNormalized prn:isa ;
+    wikibase:statementProperty ps:isa ;
+    wikibase:statementValue psv:isa ;
+    wikibase:statementValueNormalized psn:isa ;
+    skos:altLabel "isa"@en ;
+    skos:prefLabel "is a"@en ;
+    p:P31 wds:isa-8a7688de-210e-48a0-a12a-33a79283c5f2,
+        wds:isa-94536cae-64d0-42eb-b9a7-d2ba2aefdc74,
+        wds:isa-9c56762f-b935-4eb7-934f-0cba177f6a1b ;
+    wdt:P31 wd:Q18616576,
+        wd:Q18647519,
+        wd:Q28326461 .
+
+wd:out_degree a wikibase:Item,
+        wikibase:Property ;
+    rdfs:label "out degree"@en ;
+    schema:description "out degree of a node in a graph"@en ;
+    schema:name "out degree"@en ;
+    wikibase:claim p:out_degree ;
+    wikibase:directClaim wdt:out_degree ;
+    wikibase:directClaimNormalized wdtn:out_degree ;
+    wikibase:novalue wdno:out_degree ;
+    wikibase:propertyType wikibase:Quantity ;
+    wikibase:qualifier pq:out_degree ;
+    wikibase:qualifierValue pqv:out_degree ;
+    wikibase:qualifierValueNormalized pqn:out_degree ;
+    wikibase:reference pr:out_degree ;
+    wikibase:referenceValue prv:out_degree ;
+    wikibase:referenceValueNormalized prn:out_degree ;
+    wikibase:statementProperty ps:out_degree ;
+    wikibase:statementValue psv:out_degree ;
+    wikibase:statementValueNormalized psn:out_degree ;
+    skos:altLabel "degree"@en ;
+    skos:prefLabel "out degree"@en ;
+    p:P1629 wds:out_degree-9c63ca01-156a-4235-b5c7-05a1e06d1452 ;
+    p:P31 wds:out_degree-01c281ae-dfef-414e-a26e-976252791a52,
+        wds:out_degree-8a8432e4-078e-4fb5-a335-1d44fb6b9df2 ;
+    wdt:P1629 wd:Q383444 ;
+    wdt:P31 wd:Q18616576,
+        wd:Q47512165 .
+
+wd:undirected_pagerank a wikibase:Item,
+        wikibase:Property ;
+    rdfs:label "pagerank"@en ;
+    schema:description "pagerank canculated on the undirected graph"@en ;
+    schema:name "pagerank"@en ;
+    wikibase:claim p:undirected_pagerank ;
+    wikibase:directClaim wdt:undirected_pagerank ;
+    wikibase:directClaimNormalized wdtn:undirected_pagerank ;
+    wikibase:novalue wdno:undirected_pagerank ;
+    wikibase:propertyType wikibase:Quantity ;
+    wikibase:qualifier pq:undirected_pagerank ;
+    wikibase:qualifierValue pqv:undirected_pagerank ;
+    wikibase:qualifierValueNormalized pqn:undirected_pagerank ;
+    wikibase:reference pr:undirected_pagerank ;
+    wikibase:referenceValue prv:undirected_pagerank ;
+    wikibase:referenceValueNormalized prn:undirected_pagerank ;
+    wikibase:statementProperty ps:undirected_pagerank ;
+    wikibase:statementValue psv:undirected_pagerank ;
+    wikibase:statementValueNormalized psn:undirected_pagerank ;
+    skos:altLabel "page rank"@en ;
+    skos:prefLabel "pagerank"@en ;
+    p:P1629 wds:undirected_pagerank-019eacc2-b755-448f-a626-c165e6120ebe ;
+    p:P31 wds:undirected_pagerank-5c7f26e5-257a-4253-9113-9701a45df1cd,
+        wds:undirected_pagerank-a51fe0d2-9023-4bbb-96b1-2e515660eed5 ;
+    wdt:P1629 wd:Q184316 ;
+    wdt:P31 wd:Q18616576,
+        wd:Q47512165 .
+
+wds:P279star-18c7bafe-e406-4bd8-bd84-a7c541e9e503 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18616576 .
+
+wds:P279star-bc542a11-fb7b-4c9c-9230-7e7b6378f8d0 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18647521 .
+
+wds:P279star-cf4e7865-e51b-480d-9c00-16c4ffcb4ecf a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18647519 .
+
+wds:P279star-da8fb49a-1734-447e-968a-d4a912a94e50 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q28326461 .
+
+wds:directed_pagerank-bc7ac29c-1480-4f23-8b51-42415ec5c930 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1629 wd:Q184316 .
+
+wds:directed_pagerank-d2bbf915-05a0-444f-90ba-902e8e9f1db8 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q47512165 .
+
+wds:directed_pagerank-e8902ebe-d480-4391-972b-0ce29d2bbe4d a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18616576 .
+
+wds:in_degree-2eaa9eaa-f947-4701-af89-b255dd66a431 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1629 wd:Q383444 .
+
+wds:in_degree-30d8cfc8-0740-44dd-9391-ff3b0253ec88 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q47512165 .
+
+wds:in_degree-7d902794-bbab-454a-a377-0a6def4295fc a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18616576 .
+
+wds:isa-8a7688de-210e-48a0-a12a-33a79283c5f2 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18647519 .
+
+wds:isa-94536cae-64d0-42eb-b9a7-d2ba2aefdc74 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q28326461 .
+
+wds:isa-9c56762f-b935-4eb7-934f-0cba177f6a1b a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18616576 .
+
+wds:out_degree-01c281ae-dfef-414e-a26e-976252791a52 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18616576 .
+
+wds:out_degree-8a8432e4-078e-4fb5-a335-1d44fb6b9df2 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q47512165 .
+
+wds:out_degree-9c63ca01-156a-4235-b5c7-05a1e06d1452 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1629 wd:Q383444 .
+
+wds:undirected_pagerank-019eacc2-b755-448f-a626-c165e6120ebe a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P1629 wd:Q184316 .
+
+wds:undirected_pagerank-5c7f26e5-257a-4253-9113-9701a45df1cd a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q47512165 .
+
+wds:undirected_pagerank-a51fe0d2-9023-4bbb-96b1-2e515660eed5 a wikibase:Statement ;
+    wikibase:rank wikibase:BestRank ;
+    <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
+    ps:P31 wd:Q18616576 .
+
+wd:Q18647521 a wikibase:Item .
+
+wd:Q184316 a wikibase:Item .
+
+wd:Q18647519 a wikibase:Item .
+
+wd:Q28326461 a wikibase:Item .
+
+wd:Q383444 a wikibase:Item .
+
+wd:Q47512165 a wikibase:Item .
+
+wd:Q18616576 a wikibase:Item .
+
