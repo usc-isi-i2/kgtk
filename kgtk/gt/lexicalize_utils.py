@@ -44,6 +44,10 @@ class Lexicalize:
         # assume the input edge file is sorted
         self.add_all_properties: bool = self.get_add_all_properties()
 
+        self.english_labels_loaded: int = 0
+        self.english_labels_reloaded: int = 0
+        self.non_english_labels_loaded: int = 0
+        self.non_english_labels_ignored: int = 0
 
     ATTRIBUTE_TYPES = typing.Union[typing.List, typing.Set]
     EACH_NODE_ATTRIBUTES = typing.MutableMapping[str, ATTRIBUTE_TYPES]
@@ -119,10 +123,10 @@ class Lexicalize:
                                          value_options=value_options,
                                          verbose=verbose,
                                          )
-        self.english_labels_loaded: int = 0
-        self.english_labels_reloaded: int = 0
-        self.non_english_labels_loaded: int = 0
-        self.non_english_labels_ignored: int = 0
+        self.english_labels_loaded = 0
+        self.english_labels_reloaded = 0
+        self.non_english_labels_loaded = 0
+        self.non_english_labels_ignored = 0
         try:
             fail: bool = False
             if kr.node1_column_idx < 0:
@@ -335,11 +339,13 @@ class Lexicalize:
             print("Processed %d input rows." % (input_rows), file=self.error_file, flush=True)
 
 
-    def process_unsorted_input(self, kr: KgtkReader, kw: KgtkWriter):
+    def process_unsorted_input(self, kr: KgtkReader, kw: KgtkWriter, add_entity_labels: bool = False):
         """The input file is sorted in memory by node1."""
 
         if self.verbose:
             print("Processing unsorted input.", file=self.error_file, flush=True)
+
+        start_node_label_count: int = len(self.node_labels)
 
         input_rows: int = 0
 
@@ -353,6 +359,10 @@ class Lexicalize:
         for row in kr:
             input_rows += 1
             node_id = row[kr.node1_column_idx]
+
+            if add_entity_labels:
+                self.add_entity_if_label(node_id, row[kr.label_column_idx], row[kr.node2_column_idx], self.label_properties)
+
             if node_id in rows_by_node_id:
                 node_id_rows = rows_by_node_id[node_id]
             else:
@@ -362,6 +372,13 @@ class Lexicalize:
             
         if self.verbose:
             print("Read %d input rows with %d unique node_id values." % (input_rows, len(rows_by_node_id)), file=self.error_file, flush=True)
+            if add_entity_labels:
+                print("Loaded %d entity labels." % (len(self.node_labels) - start_node_label_count), file=self.error_file, flush=True)
+                print("%d English labels loaded, %d reloaded, %d non-English labels loaded, %d ignored." % (self.english_labels_loaded,
+                                                                                                           self.english_labels_reloaded,
+                                                                                                           self.non_english_labels_loaded,
+                                                                                                           self.non_english_labels_ignored),
+                      file=self.error_file, flush=True)
             print("Producing sentences.", file=self.error_file, flush=True)
 
         for node_id in sorted(rows_by_node_id.keys()):
