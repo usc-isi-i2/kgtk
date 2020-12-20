@@ -71,6 +71,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--sentence-label', action='store', type=str, dest='sentence_label', default=DEFAULT_SENTENCE_LABEL,
                         help="The relationship to write in the output file. (default=%(default)s)")
 
+    parser.add_argument("--explain", dest="explain", metavar="True|False",
+                        help="When true, include an explanation column that tells how the sentence was constructed. (default=%(default)s).",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument("--presorted", dest="presorted", metavar="True|False",
+                        help="When true, the input file is presorted on node1. (default=%(default)s).",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument("--add-entity-labels-from-input", dest="add_entity_labels_from_input", metavar="True|False",
+                        help="When true, extract entity labels from the unsorted input file. (default=%(default)s).",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
     KgtkValueOptions.add_arguments(parser, expert=False)
@@ -86,6 +98,9 @@ def run(input_file: KGTKFiles,
         has_properties: typing.Optional[typing.List[str]],
         property_values: typing.Optional[typing.List[str]],
         sentence_label: str,
+        explain: bool,
+        presorted: bool,
+        add_entity_labels_from_input: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -159,6 +174,8 @@ def run(input_file: KGTKFiles,
             print("--property-values %s" % " ".join(property_values), file=error_file, flush=True)
 
         print("--sentence-label=%s" % str(sentence_label), file=error_file, flush=True)
+        print("--explain=%s" % str(explain), file=error_file, flush=True)
+        print("--presorted=%s" % str(presorted), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -171,6 +188,7 @@ def run(input_file: KGTKFiles,
                                    has_properties,
                                    property_values,
                                    sentence_label,
+                                   explain=explain,
                                    error_file=error_file,
                                    verbose=verbose,
                                    very_verbose=very_verbose)
@@ -208,9 +226,15 @@ def run(input_file: KGTKFiles,
             print("label column index = {}".format(kr.label_column_idx),  file=error_file, flush=True)
             print("node2 column index = {}".format(kr.node2_column_idx),  file=error_file, flush=True)
 
+        output_columns: typing.List[str] = OUTPUT_COLUMNS.copy()
+        if explain:
+            output_columns.append("explaination")
+            if verbose:
+                print("Including an explaination column in the output.", file=error_file, flush=True)
+
         if verbose:
             print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
-        kw = KgtkWriter.open(OUTPUT_COLUMNS,
+        kw = KgtkWriter.open(output_columns,
                              output_kgtk_file,
                              require_all_columns=True,
                              prohibit_extra_columns=True,
@@ -220,7 +244,10 @@ def run(input_file: KGTKFiles,
                              very_verbose=very_verbose,
                              )
 
-        lexer.process_input(kr, kw)
+        if presorted:
+            lexer.process_presorted_input(kr, kw)
+        else:
+            lexer.process_unsorted_input(kr, kw, add_entity_labels=add_entity_labels_from_input)
 
         return 0
 
