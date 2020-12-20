@@ -79,6 +79,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="When true, the input file is presorted on node1. (default=%(default)s).",
                         type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument("--add-entity-labels-from-input", dest="add_entity_labels_from_input", metavar="True|False",
+                        help="When true, extract entity labels from the unsorted input file. (default=%(default)s).",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
     KgtkValueOptions.add_arguments(parser, expert=False)
@@ -96,6 +100,7 @@ def run(input_file: KGTKFiles,
         sentence_label: str,
         explain: bool,
         presorted: bool,
+        add_entity_labels_from_input: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -242,7 +247,7 @@ def run(input_file: KGTKFiles,
         if presorted:
             lexer.process_presorted_input(kr, kw)
         else:
-            lexer.process_unsorted_input(kr, kw)
+            lexer.process_unsorted_input(kr, kw, add_entity_labels=add_entity_labels_from_input)
 
         return 0
 
