@@ -67,7 +67,8 @@ class KgtkCreateTmpTsv(KgtkFormat):
         # node1 relation node2
         node1_index= kr.get_node1_column_index()
         node2_index = kr.get_node2_column_index()
-        relation_index = kr.get_id_column_index('relation')
+        ##relation_index = kr.get_id_column_index('relation')#
+        relation_index = kr.get_label_column_index()
       
         row: typing.List[str]
         # delete header
