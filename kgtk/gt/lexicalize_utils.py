@@ -346,6 +346,7 @@ class Lexicalize:
             print("Processing unsorted input.", file=self.error_file, flush=True)
 
         start_node_label_count: int = len(self.node_labels)
+        entity_label_count: int = 0
 
         input_rows: int = 0
 
@@ -361,7 +362,8 @@ class Lexicalize:
             node_id = row[kr.node1_column_idx]
 
             if add_entity_labels:
-                self.add_entity_if_label(node_id, row[kr.label_column_idx], row[kr.node2_column_idx], self.label_properties)
+                if self.add_entity_if_label(node_id, row[kr.label_column_idx], row[kr.node2_column_idx], self.label_properties):
+                    entity_label_count += 1
 
             if node_id in rows_by_node_id:
                 node_id_rows = rows_by_node_id[node_id]
@@ -373,7 +375,8 @@ class Lexicalize:
         if self.verbose:
             print("Read %d input rows with %d unique node_id values." % (input_rows, len(rows_by_node_id)), file=self.error_file, flush=True)
             if add_entity_labels:
-                print("Loaded %d entity labels." % (len(self.node_labels) - start_node_label_count), file=self.error_file, flush=True)
+                print("Loaded %d entity labels from %d rows." % (len(self.node_labels) - start_node_label_count, entity_label_count),
+                      file=self.error_file, flush=True)
                 print("%d English labels loaded, %d reloaded, %d non-English labels loaded, %d ignored." % (self.english_labels_loaded,
                                                                                                            self.english_labels_reloaded,
                                                                                                            self.non_english_labels_loaded,
