@@ -314,10 +314,11 @@ def generate_w2v_output(entities_output,output_kgtk_file,kwargs):
     fin = open(entities_output)
     entity_num = len(fin.readlines())
     fin.close()
-    fout.write(str(entity_num) + '\t' + str(kwargs['dimension_num']) + '\n')
+    fout.write(str(entity_num) + ' ' + str(kwargs['dimension_num']) + '\n')
     with open(entities_output) as fin:
         for line in fin:
-            fout.write(line)
+            embedding = ' '.join(line.split('\t'))
+            fout.write(embedding)
     fout.close()
 
 def run(verbose: bool = False,
