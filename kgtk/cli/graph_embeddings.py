@@ -309,6 +309,17 @@ def generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose):
 
     kw.close()
 
+def generate_w2v_output(entities_output,output_kgtk_file,kwargs):
+    fout = open(output_kgtk_file,'w')
+    fin = open(entities_output)
+    entity_num = len(fin.readlines())
+    fin.close()
+    fout.write(str(entity_num) + ' ' + str(kwargs['dimension_num']) + '\n')
+    with open(entities_output) as fin:
+        for line in fin:
+            embedding = ' '.join(line.split('\t'))
+            fout.write(embedding)
+    fout.close()
 
 def run(verbose: bool = False,
         very_verbose: bool = False,
@@ -435,13 +446,8 @@ def run(verbose: bool = False,
         if kwargs['output_format'] == 'glove': # glove format output 
             shutil.copyfile(entities_output,output_kgtk_file)
         elif kwargs['output_format'] == 'w2v': # w2v format output
-            shutil.copyfile(entities_output,output_kgtk_file)
-            with open(output_kgtk_file,'r+') as f:
-                entity_num = len(f.readlines())
-                content = f.read()
-                f.seek(0, 0)
-                f.write(str(entity_num) + '\t' + str(kwargs['dimension_num']) + '\n')
-                f.write(content)
+            generate_w2v_output(entities_output,output_kgtk_file,kwargs)
+
         else: # write to the kgtk output format tsv 
             generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose)
 
