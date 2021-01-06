@@ -1221,15 +1221,17 @@ def run(input_file: KGTKFiles,
                                                 raise ValueError('Unknown entity type %s' % enttype)
                                         item=value
                                     elif typ == 'quantity':
-                                        value = val['amount']
-                                        mag = val['amount']
+                                        # Strip whitespace from the numeric fields.  Some older Wikidata dumps
+                                        # (20150805-20160502) sometimes have trailing newlines in these fields.
+                                        value = val['amount'].strip()
+                                        mag = val['amount'].strip()
                                         if val.get(
                                                 'upperBound',
                                                 None) or val.get(
                                                 'lowerBound',
                                                 None):
-                                            lower = val.get('lowerBound', '')
-                                            upper = val.get('upperBound', '')
+                                            lower = val.get('lowerBound', '').strip()
+                                            upper = val.get('upperBound', '').strip()
                                             value += '[' + lower + \
                                                 ',' + upper + ']'
                                         # TODO: Don't lose the single-character unit code.  At a minimum, verify that it is the value "1".
