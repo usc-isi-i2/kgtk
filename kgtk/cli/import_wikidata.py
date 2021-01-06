@@ -1223,15 +1223,17 @@ def run(input_file: KGTKFiles,
                                     elif typ == 'quantity':
                                         # Strip whitespace from the numeric fields.  Some older Wikidata dumps
                                         # (20150805-20160502) sometimes have trailing newlines in these fields.
-                                        value = val['amount'].strip()
-                                        mag = val['amount'].strip()
+                                        # Convert actual numbers to strings before attempting to strip leading
+                                        # and trailing whitespace.
+                                        value = str(val['amount']).strip()
+                                        mag = value
                                         if val.get(
                                                 'upperBound',
                                                 None) or val.get(
                                                 'lowerBound',
                                                 None):
-                                            lower = val.get('lowerBound', '').strip()
-                                            upper = val.get('upperBound', '').strip()
+                                            lower = str(val.get('lowerBound', '')).strip()
+                                            upper = str(val.get('upperBound', '')).strip()
                                             value += '[' + lower + \
                                                 ',' + upper + ']'
                                         # TODO: Don't lose the single-character unit code.  At a minimum, verify that it is the value "1".
@@ -1242,8 +1244,9 @@ def run(input_file: KGTKFiles,
                                                 # TODO: don't lose track of "undefined" units.
                                                 value += unit
                                     elif typ == 'globe-coordinate':
-                                        lat = str(val['latitude'])
-                                        long = str(val['longitude'])
+                                        # Strip potential leading and trailing whitespace.
+                                        lat = str(val['latitude']).strip()
+                                        long = str(val['longitude']).strip()
                                         precision = str(val.get('precision', ''))
                                         value = '@' + lat + '/' + long
                                         # TODO: what about "globe"?
@@ -1252,12 +1255,13 @@ def run(input_file: KGTKFiles,
                                             pre="^-"
                                         else:
                                             pre="^"
+                                        # TODO: Maybe strip leading and traiming whitespace here?
                                         date = pre + val['time'][1:]
-                                        precision = str(val['precision'])
+                                        # Cautiously strip leading and trailing whitespace from precision?
+                                        precision = str(val['precision']).strip()
                                         calendar = val.get(
                                             'calendarmodel', '').split('/')[-1]
-                                        value = pre + \
-                                            val['time'][1:] + '/' + str(val['precision'])
+                                        value = date + '/' + precision
                                     elif typ == 'monolingualtext':
                                         # value = '\'' + \
                                         # val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
