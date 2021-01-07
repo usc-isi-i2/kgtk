@@ -1181,6 +1181,17 @@ def run(input_file: KGTKFiles,
                                         datavalue = mainsnak['datavalue']
                                         val = datavalue.get('value')
                                         val_type = datavalue.get("type", "")
+                                        if val is not None:
+                                            if val_type in ("string", "wikibase-unmapped-entityid"):
+                                                if not isinstance(val, str):
+                                                    print("Value type is %s but the value is not a string, ignoring claim_property for (%s, %s)." % (repr(val_type), repr(qnode), repr(prop)),
+                                                          file=sys.stderr, flush=True)
+                                                    continue
+                                            elif not isinstance(val, dict):
+                                                print("Value type %s is not a known string type and value is not a dict, ignoring claim_property for (%s, %s)." % (repr(val_type), repr(qnode), repr(prop)),
+                                                      file=sys.stderr, flush=True)
+                                                continue
+
                                     elif snaktype == 'somevalue':
                                         val = None
                                         val_type = "somevalue"
@@ -1216,16 +1227,32 @@ def run(input_file: KGTKFiles,
                                     if val is None:
                                         value = val_type
                                     elif typ.startswith('wikibase'):
-                                        enttype = val.get('entity-type')
-                                        value = val.get('id', '')
-                                        # Older Wikidata dumps do not have an 'id' here.
-                                        if len(value) == 0 and 'numeric-id' in val:
-                                            if enttype == "item":
-                                                value = 'Q' + str(val['numeric-id'])
-                                            elif enttype == "property":
-                                                value = 'P' + str(val['numeric-id'])
+                                        if isinstance(val, dict):
+                                            enttype = val.get('entity-type')
+                                            value = val.get('id', '')
+                                        else:
+                                            value = val
+                                            # TODO: Can we find something less ad-hoc to do here?
+                                            if typ == "wikibase-lexeme":
+                                                enttype = "lexeme"
                                             else:
-                                                raise ValueError('Unknown entity type %s' % enttype)
+                                                enttype = "unknown"
+
+                                        # Older Wikidata dumps do not have an 'id' here.
+                                        if len(value) == 0:
+                                            if isinstance(val, dict) and 'numeric-id' in val:
+                                                numeric_id = str(val['numeric-id'])
+                                            else:
+                                                raise ValueError("No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (repr(typ), repr(enttype), repr(qnode), repr(prop))) 
+
+                                            if enttype == "item":
+                                                value = 'Q' + numeric_id
+                                            elif enttype == "property":
+                                                value = 'P' + numeric_id
+                                            elif enttype == "lexeme":
+                                                value = 'L' + numeric_id
+                                            else:
+                                                raise ValueError('Unknown entity type %s for datatype %s in (%s, %s).' % (repr(enttype), repr(typ), repr(qnode), repr(prop)))
                                         item=value
                                     elif typ == 'quantity':
                                         # Strip whitespace from the numeric fields.  Some older Wikidata dumps
@@ -1266,8 +1293,7 @@ def run(input_file: KGTKFiles,
                                         date = pre + val['time'][1:]
                                         # Cautiously strip leading and trailing whitespace from precision?
                                         precision = str(val['precision']).strip()
-                                        calendar = val.get(
-                                            'calendarmodel', '').split('/')[-1]
+                                        calendar = val.get('calendarmodel', '').split('/')[-1]
                                         value = date + '/' + precision
                                     elif typ == 'monolingualtext':
                                         # value = '\'' + \
@@ -1373,16 +1399,32 @@ def run(input_file: KGTKFiles,
                                                             value = val_type
 
                                                         elif typ.startswith('wikibase'):
-                                                            enttype = val.get('entity-type')
-                                                            value = val.get('id', '')
-                                                            # Older Wikidata dumps do not have an 'id' here.
-                                                            if len(value) == 0 and 'numeric-id' in val:
-                                                                if enttype == "item":
-                                                                    value = 'Q' + str(val['numeric-id'])
-                                                                elif enttype == "property":
-                                                                    value = 'P' + str(val['numeric-id'])
+                                                            if isinstance(val, dict):
+                                                                enttype = val.get('entity-type')
+                                                                value = val.get('id', '')
+                                                            else:
+                                                                value = val
+                                                                if typ == "wikibase-lexeme":
+                                                                    enttype = "lexeme"
                                                                 else:
-                                                                    raise ValueError('Unknown entity type %s' % enttype)
+                                                                    enttype = "unknown"
+
+                                                            # Older Wikidata dumps do not have an 'id' here.
+                                                            if len(value) == 0:
+                                                                if isinstance(val, dict) and 'numeric-id' in val:
+                                                                    numeric_id = str(val['numeric-id'])
+                                                                else:
+                                                                    raise ValueError("No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (repr(typ), repr(enttype), repr(qnode), repr(prop)))
+                                                                
+                                                                if enttype == "item":
+                                                                    value = 'Q' + numeric_id
+                                                                elif enttype == "property":
+                                                                    value = 'P' + numeric_id
+                                                                elif enttype == "lexeme":
+                                                                    value = 'L' + numeric_id
+                                                                else:
+                                                                    raise ValueError('Unknown entity type %s for datatype %s in (%s, %s).' % (repr(enttype), repr(typ), repr(qnode), repr(prop)))
+
                                                             item=value
                                                         elif typ == 'quantity':
                                                             value = val['amount']
