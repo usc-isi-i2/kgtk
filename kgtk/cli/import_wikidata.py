@@ -1145,14 +1145,21 @@ def run(input_file: KGTKFiles,
 
                 if parse_claims and "claims" not in obj:
                     if fail_if_missing:
-                        raise KGTKException("Qnode %s is missing its claims" % qnode)
+                        raise KGTKException("Qnode %s is missing its claims" % obj.get("id", "<UNKNOWN>"))
                     elif warn_if_missing:
-                        print("Object id {} is missing its claims.".format(qnode), file=sys.stderr, flush=True)
+                        print("Object id {} is missing its claims.".format(obj.get("id", "<UNKNOWN>")), file=sys.stderr, flush=True)
                     
                 if parse_claims and "claims" in obj:
                     claims = obj["claims"]
                     if keep:
-                        qnode = obj["id"]
+                        qnode = obj.get("id", "")
+                        if len(qnode) == 0:
+                            if fail_if_missing:
+                                raise KGTKException("A claim is missing its Qnode id.")
+                            elif warn_if_missing:
+                                print("A claim is missing its Qnode id", file=sys.stderr, flush=True)
+                            qnode = "UNKNOWN" # This will cause trouble down the line.
+
                         for prop, claim_property in claims.items():
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
@@ -1349,7 +1356,18 @@ def run(input_file: KGTKFiles,
                                                         long = ''
                                                         enttype = ''
                                                         datahash = '"' + qcp['hash'] + '"'
-                                                        typ = qcp['datatype']
+                                                        typ = qcp.get('datatype')
+                                                        if typ is None:
+                                                            if fail_if_missing:
+                                                                raise KGTKException("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)))
+                                                            elif warn_if_missing:
+                                                                if val_type == "somevalue":
+                                                                    print("Somevalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                                elif val_type == "novalue":
+                                                                    print("Novalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                                else:
+                                                                    print("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                            continue
 
                                                         if val is None:
                                                             value = val_type
