@@ -72,8 +72,8 @@ class KgtkCreateTmpTsv(KgtkFormat):
       
         row: typing.List[str]
         # delete header
-        kw.file_out.seek(0)         # set the cursor to the top of the file
-        kw.file_out.truncate()      # truncate following part == delete first line
+        # kw.file_out.seek(0)         # set the cursor to the top of the file
+        # kw.file_out.truncate()      # truncate following part == delete first line
         # print(kw.file_out.tell())
 
         for row in kr:
