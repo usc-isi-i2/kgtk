@@ -1,5 +1,8 @@
 Import the entire ATOMIC into KGTK format. 
 
+ATOMIC ([Sap et al., 2019](https://arxiv.org/pdf/1811.00146.pdf)) is a recently constructed knowledge graph of commonsense knowledge statements for common events. It consists of over 700k statements that describe 24k base events with 9 relations. The knowledge covered in ATOMIC expresses event causality and implications on their (human) participants. Since its creation, ATOMIC has been a common resource in KG-augmented downstream reasoning systems, built for tasks such as Question Answering or Natural Language Inference.
+
+
 ## Usage
 ```
 usage: kgtk import-atomic [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
@@ -14,6 +17,10 @@ optional arguments:
                         stdout.)
 
 ```
+
+## Obtaining the data
+
+ATOMIC can be downloaded [here](https://storage.googleapis.com/ai2-mosaic/public/atomic/v1.0/atomic_data.tgz). KGTK's importer uses its aggregated file: `v4_atomic_all_agg.csv`.
 
 ## Examples
 
