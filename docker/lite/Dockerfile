@@ -1,7 +1,8 @@
-FROM python:3.6.10-slim
+FROM python:3.7.9-slim
 
 RUN apt-get update && apt-get install -y \
   gcc \
+  pv \
   git
 
 RUN pip install jupyter

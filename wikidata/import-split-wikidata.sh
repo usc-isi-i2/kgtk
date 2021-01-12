@@ -18,82 +18,84 @@ echo -e "\nImporting ${WIKIDATA_ALL_JSON} with labels, etc. in English and all l
 kgtk ${KGTK_FLAGS} \
      import-wikidata \
      -i ${WIKIDATA_ALL_JSON} \
-     --node-file ${DATADIR}/${WIKIDATA_ALL_NODES}.tsv \
-     --detailed-edge-file ${DATADIR}/${WIKIDATA_ALL_EDGES}-full.tsv \
-     --minimal-edge-file ${DATADIR}/${WIKIDATA_ALL_EDGES}.tsv \
-     --detailed-qual-file ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}-full.tsv \
-     --minimal-qual-file ${DATADIR}/${WIKIDATA_ALL_QUALIFIERS}.tsv \
+     --node-file ${DATADIR}/node.unsorted.tsv \
+     --detailed-edge-file ${DATADIR}/all.full.unsorted.tsv \
+     --minimal-edge-file ${DATADIR}/all.unsorted.tsv \
+     --detailed-qual-file ${DATADIR}/qual.full.unsorted.tsv \
+     --minimal-qual-file ${DATADIR}/qual.unsorted.tsv \
      --node-file-id-only \
      --explode-values False \
      --all-languages \
      --alias-edges True \
-     --split-alias-file ${DATADIR}/${WIKIDATA_ALL}-aliases-all-lang.tsv \
-     --split-en-alias-file ${DATADIR}/${WIKIDATA_ALL}-aliases-en-only.tsv \
+     --split-alias-file ${DATADIR}/part.alias.unsorted.tsv \
+     --split-en-alias-file ${DATADIR}/part.alias.en.unsorted.tsv \
      --description-edges True \
-     --split-description-file ${DATADIR}/${WIKIDATA_ALL}-descriptions-all-lang.tsv \
-     --split-en-description-file ${DATADIR}/${WIKIDATA_ALL}-descriptions-en-only.tsv \
+     --split-description-file ${DATADIR}/part.description.unsorted.tsv \
+     --split-en-description-file ${DATADIR}/part.description.en.unsorted.tsv \
      --label-edges True \
-     --split-label-file ${DATADIR}/${WIKIDATA_ALL}-labels-all-lang.tsv \
-     --split-en-label-file ${DATADIR}/${WIKIDATA_ALL}-labels-en-only.tsv \
+     --split-label-file ${DATADIR}/part.label.unsorted.tsv \
+     --split-en-label-file ${DATADIR}/part.label.en.unsorted.tsv \
      --datatype-edges True \
-     --split-datatype-file ${DATADIR}/${WIKIDATA_ALL}-datatypes.tsv \
+     --split-datatype-file ${DATADIR}/property.datatype.unsorted.tsv \
      --entry-type-edges True \
-     --split-type-file ${DATADIR}/${WIKIDATA_ALL}-types.tsv \
+     --split-type-file ${DATADIR}/types.unsorted.tsv \
      --sitelink-edges True \
      --sitelink-verbose-edges True \
-     --split-sitelink-file ${DATADIR}/${WIKIDATA_ALL}-sitelinks-all-lang.tsv \
-     --split-en-sitelink-file ${DATADIR}/${WIKIDATA_ALL}-sitelinks-en-only.tsv \
-     --split-property-edge-file ${DATADIR}/${WIKIDATA_ALL}-properties.tsv \
-     --split-property-qual-file ${DATADIR}/${WIKIDATA_ALL}-property-qualifiers.tsv \
+     --split-sitelink-file ${DATADIR}/part.wikipedia_sitelink.unsorted.tsv \
+     --split-en-sitelink-file ${DATADIR}/part.wikipedia_sitelink.en.unsorted.tsv \
+     --split-property-edge-file ${DATADIR}/part.property.unsorted.tsv \
+     --split-property-qual-file ${DATADIR}/part.property.qual.unsorted.tsv \
+     --value-hash-width 6 \
+     --claim-id-hash-width 8 \
      --use-kgtkwriter True \
      --use-shm True \
-     --procs 5 \
+     --procs 12 \
      --mapper-batch-size 5 \
-     --max-size-per-mapper-queue 10 \
+     --max-size-per-mapper-queue 3 \
      --single-mapper-queue True \
      --collect-results True \
      --collect-seperately True\
      --collector-batch-size 10 \
-     --collector-queue-per-proc-size 15 \
+     --collector-queue-per-proc-size 3 \
      --progress-interval 500000 \
     |& tee ${LOGDIR}/import-split-wikidata.log
 
 # ==============================================================================
 for TARGET in \
-    ${WIKIDATA_ALL_NODES} \
-	${WIKIDATA_ALL_EDGES}-full \
-	${WIKIDATA_ALL_EDGES} \
-	${WIKIDATA_ALL_QUALIFIERS}-full \
-	${WIKIDATA_ALL_QUALIFIERS} \
-	${WIKIDATA_ALL}-aliases-all-lang \
-	${WIKIDATA_ALL}-aliases-en-only \
-	${WIKIDATA_ALL}-descriptions-all-lang \
-	${WIKIDATA_ALL}-descriptions-en-only \
-	${WIKIDATA_ALL}-labels-all-lang \
-	${WIKIDATA_ALL}-labels-en-only \
-	${WIKIDATA_ALL}-datatypes \
-	${WIKIDATA_ALL}-types \
-	${WIKIDATA_ALL}-sitelinks-all-lang \
-	${WIKIDATA_ALL}-sitelinks-en-only \
-	${WIKIDATA_ALL}-properties \
-	${WIKIDATA_ALL}-property-qualifiers
+    node \
+	all.full \
+	all \
+	qual.full \
+	qual \
+	part.alias \
+	part.alias.en \
+	part.description \
+	part.description.en \
+	part.label \
+	part.label.en \
+	property.datatype \
+	types \
+	part.wikipedia_sitelink \
+	part.wikipedia_sitelink.en \
+	part.property \
+	part.property.qual \
 do
     echo -e "\nSort the ${TARGET} file."
     kgtk ${KGTK_FLAGS} \
 	 sort2 ${VERBOSE} \
-	 --input-file ${DATADIR}/${TARGET}.tsv \
-	 --output-file ${DATADIR}/${TARGET}-sorted.tsv \
+	 --input-file ${DATADIR}/${TARGET}.unsorted.tsv \
+	 --output-file ${DATADIR}/${TARGET}.tsv \
 	 --extra "${SORT_EXTRAS}" \
 	|& tee ${LOGDIR}/${TARGET}-sorted.log
 
     echo -e "\nCompress the sorted ${TARGET} file."
     time gzip --keep --force --verbose \
-	 ${DATADIR}/${TARGET}-sorted.tsv \
+	 ${DATADIR}/${TARGET}.tsv \
 	|& tee ${LOGDIR}/${TARGET}-compress.log
 
     echo -e "\nDeliver the compressed ${TARGET} file to the KGTK Google Drive."
     time rsync --archive --verbose \
-	 ${DATADIR}/${TARGET}-sorted.tsv.gz \
+	 ${DATADIR}/${TARGET}.tsv.gz \
 	 ${PRODUCTDIR}/ \
 	|& tee ${LOGDIR}/${TARGET}-deliver.log
 done
