@@ -21,7 +21,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.lift.kgtklift import KgtkLift
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions

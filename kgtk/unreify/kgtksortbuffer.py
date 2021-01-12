@@ -20,7 +20,7 @@ class KgtkSortBuffer(KgtkFormat):
     KEYGEN_TYPE = typing.Callable[['KgtkSortBuffer', typing.List[str]], str]
 
     DEFAULT_GROUPED: bool = True
-    DEFAULT_COLUMN_SEPARATOR: str = KgtkFormat.COLUMN_SEPARATOR
+    DEFAULT_KEY_FIELD_SEPARATOR: str = KgtkFormat.KEY_FIELD_SEPARATOR
     DEFAULT_ERROR_FILE: typing.TextIO = sys.stderr
     DEFAULT_VERBOSE: bool = False
     DEFAULT_VERY_VERBOSE: bool = False
@@ -36,7 +36,7 @@ class KgtkSortBuffer(KgtkFormat):
     grouped: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_GROUPED)
 
     # The column separator is normally tab.
-    column_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_COLUMN_SEPARATOR)
+    key_field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_KEY_FIELD_SEPARATOR)
 
     error_file: typing.TextIO = attr.ib(default=DEFAULT_ERROR_FILE)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_VERBOSE)
@@ -80,8 +80,8 @@ class KgtkSortBuffer(KgtkFormat):
             raise ValueError("KgtkSortBuffer: no label index")
         if buf.node2_column_idx < 0:
             raise ValueError("KgtkSortBuffer: no node2 index")
-        return row[buf.node1_column_idx] + buf.column_separator + \
-            row[buf.label_column_idx] + buf.column_separator + \
+        return row[buf.node1_column_idx] + buf.key_field_separator + \
+            row[buf.label_column_idx] + buf.key_field_separator + \
             row[buf.node2_column_idx]
 
     @staticmethod
@@ -94,9 +94,9 @@ class KgtkSortBuffer(KgtkFormat):
             raise ValueError("KgtkSortBuffer: no node2 index")
         if buf.id_column_idx < 0:
             raise ValueError("KgtkSortBuffer: no id index")
-        return row[buf.node1_column_idx] + buf.column_separator + \
-            row[buf.label_column_idx] + buf.column_separator + \
-            row[buf.node2_column_idx] +  buf.column_separator + \
+        return row[buf.node1_column_idx] + buf.key_field_separator + \
+            row[buf.label_column_idx] + buf.key_field_separator + \
+            row[buf.node2_column_idx] +  buf.key_field_separator + \
             row[buf.id_column_idx]
 
     @staticmethod

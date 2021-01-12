@@ -269,11 +269,11 @@ kgtk generate_wikidata_triples -pf example_prop.tsv -w yes < input_file.tsv > ou
 1. If properties are **only** defined in `input_file.tsv`
 
 ```{shell}
-cat input_file.tsv input_file.tsv | kgtk generate_wikidata_triples -w yes -pd yes > output_file.ttl
+cat input_file.tsv | kgtk generate_wikidata_triples -w yes -pd yes > output_file.ttl
 ```
 1. If properties are defined in both files.
 ```{shell}
-cat input_file.tsv input_file.tsv | kgtk generate_wikidata_triples -pf example_prop.tsv -w yes -pd yes > output_file.ttl
+cat input_file.tsv | kgtk generate_wikidata_triples -pf example_prop.tsv -w yes -pd yes > output_file.ttl
 ```
 
 

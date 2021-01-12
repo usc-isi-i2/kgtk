@@ -161,6 +161,8 @@ class KgtkCat():
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
+                                         use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                         mgzip_threads=self.reader_options.mgzip_threads, # Hack!
                                          gzip_in_parallel=False,
                                          mode=output_mode,
                                          output_format=self.output_format,
@@ -202,7 +204,7 @@ class KgtkCat():
             ew.flush()
 
             if self.verbose:
-                print("Read %d data lines from file %d: %s" % (input_data_lines, idx + 1, input_file_path))
+                print("Read %d data lines from file %d: %s" % (input_data_lines, idx + 1, input_file_path), file=self.error_file, flush=True)
         
         if self.verbose:
             print("Wrote %d lines total from %d files" % (output_data_lines, len(krs)), file=self.error_file, flush=True)

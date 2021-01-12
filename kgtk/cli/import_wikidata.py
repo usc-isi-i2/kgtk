@@ -13,6 +13,11 @@ TODO: Incorporate URLs into the KGTK data model.
 
 TODO: Node type needs to be optional in the edge file.
 
+See:
+https://www.mediawiki.org/wiki/Wikibase/DataModel/JSON
+https://www.wikidata.org/wiki/Special:ListDatatypes
+https://www.wikidata.org/wiki/Help:Data_type
+
 """
 
 import typing
@@ -31,6 +36,8 @@ def add_arguments(parser: KGTKArgumentParser):
         parser (argparse.ArgumentParser)
     """
     from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
     
     parser.add_input_file(positional=True, who='input path file (may be .bz2)')
 
@@ -105,7 +112,7 @@ def add_arguments(parser: KGTKArgumentParser):
         type=optional_bool,
         dest="use_shm",
         const=True,
-        default=True,
+        default=False,
         metavar="True/False",
         help="If true, use ShmQueue. (default=%(default)s).")
 
@@ -549,6 +556,67 @@ def add_arguments(parser: KGTKArgumentParser):
         metavar="True/False",
         help="If true, use KgtkWriter instead of csv.writer. (default=%(default)s).")
 
+    parser.add_argument(
+        "--use-mgzip-for-input",
+        nargs='?',
+        type=optional_bool,
+        dest="use_mgzip_for_input",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, use the multithreaded gzip package, mgzip, for input. (default=%(default)s).")
+
+    parser.add_argument(
+        "--use-mgzip-for-output",
+        nargs='?',
+        type=optional_bool,
+        dest="use_mgzip_for_output",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, use the multithreaded gzip package, mgzip, for output. (default=%(default)s).")
+
+    parser.add_argument(
+        "--mgzip-threads-for-input",
+        type=int,
+        default=KgtkReaderOptions.MGZIP_THREAD_COUNT_DEFAULT,
+        dest="mgzip_threads_for_input",
+        help="The number of threads per mgzip input streama. (default=%(default)s).")
+
+    parser.add_argument(
+        "--mgzip-threads-for-output",
+        type=int,
+        default=KgtkWriter.MGZIP_THREAD_COUNT_DEFAULT,
+        dest="mgzip_threads_for_output",
+        help="The number of threads per mgzip output streama. (default=%(default)s).")
+
+    parser.add_argument(
+        '--value-hash-width',
+        action="store",
+        type=int,
+        dest="value_hash_width",
+        default=8,
+        help='How many characters should be used in a value hash? (default=%(default)d)')
+
+    parser.add_argument(
+        '--claim-id-hash-width',
+        action="store",
+        type=int,
+        dest="claim_id_hash_width",
+        default=0,
+        help='How many characters should be used to hash the claim ID? 0 means do not hash the claim ID. (default=%(default)d)')
+
+    parser.add_argument(
+        "--skip-validation",
+        nargs='?',
+        type=optional_bool,
+        dest="skip_validation",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, skip output record validation. (default=%(default)s).",
+    )
+
 def custom_progress()->bool:
     return True # We want to start a custom progress monitor.
 
@@ -610,13 +678,20 @@ def run(input_file: KGTKFiles,
         collector_batch_size: int,
         single_mapper_queue: bool,
         use_kgtkwriter: bool,
+        use_mgzip_for_input: bool,
+        use_mgzip_for_output: bool,
+        mgzip_threads_for_input: int,
+        mgzip_threads_for_output: int,
+        value_hash_width: int,
+        claim_id_hash_width: int,
+        skip_validation: bool,
         ):
 
     # import modules locally
     import bz2
     import simplejson as json
     import csv
-    import gzip
+    import hashlib
     import multiprocessing as mp
     import os
     from pathlib import Path
@@ -627,7 +702,6 @@ def run(input_file: KGTKFiles,
     from kgtk.cli_argparse import KGTKArgumentParser
     from kgtk.cli_entry import progress_startup
     from kgtk.exceptions import KGTKException
-    from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.cats import platform_cat
 
     languages=lang.split(',')
@@ -656,41 +730,7 @@ def run(input_file: KGTKFiles,
 
         def enter(self):
             print("Starting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
-            WD_META_ITEMS = [
-                "Q163875",
-                "Q191780",
-                "Q224414",
-                "Q4167836",
-                "Q4167410",
-                "Q4663903",
-                "Q11266439",
-                "Q13406463",
-                "Q15407973",
-                "Q18616576",
-                "Q19887878",
-                "Q22808320",
-                "Q23894233",
-                "Q33120876",
-                "Q42104522",
-                "Q47460393",
-                "Q64875536",
-                "Q66480449",
-            ]
-            # filter: currently defined as OR: one hit suffices to be removed from
-            # further processing
-            exclude_list = WD_META_ITEMS
 
-            # punctuation
-            exclude_list.extend(["Q1383557", "Q10617810"])
-
-            # letters etc
-            exclude_list.extend(["Q188725", "Q19776628", "Q3841820",
-                                 "Q17907810", "Q9788", "Q9398093"])
-
-            self.neg_prop_filter = {
-                'P31': exclude_list,    # instance of
-                'P279': exclude_list    # subclass
-            }
             self.first=True
             self.cnt=0
             self.write_mode='w'
@@ -920,12 +960,21 @@ def run(input_file: KGTKFiles,
             description_erows = []
             sitelink_erows = []
 
+            # These maps avoid avoid ID collisions due to hash collision or
+            # repeated values in the input data.  We assume that a top-level
+            # property (obj["id"]) will not occur in multiple input lines.
+            alias_id_collision_map: typing.MutableMapping[str, int] = dict()
+            edge_id_collision_map: typing.MutableMapping[str, int] = dict()
+            qual_id_collision_map: typing.MutableMapping[str, int] = dict()
+            sitelink_id_collision_map: typing.MutableMapping[str, int] = dict()
+
             clean_line = line.strip()
             if clean_line.endswith(b","):
                 clean_line = clean_line[:-1]
             if len(clean_line) > 1:
                 obj = json.loads(clean_line)
                 entry_type = obj["type"]
+                keep: bool = False
                 if entry_type == "item" or entry_type == "property":
                     keep = True
                 elif warn_if_missing:
@@ -952,15 +1001,20 @@ def run(input_file: KGTKFiles,
                             for lang in label_languages:
                                 lang_label = labels.get(lang, None)
                                 if lang_label:
+                                    # We needn't worry about duplicate label entries if this check passes.
+                                    if lang_label['language'] != lang:
+                                        print("*** Conflicting language key %s for the %s label for %s" % (repr(lang_label['language']), repr(lang), qnode),
+                                              file=sys.stderr, flush=True)
+
                                     # lang_label['value']=lang_label['value'].replace('|','\\|')
                                     # label_list.append('\'' + lang_label['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_label['value'], language=lang)
                                     label_list.append(value)
                                         
                                     if label_edges:
-                                        sid = qnode + '-' + LABEL_LABEL + '-' + lang
+                                        langid: str = qnode + '-' + LABEL_LABEL + '-' + lang
                                         self.erows_append(erows,
-                                                          edge_id=sid,
+                                                          edge_id=langid,
                                                           node1=qnode,
                                                           label=LABEL_LABEL,
                                                           node2=value,
@@ -977,9 +1031,9 @@ def run(input_file: KGTKFiles,
                         row.append(entry_type)
                         
                     if entry_type_edges:
-                        sid = qnode + '-' + TYPE_LABEL
+                        typeid: str = qnode + '-' + TYPE_LABEL + '-' + entry_type
                         self.erows_append(erows,
-                                          edge_id=sid,
+                                          edge_id=typeid,
                                           node1=qnode,
                                           label=TYPE_LABEL,
                                           node2=entry_type)
@@ -1000,14 +1054,18 @@ def run(input_file: KGTKFiles,
                             for lang in desc_languages:
                                 lang_descr = descriptions.get(lang, None)
                                 if lang_descr:
+                                    # We needn't worry about duplicate description entries if this check passes.
+                                    if lang_descr['language'] != lang:
+                                        print("*** Conflicting language key %s for the %s description for %s" % (repr(lang_descr['language']), repr(lang), qnode),
+                                              file=sys.stderr, flush=True)
                                     # lang_descr['value']=lang_descr['value'].replace('|','\\|')
                                     # descr_list.append('\'' + lang_descr['value'].replace("'","\\'") + '\'' + "@" + lang)
                                     value = KgtkFormat.stringify(lang_descr['value'], language=lang)
                                     descr_list.append(value)
                                     if descr_edges:
-                                        sid = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
+                                        descrid: str = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
                                         self.erows_append(description_erows if collect_seperately else erows,
-                                                              edge_id=sid,
+                                                              edge_id=descrid,
                                                               node1=qnode,
                                                               label=DESCRIPTION_LABEL,
                                                               node2=value,
@@ -1033,7 +1091,6 @@ def run(input_file: KGTKFiles,
                             else:
                                 alias_languages = languages
                             for lang in alias_languages:
-                                seq_no = 1
                                 lang_aliases = aliases.get(lang, None)
                                 if lang_aliases:
                                     for item in lang_aliases:
@@ -1042,10 +1099,20 @@ def run(input_file: KGTKFiles,
                                         value = KgtkFormat.stringify(item['value'], language=lang)
                                         alias_list.append(value)
                                         if alias_edges:
-                                            sid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + str(seq_no)
-                                            seq_no += 1
+                                            # Hash the value to save space and avoid syntactic difficulties.
+                                            # Take a subset of the hash value to save space.
+                                            alias_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[:value_hash_width]
+                                            aliasid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash
+                                            alias_seq_no: int # In case of hash collision
+                                            if aliasid in alias_id_collision_map:
+                                                alias_seq_no = alias_id_collision_map[aliasid]
+                                                print("\n*** Alias collision #%d detected for %s (%s)" % (alias_seq_no, aliasid, value), file=sys.stderr, flush=True)
+                                            else:
+                                                alias_seq_no = 0
+                                            alias_id_collision_map[aliasid] = alias_seq_no + 1
+                                            aliasid += '-' + str(alias_seq_no)
                                             self.erows_append(erows,
-                                                              edge_id=sid,
+                                                              edge_id=aliasid,
                                                               node1=qnode,
                                                               label=ALIAS_LABEL,
                                                               node2=value,
@@ -1063,11 +1130,11 @@ def run(input_file: KGTKFiles,
                     if not node_id_only:
                         row.append(datatype)
                     if len(datatype) > 0 and datatype_edges:
-                        sid = qnode + '-' + "datatype"
+                        datatypeid: str = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
                         # there's no need to stringify it.
                         self.erows_append(erows,
-                                          edge_id=sid,
+                                          edge_id=datatypeid,
                                           node1=qnode,
                                           label=DATATYPE_LABEL,
                                           node2=datatype)
@@ -1078,42 +1145,53 @@ def run(input_file: KGTKFiles,
 
                 if parse_claims and "claims" not in obj:
                     if fail_if_missing:
-                        raise KGTKException("Qnode %s is missing its claims" % qnode)
+                        raise KGTKException("Qnode %s is missing its claims" % obj.get("id", "<UNKNOWN>"))
                     elif warn_if_missing:
-                        print("Object id {} is missing its claims.".format(qnode), file=sys.stderr, flush=True)
+                        print("Object id {} is missing its claims.".format(obj.get("id", "<UNKNOWN>")), file=sys.stderr, flush=True)
                     
                 if parse_claims and "claims" in obj:
                     claims = obj["claims"]
-                    for prop, value_set in self.neg_prop_filter.items():
-                        claim_property = claims.get(prop, None)
-                        if claim_property:
-                            for cp in claim_property:
-                                cp_id = (
-                                    cp["mainsnak"]
-                                    .get("datavalue", {})
-                                    .get("value", {})
-                                    .get("id")
-                                )
-                                cp_rank = cp["rank"]
-                                if cp_rank != "deprecated" and cp_id in value_set:
-                                    keep = False
                     if keep:
-                        qnode = obj["id"]
+                        qnode = obj.get("id", "")
+                        if len(qnode) == 0:
+                            if fail_if_missing:
+                                raise KGTKException("A claim is missing its Qnode id.")
+                            elif warn_if_missing:
+                                print("A claim is missing its Qnode id", file=sys.stderr, flush=True)
+                            qnode = "UNKNOWN" # This will cause trouble down the line.
+
                         for prop, claim_property in claims.items():
-                            seq_no = 1
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
-                                    snaktype = cp['mainsnak']['snaktype']
+                                    mainsnak = cp['mainsnak']
+                                    snaktype = mainsnak.get('snaktype')
                                     rank=cp['rank']
                                     claim_id = cp['id']
                                     claim_type = cp['type']
                                     if claim_type != "statement":
-                                        print("Unknown claim type %s" % claim_type, file=sys.stderr, flush=True)
+                                        print("Unknown claim type %s, ignoring claim_property for (%s, %s)." % (repr(claim_type), repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
 
+                                    if snaktype is None:
+                                        print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
                                     if snaktype == 'value':
-                                        datavalue = cp['mainsnak']['datavalue']
+                                        datavalue = mainsnak['datavalue']
                                         val = datavalue.get('value')
                                         val_type = datavalue.get("type", "")
+                                        if val is not None:
+                                            if val_type in ("string", "wikibase-unmapped-entityid"):
+                                                if not isinstance(val, str):
+                                                    print("Value type is %s but the value is not a string, ignoring claim_property for (%s, %s)." % (repr(val_type), repr(qnode), repr(prop)),
+                                                          file=sys.stderr, flush=True)
+                                                    continue
+                                            elif not isinstance(val, dict):
+                                                print("Value type %s is not a known string type and value is not a dict, ignoring claim_property for (%s, %s)." % (repr(val_type), repr(qnode), repr(prop)),
+                                                      file=sys.stderr, flush=True)
+                                                continue
+
                                     elif snaktype == 'somevalue':
                                         val = None
                                         val_type = "somevalue"
@@ -1121,14 +1199,18 @@ def run(input_file: KGTKFiles,
                                         val = None
                                         val_type = "novalue"
                                     else:
-                                        raise ValueError("Unknown snaktype %s" % snaktype)
-
-                                    typ = cp['mainsnak']['datatype']
+                                        print("Unknown snaktype %s, ignoring claim_property for (%s, %s)." % (repr(snaktype), repr(qnode), repr(prop)),
+                                                                                                        file=sys.stderr, flush=True)
+                                        continue
+                                    
+                                    typ = mainsnak.get('datatype')
+                                    if typ is None:
+                                        print("Mainsnak without datatype, ignoring claim_property for (%s, %s)" % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
                                     # if typ != val_type:
                                     #     print("typ %s != val_type %s" % (typ, val_type), file=sys.stderr, flush=True)
 
-                                    sid = qnode + '-' + \
-                                        prop + '-' + str(seq_no)                             
                                     value = ''
                                     mag = ''
                                     unit = ''
@@ -1145,19 +1227,47 @@ def run(input_file: KGTKFiles,
                                     if val is None:
                                         value = val_type
                                     elif typ.startswith('wikibase'):
-                                        enttype = val.get('entity-type')
-                                        value = val.get('id', '')
+                                        if isinstance(val, dict):
+                                            enttype = val.get('entity-type')
+                                            value = val.get('id', '')
+                                        else:
+                                            value = val
+                                            # TODO: Can we find something less ad-hoc to do here?
+                                            if typ == "wikibase-lexeme":
+                                                enttype = "lexeme"
+                                            else:
+                                                enttype = "unknown"
+
+                                        # Older Wikidata dumps do not have an 'id' here.
+                                        if len(value) == 0:
+                                            if isinstance(val, dict) and 'numeric-id' in val:
+                                                numeric_id = str(val['numeric-id'])
+                                            else:
+                                                raise ValueError("No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (repr(typ), repr(enttype), repr(qnode), repr(prop))) 
+
+                                            if enttype == "item":
+                                                value = 'Q' + numeric_id
+                                            elif enttype == "property":
+                                                value = 'P' + numeric_id
+                                            elif enttype == "lexeme":
+                                                value = 'L' + numeric_id
+                                            else:
+                                                raise ValueError('Unknown entity type %s for datatype %s in (%s, %s).' % (repr(enttype), repr(typ), repr(qnode), repr(prop)))
                                         item=value
                                     elif typ == 'quantity':
-                                        value = val['amount']
-                                        mag = val['amount']
+                                        # Strip whitespace from the numeric fields.  Some older Wikidata dumps
+                                        # (20150805-20160502) sometimes have trailing newlines in these fields.
+                                        # Convert actual numbers to strings before attempting to strip leading
+                                        # and trailing whitespace.
+                                        value = str(val['amount']).strip()
+                                        mag = value
                                         if val.get(
                                                 'upperBound',
                                                 None) or val.get(
                                                 'lowerBound',
                                                 None):
-                                            lower = val.get('lowerBound', '')
-                                            upper = val.get('upperBound', '')
+                                            lower = str(val.get('lowerBound', '')).strip()
+                                            upper = str(val.get('upperBound', '')).strip()
                                             value += '[' + lower + \
                                                 ',' + upper + ']'
                                         # TODO: Don't lose the single-character unit code.  At a minimum, verify that it is the value "1".
@@ -1168,8 +1278,9 @@ def run(input_file: KGTKFiles,
                                                 # TODO: don't lose track of "undefined" units.
                                                 value += unit
                                     elif typ == 'globe-coordinate':
-                                        lat = str(val['latitude'])
-                                        long = str(val['longitude'])
+                                        # Strip potential leading and trailing whitespace.
+                                        lat = str(val['latitude']).strip()
+                                        long = str(val['longitude']).strip()
                                         precision = str(val.get('precision', ''))
                                         value = '@' + lat + '/' + long
                                         # TODO: what about "globe"?
@@ -1178,12 +1289,12 @@ def run(input_file: KGTKFiles,
                                             pre="^-"
                                         else:
                                             pre="^"
+                                        # TODO: Maybe strip leading and traiming whitespace here?
                                         date = pre + val['time'][1:]
-                                        precision = str(val['precision'])
-                                        calendar = val.get(
-                                            'calendarmodel', '').split('/')[-1]
-                                        value = pre + \
-                                            val['time'][1:] + '/' + str(val['precision'])
+                                        # Cautiously strip leading and trailing whitespace from precision?
+                                        precision = str(val['precision']).strip()
+                                        calendar = val.get('calendarmodel', '').split('/')[-1]
+                                        value = date + '/' + precision
                                     elif typ == 'monolingualtext':
                                         # value = '\'' + \
                                         # val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
@@ -1193,8 +1304,26 @@ def run(input_file: KGTKFiles,
                                         value = KgtkFormat.stringify(val)
 
                                     if minimal_edge_file is not None or detailed_edge_file is not None:
+                                        prop_value_hash: str
+                                        if value.startswith(('P', 'Q')):
+                                            prop_value_hash = value
+                                        else:
+                                            prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:value_hash_width]
+                                        edgeid: str = qnode + '-' + prop + '-' + prop_value_hash + '-'
+                                        if claim_id_hash_width == 0:
+                                            edgeid += claim_id.lower()
+                                        else:
+                                            edgeid += hashlib.sha256(claim_id.lower().encode('utf-8')).hexdigest()[:claim_id_hash_width]
+                                        prop_seq_no: int # In case of hash collision
+                                        if edgeid in edge_id_collision_map:
+                                            prop_seq_no = edge_id_collision_map[edgeid]
+                                            print("\n*** Edge collision #%d detected for %s (%s)" % (prop_seq_no, edgeid, value), file=sys.stderr, flush=True)
+                                        else:
+                                            prop_seq_no = 0
+                                        edge_id_collision_map[edgeid] = prop_seq_no + 1
+                                        edgeid += '-' + str(prop_seq_no)
                                         self.erows_append(erows,
-                                                          edge_id=sid,
+                                                          edge_id=edgeid,
                                                           node1=qnode,
                                                           label=prop,
                                                           node2=value,
@@ -1215,25 +1344,27 @@ def run(input_file: KGTKFiles,
                                                           precision=precision,
                                                           calendar=calendar)
 
-                                    seq_no += 1
+
                                     if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
-                                                qual_seq_no = 1
                                                 for qcp in qual_claim_property:
-
                                                     snaktype = qcp['snaktype']
+
                                                     if snaktype == 'value':
                                                         datavalue = qcp['datavalue']
                                                         val = datavalue.get('value')
                                                         val_type = datavalue.get("type", "")
+
                                                     elif snaktype == 'somevalue':
                                                         val = None
                                                         val_type = "somevalue"
+
                                                     elif snaktype == 'novalue':
                                                         val = None
                                                         val_type = "novalue"
+
                                                     else:
                                                         raise ValueError("Unknown qualifier snaktype %s" % snaktype)
 
@@ -1251,20 +1382,49 @@ def run(input_file: KGTKFiles,
                                                         long = ''
                                                         enttype = ''
                                                         datahash = '"' + qcp['hash'] + '"'
-                                                        typ = qcp['datatype']
-                                                        tempid = sid + '-' + qual_prop + \
-                                                            '-' + str(qual_seq_no)
-                                                        qual_seq_no += 1
+                                                        typ = qcp.get('datatype')
+                                                        if typ is None:
+                                                            if fail_if_missing:
+                                                                raise KGTKException("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)))
+                                                            elif warn_if_missing:
+                                                                if val_type == "somevalue":
+                                                                    print("Somevalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                                elif val_type == "novalue":
+                                                                    print("Novalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                                else:
+                                                                    print("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                            continue
 
                                                         if val is None:
                                                             value = val_type
 
-                                                        elif typ.startswith(
-                                                                'wikibase'):
-                                                            enttype = val.get(
-                                                                'entity-type')
-                                                            value = val.get(
-                                                                'id', '')
+                                                        elif typ.startswith('wikibase'):
+                                                            if isinstance(val, dict):
+                                                                enttype = val.get('entity-type')
+                                                                value = val.get('id', '')
+                                                            else:
+                                                                value = val
+                                                                if typ == "wikibase-lexeme":
+                                                                    enttype = "lexeme"
+                                                                else:
+                                                                    enttype = "unknown"
+
+                                                            # Older Wikidata dumps do not have an 'id' here.
+                                                            if len(value) == 0:
+                                                                if isinstance(val, dict) and 'numeric-id' in val:
+                                                                    numeric_id = str(val['numeric-id'])
+                                                                else:
+                                                                    raise ValueError("No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (repr(typ), repr(enttype), repr(qnode), repr(prop)))
+                                                                
+                                                                if enttype == "item":
+                                                                    value = 'Q' + numeric_id
+                                                                elif enttype == "property":
+                                                                    value = 'P' + numeric_id
+                                                                elif enttype == "lexeme":
+                                                                    value = 'L' + numeric_id
+                                                                else:
+                                                                    raise ValueError('Unknown entity type %s for datatype %s in (%s, %s).' % (repr(enttype), repr(typ), repr(qnode), repr(prop)))
+
                                                             item=value
                                                         elif typ == 'quantity':
                                                             value = val['amount']
@@ -1313,9 +1473,24 @@ def run(input_file: KGTKFiles,
                                                         else:
                                                             # value = '\"' + val.replace('"','\\"') + '\"'
                                                             value = KgtkFormat.stringify(val)
+
+                                                        qual_value_hash: str
+                                                        if value.startswith(('P', 'Q')):
+                                                            qual_value_hash = value
+                                                        else:
+                                                            qual_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:value_hash_width]
+                                                        qualid: str  = edgeid + '-' + qual_prop + '-' + qual_value_hash
+                                                        qual_seq_no: int # In case of hash collision
+                                                        if qualid in qual_id_collision_map:
+                                                            qual_seq_no = qual_id_collision_map[qualid]
+                                                            print("\n*** Qualifier collision #%d detected for %s (%s)" % (qual_seq_no, qualid, value), file=sys.stderr, flush=True)
+                                                        else:
+                                                            qual_seq_no = 0
+                                                        qual_id_collision_map[qualid] = qual_seq_no + 1
+                                                        qualid += '-' + str(qual_seq_no)
                                                         self.qrows_append(qrows,
-                                                                          edge_id=tempid,
-                                                                          node1=sid,
+                                                                          edge_id=qualid,
+                                                                          node1=edgeid,
                                                                           label=qual_prop,
                                                                           node2=value,
                                                                           magnitude=mag,
@@ -1337,23 +1512,25 @@ def run(input_file: KGTKFiles,
                         else:
                             sitelinks = None
                         if sitelinks:
-                            wikipedia_seq_no = 1
                             for link in sitelinks:
                                 # TODO: If the title might contain vertical bar, more work is needed
                                 # to make the sitetitle safe for KGTK.
                                 if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
                                     linklabel = SITELINK_LABEL
-                                    sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
-                                    wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
+
+                                    # The following leads to ambuiguity if there are both
+                                    # "afwiki" and "afwikibooks".
+                                    #
+                                    # TODO: Need to research the sitelink structure more fully.
                                     sitelang=link.split('wiki')[0].replace('_','-')
+
                                     sitelink='http://'+sitelang+'.wikipedia.org/wiki/'+sitetitle
                                 else:
                                     linklabel = ADDL_SITELINK_LABEL
-                                    sid=qnode + '-' + linklabel + '-'+str(wikipedia_seq_no)
-                                    wikipedia_seq_no+=1
                                     sitetitle='_'.join(sitelinks[link]['title'].split())
                                     if "wiki" in link:
+                                        # TODO: needs more work here.
                                         sitelang=link.split("wiki")[0]
                                         if sitelang in ("commons", "simple"):
                                             sitelang = "en" # TODO: Need to retain the distinction we lose here.
@@ -1364,9 +1541,20 @@ def run(input_file: KGTKFiles,
 
                                 if sitelink is not None:
                                     serows = sitelink_erows if collect_seperately else erows
+                                    sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[:value_hash_width]
+                                    sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash
+                                    sitelink_seq_no: int = 0
+                                    if sitelinkid in sitelink_id_collision_map:
+                                        sitelink_seq_no = sitelink_id_collision_map[sitelinkid]
+                                        print("\n*** Sitelink collision #%d detected for %s (%s)" % (sitelink_seq_no, sitelinkid, sitelink), file=sys.stderr, flush=True)
+                                    else:
+                                        sitelink_seq_no = 0
+                                    sitelink_id_collision_map[sitelinkid] = sitelink_seq_no + 1
+                                    sitelinkid += '-' + str(sitelink_seq_no)
+
                                     if sitelink_edges:
                                         self.erows_append(serows,
-                                                          edge_id=sid,
+                                                          edge_id=sitelinkid,
                                                           node1=qnode,
                                                           label=linklabel,
                                                           node2=sitelink,
@@ -1374,73 +1562,63 @@ def run(input_file: KGTKFiles,
 
                                     if sitelink_verbose_edges:
                                         if len(sitelang) > 0:
-                                            tempid=sid+'-language-1'
                                             self.erows_append(serows,
-                                                              edge_id=tempid,
-                                                              node1=sid,
+                                                              edge_id=sitelinkid + '-language-0',
+                                                              node1=sitelinkid,
                                                               label=SITELINK_LANGUAGE_LABEL,
                                                               node2=sitelang,
                                                               entrylang=sitelang)
                                             
-                                        tempid=sid+'-site-1'
                                         self.erows_append(serows,
-                                                          edge_id=tempid,
-                                                          node1=sid,
+                                                          edge_id=sitelinkid + '-site-0',
+                                                          node1=sitelinkid,
                                                           label=SITELINK_SITE_LABEL,
                                                           node2=link,
                                                           entrylang=sitelang)
 
-                                        tempid=sid+'-title-1'
                                         self.erows_append(serows,
-                                                          edge_id=tempid,
-                                                          node1=sid,
+                                                          edge_id=sitelinkid + '-title-0',
+                                                          node1=sitelinkid,
                                                           label=SITELINK_TITLE_LABEL,
                                                           node2=KgtkFormat.stringify(sitelinks[link]['title']),
                                                           entrylang=sitelang)
 
-                                        edge_badge_num: int = 0
                                         for badge in sitelinks[link]['badges']:
-                                            tempid=sid+'-badge-'+str(edge_badge_num + 1)
+                                            badgeid = sitelinkid + '-badge-' + badge
                                             self.erows_append(serows,
-                                                              edge_id=tempid,
-                                                              node1=sid,
+                                                              edge_id=badgeid,
+                                                              node1=sitelinkid,
                                                               label=SITELINK_BADGE_LABEL,
-                                                              node2=sitelinks[link]['badges'][edge_badge_num],
+                                                              node2=badge,
                                                               entrylang=sitelang)
-                                            edge_badge_num += 1
 
                                     if sitelink_verbose_qualifiers:
                                         if len(sitelang) > 0:
-                                            tempid=sid+'-language-1'
                                             self.qrows_append(qrows,
-                                                              edge_id=tempid,
-                                                              node1=sid,
+                                                              edge_id=sitelinkid + '-language-0',
+                                                              node1=sitelinkid,
                                                               label=SITELINK_LANGUAGE_LABEL,
                                                               node2=sitelang)
                                             
-                                        tempid=sid+'-site-1'
                                         self.qrows_append(qrows,
-                                                          edge_id=tempid,
-                                                          node1=sid,
+                                                          edge_id=sitelinkid + '-site-0',
+                                                          node1=sitelinkid,
                                                           label=SITELINK_SITE_LABEL,
                                                           node2=link)
 
-                                        tempid=sid+'-title-1'
                                         self.qrows_append(qrows,
-                                                          edge_id=tempid,
-                                                          node1=sid,
+                                                          edge_id=sitelinkid + '-title-0',
+                                                          node1=sitelinkid,
                                                           label=SITELINK_TITLE_LABEL,
                                                           node2=KgtkFormat.stringify(sitelinks[link]['title']))
 
-                                        qual_badge_num: int = 0
                                         for badge in sitelinks[link]['badges']:
-                                            tempid=sid+'-badge-'+str(qual_badge_num + 1)
+                                            badgeid = sitelinkid + '-badge-' + badge
                                             self.qrows_append(qrows,
-                                                              edge_id=tempid,
-                                                              node1=sid,
+                                                              edge_id=badgeid,
+                                                              node1=sielinkid,
                                                               label=SITELINK_BADGE_LABEL,
-                                                              node2=sitelinks[link]['badges'][qual_badge_num])
-                                            qual_badge_num += 1
+                                                              node2=badge)
 
             if len(nrows) > 0 or len(erows) > 0 or len(qrows) > 0 or len(description_erows) > 0 or len(sitelink_erows) > 0:
                 if collect_results:
@@ -1507,11 +1685,13 @@ def run(input_file: KGTKFiles,
 
                     if detailed_edge_file:
                         for row in erows:
-                            self.edge_wr.writerow(row)
+                            if skip_validation or validate(row, "detailed edge uncollected"):
+                                self.edge_wr.writerow(row)
 
                     if detailed_qual_file:
                         for row in qrows:
-                            self.qual_wr.writerow(row)
+                            if skip_validation or validate(row, "detailed qual uncollected"):
+                                self.qual_wr.writerow(row)
     
     class MyCollector:
 
@@ -1676,8 +1856,9 @@ def run(input_file: KGTKFiles,
             f: typing.Optional[typing.TextIO]
             wr: typing.Any
             if use_kgtkwriter:
+                from kgtk.io.kgtkwriter import KgtkWriter
                 print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file), file=sys.stderr, flush=True)
-                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector")
+                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector", use_mgzip=use_mgzip_for_output, mgzip_threads=mgzip_threads_for_output)
                 return None, wr
                 
             else:
@@ -1887,7 +2068,8 @@ def run(input_file: KGTKFiles,
                         if self.detailed_edge_wr is None:
                             raise ValueError("Unexpected edge rows in the %s collector." % who)
                         for row in erows:
-                            self.detailed_edge_wr.write(row)
+                            if skip_validation or validate(row, "unsplit detailed edge"):
+                                self.detailed_edge_wr.write(row)
                     else:
                         for row in erows:
                             split: bool = False
@@ -1901,38 +2083,53 @@ def run(input_file: KGTKFiles,
 
                                 if self.split_property_edge_wr is not None and row[1].startswith("P"): # Hack: knows the structure of the row.
                                     # For now, split property files are minimal.
-                                    self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+                                    if skip_validation or validate(row, "split property edge"):
+                                        self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
 
                                 elif self.minimal_edge_wr is not None:
-                                    self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+                                    if skip_validation or validate(row, "minimal edge"):
+                                        self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
 
                                 if self.detailed_edge_wr is not None:
-                                    self.detailed_edge_wr.write(row)
+                                    if skip_validation or validate(row, "split detailed edge"):
+                                        self.detailed_edge_wr.write(row)
                 else:
                     if self.minimal_edge_wr is None:
                         raise ValueError("Unexpected edge rows in the %s collector." % who)
 
-                    self.minimal_edge_wr.writerows(erows)
+                    if skip_validation:
+                        self.minimal_edge_wr.writerows(erows)
+                    else:
+                        for row in erows:
+                            if validate(row, "minimal edge csv"):
+                                self.minimal_edge_wr.write(row)
 
             if len(qrows) > 0:
-
                 if use_kgtkwriter:
                     if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
                         raise ValueError("Unexpected qual rows in the %s collector." % who)
                     
                     for row in qrows:
                         if self.split_property_qual_wr is not None and row[0].startswith("P"): # Hack: knows the structure of the row.
-                            self.split_property_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+                            if skip_validation or validate(row, "split property qual"):
+                                self.split_property_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
                                                               
                         elif self.minimal_qual_wr is not None:
-                            self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+                            if skip_validation or validate(row, "minimal qual"):
+                                self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
 
                         if self.detailed_qual_wr is not None:
-                            self.detailed_qual_wr.write(row)
+                            if skip_validation or validate(row, "detailed qual"):
+                                self.detailed_qual_wr.write(row)
                 else:
                     if self.detailed_qual_wr is None:
                         raise ValueError("Unexpected qual rows in the %s collector." % who)
-                    self.detailed_qual_wr.writerows(qrows)
+                    if skip_validation:
+                        self.detailed_qual_wr.writerows(qrows)
+                    else:
+                        for row in qrows:
+                            if validate(row, "detailed qual csv"):
+                                self.detailed_qual_wr.write(row)
 
         def setup_split_dispatcher(self):
             self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
@@ -2028,7 +2225,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2020-10-09T02:30:01.739286+00:00#aTiYRl8crXerNw+GspBJ3siHCK9fY459NzMFtMKhbSUcp2CxbkFO62286zYjPLqeTvv8aUJgndD96vV1NK1m8g=="
+        UPDATE_VERSION: str = "2020-12-08T23:35:07.113207+00:00#g4xo5tTabYAJX0cxMKB6wjezb1k3fGAPtNPYELzeAmrESNU2wiKR2wQVS4cBMsjz9KGTL0J0Mmp0pE+iLSTYOQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -2038,10 +2235,11 @@ def run(input_file: KGTKFiles,
         start=time.time()
 
         if not skip_processing:
+            from gzip import GzipFile
             print("Processing.", file=sys.stderr, flush=True)
 
             # Open the input file first to make it easier to monitor with "pv".
-            input_f: typing.IO[typing.Any]
+            input_f: typing.Union[GzipFile, typing.IO[typing.Any]]
             if str(inp_path) == "-":
                 print('Processing wikidata from standard input', file=sys.stderr, flush=True)
                 # It is not well documented, but this is how you read binary data
@@ -2061,9 +2259,15 @@ def run(input_file: KGTKFiles,
                     input_f = bz2.open(input_f)
 
                 elif str(inp_path).endswith(".gz"):
-                    print('Decompressing (gzip)', file=sys.stderr, flush=True)
                     # TODO: Optionally use a system decompression program.
-                    input_f = gzip.open(input_f)
+                    if use_mgzip_for_input:
+                        import mgzip
+                        print('Decompressing (mgzip)', file=sys.stderr, flush=True)
+                        input_f = mgzip.open(input_f, thread=mgzip_threads_for_input)
+                    else:
+                        import gzip
+                        print('Decompressing (gzip)', file=sys.stderr, flush=True)
+                        input_f = gzip.open(input_f)
 
             collector_p = None
             node_collector_p = None
@@ -2431,4 +2635,21 @@ def run(input_file: KGTKFiles,
         print('time taken : {}s'.format(end-start), file=sys.stderr, flush=True)
     except Exception as e:
         raise KGTKException(str(e))
+
+def validate(row: typing.List[str], who: str)->bool:
+    """Ensure that output edge rows meet minimal validation criteria."""
+    import sys
+
+    # There must be at least four fields (id, node1, label, node2):
+    if len(row) < 4:
+        print("%s row too short: %s" % (who, repr(row)), file=sys.stderr, flush=True)
+        return False
+
+    # Ensure that the first four fields (id, node1, label, node2) are all
+    # non-empty.
+    if len(row[0]) == 0 or len(row[1]) == 0 or len(row[2]) == 0 or len(row[3]) ==0:
+        print("Invalid %s row: (%s, %s, %s, %s)" % (who, repr(row[0]), repr(row[1]), repr(row[2]), repr(row[3])), file=sys.stderr, flush=True)
+        return False
+
+    return True
 

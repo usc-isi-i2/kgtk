@@ -80,7 +80,7 @@ def get_topn_indices(g, prop, n, print_prop):
     result = []
     for i in ind:
         result.append([i, g.vp[print_prop][i], g.vp[prop][i]])
-    return result
+    return sorted(result, key=lambda x: x[-1], reverse=True)
 
 
 #### RUN ALL STATS ####
