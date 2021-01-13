@@ -4,8 +4,9 @@ If no input filename is provided, the default is to read standard input.
 ## Usage
 
 ```
-usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] -c COLUMN_NAME [COLUMN_NAME ...] --into INTO_COLUMN_NAME --do {average,percentage,sum}
-                 [--format FORMAT_STRING] [-v]
+usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into
+                 INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...] --do {average,copy,join,percentage,set,sum}
+                 [--values [VALUES [VALUES ...]]] [--format FORMAT_STRING] [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
 If no input filename is provided, the default is to read standard input. 
@@ -19,16 +20,20 @@ optional arguments:
                         The KGTK input file. (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for stdout.)
-  -c COLUMN_NAME [COLUMN_NAME ...], --columns COLUMN_NAME [COLUMN_NAME ...]
-                        The list of source column names, optionally containing '..' for column ranges and '...' for column names not explicitly mentioned.
-  --into INTO_COLUMN_NAME
+  -c [COLUMN_NAME [COLUMN_NAME ...]], --columns [COLUMN_NAME [COLUMN_NAME ...]]
+                        The list of source column names, optionally containing '..' for column ranges and '...'
+                        for column names not explicitly mentioned.
+  --into INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...]
                         The name of the column to receive the result of the calculation.
-  --do {average,percentage,sum}
+  --do {average,copy,join,percentage,set,sum}
                         The name of the operation.
+  --values [VALUES [VALUES ...]]
+                        An optional list of values
   --format FORMAT_STRING
                         The format string for the calculation.
 
-  -v, --verbose         Print additional progress messages (default=False).
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 
 ## Examples
