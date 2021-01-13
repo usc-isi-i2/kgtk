@@ -1,15 +1,19 @@
 The add-id command copies its input file to its output file,
-adding ID values where needed.
+adding an Id column and ID values when needed.
 
 New IDs may be generated using one of several available ID generation
 styles.
 
 | ID Style | Description |
 | -------- | ----------- |
-| concat   | node1-label-node2 |
-| concat-nlnum | Concatenates (node1, label) with a sequence number per-(node1, label) pair: node1-label-num |
-| concat-with-id | node1-label-node2-id |
-| prefixed | PREFIX### where PREFIX is supplied from --id-prefix and ### increments. |
+| empty | Sets the ID column to the empty value. |
+| node1-label-node2 | Concatenates the node1, label, and node2 column values. |
+| node1-label-node2-id | Concatenates the node1, label, and node2 column values, then concatenate any existing non-blank ID value. |
+| node1-label-node2-num | Concatenates the node1, label, and node2 column values with a sequence number per (node1, label, node2) tuple. |
+| node1-label-num | Concatenates the node1 and label column values with a sequence number per-(node1, label) pair. |
+| prefix### | Concatenate a prefix value (from --id-prefix) with an incrementing counter with leading zeros per --id-prefix-num-width). |
+| wikidata | Concatenate the node1 and label column values with either the node2 column value (if it starts with P or Q) or the SHA256 hash of the node2 column value (truncated to the width giver by --value-hash-width). |
+| wikidata-with-claim-id | If the claim-id column is empty, produce an ID value as per 'wikidata'. Otherwise, if --claim-id-hash-width is 0, then concatenate the claim_id column value to the `wikidata` ID value. Otherwise, concatenatea a SHA256 hash of the claim-id value, truncated per --claim-id-hash-width. | 
 
 By default, the ID values in the file are validated for uniqueness,
 using an in-memory set.  This may cause
@@ -23,9 +27,11 @@ The --verify-id-unique=false optin may be used to disable this check.
 usage: kgtk add-id [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--old-id-column-name COLUMN_NAME]
                    [--new-id-column-name COLUMN_NAME] [--overwrite-id [optional true|false]]
                    [--verify-id-unique [optional true|false]]
-                   [--id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###}]
-                   [--id-prefix PREFIX] [--initial-id INTEGER]
-                   [--id-prefix-num-width INTEGER] [--id-concat-num-width INTEGER] [-v]
+                   [--id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###,wikidata,wikidata-with-claim-id}]
+                   [--id-prefix PREFIX] [--initial-id INTEGER] [--id-prefix-num-width INTEGER]
+                   [--id-concat-num-width INTEGER] [--value-hash-width VALUE_HASH_WIDTH]
+                   [--claim-id-hash-width CLAIM_ID_HASH_WIDTH] [--claim-id-column-name CLAIM_ID_COLUMN_NAME]
+                   [-v [optional True|False]]
 
 Copy a KGTK file, adding ID values.
 
@@ -47,14 +53,14 @@ optional arguments:
   --new-id-column-name COLUMN_NAME
                         The name of the new ID column. (default=id).
   --overwrite-id [optional true|false]
-                        When true, replace existing ID values. When false, copy existing ID
-                        values. When --overwrite-id is omitted, it defaults to False. When
-                        --overwrite-id is supplied without an argument, it is True.
+                        When true, replace existing ID values. When false, copy existing ID values. When
+                        --overwrite-id is omitted, it defaults to False. When --overwrite-id is supplied without
+                        an argument, it is True.
   --verify-id-unique [optional true|false]
-                        When true, verify ID uniqueness using an in-memory set of IDs. When
-                        --verify-id-unique is omitted, it defaults to False. When --verify-
-                        id-unique is supplied without an argument, it is True.
-  --id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###}
+                        When true, verify ID uniqueness using an in-memory set of IDs. When --verify-id-unique
+                        is omitted, it defaults to False. When --verify-id-unique is supplied without an
+                        argument, it is True.
+  --id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###,wikidata,wikidata-with-claim-id}
                         The ID generation style. (default=prefix###).
   --id-prefix PREFIX    The prefix for a prefix### ID. (default=E).
   --initial-id INTEGER  The initial numeric value for a prefix### ID. (default=1).
@@ -62,8 +68,16 @@ optional arguments:
                         The width of the numeric value for a prefix### ID. (default=1).
   --id-concat-num-width INTEGER
                         The width of the numeric value for a concatenated ID. (default=4).
+  --value-hash-width VALUE_HASH_WIDTH
+                        How many characters should be used in a value hash? (default=6)
+  --claim-id-hash-width CLAIM_ID_HASH_WIDTH
+                        How many characters should be used to hash the claim ID? 0 means do not hash the claim
+                        ID. (default=8)
+  --claim-id-column-name CLAIM_ID_COLUMN_NAME
+                        The name of the claim_id column. (default=claim_id)
 
-  -v, --verbose         Print additional progress messages (default=False).
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 
 ## Examples
@@ -86,7 +100,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | steve | zipcode | 45601 | work      | 2     |
 | steve | zipcode | 45601 | cabin     |       |
 
-Add an ID column using the default ID style (prefixed):
+Add an ID column using the default ID style (prefix###):
 
 ```bash
 kgtk add-id -i file1.tsv
@@ -108,6 +122,29 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | home | 1 | E10 |
 | steve | zipcode | 45601 | work | 2 | E11 |
 | steve | zipcode | 45601 | cabin |  | E12 |
+
+Add an ID column using the node1-label-node2 ID style:
+
+```bash
+kgtk add-id -i file1.tsv --id-style node1-label-node2
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | john-zipcode-12345 |
+| john | zipcode | 12346 |  |  | john-zipcode-12346 |
+| peter | zipcode | 12040 | home |  | peter-zipcode-12040 |
+| peter | zipcode | 12040 | cabin |  | peter-zipcode-12040 |
+| peter | zipcode | 12040 | work | 5 | peter-zipcode-12040 |
+| peter | zipcode | 12040 |  | 6 | peter-zipcode-12040 |
+| steve | zipcode | 45601 |  | 3 | steve-zipcode-45601 |
+| steve | zipcode | 45601 |  | 4 | steve-zipcode-45601 |
+| steve | zipcode | 45601 |  | 5 | steve-zipcode-45601 |
+| steve | zipcode | 45601 | home | 1 | steve-zipcode-45601 |
+| steve | zipcode | 45601 | work | 2 | steve-zipcode-45601 |
+| steve | zipcode | 45601 | cabin |  | steve-zipcode-45601 |
 
 Add an ID column using the node1-label-num ID style:
 
@@ -131,3 +168,141 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | home | 1 | steve-zipcode-0003 |
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-0004 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-0005 |
+
+Add an ID column building on an existing ID value using the node1-label-node2-id format:
+
+```bash
+kgtk add-id -i file1.tsv -o file2.tsv
+kgtk add-id -i file2.tsv --id-style node1-label-node2-id --overwrite-id
+```
+
+| node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | john-zipcode-12345-E1 |
+| john | zipcode | 12346 |  |  | john-zipcode-12346-E2 |
+| peter | zipcode | 12040 | home |  | peter-zipcode-12040-E3 |
+| peter | zipcode | 12040 | cabin |  | peter-zipcode-12040-E4 |
+| peter | zipcode | 12040 | work | 5 | peter-zipcode-12040-E5 |
+| peter | zipcode | 12040 |  | 6 | peter-zipcode-12040-E6 |
+| steve | zipcode | 45601 |  | 3 | steve-zipcode-45601-E7 |
+| steve | zipcode | 45601 |  | 4 | steve-zipcode-45601-E8 |
+| steve | zipcode | 45601 |  | 5 | steve-zipcode-45601-E9 |
+| steve | zipcode | 45601 | home | 1 | steve-zipcode-45601-E10 |
+| steve | zipcode | 45601 | work | 2 | steve-zipcode-45601-E11 |
+| steve | zipcode | 45601 | cabin |  | steve-zipcode-45601-E12 |
+
+Create a new ID column for the result instead of overwriting the existing ID column value:
+
+```bash
+kgtk add-id -i file1.tsv -o file2.tsv
+kgtk add-id -i file2.tsv --id-style node1-label-node2-id --new-id-column-name new-id
+```
+
+| node1 | label | node2 | location | years | id | new-id |
+| -- | -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | E1 | john-zipcode-12345-E1 |
+| john | zipcode | 12346 |  |  | E2 | john-zipcode-12346-E2 |
+| peter | zipcode | 12040 | home |  | E3 | peter-zipcode-12040-E3 |
+| peter | zipcode | 12040 | cabin |  | E4 | peter-zipcode-12040-E4 |
+| peter | zipcode | 12040 | work | 5 | E5 | peter-zipcode-12040-E5 |
+| peter | zipcode | 12040 |  | 6 | E6 | peter-zipcode-12040-E6 |
+| steve | zipcode | 45601 |  | 3 | E7 | steve-zipcode-45601-E7 |
+| steve | zipcode | 45601 |  | 4 | E8 | steve-zipcode-45601-E8 |
+| steve | zipcode | 45601 |  | 5 | E9 | steve-zipcode-45601-E9 |
+| steve | zipcode | 45601 | home | 1 | E10 | steve-zipcode-45601-E10 |
+| steve | zipcode | 45601 | work | 2 | E11 | steve-zipcode-45601-E11 |
+| steve | zipcode | 45601 | cabin |  | E12 | steve-zipcode-45601-E12 |
+
+Add an ID column using the node1-label-node2-num ID style:
+
+```bash
+kgtk add-id -i file1.tsv --id-style node1-label-node2-num
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | john-zipcode-12345-0000 |
+| john | zipcode | 12346 |  |  | john-zipcode-12346-0000 |
+| peter | zipcode | 12040 | home |  | peter-zipcode-12040-0000 |
+| peter | zipcode | 12040 | cabin |  | peter-zipcode-12040-0001 |
+| peter | zipcode | 12040 | work | 5 | peter-zipcode-12040-0002 |
+| peter | zipcode | 12040 |  | 6 | peter-zipcode-12040-0003 |
+| steve | zipcode | 45601 |  | 3 | steve-zipcode-45601-0000 |
+| steve | zipcode | 45601 |  | 4 | steve-zipcode-45601-0001 |
+| steve | zipcode | 45601 |  | 5 | steve-zipcode-45601-0002 |
+| steve | zipcode | 45601 | home | 1 | steve-zipcode-45601-0003 |
+| steve | zipcode | 45601 | work | 2 | steve-zipcode-45601-0004 |
+| steve | zipcode | 45601 | cabin |  | steve-zipcode-45601-0005 |
+
+Add an ID column using the node1-label-num ID style:
+
+```bash
+kgtk add-id -i file1.tsv --id-style node1-label-num
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | john-zipcode-0000 |
+| john | zipcode | 12346 |  |  | john-zipcode-0001 |
+| peter | zipcode | 12040 | home |  | peter-zipcode-0000 |
+| peter | zipcode | 12040 | cabin |  | peter-zipcode-0001 |
+| peter | zipcode | 12040 | work | 5 | peter-zipcode-0002 |
+| peter | zipcode | 12040 |  | 6 | peter-zipcode-0003 |
+| steve | zipcode | 45601 |  | 3 | steve-zipcode-0000 |
+| steve | zipcode | 45601 |  | 4 | steve-zipcode-0001 |
+| steve | zipcode | 45601 |  | 5 | steve-zipcode-0002 |
+| steve | zipcode | 45601 | home | 1 | steve-zipcode-0003 |
+| steve | zipcode | 45601 | work | 2 | steve-zipcode-0004 |
+| steve | zipcode | 45601 | cabin |  | steve-zipcode-0005 |
+
+Add an ID column using the wikidata ID style:
+(Node: the existing test dataset doesn't have any entries with node2 values starting with P or Q)
+
+```bash
+kgtk add-id -i file1.tsv --id-style wikidata
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | john-zipcode-599447 |
+| john | zipcode | 12346 |  |  | john-zipcode-34d128 |
+| peter | zipcode | 12040 | home |  | peter-zipcode-a5ceb2 |
+| peter | zipcode | 12040 | cabin |  | peter-zipcode-a5ceb2 |
+| peter | zipcode | 12040 | work | 5 | peter-zipcode-a5ceb2 |
+| peter | zipcode | 12040 |  | 6 | peter-zipcode-a5ceb2 |
+| steve | zipcode | 45601 |  | 3 | steve-zipcode-3f5bb8 |
+| steve | zipcode | 45601 |  | 4 | steve-zipcode-3f5bb8 |
+| steve | zipcode | 45601 |  | 5 | steve-zipcode-3f5bb8 |
+| steve | zipcode | 45601 | home | 1 | steve-zipcode-3f5bb8 |
+| steve | zipcode | 45601 | work | 2 | steve-zipcode-3f5bb8 |
+| steve | zipcode | 45601 | cabin |  | steve-zipcode-3f5bb8 |
+
+Add an ID column using the wikidata-with-claim-id ID style, using
+the location column as a placeholder for the claim-id column:
+
+```bash
+kgtk add-id -i file1.tsv --id-style wikidata-with-claim-id --claim-id-column-name location
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | john-zipcode-599447-4ea14058 |
+| john | zipcode | 12346 |  |  | john-zipcode-34d128 |
+| peter | zipcode | 12040 | home |  | peter-zipcode-a5ceb2-4ea14058 |
+| peter | zipcode | 12040 | cabin |  | peter-zipcode-a5ceb2-2764182d |
+| peter | zipcode | 12040 | work | 5 | peter-zipcode-a5ceb2-00e13ed7 |
+| peter | zipcode | 12040 |  | 6 | peter-zipcode-a5ceb2 |
+| steve | zipcode | 45601 |  | 3 | steve-zipcode-3f5bb8 |
+| steve | zipcode | 45601 |  | 4 | steve-zipcode-3f5bb8 |
+| steve | zipcode | 45601 |  | 5 | steve-zipcode-3f5bb8 |
+| steve | zipcode | 45601 | home | 1 | steve-zipcode-3f5bb8-4ea14058 |
+| steve | zipcode | 45601 | work | 2 | steve-zipcode-3f5bb8-00e13ed7 |
+| steve | zipcode | 45601 | cabin |  | steve-zipcode-3f5bb8-2764182d |
