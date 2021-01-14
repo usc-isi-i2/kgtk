@@ -83,6 +83,8 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | steve | zipcode | 45601 | work     |       |
 
 
+Count the unique values in the `location` column:
+
 ```bash
 kgtk unique -i file1.tsv --column location
 
@@ -92,6 +94,9 @@ kgtk unique -i file1.tsv --column location
 | ----- | ----- | ----- |
 | home  | count | 2     |
 | work  | count | 3     |
+
+Count the unique values in the `location` column, using
+the value `NONE` for empty values:
 
 ```bash
 kgtk unique -i file1.tsv --column location --empty NONE
@@ -104,6 +109,10 @@ kgtk unique -i file1.tsv --column location --empty NONE
 | home  | count | 2     |
 | work  | count | 3     |
 
+Count the unique values in the `location` column, using
+the value `NONE` for empty values, but use the `node` format
+for the output file:
+
 ```bash
 kgtk unique -i file1.tsv --column location --empty NONE --format node
 
@@ -113,6 +122,8 @@ kgtk unique -i file1.tsv --column location --empty NONE --format node
 | -------- | ---- | ---- | ---- |
 | location | 3    | 2    | 3    |
 
+Give each column name a prefix:
+
 ```bash
 kgtk unique -i file1.tsv --column location --empty NONE --format node --prefix 'location;'
 
@@ -121,6 +132,8 @@ kgtk unique -i file1.tsv --column location --empty NONE --format node --prefix '
 | id       | location;NONE | location;home | location;work |
 | -------- | ---- | ---- | ---- |
 | location | 3    | 2    | 3    |
+
+Filter the input file and create an edge-stype output file:
 
 ```bash
 kgtk unique -i file1.tsv --column location --where node1 --in peter
