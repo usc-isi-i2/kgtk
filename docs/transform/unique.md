@@ -1,4 +1,4 @@
-The unique command reads a KGTK file, constructing a second KGTK file
+The `kgtk unique` command reads a KGTK file, constructing a second KGTK file
 containing the unique values for a column in the first file.  Each unique
 value may be accompanied by an occurance count, depending on the format
 selected for the output file.
