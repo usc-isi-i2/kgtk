@@ -1,45 +1,98 @@
-The filter command is used to select edges from an edge file. The initial implementation will use a simple language, but we may in the future extend it to be similar to graphy. The initial implementation also ignores reification.
+`kgtk filter` selects edges from an edge file. The initial implementation uses
+a simple pattern language as a filter, but we may in the future extend it to be
+similar to graphy. The initial implementation also ignores reification.
+
+`kgtk filter` reads a single input file. It will write one or more output files and/or a reject file.
+When there are multiple output files, each output file must have its own filter.
+Output files and filters are paired by order.  We recommend listing each filter
+and output file as a pair on the command line, as shown in one of the examples, below.
+Input records that do not match any filter may be written to a reject file
+(`--reject-file REJECT_FILE).
+
+When there are multiple output files, `--first-match-only` determines whether
+input records are copied to the first matching output file (when `True`) or to
+all matching output files (when `False`, the default).
 
 Filters are specified using patterns of the form
-    subject-pattern ; predicate-pattern ; object-pattern
-Each of the patterns can consist of a list of symbols separated using commas.
+
+> subject-pattern ; predicate-pattern ; object-pattern
+
+Pattern | Description
+------- | -----------
+subject-pattern | This pattern applies to the `node1` column (or its alias), unless a different column is selected with the `--subj SUBJ_COL` option.
+predicate-pattern | This pattern applies to the `label` column (or its alias), unless a different column is selected with the `--pred PRED_COL` option.
+object-pattern | This pattern applies to the `node2` column (or its alias), unless a different column is selected with the `--obj OBJ_COL` option.
+
+Each of the patterns in a filter can consist of a list of symbols separated using commas,
+or a regular expression (when `--regex` is specified).
+
+A complete filter requires two semicolons (`;;`) with one or more nonempty patterns.  By default,
+all nonempty patterns in a filter must match an input record for the input record to match the
+filter; however, the `--or` option may be specified to allow an input record to match when any
+nonempty pattern matches.  The `--invert` option may be used to invert the
+sense of the filter, causing matching input records to be written to the
+reject file, and non-matching records to be written to the output file.
+
+When using regular expressions as patterns, ``match-type xxx` determines the type of
+regular expression match that takes place.
+
+Match Type | Description
+---------- | -----------
+fullmatch  | The full field must match the regular expression.  It is not necessary to start the regular expressin with `^` nor end it with `$`.
+match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.
+search     | The regular expression must match somewhere in the field.
 
 ## Usage
 
 ```
-usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]] [--reject-file REJECT_FILE] -p PATTERNS [PATTERNS ...] [--subj SUBJ_COL]
-                   [--pred PRED_COL] [--obj OBJ_COL] [--or [True|False]] [--invert [True|False]] [--first-match-only [True|False]] [--show-version [True/False]]
-                   [-v]
+usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]] [--reject-file REJECT_FILE] -p
+                   PATTERNS [PATTERNS ...] [--subj SUBJ_COL] [--pred PRED_COL] [--obj OBJ_COL]
+                   [--or [True|False]] [--invert [True|False]] [--regex [True|False]]
+                   [--match-type {fullmatch,match,search}] [--first-match-only [True|False]]
+                   [--show-version [True/False]] [-v [optional True|False]]
 
-Filter KGTK file based on values in the node1 (subject), label (predicate), and node2 (object) fields.
+Filter KGTK file based on values in the node1 (subject), label (predicate), and node2 (object) fields.  Optionally filter based on regular expressions.
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
                         The KGTK input file. (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE [OUTPUT_FILE ...], --output-file OUTPUT_FILE [OUTPUT_FILE ...]
-                        The KGTK output file for records that pass the filter. Multiple output file may be specified, each with their own pattern. (May be omitted
-                        or '-' for stdout.)
+                        The KGTK output file for records that pass the filter. Multiple output file may be
+                        specified, each with their own pattern. (May be omitted or '-' for stdout.)
   --reject-file REJECT_FILE
                         The KGTK reject file for records that fail the filter. (Optional, use '-' for stdout.)
   -p PATTERNS [PATTERNS ...], --pattern PATTERNS [PATTERNS ...]
-                        Pattern to filter on, for instance, " ; P154 ; ". Multiple patterns may be specified when there are mutiple output files.
+                        Pattern to filter on, for instance, " ; P154 ; ". Multiple patterns may be specified
+                        when there are mutiple output files.
   --subj SUBJ_COL       Subject column, default is node1
   --pred PRED_COL       Predicate column, default is label
   --obj OBJ_COL         Object column, default is node2
   --or [True|False]     'Or' the clauses of the pattern. (default=False).
   --invert [True|False]
                         Invert the result of applying the pattern. (default=False).
+  --regex [True|False]  When True, treat the filter clauses as regular expressions. (default=False).
+  --match-type {fullmatch,match,search}
+                        Which type of regular expression match: fullmatch, match, search. (default=match).
   --first-match-only [True|False]
-                        If true, write only to the file with the first matching pattern. If false, write to all files with matching patterns. (default=False).
+                        If true, write only to the file with the first matching pattern. If false, write to all
+                        files with matching patterns. (default=False).
   --show-version [True/False]
                         Print the version of this program. (default=False).
 
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 
 ## Examples
 
-Select all edges that have property P154. The property is called "prop" in this file
+Select all edges that have property P154 in the `label` column:
+
+```bash
+kgtk filter -p " ; P154 ; " -i INPUT
+```
+
+Select all edges that have property P154. The property is called "prop" in this file:
 
 ```bash
 kgtk filter -p " ; P154 ; " --pred prop -i INPUT
@@ -64,5 +117,8 @@ kgtk filter -p " Q32, Q45 ; ; " --pred prop -i INPUT
 
 Send P154 records to one file, P983 records to another file, and the remainder to a third file.
 ```bash
-kgtk filter -p "; P154 ;" -o P154.tsv -p "; P983 ;" -o P983.tsv --reject-file others.tsv
+kgtk filter \
+     -p "; P154 ;" -o P154.tsv \
+     -p "; P983 ;" -o P983.tsv \
+     --reject-file others.tsv
 ```
