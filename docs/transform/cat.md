@@ -123,6 +123,51 @@ The result will be the following table in KGTK format:
 | h13 | linda_hamilton        | label       | Linda Hamilton           |      | en       |
 | h15 | linda_hamilton        | birth_date  | ^1956-09-26T00:00:00Z/11 |      |          |
 
+Suppose that `file3.tsv` contains the following **not** in KGTK format,
+
+| a   | b              | c           | d                         |
+|-----|----------------|-------------|---------------------------|
+| h21 | robert_patrick | label       | Robert Patrick            |
+| h22 | robert_patrick | instance_of | human                     |
+| h23 | robert_patrick | birth_date  | ^1958-11-05T00:00:00Z/11  |
+| h24 | robert_patrick | country     | United States of America |
+
+trying to run the command ,
+
+```
+kgtk cat -i file1.tsv.gz file3.tsv 
+```
+
+will result in an error message ,
+
+```
+In input 2 header 'a	b	c	d': Missing required column: id | ID
+Exit requested
+```
+
+We can force `kgtk cat` command to concatenate anyway using the `--mode NONE` option,
+
+```
+kgtk cat -i file1.tsv.gz file3.tsv --mode NONE
+```
+
+| id  | node1      | label       | node2                 | rank | a   | b              | c           | d                        |
+|-----|------------|-------------|-----------------------|------|-----|----------------|-------------|--------------------------|
+| t1  | terminator | label       | The Terminator@en     | 4    |     |                |             |                          |
+| t2  | terminator | instance_of | film                  | 3    |     |                |             |                          |
+| t3  | terminator | genre       | action                | 1    |     |                |             |                          |
+| t9  | terminator | director    | james_cameron         | 8    |     |                |             |                          |
+| t10 | terminator | cast        | arnold_schwarzenegger | 2    |     |                |             |                          |
+| t11 | t10        | role        | terminator            | 7    |     |                |             |                          |
+| t12 | terminator | cast        | michael_biehn         | 2    |     |                |             |                          |
+| t13 | t12        | role        | kyle_reese            | 1    |     |                |             |                          |
+| t14 | terminator | cast        | linda_hamilton        | 2    |     |                |             |                          |
+| t15 | t14        | role        | sarah_connor          | 9    |     |                |             |                          |
+|     |            |             |                       |      | h21 | robert_patrick | label       | Robert Patrick           |
+|     |            |             |                       |      | h22 | robert_patrick | instance_of | human                    |
+|     |            |             |                       |      | h23 | robert_patrick | birth_date  | ^1958-11-05T00:00:00Z/11 |
+|     |            |             |                       |      | h24 | robert_patrick | country     | United States of America |
+
 # Expert Topic: Adding Column Names
 
 Suppose that you have a TSV (tab-separated values) data file
