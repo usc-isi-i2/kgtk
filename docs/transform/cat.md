@@ -123,7 +123,7 @@ The result will be the following table in KGTK format:
 | h13 | linda_hamilton        | label       | Linda Hamilton           |      | en       |
 | h15 | linda_hamilton        | birth_date  | ^1956-09-26T00:00:00Z/11 |      |          |
 
-Suppose that `file3.tsv` contains the following **not** in KGTK format,
+Suppose that `file3.tsv` contains the following data **not** in KGTK format,
 
 | a   | b              | c           | d                         |
 |-----|----------------|-------------|---------------------------|
