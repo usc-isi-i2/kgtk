@@ -23,6 +23,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.kgtkformat import KgtkFormat
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.join.unique import Unique
     from kgtk.utils.argparsehelpers import optional_bool
@@ -43,7 +44,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_output_file()
 
     parser.add_argument(      "--column", dest="column_name",
-                              help="The column to count unique values (required).", required=True)
+                              help="The column to count unique values (default=node2 or its alias).")
 
     parser.add_argument(      "--empty", dest="empty_value", help="A value to substitute for empty values (default=%(default)s).", default="")
 
@@ -72,7 +73,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
 
-        column_name: str,
+        column_name: typing.Optional[str] = None,
         empty_value: str = "",
         label_value: str = "count",
 
@@ -116,7 +117,8 @@ def run(input_file: KGTKFiles,
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
-        print("--column=%s" % str(column_name), file=error_file)
+        if column_name is not None:
+            print("--column=%s" % str(column_name), file=error_file)
         print("--empty=%s" % str(empty_value), file=error_file)
         print("--label=%s" % str(label_value), file=error_file)
         print("--format=%s" % output_format, file=error_file)
