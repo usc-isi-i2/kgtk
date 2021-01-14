@@ -65,7 +65,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            who='Output file to write to.')
 
     parser.add_argument('-c', '--column', '--columns', action='store', dest='columns', nargs='*',
-                        help="comma-separated list of column names to sort on. " +
+                        help="space and/or comma-separated list of column names to sort on. " +
                         "(defaults to id for node files, " +
                         "(node1, label, node2) for edge files without ID, (id, node1, label, node2) for edge files with ID)")
 
