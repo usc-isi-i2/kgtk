@@ -22,9 +22,7 @@ be included in the output file.
 The value used in the `label` column, normally `count`, may be changed
 with the `--label VALUE` option.
 
-There are two noteworthy expert options for this command:
-
-The `--prefix VALUE` option supplies a prefix to the value in the output file.
+The `--prefix VALUE` option supplies a prefix to the unique values in the output file.
 
 The `--format xxx` option selects an output format:
 
