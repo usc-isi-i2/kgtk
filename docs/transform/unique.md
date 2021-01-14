@@ -1,9 +1,10 @@
 The unique command reads a KGTK file, constructing a second KGTK file
 containing the unique values and counts for a column in the first file.
 
-This implementation, in Python, builds an im-memory dictionary of the unique
+This implementation normally builds an im-memory dictionary of the unique
 values and counts.  Performance will be poor, and execution may fail, if there
-are a very large number of unique values.
+are a very large number of unique values.  If the input file has been presorted,
+then the `--presorted` option may be used to avoid  building the in-memory dictionary.
 
 In the default output format, the output file is a KGTK edge file.
 The node1 column contains the unique values, thelabel column is `count`,
@@ -16,25 +17,37 @@ KGTK file to represent empty values in the input KGTK file.
 The value used in the `label` column, normally `count`, may be changed
 with the `--label VALUE` option.
 
-There are two expert options specifically for this command:
+There are two noteworthy expert options for this command:
 
 The `--prefix VALUE` option supplies a prefix to the value in the output file.
 
-The `--format node` option creates a KGTK node file as its output.  The value
+The `--format xxx` option selects the lutput format:
+
+`--format edge` creates a KGTK edge file as its output (default).
+
+`--format node` creates a KGTK node file as its output.  The value
 (prefixed if requested) appears in the `id` column of the output file, and new
 columns (prefixed) are created for each unique value found in the specified
 column in the input file.
 
-Usint the `--where name` and `--in value(s)` options, you can restrict the
+`--format node-counts` creates a KGTK node file with two columns.  The `id`
+column will contain the (optionally prefixed) unique values, while the second column
+(named by `--label`) will contain the count.
+
+`--format node-only` creates a KGTK node file with a single column, the `id`
+column, containing the unique values.  The counts are computed but not written.
+
+Using the `--where name` and `--in value(s)` options, you can restrict the
 count to records where the value in a specified column matches a list of
-specified values.
+specified values.  More sophisticated filtering can be obtained by running
+`kgtk filter` to provide the input to `kgtk unique`.
 
 ## Usage
 
 ```
-usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --column COLUMN_NAME
-                   [--empty EMPTY_VALUE] [--label LABEL_VALUE] [--where WHERE_COLUMN_NAME]
-                   [--in WHERE_VALUES [WHERE_VALUES ...]] [-v]
+usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --column COLUMN_NAME [--empty EMPTY_VALUE]
+                   [--label LABEL_VALUE] [--where WHERE_COLUMN_NAME] [--in WHERE_VALUES [WHERE_VALUES ...]]
+                   [--presorted [True|False]] [-v [optional True|False]]
 
 Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.
 
@@ -54,8 +67,11 @@ optional arguments:
                         The name of a column for a record selection test. (default=None).
   --in WHERE_VALUES [WHERE_VALUES ...]
                         The list of values for a record selection test. (default=None).
+  --presorted [True|False]
+                        When True, the input file is presorted. (default=False).
 
-  -v, --verbose         Print additional progress messages (default=False).
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 
 ## Examples
