@@ -20,22 +20,22 @@ import papermill as pm
 # Parameters
 
 # Folder on local machine where to create the output and temporary folders
-output_path = "/Users/pedroszekely/Downloads/kypher"
+output_path = "/Users/amandeep/Documents/kypher"
 
 # The location of the KGTK installation
-kgtk_path = "/Users/pedroszekely/Documents/GitHub/kgtk"
+kgtk_path = "/Users/amandeep/Github/kgtk"
 
 # The names of the output and temporary folders
 output_folder = "wikidata_os_v5"
 temp_folder = "temp.wikidata_os_v5"
 
 # The location of input Wikidata files
-wikidata_folder = "/Volumes/GoogleDrive/Shared drives/KGTK/datasets/wikidata-20200803-v4/"
-wikidata_folder = "/Users/pedroszekely/Downloads/kypher/wikidata_os_v1/"
-# The wikidata_os files can be downloaded from https://drive.google.com/drive/folders/1V6oAQKmwQ4LJnrBai-uv5gHWphFSCt50?usp=sharing
+wikidata_folder = "/Volumes/GoogleDrive/Shared drives/KGTK/datasets/wikidataos-v4/"
+
+# The wikidata_os files can be downloaded from https://drive.google.com/drive/u/1/folders/1ukXXHqSCcFXE2xpvhqQ2AGAD5y2ue_c7
 
 # Location of the cache database for kypher
-cache_path = "/Users/pedroszekely/Downloads/kypher/temp.useful_wikidata_files_v4"
+cache_path = f"/Users/amandeep/Documents/kypher/{temp_folder}"
 
 # Whether to delete the cache database
 delete_database = False
@@ -123,6 +123,7 @@ def kgtk_to_dataframe(kgtk):
     columns = kgtk[0].split("\t")
     data = []
     for line in kgtk[1:]:
-        data.append(line.split("\t"))
+        data.append(line.encode('utf-8').decode('utf-8').split("\t"))
     return pd.DataFrame(data, columns=columns)
     
+os.environ['SHELL'] = '/bin/bash'
