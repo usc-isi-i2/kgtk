@@ -30,7 +30,7 @@ The `--format xxx` option selects an output format:
 
 Format                 | Description
 ---------------------- | -----------
-`--format edge`        | This format creates a KGTK edge file as its output, as described above. This is the default output format.
+`--format edge`        | This format creates a KGTK edge file as its output. The node1 column contains the unique values, the label column value is `count` (which may be changed with `--label VALUE`), and the node2 column contains the unique count. This is the default output format.
 `--format node`        | This format creates a KGTK node file as its output.  The value (prefixed if requested) appears in the `id` column of the output file, and new columns (prefixed) are created for each unique value found in the specified column in the input file.
 `--format node-counts` | This format creates a KGTK node file with two columns.  The `id` column will contain the (optionally prefixed) unique values, while the second column (named by `--label`) will contain the count.
 `--format node-only`   | creates a KGTK node file with a single column, the `id` column, containing the unique values.  The counts are computed but not written.
