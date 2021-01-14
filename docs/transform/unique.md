@@ -32,6 +32,7 @@ Format                 | Description
 `--format node`        | This format creates a KGTK node file.  The value (prefixed if requested) appears in the `id` column of the output file, and new columns (prefixed) are created for each unique value found in the specified column in the input file.
 `--format node-counts` | This format creates a KGTK node file with two columns.  The `id` column will contain the (optionally prefixed) unique values, while the second column, named `count`, unless changed by `--label VALUE`, will contain the count.
 `--format node-only`   | This creates a KGTK node file with a single column, the `id` column, containing the unique values.  The counts are computed but not written.
+
 Using the `--where name` and `--in value(s)` options, you can restrict the count to records where the value in a specified column matches a list of specified values.  More sophisticated filtering can be obtained by running `kgtk filter` to provide the input to `kgtk unique`.
 
 ## Usage
