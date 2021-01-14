@@ -1,11 +1,13 @@
 The unique command reads a KGTK file, constructing a second KGTK file
-containing the unique values and counts for a column in the first file.
+containing the unique values for a column in the first file.  Each unique
+value may be accompanied by an occurance count, depending on the format
+selected for the output file.
 
-This implementation normally builds an in-memory dictionary of the unique
+`kgtk unique` normally builds an in-memory dictionary of the unique
 values and counts.  Performance will be poor, and execution may fail, if there
-are a very large number of unique values;  if that occurs, you should presort
-the input file and give the `--presorted` option to avoid  building the
-in-memory dictionary.
+are a very large number of unique values, causing main memory to be exhausted.
+If you run out of main memory, you should presort the input file and use
+`kgtk unique --presorted` to avoid  building the in-memory dictionary.
 
 In the default output format, the output file is a KGTK edge file.
 The node1 column contains the unique values, the label column value is `count`,
