@@ -92,7 +92,7 @@ def split_list(sequence, sep):
             chunk.append(val)
     yield chunk
 
-def cli_entry_pipe(args, parsed_shared_args, parser, sub_parsers, subparser_lookup, subparsers_built):
+def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built):
     # parse internal pipe
     pipe = [list(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
     if len(pipe) == 0:
@@ -226,10 +226,10 @@ def cli_entry_pipe(args, parsed_shared_args, parser, sub_parsers, subparser_look
             parser.exit(KGTKArgumentParseException.return_code, e.stderr.decode('utf-8'))
     
 
-def cli_entry_sequential_commands(args, parsed_shared_args, parser, sub_parsers, subparser_lookup, subparsers_built):
+def cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built):
     # parse internal sequence of pipes
     for commands in split_list(args, sequential_delimiter):
-        cli_entry_pipe(commands, parsed_shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+        cli_entry_pipe(commands, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
 
 def cli_entry(*args):
     """
@@ -301,7 +301,7 @@ def cli_entry(*args):
     # this won't pollute help info in sub-parsers
     parser.usage = '%(prog)s [options] command [ / command]*'
 
-    cli_entry_sequential_commands(args, parsed_shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+    cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
 
     if parsed_shared_args._timing:
         end_time: float = time.time()
