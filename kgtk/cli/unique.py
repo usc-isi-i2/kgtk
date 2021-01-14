@@ -50,10 +50,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--label", dest="label_value", help="The output file label column value (default=%(default)s).", default="count")
 
     # TODO: use an emum
-    parser.add_argument(      "--format", dest="output_format", help=h("The output file format and mode (default=%(default)s)."),
+    parser.add_argument(      "--format", dest="output_format", help="The output file format and mode (default=%(default)s).",
                               default=Unique.DEFAULT_FORMAT, choices=Unique.OUTPUT_FORMATS)
 
-    parser.add_argument(      "--prefix", dest="prefix", help=h("The value prefix (default=%(default)s)."), default="")
+    parser.add_argument(      "--prefix", dest="prefix", help="The value prefix (default=%(default)s).", default="")
 
     parser.add_argument(      "--where", dest="where_column_name",
                               help="The name of a column for a record selection test. (default=%(default)s).", default=None)
