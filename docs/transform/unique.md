@@ -1,18 +1,21 @@
 The unique command reads a KGTK file, constructing a second KGTK file
 containing the unique values and counts for a column in the first file.
 
-This implementation normally builds an im-memory dictionary of the unique
+This implementation normally builds an in-memory dictionary of the unique
 values and counts.  Performance will be poor, and execution may fail, if there
-are a very large number of unique values.  If the input file has been presorted,
-then the `--presorted` option may be used to avoid  building the in-memory dictionary.
+are a very large number of unique values;  if that occurs, you should presort
+the input file and give the `--presorted` option to avoid  building the
+in-memory dictionary.
 
 In the default output format, the output file is a KGTK edge file.
-The node1 column contains the unique values, thelabel column is `count`,
+The node1 column contains the unique values, the label column value is `count`,
 and the node2 column contains the unique count.
 
-Since KGTK edge files cannot have an empty node1 column, the `--empty value`
+Since KGTK edge files cannot have an empty node1 column, the `--empty VALUE`
 option provides a substitute value (e.g. NONE) that will be used in the ouput
-KGTK file to represent empty values in the input KGTK file.
+KGTK file to represent empty values in the input KGTK file.  When the empty
+value is itself empty (the default), empty values in the input file will not
+be included in the output file.
 
 The value used in the `label` column, normally `count`, may be changed
 with the `--label VALUE` option.
@@ -21,26 +24,15 @@ There are two noteworthy expert options for this command:
 
 The `--prefix VALUE` option supplies a prefix to the value in the output file.
 
-The `--format xxx` option selects the lutput format:
+The `--format xxx` option selects an output format:
 
-`--format edge` creates a KGTK edge file as its output (default).
-
-`--format node` creates a KGTK node file as its output.  The value
-(prefixed if requested) appears in the `id` column of the output file, and new
-columns (prefixed) are created for each unique value found in the specified
-column in the input file.
-
-`--format node-counts` creates a KGTK node file with two columns.  The `id`
-column will contain the (optionally prefixed) unique values, while the second column
-(named by `--label`) will contain the count.
-
-`--format node-only` creates a KGTK node file with a single column, the `id`
-column, containing the unique values.  The counts are computed but not written.
-
-Using the `--where name` and `--in value(s)` options, you can restrict the
-count to records where the value in a specified column matches a list of
-specified values.  More sophisticated filtering can be obtained by running
-`kgtk filter` to provide the input to `kgtk unique`.
+Format | Description
+====== | ===========
+`--format edge` | This format creates a KGTK edge file as its output, as described above. This is the default output format.
+`--format node` | This format creates a KGTK node file as its output.  The value (prefixed if requested) appears in the `id` column of the output file, and new columns (prefixed) are created for each unique value found in the specified column in the input file.
+`--format node-counts` | This format creates a KGTK node file with two columns.  The `id` column will contain the (optionally prefixed) unique values, while the second column (named by `--label`) will contain the count.
+`--format node-only` | creates a KGTK node file with a single column, the `id` column, containing the unique values.  The counts are computed but not written.
+Using the `--where name` and `--in value(s)` options, you can restrict the count to records where the value in a specified column matches a list of specified values.  More sophisticated filtering can be obtained by running `kgtk filter` to provide the input to `kgtk unique`.
 
 ## Usage
 
