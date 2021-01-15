@@ -116,7 +116,7 @@ Select all edges that have subject Q31 or Q45:
 kgtk filter -p " Q32, Q45 ; ; " --pred prop -i INPUT
 ```
 
-Send P154 records to one file, P983 records to another file, and the remainder to a third file:
+Send records with property P154 to one file, records with property P983 to another file, and the remaining records to a third file:
 
 ```bash
 kgtk filter \
