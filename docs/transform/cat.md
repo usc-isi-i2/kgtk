@@ -12,7 +12,7 @@ input file has a "node1" column and the second has a "from" column, the two
 columns will be combined as the "node1" column in the output file.
 
 Normally, the files being combined must be either all KGTK edge files or all
-KGTK node files, but that constraint can be overridded with --mode=NONE.
+KGTK node files, but that constraint can be overridden with --mode=NONE.
 
 Optionally, the output can be written in a selection of other formats.
 
