@@ -11,7 +11,9 @@ Input records that do not match any filter may be written to a reject file
 
 When there are multiple output files, `--first-match-only` determines whether
 input records are copied to the first matching output file (when `True`) or to
-all matching output files (when `False`, the default).
+all matching output files (when `False`, the default).  It can also trigger certain
+the use of an optimized code path, which may produce substantial savings when the
+number of total alternatives is large.
 
 Filters are specified using patterns of the form
 
@@ -41,6 +43,10 @@ Match Type | Description
 fullmatch  | The full field must match the regular expression.  It is not necessary to start the regular expressin with `^` nor end it with `$`.
 match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  It is not necessary to start the regular expressin with `^`.
 search     | The regular expression must match somewhere in the field.
+
+> NOTE: At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
+
+> NOTE: At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
 
 ## Usage
 
@@ -120,6 +126,16 @@ Send records with property P154 to one file, records with property P983 to anoth
 
 ```bash
 kgtk filter \
+     -p "; P154 ;" -o P154.tsv \
+     -p "; P983 ;" -o P983.tsv \
+     --reject-file others.tsv
+```
+
+Send records with property P154 to one file, records with property P983 to another file, and the remaining records to a third file.
+Specify `--first-match-only`.  It will not change the results, but may lead to improved performance due to internal optimizations.
+
+```bash
+kgtk filter --first-match-only \
      -p "; P154 ;" -o P154.tsv \
      -p "; P983 ;" -o P983.tsv \
      --reject-file others.tsv
