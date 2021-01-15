@@ -13,7 +13,7 @@ When there are multiple output files, `--first-match-only` determines whether
 input records are copied to the first matching output file (when `True`) or to
 all matching output files (when `False`, the default).  When `True`, it can also trigger
 the use of an optimized code path, which may produce substantial savings when the
-number of total alternatives is large.
+total number of alternatives is large.
 
 Filters are specified using patterns of the form
 
