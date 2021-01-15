@@ -92,7 +92,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         + " (defaults to per-user temporary file)")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
                         help="output file to write to, if `-' (the default) output goes to stdout."
-                        + " Files with extensions .gz, .bz2 or .xz will be appopriately compressed.")
+                        + " Files with extensions .gz, .bz2 or .xz will be appropriately compressed.")
 
 def import_modules():
     """Import command-specific modules that are only needed when we actually run.
