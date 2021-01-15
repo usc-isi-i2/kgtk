@@ -33,13 +33,13 @@ nonempty pattern matches.  The `--invert` option may be used to invert the
 sense of the filter, causing matching input records to be written to the
 reject file, and non-matching records to be written to the output file.
 
-When using regular expressions as patterns, ``match-type xxx` determines the type of
+When using regular expressions as patterns, `match-type MATCH_TYPE` determines the type of
 regular expression match that takes place.
 
 Match Type | Description
 ---------- | -----------
 fullmatch  | The full field must match the regular expression.  It is not necessary to start the regular expressin with `^` nor end it with `$`.
-match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.
+match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  It is not necessary to start the regular expressin with `^`.
 search     | The regular expression must match somewhere in the field.
 
 ## Usage
@@ -86,39 +86,56 @@ optional arguments:
 
 ## Examples
 
-Select all edges that have property P154 in the `label` column:
+Select all edges that have property P154 (in the `label` column or its alias):
 
 ```bash
 kgtk filter -p " ; P154 ; " -i INPUT
 ```
 
-Select all edges that have property P154. The property is called "prop" in this file:
+Select all edges that have P154 in a column called `prop`:
 
 ```bash
 kgtk filter -p " ; P154 ; " --pred prop -i INPUT
 ```
 
-Select all edges that have properties P154 or P983
+Select all edges that have properties P154 or P983:
 
 ```bash
 kgtk filter -p " ; P154, P983 ; " --pred prop -i INPUT
 ```
 
-Select all edges that have properties P154 or P983 and object Q12
+Select all edges that have properties P154 or P983 and object Q12:
 
 ```bash
 kgtk filter -p " ; P154, P983 ; Q12 " --pred prop -i INPUT
 ```
 
-Select all edges that have subject Q31 or Q45
-```bash
+Select all edges that have subject Q31 or Q45:
+
+```
 kgtk filter -p " Q32, Q45 ; ; " --pred prop -i INPUT
 ```
 
-Send P154 records to one file, P983 records to another file, and the remainder to a third file.
+Send P154 records to one file, P983 records to another file, and the remainder to a third file:
+
 ```bash
 kgtk filter \
      -p "; P154 ;" -o P154.tsv \
      -p "; P983 ;" -o P983.tsv \
      --reject-file others.tsv
 ```
+
+Select all records with a subject value that starts with the letter `P` (with
+unnecessary spaces trimmed out of the filter):
+
+```
+kgtk filter -p "P;;" --regex --match-type match -i INPUT
+```
+
+Select all records with an object value that starts with the letter `P` followed by 1 or more digits:
+
+```
+kgtk filter -p ';;P[0-9]+' --regex --match-type fullmatch -i INPUT
+```
+
+
