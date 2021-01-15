@@ -48,10 +48,9 @@ search     | The regular expression must match somewhere in the field.
 
 > NOTE: At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
 
-> NOTE: At the present time, the `--invert`, `--match-type`, `--or`, and `--regex` options apply to all filters and patterns in the `kgtk filter` invocation.
+> NOTE: At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--obj`, `--or`, `--pred`, `--regex`, and `--subj`
+> options apply to all filters and patterns in the `kgtk filter` invocation.
 > In particular, there is no support for mixing non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern.
-
-
 
 ## Usage
 
