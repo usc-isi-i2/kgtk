@@ -11,7 +11,9 @@ Input records that do not match any filter may be written to a reject file
 
 When there are multiple output files, `--first-match-only` determines whether
 input records are copied to the first matching output file (when `True`) or to
-all matching output files (when `False`, the default).
+all matching output files (when `False`, the default).  When `True`, it can also trigger
+the use of an optimized code path, which may produce substantial savings when the
+total number of alternatives is large.
 
 Filters are specified using patterns of the form
 
@@ -33,14 +35,22 @@ nonempty pattern matches.  The `--invert` option may be used to invert the
 sense of the filter, causing matching input records to be written to the
 reject file, and non-matching records to be written to the output file.
 
-When using regular expressions as patterns, ``match-type xxx` determines the type of
+When using regular expressions as patterns, `--match-type MATCH_TYPE` determines the type of
 regular expression match that takes place.
 
 Match Type | Description
 ---------- | -----------
 fullmatch  | The full field must match the regular expression.  It is not necessary to start the regular expressin with `^` nor end it with `$`.
-match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.
+match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  It is not necessary to start the regular expressin with `^`.
 search     | The regular expression must match somewhere in the field.
+
+> NOTE: At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
+
+> NOTE: At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
+
+> NOTE: At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--obj`, `--or`, `--pred`, `--regex`, and `--subj`
+> options apply to all filters and patterns in the `kgtk filter` invocation.
+> In particular, there is no support for mixing non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern.
 
 ## Usage
 
@@ -86,39 +96,66 @@ optional arguments:
 
 ## Examples
 
-Select all edges that have property P154 in the `label` column:
+Select all edges that have property P154 (in the `label` column or its alias):
 
 ```bash
 kgtk filter -p " ; P154 ; " -i INPUT
 ```
 
-Select all edges that have property P154. The property is called "prop" in this file:
+Select all edges that have P154 in a column called `prop`:
 
 ```bash
 kgtk filter -p " ; P154 ; " --pred prop -i INPUT
 ```
 
-Select all edges that have properties P154 or P983
+Select all edges that have properties P154 or P983:
 
 ```bash
 kgtk filter -p " ; P154, P983 ; " --pred prop -i INPUT
 ```
 
-Select all edges that have properties P154 or P983 and object Q12
+Select all edges that have properties P154 or P983 and object Q12:
 
 ```bash
 kgtk filter -p " ; P154, P983 ; Q12 " --pred prop -i INPUT
 ```
 
-Select all edges that have subject Q31 or Q45
-```bash
+Select all edges that have subject Q31 or Q45:
+
+```
 kgtk filter -p " Q32, Q45 ; ; " --pred prop -i INPUT
 ```
 
-Send P154 records to one file, P983 records to another file, and the remainder to a third file.
+Send records with property P154 to one file, records with property P983 to another file, and the remaining records to a third file:
+
 ```bash
 kgtk filter \
      -p "; P154 ;" -o P154.tsv \
      -p "; P983 ;" -o P983.tsv \
      --reject-file others.tsv
 ```
+
+Send records with property P154 to one file, records with property P983 to another file, and the remaining records to a third file.
+Specify `--first-match-only`.  It will not change the results, but may lead to improved performance due to internal optimizations.
+
+```bash
+kgtk filter --first-match-only \
+     -p "; P154 ;" -o P154.tsv \
+     -p "; P983 ;" -o P983.tsv \
+     --reject-file others.tsv
+```
+
+Select all records with a subject value that starts with the letter `P` (with
+unnecessary spaces trimmed out of the filter):
+
+```
+kgtk filter -p "P;;" --regex --match-type match -i INPUT
+```
+
+Select all records with an object value that starts with the letter `P` followed by 1 or more digits:
+
+```
+kgtk filter -p ';;P[0-9]+' --regex --match-type fullmatch -i INPUT
+```
+
+
