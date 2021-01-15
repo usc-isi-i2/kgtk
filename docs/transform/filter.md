@@ -35,7 +35,7 @@ nonempty pattern matches.  The `--invert` option may be used to invert the
 sense of the filter, causing matching input records to be written to the
 reject file, and non-matching records to be written to the output file.
 
-When using regular expressions as patterns, `match-type MATCH_TYPE` determines the type of
+When using regular expressions as patterns, `--match-type MATCH_TYPE` determines the type of
 regular expression match that takes place.
 
 Match Type | Description
@@ -47,6 +47,11 @@ search     | The regular expression must match somewhere in the field.
 > NOTE: At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
 
 > NOTE: At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
+
+> NOTE: At the present time, the `--invert`, `--match-type`, `--or`, and `--regex` options apply to all filters and patterns in the `kgtk filter` invocation.
+> In particular, there is no support for mixing non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern.
+
+
 
 ## Usage
 
