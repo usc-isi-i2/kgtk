@@ -11,7 +11,7 @@ Input records that do not match any filter may be written to a reject file
 
 When there are multiple output files, `--first-match-only` determines whether
 input records are copied to the first matching output file (when `True`) or to
-all matching output files (when `False`, the default).  It can also trigger certain
+all matching output files (when `False`, the default).  When `True`, it can also trigger
 the use of an optimized code path, which may produce substantial savings when the
 number of total alternatives is large.
 
