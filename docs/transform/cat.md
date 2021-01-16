@@ -20,7 +20,8 @@ Optionally, the output can be written in a selection of other formats.
 
 ```bash
 usage: kgtk cat [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
-                [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}] [-v]
+                [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
+                [-v [optional True|False]]
 
 Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
 
@@ -32,12 +33,33 @@ optional arguments:
   -i INPUT_FILE [INPUT_FILE ...], --input-files INPUT_FILE [INPUT_FILE ...]
                         KGTK input files (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for stdout.)
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
   --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
 
-  -v, --verbose         Print additional progress messages (default=False).
-```
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).usage: kgtk cat [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
+                [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
+                [-v [optional True|False]]
+
+Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
+
+Additional options are shown in expert help.
+kgtk --expert cat --help
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT_FILE [INPUT_FILE ...], --input-files INPUT_FILE [INPUT_FILE ...]
+                        KGTK input files (May be omitted or '-' for stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
+  --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
+                        The file format (default=kgtk)
+
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).```
 
 ## Output Formats
 
