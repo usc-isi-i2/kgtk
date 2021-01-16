@@ -1,5 +1,5 @@
 """
-Test driver for KGTK Kypher query engine
+Run Kypher query engine.
 """
 
 import sys
@@ -17,9 +17,11 @@ DEFAULT_GRAPH_CACHE_FILE = os.path.join(
     tempfile.gettempdir(), 'kgtk-graph-cache-%s.sqlite3.db' % os.environ.get('USER', ''))
 
 def parser():
+    desc = ('Query one or more KGTK files with Kypher.\n' +
+            'IMPORTANT: input can come from stdin but chaining queries is not yet supported.')
     return {
-        'help': 'Query one or more KGTK files with Kypher',
-        'description': 'Query one or more KGTK files with Kypher.',
+        'help': desc,
+        'description': desc,
     }
 
 EXPLAIN_MODES = ('plan', 'full', 'expert')
