@@ -1,5 +1,9 @@
+## Overview
+
 The add-id command copies its input file to its output file,
-adding an Id column and ID values when needed.
+adding an ID column and ID values when needed.
+
+### ID Styles
 
 New IDs may be generated using one of several available ID generation
 styles.
@@ -14,6 +18,8 @@ styles.
 | prefix### | Concatenate a prefix value (from --id-prefix) with an incrementing counter with leading zeros per --id-prefix-num-width). |
 | wikidata | Concatenate the node1 and label column values with either the node2 column value (if it starts with P or Q) or the SHA256 hash of the node2 column value (truncated to the width giver by --value-hash-width). |
 | wikidata-with-claim-id | If the claim-id column is empty, produce an ID value as per 'wikidata'. Otherwise, if --claim-id-hash-width is 0, then concatenate the claim_id column value to the `wikidata` ID value. Otherwise, concatenatea a SHA256 hash of the claim-id value, truncated per --claim-id-hash-width. | 
+
+### Uniqueness and Memory Use
 
 By default, the ID values in the file are validated for uniqueness,
 using an in-memory set.  This may cause
