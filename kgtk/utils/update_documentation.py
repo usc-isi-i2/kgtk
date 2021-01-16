@@ -149,15 +149,18 @@ class DocUpdater():
                 print("No usage block found.", file=self.error_file, flush=True)
             return
         if self.very_verbose:
-            print("Existing usage:\n%s\n" % "".join(lines[usage_block_begin:usage_block_end]), file=self.error_file, flush=True)
+            print("Existing usage:\n****************\n%s****************" % "".join(lines[usage_block_begin:usage_block_end]), file=self.error_file, flush=True)
 
             
         command: str = "%s %s --help" % (self.kgtk_command, subcommand)
         if self.verbose:
             print("Getting new usage for %s" % repr(command), file=self.error_file, flush=True)
         new_usage: typing.List[str] = subprocess.getoutput(command).splitlines(keepends=True)
+        nlines: int = len(new_usage)
+        if nlines > 0:
+                new_usage[nlines-1] = new_usage[nlines-1].rstrip('\n') + '\n'
         if self.very_verbose:
-            print("new usage:\n%s" % "".join(new_usage), file=self.error_file, flush=True)
+            print("new usage:\n****************\n%s****************" % "".join(new_usage), file=self.error_file, flush=True)
 
         if self.update_usage:
             # Replace the old usage with the new usage:
@@ -223,7 +226,7 @@ class DocUpdater():
             elif self.update_examples:
                 # Replace the old example table with the new example table:
                 lines[table_begin:table_end] = new_table_lines
-                current_idx = table_end + (table_end - table_begin + len(new_table_lines))
+                current_idx = table_end + (nlines - (table_end - table_begin))
             else:
                 current_idx = table_end
 
