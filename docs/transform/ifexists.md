@@ -23,7 +23,7 @@ filtered, and "right" refers to the file supplying the matching records.
 |         |         | left.node2 == right.node2 |
 | node    | node    | left.id    == right.id |
 | edge    | node    | left.node1 == right.id |
-| node    | edge    | right.id   == left.node1 |
+| node    | edge    | left.id   == right.node1 |
 
 ## Usage
 
