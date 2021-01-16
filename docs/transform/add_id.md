@@ -24,7 +24,7 @@ By default, the ID values in the file are validated for uniqueness,
 using an in-memory set.  This may cause
 memory usage issues for large input files, and may be inappropriate
 for some files that legitimately contain duplicate records.
-The --verify-id-unique=false optin may be used to disable this check.
+The --verify-id-unique=false option may be used to disable this check.
 
 ## Usage
 
