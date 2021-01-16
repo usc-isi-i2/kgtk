@@ -5,12 +5,11 @@ adding an ID column and ID values when needed.
 
 ### ID Styles
 
-New IDs may be generated using one of several available ID generation
-styles.
+New IDs may be generated using one of the following ID generation styles.
 
 | ID Style | Description |
 | -------- | ----------- |
-| empty | Sets the ID column to the empty value. |
+| empty | Sets the ID column to the empty value (clears it). |
 | node1-label-node2 | Concatenates the node1, label, and node2 column values. |
 | node1-label-node2-id | Concatenates the node1, label, and node2 column values, then concatenate any existing non-blank ID value. |
 | node1-label-node2-num | Concatenates the node1, label, and node2 column values with a sequence number per (node1, label, node2) tuple. |
