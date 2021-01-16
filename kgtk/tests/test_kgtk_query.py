@@ -7,6 +7,12 @@ import pandas as pd
 from kgtk.cli_entry import cli_entry
 
 
+# TO DO:
+# - file aliasing via --as, realiasing
+# - files not required to exist after initial import
+# - queries from stdin (query pipes not yet supported)
+# - NULL value tests and conversion functions
+
 class TestKGTKQuery(unittest.TestCase):
     def setUp(self) -> None:
         self.file_path = 'data/kypher/graph.tsv'
@@ -260,6 +266,24 @@ class TestKGTKQuery(unittest.TestCase):
     def test_kgtk_query_multi_step_path_german_lovers(self):
         cli_entry("kgtk", "query", "-i", self.file_path, "-o", f'{self.temp_dir}/out.tsv', "--match",
                   "(na)<-[:name]-(a)-[r:loves]->(b)-[:name]->(nb)",
+                  "--where", 'na.kgtk_lqstring_lang = "de" OR nb.kgtk_lqstring_lang = "de"',
+                  "--return", "r, na, r.label, nb", '--graph-cache', self.sqldb)
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 2)
+        ids = list(df['id'].unique())
+        node2s = list(df['node2'].unique())
+        node2_1s = list(df['node2.1'].unique())
+        self.assertTrue('e11' in ids)
+        self.assertTrue('e12' in ids)
+        self.assertTrue("'Hans'@de" in node2s)
+        self.assertTrue("'Otto'@de" in node2s)
+        self.assertTrue('Molly' in node2_1s)
+        self.assertTrue('Susi' in node2_1s)
+
+    def test_kgtk_query_multi_step_path_german_lovers_anonymous(self):
+        cli_entry("kgtk", "query", "-i", self.file_path, "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  # test connection through anonymous node variables instead of a and b:
+                  "(na)<-[:name]-()-[r:loves]->()-[:name]->(nb)",
                   "--where", 'na.kgtk_lqstring_lang = "de" OR nb.kgtk_lqstring_lang = "de"',
                   "--return", "r, na, r.label, nb", '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
