@@ -103,7 +103,6 @@ optional arguments:
 
 Suppose that `examples/docs/add-id-file1.tsv` contains the following table in KGTK format:
 
-(Note:  The `years` column means years employed, not age.)
 ```bash
 kgtk cat -i examples/docs/add-id-file1.tsv
 ```
@@ -122,6 +121,8 @@ kgtk cat -i examples/docs/add-id-file1.tsv
 | steve | zipcode | 45601 | home | 1 |
 | steve | zipcode | 45601 | work | 2 |
 | steve | zipcode | 45601 | cabin |  |
+
+Note:  The `years` column means years employed, not age.
 
 ### Add an ID column using the default ID style (prefix###)
 
