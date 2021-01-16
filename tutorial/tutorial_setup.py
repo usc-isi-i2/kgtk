@@ -98,7 +98,10 @@ kgtk_environment_variables.append('kypher')
 
 # Directory where the notebooks live
 os.environ["EXAMPLES_DIR"] = kgtk_path + "/examples"
+os.environ["USECASE_DIR"] = kgtk_path + "/use-cases"
 kgtk_environment_variables.append('EXAMPLES_DIR')
+kgtk_environment_variables.append('USECASE_DIR')
+
 
 # Directories for the embeddings
 os.environ['GE'] = os.environ['TEMP'] + "/graph-embedding"
