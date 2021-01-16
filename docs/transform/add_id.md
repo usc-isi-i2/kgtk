@@ -83,6 +83,7 @@ optional arguments:
 ## Examples
 
 Suppose that `examples/docs/add-id-file1.tsv` contains the following table in KGTK format:
+
 (Note:  The `years` column means years employed, not age.)
 ```bash
 kgtk cat -i examples/docs/add-id-file1.tsv
