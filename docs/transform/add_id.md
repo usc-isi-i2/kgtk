@@ -103,7 +103,7 @@ kgtk cat -i examples/docs/add-id-file1.tsv
 | steve | zipcode | 45601 | work      | 2     |
 | steve | zipcode | 45601 | cabin     |       |
 
-Add an ID column using the default ID style (prefix###):
+### Add an ID column using the default ID style (prefix###)
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv
@@ -126,7 +126,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | E11 |
 | steve | zipcode | 45601 | cabin |  | E12 |
 
-Add an ID column using the node1-label-node2 ID style:
+### Add an ID column using the node1-label-node2 ID style
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style node1-label-node2
@@ -149,7 +149,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-45601 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-45601 |
 
-Add an ID column using the node1-label-num ID style:
+### Add an ID column using the node1-label-num ID style
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style node1-label-num
@@ -172,7 +172,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-0004 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-0005 |
 
-Add an ID column building on an existing ID value using the node1-label-node2-id format:
+### Add an ID column building on an existing ID value using the node1-label-node2-id format
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv / add-id --id-style node1-label-node2-id --overwrite-id
@@ -193,7 +193,7 @@ kgtk add-id -i examples/docs/add-id-file1.tsv / add-id --id-style node1-label-no
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-45601-E11 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-45601-E12 |
 
-Create a new ID column for the result instead of overwriting the existing ID column value:
+### Create a new ID column for the result instead of overwriting the existing ID column value
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv / add-id --id-style node1-label-node2-id --new-id-column-name new-id
@@ -214,7 +214,7 @@ kgtk add-id -i examples/docs/add-id-file1.tsv / add-id --id-style node1-label-no
 | steve | zipcode | 45601 | work | 2 | E11 | steve-zipcode-45601-E11 |
 | steve | zipcode | 45601 | cabin |  | E12 | steve-zipcode-45601-E12 |
 
-Add an ID column using the node1-label-node2-num ID style:
+### Add an ID column using the node1-label-node2-num ID style
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style node1-label-node2-num
@@ -237,7 +237,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-45601-0004 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-45601-0005 |
 
-Add an ID column using the node1-label-num ID style:
+### Add an ID column using the node1-label-num ID style
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style node1-label-num
@@ -260,8 +260,8 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-0004 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-0005 |
 
-Add an ID column using the wikidata ID style:
-(Node: the existing test dataset doesn't have any entries with node2 values starting with P or Q)
+### Add an ID column using the wikidata ID style
+(Note: the existing test dataset doesn't have any entries with node2 values starting with P or Q)
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style wikidata
@@ -284,8 +284,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-3f5bb8 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-3f5bb8 |
 
-Add an ID column using the wikidata-with-claim-id ID style, using
-the location column as a placeholder for the claim-id column:
+### Add an ID column using the wikidata-with-claim-id ID style, using the location column as a placeholder for the claim-id column
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style wikidata-with-claim-id --claim-id-column-name location
