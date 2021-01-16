@@ -20,6 +20,8 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### TO DO:
 
+# - support node property access without having to introduce the property variable in the
+#   match clause first (e.g., y.salary in the multi-graph join example)
 # + support parameters in lists
 # - support concat function (|| operator in sqlite)
 # - maybe support positional parameters $0, $1,...
@@ -320,14 +322,16 @@ class KgtkQuery(object):
         if node1.labels is not None:
             para = self.get_literal_parameter(node1.labels[0], litmap)
             restrictions.add(((graph, node1col), para))
-        if node1.variable is not None and not isinstance(node1.variable, parser.AnonymousVariable):
+        # we do not exclude anonymous vars here, since they can connect edges: <-[]-()-[]->
+        if node1.variable is not None:
             self.register_clause_variable(node1.variable.name, (graph, node1col), varmap, joins)
 
         node2col = self.get_node2_column(graph)
         if node2.labels is not None:
             para = self.get_literal_parameter(node2.labels[0], litmap)
             restrictions.add(((graph, node2col), para))
-        if node2.variable is not None and not isinstance(node2.variable, parser.AnonymousVariable):
+        # we do not exclude anonymous vars here (see above):
+        if node2.variable is not None:
             self.register_clause_variable(node2.variable.name, (graph, node2col), varmap, joins)
             
         labelcol = self.get_label_column(graph)
@@ -335,6 +339,7 @@ class KgtkQuery(object):
         if rel.labels is not None:
             para = self.get_literal_parameter(rel.labels[0], litmap)
             restrictions.add(((graph, labelcol), para))
+        # but an anonymous relation variable cannot connect to anything else:
         if rel.variable is not None and not isinstance(rel.variable, parser.AnonymousVariable):
             self.register_clause_variable(rel.variable.name, (graph, idcol), varmap, joins)
 
