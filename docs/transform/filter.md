@@ -96,66 +96,162 @@ optional arguments:
 
 ## Examples
 
-Select all edges that have property P154 (in the `label` column or its alias):
+Let us assume we have a KGTK file with movie data, such as the following (download the sample file [here](../../examples/docs/movies_reduced.tsv)):
+
+| id  | node1          |          label   |      node2                       |
+| --- | -------------- | ---------------- | -------------------------------- |
+| t1  | terminator     |      label       |      "The Terminator"@en         |
+| t2  | terminator     | instance_of      |  film                            |
+| t3  | terminator     | genre            | action                           |
+| t4  | terminator     | genre            | science_fiction                  |
+| t5  | terminator     | publication_date | ^1984-10-26T00:00:00Z/11         |
+| t6  | t5             | location         | united_states                    |
+| t7  | terminator     | publication_date | ^1985-02-08T00:00:00Z/11         |
+| t8  | t7             | location         | sweden                           |
+| t9  | terminator     | director         | james_cameron                    |
+| t10 | terminator     | cast             | arnold_schwarzenegger            |
+| t11 | t10            | role             | terminator_machine                       |
+| t12 | terminator     | cast             | michael_biehn                    |
+| t13 | t12            | role             | kyle_reese                       |
+| t14 | terminator     | cast             | linda_hamilton                   |
+| t15 | t14            | role             | sarah_connor                     |
+| t16 | terminator     | duration         | 108minute                        |
+| t17 | terminator     | award            | national_film_registry           |
+| t18 | t17            | point_in_time    | ^2008-01-01T00:00:00Z/9          |
+
+
+Now let's perform several filter operations. For example, selecting all edges that have property `genre` (in the `label` column or its alias):
 
 ```bash
-kgtk filter -p " ; P154 ; " -i INPUT
+kgtk filter -p " ; genre ; " -i INPUT
 ```
 
-Select all edges that have P154 in a column called `prop`:
+Note that `INPUT` refers to the input path of your .tsv file.
+
+Result:
+
+| id | node1      |     label | node2           |
+| -- | ---------- | --------- | --------------- |
+| t3 | terminator | genre     | action          |
+| t4 | terminator | genre     | science_fiction |
+
+
+By default, KGTK will assume there is a `label` column. However, you can specify any other column to filter. For example, if we had a column called `prop`:
 
 ```bash
-kgtk filter -p " ; P154 ; " --pred prop -i INPUT
+kgtk filter -p " ;genre ; " --pred prop -i INPUT
 ```
 
-Select all edges that have properties P154 or P983:
+Select all edges that have properties `genre` or `cast`:
 
 ```bash
-kgtk filter -p " ; P154, P983 ; " --pred prop -i INPUT
+kgtk filter -p " ; genre, cast ; " -i INPUT
 ```
 
-Select all edges that have properties P154 or P983 and object Q12:
+Result:
+
+| id  | node1      |      label | node2                 |
+| --- | ---------- | ---------- | --------------------- |
+| t3  | terminator |  genre     | action                |
+| t4  | terminator |  genre     | science_fiction       |
+| t10 | terminator |  cast      | arnold_schwarzenegger |
+| t12 | terminator |  cast      | michael_biehn         |
+| t14 | terminator |  cast      | linda_hamilton        |
+
+
+Select all edges that have `arnold_schwarzenegger` as object:
 
 ```bash
-kgtk filter -p " ; P154, P983 ; Q12 " --pred prop -i INPUT
+kgtk filter -p " ; ; arnold_schwarzenegger" -i INPUT
 ```
 
-Select all edges that have subject Q31 or Q45:
+Result:
+
+| id  | node1      |      label | node2                 |
+| --- | ---------- | ---------- | --------------------- |
+| t10 | terminator |  cast      | arnold_schwarzenegger |
+
+
+Select all edges that have properties `role` or `cast` and object `terminator`:
+
+```bash
+kgtk filter -p " ; role, cast ; terminator " --pred prop -i INPUT
+```
+
+Result:
+
+| id  | node1 | label     | node2              |
+| --- | ----- | --------- | ------------------ |
+| t11 | t10   |  role     | terminator_machine |
+
+
+Select all edges that have subject `terminator`:
 
 ```
-kgtk filter -p " Q32, Q45 ; ; " --pred prop -i INPUT
+kgtk filter -p " terminator; ; " --pred prop -i INPUT
 ```
+Result:
 
-Send records with property P154 to one file, records with property P983 to another file, and the remaining records to a third file:
+| id  | node1      | label            | node2                    |
+| --- | ---------- | ---------------- | ------------------------ |
+| t1  | terminator | label            | "The Terminator"@en      |
+| t2  | terminator | instance_of      | film                     |
+| t3  | terminator | genre            | action                   |
+| t4  | terminator | genre            | science_fiction          |
+| t5  | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7  | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t9  | terminator | director         | james_cameron            |
+| t10 | terminator | cast             | arnold_schwarzenegger    |
+| t12 | terminator | cast             | michael_biehn            |
+| t14 | terminator | cast             | linda_hamilton           |
+| t16 | terminator | duration         | 108minute                |
+| t17 | terminator | award            | national_film_registry   |
+
+Send records with property `cast` to one file, records with property `genre` to another file, and the remaining records to a third file:
 
 ```bash
 kgtk filter \
-     -p "; P154 ;" -o P154.tsv \
-     -p "; P983 ;" -o P983.tsv \
-     --reject-file others.tsv
+     -p "; cast ;" -o cast.tsv \
+     -p "; genre ;" -o role.tsv \
+     --reject-file others.tsv -i INPUT
 ```
 
-Send records with property P154 to one file, records with property P983 to another file, and the remaining records to a third file.
+Send records with property `cast` to one file, records with property `genre` to another file, and the remaining records to a third file.
 Specify `--first-match-only`.  It will not change the results, but may lead to improved performance due to internal optimizations.
 
 ```bash
 kgtk filter --first-match-only \
-     -p "; P154 ;" -o P154.tsv \
-     -p "; P983 ;" -o P983.tsv \
-     --reject-file others.tsv
+     -p "; cast ;" -o cast.tsv \
+     -p "; genre ;" -o genre.tsv \
+     --reject-file others.tsv -i INPUT
 ```
 
-Select all records with a subject value that starts with the letter `P` (with
+Select all records with a subject value that starts with the letters `t1` (with
 unnecessary spaces trimmed out of the filter):
 
 ```
-kgtk filter -p "P;;" --regex --match-type match -i INPUT
+kgtk filter -p "t1;;" --regex --match-type match -i INPUT
+```
+Result:
+
+| id  | node1 | label         | node2                   |
+| --- | ----- | ------------- | ----------------------- |
+| t11 | t10   | role          | terminator              |
+| t13 | t12   | role          | kyle_reese              |
+| t15 | t14   | role          | sarah_connor            |
+| t18 | t17   | point_in_time | ^2008-01-01T00:00:00Z/9 |
+
+
+Select all records with an object value that starts with a number:
+
+```
+kgtk filter -p ';;[0-9].+' --regex --match-type fullmatch -i INPUT
 ```
 
-Select all records with an object value that starts with the letter `P` followed by 1 or more digits:
+Result:
 
-```
-kgtk filter -p ';;P[0-9]+' --regex --match-type fullmatch -i INPUT
-```
+| id  | node1      | label    | node2     |
+| --- | ---------- | -------- | --------- |
+| t16 | terminator | duration | 108minute |
 
 
