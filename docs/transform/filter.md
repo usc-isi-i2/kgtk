@@ -40,8 +40,8 @@ regular expression match that takes place.
 
 Match Type | Description
 ---------- | -----------
-fullmatch  | The full field must match the regular expression.  It is not necessary to start the regular expressin with `^` nor end it with `$`.
-match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  It is not necessary to start the regular expressin with `^`.
+fullmatch  | The full field must match the regular expression.  It is not necessary to start the regular expression with `^` nor end it with `$`.
+match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  It is not necessary to start the regular expression with `^`.
 search     | The regular expression must match somewhere in the field.
 
 > NOTE: At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
@@ -96,7 +96,7 @@ optional arguments:
 
 ## Examples
 
-Let us assume we have a KGTK file with movie data, such as the following (download the sample file [here](../../examples/docs/movies_reduced.tsv)):
+Let us assume we have a KGTK file with movie data, such as the following (download the sample file [here](https://raw.githubusercontent.com/usc-isi-i2/kgtk/dev/examples/docs/movies_reduced.tsv)):
 
 | id  | node1          |          label   |      node2                       |
 | --- | -------------- | ---------------- | -------------------------------- |
