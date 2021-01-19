@@ -1,5 +1,5 @@
 id	node1	label	node2
-t1	terminator	label	"The Terminator"@en
+t1	terminator	label	'The Terminator'@en
 t2	terminator	instance_of	film
 t3	terminator	genre	action
 t4	terminator	genre	science_fiction
@@ -14,10 +14,10 @@ t12	terminator	cast	michael_biehn
 t13	t12	role	kyle_reese
 t14	terminator	cast	linda_hamilton
 t15	t14	role	sarah_connor
-t16	terminator	duration	108minute
+t16	terminator	duration	108
 t17	terminator	award	national_film_registry
 t18	t17	point_in_time	^2008-01-01T00:00:00Z/9
-s1	terminator2_jd	label	"Terminator 2: Judgement Day"@en
+s1	terminator2_jd	label	'Terminator 2: Judgement Day'@en
 s2	terminator2_jd	instance_of	film
 s3	terminator2_jd	genre	action
 s4	terminator2_jd	genre	science_fiction
@@ -34,7 +34,7 @@ s14	terminator2_jd	cast	linda_hamilton
 s15	s14	role	sarah_connor
 s16	terminator2_jd	cast	robert_patrick
 s17	s16	role	t1000
-s18	terminator2_jd	duration	137minute
+s18	terminator2_jd	duration	137
 s19	terminator2_jd	award	academy_best_sound_editing
 s20	s19	point_in_time	^1992-03-30T00:00:00Z/11
 s21	s19	winner	gary_rydstrom
