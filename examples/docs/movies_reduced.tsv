@@ -1,5 +1,5 @@
 id	node1	label	node2
-t1	terminator	label	"The Terminator"@en
+t1	terminator	label	'The Terminator'@en
 t2	terminator	instance_of	film
 t3	terminator	genre	action
 t4	terminator	genre	science_fiction
@@ -14,6 +14,6 @@ t12	terminator	cast	michael_biehn
 t13	t12	role	kyle_reese
 t14	terminator	cast	linda_hamilton
 t15	t14	role	sarah_connor
-t16	terminator	duration	108minute
+t16	terminator	duration	108
 t17	terminator	award	national_film_registry
 t18	t17	point_in_time	^2008-01-01T00:00:00Z/9
