@@ -1,4 +1,4 @@
-This command will import Wikidata into KGTK format and generates 3 files.
+This command will import a Wikidata dump in json format (compressed in gzip or bz2) into KGTK format,  generating 3 files:
 
 - A nodes file containing all Qnodes and Pnodes in Wikidata
 - An edges file containing all the statements in Wikidata
