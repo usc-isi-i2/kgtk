@@ -1,20 +1,20 @@
 The `kgtk unique` command reads a KGTK file, constructing a second KGTK file
 containing the unique values found in one of the columns of the input file.  Each unique
-value may be accompanied by an occurance count, depending on the format
+value may be accompanied by an occurence count, depending on the format
 selected for the output file.
 
 In the default output format, the output file is a KGTK edge file.
-The node1 column contains the unique values, the label column value is `count`,
-and the node2 column contains the unique count.
+The `node1` column contains the unique values, the `label` column value is `count`,
+and the `node2` column contains the unique count.
 
-Since KGTK edge files cannot have an empty node1 column, the `--empty EMPTY_VALUE`
+Since KGTK edge files cannot have an empty `node1` column, the `--empty EMPTY_VALUE`
 option provides a substitute value (e.g. NONE) that will be used in the ouput
 KGTK file to represent empty values in the input KGTK file.  When the empty
-value is itself empty (the default), empty values in the input file will not
+value is itself empty, (the default) empty values in the input file will not
 be included in the output file.
 
 The `--column COLUMN_NAME` option specifies the name of the column to
-count unique values.  If not specified, the default is the node2 column or its alias.
+count unique values.  If not specified, the default is the `node2` column or its alias.
 
 The value used in the `label` column of the output file, normally `count`, may be changed
 with the `--label LABEL_VALUE` option.
@@ -25,7 +25,7 @@ The `--format xxx` option selects an output format:
 
 Format                 | Description
 ---------------------- | -----------
-`--format edge`        | This format creates a KGTK edge file. The node1 column contains the unique values, the label column value is `count` (which may be changed with `--label LABEL_VALUE`), and the node2 column contains the unique count. This is the default output format.
+`--format edge`        | This format creates a KGTK edge file. The `node1` column contains the unique values, the `label` column value is `count` (which may be changed with `--label LABEL_VALUE`), and the `node2` column contains the unique count. This is the default output format.
 `--format node`        | This format creates a KGTK node file.  The value (prefixed if requested) appears in the `id` column of the output file, and new columns (prefixed) are created for each unique value found in the specified column in the input file.
 `--format node-counts` | This format creates a KGTK node file with two columns.  The `id` column will contain the (optionally prefixed) unique values, while the second column, named `count`, unless changed by `--label LABEL_VALUE`, will contain the count.
 `--format node-only`   | This creates a KGTK node file with a single column, the `id` column, containing the unique values.  The counts are computed but not written.
