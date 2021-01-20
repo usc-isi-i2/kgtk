@@ -6,11 +6,11 @@ similar to graphy. The initial implementation also ignores reification.
 When there are multiple output files, each output file must have its own filter.
 Output files and filters are paired by order.  We recommend listing each filter
 and output file as a pair on the command line, as shown in one of the examples, below.
-Input records that do not match any filter may be written to a reject file
+Input edges that do not match any filter may be written to a reject file
 (`--reject-file REJECT_FILE).
 
 When there are multiple output files, `--first-match-only` determines whether
-input records are copied to the first matching output file (when `True`) or to
+input edges are copied to the first matching output file (when `True`) or to
 all matching output files (when `False`, the default).  When `True`, it can also trigger
 the use of an optimized code path, which may produce substantial savings when the
 total number of alternatives is large.
@@ -29,11 +29,11 @@ Each of the patterns in a filter can consist of a list of symbols separated usin
 or a regular expression (when `--regex` is specified).
 
 A complete filter requires two semicolons (`;;`) with one or more nonempty patterns.  By default,
-all nonempty patterns in a filter must match an input record for the input record to match the
-filter; however, the `--or` option may be specified to allow an input record to match when any
+all nonempty patterns in a filter must match an input edge for the input edge to match the
+filter; however, the `--or` option may be specified to allow an input edge to match when any
 nonempty pattern matches.  The `--invert` option may be used to invert the
-sense of the filter, causing matching input records to be written to the
-reject file, and non-matching records to be written to the output file.
+sense of the filter, causing matching input edges to be written to the
+reject file, and non-matching edges to be written to the output file.
 
 When using regular expressions as patterns, `--match-type MATCH_TYPE` determines the type of
 regular expression match that takes place.
@@ -55,10 +55,13 @@ search     | The regular expression must match somewhere in the field.
 ## Usage
 
 ```
-usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]] [--reject-file REJECT_FILE] -p
-                   PATTERNS [PATTERNS ...] [--subj SUBJ_COL] [--pred PRED_COL] [--obj OBJ_COL]
-                   [--or [True|False]] [--invert [True|False]] [--regex [True|False]]
-                   [--match-type {fullmatch,match,search}] [--first-match-only [True|False]]
+usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]]
+                   [--reject-file REJECT_FILE] -p PATTERNS [PATTERNS ...]
+                   [--subj SUBJ_COL] [--pred PRED_COL] [--obj OBJ_COL]
+                   [--or [True|False]] [--invert [True|False]]
+                   [--regex [True|False]]
+                   [--match-type {fullmatch,match,search}]
+                   [--first-match-only [True|False]]
                    [--show-version [True/False]] [-v [optional True|False]]
 
 Filter KGTK file based on values in the node1 (subject), label (predicate), and node2 (object) fields.  Optionally filter based on regular expressions.
@@ -66,27 +69,35 @@ Filter KGTK file based on values in the node1 (subject), label (predicate), and 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   -o OUTPUT_FILE [OUTPUT_FILE ...], --output-file OUTPUT_FILE [OUTPUT_FILE ...]
-                        The KGTK output file for records that pass the filter. Multiple output file may be
-                        specified, each with their own pattern. (May be omitted or '-' for stdout.)
+                        The KGTK output file for records that pass the filter.
+                        Multiple output file may be specified, each with their
+                        own pattern. (May be omitted or '-' for stdout.)
   --reject-file REJECT_FILE
-                        The KGTK reject file for records that fail the filter. (Optional, use '-' for stdout.)
+                        The KGTK reject file for records that fail the filter.
+                        (Optional, use '-' for stdout.)
   -p PATTERNS [PATTERNS ...], --pattern PATTERNS [PATTERNS ...]
-                        Pattern to filter on, for instance, " ; P154 ; ". Multiple patterns may be specified
-                        when there are mutiple output files.
+                        Pattern to filter on, for instance, " ; P154 ; ".
+                        Multiple patterns may be specified when there are
+                        mutiple output files.
   --subj SUBJ_COL       Subject column, default is node1
   --pred PRED_COL       Predicate column, default is label
   --obj OBJ_COL         Object column, default is node2
   --or [True|False]     'Or' the clauses of the pattern. (default=False).
   --invert [True|False]
-                        Invert the result of applying the pattern. (default=False).
-  --regex [True|False]  When True, treat the filter clauses as regular expressions. (default=False).
+                        Invert the result of applying the pattern.
+                        (default=False).
+  --regex [True|False]  When True, treat the filter clauses as regular
+                        expressions. (default=False).
   --match-type {fullmatch,match,search}
-                        Which type of regular expression match: fullmatch, match, search. (default=match).
+                        Which type of regular expression match: fullmatch,
+                        match, search. (default=match).
   --first-match-only [True|False]
-                        If true, write only to the file with the first matching pattern. If false, write to all
-                        files with matching patterns. (default=False).
+                        If true, write only to the file with the first
+                        matching pattern. If false, write to all files with
+                        matching patterns. (default=False).
   --show-version [True/False]
                         Print the version of this program. (default=False).
 
@@ -96,162 +107,297 @@ optional arguments:
 
 ## Examples
 
-Let us assume we have a KGTK file with movie data, such as the following (download the sample file [here](https://raw.githubusercontent.com/usc-isi-i2/kgtk/dev/examples/docs/movies_reduced.tsv)):
+### Sample Data
 
-| id  | node1          |          label   |      node2                       |
-| --- | -------------- | ---------------- | -------------------------------- |
-| t1  | terminator     |      label       |      "The Terminator"@en         |
-| t2  | terminator     | instance_of      |  film                            |
-| t3  | terminator     | genre            | action                           |
-| t4  | terminator     | genre            | science_fiction                  |
-| t5  | terminator     | publication_date | ^1984-10-26T00:00:00Z/11         |
-| t6  | t5             | location         | united_states                    |
-| t7  | terminator     | publication_date | ^1985-02-08T00:00:00Z/11         |
-| t8  | t7             | location         | sweden                           |
-| t9  | terminator     | director         | james_cameron                    |
-| t10 | terminator     | cast             | arnold_schwarzenegger            |
-| t11 | t10            | role             | terminator_machine                       |
-| t12 | terminator     | cast             | michael_biehn                    |
-| t13 | t12            | role             | kyle_reese                       |
-| t14 | terminator     | cast             | linda_hamilton                   |
-| t15 | t14            | role             | sarah_connor                     |
-| t16 | terminator     | duration         | 108minute                        |
-| t17 | terminator     | award            | national_film_registry           |
-| t18 | t17            | point_in_time    | ^2008-01-01T00:00:00Z/9          |
+Let us assume we have a KGTK file with movie data, such as the following
+(also available for download [here](https://raw.githubusercontent.com/usc-isi-i2/kgtk/dev/examples/docs/movies_reduced.tsv)):
 
+```bash
+kgtk cat -i examples/docs/movies_reduced.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t1 | terminator | label | 'The Terminator'@en |
+| t2 | terminator | instance_of | film |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t8 | t7 | location | sweden |
+| t9 | terminator | director | james_cameron |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t11 | t10 | role | terminator |
+| t12 | terminator | cast | michael_biehn |
+| t13 | t12 | role | kyle_reese |
+| t14 | terminator | cast | linda_hamilton |
+| t15 | t14 | role | sarah_connor |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+
+
+### Selecting Edges with Predicate `genre`
 
 Now let's perform several filter operations. For example, selecting all edges that have property `genre` (in the `label` column or its alias):
 
 ```bash
-kgtk filter -p " ; genre ; " -i INPUT
+kgtk filter -p " ; genre ; " -i examples/docs/movies_reduced.tsv
 ```
 
-Note that `INPUT` refers to the input path of your .tsv file.
+Note that `examples/docs/movies_reduced.tsv` should be replaced by the path to your .tsv file.
 
 Result:
 
-| id | node1      |     label | node2           |
-| -- | ---------- | --------- | --------------- |
-| t3 | terminator | genre     | action          |
-| t4 | terminator | genre     | science_fiction |
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
 
 
-By default, KGTK will assume there is a `label` column. However, you can specify any other column to filter. For example, if we had a column called `prop`:
+### Selecting Edges by Matching an Alternate Predicate Column
+
+By default, KGTK will assume there is a `label` column for the predicate pattern
+However, you can specify any other column to filter.
+For example, if we had a column called `genre` in a modified input file:
 
 ```bash
-kgtk filter -p " ;genre ; " --pred prop -i INPUT
+kgtk filter -p " ;action ; " --pred genre -i examples/docs/movies_reduced_with_prop.tsv
 ```
+
+Results:
+
+| id | node1 | label | node2 | genre |
+| -- | -- | -- | -- | -- |
+| t1 | terminator | label | 'The Terminator'@en | action |
+
+### Selecting Edges with Multiple Possible Predicate Matches
 
 Select all edges that have properties `genre` or `cast`:
 
 ```bash
-kgtk filter -p " ; genre, cast ; " -i INPUT
+kgtk filter -p " ; genre, cast ; " -i examples/docs/movies_reduced.tsv
 ```
 
 Result:
 
-| id  | node1      |      label | node2                 |
-| --- | ---------- | ---------- | --------------------- |
-| t3  | terminator |  genre     | action                |
-| t4  | terminator |  genre     | science_fiction       |
-| t10 | terminator |  cast      | arnold_schwarzenegger |
-| t12 | terminator |  cast      | michael_biehn         |
-| t14 | terminator |  cast      | linda_hamilton        |
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t12 | terminator | cast | michael_biehn |
+| t14 | terminator | cast | linda_hamilton |
 
+
+### Selecting Edges with a Matching Object
 
 Select all edges that have `arnold_schwarzenegger` as object:
 
 ```bash
-kgtk filter -p " ; ; arnold_schwarzenegger" -i INPUT
+kgtk filter -p " ; ; arnold_schwarzenegger" -i examples/docs/movies_reduced.tsv
 ```
 
 Result:
 
-| id  | node1      |      label | node2                 |
-| --- | ---------- | ---------- | --------------------- |
-| t10 | terminator |  cast      | arnold_schwarzenegger |
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t10 | terminator | cast | arnold_schwarzenegger |
 
+
+### Selecting Edges with Both a Predicate and an Object Match
 
 Select all edges that have properties `role` or `cast` and object `terminator`:
 
 ```bash
-kgtk filter -p " ; role, cast ; terminator " --pred prop -i INPUT
+kgtk filter -p " ; role, cast ; terminator " -i examples/docs/movies_reduced.tsv
 ```
 
 Result:
 
-| id  | node1 | label     | node2              |
-| --- | ----- | --------- | ------------------ |
-| t11 | t10   |  role     | terminator_machine |
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t11 | t10 | role | terminator |
 
+
+### Selecting Edges with a Matching Subject
 
 Select all edges that have subject `terminator`:
 
 ```
-kgtk filter -p " terminator; ; " --pred prop -i INPUT
+kgtk filter -p " terminator; ; " -i examples/docs/movies_reduced.tsv
 ```
 Result:
 
-| id  | node1      | label            | node2                    |
-| --- | ---------- | ---------------- | ------------------------ |
-| t1  | terminator | label            | "The Terminator"@en      |
-| t2  | terminator | instance_of      | film                     |
-| t3  | terminator | genre            | action                   |
-| t4  | terminator | genre            | science_fiction          |
-| t5  | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
-| t7  | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
-| t9  | terminator | director         | james_cameron            |
-| t10 | terminator | cast             | arnold_schwarzenegger    |
-| t12 | terminator | cast             | michael_biehn            |
-| t14 | terminator | cast             | linda_hamilton           |
-| t16 | terminator | duration         | 108minute                |
-| t17 | terminator | award            | national_film_registry   |
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t1 | terminator | label | 'The Terminator'@en |
+| t2 | terminator | instance_of | film |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t9 | terminator | director | james_cameron |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t12 | terminator | cast | michael_biehn |
+| t14 | terminator | cast | linda_hamilton |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
 
-Send records with property `cast` to one file, records with property `genre` to another file, and the remaining records to a third file:
+### Sending Different Edges to Different Files
+
+Send edges with property `cast` to one file, edges with property `genre` to another file, and the remaining edges to a third file:
 
 ```bash
 kgtk filter \
      -p "; cast ;" -o cast.tsv \
-     -p "; genre ;" -o role.tsv \
-     --reject-file others.tsv -i INPUT
+     -p "; genre ;" -o genre.tsv \
+     --reject-file others.tsv -i examples/docs/movies_reduced.tsv
+```
+(No standard output)
+
+Result:
+
+```bash
+kgtk cat -i cast.tsv
 ```
 
-Send records with property `cast` to one file, records with property `genre` to another file, and the remaining records to a third file.
-Specify `--first-match-only`.  It will not change the results, but may lead to improved performance due to internal optimizations.
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t12 | terminator | cast | michael_biehn |
+| t14 | terminator | cast | linda_hamilton |
+
+```bash
+kgtk cat -i genre.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+
+```bash
+kgtk cat -i others.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t1 | terminator | label | 'The Terminator'@en |
+| t2 | terminator | instance_of | film |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t8 | t7 | location | sweden |
+| t9 | terminator | director | james_cameron |
+| t11 | t10 | role | terminator |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+
+### Sending Different Edges to Different Files #2
+
+Send edges with property `genre` to one file, edges with object `action` to another file, and ignore other edges.
+
+```bash
+kgtk filter \
+     -p "; genre ;" -o genre.tsv \
+     -p "; ; action" -o action.tsv \
+     -i examples/docs/movies_reduced.tsv
+```
+(No standard output)
+
+Result:
+
+```bash
+kgtk cat -i genre.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+
+```bash
+kgtk cat -i action.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t3 | terminator | genre | action |
+
+Note that the edge terminator/genre/action appears in both the
+genre and action output files.
+
+### Sending Different Edges to Different Files #2 Based on the First Match
+
+Send edges with property `genre` to one file, edges with object `action` to another file, ignoring other edges.
+Specify `--first-match-only`.
 
 ```bash
 kgtk filter --first-match-only \
-     -p "; cast ;" -o cast.tsv \
      -p "; genre ;" -o genre.tsv \
-     --reject-file others.tsv -i INPUT
+     -p "; ; action" -o action.tsv \
+     -i examples/docs/movies_reduced.tsv
+```
+(No standard output)
+
+Result:
+
+```bash
+kgtk cat -i genre.tsv
 ```
 
-Select all records with a subject value that starts with the letters `t1` (with
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+
+```bash
+kgtk cat -i action.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+
+
+Note that the edge terminator/genre/action appears in only the
+genre output file.
+
+
+### Selecting Edges where the Subject Starts with `t1`
+
+Select all edges with a subject value that starts with the letters `t1` (with
 unnecessary spaces trimmed out of the filter):
 
 ```
-kgtk filter -p "t1;;" --regex --match-type match -i INPUT
+kgtk filter -p "t1;;" --regex --match-type match -i examples/docs/movies_reduced.tsv
 ```
 Result:
 
-| id  | node1 | label         | node2                   |
-| --- | ----- | ------------- | ----------------------- |
-| t11 | t10   | role          | terminator              |
-| t13 | t12   | role          | kyle_reese              |
-| t15 | t14   | role          | sarah_connor            |
-| t18 | t17   | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t11 | t10 | role | terminator |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
 
-Select all records with an object value that starts with a number:
+### Selecting Edges where the Object Starts with a Digit
+
+Select all edges with an object value that starts with a Digit:
 
 ```
-kgtk filter -p ';;[0-9].+' --regex --match-type fullmatch -i INPUT
+kgtk filter -p ';;[0-9].+' --regex --match-type fullmatch -i examples/docs/movies_reduced.tsv
 ```
 
 Result:
 
-| id  | node1      | label    | node2     |
-| --- | ---------- | -------- | --------- |
-| t16 | terminator | duration | 108minute |
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t16 | terminator | duration | 108 |
 
 
