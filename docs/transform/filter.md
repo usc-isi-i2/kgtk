@@ -1,14 +1,13 @@
 ## Overview
 
-`kgtk filter` selects edges from an edge file. The initial implementation uses
-a simple pattern language as a filter, but we may in the future extend it to be
-similar to graphy. The initial implementation also ignores reification.
+`kgtk filter` selects edges from an edge file. The current implementation uses
+a simple pattern language as a filter, and ignores reification.
 
 ### Filters and  Patterns
 
 Filters are composed of three patterns separated by semicolons:
 
-> subject-pattern ; predicate-pattern ; object-pattern
+`subject-pattern ; predicate-pattern ; object-pattern`
 
 Pattern | Description
 ------- | -----------
@@ -55,18 +54,19 @@ total number of alternatives is large.
 
 ### Caveats
 
-> NOTE: At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
+!!! info
+    At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
 
-> NOTE: At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
+!!! info
+    At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
 
-> NOTE: At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--obj`, `--or`, `--pred`, `--regex`, and `--subj`
-> options apply to all filters and patterns in the `kgtk filter` invocation.
-> In particular, there is no support for mixing non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern.
+!!! info
+    At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--obj`, `--or`, `--pred`, `--regex`, and `--subj` options apply to all filters and patterns in the `kgtk filter` invocation. In particular, there is no support for mixing non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern.
 
 ## Usage
 
 ```
-usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]]
+kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]]
                    [--reject-file REJECT_FILE] -p PATTERNS [PATTERNS ...]
                    [--subj SUBJ_COL] [--pred PRED_COL] [--obj OBJ_COL]
                    [--or [True|False]] [--invert [True|False]]
@@ -148,7 +148,7 @@ kgtk cat -i examples/docs/movies_reduced.tsv
 | t17 | terminator | award | national_film_registry |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
-Let's use this file (or a close derivative) in the following examples.
+Let us use this file (or a close derivative) in the following examples.
 
 ### Selecting Edges with a Matching Subject
 
@@ -200,7 +200,8 @@ Select all edges that have property `genre` (in the `label` column or its alias)
 kgtk filter -p " ; genre ; " -i examples/docs/movies_reduced.tsv
 ```
 
-> NOTE: `examples/docs/movies_reduced.tsv` should be replaced by the path to your .tsv file.
+!!! info
+    `examples/docs/movies_reduced.tsv` should be replaced by the path to your .tsv file.
 
 Result:
 
@@ -414,7 +415,9 @@ kgtk cat -i action.tsv
 | -- | -- | -- | -- |
 
 
-> NOTE: The edge terminator/genre/action appears in only the
+
+!!! info
+    The edge terminator/genre/action appears in only the
 genre output file.
 
 
