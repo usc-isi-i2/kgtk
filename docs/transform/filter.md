@@ -148,10 +148,35 @@ kgtk cat -i examples/docs/movies_reduced.tsv
 | t17 | terminator | award | national_film_registry |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
+Let's use this file (or a close derivative) in the following examples.
+
+### Selecting Edges with a Matching Subject
+
+Select all edges that have subject `terminator`:
+
+```
+kgtk filter -p " terminator; ; " -i examples/docs/movies_reduced.tsv
+```
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t1 | terminator | label | 'The Terminator'@en |
+| t2 | terminator | instance_of | film |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t9 | terminator | director | james_cameron |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t12 | terminator | cast | michael_biehn |
+| t14 | terminator | cast | linda_hamilton |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
 
 ### Selecting Edges with Predicate `genre`
 
-Now let's perform several filter operations. For example, selecting all edges that have property `genre` (in the `label` column or its alias):
+Select all edges that have property `genre` (in the `label` column or its alias):
 
 ```bash
 kgtk filter -p " ; genre ; " -i examples/docs/movies_reduced.tsv
@@ -219,7 +244,7 @@ Result:
 
 ### Selecting Edges with Both a Predicate and an Object Match
 
-Select all edges that have properties `role` or `cast` and object `terminator`:
+Select all edges that have predicate values `role` or `cast` and object `terminator`:
 
 ```bash
 kgtk filter -p " ; role, cast ; terminator " -i examples/docs/movies_reduced.tsv
@@ -232,29 +257,26 @@ Result:
 | t11 | t10 | role | terminator |
 
 
-### Selecting Edges with a Matching Subject
+### Selecting Edges with a Predicate or an Object Match
 
-Select all edges that have subject `terminator`:
+Select all edges that have predicate values `role` or `cast`, or object `sweden`:
 
+```bash
+kgtk filter --or -p " ; role, cast ; sweden " -i examples/docs/movies_reduced.tsv
 ```
-kgtk filter -p " terminator; ; " -i examples/docs/movies_reduced.tsv
-```
+
 Result:
 
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
-| t1 | terminator | label | 'The Terminator'@en |
-| t2 | terminator | instance_of | film |
-| t3 | terminator | genre | action |
-| t4 | terminator | genre | science_fiction |
-| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
-| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
-| t9 | terminator | director | james_cameron |
+| t8 | t7 | location | sweden |
 | t10 | terminator | cast | arnold_schwarzenegger |
+| t11 | t10 | role | terminator |
 | t12 | terminator | cast | michael_biehn |
+| t13 | t12 | role | kyle_reese |
 | t14 | terminator | cast | linda_hamilton |
-| t16 | terminator | duration | 108 |
-| t17 | terminator | award | national_film_registry |
+| t15 | t14 | role | sarah_connor |
+
 
 ### Sending Different Edges to Different Files
 
@@ -462,5 +484,3 @@ Result:
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
 | t16 | terminator | duration | 108 |
-
-
