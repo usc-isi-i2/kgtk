@@ -160,10 +160,10 @@ Result:
 
 By default, KGTK will assume there is a `label` column for the predicate pattern
 However, you can specify any other column to filter.
-For example, if we had a column called `genre` in a modified input file:
+For example, if we had a column called `genre` in the input file:
 
 ```bash
-kgtk filter -p " ;action ; " --pred genre -i examples/docs/movies_reduced_with_prop.tsv
+kgtk filter -p " ;action ; " --pred genre -i examples/docs/movies_reduced_with_genre_column.tsv
 ```
 
 Results:
