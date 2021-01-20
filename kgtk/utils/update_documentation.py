@@ -190,19 +190,6 @@ class DocUpdater():
                 print("Example command:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]), file=self.error_file, flush=True)
             current_idx = command_block_end + 1
 
-            table_begin: int
-            table_end: int
-            table_begin, table_end = self.find_table(lines, current_idx)
-            if table_begin < 0:
-                if self.verbose:
-                    print ("No table found for this example", file=self.error_file, flush=True)
-                continue
-            table_count += 1
-
-            if self.very_verbose:
-                print("Existing table:\n****************\n%s****************" % "".join(lines[table_begin:table_end]), file=self.error_file, flush=True)
-                
-            
             command: str = "".join(lines[command_block_begin:command_block_end]).strip() + " / md"
             if self.verbose:
                 print("Getting new table lines for:\n%s" % command, file=self.error_file, flush=True)
@@ -214,7 +201,19 @@ class DocUpdater():
             if self.very_verbose:
                 print("New table:\n****************\n%s****************" % "".join(new_table_lines), file=self.error_file, flush=True)
 
+            table_begin: int
+            table_end: int
+            table_begin, table_end = self.find_table(lines, current_idx)
+            if table_begin < 0:
+                if self.verbose:
+                    print ("No table found for example:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]),
+                           file=self.error_file, flush=True)
+                continue
+            table_count += 1
 
+            if self.very_verbose:
+                print("Existing table:\n****************\n%s****************" % "".join(lines[table_begin:table_end]), file=self.error_file, flush=True)
+            
             if nlines == 0:
                 if self.verbose:
                     print("Error fetching new table (no output)", file=self.error_file, flush=True)
