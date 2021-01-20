@@ -6,7 +6,7 @@ similar to graphy. The initial implementation also ignores reification.
 
 ### Filters and  Patterns
 
-Filters are specified using patterns of the form
+Filters are specified using patterns of the form;
 
 > subject-pattern ; predicate-pattern ; object-pattern
 
@@ -28,6 +28,7 @@ reject file, and non-matching edges to be written to the output file.
 
 ### Regular Expression Patterns
 
+`--regex` (short for `--regex True` or `--regex=True`) indicates that the patterns in a filter are regular expressions instead of comma-separated lists.
 When using regular expressions as patterns, `--match-type MATCH_TYPE` determines the type of
 regular expression match that takes place.
 
