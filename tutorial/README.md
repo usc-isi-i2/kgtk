@@ -24,7 +24,7 @@
 5. Install `rdflib` from the `master` branch
 ```
   pip uninstall rdflib
-  pip install git+https://github.com/RDFLib/rdflib.git@master
+  pip install git+https://github.com/RDFLib/rdflib.git@2077524d43a103c3b9bf9fdd009a4942c7fff032
 ```
 6. Install python packages for the tutorial
 ```
