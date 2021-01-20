@@ -1,4 +1,4 @@
-id	node1	label	node2	prop
+id	node1	label	node2	genre
 t1	terminator	label	'The Terminator'@en	action
 t2	terminator	instance_of	film	
 t3	terminator	genre	action	
