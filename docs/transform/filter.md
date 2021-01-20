@@ -382,8 +382,8 @@ kgtk cat -i action.tsv
 | -- | -- | -- | -- |
 | t3 | terminator | genre | action |
 
-> NOTE: The edge terminator/genre/action appears in both the
-genre and action output files.
+!!! note
+    The edge terminator/genre/action appears in both the genre and action output files.
 
 ### Sending Different Edges to Different Files with First Match
 
