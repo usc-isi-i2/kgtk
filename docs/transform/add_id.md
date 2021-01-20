@@ -14,9 +14,9 @@ New IDs may be generated using one of the following ID generation styles.
 | node1-label-node2-id | Concatenates the node1, label, and node2 column values, then concatenate any existing non-blank ID value. |
 | node1-label-node2-num | Concatenates the node1, label, and node2 column values with a sequence number per (node1, label, node2) tuple. |
 | node1-label-num | Concatenates the node1 and label column values with a sequence number per-(node1, label) pair. |
-| prefix### | Concatenate a prefix value (from --id-prefix) with an incrementing counter with leading zeros per --id-prefix-num-width). |
-| wikidata | Concatenate the node1 and label column values with either the node2 column value (if it starts with P or Q) or the SHA256 hash of the node2 column value (truncated to the width giver by --value-hash-width). |
-| wikidata-with-claim-id | If the claim-id column is empty, produce an ID value as per 'wikidata'. Otherwise, if --claim-id-hash-width is 0, then concatenate the claim_id column value to the `wikidata` ID value. Otherwise, concatenatea a SHA256 hash of the claim-id value, truncated per --claim-id-hash-width. | 
+| prefix### | Concatenate a prefix value (from `--id-prefix`) with an incrementing counter with leading zeros per `--id-prefix-num-width`). |
+| wikidata | Concatenate the node1 and label column values with either the node2 column value (if it starts with P or Q) or the SHA256 hash of the node2 column value (truncated to the width giver by ``--value-hash-width`). |
+| wikidata-with-claim-id | If the claim-id column is empty, produce an ID value as per 'wikidata'. Otherwise, if `--claim-id-hash-width` is 0, then concatenate the claim_id column value to the `wikidata` ID value. Otherwise, concatenatea a SHA256 hash of the claim-id value, truncated per `--claim-id-hash-width`. | 
 
 ### Uniqueness and Memory Use
 
@@ -24,7 +24,7 @@ By default, the ID values in the file are validated for uniqueness,
 using an in-memory set.  This may cause
 memory usage issues for large input files, and may be inappropriate
 for some files that legitimately contain duplicate records.
-The --verify-id-unique=false option may be used to disable this check.
+The `--verify-id-unique=false` option may be used to disable this check.
 
 ## Usage
 
@@ -45,7 +45,7 @@ usage: kgtk add-id [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
 
 Copy a KGTK file, adding ID values.
 
-The --overwrite-id option can be used to replace existing ID values in the ID column.
+The `--overwrite-id` option can be used to replace existing ID values in the ID column.
 It does not update instances of the same ID in other columns, such as node1, elsewhere in the file.
 
 Several ID styles are supported.

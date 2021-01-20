@@ -12,7 +12,7 @@ def parser():
     return {
         'help': 'Copy a KGTK file, adding ID values.',
         'description': 'Copy a KGTK file, adding ID values.\n\n' +
-        'The --overwrite-id option can be used to replace existing ID values in the ID column.\n' +
+        'The `--overwrite-id` option can be used to replace existing ID values in the ID column.\n' +
         'It does not update instances of the same ID in other columns, such as node1, elsewhere in the file.\n\n' +
         'Several ID styles are supported.\n\n' +
         'Additional options are shown in expert help.\nkgtk --expert add-id --help'
