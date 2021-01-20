@@ -75,6 +75,13 @@ kgtk cat -i examples/docs/calc-file1.tsv
 
 ### Calculate the average of `node2` and `node1;total`.
 
+!!! info
+    `--do average` requires at least one source column (`--columns`) and one destination column (`--into`).
+
+!!! info
+    The format option (`--format`), which takes a Python %-style format string as argument,
+    may be used to format the result of this calculation.
+
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do average
 ```
@@ -100,6 +107,10 @@ The output will be the following table in KGTK format:
 
 ### Copy `node2` into the `node2-copy` column.
 
+!!! info
+    `--do copy` requires at least one source column (`--columns`) and at least one destination column (`--into`).
+    The number of source and destination columns must match.
+
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv -c node2 --into node2-copy --do copy
 ```
@@ -124,7 +135,11 @@ The output will be the following table in KGTK format:
 | P1050 | p585-count | 246 | 226380 | 246 |
 
 
-### Swap the `node2` and 'node1;total' column values.
+### Copy and swap the `node2` and 'node1;total' column values.
+
+!!! info
+    When multiple columns are copied in the same command, the copies take place
+    simultaneously.  This allows column values to be swapped, shifted, permuted, etc.
 
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into "node1;total" node2 --do copy
@@ -151,6 +166,11 @@ The output will be the following table in KGTK format:
 
 ### Join the 'node1' and 'label' column values using ':' as a separator.
 
+!!! info
+    `---do join` requires at least one source column (`--columns`) and one destination column (`--into`).
+    It also needs one `--values` argument, which may be an explicit empty value (`--values ""`),
+    to provide the separator between the joined fields.
+
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv -c node1 label --value : --into result --do join
 ```
@@ -175,6 +195,13 @@ The output will be the following table in KGTK format:
 | P1050 | p585-count | 246 | 226380 | P1050:p585-count |
 
 ### Calculate the percentage of `node2` and `node1;total`.
+
+!!! info
+    `--do percent` requires two source columns (`--columns`) and one destination column (`--into`).
+
+!!! info
+    The format option (`--format`), which takes a Python %-style format string as argument,
+    may be used to format the result of this calculation.
 
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do percentage
@@ -201,6 +228,10 @@ The output will be the following table in KGTK format:
 
 ### Set a value into a column.
 
+!!! info
+    `--do set` requires at least one `--values` argument and a matching number of destination columnes (`--into`).
+    It does not allow any source columne (`--columns`).
+
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv --value xxx --into result --do set
 ```
@@ -225,6 +256,13 @@ The output will be the following table in KGTK format:
 | P1050 | p585-count | 246 | 226380 | xxx |
 
 ### Calculate the sum of `node2` and `node1;total`.
+
+!!! info
+    `--do sum` requires at least one source column (`--columns`) and one destination column (`--into`).
+
+!!! info
+    The format option (`--format`), which takes a Python %-style format string as argument,
+    may be used to format the result of the calculation.
 
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do sum
