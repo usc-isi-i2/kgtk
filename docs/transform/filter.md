@@ -146,7 +146,7 @@ Now let's perform several filter operations. For example, selecting all edges th
 kgtk filter -p " ; genre ; " -i examples/docs/movies_reduced.tsv
 ```
 
-Note that `examples/docs/movies_reduced.tsv` should be replaced by the path to your .tsv file.
+> NOTE: `examples/docs/movies_reduced.tsv` should be replaced by the path to your .tsv file.
 
 Result:
 
@@ -298,7 +298,7 @@ kgtk cat -i others.tsv
 | t17 | terminator | award | national_film_registry |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
-### Sending Different Edges to Different Files #2
+### Sending Different Edges to Different Files #2 Without First Match
 
 Send edges with property `genre` to one file, edges with object `action` to another file, and ignore other edges.
 
@@ -329,10 +329,10 @@ kgtk cat -i action.tsv
 | -- | -- | -- | -- |
 | t3 | terminator | genre | action |
 
-Note that the edge terminator/genre/action appears in both the
+> NOTE: The edge terminator/genre/action appears in both the
 genre and action output files.
 
-### Sending Different Edges to Different Files #2 Based on the First Match
+### Sending Different Edges to Different Files #2 with First Match
 
 Send edges with property `genre` to one file, edges with object `action` to another file, ignoring other edges.
 Specify `--first-match-only`.
@@ -364,7 +364,7 @@ kgtk cat -i action.tsv
 | -- | -- | -- | -- |
 
 
-Note that the edge terminator/genre/action appears in only the
+> NOTE: The edge terminator/genre/action appears in only the
 genre output file.
 
 
