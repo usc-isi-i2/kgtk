@@ -6,7 +6,7 @@ similar to graphy. The initial implementation also ignores reification.
 
 ### Filters and  Patterns
 
-Filters are specified using patterns of the form;
+Filters are composed of three patterns separated by semicolons:
 
 > subject-pattern ; predicate-pattern ; object-pattern
 
