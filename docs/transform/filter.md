@@ -9,11 +9,11 @@ Filters are composed of three patterns separated by semicolons:
 
 `subject-pattern ; predicate-pattern ; object-pattern`
 
-Pattern | Description
-------- | -----------
-subject-pattern | This pattern applies to the `node1` column (or its alias), unless a different column is selected with the `--subj SUBJ_COL` option.
-predicate-pattern | This pattern applies to the `label` column (or its alias), unless a different column is selected with the `--pred PRED_COL` option.
-object-pattern | This pattern applies to the `node2` column (or its alias), unless a different column is selected with the `--obj OBJ_COL` option.
+| Pattern | Description |
+| ------- | ----------- |
+| subject-pattern | This pattern applies to the `node1` column (or its alias), unless a different column is selected with the `--subj SUBJ_COL` option. |
+| predicate-pattern | This pattern applies to the `label` column (or its alias), unless a different column is selected with the `--pred PRED_COL` option. |
+| object-pattern | This pattern applies to the `node2` column (or its alias), unless a different column is selected with the `--obj OBJ_COL` option. |
 
 Each of the patterns in a filter can consist of a list of symbols separated using commas,
 or a regular expression (when `--regex` is specified).
@@ -31,11 +31,11 @@ reject file, and non-matching edges to be written to the output file.
 When using regular expressions as patterns, `--match-type MATCH_TYPE` determines the type of
 regular expression match that takes place.
 
-Match Type | Description
----------- | -----------
-fullmatch  | The full field must match the regular expression.  It is not necessary to start the regular expression with `^` nor end it with `$`.
-match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  It is not necessary to start the regular expression with `^`.
-search     | The regular expression must match somewhere in the field.
+| Match Type | Description |
+| ---------- | ----------- |
+| fullmatch  | The full field must match the regular expression.  It is not necessary to start the regular expression with `^` nor end it with `$`. |
+| match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  It is not necessary to start the regular expression with `^`. |
+| search     | The regular expression must match somewhere in the field. |
 
 ### Multiple Filters
 
