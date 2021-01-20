@@ -417,8 +417,7 @@ kgtk cat -i action.tsv
 
 
 !!! info
-    The edge terminator/genre/action appears in only the
-genre output file.
+    The edge terminator/genre/action appears in only the genre output file.
 
 
 ### Sending Different Edges to Diferent Files with Unselected Edges to Standard Output
