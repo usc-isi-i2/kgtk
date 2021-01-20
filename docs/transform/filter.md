@@ -174,6 +174,24 @@ Result:
 | t16 | terminator | duration | 108 |
 | t17 | terminator | award | national_film_registry |
 
+### Selecting Edges without a Matching Subject
+
+Select all edges that do not have subject `terminator`:
+
+```
+kgtk filter --invert -p " terminator; ; " -i examples/docs/movies_reduced.tsv
+```
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t6 | t5 | location | united_states |
+| t8 | t7 | location | sweden |
+| t11 | t10 | role | terminator |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+
 ### Selecting Edges with Predicate `genre`
 
 Select all edges that have property `genre` (in the `label` column or its alias):
@@ -190,7 +208,6 @@ Result:
 | -- | -- | -- | -- |
 | t3 | terminator | genre | action |
 | t4 | terminator | genre | science_fiction |
-
 
 ### Selecting Edges by Matching an Alternate Predicate Column
 
