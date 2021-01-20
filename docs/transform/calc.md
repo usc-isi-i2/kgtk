@@ -194,6 +194,36 @@ The output will be the following table in KGTK format:
 | P1040 | p585-count | 1 | 45073 | P1040:p585-count |
 | P1050 | p585-count | 246 | 226380 | P1050:p585-count |
 
+### Join the 'node1' and 'label' column values without a separator.
+
+!!! info
+    `---do join` requires at least one source column (`--columns`) and one destination column (`--into`).
+    It also needs one `--values` argument, which may be an explicit empty value (`--values ""`),
+    to provide the separator between the joined fields.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv -c node1 label --value "" --into result --do join
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total | result |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | P10p585-count |
+| P1000 | p585-count | 16 | 266 | P1000p585-count |
+| P101 | p585-count | 5 | 157519 | P101p585-count |
+| P1018 | p585-count | 2 | 177 | P1018p585-count |
+| P102 | p585-count | 295 | 414726 | P102p585-count |
+| P1025 | p585-count | 26 | 693 | P1025p585-count |
+| P1026 | p585-count | 40 | 6930 | P1026p585-count |
+| P1027 | p585-count | 14 | 10008 | P1027p585-count |
+| P1028 | p585-count | 1131 | 4035 | P1028p585-count |
+| P1029 | p585-count | 4 | 2643 | P1029p585-count |
+| P1035 | p585-count | 4 | 366 | P1035p585-count |
+| P1037 | p585-count | 60 | 9317 | P1037p585-count |
+| P1040 | p585-count | 1 | 45073 | P1040p585-count |
+| P1050 | p585-count | 246 | 226380 | P1050p585-count |
+
 ### Calculate the percentage of `node2` and `node1;total`.
 
 !!! info
