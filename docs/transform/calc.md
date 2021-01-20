@@ -1,12 +1,17 @@
+## Overview
+
 This command performs calculations on one or more columns in a KGTK file. 
 If no input filename is provided, the default is to read standard input. 
 
 ## Usage
 
 ```
-usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into
-                 INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...] --do {average,copy,join,percentage,set,sum}
-                 [--values [VALUES [VALUES ...]]] [--format FORMAT_STRING] [-v [optional True|False]]
+usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                 [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into INTO_COLUMN_NAMES
+                 [INTO_COLUMN_NAMES ...] --do
+                 {average,copy,join,percentage,set,sum}
+                 [--values [VALUES [VALUES ...]]] [--format FORMAT_STRING]
+                 [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
 If no input filename is provided, the default is to read standard input. 
@@ -17,14 +22,18 @@ kgtk --expert rename_columns --help
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for stdout.)
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
   -c [COLUMN_NAME [COLUMN_NAME ...]], --columns [COLUMN_NAME [COLUMN_NAME ...]]
-                        The list of source column names, optionally containing '..' for column ranges and '...'
-                        for column names not explicitly mentioned.
+                        The list of source column names, optionally containing
+                        '..' for column ranges and '...' for column names not
+                        explicitly mentioned.
   --into INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...]
-                        The name of the column to receive the result of the calculation.
+                        The name of the column to receive the result of the
+                        calculation.
   --do {average,copy,join,percentage,set,sum}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
@@ -38,7 +47,13 @@ optional arguments:
 
 ## Examples
 
+### Sample Data
+
 Suppose that `file1.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/calc-file1.tsv
+```
 
 | node1 | label | node2 | node1;total |
 | -- | -- | -- | -- |
@@ -140,10 +155,10 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 | P138 | p585-count | 40 | 265751 |
 
 
-Calculate the average of `node2` and `node1;total`:
+### Calculate the average of `node2` and `node1;total`
 
 ```bash
-kgtk calc -i kgtk/join/test/calc-file1.tsv -c node2 "node1;total" --into result --do average
+kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do average
 ```
 
 The output will be the following table in KGTK format:
@@ -247,10 +262,10 @@ The output will be the following table in KGTK format:
 | P1376 | p585-count | 8 | 77905 | 38956.50 |
 | P138 | p585-count | 40 | 265751 | 132895.50 |
 
-Copy `node2` into the `node2-copy` column:
+### Copy `node2` into the `node2-copy` column:
 
 ```bash
-kgtk calc -i kgtk/join/test/calc-file1.tsv -c node2 --into node2-copy --do copy
+kgtk calc -i examples/docs/calc-file1.tsv -c node2 --into node2-copy --do copy
 ```
 
 The output will be the following table in KGTK format:
@@ -355,10 +370,10 @@ The output will be the following table in KGTK format:
 | P138 | p585-count | 40 | 265751 | 40 |
 
 
-Swap the `node2` and 'node1;total' column values:
+### Swap the `node2` and 'node1;total' column values:
 
 ```bash
-kgtk calc -i kgtk/join/test/calc-file1.tsv -c node2 "node1;total" --into "node1;total" node2 --do copy
+kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into "node1;total" node2 --do copy
 ```
 
 The output will be the following table in KGTK format:
@@ -462,10 +477,10 @@ The output will be the following table in KGTK format:
 | P1376 | p585-count | 77905 | 8 |
 | P138 | p585-count | 265751 | 40 |
 
-Join the 'node1' and 'label' column values using ':' as a separator:
+### Join the 'node1' and 'label' column values using ':' as a separator:
 
 ```bash
-kgtk calc -i kgtk/join/test/calc-file1.tsv -c node1 label --value : --into result --do join
+kgtk calc -i examples/docs/calc-file1.tsv -c node1 label --value : --into result --do join
 ```
 
 The output will be the following table in KGTK format:
@@ -569,10 +584,10 @@ The output will be the following table in KGTK format:
 | P1376 | p585-count | 8 | 77905 | P1376:p585-count |
 | P138 | p585-count | 40 | 265751 | P138:p585-count |
 
-Calculate the percentage of `node2` and `node1;total`:
+### Calculate the percentage of `node2` and `node1;total`:
 
 ```bash
-kgtk calc -i kgtk/join/test/calc-file1.tsv -c node2 "node1;total" --into result --do percentage
+kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do percentage
 ```
 
 The output will be the following table in KGTK format:
@@ -676,10 +691,10 @@ The output will be the following table in KGTK format:
 | P1376 | p585-count | 8 | 77905 |  0.01 |
 | P138 | p585-count | 40 | 265751 |  0.02 |
 
-Set a value into a column:
+### Set a value into a column:
 
 ```bash
-kgtk calc -i kgtk/join/test/calc-file1.tsv --value xxx --into result --do set
+kgtk calc -i examples/docs/calc-file1.tsv --value xxx --into result --do set
 ```
 
 The output will be the following table in KGTK format:
@@ -783,10 +798,10 @@ The output will be the following table in KGTK format:
 | P1376 | p585-count | 8 | 77905 | xxx |
 | P138 | p585-count | 40 | 265751 | xxx |
 
-Calculate the sum of `node2` and `node1;total`:
+### Calculate the sum of `node2` and `node1;total`:
 
 ```bash
-kgtk calc -i kgtk/join/test/calc-file1.tsv -c node2 "node1;total" --into result --do sum
+kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do sum
 ```
 
 The output will be the following table in KGTK format:
@@ -890,10 +905,10 @@ The output will be the following table in KGTK format:
 | P1376 | p585-count | 8 | 77905 | 77913.00 |
 | P138 | p585-count | 40 | 265751 | 265791.00 |
 
-Calculate the sum of `node2` and `node1;total`, with the result formatted as an integer:
+### Calculate the sum of `node2` and `node1;total`, with the result formatted as an integer:
 
 ```bash
-kgtk calc -i kgtk/join/test/calc-file1.tsv -c node2 "node1;total" --into result --do sum --format '%d'
+kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do sum --format '%d'
 ```
 
 The output will be the following table in KGTK format:
