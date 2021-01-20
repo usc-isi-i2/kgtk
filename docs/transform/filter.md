@@ -54,10 +54,10 @@ total number of alternatives is large.
 
 ### Caveats
 
-!!! info
+!!! info "Note:"
     At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
 
-!!! info
+!!! note
     At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
 
 !!! info
