@@ -54,14 +54,16 @@ total number of alternatives is large.
 
 ### Caveats
 
-!!! info "Note:"
+!!! note
     At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
 
 !!! note
     At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
 
-!!! info
-    At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--obj`, `--or`, `--pred`, `--regex`, and `--subj` options apply to all filters and patterns in the `kgtk filter` invocation. In particular, there is no support for mixing non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern.
+!!! note
+    At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--obj`, `--or`, `--pred`, `--regex`, and `--subj`
+    options apply to all filters and patterns in the `kgtk filter` invocation. In particular, there is no support for mixing
+    non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern.
 
 ## Usage
 
