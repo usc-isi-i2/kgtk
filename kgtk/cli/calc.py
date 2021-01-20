@@ -169,7 +169,7 @@ def run(input_file: KGTKFiles,
                     raise KGTKException("Elipses may appear only once")
 
                 if saw_ranger:
-                    raise KGTKException("ELipses may not appear directly after a range operator ('..').")
+                    raise KGTKException("Elipses may not appear directly after a range operator ('..').")
 
                 save_selected_names = selected_names
                 selected_names = [ ]
@@ -300,9 +300,9 @@ def run(input_file: KGTKFiles,
             if len(sources) != 0:
                 raise KGTKException("Set needs no sources, got %d" % len(sources))
             if len(into_column_idxs) == 0:
-                raise KGTKException("Set needsat least one destination column, got %d" % len(into_column_idxs))
+                raise KGTKException("Set needs at least one destination column, got %d" % len(into_column_idxs))
             if len(values) == 0:
-                raise KGTKException("Set needsat least one value, got %d" % len(values))
+                raise KGTKException("Set needs at least one value, got %d" % len(values))
             if len(into_column_idxs) != len(values):
                 raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
 
