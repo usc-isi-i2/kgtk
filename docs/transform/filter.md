@@ -298,7 +298,7 @@ kgtk cat -i others.tsv
 | t17 | terminator | award | national_film_registry |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
-### Sending Different Edges to Different Files #2 Without First Match
+### Sending Different Edges to Different Files Without First Match
 
 Send edges with property `genre` to one file, edges with object `action` to another file, and ignore other edges.
 
@@ -332,10 +332,10 @@ kgtk cat -i action.tsv
 > NOTE: The edge terminator/genre/action appears in both the
 genre and action output files.
 
-### Sending Different Edges to Different Files #2 with First Match
+### Sending Different Edges to Different Files with First Match
 
 Send edges with property `genre` to one file, edges with object `action` to another file, ignoring other edges.
-Specify `--first-match-only`.
+Specify `--first-match-only` to ensure that a given edge will be sent to at most one output file.
 
 ```bash
 kgtk filter --first-match-only \
