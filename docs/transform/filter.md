@@ -379,6 +379,58 @@ kgtk cat -i action.tsv
 genre output file.
 
 
+### Sending Different Edges to Diferent Files with Unselected Edges to Standard Output
+
+Send edges with property `genre` to one file, edges with object `action` to another file, and pass the
+remaining edges to standard output.  Specify `--first-match-only` to ensure that a given edge will be sent to at most one output file.
+
+```bash
+kgtk filter --first-match-only \
+     -p "; genre ;" -o genre.tsv \
+     -p "; ; action" -o action.tsv \
+     --reject-file - \
+     -i examples/docs/movies_reduced.tsv
+```
+
+
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t1 | terminator | label | 'The Terminator'@en |
+| t2 | terminator | instance_of | film |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t8 | t7 | location | sweden |
+| t9 | terminator | director | james_cameron |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t11 | t10 | role | terminator |
+| t12 | terminator | cast | michael_biehn |
+| t13 | t12 | role | kyle_reese |
+| t14 | terminator | cast | linda_hamilton |
+| t15 | t14 | role | sarah_connor |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+
+```bash
+kgtk cat -i genre.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+
+```bash
+kgtk cat -i action.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+
+
 ### Selecting Edges where the Subject Starts with `t1`
 
 Select all edges with a subject value that starts with the letters `t1` (with
