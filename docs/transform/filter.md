@@ -63,7 +63,7 @@ total number of alternatives is large.
 !!! note
     At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--obj`, `--or`, `--pred`, `--regex`, and `--subj`
     options apply to all filters and patterns in the `kgtk filter` invocation. In particular, there is no support for mixing
-    non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern.
+    non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern by hand.
 
 ## Usage
 
