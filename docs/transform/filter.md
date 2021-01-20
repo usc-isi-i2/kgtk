@@ -1,3 +1,5 @@
+## Overview
+
 `kgtk filter` selects edges from an edge file. The initial implementation uses
 a simple pattern language as a filter, but we may in the future extend it to be
 similar to graphy. The initial implementation also ignores reification.
