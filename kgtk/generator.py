@@ -1,5 +1,6 @@
 import re
 import json
+import gzip
 import rfc3986
 from etk.etk import ETK
 from etk.etk_module import ETKModule
@@ -224,22 +225,37 @@ class TripleGenerator(Generator):
         return
 
     def set_properties(self, prop_file: str):
-        self.prop_types = {}
+        self.prop_types = dict()
         if prop_file == "NONE":
             return
 
-        with open(prop_file, "r") as fp:
-            props = fp.readlines()
-        for line in props[1:]:
-            node1, _, node2 = line.split("\t")
-            try:
-                self.prop_types[node1] = self.datatype_mapping[node2.strip()]
-            except:
-                raise KGTKException(
-                    "DataType {} of node {} is not supported.\n".format(
-                        node2, node1
+        if prop_file.endswith(".gz"):
+            fp = gzip.open(prop_file, 'rt')
+        else:
+            fp = open(prop_file, "r")
+
+        node1_idx = -1
+        node2_idx = -1
+
+        for line in fp:
+            vals = line.split('\t')
+            vals = [v.strip() for v in vals]
+            if 'node1' in vals and 'node2' in vals:
+                node1_idx = vals.index('node1')
+                node2_idx = vals.index('node2')
+
+            else:
+                node1 = vals[node1_idx]
+                node2 = vals[node2_idx]
+                try:
+                    self.prop_types[node1] = self.datatype_mapping[node2.strip()]
+                except:
+                    self.prop_types[node1] = StringValue
+                    self.warn_log.write(
+                        "DataType {} of node {} is not supported.\n".format(
+                            node2, node1
+                        )
                     )
-                )
 
     def _node_2_entity(self, node: str):
         '''
@@ -501,7 +517,7 @@ class TripleGenerator(Generator):
             success = self.generate_description_triple(node1, node2)
         elif prop in self.alias_set:
             success = self.generate_alias_triple(node1, node2)
-        elif prop == "data_type":
+        elif prop == "data_type" or prop == 'datatype':
             # special edge of prop declaration
             success = self.generate_prop_declaration_triple(
                 node1, node2)
