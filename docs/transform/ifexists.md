@@ -3,7 +3,7 @@
 The ifexists command filters a KGTK file (the input file), passing through only those rows for
 which one or more specified columns match records in a second KGTK file (the filter file).
 
-### Memory Useage Options
+### Memory Usage Options
 
 This implementation of `ifexists` is written in Python.  By default, it builds
 an in-memory dictionary of the key values it finds in the `--filter-on` file
