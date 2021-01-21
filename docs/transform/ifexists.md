@@ -7,7 +7,7 @@ which one or more specified columns match records in a second KGTK file (the fil
 
 This implementation of `ifexists` is written in Python.  By default, it builds
 an in-memory dictionary of the key values it finds in the `--filter-on` file
-before processing the `--input-file` .  Performance will be poor, and execution may
+before processing the `--input-file` in a single pass.  Performance will be poor, and execution may
 fail, if the `--filter-on` file is too large for the key dictionary to fit into main memory.
 
 If the input file is small, the `--cache-input`
@@ -27,10 +27,12 @@ records to ordered by key value (alpha sort), then by input order.  If you
 wish the output file to retain the input file's order when cacheing the
 input file, use the ``--preserve-order` option.
 
-### Matching Fields
+### Key Fields
 
-The fields to match may be supplied by the user using `--input-keys` and `--filter-keys`.
-If not supplied, the following defaults will be used, which depend on the KGTK file type
+The names of the fields used match records may be supplied by the user using
+the `--input-keys` and `--filter-keys` option.
+Each option may take a variable number of space-separated field names.  If keys are not supplied,
+the following defaults will be used, which depend on the KGTK file type
 (edge or node) of the input and filter files.
 
 | Input File Type | Filter File Type   | Key fields |
@@ -41,6 +43,12 @@ If not supplied, the following defaults will be used, which depend on the KGTK f
 | node    | node    | input.id    == filter.id |
 | edge    | node    | input.node1 == filter.id |
 | node    | edge    | input.id   == filter.node1 |
+
+!!! info
+The number of input file keys must match the number of output file keys, after
+taking into consideration the default keys.  So, if you want to match an edge file's
+node1 value to a nonstandard column in a node file, only the `--filter-keys`
+option needs to be specified.
 
 ### Optional Output Files
 
@@ -53,6 +61,15 @@ any filter records that found a match in the input file.
 
 The `--unmatched-filter-file`, when specified, will receive a copy of
 any filter records that did not find a match in the input file.
+
+### Experimental Join Facility
+
+The `kgtk ifexists` comand contains experimental support for performing
+a join.  The join output file (which may be the primary output file)
+will contain the union of the columns found in the `--input-file` and the `--filter-on` file, and may contain
+records from both file.  At the present time, please refer to
+`kgtk --expert ifexists --help` and the KGTK source code files for more
+details on this facility.
 
 
 ## Usage
@@ -123,14 +140,17 @@ Suppose that `ifexists-file1.tsv` contains the following table in KGTK format:
 kgtk cat -i examples/docs/ifexists-file1.tsv
 ```
 
-| node1 | label | node2 | location | years |
-| -- | -- | -- | -- | -- |
-| john | zipcode | 12345 | home | 10 |
-| john | zipcode | 12346 |  |  |
-| peter | zipcode | 12040 | home |  |
-| peter | zipcode | 12040 | work | 6 |
-| steve | zipcode | 45601 |  | 3 |
-| steve | zipcode | 45601 | work |  |
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| j1 | john | title | programmer |  |  |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
+| p1 | peter | title | manager |  |  |
+| p2 | peter | zipcode | 12040 | home |  |
+| p3 | peter | zipcode | 12040 | work | 6 |
+| s1 | steve | title | supervisor |  |  |
+| s2 | steve | zipcode | 45601 |  | 3 |
+| s3 | steve | zipcode | 45601 | work |  |
 
 !!! note
     This is a KGTK edge file.
@@ -189,6 +209,39 @@ kgtk cat -i examples/docs/ifexists-file5.tsv
 !!! note
     This is a KGTK node file.
 
+Suppose that `ifexists-file6.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/ifexists-file6.tsv --mode NONE
+```
+
+| label | node2 |
+| -- | -- |
+| zipcode | 12040 |
+| zipcode | 45601 |
+| zipcode | 45601 |
+| zipcode | 52040 |
+| zipcode | 62040 |
+| zipcode | 72040 |
+
+!!! note
+    This is not a valid KGTK file, as it does not meet the mandatory column requirements
+    for an edge file nor a node file.
+
+Suppose that `ifexists-file7.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/ifexists-file7.tsv
+```
+
+| id |
+| -- |
+| j1 |
+| s1 |
+
+!!! note
+    This is a KGTK node file.
+
 ### Filter an Edge File on Another Edge File.
 
 ```bash
@@ -197,10 +250,10 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 
 ```
 
-| node1 | label | node2 | location | years |
-| -- | -- | -- | -- | -- |
-| peter | zipcode | 12040 | home |  |
-| peter | zipcode | 12040 | work | 6 |
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| p2 | peter | zipcode | 12040 | home |  |
+| p3 | peter | zipcode | 12040 | work | 6 |
 
 ### Filter an Edge File on a Node File
 
@@ -209,12 +262,14 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file3.tsv
 
 ```
-| node1 | label | node2 | location | years |
-| -- | -- | -- | -- | -- |
-| john | zipcode | 12345 | home | 10 |
-| john | zipcode | 12346 |  |  |
-| steve | zipcode | 45601 |  | 3 |
-| steve | zipcode | 45601 | work |  |
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| j1 | john | title | programmer |  |  |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
+| s1 | steve | title | supervisor |  |  |
+| s2 | steve | zipcode | 45601 |  | 3 |
+| s3 | steve | zipcode | 45601 | work |  |
 
 ### Filter a Node File on a Node File
 
@@ -235,7 +290,136 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 	      --input-keys location
 
 ```
-| node1 | label | node2 | location | years |
-| -- | -- | -- | -- | -- |
-| john | zipcode | 12345 | home | 10 |
-| peter | zipcode | 12040 | home |  |
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| j2 | john | zipcode | 12345 | home | 10 |
+| p2 | peter | zipcode | 12040 | home |  |
+
+### Filter an Edge File on a Nonstandard File
+
+We want to filter a KGTK edge file agains a file that not
+a valid KGTK file (it is almost a KGTK edge file, but it is
+missing the `node1` column). We can use the expert option
+`--filter-mode NONE` to disable the mandatory column check
+on the filter file, then use `--input-keys` and `--filter-keys`
+to specify the columns that we want to compare.
+
+```bash
+kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
+              --filter-on examples/docs/ifexists-file6.tsv \
+	      --filter-mode NONE \
+	      --input-keys label node2 \
+	      --filter-keys label node2
+
+```
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| p2 | peter | zipcode | 12040 | home |  |
+| p3 | peter | zipcode | 12040 | work | 6 |
+| s2 | steve | zipcode | 45601 |  | 3 |
+| s3 | steve | zipcode | 45601 | work |  |
+
+### Filter an Edge File: Filter Matches
+
+We want to filter a KGTK edge file agains a file that not
+a valid KGTK file (it is almost a KGTK edge file, but it is
+missing the `node1` column). We can use the expert option
+`--filter-mode NONE` to disable the mandatory column check
+on the filter file, then use `--input-keys` and `--filter-keys`
+to specify the columns that we want to compare.
+
+Furthermore, we want to see which filter records found
+at least one matching input record, and which filter records
+did not find a match.
+
+```bash
+kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
+              --filter-on examples/docs/ifexists-file6.tsv \
+	      --filter-mode NONE \
+	      --input-keys label node2 \
+	      --filter-keys label node2 \
+	      --matched-filter-file ifexists-matched-filter.tsv \
+	      --unmatched-filter-file ifexists-unmatched-filter.tsv
+
+```
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| p2 | peter | zipcode | 12040 | home |  |
+| p3 | peter | zipcode | 12040 | work | 6 |
+| s2 | steve | zipcode | 45601 |  | 3 |
+| s3 | steve | zipcode | 45601 | work |  |
+
+```bash
+kgtk cat -i ifexists-matched-filter.tsv --mode NONE
+```
+| label | node2 |
+| -- | -- |
+| zipcode | 12040 |
+| zipcode | 45601 |
+| zipcode | 45601 |
+
+```bash
+kgtk cat -i ifexists-unmatched-filter.tsv --mode NONE
+```
+| label | node2 |
+| -- | -- |
+| zipcode | 52040 |
+| zipcode | 62040 |
+| zipcode | 72040 |
+
+
+### Filter an Edge File By id
+
+This is another example of filtering an input file using an
+alternate input file key column.  `examples/docs/ifexists-file7.tsv`
+contains a list of edge ids that we want to retain in the output file.
+
+```bash
+kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
+              --filter-on examples/docs/ifexists-file7.tsv \
+	      --input-keys id
+
+```
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| j1 | john | title | programmer |  |  |
+| s1 | steve | title | supervisor |  |  |
+
+### Filter an Edge File By id: Reject File
+
+This is another example of filtering an input file using an
+alternate input file key column.  `examples/docs/ifexists-file7.tsv`
+contains a list of edge ids that we want to retain in the output file.
+However, we also want to obtain the records that were rejected to
+check that the records that were rejected match our expectations, or
+perhaps to apply different processing to them.
+
+```bash
+kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
+              --filter-on examples/docs/ifexists-file7.tsv \
+	      --reject-file ifexists-rejects.tsv \
+	      --input-keys id
+
+```
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| j1 | john | title | programmer |  |  |
+| s1 | steve | title | supervisor |  |  |
+
+```bash
+kgtk cat -i ifexists-rejects.tsv
+```
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
+| p1 | peter | title | manager |  |  |
+| p2 | peter | zipcode | 12040 | home |  |
+| p3 | peter | zipcode | 12040 | work | 6 |
+| s2 | steve | zipcode | 45601 |  | 3 |
+| s3 | steve | zipcode | 45601 | work |  |
+
+!!! note
+    If the intent of the filter was to separate all title records by edge
+    ID, then the reject file shows that id `p1` was omitted from the filter file.
+
