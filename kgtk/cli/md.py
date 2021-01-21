@@ -67,7 +67,7 @@ def run(input_file: KGTKFiles,
     import typing
     
     from kgtk.exceptions import KGTKException
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.join.kgtkcat import KgtkCat
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -81,7 +81,7 @@ def run(input_file: KGTKFiles,
     # TODO: check that at most one input file is stdin?
 
     # Build the option structures.
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, mode=KgtkReaderMode.NONE)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     # Show the final option structures for debugging and documentation.
