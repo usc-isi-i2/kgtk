@@ -1,0 +1,10 @@
+node1	label	node2	claim_id
+Q1	P1	Q5	
+Q1	P2	Q6	2345678901
+Q1	label	"Elmo"	3456789012
+Q2	label	"Alice"	4567890123
+P1	label	"instance of"	5678901234
+P2	label	"friend"	6789012345
+Q5	label	"human"	7890123456
+Q6	P1	Q5	8901234567
+Q6	label	"Fred"	9012345678

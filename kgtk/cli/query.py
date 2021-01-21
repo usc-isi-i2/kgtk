@@ -1,5 +1,5 @@
 """
-Test driver for KGTK Kypher query engine
+Run Kypher query engine.
 """
 
 import sys
@@ -17,9 +17,11 @@ DEFAULT_GRAPH_CACHE_FILE = os.path.join(
     tempfile.gettempdir(), 'kgtk-graph-cache-%s.sqlite3.db' % os.environ.get('USER', ''))
 
 def parser():
+    desc = ('Query one or more KGTK files with Kypher.\n' +
+            'IMPORTANT: input can come from stdin but chaining queries is not yet supported.')
     return {
-        'help': 'Query one or more KGTK files with Kypher',
-        'description': 'Query one or more KGTK files with Kypher.',
+        'help': desc,
+        'description': desc,
     }
 
 EXPLAIN_MODES = ('plan', 'full', 'expert')
@@ -92,7 +94,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         + " (defaults to per-user temporary file)")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
                         help="output file to write to, if `-' (the default) output goes to stdout."
-                        + " Files with extensions .gz, .bz2 or .xz will be appopriately compressed.")
+                        + " Files with extensions .gz, .bz2 or .xz will be appropriately compressed.")
 
 def import_modules():
     """Import command-specific modules that are only needed when we actually run.

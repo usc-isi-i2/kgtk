@@ -1,4 +1,10 @@
 node1	label	node2
 Q1	P1	Q5
 Q1	P2	Q6
+Q1	label	"Elmo"
+Q2	label	"Alice"
+P1	label	"instance of"
+P2	label	"friend"
+Q5	label	"human"
 Q6	P1	Q5
+Q6	label	"Fred"

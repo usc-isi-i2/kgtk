@@ -2,8 +2,8 @@ This command will sort any KGTK file on one or more columns. If more than one co
 
 ## Usage
 ```
-usage: kgtk sort [-h] [-i INPUT] [-o OUTPUT_FILE] [-c [COLUMNS [COLUMNS ...]]] [--locale LOCALE] [-r [True|False]] [--pure-python [True|False]] [-X EXTRA]
-                 [-v [optional True|False]]
+usage: kgtk sort [-h] [-i INPUT] [-o OUTPUT_FILE] [-c [COLUMNS [COLUMNS ...]]] [--locale LOCALE]
+                 [-r [True|False]] [--pure-python [True|False]] [-X EXTRA] [-v [optional True|False]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -12,8 +12,9 @@ optional arguments:
   -o OUTPUT_FILE, --out OUTPUT_FILE, --output-file OUTPUT_FILE
                         Output file to write to. (May be omitted or '-' for stdout.)
   -c [COLUMNS [COLUMNS ...]], --column [COLUMNS [COLUMNS ...]], --columns [COLUMNS [COLUMNS ...]]
-                        comma-separated list of column names to sort on. (defaults to id for node files, (node1, label, node2) for edge files without ID, (id,
-                        node1, label, node2) for edge files with ID)
+                        space and/or comma-separated list of column names to sort on. (defaults to id for node
+                        files, (node1, label, node2) for edge files without ID, (id, node1, label, node2) for
+                        edge files with ID)
   --locale LOCALE       LC_ALL locale controls the sorting order. (default=C)
   -r [True|False], --reverse [True|False]
                         When True, generate output in reverse sort order. (default=False)
@@ -26,7 +27,11 @@ optional arguments:
                         Print additional progress messages (default=False).
 ```
 
-Input files can be piped in from stdin or named explicitly.  They can also be optionally compressed and will transparently be decompressed.  Columns can be specified by the names used in the file header line, as 1-based positions, or through the pre-defined positions of reserved names such as `subject', etc.  Column names found in the header will override any predefined positions.
+Input files can be piped in from stdin or named explicitly.  They can also be
+optionally compressed and will transparently be decompressed.  Columns can be
+specified by the names used in the file header line, as 1-based positions, or
+through the pre-defined positions of reserved names such as `subject', etc.
+Column names found in the header will override any predefined positions.
 
 ## Examples
 Sort the conceptnet CSKG file based on label and node2
@@ -53,3 +58,17 @@ Q45582        item    'Polish literary award'@en        wikidata-20200203
 Q45877        item    'television series'@en        wikidata-20200203
 Q45886        item            wikidata-20200203
 ```
+
+Sort on a larger system using 24 threads, 60% of main memory, and
+a nonstandard temporary file folder.
+
+```
+kgtk sort -i data/conceptnet_first10.tsv -o data/conceptnet_first10_sorted.tsv -X "--parallel 24 --buffer-size 60% -T /data1/tmp"
+```
+
+Sort in memory using pure Python instead of the system sort program.
+
+```
+kgtk sort -i data/conceptnet_first10.tsv -o data/conceptnet_first10_sorted.tsv --pure-python
+```
+

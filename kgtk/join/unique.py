@@ -23,7 +23,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 class Unique(KgtkFormat):
     input_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
-    column_name: str = attr.ib(validator=attr.validators.instance_of(str))
+    column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)))
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
@@ -57,14 +57,14 @@ class Unique(KgtkFormat):
     DEFAULT_FORMAT: str = EDGE_FORMAT
 
     def process_presorted(self,
-                         output_columns: typing.List[str],
-                         kr: KgtkReader,
-                         column_idx: int,
-                         where_column_idx: int,
-                         where_value_set: typing.Set[str]):
+                          output_columns: typing.List[str],
+                          kr: KgtkReader,
+                          column_idx: int,
+                          where_column_idx: int,
+                          where_value_set: typing.Set[str]):
 
         if self.verbose:
-            print("Counting unique values from the %s column in presorted %s" % (self.column_name, self.input_file_path), file=self.error_file, flush=True)
+            print("Counting unique values from the %s column in presorted %s" % (kr.column_names[column_idx], self.input_file_path), file=self.error_file, flush=True)
         input_line_count: int = 0
         skip_line_count: int = 0
         empty_value_count: int = 0
@@ -168,7 +168,7 @@ class Unique(KgtkFormat):
                          where_value_set: typing.Set[str]):
 
         if self.verbose:
-            print("Counting unique values from the %s column in %s" % (self.column_name, self.input_file_path), file=self.error_file, flush=True)
+            print("Counting unique values from the %s column in %s" % (kr.column_names[column_idx], self.input_file_path), file=self.error_file, flush=True)
         input_line_count: int = 0
         skip_line_count: int = 0
         empty_value_count: int = 0
@@ -237,7 +237,7 @@ class Unique(KgtkFormat):
                 ew.write([value, str(value_counts[value])])
 
         elif self.output_format == self.NODE_FORMAT:
-            row = [ self.column_name ]
+            row = [ kr.column_names[column_idx] ]
             for value in sorted(value_counts.keys()):
                 row.append(str(value_counts[value]))
             ew.write(row)
@@ -282,9 +282,15 @@ class Unique(KgtkFormat):
                                           very_verbose=self.very_verbose,
         )
 
-        if self.column_name not in kr.column_name_map:
-            raise ValueError("Column %s is not in the input file" % (self.column_name))
-        column_idx: int = kr.column_name_map[self.column_name]
+        column_idx: int
+        if self.column_name is None:
+            column_idx = kr.node2_column_idx
+            if column_idx < 0:
+                raise ValueError("No node2 default column name in the input file.")
+        else:
+            if self.column_name not in kr.column_name_map:
+                raise ValueError("Column %s is not in the input file" % (self.column_name))
+            column_idx = kr.column_name_map[self.column_name]
 
         where_column_idx: int = -1
         where_value_set: typing.Set[str] = { }
