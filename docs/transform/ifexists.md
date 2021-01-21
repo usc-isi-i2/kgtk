@@ -255,6 +255,14 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | p2 | peter | zipcode | 12040 | home |  |
 | p3 | peter | zipcode | 12040 | work | 6 |
 
+!!! note
+    Since both the input file and the filter file are KGTK edge files, the
+    default key field comparisons are:
+    
+    > input.node1 == filter.node1 and
+    > input.label == filter.label and
+    > input.node2 == filter.node2
+
 ### Filter an Edge File on a Node File
 
 ```bash
