@@ -4,6 +4,8 @@ import subprocess
 import sys
 import tempfile
 import re
+import json
+import copy
 
 import numpy as np
 import pandas as pd
@@ -19,23 +21,29 @@ import papermill as pm
 ########################
 # Parameters
 
+try:
+    conf = copy.deepcopy(json.load(open('tutorial.conf.json')))
+except Exception as e:
+    print(e)
+    print('Please create the conf file required for this tutorial: "tutorial.conf.json"')
+
 # Folder on local machine where to create the output and temporary folders
-output_path = "/Users/amandeep/Documents/kypher"
+output_path = conf['output_path']
 
 # The location of the KGTK installation
-kgtk_path = "/Users/amandeep/Github/kgtk"
+kgtk_path = conf['kgtk_path']
 
 # The names of the output and temporary folders
 output_folder = "wikidata_os_v5"
 temp_folder = "temp.wikidata_os_v5"
 
 # The location of input Wikidata files
-wikidata_folder = "/Volumes/GoogleDrive/Shared drives/KGTK/datasets/wikidataos-v4/"
+wikidata_folder = conf['wikidata_folder']
 
 # The wikidata_os files can be downloaded from https://drive.google.com/drive/u/1/folders/1ukXXHqSCcFXE2xpvhqQ2AGAD5y2ue_c7
 
 # Location of the cache database for kypher
-cache_path = f"/Users/amandeep/Documents/kypher/{temp_folder}"
+cache_path = f"{output_path}/{temp_folder}"
 
 # Whether to delete the cache database
 delete_database = False
