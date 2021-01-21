@@ -142,15 +142,15 @@ kgtk cat -i examples/docs/ifexists-file1.tsv
 
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
-| j1 | john | title | programmer |  |  |
-| j2 | john | zipcode | 12345 | home | 10 |
-| j2 | john | zipcode | 12346 |  |  |
 | p1 | peter | title | manager |  |  |
 | p2 | peter | zipcode | 12040 | home |  |
 | p3 | peter | zipcode | 12040 | work | 6 |
 | s1 | steve | title | supervisor |  |  |
 | s2 | steve | zipcode | 45601 |  | 3 |
 | s3 | steve | zipcode | 45601 | work |  |
+| j1 | john | title | programmer |  |  |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
 
 !!! note
     This is a KGTK edge file.
@@ -275,12 +275,12 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 ```
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
-| j1 | john | title | programmer |  |  |
-| j2 | john | zipcode | 12345 | home | 10 |
-| j2 | john | zipcode | 12346 |  |  |
 | s1 | steve | title | supervisor |  |  |
 | s2 | steve | zipcode | 45601 |  | 3 |
 | s3 | steve | zipcode | 45601 | work |  |
+| j1 | john | title | programmer |  |  |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
 
 !!! note
     Since the input file is a KGTK edge file and the filter file is
@@ -315,8 +315,8 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 ```
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
-| j2 | john | zipcode | 12345 | home | 10 |
 | p2 | peter | zipcode | 12040 | home |  |
+| j2 | john | zipcode | 12345 | home | 10 |
 
 !!! note
     This used the key field comparison:
@@ -421,8 +421,8 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 ```
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
-| j1 | john | title | programmer |  |  |
 | s1 | steve | title | supervisor |  |  |
+| j1 | john | title | programmer |  |  |
 
 ! note
     This used the key field comparison:
@@ -447,23 +447,124 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 ```
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
-| j1 | john | title | programmer |  |  |
 | s1 | steve | title | supervisor |  |  |
+| j1 | john | title | programmer |  |  |
 
 ```bash
 kgtk cat -i ifexists-rejects.tsv
 ```
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
-| j2 | john | zipcode | 12345 | home | 10 |
-| j2 | john | zipcode | 12346 |  |  |
 | p1 | peter | title | manager |  |  |
 | p2 | peter | zipcode | 12040 | home |  |
 | p3 | peter | zipcode | 12040 | work | 6 |
 | s2 | steve | zipcode | 45601 |  | 3 |
 | s3 | steve | zipcode | 45601 | work |  |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
 
 !!! note
     If the intent of the filter was to separate all title records by edge
     ID, then the reject file shows that id `p1` was omitted from the filter file.
 
+### Filter a Small Input File on a Large Filter File
+
+Although the example data files are very small, this example
+command shows how to filter a small input file against a
+large filter file:
+
+```bash
+kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
+              --filter-on examples/docs/ifexists-file3.tsv \
+	      --cache-input
+
+```
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| j1 | john | title | programmer |  |  |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
+| s1 | steve | title | supervisor |  |  |
+| s2 | steve | zipcode | 45601 |  | 3 |
+| s3 | steve | zipcode | 45601 | work |  |
+
+!!! note
+    Since the input file is a KGTK edge file and the filter file is
+    a KGTK node file, the default key field comparison is:
+
+    > input.node1 == filter.id
+
+    Because we are cacheing the input file, the output edges have
+    been reordered by the input key, then by order.
+
+
+### Filter a Small Input File on a Large Filter File, Preserving Order
+
+Although the example data files are very small, this example
+command shows how to filter a small input file against a
+large filter file, preserving the input file's order:
+
+```bash
+kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
+              --filter-on examples/docs/ifexists-file3.tsv \
+	      --cache-input --preserve-order
+
+```
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| s1 | steve | title | supervisor |  |  |
+| s2 | steve | zipcode | 45601 |  | 3 |
+| s3 | steve | zipcode | 45601 | work |  |
+| j1 | john | title | programmer |  |  |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
+
+!!! note
+    Since the input file is a KGTK edge file and the filter file is
+    a KGTK node file, the default key field comparison is:
+
+    > input.node1 == filter.id
+
+    The output edges appear in the same order as the input edges.
+
+### Filter a Large Input File on a Large Filter File
+
+Although the example data files are very small, this example
+command shows how to filter a large input file against a
+large filter file by sorting the two files.
+
+We will explicitly tell the `kgtk sort` command which
+columns to sort on.
+
+```bash
+kgtk sort --input-file examples/docs/ifexists-file1.tsv \
+          --output-file ifexists-file1-sorted-by-node1.tsv \
+	  --column node1
+```
+
+```bash
+kgtk sort --input-file examples/docs/ifexists-file3.tsv \
+          --output-file ifexists-file3-sorted-by-id.tsv \
+	  --column id
+```
+
+```bash
+kgtk ifexists --input-file ifexists-file1-sorted-by-node1.tsv \
+             --filter-on ifexists-file3-sorted-by-id.tsv \
+	     --presorted
+```
+
+| id | node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- | -- |
+| j1 | john | title | programmer |  |  |
+| j2 | john | zipcode | 12345 | home | 10 |
+| j2 | john | zipcode | 12346 |  |  |
+| s1 | steve | title | supervisor |  |  |
+| s2 | steve | zipcode | 45601 |  | 3 |
+| s3 | steve | zipcode | 45601 | work |  |
+
+!!! note
+    Since the input file is a KGTK edge file and the filter file is
+    a KGTK node file, the default key field comparison is:
+
+    > input.node1 == filter.id
