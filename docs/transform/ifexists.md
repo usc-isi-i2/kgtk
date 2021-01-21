@@ -44,7 +44,7 @@ the following defaults will be used, which depend on the KGTK file type
 | edge    | node    | input.node1 == filter.id |
 | node    | edge    | input.id   == filter.node1 |
 
-!!! info
+!!! note
 The number of input file keys must match the number of output file keys, after
 taking into consideration the default keys.  So, if you want to match an edge file's
 node1 value to a nonstandard column in a node file, only the `--filter-keys`
