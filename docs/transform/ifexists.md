@@ -1,7 +1,7 @@
 ## Overview
 
-The ifexists command filters a KGTK file (the input file), passing through only those rows for
-which one or more specified columns match records in a second KGTK file (the filter file).
+The ifexists command filters a KGTK file (the input file specified by `--input-file`, which defaults to standard input),
+passing through only those rows forwhich one or more specified columns match records in a second KGTK file (the filter file, specified by `--filter-on`).
 
 ### Memory Usage Options
 
