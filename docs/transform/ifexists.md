@@ -263,6 +263,9 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
     > input.label == filter.label and
     > input.node2 == filter.node2
 
+    The `id` fields are not part of this comparison (and the
+    `id` field isn't present in `examples/docs/ifexists-file2.tsv`).
+
 ### Filter an Edge File on a Node File
 
 ```bash
@@ -279,6 +282,12 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | s2 | steve | zipcode | 45601 |  | 3 |
 | s3 | steve | zipcode | 45601 | work |  |
 
+!!! note
+    Since the input file is a KGTK edge file and the filter file is
+    a KGTK node file, the default key field comparison is:
+
+    > input.node1 == filter.id
+
 ### Filter a Node File on a Node File
 
 ```bash
@@ -289,6 +298,12 @@ kgtk ifexists --input-file examples/docs/ifexists-file4.tsv \
 | id |
 | -- |
 | john |
+
+!!! Note:
+    Since the input file and the filter files are both KGTK
+    node files, the default key field comparison is:
+
+    > input.id == filter.id
 
 ### Filter an Edge File on a Node File Using an Alternate Input Column
 
@@ -302,6 +317,11 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | -- | -- | -- | -- | -- | -- |
 | j2 | john | zipcode | 12345 | home | 10 |
 | p2 | peter | zipcode | 12040 | home |  |
+
+!!! note
+    This used the key field comparison:
+
+    > input.location == filter.id
 
 ### Filter an Edge File on a Nonstandard File
 
@@ -326,6 +346,11 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | p3 | peter | zipcode | 12040 | work | 6 |
 | s2 | steve | zipcode | 45601 |  | 3 |
 | s3 | steve | zipcode | 45601 | work |  |
+
+!!! note
+    This used the key field comparison:
+
+    > input.label == filter.label and input.node2 == filter.node2
 
 ### Filter an Edge File: Filter Matches
 
@@ -398,6 +423,11 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | -- | -- | -- | -- | -- | -- |
 | j1 | john | title | programmer |  |  |
 | s1 | steve | title | supervisor |  |  |
+
+! note
+    This used the key field comparison:
+
+    > input.id == filter.id
 
 ### Filter an Edge File By id: Reject File
 
