@@ -34,7 +34,7 @@ regular expression match that takes place.
 | Match Type | Description |
 | ---------- | ----------- |
 | fullmatch  | The full field must match the regular expression.  <br />It is not necessary to start the regular expression with `^` nor end it with `$`. |
-| match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  <br />It is not necessary to start the regular expression with `^`. |
+| match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  <br />It is not necessary to start the regular expression with `^`. <br />This is the default match type.|
 | search     | The regular expression must match somewhere in the field. |
 
 ### Multiple Filters
