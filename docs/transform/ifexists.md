@@ -310,7 +310,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file4.tsv \
 ```bash
 kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file5.tsv \
-	      --input-keys location
+              --input-keys location
 
 ```
 | id | node1 | label | node2 | location | years |
@@ -335,9 +335,9 @@ to specify the columns that we want to compare.
 ```bash
 kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file6.tsv \
-	      --filter-mode NONE \
-	      --input-keys label node2 \
-	      --filter-keys label node2
+              --filter-mode NONE \
+              --input-keys label node2 \
+              --filter-keys label node2
 
 ```
 | id | node1 | label | node2 | location | years |
@@ -368,11 +368,11 @@ did not find a match.
 ```bash
 kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file6.tsv \
-	      --filter-mode NONE \
-	      --input-keys label node2 \
-	      --filter-keys label node2 \
-	      --matched-filter-file ifexists-matched-filter.tsv \
-	      --unmatched-filter-file ifexists-unmatched-filter.tsv
+              --filter-mode NONE \
+              --input-keys label node2 \
+              --filter-keys label node2 \
+              --matched-filter-file ifexists-matched-filter.tsv \
+              --unmatched-filter-file ifexists-unmatched-filter.tsv
 
 ```
 | id | node1 | label | node2 | location | years |
@@ -416,7 +416,7 @@ contains a list of edge ids that we want to retain in the output file.
 ```bash
 kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file7.tsv \
-	      --input-keys id
+              --input-keys id
 
 ```
 | id | node1 | label | node2 | location | years |
@@ -441,8 +441,8 @@ perhaps to apply different processing to them.
 ```bash
 kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file7.tsv \
-	      --reject-file ifexists-rejects.tsv \
-	      --input-keys id
+              --reject-file ifexists-rejects.tsv \
+              --input-keys id
 
 ```
 | id | node1 | label | node2 | location | years |
@@ -476,7 +476,7 @@ large filter file:
 ```bash
 kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file3.tsv \
-	      --cache-input
+              --cache-input
 
 ```
 | id | node1 | label | node2 | location | years |
@@ -507,7 +507,7 @@ large filter file, preserving the input file's order:
 ```bash
 kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file3.tsv \
-	      --cache-input --preserve-order
+              --cache-input --preserve-order
 
 ```
 | id | node1 | label | node2 | location | years |
@@ -539,19 +539,19 @@ columns to sort on.
 ```bash
 kgtk sort --input-file examples/docs/ifexists-file1.tsv \
           --output-file ifexists-file1-sorted-by-node1.tsv \
-	  --column node1
+          --column node1
 ```
 
 ```bash
 kgtk sort --input-file examples/docs/ifexists-file3.tsv \
           --output-file ifexists-file3-sorted-by-id.tsv \
-	  --column id
+          --column id
 ```
 
 ```bash
 kgtk ifexists --input-file ifexists-file1-sorted-by-node1.tsv \
-             --filter-on ifexists-file3-sorted-by-id.tsv \
-	     --presorted
+              --filter-on ifexists-file3-sorted-by-id.tsv \
+              --presorted
 ```
 
 | id | node1 | label | node2 | location | years |
