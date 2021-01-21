@@ -156,6 +156,9 @@ kgtk cat -i examples/docs/ifexists-file1.tsv
 | j1 | john | title | programmer |  |  |
 | j2 | john | zipcode | 12345 | home | 10 |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 !!! note
     This is a KGTK edge file.
@@ -264,6 +267,9 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | j1 | john | title | programmer |  |  |
 | j2 | john | zipcode | 12345 | home | 10 |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 !!! note
     Since both the input file and the filter file are KGTK edge files, the
@@ -288,6 +294,9 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | p1 | peter | title | manager |  |  |
 | p2 | peter | zipcode | 12040 | home |  |
 | p3 | peter | zipcode | 12040 | work | 6 |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 !!! note
     Since the input file is a KGTK edge file and the filter file is
@@ -329,6 +338,8 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | s3 | steve | zipcode | 45601 | work |  |
 | j1 | john | title | programmer |  |  |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 !!! note
     This used the key field comparison:
@@ -359,6 +370,7 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | j1 | john | title | programmer |  |  |
 | j2 | john | zipcode | 12345 | home | 10 |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
 
 !!! note
     This used the key field comparison:
@@ -395,6 +407,7 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | j1 | john | title | programmer |  |  |
 | j2 | john | zipcode | 12345 | home | 10 |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
 
 ```bash
 kgtk cat -i ifexists-matched-filter.tsv --mode NONE
@@ -442,6 +455,9 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | s3 | steve | zipcode | 45601 | work |  |
 | j2 | john | zipcode | 12345 | home | 10 |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 ! note
     This used the key field comparison:
@@ -473,6 +489,9 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | s3 | steve | zipcode | 45601 | work |  |
 | j2 | john | zipcode | 12345 | home | 10 |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 ```bash
 kgtk cat -i ifexists-rejects.tsv
@@ -500,6 +519,9 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 ```
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 | p1 | peter | title | manager |  |  |
 | p2 | peter | zipcode | 12040 | home |  |
 | p3 | peter | zipcode | 12040 | work | 6 |
@@ -531,6 +553,9 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | p1 | peter | title | manager |  |  |
 | p2 | peter | zipcode | 12040 | home |  |
 | p3 | peter | zipcode | 12040 | work | 6 |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 !!! note
     Since the input file is a KGTK edge file and the filter file is
@@ -569,6 +594,9 @@ kgtk ifnotexists --input-file ifexists-file1-sorted-by-node1.tsv \
 
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 | p1 | peter | title | manager |  |  |
 | p2 | peter | zipcode | 12040 | home |  |
 | p3 | peter | zipcode | 12040 | work | 6 |
