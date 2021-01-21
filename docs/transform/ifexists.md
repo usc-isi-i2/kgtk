@@ -367,6 +367,12 @@ kgtk cat -i ifexists-unmatched-filter.tsv --mode NONE
 | zipcode | 62040 |
 | zipcode | 72040 |
 
+!!! note
+    Since the filter file was missing a mandatory KGTK column (`node1`), the
+    matched and unmatched filter output files are also missing that
+    column.  Thus, the `kgtk cat` commands that disply them also need
+    `--mode NONE`.
+
 
 ### Filter an Edge File By id
 
