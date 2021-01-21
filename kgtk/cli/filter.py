@@ -39,9 +39,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # parser.add_argument('-dt', "--datatype", action="store", type=str, dest="datatype", help="Datatype of the input file, e.g., tsv or csv.", default="tsv")
     parser.add_argument('-p', '--pattern', action="append", nargs="+", type=str, dest="patterns", required=True,
                         help="Pattern to filter on, for instance, \" ; P154 ; \". Multiple patterns may be specified when there are mutiple output files.")
-    parser.add_argument('--subj', action="store", type=str, dest='subj_col', help="Subject column, default is node1")
-    parser.add_argument('--pred', action="store", type=str, dest='pred_col', help="Predicate column, default is label")
-    parser.add_argument('--obj', action="store", type=str, dest='obj_col', help="Object column, default is node2")
+    parser.add_argument('--node1', '--subj', action="store", type=str, dest='subj_col', help="The subject column, default is node1 or its alias.")
+    parser.add_argument('--label', '--pred', action="store", type=str, dest='pred_col', help="The predicate column, default is label or its alias.")
+    parser.add_argument('--node2', '--obj', action="store", type=str, dest='obj_col', help="The object column, default is node2 or its alias.")
 
     parser.add_argument(      "--or", dest="or_pattern", metavar="True|False",
                               help="'Or' the clauses of the pattern. (default=%(default)s).",
