@@ -7,13 +7,13 @@ a simple pattern language as a filter, and ignores reification.
 
 Filters are composed of three patterns separated by semicolons:
 
-`subject-pattern ; predicate-pattern ; object-pattern`
+`node1-pattern ; label-pattern ; node2-pattern`
 
 | Pattern | Description |
 | ------- | ----------- |
-| subject-pattern | This pattern applies to the `node1` column (or its alias), unless a different column is selected with the `--subj SUBJ_COL` option. |
-| predicate-pattern | This pattern applies to the `label` column (or its alias), unless a different column is selected with the `--pred PRED_COL` option. |
-| object-pattern | This pattern applies to the `node2` column (or its alias), unless a different column is selected with the `--obj OBJ_COL` option. |
+| node1-pattern | This pattern applies to the `node1` column (or its alias), unless a different column is selected with the `--node1 SUBJ_COL` option. |
+| label-pattern | This pattern applies to the `label` column (or its alias), unless a different column is selected with the `--label PRED_COL` option. |
+| node2-pattern | This pattern applies to the `node2` column (or its alias), unless a different column is selected with the `--node2 OBJ_COL` option. |
 
 Each of the patterns in a filter can consist of a list of symbols separated using commas,
 or a regular expression (when `--regex` is specified).
@@ -34,7 +34,7 @@ regular expression match that takes place.
 | Match Type | Description |
 | ---------- | ----------- |
 | fullmatch  | The full field must match the regular expression.  <br />It is not necessary to start the regular expression with `^` nor end it with `$`. |
-| match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  <br />It is not necessary to start the regular expression with `^`. |
+| match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  <br />It is not necessary to start the regular expression with `^`. <br />This is the default match type.|
 | search     | The regular expression must match somewhere in the field. |
 
 ### Multiple Filters
@@ -44,7 +44,7 @@ When there are multiple output files, each output file must have its own filter.
 Output files and filters are paired by order.  We recommend listing each filter
 and output file as a pair on the command line, as shown in one of the examples, below.
 Input edges that do not match any filter may be written to a reject file
-(`--reject-file REJECT_FILE).
+(`--reject-file REJECT_FILE`).
 
 When there are multiple output files, `--first-match-only` determines whether
 input edges are copied to the first matching output file (when `True`) or to
@@ -61,16 +61,16 @@ total number of alternatives is large.
     At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
 
 !!! note
-    At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--obj`, `--or`, `--pred`, `--regex`, and `--subj`
+    At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--node2`, `--or`, `--label`, `--regex`, and `--node1`
     options apply to all filters and patterns in the `kgtk filter` invocation. In particular, there is no support for mixing
     non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern by hand.
 
 ## Usage
 
 ```
-kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]]
+usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]]
                    [--reject-file REJECT_FILE] -p PATTERNS [PATTERNS ...]
-                   [--subj SUBJ_COL] [--pred PRED_COL] [--obj OBJ_COL]
+                   [--node1 SUBJ_COL] [--label PRED_COL] [--node2 OBJ_COL]
                    [--or [True|False]] [--invert [True|False]]
                    [--regex [True|False]]
                    [--match-type {fullmatch,match,search}]
@@ -95,9 +95,12 @@ optional arguments:
                         Pattern to filter on, for instance, " ; P154 ; ".
                         Multiple patterns may be specified when there are
                         mutiple output files.
-  --subj SUBJ_COL       Subject column, default is node1
-  --pred PRED_COL       Predicate column, default is label
-  --obj OBJ_COL         Object column, default is node2
+  --node1 SUBJ_COL, --subj SUBJ_COL
+                        The subject column, default is node1 or its alias.
+  --label PRED_COL, --pred PRED_COL
+                        The predicate column, default is label or its alias.
+  --node2 OBJ_COL, --obj OBJ_COL
+                        The object column, default is node2 or its alias.
   --or [True|False]     'Or' the clauses of the pattern. (default=False).
   --invert [True|False]
                         Invert the result of applying the pattern.
@@ -219,7 +222,7 @@ However, you can specify any other column to filter.
 For example, if we had a column called `genre` in the input file:
 
 ```bash
-kgtk filter -p " ;action ; " --pred genre -i examples/docs/movies_reduced_with_genre_column.tsv
+kgtk filter -p " ;action ; " --label genre -i examples/docs/movies_reduced_with_genre_column.tsv
 ```
 
 Results:
