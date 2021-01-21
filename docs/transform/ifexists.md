@@ -1,7 +1,11 @@
 ## Overview
 
 The ifexists command filters a KGTK file (the input file specified by `--input-file`, which defaults to standard input),
-passing through only those rows forwhich one or more specified columns match records in a second KGTK file (the filter file, specified by `--filter-on`).
+passing through only those rows for which one or more specified columns
+match records in a second KGTK file (the filter file, specified by `--filter-on`).
+
+!!! note
+    The `kgtk ifnotexists` command computes the inverse output of this command.
 
 ### Memory Usage Options
 
@@ -64,7 +68,7 @@ any filter records that did not find a match in the input file.
 
 ### Experimental Join Facility
 
-The `kgtk ifexists` comand contains experimental support for performing
+The `kgtk ifexists` command contains experimental support for performing
 a join.  The join output file (which may be the primary output file)
 will contain the union of the columns found in the `--input-file` and the `--filter-on` file, and may contain
 records from both file.  At the present time, please refer to
