@@ -1,7 +1,10 @@
-node1	label	node2	location	years
-john	zipcode	12345	home	10
-john	zipcode	12346		
-peter	zipcode	12040	home	
-peter	zipcode	12040	work	6
-steve	zipcode	45601		3
-steve	zipcode	45601	work	
+id	node1	label	node2	location	years
+j1	john	title	programmer		
+j2	john	zipcode	12345	home	10
+j2	john	zipcode	12346		
+p1	peter	title	manager		
+p2	peter	zipcode	12040	home	
+p3	peter	zipcode	12040	work	6
+s1	steve	title	supervisor		
+s2	steve	zipcode	45601		3
+s3	steve	zipcode	45601	work	
