@@ -299,7 +299,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file4.tsv \
 | -- |
 | john |
 
-!!! Note:
+!!! note
     Since the input file and the filter files are both KGTK
     node files, the default key field comparison is:
 
