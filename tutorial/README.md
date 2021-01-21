@@ -28,7 +28,7 @@
 ```
 6. Install python packages for the tutorial
 ```
-  pip install jupyterlab altair gensim papermill ipywidgets iprogress
+  pip install jupyterlab altair gensim papermill ipywidgets iprogress plotly
 ```
 7. Link the virtual environment to jupyter kernel
 ```
