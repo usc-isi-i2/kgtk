@@ -34,7 +34,7 @@ regular expression match that takes place.
 | Match Type | Description |
 | ---------- | ----------- |
 | fullmatch  | The full field must match the regular expression.  <br />It is not necessary to start the regular expression with `^` nor end it with `$`. |
-| match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  <br />It is not necessary to start the regular expression with `^`. |
+| match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  <br />It is not necessary to start the regular expression with `^`. <br />This is the default match type.|
 | search     | The regular expression must match somewhere in the field. |
 
 ### Multiple Filters
@@ -44,7 +44,7 @@ When there are multiple output files, each output file must have its own filter.
 Output files and filters are paired by order.  We recommend listing each filter
 and output file as a pair on the command line, as shown in one of the examples, below.
 Input edges that do not match any filter may be written to a reject file
-(`--reject-file REJECT_FILE).
+(`--reject-file REJECT_FILE`).
 
 When there are multiple output files, `--first-match-only` determines whether
 input edges are copied to the first matching output file (when `True`) or to
