@@ -424,7 +424,7 @@ be referenced using Kypher's property syntax.  For example, `r.label`
 references an edge's label, `r.node1` its starting node, or `r.time`
 an extra column named `time`.  See [ref <b>Edges and properties</b>]
 for more details.  Finally, here is the query which now does produce
-valid KGTK as output, since the order of columns does not matter:
+valid KGTK as output (the order of columns does not matter):
 
 <pre><i>
     &gt; kgtk query -i $GRAPH \
@@ -440,7 +440,7 @@ One of the most powerful features of Kypher is that we cannot only
 filter and join edges, but that we can transform values into new
 ones building modified or completely new edges.  A lot of useful
 transformations can be performed by applying built-in functions
-to the columns specified in a `--return clause`.  For example,
+to the columns specified in a `--return` clause.  For example,
 below we change the names of the selected edges by converting them
 to lowercase using another one of SQLite3's built-in functions:
 
@@ -544,7 +544,7 @@ this data who are in love with themselves:
     e14	"Joe"	loves	"Joe"
 </pre>
 
-Of course, these more elaborate path patterns can be combined with `--where` expression for
+Of course, these path patterns can be combined with `--where` expression for
 more elaborate filtering that cannot be described in the graph pattern directly.  For example,
 here we only select starting edges where at least one of the nodes has a German name:
 
