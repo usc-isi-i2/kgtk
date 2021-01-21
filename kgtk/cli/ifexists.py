@@ -51,7 +51,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(who="The KGTK file to filter against.",
                           options=["--filter-on", "--filter-file"], dest="filter_file", metavar="FILTER_FILE")
     parser.add_output_file()
-    parser.add_output_file(who="The KGTK reject file for records that fail the filter.",
+    parser.add_output_file(who="The KGTK file for input records that fail the filter.",
                            dest="reject_file",
                            options=["--reject-file"],
                            metavar="REJECT_FILE",
