@@ -116,7 +116,6 @@ overview_class_template="""
 
 {overview_summary_div}
 
-
 {overview_class_summary_div}
 
 
@@ -141,8 +140,6 @@ overview_summary_template="""
    </div>
 
    </div>
-
-
 
 """
 
@@ -184,8 +181,6 @@ Details
 
  </div>
 </div>
-
-
 
 """
 
@@ -506,7 +501,7 @@ geo_coord_template="""
 
 """
 
-time_template_template="""
+time_template="""
 
 <div class="card w-100 ">
         <div class="card-body">
@@ -651,408 +646,394 @@ def create_desc_table(df):
 
 ##  END HELPER FUNCTIONS
 
-def run(profiler_files_path):
-    ##  OVERVIEW SECTION
+##  OVERVIEW SECTION
 
-    overview_property_file_list = []
-    class_summary_file = ""
-    stats_file = ""
-    degree_file = ""
-    quantity_file = ""
+overview_property_file_list=[]
+class_summary_file=""
+stats_file=""
+degree_file=""
+quantity_file =""
 
-    for f in listdir(f'{profiler_files_path}/overview'):
-        if isfile(join(f'{profiler_files_path}/overview', f)):
-            if (f.split(".")[-1] != "tsv"):
-                continue
-            if (f.find("property") != -1 and f.split(".")[0] == "Overview"):
-                overview_property_file_list.append(join(f'{profiler_files_path}/overview', f))
-                if (f.find("quantity") != -1):
-                    quantity_file = join(f'{profiler_files_path}/overview', f)
-            elif (f.find("class") != -1):
-                class_summary_file = join(f'{profiler_files_path}/overview', f)
-            elif (f.find("nodes") != -1):
-                stats_file = join(f'{profiler_files_path}/overview', f)
-            elif (f.find("degree") != -1):
-                degree_file = join(f'{profiler_files_path}/overview', f)
+for f in listdir('Wikidata/overview'):
+    if isfile(join('Wikidata/overview', f)):
+        if(len(f.split("."))<1 or f.split(".")[-1]!="tsv" or  f.split(".")[0]!="Overview"):
+            continue
+        if(len(f.split("."))==4 and f.split(".")[1]=="property" ):
+            overview_property_file_list.append(join('Wikidata/overview', f))
+            if (f.split(".")[2]=="quantity"):
+                quantity_file = join('Wikidata/overview', f)
+        elif(len(f.split("."))==3 and f.split(".")[1]=="class"):
+            class_summary_file=join('Wikidata/overview', f)
+        elif(len(f.split("."))==3 and f.split(".")[1]=="nodes" ):
+            stats_file=join('Wikidata/overview', f)
+        elif(len(f.split("."))==3 and f.split(".")[1]=="degree" ):
+            degree_file=join('Wikidata/overview', f)
 
+
+try:
+    df = pd.read_csv(stats_file,sep='\t', index_col=[0])
+    if df.empty:
+        raise Exception("DF Empty")
+    stats_table = create_table(df)["table_html"]
+except:
+    stats_table=""
+
+try:
+    df = pd.read_csv(degree_file,sep='\t', index_col=[0])
+    if df.empty:
+        raise Exception("DF Empty")
+    degree_table = create_table(df)["table_html"]
+except:
+    degree_table=""
+
+if degree_table=="" and stats_table=="":
+    overview_summary_div=""
+else:
+    overview_summary_div= overview_summary_template.format(stats_table= stats_table, degree_table= degree_table)
+
+class_labels_ordered = []
+criteria_ranking=""
+try:
+    df = pd.read_csv(class_summary_file,sep='\t', index_col=[0])
+    if df.empty:
+        raise Exception("DF Empty")
     try:
-        df = pd.read_csv(stats_file, sep='\t', index_col=[0])
+        df.sort_values('Pagerank')
+        class_summary_div_rank = create_bar_div(df,'Pagerank', 'Class_Label')
+        criteria_ranking="Pagerank"
+    except:
+        criteria_ranking="Number of Instances"
+        class_summary_div_rank=""
+    class_label_col = df.loc[:,'Class_Label']
+    class_labels_ordered = class_label_col.values
+    class_summary_div_table = create_table(df)["table_html"]
+    class_summary_div_bar= create_bar_div(df, 'Number of Instances', 'Class_Label' )
+    fig = px.pie(df, values='Number of Instances', names='Class_Label', height=360, width=440)
+    class_summary_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
+    overview_class_summary_div = overview_class_summary_template.format(
+    class_summary_div_table = class_summary_div_table,
+    class_summary_div_bar= class_summary_div_bar,
+    class_summary_div_pie= class_summary_div_pie,
+    class_summary_div_rank= class_summary_div_rank)
+except:
+    overview_class_summary_div = ""
+
+
+overview_class_div =  overview_class_template.format(
+        overview_class_summary_div= overview_class_summary_div,overview_summary_div=overview_summary_div )
+
+overview_property_div=""
+id=0
+for file in overview_property_file_list:
+    try:
+        property_name= file.split(".")[2]
+        id= id+1
+        df = pd.read_csv(file,sep='\t', index_col=[0])
+        if df.empty:
+            continue
+        property_summary_table = create_table(df)
+        property_summary_div_table= property_summary_table["table_html"]
+        property_summary_div_bar= create_bar_div(df, 'Number_of_Statements', 'Property_Label' )
+        fig = px.pie(df, values='Number_of_Statements', names='Property_Label', title='Statement Distribution')
+        property_summary_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
+        file_with_slash=str(id)+"""/"""
+        file=str(id)
+        overview_property_div+=overview_property_template.format(
+        property_summary_div_table= property_summary_div_table,
+        property_summary_div_bar=property_summary_div_bar ,
+        property_summary_div_pie = property_summary_div_pie,
+        file=file, file_with_slash=file_with_slash, property_name= property_name )
+    except:
+        continue
+
+overview_div=overview_class_div+overview_property_div
+
+##  CLASS SECTION
+
+class_files = {}
+for f in listdir('Wikidata/class_overview'):
+    if isfile(join('Wikidata/class_overview', f)):
+        if(len(f.split("."))<1 or f.split(".")[-1]!="tsv" or f.split(".")[0]!="Class_overview"):
+            continue
+        file_key = f.split(".")[1]
+
+        if file_key not in class_files.keys() :
+            class_files[file_key]={}
+
+        if(len(f.split("."))==4 and f.split(".")[2]=="examples"):
+            class_files[file_key]["examples"]= join('Wikidata/class_overview', f)
+        elif( len(f.split("."))==4 and f.split(".")[2]=="incoming_properties"):
+            class_files[file_key]["properties_incoming"]= join('Wikidata/class_overview', f)
+        elif(  len(f.split("."))==4 and f.split(".")[2]=="outgoing_properties"):
+            class_files[file_key]["properties"]= join('Wikidata/class_overview', f)
+        elif(len(f.split("."))==4 and f.split(".")[2]=="overview"):
+            class_files[file_key]["overview"]= join('Wikidata/class_overview', f)
+
+class_div=""
+
+K= 6
+
+for key in class_labels_ordered:
+    key = key.replace(" ", "_")
+    key = key.replace("-", "_")
+
+
+    if key not in class_files:
+        continue
+    try:
+        value = class_files[key]
+        df = pd.read_csv(value["overview"], sep='\t', index_col=[0])
         if df.empty:
             raise Exception("DF Empty")
-        stats_table = create_desc_table(df)["table_html"]
-    except:
-        print("Stats div missing")
-        stats_table = ""
+        else:
+            class_overview_div_table = create_desc_table(df)["table_html"]
+            class_overview_div = class_overview_template.format(class_overview_div_table=class_overview_div_table)
+    except Exception as e:
+        class_overview_div=""
 
     try:
-        df = pd.read_csv(degree_file, sep='\t', index_col=[0])
+        file = value["examples"]
+        example_name= file.split(".")[1]
+        df = pd.read_csv(file,sep='\t', index_col=[0], nrows=K)
         if df.empty:
             raise Exception("DF Empty")
-        degree_table = create_desc_table(df)["table_html"]
-    except:
-        print("Degree div missing")
-        degree_table = ""
+        else:
+            if 'Pagerank' in df.columns:
+                df = df.sort_values(by = 'Pagerank', ascending = False)
+                example_summary_div_bar = create_bar_div(df,'Pagerank', 'Label_' )
+            else:
+                example_summary_div_bar=""
+            example_summary_div_table = create_table(df)["table_html"]
+            if len(df) <K:
+                n=len(df)
+            else:
+                n= K
+            class_example_div= class_example_template.format(
+            example_summary_div_table= example_summary_div_table,
+            example_summary_div_bar=example_summary_div_bar,n=K, example_name=key)
+    except Exception as e:
+        class_example_div=""
 
-    if degree_table == "" and stats_table == "":
-        overview_summary_div = ""
-    else:
-        overview_summary_div = overview_summary_template.format(stats_table=stats_table, degree_table=degree_table)
-
-    class_labels_ordered = []
-    criteria_ranking = ""
     try:
-        df = pd.read_csv(class_summary_file, sep='\t', index_col=[0])
+        file = value["properties_incoming"]
+        df = pd.read_csv(file, sep='\t', index_col=[0],nrows=K)
         if df.empty:
             raise Exception("DF Empty")
-        try:
-            df.sort_values('Pagerank')
-            class_summary_div_rank = create_bar_div(df, 'Pagerank', 'Class_Label')
-            criteria_ranking = "Pagerank"
-        except:
-            criteria_ranking = "Number of Instances"
-            class_summary_div_rank = ""
-        class_label_col = df.loc[:, 'Class_Label']
-        class_labels_ordered = class_label_col.values
-        class_summary_div_table = create_table(df)["table_html"]
-        class_summary_div_bar = create_bar_div(df, 'Number of Instances', 'Class_Label')
-        fig = px.pie(df, values='Number of Instances', names='Class_Label', height=360, width=440)
-        class_summary_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
-        overview_class_summary_div = overview_class_summary_template.format(
-            class_summary_div_table=class_summary_div_table,
-            class_summary_div_bar=class_summary_div_bar,
-            class_summary_div_pie=class_summary_div_pie,
-            class_summary_div_rank=class_summary_div_rank)
-    except:
-        print("Overview of Class summary div missing")
-        overview_class_summary_div = ""
+        else:
+            incoming_properties_summary_div_table = create_table(df)["table_html"]
+            incoming_properties_summary_div_bar = create_bar_div(df,'Instances', 'Property Name' )
+            fig = px.pie(df, values='Instances', names='Property Name', title='Distribution')
+            incoming_properties_summary_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
+            fig = px.scatter(df, x="Property Name", y="Instances")
+            fig.update_xaxes(showticklabels=False, title_text='Property')
+            incoming_properties_summary_div_scatter = plot(fig, output_type='div', include_plotlyjs=False)
+            f_with_slash="class"+key+"""/"""
+            f="class"+key
+            n=0
+            if len(df) <K:
+                n=len(df)
+            else:
+                n= K
+            class_property_incoming_top_div= class_property_incoming_top_template.format(
+            incoming_properties_summary_div_table=incoming_properties_summary_div_table,
+            incoming_properties_summary_div_bar=incoming_properties_summary_div_bar,
+            incoming_properties_summary_div_pie=incoming_properties_summary_div_pie,
+            incoming_properties_summary_div_scatter= incoming_properties_summary_div_scatter,
+            file=f, file_with_slash=f_with_slash, n=n, example_name=key)
+    except Exception as e:
+        class_property_incoming_top_div=""
 
-    overview_class_div = overview_class_template.format(
-        overview_class_summary_div=overview_class_summary_div, overview_summary_div=overview_summary_div)
+    try:
+        file = value["properties"]
+        df = pd.read_csv(file, sep='\t', index_col=[0],nrows=K)
+        if df.empty:
+            raise Exception("DF Empty")
+        else:
+            properties_summary_div_table = create_table(df)["table_html"]
+            properties_summary_div_bar = create_bar_div(df, 'Instances', 'Property Name' )
+            properties_summary_percent_div_bar = create_bar_div(df,'% Instances', 'Property Name' )
+            fig = px.pie(df, values='Instances', names='Property Name')
+            properties_summary_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
+            if len(df) <K:
+                n=len(df)
+            else:
+                n= K
+            class_property_top_div=class_property_top_template.format(
+            properties_summary_div_table=properties_summary_div_table,
+            properties_summary_div_bar=properties_summary_div_bar,
+            n=K, example_name=key)
+    except Exception as e:
+        class_property_top_div=""
 
-    overview_property_div = ""
-    id = 0
-    for file in overview_property_file_list:
-        try:
-            property_name = file.split(".")[2]
-            id = id + 1
-            df = pd.read_csv(file, sep='\t', index_col=[0])
-            if df.empty:
-                continue
-            property_summary_table = create_table(df)
-            property_summary_div_table = property_summary_table["table_html"]
-            property_summary_div_bar = create_bar_div(df, 'Number_of_Statements', 'Property_Label')
-            fig = px.pie(df, values='Number_of_Statements', names='Property_Label', title='Statement Distribution')
-            property_summary_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
-            file_with_slash = str(id) + """/"""
-            file = str(id)
-            overview_property_div += overview_property_template.format(
-                property_summary_div_table=property_summary_div_table,
-                property_summary_div_bar=property_summary_div_bar,
-                property_summary_div_pie=property_summary_div_pie,
-                file=file, file_with_slash=file_with_slash, property_name=property_name)
-        except:
-            print(property_name + " property overview div missing")
+
+
+    class_div+= class_template.format(
+    class_overview_div=class_overview_div,
+    class_example_div=class_example_div,
+    class_property_top_div=class_property_top_div,
+    class_property_incoming_top_div=class_property_incoming_top_div,
+    example_name=key)
+
+##  PROPERTIES SECTION
+
+top_property_file=""
+top_k_properties= {}
+quantity_dict ={}
+geo_coord_file=""
+time_files=[]
+for f in listdir('Wikidata/property_overview'):
+    if isfile(join('Wikidata/property_overview', f)):
+        if(len(f.split("."))<1 or f.split(".")[-1]!="tsv" or f.split(".")[0]!="Property_overview"):
             continue
 
-    overview_div = overview_class_div + overview_property_div
-
-    ##  CLASS SECTION
-
-    class_files = {}
-    for f in listdir(f'{profiler_files_path}/class_overview'):
-        if isfile(join(f'{profiler_files_path}/class_overview', f)):
-            if (f.split(".")[-1] != "tsv"):
-                continue
-            file_key = f.split(".")[1]
-            if f.split(".")[0] != "Class_overview":
-                continue
-            if file_key not in class_files.keys():
-                class_files[file_key] = {}
-
-            if (f.find("examples") != -1):
-                class_files[file_key]["examples"] = join(f'{profiler_files_path}/class_overview', f)
-            elif (f.find("incoming_properties") != -1):
-                class_files[file_key]["properties_incoming"] = join(f'{profiler_files_path}/class_overview', f)
-            elif (f.find("outgoing_properties") != -1):
-                class_files[file_key]["properties"] = join(f'{profiler_files_path}/class_overview', f)
-            elif (len(f.split(".")) >= 3 and f.split(".")[2] == "overview"):
-                class_files[file_key]["overview"] = join(f'{profiler_files_path}/class_overview', f)
-
-    class_div = ""
-
-    K = 6
-
-    for key in class_labels_ordered:
-        key = key.replace(" ", "_")
-        key = key.replace("-", "_")
-
-        if key not in class_files:
-            continue
-        try:
-            value = class_files[key]
-            df = pd.read_csv(value["overview"], sep='\t', index_col=[0])
-            if df.empty:
-                raise Exception("DF Empty")
-            else:
-                class_overview_div_table = create_desc_table(df)["table_html"]
-
-                class_overview_div = class_overview_template.format(class_overview_div_table=class_overview_div_table)
-        except Exception as e:
-            print(key + "overview div creation failed")
-
-        try:
-            file = value["examples"]
-            example_name = file.split(".")[1]
-            df = pd.read_csv(file, sep='\t', index_col=[0], nrows=K)
-            df = df.sort_values(by='Pagerank', ascending=False)
-            if df.empty:
-                raise Exception("DF Empty")
-            else:
-                example_summary_div_table = create_table(df)["table_html"]
-                example_summary_div_bar = create_bar_div(df, 'Pagerank', 'Label_')
-                if len(df) < K:
-                    n = len(df)
-                else:
-                    n = K
-                class_example_div = class_example_template.format(
-                    example_summary_div_table=example_summary_div_table,
-                    example_summary_div_bar=example_summary_div_bar, n=K, example_name=key)
-        except Exception as e:
-            class_example_div = ""
-            print(key + " example div creation failed")
-
-        try:
-            file = value["properties_incoming"]
-            df = pd.read_csv(file, sep='\t', index_col=[0], nrows=K)
-            if df.empty:
-                raise Exception("DF Empty")
-            else:
-                incoming_properties_summary_div_table = create_table(df)["table_html"]
-                incoming_properties_summary_div_bar = create_bar_div(df, 'Instances', 'Property Name')
-                fig = px.pie(df, values='Instances', names='Property Name', title='Distribution')
-                incoming_properties_summary_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
-                fig = px.scatter(df, x="Property Name", y="Instances")
-                fig.update_xaxes(showticklabels=False, title_text='Property')
-                incoming_properties_summary_div_scatter = plot(fig, output_type='div', include_plotlyjs=False)
-                f_with_slash = "class" + key + """/"""
-                f = "class" + key
-                n = 0
-                if len(df) < K:
-                    n = len(df)
-                else:
-                    n = K
-                class_property_incoming_top_div = class_property_incoming_top_template.format(
-                    incoming_properties_summary_div_table=incoming_properties_summary_div_table,
-                    incoming_properties_summary_div_bar=incoming_properties_summary_div_bar,
-                    incoming_properties_summary_div_pie=incoming_properties_summary_div_pie,
-                    incoming_properties_summary_div_scatter=incoming_properties_summary_div_scatter,
-                    file=f, file_with_slash=f_with_slash, n=n, example_name=key)
-        except Exception as e:
-            print(key + " incoming properties div creation failed")
-
-        try:
-            file = value["properties"]
-            df = pd.read_csv(file, sep='\t', index_col=[0], nrows=K)
-            if df.empty:
-                raise Exception("DF Empty")
-            else:
-                properties_summary_div_table = create_table(df)["table_html"]
-                properties_summary_div_bar = create_bar_div(df, 'Instances', 'Property Name')
-                properties_summary_percent_div_bar = create_bar_div(df, '% Instances', 'Property Name')
-                fig = px.pie(df, values='Instances', names='Property Name')
-                properties_summary_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
-                if len(df) < K:
-                    n = len(df)
-                else:
-                    n = K
-                class_property_top_div = class_property_top_template.format(
-                    properties_summary_div_table=properties_summary_div_table,
-                    properties_summary_div_bar=properties_summary_div_bar,
-                    n=K, example_name=key)
-        except Exception as e:
-            print(key + " property div creation failed")
-            class_property_top_div = ""
-
-        class_div += class_template.format(
-            class_overview_div=class_overview_div,
-            class_example_div=class_example_div,
-            class_property_top_div=class_property_top_div,
-            class_property_incoming_top_div=class_property_incoming_top_div,
-            example_name=key)
-
-    ##  PROPERTIES SECTION
-
-    top_property_file = ""
-    top_k_properties = {}
-    quantity_dict = {}
-    geo_coord_file = ""
-    time_files = []
-    for f in listdir(f'{profiler_files_path}/property_overview'):
-        if isfile(join(f'{profiler_files_path}/property_overview', f)):
-            if (f.split(".")[-1] != "tsv"):
-                continue
-
-            if (f.find("top") != -1):
-                top_property_file = join(f'{profiler_files_path}/property_overview', f)
-            elif (f.split(".")[-2] == "overview"):
-                top_k_properties[f.split(".")[1]] = join(f'{profiler_files_path}/property_overview', f)
-            elif (f.split(".")[1] == "quantity" or f.split(".")[1] == "time"):
+        if(len(f.split("."))==3 and f.split(".")[1]=="top"):
+            top_property_file = join('Wikidata/property_overview', f)
+        elif(len(f.split("."))==4  and f.split(".")[-2]=="overview"):
+            top_k_properties[f.split(".")[1]]= join('Wikidata/property_overview', f)
+        elif(f.split(".")[1]=="quantity" or f.split(".")[1]=="time"):
+            if(f.split(".")[1]=="quantity"):
                 value = f.split(".")[2]
-                if (f.split(".")[1] == "quantity"):
-                    if value not in quantity_dict:
-                        quantity_dict[value] = {}
-                    if f.split(".")[3] == "units_distribution":
-                        quantity_dict[value]["units_distribution"] = join(f'{profiler_files_path}/property_overview', f)
-                    else:
-                        quantity_dict[value]["value_distribution"] = join(f'{profiler_files_path}/property_overview', f)
+                if value not in quantity_dict:
+                    quantity_dict[value]={}
+                if f.split(".")[3]=="units_distribution":
+                    quantity_dict[value]["units_distribution"]= join('Wikidata/property_overview', f)
                 else:
-                    if (f.split(".")[-2] == "year_distibution"):
-                        time_files.append(join(f'{profiler_files_path}/property_overview', f))
-            elif (f.find("geo_coord") != -1):
-                geo_coord_file = join(f'{profiler_files_path}/property_overview', f)
+                    quantity_dict[value]["value_distribution"]= join('Wikidata/property_overview', f)
+            else:
+                if(len(f.split("."))==5 and f.split(".")[-2]=="year_distibution" ):
+                    time_files.append(join('Wikidata/property_overview', f))
+        elif(f.find("geo_coord")!=-1):
+            geo_coord_file = join('Wikidata/property_overview', f)
 
+try:
+    df = pd.read_csv(top_property_file,sep='\t', index_col=[0], nrows=K)
+    if df.empty:
+        raise Exception("DF Empty")
+    property_div_table = create_table(df)["table_html"]
+    property_div_bar= create_bar_div(df, 'Number_of_Statements', 'Property_Label' )
+    fig = px.pie(df, values='Number_of_Statements', names='Property_Label', title='Statements Distribution')
+    property_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
+    top_k_property_summary_div= top_k_property_summary_template.format(property_div_table=property_div_table, property_div_bar= property_div_bar, property_div_pie=property_div_pie , K=K)
+except:
+    top_k_property_summary_div=""
+
+example_list=[]
+if 'Property_Label' in df.columns:
+    example_list = df.Property_Label.tolist()
+
+count = 0
+example_tables = ""
+for example_name in example_list:
     try:
-        df = pd.read_csv(top_property_file, sep='\t', index_col=[0], nrows=K)
-        if df.empty:
-            raise Exception("DF Empty")
-        property_div_table = create_table(df)["table_html"]
-        property_div_bar = create_bar_div(df, 'Number_of_Statements', 'Property_Label')
-        fig = px.pie(df, values='Number_of_Statements', names='Property_Label', title='Statements Distribution')
-        property_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
-        top_k_property_summary_div = top_k_property_summary_template.format(property_div_table=property_div_table,
-                                                                            property_div_bar=property_div_bar,
-                                                                            property_div_pie=property_div_pie, K=K)
-    except:
-        print("Top k summary div missing")
-        top_k_property_summary_div = ""
-
-    example_list = []
-    if 'Property_Label' in df.columns:
-        example_list = df.Property_Label.tolist()
-
-    example_tables = ""
-    for example_name in example_list:
-        try:
-            example_name = example_name.replace(" ", "_")
-            if example_name in top_k_properties:
-                example_file = top_k_properties[example_name]
-                df = pd.read_csv(example_file, sep='\t', index_col=[0], nrows=K)
-                if df.empty:
-                    raise Exception("DF Empty")
-                example_div_table = create_desc_table(df)["table_html"]
-                example_tables += top_k_property_unit_template.format(
-                    example_name=example_name, example_div_table=example_div_table)
-        except:
-            print(example_name + " in top k property div missing")
-            continue
-
-    if example_tables == "":
-        example_div = ""
-    else:
-        example_div = example_div_template.format(K=K, example_tables=example_tables)
-
-    top_k_property_div = top_k_property_template.format(top_k_property_summary_div=top_k_property_summary_div,
-                                                        example_div=example_div)
-
-    quantity_div = ""
-
-    df = pd.read_csv(quantity_file, sep='\t', index_col=[0])
-    property_label_list = []
-    if 'Property_Label' in df.columns:
-        property_label_list = df.Property_Label.tolist()
-
-    quantity_coord_time_div = ""
-
-    for property_label in property_label_list:
-        try:
-            k = property_label.replace(" ", "_")
-
-            if k in quantity_dict:
-                v = quantity_dict[k]
-                df = pd.read_csv(v["units_distribution"], sep='\t', index_col=[0], nrows=3)
-                quantity_div_table = create_table(df)["table_html"]
-                quantity_div_bar = create_bar_div(df, 'Number_of_Statements', 'Unit')
-                fig = px.pie(df, values='Number_of_Statements', names='Unit', height=340, width=420)
-                quantity_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
-                df = pd.read_csv(v["value_distribution"], sep='\t')
-                example_name = v["value_distribution"].split(".")[3]
-                fig = px.histogram(df, x="Magnitude", height=340, width=420, nbins=10)
-                fig.update_traces(marker_color='rgb(55,123,181)')
-                fig.update_layout(uniformtext_minsize=3, uniformtext_mode='show', plot_bgcolor='rgba(0, 0, 0, 0)',
-                                  paper_bgcolor='rgba(0, 0, 0, 0)', font=dict(
-                        size=8,
-                        color="gray"
-                    ))
-                quantity_div_histogram = plot(fig, output_type='div', include_plotlyjs=False)
-                quantity_name_with_slash = k + "/"
-                quantity_div += quantity_unit_template.format(quantity_name=k, example_name=example_name,
-                                                              quantity_name_with_slash=quantity_name_with_slash,
-                                                              quantity_div_table=quantity_div_table,
-                                                              quantity_div_bar=quantity_div_bar,
-                                                              quantity_div_pie=quantity_div_pie,
-                                                              quantity_div_histogram=quantity_div_histogram)
-                quantity_coord_time_div = quantity_template.format(quantity_div=quantity_div)
-        except:
-            print(k + " quantity div failed")
-            continue
-
-    try:
-        df = pd.read_csv(geo_coord_file, sep='\t', index_col=[0])
-        if df.empty:
-            raise Exception("DF Empty")
-        fig = px.scatter_mapbox(df, lat="latitude", lon="longitude",
-                                color_discrete_sequence=["fuchsia"], zoom=3, height=320)
-
-        fig.update_layout(mapbox_style="open-street-map")
-        fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-        fig.update_traces(marker_color='rgb(55,123,181)', marker_size=18)
-        coordinate_div = plot(fig, output_type='div', include_plotlyjs=False)
-        coordinate_name = geo_coord_file.split(".")[2]
-        quantity_coord_time_div += geo_coord_template.format(coordinate_div=coordinate_div,
-                                                             coordinate_name=coordinate_name)
-    except:
-        quantity_coord_time_div += ""
-
-    time_div = ""
-
-    for tf in time_files:
-        try:
-            time_name = tf.split(".")[2]
-            df = pd.read_csv(tf, sep='\t')
+        example_name  = example_name.replace(" ", "_")
+        if example_name in top_k_properties:
+            example_file= top_k_properties[example_name ]
+            df = pd.read_csv(example_file,sep='\t', index_col=[0], nrows=K)
             if df.empty:
                 raise Exception("DF Empty")
-            cols = list(df.columns)
-            labels_names = cols[1:]
+            example_div_table = create_desc_table(df)["table_html"]
+            example_tables+=top_k_property_unit_template.format(
+            example_name= example_name, example_div_table= example_div_table)
+            count= count+1
+    except:
+        continue
 
-            fig = px.bar(df, x=cols[0], y=labels_names, barmode='stack', range_x=[1800, 2050], width=1000,
-                         orientation='v')
-            # fig = px.histogram(df, x="Year",y="Count", labels={'x':'Year', 'y':'Count'},height=340, width=420, nbins=10)
-            # fig.update_traces(marker_color='rgb(55,123,181)')
-            fig.update_layout(uniformtext_minsize=3, barmode='relative', bargap=0, bargroupgap=0,
-                              uniformtext_mode='show', plot_bgcolor='rgba(0, 0, 0, 0)',
-                              paper_bgcolor='rgba(0, 0, 0, 0)', font=dict(
+if example_tables=="":
+    example_div=""
+else:
+    example_div= example_div_template.format( K=count, example_tables=example_tables)
+
+top_k_property_div = top_k_property_template.format(top_k_property_summary_div= top_k_property_summary_div, example_div=example_div)
+
+quantity_div=""
+
+df = pd.read_csv(quantity_file,sep='\t', index_col=[0])
+property_label_list=[]
+if 'Property_Label' in df.columns:
+    property_label_list = df.Property_Label.tolist()
+
+quantity_coord_time_div=""
+
+for property_label in property_label_list:
+    try:
+        k = property_label.replace(" ", "_")
+
+        if k in quantity_dict:
+            v = quantity_dict[k]
+            df = pd.read_csv(v["units_distribution"],sep='\t', index_col=[0],nrows=3)
+            quantity_div_table = create_table(df)["table_html"]
+            quantity_div_bar= create_bar_div(df, 'Number_of_Statements', 'Unit' )
+            fig = px.pie(df, values='Number_of_Statements', names='Unit', height=340, width=420)
+            quantity_div_pie = plot(fig, output_type='div', include_plotlyjs=False)
+            df = pd.read_csv(v["value_distribution"],sep='\t')
+            example_name= v["value_distribution"].split(".")[3]
+            fig = px.histogram(df, x="Magnitude" ,height=340, width=420, nbins=10)
+            fig.update_traces(marker_color='rgb(55,123,181)')
+            fig.update_layout(uniformtext_minsize=3, uniformtext_mode='show' , plot_bgcolor='rgba(0, 0, 0, 0)',
+            paper_bgcolor= 'rgba(0, 0, 0, 0)',font=dict(
                     size=8,
                     color="gray"
-                ))
+                    ))
+            quantity_div_histogram = plot(fig, output_type='div', include_plotlyjs=False)
+            quantity_name_with_slash= k+"/"
+            quantity_div+=quantity_unit_template.format(quantity_name = k,example_name=example_name,quantity_name_with_slash= quantity_name_with_slash, quantity_div_table=quantity_div_table,quantity_div_bar=quantity_div_bar, quantity_div_pie=quantity_div_pie, quantity_div_histogram =quantity_div_histogram )
+            quantity_coord_time_div= quantity_template.format(quantity_div=quantity_div)
+    except:
+        continue
 
-            fig.update_xaxes(title_text='Year')
-            time_div_histogram = plot(fig, output_type='div', include_plotlyjs=False)
-            time_div += time_div_template.format(time_name=time_name, time_div_histogram=time_div_histogram)
-        except:
-            print(time_name + " div missing")
+try:
+    df = pd.read_csv(geo_coord_file,sep='\t', index_col=[0])
+    if df.empty:
+        raise Exception("DF Empty")
+    fig = px.scatter_mapbox(df, lat="latitude", lon="longitude",
+                        color_discrete_sequence=["fuchsia"], zoom=3, height=320)
 
-    time_template = time_template_template.format(time_div=time_div)
-    quantity_coord_time_div += time_template
-    property_div = top_k_property_div + quantity_coord_time_div
+    fig.update_layout(mapbox_style="open-street-map")
+    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    fig.update_traces(marker_color='rgb(55,123,181)', marker_size=18)
+    coordinate_div = plot(fig, output_type='div', include_plotlyjs=False)
+    coordinate_name= geo_coord_file.split(".")[2]
+    quantity_coord_time_div+=geo_coord_template.format(coordinate_div= coordinate_div, coordinate_name = coordinate_name)
+except:
+    quantity_coord_time_div+=""
 
-    ## FINAL FORMATTING OF BASE TEMPLATE
 
-    with open('report.html', 'w') as f:
-        f.write(base_template.format(
-            style=style_template,
-            overview_div=overview_div,
-            class_div=class_div,
-            property_div=property_div,
-            criteria_ranking=criteria_ranking,
-        ))
+time_div=""
 
+for tf in time_files:
+    try:
+        time_name= tf.split(".")[2]
+        df = pd.read_csv(tf,sep='\t')
+        if df.empty:
+            raise Exception("DF Empty")
+        cols=list(df.columns)
+        labels_names= cols[1:]
+
+        fig = px.bar(df, x=cols[0], y=labels_names, barmode = 'stack',range_x=[1800,2050], width=1000,orientation='v')
+        fig.update_layout(uniformtext_minsize=3, barmode='relative', bargap=0, bargroupgap=0,uniformtext_mode='show' , plot_bgcolor='rgba(0, 0, 0, 0)',
+        paper_bgcolor= 'rgba(0, 0, 0, 0)',font=dict(
+            size=8,
+            color="gray"
+            ))
+
+        fig.update_xaxes(title_text='Year')
+        time_div_histogram = plot(fig, output_type='div', include_plotlyjs=False)
+        time_div+=time_div_template.format(time_name=time_name, time_div_histogram=time_div_histogram)
+    except:
+        continue
+
+time_template=time_template.format(time_div= time_div)
+quantity_coord_time_div+=time_template
+property_div= top_k_property_div+quantity_coord_time_div
+
+
+## FINAL FORMATTING OF BASE TEMPLATE
+
+with open('report.html', 'w') as f:
+    f.write(base_template.format(
+        style= style_template,
+        overview_div=overview_div,
+        class_div= class_div,
+        property_div= property_div,
+        criteria_ranking= criteria_ranking,
+    ))
