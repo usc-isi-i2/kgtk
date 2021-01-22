@@ -39,12 +39,23 @@
     cd tutorial
     cp tutorial.conf.json.template tutorial.conf.json
 ```
-Update the required parameters in the `template.conf.json` file as:
+Update the required parameters in the `tutorial.conf.json` file as:
  - `output_path`: Path to the output folder where the files created by the tutorial notebooks will stored.
- - `kgtk_path`: Path where `kgtk` repository is cloned
- - `wikidata_folder`: Path to the input wikidata files
+ - `kgtk_path`: Path to the folder where `kgtk` repository is cloned
+ - `wikidata_folder`: Path to the input wikidata files folder
  - `wikidata_sqlite3_db_path`: Path to the `wikidata.sqlite3.db` file downloaded in the previous step
  - `text_embedding_path`: Path to the `text-embedding.tsv` file downloaded in the previous step
+
+A sample `tutorial.conf.json file:
+```
+{
+	"output_path": "/Users/amandeep/Documents/kypher",
+	"kgtk_path": "/Users/amandeep/Github/kgtk",
+	"wikidata_folder": "/Volumes/GoogleDrive/Shared drives/KGTK/datasets/wikidataos-v4/",
+	"wikidata_sqlite3_db_path": "/Users/amandeep/Downloads/wikidata.sqlite3.db",
+	"text_embedding_path": "/Users/amandeep/Downloads/text-embedding.tsv"
+}
+```
 10. Start jupyter lab
 ```
   jupyter lab
