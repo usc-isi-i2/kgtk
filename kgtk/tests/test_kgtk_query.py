@@ -365,6 +365,20 @@ class TestKGTKQuery(unittest.TestCase):
                 self.assertEqual(row['node2'], 'Molly')
                 self.assertEqual(row['node2;work'], 'Renal')
 
+    def test_kgtk_query_multi_graph_ambiguous_return_alias(self):
+        # Tests bug fix for case where 'node1'/'node2' return aliases are ambiguous for the two input graphs..
+        cli_entry("kgtk", "query",
+                  "-i", self.file_path, "-i", self.works_path, "-o", f'{self.temp_dir}/out.tsv',
+                  "--match", "g: (:Susi)<-[:loves]-(n1), (n1)-[prop]->(), w: (n1)-[]->(n2)",
+                  "--return", "distinct prop.label, count(prop.label) as node1, n2 as node2",
+                  "--order-by", "node1 desc",
+                  "--graph-cache", self.sqldb)
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 2)
+        for i, row in df.iterrows():
+            self.assertEqual(row['node1'], 2)
+            self.assertEqual(row['node2'], 'Kaiser')
+                
     def test_kgtk_query_max(self):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
