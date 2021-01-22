@@ -6,10 +6,13 @@ operations.
 
 Input files are assumed to be valid, multi-column KGTK files and can
 be piped in from stdin or named explicitly.  Named input files can
-also be optionally compressed.  Output goes to stdout or the specified output file which will be transparently compressed according to its file extension.
+also be optionally compressed.  Output goes to stdout or the specified
+output file which will be transparently compressed according to its file extension.
 
 !!! note
-    <b>Important restriction:</b> Command pipes must contain **at most** one query command due to database locking considerations.  Future versions will relax this restriction.
+    <b>Important restriction:</b> Command pipes must contain **at most** one query command
+    due to database locking considerations.  Future versions will relax this restriction.
+
 
 ## Usage
 ```
@@ -120,11 +123,11 @@ instead of the full file name.  We use quotes around the match pattern
 to protect it from interpretation by the shell. The result of the queries are shown in tables to facilitate readibility:
 
 ```
+ > DATA_HOME=kgtk/tests/data/kypher
  > GRAPH=$DATA_HOME/graph.tsv
     
- > kgtk query -i $GRAPH --match '()-[]->;()'
+ > kgtk query -i $GRAPH --match '()-[]->()'
 ```
-
 Result:
 
 |     id  | node1 | label  | node2     |
@@ -174,7 +177,6 @@ will be produced (not counting the header line):
 ```
 > kgtk query -i $GRAPH --limit 3
 ```
-
 Result:
 
 |  id     | node1 | label  | node2 |
@@ -183,14 +185,12 @@ Result:
 |     e12 | Otto  | loves  | Susi  |
 |     e13 | Joe   | friend | Otto  |
 
-
 Similarly, `--skip N` can be used to skip `N` result rows first before
 any of them are output which can then be further limited with `--limit`:
 
 ```
 > kgtk query -i $GRAPH --skip 2 --limit 3
 ```
-
 Result:
 
 | id      | node1 | label  | node2     |
@@ -222,7 +222,7 @@ start with `Hans` using Kypher's colon-restriction syntax in the
 from-node of the pattern:
 
 ```
-> kgtk query -i $GRAPH --match '(:Hans)-[]->;()'
+> kgtk query -i $GRAPH --match '(:Hans)-[]->()'
 ```
 Result:
 
@@ -244,7 +244,6 @@ syntax on the relation part of the pattern:
 ```
 > kgtk query -i $GRAPH --match '()-[:name]->()'
 ```
-
 Result:
 
 | id      | node1 | label | node2     |
@@ -255,7 +254,6 @@ Result:
 |     e24 | Molly | name  | "Molly"   |
 |     e25 | Susi  | name  | "Susi"    |
 
-
 For relations, the interpretation of restrictions on the label of an
 edge (as opposed to its `id`) is more in line with standard Cypher.
 
@@ -265,13 +263,11 @@ select all `name` edges starting from node `Otto`:
 ```
  > kgtk query -i $GRAPH --match '(:Otto)-[:name]->()'
 ```
-
 Result:
 
 | id  | node1 | label | node2     |
 | --- | ----- | ----- | --------- |
 | e22 | Otto  | name  | 'Otto'@de |
-
 
 
 ### Filtering with the `--where` clause
@@ -298,7 +294,6 @@ pattern:
     --match '(p)-[:name]->()' \
     --where 'p = "Otto"'
 ```
-
 Result:
 
 |  id     | node1 | label | node2     |
@@ -330,7 +325,6 @@ edges that lead to a name that contains a double letter:
     --match '(p)-[:name]->(n)' \
     --where 'n =~ ".*(.)\\1.*"'
 ```
-
 Result:
 
 | id      | node1 | label | node2     |
@@ -348,14 +342,12 @@ or numbers, but not variables or other expressions which is legal in Cypher:
     --match '(p)-[:name]->(n)' \
     --where 'p IN ["Hans", "Susi"]'
 ```
-
-Results:
+Result:
 
 |    id   | node1 | label | node2     |
 | ------- | ----- | ----- | --------- |
 |     e21 | Hans  | name  | 'Hans'@de |
 |     e25 | Susi  | name  | "Susi"    |
-
 
 Another way to filter edges is by using a comparison operator
 coupled with a computation using built-in functions.  Note that all
@@ -375,7 +367,6 @@ used in `--where` and other Kypher clauses that accept expressions
     --match '(p)-[:name]->(n)' \
     --where "substr(n,2,1) >= 'J'"
 ```
-
 Result:
 
 | id      | node1 | label | node2     |
@@ -384,7 +375,6 @@ Result:
 |     e23 | Joe   | name  | "Joe"     |
 |     e24 | Molly | name  | "Molly"   |
 |     e25 | Susi  | name  | "Susi"    |
-
 
 
 ### Sorting results with the `--order-by` clause
@@ -398,7 +388,6 @@ For example, the following query sorts by names in ascending order.
     --where "upper(substr(n,2,1)) >= 'J'" \
     --order-by n
 ```
-
 Result:
 
 | id      | node1 | label | node2     |
@@ -423,7 +412,6 @@ example we also use the `desc` keyword to sort in descending order:
     --where "substr(n,2,1) >= 'J'" \
     --order-by "substr(n,2,1) desc"
 ```
-
 Result:
 
 |     id  | node1 | label | node2     |
@@ -458,7 +446,6 @@ since it is missing the `id` and `label` columns:
          --where 'n =~ ".*(.)\\1.*"' \
          --return 'p, n'
 ```
-
 Result:
 
 |     node1 | node2     |
@@ -485,7 +472,6 @@ valid KGTK as output (the order of columns does not matter):
     --where 'n =~ ".*(.)\\1.*"' \
     --return 'p, n, r, r.label'
 ```
-
 Result:
 
 | node1     | node2     | id  | label |
@@ -493,12 +479,12 @@ Result:
 |     Otto  | 'Otto'@de | e22 | name  |
 |     Molly | "Molly"   | e24 | name  |
 
-One of the most powerful features of Kypher is that we can transform values into new
-ones building modified or completely new edges.  Many useful
-transformations can be performed by applying built-in functions
-to the columns specified in a `--return` clause.  For example,
-below we change the names of the selected edges by converting them
-to lowercase using another one of SQLite3's built-in functions:
+One of the most powerful features of Kypher is that we can transform
+values into new ones building modified or completely new edges.  Many
+useful transformations can be performed by applying built-in functions
+to the columns specified in a `--return` clause.  For example, below
+we change the names of the selected edges by converting them to
+lowercase using another one of SQLite3's built-in functions:
 
 ```
 > kgtk query -i $GRAPH \
@@ -506,7 +492,6 @@ to lowercase using another one of SQLite3's built-in functions:
     --where 'n =~ ".*(.)\\1.*"' \
     --return 'p, r.label, lower(n), r'
 ```
-
 Result:
 
 | node1     | label | lower(graph_2_c1."node2") | id  |
@@ -527,7 +512,6 @@ column name we want.  For example:
     --where 'n =~ ".*(.)\\1.*"' \
     --return 'p, r.label, lower(n) as node2, r'
 ```
-
 Result:
 
 | node1     | label | node2     | id  |
@@ -551,14 +535,12 @@ column names:
     --where 'n =~ ".*(.)\\1.*"' \
     --return 'kgtk_stringify(p) as node1, r.label, kgtk_unstringify(n) as node2, r'
 ```
-
 Result: 
 
 | node1       | label | node2     | id  |
 | ----------- | ----- | --------- | --- |
 |     "Otto"  | name  | 'Otto'@de | e22 |
 |     "Molly" | name  | Molly     | e24 |
-
 
 Since subcomponents of structured literals such as the language field
 in a language-qualified string can be interpreted as *virtual*
@@ -576,7 +558,6 @@ Kypher - see [ref <b>Quoting</b>] for more details).
     --where 'kgtk_lqstring(n)' \
     --return 'r, p, r.label, lower(n) as node2, n.kgtk_lqstring_lang as `node2;lang`'
 ```
-
 Result:
 
 | id      | node1 | label | node2     | node2;lang |
@@ -603,13 +584,15 @@ single path following arrows in both directions, but other formulations are poss
     --return 'r, na as node1, r.label, nb as node2'
 ```
 Result:
+
 | id      | node1     | label | node2   |
 | ------- | --------- | ----- | ------- |
 |     e14 | "Joe"     | loves | "Joe"   |
 |     e11 | 'Hans'@de | loves | "Molly" |
 |     e12 | 'Otto'@de | loves | "Susi"  |
 
-Here is a variant of the above that looks for circular edges so we can find all people (in this dataset) who are in love with themselves:
+Here is a variant of the above that looks for circular edges so we can
+find all people (in this dataset) who are in love with themselves:
 
 ```
 > kgtk query -i $GRAPH \
@@ -617,6 +600,7 @@ Here is a variant of the above that looks for circular edges so we can find all 
     --return 'r, na as node1, r.label, nb as node2'
 ```
 Result:
+
 | id      | node1 | label | node2 |
 | ------- | ----- | ----- | ----- |
 |     e14 | "Joe" | loves | "Joe" |
@@ -632,6 +616,7 @@ here we only select starting edges where at least one of the nodes has a German 
     --return 'r, na as node1, r.label, nb as node2'
 ```
 Result:
+
 | id      | node1     | label | node2   |
 | ------- | --------- | ----- | ------- |
 |     e11 | 'Hans'@de | loves | "Molly" |
@@ -703,7 +688,7 @@ and all following clauses are associated with the named graph, either
 until the end of the pattern is reached, or until a different graph
 variable is introduced.  For example, the pattern:
 ```
-g: (x)-[:loves]->;(y)
+g: (x)-[:loves]->(y)
 ```
 means that the edge should be matched against edges from graph `g`.
 
@@ -725,10 +710,11 @@ exist as `node1`s in graph `w`:
 
 ```
 > kgtk query -i $GRAPH -i $WORKS \
-    --match 'g: (x)-[:loves]->(y), w: (y)-[:works]-(c)' \
+    --match 'g: (x)-[r:loves]->(y), w: (y)-[:works]->(c)' \
     --return 'r, x, r.label, y, c as `node2;employer`'
 ```
 Result:
+
 | id      | node1 | label | node2 | node2;employer |
 | ------- | ----- | ----- | ----- | -------------- |
 |     e14 | Joe   | loves | Joe   | Kaiser         |
@@ -741,7 +727,7 @@ so the order in which input files are specified is important:
 
 ```
 > kgtk query -i $GRAPH -i $WORKS \
-    --match '(x)-[:loves]->(y), w: (y)-[:works]-(c)' \
+    --match '(x)-[r:loves]->(y), w: (y)-[:works]->(c)' \
     --return 'r, x, r.label, y, c as `node2;employer`'
 ```    
 Result:
@@ -751,7 +737,6 @@ Result:
 |     e14 | Joe   | loves | Joe   | Kaiser         |
 |     e11 | Hans  | loves | Molly | Renal          |
 |     e12 | Otto  | loves | Susi  | Cakes          |
-</pre>
 
 As before the `--where` clause can be used to restrict matches further, and it
 may of course restrict variables from any graph.  Let us query for employees
@@ -776,18 +761,17 @@ as well as in where and return specifications to access and restrict those value
 
 ```
 > kgtk query -i $GRAPH -i $WORKS \
-    --match 'g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]-(c)' \
+    --match 'g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]->(c)' \
     --where 's >= 10000' \
     --return 'r, x, r.label, y as node2, c as `node2;work`, s as `node2;salary`'
 ```
 Result:
 
-  |   id    | node1 | label | node2 | node2;work | node2;salary |
+|   id    | node1 | label | node2 | node2;work | node2;salary |
 | ------- | ----- | ----- | ----- | ---------- | ------------ |
 |     e14 | Joe   | loves | Joe   | Kaiser     | 20000        |
 |     e11 | Hans  | loves | Molly | Renal      | 11000        |
 |     e12 | Otto  | loves | Susi  | Cakes      | 9900         |
-
 
 From the last result row above it looks as if the restriction didn't
 really work correctly, since that salary is less than 10000.  The
@@ -801,11 +785,10 @@ this is with the SQLite built-in `cast`:
 
 ```
 > kgtk query -i $GRAPH -i $WORKS \
-    --match 'g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]-(c)' \
+    --match 'g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]->(c)' \
     --where 'cast(s, integer) >= 10000' \
     --return 'r, x, r.label, y as node2, c as `node2;work`, s as `node2;salary`'
 ```
-
 Result:
 
 | id      | node1 | label | node2 | node2;work | node2;salary |
@@ -818,11 +801,10 @@ which in this case accesses the numeric value of a quantity literal as a number:
 
 ```
 > kgtk query -i $GRAPH -i $WORKS \
-    --match 'g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]-(c)' \
+    --match 'g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]->(c)' \
     --where 's.kgtk_quantity_number >= 10000' \
     --return 'r, x, r.label, y as node2, c as `node2;work`, s as `node2;salary`'
 ```
-
 Result: 
 
 | id      | node1 | label | node2 | node2;work | node2;salary |
@@ -895,7 +877,7 @@ Person with biggest salary:
 
 <pre><i>
     > kgtk --debug query -i $WORKS \
-         --match 'w: (y {salary: s})-[r:works]-(c)' \
+         --match 'w: (y {salary: s})-[r:works]->(c)' \
          --return 'max(cast(s, int)) as `node1;salary`, y, "works" as label, c, r'
 </i>    [2020-10-16 13:37:19 query]: SQL Translation:
     ---------------------------------------------
