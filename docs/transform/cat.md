@@ -357,7 +357,8 @@ kgtk cat -i examples/docs/no-header.tsv --mode=NONE
 We can supply a valid header line as follows:
 
 ```bash
-kgtk cat -i examples/docs/no-header.tsv --force-column-names id node1 label node2
+kgtk cat -i examples/docs/no-header.tsv \
+         --force-column-names id node1 label node2
 ```
 
 The result will be the following file in KGTK format:
@@ -390,7 +391,9 @@ Overriding the column names on input can be done by skipping the existing
 header record and supplying a replacement list of column names.
 
 ```bash
-kgtk cat -i examples/docs/not-kgtk.tsv --skip-header-record --force-column-names id node1 label node2
+kgtk cat -i examples/docs/not-kgtk.tsv \
+         --skip-header-record \
+	 --force-column-names id node1 label node2
 ```
 
 The result will be the following file in KGTK format:
@@ -433,7 +436,8 @@ Renaming the column names on output can by done two ways.  First, you can name
 all of the new column names using --output-columns.
 
 ```bash
-kgtk cat -i examples/docs/movies_origin_destination.tsv --mode=NONE --output-columns node1 label node2 years
+kgtk cat -i examples/docs/movies_origin_destination.tsv --mode=NONE \
+         --output-columns node1 label node2 years
 ```
 
 The result will be the following table in KGTK format:
