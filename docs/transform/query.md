@@ -124,6 +124,7 @@ to protect it from interpretation by the shell. The result of the queries are sh
     
  > kgtk query -i $GRAPH --match '()-[]->;()'
 ```
+
 Result:
 
 |     id  | node1 | label  | node2     |
@@ -173,7 +174,9 @@ will be produced (not counting the header line):
 ```
 > kgtk query -i $GRAPH --limit 3
 ```
+
 Result:
+
 |  id     | node1 | label  | node2 |
 | ------- | ----- | ------ | ----- |
 |     e11 | Hans  | loves  | Molly |
@@ -187,6 +190,7 @@ any of them are output which can then be further limited with `--limit`:
 ```
 > kgtk query -i $GRAPH --skip 2 --limit 3
 ```
+
 Result:
 
 | id      | node1 | label  | node2     |
@@ -203,7 +207,9 @@ the KGTK file format:
 ```
 > kgtk query -i $GRAPH | tail +3 | head -3
 ```
+
 Result:
+
 | e12     | Otto | loves  | Susi |
 | ------- | ---- | ------ | ---- |
 |     e13 | Joe  | friend | Otto |
@@ -238,6 +244,9 @@ syntax on the relation part of the pattern:
 ```
 > kgtk query -i $GRAPH --match '()-[:name]->()'
 ```
+
+Result:
+
 | id      | node1 | label | node2     |
 | ------- | ----- | ----- | --------- |
 |     e21 | Hans  | name  | 'Hans'@de |
@@ -256,6 +265,8 @@ select all `name` edges starting from node `Otto`:
 ```
  > kgtk query -i $GRAPH --match '(:Otto)-[:name]->()'
 ```
+
+Result:
 
 | id  | node1 | label | node2     |
 | --- | ----- | ----- | --------- |
@@ -287,6 +298,7 @@ pattern:
     --match '(p)-[:name]->()' \
     --where 'p = "Otto"'
 ```
+
 Result:
 
 |  id     | node1 | label | node2     |
@@ -318,7 +330,9 @@ edges that lead to a name that contains a double letter:
     --match '(p)-[:name]->(n)' \
     --where 'n =~ ".*(.)\\1.*"'
 ```
+
 Result:
+
 | id      | node1 | label | node2     |
 | ------- | ----- | ----- | --------- |
 |     e22 | Otto  | name  | 'Otto'@de |
@@ -334,7 +348,9 @@ or numbers, but not variables or other expressions which is legal in Cypher:
     --match '(p)-[:name]->(n)' \
     --where 'p IN ["Hans", "Susi"]'
 ```
+
 Results:
+
 |    id   | node1 | label | node2     |
 | ------- | ----- | ----- | --------- |
 |     e21 | Hans  | name  | 'Hans'@de |
@@ -359,7 +375,9 @@ used in `--where` and other Kypher clauses that accept expressions
     --match '(p)-[:name]->(n)' \
     --where "substr(n,2,1) >= 'J'"
 ```
+
 Result:
+
 | id      | node1 | label | node2     |
 | ------- | ----- | ----- | --------- |
 |     e22 | Otto  | name  | 'Otto'@de |
@@ -380,7 +398,9 @@ For example, the following query sorts by names in ascending order.
     --where "upper(substr(n,2,1)) >= 'J'" \
     --order-by n
 ```
+
 Result:
+
 | id      | node1 | label | node2     |
 | ------- | ----- | ----- | --------- |
 |     e23 | Joe   | name  | "Joe"     |
@@ -403,7 +423,9 @@ example we also use the `desc` keyword to sort in descending order:
     --where "substr(n,2,1) >= 'J'" \
     --order-by "substr(n,2,1) desc"
 ```
+
 Result:
+
 |     id  | node1 | label | node2     |
 | ------- | ----- | ----- | --------- |
 |     e25 | Susi  | name  | "Susi"    |
@@ -436,7 +458,9 @@ since it is missing the `id` and `label` columns:
          --where 'n =~ ".*(.)\\1.*"' \
          --return 'p, n'
 ```
+
 Result:
+
 |     node1 | node2     |
 | --------- | --------- |
 |     Otto  | 'Otto'@de |
@@ -461,7 +485,9 @@ valid KGTK as output (the order of columns does not matter):
     --where 'n =~ ".*(.)\\1.*"' \
     --return 'p, n, r, r.label'
 ```
+
 Result:
+
 | node1     | node2     | id  | label |
 | --------- | --------- | --- | ----- |
 |     Otto  | 'Otto'@de | e22 | name  |
@@ -480,7 +506,9 @@ to lowercase using another one of SQLite3's built-in functions:
     --where 'n =~ ".*(.)\\1.*"' \
     --return 'p, r.label, lower(n), r'
 ```
+
 Result:
+
 | node1     | label | lower(graph_2_c1."node2") | id  |
 | --------- | ----- | ------------------------- | --- |
 |     Otto  | name  | 'otto'@de                 | e22 |
@@ -499,7 +527,9 @@ column name we want.  For example:
     --where 'n =~ ".*(.)\\1.*"' \
     --return 'p, r.label, lower(n) as node2, r'
 ```
+
 Result:
+
 | node1     | label | node2     | id  |
 | --------- | ----- | --------- | --- |
 |     Otto  | name  | 'otto'@de | e22 |
@@ -521,7 +551,9 @@ column names:
     --where 'n =~ ".*(.)\\1.*"' \
     --return 'kgtk_stringify(p) as node1, r.label, kgtk_unstringify(n) as node2, r'
 ```
+
 Result: 
+
 | node1       | label | node2     | id  |
 | ----------- | ----- | --------- | --- |
 |     "Otto"  | name  | 'Otto'@de | e22 |
@@ -544,7 +576,9 @@ Kypher - see [ref <b>Quoting</b>] for more details).
     --where 'kgtk_lqstring(n)' \
     --return 'r, p, r.label, lower(n) as node2, n.kgtk_lqstring_lang as `node2;lang`'
 ```
+
 Result:
+
 | id      | node1 | label | node2     | node2;lang |
 | ------- | ----- | ----- | --------- | ---------- |
 |     e21 | Hans  | name  | 'Hans'@de | de         |
@@ -771,6 +805,9 @@ this is with the SQLite built-in `cast`:
     --where 'cast(s, integer) >= 10000' \
     --return 'r, x, r.label, y as node2, c as `node2;work`, s as `node2;salary`'
 ```
+
+Result:
+
 | id      | node1 | label | node2 | node2;work | node2;salary |
 | ------- | ----- | ----- | ----- | ---------- | ------------ |
 |     e14 | Joe   | loves | Joe   | Kaiser     | 20000        |
@@ -785,6 +822,8 @@ which in this case accesses the numeric value of a quantity literal as a number:
     --where 's.kgtk_quantity_number >= 10000' \
     --return 'r, x, r.label, y as node2, c as `node2;work`, s as `node2;salary`'
 ```
+
+Result: 
 
 | id      | node1 | label | node2 | node2;work | node2;salary |
 | ------- | ----- | ----- | ----- | ---------- | ------------ |
