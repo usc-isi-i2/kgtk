@@ -46,7 +46,7 @@ Update the required parameters in the `tutorial.conf.json` file as:
  - `wikidata_sqlite3_db_path`: Path to the `wikidata.sqlite3.db` file downloaded in the previous step
  - `text_embedding_path`: Path to the `text-embedding.tsv` file downloaded in the previous step
 
-A sample `tutorial.conf.json file:
+A sample `tutorial.conf.json` file:
 ```
 {
 	"output_path": "/Users/amandeep/Documents/kypher",
