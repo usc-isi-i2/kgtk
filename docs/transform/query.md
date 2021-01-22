@@ -714,6 +714,7 @@ exist as `node1`s in graph `w`:
     --return 'r, x, r.label, y, c as `node2;employer`'
 ```
 Result:
+
 | id      | node1 | label | node2 | node2;employer |
 | ------- | ----- | ----- | ----- | -------------- |
 |     e14 | Joe   | loves | Joe   | Kaiser         |
