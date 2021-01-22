@@ -8,8 +8,7 @@
 ```
 2. Install `kgtk` from the `dev` branch,
 ```
-  git clone https://github.com/usc-isi-i2/kgtk
-  cd kgtk
+  cd <kgtk_root_folder>
   git checkout dev
   pip install -e .
 ```
@@ -34,8 +33,13 @@
 ```
   python -m ipykernel install --user --name=kgtk-env
 ```
-8. Start jupyter lab
+8. Create the config file required for tutorial
 ```
-  cd tutorial
+    cd tutorial
+    cp tutorial.conf.json.template tutorial.conf.json
+```
+9. Update the required parameters in `tutorial.conf.json`
+10. Start jupyter lab
+```
   jupyter lab
 ```
