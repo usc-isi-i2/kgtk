@@ -13,9 +13,9 @@ def parser():
         'help': 'Convert a KGTK file to a GitHub Markdown Table.',
         'description': 'Convert a KGTK input file to a GitHub markdown table on output. ' +
         '\n\nUse this command to filter the output of any KGTK command: ' +
-        '\n\nkgtk md ' +
+        '\n\nkgtk xxx / md ' +
         '\n\nUse it to convert a KGTK file to a GitHub Markdown table in a file: ' +
-        '\n\nkgtk md file.tsv ' +
+        '\n\nkgtk md -i file.tsv -o file.md' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert md --help'
     }
 
