@@ -482,7 +482,9 @@ class RelationshipPattern(QueryElement):
         # TO DO: handle implied clauses from properties
         query = self._query
         labels = self.labels
+        arrow = self.arrow
         assert labels is None or len(labels) == 1, 'Multiple relationship labels are not (yet) allowed'
+        assert arrow != '--', 'Undirected relationships are not (yet) allowed'
         if self.is_anonymous():
             self.variable = query.create_anonymous_variable()
         return self
