@@ -634,11 +634,15 @@ def create_desc_table(df):
     for row in df.itertuples():
         table_html += """<div ><div style="font-size:0.85rem;font-weight:550; width:35%;color:rgb(55,123,181);text-align:left;float:left;">"""
         val = row[1]
+        if pd.isnull(val):
+            val=""
         table_html += str(val)
         table_html += """</div> <div style="font-size:0.80rem;text-align:left; white-space: nowrap;
         width:65%;float:right;overflow:hidden;text-overflow: ellipsis;">"""
         val = row[2]
-        if isinstance(val, float):
+        if pd.isnull(val):
+            val=""
+        elif isinstance(val, float):
             val = '{:.4g}'.format(val)
 
         val = str(val)
