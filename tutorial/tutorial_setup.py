@@ -40,6 +40,10 @@ temp_folder = "temp.wikidata_os_v5"
 # The location of input Wikidata files
 wikidata_folder = conf['wikidata_folder']
 
+wikidata_sqlite3_db_path = conf['wikidata_sqlite3_db_path']
+
+text_embedding_path = conf['text_embedding_path']
+
 # The wikidata_os files can be downloaded from https://drive.google.com/drive/u/1/folders/1ukXXHqSCcFXE2xpvhqQ2AGAD5y2ue_c7
 
 # Location of the cache database for kypher
@@ -74,6 +78,9 @@ file_names = {
 # We will define environment variables to hold the full paths to the files as we will use them in the shell commands
 kgtk_environment_variables = []
 
+if text_embedding_path and text_embedding_path.strip() != "":
+    os.environ['text_embedding_path'] = text_embedding_path
+
 os.environ['WIKIDATA'] = wikidata_folder
 kgtk_environment_variables.append('WIKIDATA')
 
@@ -84,10 +91,14 @@ for key, value in file_names.items():
 
     
 # KGTK creates a SQLite database to index the knowledge graph.
-if cache_path:
-    os.environ['STORE'] = "{}/wikidata.sqlite3.db".format(cache_path)
+if wikidata_sqlite3_db_path and wikidata_sqlite3_db_path.strip() != "":
+    os.environ['STORE'] = wikidata_sqlite3_db_path
 else:
-    os.environ['STORE'] = "{}/{}/wikidata.sqlite3.db".format(output_path, temp_folder)
+    if cache_path:
+        os.environ['STORE'] = "{}/wikidata.sqlite3.db".format(cache_path)
+    else:
+        os.environ['STORE'] = "{}/{}/wikidata.sqlite3.db".format(output_path, temp_folder)
+        
 kgtk_environment_variables.append('STORE')
 
 # We will create many temporary files, so set up a folder for outputs and one for the temporary files.
