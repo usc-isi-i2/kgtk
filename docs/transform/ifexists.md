@@ -5,7 +5,7 @@ passing through only those rows for which one or more specified columns
 match records in a second KGTK file (the filter file, specified by `--filter-on`).
 
 !!! note
-    The `kgtk ifnotexists` command computes the inverse output of this command.
+    The [`kgtk ifnotexists`](https:../ifnotexists/) command computes the inverse output of this command.
 
 ### Memory Usage Options
 
