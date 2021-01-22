@@ -155,6 +155,9 @@ kgtk cat -i examples/docs/ifexists-file1.tsv
 | j1 | john | title | programmer |  |  |
 | j2 | john | zipcode | 12345 | home | 10 |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 !!! note
     This is a KGTK edge file.
@@ -321,6 +324,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | -- | -- | -- | -- | -- | -- |
 | p2 | peter | zipcode | 12040 | home |  |
 | j2 | john | zipcode | 12345 | home | 10 |
+| k2 | kathy | zipcode | 12040 | home |  |
 
 !!! note
     This used the key field comparison:
@@ -350,6 +354,8 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | p3 | peter | zipcode | 12040 | work | 6 |
 | s2 | steve | zipcode | 45601 |  | 3 |
 | s3 | steve | zipcode | 45601 | work |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 !!! note
     This used the key field comparison:
@@ -385,6 +391,8 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | p3 | peter | zipcode | 12040 | work | 6 |
 | s2 | steve | zipcode | 45601 |  | 3 |
 | s3 | steve | zipcode | 45601 | work |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 ```bash
 kgtk cat -i ifexists-matched-filter.tsv --mode NONE
@@ -466,6 +474,9 @@ kgtk cat -i ifexists-rejects.tsv
 | s3 | steve | zipcode | 45601 | work |  |
 | j2 | john | zipcode | 12345 | home | 10 |
 | j2 | john | zipcode | 12346 |  |  |
+| k1 | kathy | title | owner |  |  |
+| k2 | kathy | zipcode | 12040 | home |  |
+| k3 | kathy | zipcode | 12040 | work | 6 |
 
 !!! note
     If the intent of the filter was to separate all title records by edge
