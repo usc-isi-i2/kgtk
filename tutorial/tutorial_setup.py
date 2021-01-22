@@ -40,9 +40,9 @@ temp_folder = "temp.wikidata_os_v5"
 # The location of input Wikidata files
 wikidata_folder = conf['wikidata_folder']
 
-wikidata_sqlite3_db_path = conf['wikidata_sqlite3_db_path']
+wikidata_sqlite3_db_path = conf.get('wikidata_sqlite3_db_path', None)
 
-text_embedding_path = conf['text_embedding_path']
+text_embedding_path = conf.get('text_embedding_path', None)
 
 # The wikidata_os files can be downloaded from https://drive.google.com/drive/u/1/folders/1ukXXHqSCcFXE2xpvhqQ2AGAD5y2ue_c7
 
