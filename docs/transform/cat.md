@@ -433,12 +433,12 @@ Renaming the column names on output can by done two ways.  First, you can name
 all of the new column names using --output-columns.
 
 ```bash
-kgtk cat -i examples/docs/movies_origin_destination.tsv --mode=NONE --output-columns id node1 label node2
+kgtk cat -i examples/docs/movies_origin_destination.tsv --mode=NONE --output-columns node1 label node2 years
 ```
 
 The result will be the following table in KGTK format:
 
-| id | node1 | label | node2 |
+| node1 | label | node2 | years |
 | -- | -- | -- | -- |
 | terminator | label | 'The Terminator'@en | 4 |
 | terminator | instance_of | film | 3 |
