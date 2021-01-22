@@ -8,8 +8,7 @@
 ```
 2. Install `kgtk` from the `dev` branch,
 ```
-  git clone https://github.com/usc-isi-i2/kgtk
-  cd kgtk
+  cd <kgtk_root_folder>
   git checkout dev
   pip install -e .
 ```
@@ -34,8 +33,19 @@
 ```
   python -m ipykernel install --user --name=kgtk-env
 ```
-8. Start jupyter lab
+8. Download the files `wikidata.sqlite3.db` (~77GB) and `text-embedding.tsv` (162 MB) from here: https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing beforehand.
+9. Create the config file required for tutorial
 ```
-  cd tutorial
+    cd tutorial
+    cp tutorial.conf.json.template tutorial.conf.json
+```
+Update the required parameters in the `template.conf.json` file as:
+ - `output_path`: Path to the output folder where the files created by the tutorial notebooks will stored.
+ - `kgtk_path`: Path where `kgtk` repository is cloned
+ - `wikidata_folder`: Path to the input wikidata files
+ - `wikidata_sqlite3_db_path`: Path to the `wikidata.sqlite3.db` file downloaded in the previous step
+ - `text_embedding_path`: Path to the `text-embedding.tsv` file downloaded in the previous step
+10. Start jupyter lab
+```
   jupyter lab
 ```

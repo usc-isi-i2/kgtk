@@ -97,7 +97,7 @@ Suppose that `file1.tsv` contains the following table in KGTK format:
 
 | id  | node1      | label       | node2                 | rank |
 |-----|------------|-------------|-----------------------|------|
-| t1  | terminator | label       | The Terminator@en     | 4    |
+| t1  | terminator | label       | 'The Terminator'@en     | 4    |
 | t2  | terminator | instance_of | film                  | 3    |
 | t3  | terminator | genre       | action                | 1    |
 | t9  | terminator | director    | james_cameron         | 8    |
@@ -126,7 +126,7 @@ The result will be the following table in KGTK format:
 
 | id  | node1                 | label       | node2                    | rank | language |
 |-----|-----------------------|-------------|--------------------------|------|----------|
-| t1  | terminator            | label       | The Terminator@en        | 4    |          |
+| t1  | terminator            | label       | 'The Terminator'@en        | 4    |          |
 | t2  | terminator            | instance_of | film                     | 3    |          |
 | t3  | terminator            | genre       | action                   | 1    |          |
 | t9  | terminator            | director    | james_cameron            | 8    |          |
@@ -175,7 +175,7 @@ kgtk cat -i file1.tsv.gz file3.tsv --mode NONE
 
 | id  | node1      | label       | node2                 | rank | a   | b              | c           | d                        |
 |-----|------------|-------------|-----------------------|------|-----|----------------|-------------|--------------------------|
-| t1  | terminator | label       | The Terminator@en     | 4    |     |                |             |                          |
+| t1  | terminator | label       | 'The Terminator'@en     | 4    |     |                |             |                          |
 | t2  | terminator | instance_of | film                  | 3    |     |                |             |                          |
 | t3  | terminator | genre       | action                | 1    |     |                |             |                          |
 | t9  | terminator | director    | james_cameron         | 8    |     |                |             |                          |
@@ -235,7 +235,7 @@ For example, suppose your input file contained the following table in KGTK forma
 
 | origin | label    | destination      | years |
 | ----- | -------- | ---------- | ----- |
-| t1  | terminator | label       | The Terminator@en     | 4    |
+| t1  | terminator | label       | 'The Terminator'@en     | 4    |
 | t2  | terminator | instance_of | film                  | 3    |
 
 You want to rename the `origin` column to `node1`, and the `destination`
@@ -249,7 +249,7 @@ The result will be the following table in KGTK format:
 
 | node1 | label    | node2      | years |
 | ----- | -------- | ---------- | ----- |
-| t1  | terminator | label       | The Terminator@en     | 4    |
+| t1  | terminator | label       | 'The Terminator'@en     | 4    |
 | t2  | terminator | instance_of | film                  | 3    |
 
 When you rename columns on input, the change applies to all input files: they
@@ -270,7 +270,7 @@ The result will be the following table in KGTK format:
 
 | id | node1      | label       | node2             | rank |
 |----|------------|-------------|-------------------|------|
-| t1 | terminator | label       | The Terminator@en | 4    |
+| t1 | terminator | label       | 'The Terminator'@en | 4    |
 | t2 | terminator | instance_of | film              | 3    |
 | t3 | terminator | genre       | action            | 1    |
 | t9 | terminator | director    | james_cameron     | 8    |
