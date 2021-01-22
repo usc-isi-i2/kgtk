@@ -39,7 +39,7 @@ nav:
       - 'unique': 'transform/unique.md'
       - 'unreify-rdf-statements': 'transform/unreify_rdf_statements.md'
       - 'unreify-values': 'transform/unreify_values.md'
-      - 'zconcat': 'transform/zconcat.md'
+      # - 'zconcat': 'transform/zconcat.md' # Disabled 21-Jan-2021
   - 'Curation commands':
       - 'clean-data': 'curate/clean_data.md'
       - 'validate': 'curate/validate.md'
