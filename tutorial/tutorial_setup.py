@@ -6,6 +6,7 @@ import tempfile
 import re
 import json
 import copy
+from shutil import copyfile
 
 import numpy as np
 import pandas as pd
@@ -78,9 +79,6 @@ file_names = {
 # We will define environment variables to hold the full paths to the files as we will use them in the shell commands
 kgtk_environment_variables = []
 
-if text_embedding_path and text_embedding_path.strip() != "":
-    os.environ['text_embedding_path'] = text_embedding_path
-
 os.environ['WIKIDATA'] = wikidata_folder
 kgtk_environment_variables.append('WIKIDATA')
 
@@ -127,6 +125,10 @@ os.environ['GE'] = os.environ['TEMP'] + "/graph-embedding"
 os.environ['TE'] = os.environ['TEMP'] + "/text-embedding"
 kgtk_environment_variables.append('GE')
 kgtk_environment_variables.append('TE')
+
+if text_embedding_path and text_embedding_path.strip() != "":
+    os.environ['text_embedding_path'] = text_embedding_path
+    copyfile(text_embedding_path, f"{os.environ['TE']}/text-embedding.tsv")
 
 for key, value in file_names.items():
     q154_variable = "Q154" + key.upper()
