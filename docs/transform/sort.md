@@ -108,7 +108,7 @@ kgtk sort -c 'label, id' \
 	  -o nodes-sort.tsv
 ```
 
-### Sort on a larger system using more respurces.
+### Sort on a larger system using more resources.
 
 Sort on a larger system using 24 threads, 60% of main memory, and
 a nonstandard temporary file folder.
