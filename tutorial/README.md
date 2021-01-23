@@ -72,5 +72,5 @@ kgtk --- Knowledge Graph Toolkit
 ```
 12. Start jupyter lab
 ```
-upyter lab
+jupyter lab
 ```
