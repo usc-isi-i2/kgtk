@@ -8,7 +8,8 @@
 ```
 2. Install `kgtk` from the `dev` branch,
 ```
-  cd <kgtk_root_folder>
+  git clone https://github.com/usc-isi-i2/kgtk
+  cd kgtk
   git checkout dev
   pip install -e .
 ```
