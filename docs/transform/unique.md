@@ -9,7 +9,7 @@ In the default output format, the output file is a KGTK edge file.
 The `node1` column contains the unique values, the `label` column value is `count`,
 and the `node2` column contains the unique count.
 
-### Naming Column to Process
+### Naming the Column to Count
 
 The `--column COLUMN_NAME` option specifies the name of the column to
 count unique values.  If not specified, the default is the `node2` column or its alias.
@@ -40,14 +40,14 @@ Format                 | Description
 `--format node-counts` | This format creates a KGTK node file with two columns.  The `id` column will contain the (optionally prefixed) unique values, while the second column, named `count`, unless changed by `--label LABEL_VALUE`, will contain the count.
 `--format node-only`   | This creates a KGTK node file with a single column, the `id` column, containing the unique values.  The counts are computed but not written.
 
-### Quick Filtering
+### Quick Input Filtering
 
 Using the `--where WHERE_COLUMN_NAME` and `--in WHERE_VALUES...` options, you
 can restrict the count to records where the value in a specified column
 matches a list of specified values.  More sophisticated filtering can be
 obtained by running `kgtk filter` to provide the input to `kgtk unique`.
 
-### Processing large Files
+### Processing Large Files
 
 `kgtk unique` normally builds an in-memory dictionary of the unique
 values and counts.  Performance will be poor, and execution may fail, if there
@@ -170,7 +170,7 @@ kgtk unique -i examples/docs/unique-file1.tsv --column location \
 | -- | -- | -- | -- |
 | location | 3 | 2 | 3 |
 
-### Filter the input file and create an edge-stype output file.
+### Filter the input file and create an edge-type output file.
 
 ```bash
 kgtk unique -i examples/docs/unique-file1.tsv --column location \
