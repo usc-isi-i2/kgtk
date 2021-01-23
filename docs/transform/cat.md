@@ -210,7 +210,7 @@ kgtk cat -i examples/docs/movies_reduced.tsv
 | t17 | terminator | award | national_film_registry |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
-Suppose that `tutorial_people_fill.tsv` contains the following table in KGTK format:
+Suppose that `tutorial_people_full.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat -i examples/docs/tutorial_people_full.tsv
@@ -244,10 +244,11 @@ kgtk cat -i examples/docs/tutorial_people_full.tsv
 
 ### Combine two KGTK files, sending the output to standard output.
 
+These two files have only he 4 basic KGTK fields.
+
 ```bash
 kgtk cat -i examples/docs/movies_reduced.tsv examples/docs/tutorial_people_full.tsv
 ```
-
 The result will be the following file in KGTK format:
 
 | id | node1 | label | node2 |
