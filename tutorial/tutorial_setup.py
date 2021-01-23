@@ -128,7 +128,6 @@ kgtk_environment_variables.append('TE')
 
 if text_embedding_path and text_embedding_path.strip() != "":
     os.environ['text_embedding_path'] = text_embedding_path
-    copyfile(text_embedding_path, f"{os.environ['TE']}/text-embedding.tsv")
 
 for key, value in file_names.items():
     q154_variable = "Q154" + key.upper()
