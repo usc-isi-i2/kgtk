@@ -34,7 +34,7 @@
 ```
   python -m ipykernel install --user --name=kgtk-env
 ```
-8. Download the files `wikidata.sqlite3.db` (~77GB) and `text-embedding.tsv` (162 MB) from here: https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing beforehand.
+8. Download the files `wikidata.sqlite3.small.db` (~8GB) and `text-embedding.tsv` (672 MB) from here: https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing beforehand.
 9. Create the config file required for tutorial
 ```
     cd tutorial
