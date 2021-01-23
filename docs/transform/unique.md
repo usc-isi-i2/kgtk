@@ -45,7 +45,7 @@ Format                 | Description
 Using the `--where WHERE_COLUMN_NAME` and `--in WHERE_VALUES...` options, you
 can restrict the count to records where the value in a specified column
 matches a list of specified values.  More sophisticated filtering can be
-obtained by running `kgtk filter` to provide the input to `kgtk unique`.
+obtained by running [`kgtk filter`](https://../filter) to provide the input to `kgtk unique`.
 
 ### Processing Large Files
 
