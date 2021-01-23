@@ -3,19 +3,19 @@
 0. [Install conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/), if not already installed.
 1. Create a virtual environment
 ```
-  conda create -n kgtk-env python=3.7
-  conda activate kgtk-env
+conda create -n kgtk-env python=3.7
+conda activate kgtk-env
 ```
 2. Install `kgtk` from the `dev` branch,
 ```
-  git clone https://github.com/usc-isi-i2/kgtk
-  cd kgtk
-  git checkout dev
-  pip install -e .
+git clone https://github.com/usc-isi-i2/kgtk
+cd kgtk
+git checkout dev
+pip install -e .
 ```
 3. Download `spacy` language model
 ```
-  python -m spacy download en_core_web_sm
+python -m spacy download en_core_web_sm
 ```
 4. Install graph tools
 ```
@@ -23,22 +23,25 @@
 ```
 5. Install `rdflib` from the `master` branch
 ```
-  pip uninstall rdflib
-  pip install git+https://github.com/RDFLib/rdflib.git@2077524d43a103c3b9bf9fdd009a4942c7fff032
+pip uninstall rdflib
+pip install git+https://github.com/RDFLib/rdflib.git@2077524d43a103c3b9bf9fdd009a4942c7fff032
 ```
 6. Install python packages for the tutorial
 ```
-  pip install jupyterlab altair gensim papermill ipywidgets iprogress plotly
+pip install jupyterlab altair gensim papermill ipywidgets iprogress plotly
 ```
 7. Link the virtual environment to jupyter kernel
 ```
-  python -m ipykernel install --user --name=kgtk-env
+python -m ipykernel install --user --name=kgtk-env
 ```
 8. Download the files `wikidata.sqlite3.small.db` (~8GB) and `text-embedding.tsv` (672 MB) from here: https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing beforehand.
-9. Create the config file required for tutorial
+
+9. Download the mini-version of wikidata that we use for the tutoria from https://drive.google.com/drive/folders/1nDeNpYF8pdnN9pgD-vhbGNP4mmfiJgRJ?usp=sharing. 
+
+10. Create the config file required for tutorial
 ```
-    cd tutorial
-    cp tutorial.conf.json.template tutorial.conf.json
+cd tutorial
+cp tutorial.conf.json.template tutorial.conf.json
 ```
 Update the required parameters in the `tutorial.conf.json` file as:
  - `output_path`: Path to the output folder where the files created by the tutorial notebooks will be stored.
@@ -57,7 +60,17 @@ A sample `tutorial.conf.json` file:
 	"text_embedding_path": "/Users/amandeep/Downloads/text-embedding.tsv"
 }
 ```
-10. Start jupyter lab
+11. Test that kgtk is installed properly
+```bash
+kgtk --help
 ```
-  jupyter lab
+The shell should show the following (and many more lines):
+```bash
+usage: kgtk [options] command [ / command]*
+
+kgtk --- Knowledge Graph Toolkit
+```
+12. Start jupyter lab
+```
+upyter lab
 ```
