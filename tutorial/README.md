@@ -36,7 +36,7 @@ python -m ipykernel install --user --name=kgtk-env
 ```
 8. Download the files `wikidata.sqlite3.small.db` (~8GB) and `text-embedding.tsv` (672 MB) from here: https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing beforehand.
 
-9. Download the mini-version of wikidata that we use for the tutoria from https://drive.google.com/drive/folders/1nDeNpYF8pdnN9pgD-vhbGNP4mmfiJgRJ?usp=sharing. 
+9. Download the mini-version of wikidata that we use for the tutorial from https://drive.google.com/drive/folders/1nDeNpYF8pdnN9pgD-vhbGNP4mmfiJgRJ?usp=sharing. Right-click on the folder and select `Download`
 
 10. Create the config file required for tutorial
 ```
@@ -53,13 +53,37 @@ Update the required parameters in the `tutorial.conf.json` file as:
 A sample `tutorial.conf.json` file:
 ```
 {
-	"output_path": "/Users/amandeep/Documents/kypher",
-	"kgtk_path": "/Users/amandeep/Github/kgtk",
-	"wikidata_folder": "/Volumes/GoogleDrive/Shared drives/KGTK/datasets/wikidataos-v4/", # notice the / at the end
-	"wikidata_sqlite3_db_path": "/Users/amandeep/Downloads/wikidata.sqlite3.db",
-	"text_embedding_path": "/Users/amandeep/Downloads/text-embedding.tsv"
+	"output_path": "/Users/pedroszekely/Downloads/kgtk-tutorial",
+	"kgtk_path": "/Users/pedroszekely/Documents/GitHub/kgtk",
+	"wikidata_folder": "/Users/pedroszekely/Downloads/kgtk-tutorial/wikidataos-v4-mm/",
+	"wikidata_sqlite3_db_path": "/Users/pedroszekely/Downloads/kgtk-tutorial/wikidata.sqlite3.small.db",
+	"text_embedding_path": "/Users/pedroszekely/Downloads/kgtk-tutorial/text-embedding.tsv"
 }
 ```
+
+This config file corresponds to a simple setup where all the relevant files for the tutorial are placed in the same directory:
+```bash
+(base) D22ML-PSZEKELY:kgtk-tutorial pedroszekely$ ls -l
+total 18733072
+-rw-r--r--@  1 pedroszekely  staff   704327851 Jan 23 13:35 text-embedding.tsv
+-rw-r--r--@  1 pedroszekely  staff  8881557504 Jan 23 13:56 wikidata.sqlite3.small.db
+drwxr-xr-x  13 pedroszekely  staff         416 Jan 23 14:00 wikidataos-v4-mm
+(base) D22ML-PSZEKELY:kgtk-tutorial pedroszekely$ ls -l wikidataos-v4-mm/
+total 1645104
+-rw-r--r--@ 1 pedroszekely  staff   10619848 Jan 22 09:36 aliases.en.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff    2868983 Jan 22 15:52 all.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff  315694467 Jan 22 09:35 claims.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff  107407920 Jan 22 09:48 claims.wikibase-item.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff   11596558 Jan 22 15:09 derived.P279.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff  163532619 Jan 22 14:48 derived.P279star.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff  132037407 Jan 22 14:45 derived.isa.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff   21647502 Jan 22 09:36 descriptions.en.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff   37127213 Jan 22 09:35 labels.en.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff      46075 Jan 22 15:33 metadata.property.datatypes.tsv.gz
+-rw-r--r--@ 1 pedroszekely  staff   39692305 Jan 22 09:41 qualifiers.tsv.gz
+(base) D22ML-PSZEKELY:kgtk-tutorial pedroszekely$
+```
+
 11. Test that kgtk is installed properly
 ```bash
 kgtk --help
