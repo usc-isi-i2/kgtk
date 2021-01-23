@@ -20,8 +20,7 @@ New IDs may be generated using one of the following ID generation styles.
 
 ### Uniqueness and Memory Use
 
-By default, the ID values in the file are validated for uniqueness,
-using an in-memory set.  This may cause
+By default, the ID values in the file are validated for uniqueness using an in-memory set.  This may cause
 memory usage issues for large input files, and may be inappropriate
 for some files that legitimately contain duplicate records.
 The `--verify-id-unique=false` option may be used to disable this check.
@@ -122,7 +121,8 @@ kgtk cat -i examples/docs/add-id-file1.tsv
 | steve | zipcode | 45601 | work | 2 |
 | steve | zipcode | 45601 | cabin |  |
 
-Note:  The `years` column means years employed, not age.
+!!! note
+    The `years` column means years employed, not age.
 
 ### Add an ID column using the default ID style (prefix###)
 
@@ -282,7 +282,6 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-0005 |
 
 ### Add an ID column using the wikidata ID style
-(Note: the existing test dataset doesn't have any entries with node2 values starting with P or Q)
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style wikidata
@@ -304,6 +303,10 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | home | 1 | steve-zipcode-3f5bb8 |
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-3f5bb8 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-3f5bb8 |
+
+!!! note
+   The existing test dataset doesn't have any entries with node2 values starting with P or Q,
+   so this example doesn't  doesn't illustrate the full range of IDs generated inthis style.
 
 ### Add an ID column using the wikidata-with-claim-id ID style, using the location column as a placeholder for the claim-id column
 
