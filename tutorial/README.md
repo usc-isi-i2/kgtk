@@ -34,9 +34,12 @@ pip install jupyterlab altair gensim papermill ipywidgets iprogress plotly
 ```
 python -m ipykernel install --user --name=kgtk-env
 ```
-8. Download the files `wikidata.sqlite3.small.db` (~8GB) and `text-embedding.tsv` (672 MB) from here: https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing beforehand.
+8. Download the files needed for the tutorial:
 
-9. Download the mini-version of wikidata that we use for the tutorial from https://drive.google.com/drive/folders/1nDeNpYF8pdnN9pgD-vhbGNP4mmfiJgRJ?usp=sharing. Right-click on the folder and select `Download`
+- `wikidata.sqlite3.small.db` (~8GB). This file is optional. If you downloaded it, the tutorial will run much faster, as it won't have to spend time building this file. It will save you waiting for one to five minutes in some commands. 
+- `text-embedding.tsv` (672 MB) from here: https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing 
+
+9. If you are not using the cached sqlite file, you need to download the mini-version of wikidata that we use for the tutorial from https://drive.google.com/drive/folders/1nDeNpYF8pdnN9pgD-vhbGNP4mmfiJgRJ?usp=sharing. Right-click on the folder and select `Download`
 
 10. Create the config file required for tutorial
 ```
@@ -60,6 +63,8 @@ A sample `tutorial.conf.json` file:
 	"text_embedding_path": "/Users/pedroszekely/Downloads/kgtk-tutorial/text-embedding.tsv"
 }
 ```
+
+> If you want to use the downloaded cached sqlite file, then the `wikidata_folder` must be set to `"/Users/pedroszekely/Downloads/kgtk-tutorial/wikidataos-v4-mm/"` as the cache believes the files are there, and if you put the files somewhere else, KGTK will think the files changed and will reload them in the database, defeating the benefit of the cache.
 
 This config file corresponds to a simple setup where all the relevant files for the tutorial are placed in the same directory:
 ```bash
