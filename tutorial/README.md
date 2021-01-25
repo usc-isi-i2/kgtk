@@ -69,9 +69,14 @@ A sample `tutorial.conf.json` file:
 }
 ```
 
-> If you want to use the downloaded cached sqlite file, then the `wikidata_folder` must be set to `"/Users/pedroszekely/Downloads/kgtk-tutorial/wikidataos-v4-mm/"` as the cache believes the files are there, and if you put the files somewhere else, KGTK will think the files changed and will reload them in the database, defeating the benefit of the cache.
+> If you want to use the downloaded cached sqlite file, then the `wikidata_folder` must be set to one of the following values (the trailing slash is important):
 
-This config file corresponds to a simple setup where all the relevant files for the tutorial are placed in the same directory:
+- `"/Users/pedroszekely/Downloads/kgtk-tutorial/wikidataos-v4-mm/"` if you use the small file `wikidata.sqlite3.small.db` or
+- `"/Users/pedroszekely/Downloads/kgtk-tutorial/miniwikidata/"` if you use the larger  file `wikidata.sqlite3.miniwikidata.db`
+
+The reason to use this values is that the cache believes the files are in Pedro Szekely's machine, and if you put the files somewhere else, KGTK will think the files changed and will reload them in the database, defeating the benefit of the cache.
+
+This config file corresponds to a simple setup where all the relevant files for the tutorial are placed in the same directory (if you use miniwikidata the structure is similar but the files are different):
 ```bash
 (base) D22ML-PSZEKELY:kgtk-tutorial pedroszekely$ ls -l
 total 18733072
