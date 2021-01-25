@@ -6,7 +6,7 @@ Compact is intended to operate on KGTK node
 files or on the additional columns of KGTK denormalized edge files.
 It should not be used to compact the `node2` column of a KGTK edge file.
 
-### Multi-value Edges
+### Creating Multi-value Edges
 
 Suppose you have a KGTK edge file such as:
 
@@ -20,6 +20,9 @@ The compacted result would be:
 | node1 | label | node2 | genre |
 | --- | --- | --- | --- |
 | terminator2_jd | isa | movie | action\|science_fiction |
+
+!!! note
+    The key columns (see below) in this example are (`node1`, `label`, `node2`).
 
 ### Key Columns
 
