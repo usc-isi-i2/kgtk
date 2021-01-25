@@ -1,9 +1,25 @@
 ## Overview
 
 The expand command copies its input file to its output file, compacting
-repeated items into `|` lists.  Compact is intended to operate on KGTK node
+repeated items into [multi-valued edges (`|` lists)](https://../../specification#multi-valued-edges).
+Compact is intended to operate on KGTK node
 files or on the additional columns of KGTK denormalized edge files.
 It should not be used to compact the `node2` column of a KGTK edge file.
+
+### Multi-value Edges
+
+Suppose you have a KGTK edge file such as:
+
+| node1 | label | node2 | genre|
+| --- | --- | --- | --- |
+| terminator2_jd | isa | movie | science_fiction |
+| terminator2_jd | isa | movie | action |
+
+The compacted result would be:
+
+| node1 | label | node2 | genre |
+| --- | --- | --- | --- |
+| terminator2_jd | isa | movie | action\|science_fiction |
 
 ### Key Columns
 
@@ -53,18 +69,20 @@ For example, using movies as the topic:
 | terminator2_jd | genre | science_fiction |
 | terminator2_jd | genre | action |
 
-Your intented result is:
+You intend to create:
 
 | node1 | label | node2 |
 | --- | --- | --- |
 | terminator2_jd | genre | action\|science_fiction |
 
 This would result in an invalid KGTK file, as the `node2` column is
-not allowed to contain `|` lists according to the [KGTK File Specification](https://../../specification#multi-valued-edges).
+not allowed to contain multi-value edges (`|` lists) according to the
+[KGTK File Specification](https://../../specification#multi-valued-edges).
 
-If you insist on compacting the `node2` column, you can do so using:
+!!! note
+    If you insist on compacting the `node2` column, you can do so using:
 
-`--mode=NONE --columns node1 label`
+    `kgtk compact --mode=NONE --columns node1 label`
 
 ## Usage
 
