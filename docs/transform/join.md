@@ -315,7 +315,7 @@ kgtk cat -i examples/docs/join-file4.tsv
 | john | laptop | dell | 4 |
 | peter | laptop | apple | 7 |
 
-### Do an inner join on two KGTK normalized edge files on `node1`.
+### Do an inner join on two KGTK denormalized edge files on `node1`.
 
 The output will contain edges from the left and right files
 got only those `node1` values that appear in both files.
@@ -340,7 +340,7 @@ The result will be the following table in KGTK format:
 | peter | laptop | apple |  | 7 |
 
 
-### Do a left outer join on two KGTK normalized edge files on `node1`.
+### Do a left outer join on two KGTK denormalized edge files on `node1`.
 
 The output will contain all edges from the left file,
 and any edges from the right file with a `node1` value that
@@ -368,7 +368,7 @@ The result will be the following table in KGTK format:
 | peter | laptop | apple |  | 7 |
 
 
-### Do a right outer join on two KGTK normalized edge files on `node1`.
+### Do a right outer join on two KGTK denormalized edge files on `node1`.
 
 The output will contain all edges from the right file,
 and any edges from the left file with a `node1` value that
@@ -394,7 +394,7 @@ The result will be the following table in KGTK format:
 | john | laptop | dell |  | 4 |
 | peter | laptop | apple |  | 7 |
 
-### Do a full outer join on two KGTK normalized edge files on `node1`.
+### Do a full outer join on two KGTK denormalized edge files on `node1`.
 
 This produces the same output as the `kgtk cat` command,
 and is included here for completeness.
