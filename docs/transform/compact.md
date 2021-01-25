@@ -264,7 +264,7 @@ The output will be the following table in KGTK format:
 
 !!! note
     In order to compact on just the `id` column, it was necessary to
-    specify `--mode=NONE`.  This mahavior may change in the future.
+    specify `--mode=NONE`.  This behavior may change in the future.
 
 ### Compacting on (`node1`, `label`, `node2`)
 
