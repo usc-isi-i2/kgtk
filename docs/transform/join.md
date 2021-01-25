@@ -59,7 +59,16 @@ edges from the output file.
 
 A denormalized KGTK edge file contains additional columns beyond (`node1`, `label`, `node2`, and `id`).
 
+When one or both of the input edge file are denormalized, the output file will also be denormalized.
+The output file will contain the union of the additional columns from the input files, with empty values
+when an input file does not contain a nonempty value.
 
+!!! note
+   The left and right edges will remain distinct in the output file,
+   even if the (`node1`, `label`, `node2, and `id`) fields match.
+   If you want to create a single edge with additional columns from
+   both input files, process the output of `kgtk join` with [`kgtk compact`](https:../compact),
+   or use [`kgtk lift`](https:../lift) to merge the data records.
 
 ### Bending the Rules
 
@@ -161,7 +170,7 @@ optional arguments:
 ```
 ## Examples
 
-### Sample Data
+### Normalized Sample Data
 
 Suppose that `file1.tsv` contains the following table in KGTK format:
 
@@ -187,7 +196,7 @@ kgtk cat -i examples/docs/join-file2.tsv
 | peter | position | engineer |
 | edward | position | supervisor |
 
-### Do an inner join on two KGTK files on `node1`.
+### Do an inner join on two KGTK normalized edge files on `node1`.
 
 The output will contain edges from the left and right files
 got only those `node1` values that appear in both files.
@@ -208,7 +217,7 @@ The result will be the following table in KGTK format:
 | peter | position | engineer |
 
 
-### Do a left outer join on two KGTK files on `node1`.
+### Do a left outer join on two KGTK normalized edge files on `node1`.
 
 The output will contain all edges from the left file,
 and any edges from the right file with a `node1` value that
@@ -231,7 +240,7 @@ The result will be the following table in KGTK format:
 | peter | position | engineer |
 
 
-### Do a right outer join on two KGTK files on `node1`.
+### Do a right outer join on two KGTK normalized edge files on `node1`.
 
 The output will contain all edges from the right file,
 and any edges from the left file with a `node1` value that
@@ -253,7 +262,7 @@ The result will be the following table in KGTK format:
 | peter | position | engineer |
 | edward | position | supervisor |
 
-### Do a full outer join on two KGTK files on `node1`.
+### Do a full outer join on two KGTK normalized edge files on `node1`.
 
 This produces the same output as the `kgtk cat` command,
 and is included here for completeness.
@@ -274,4 +283,141 @@ The result will be the following table in KGTK format:
 | john | position | programmer |
 | peter | position | engineer |
 | edward | position | supervisor |
+
+### Deormalized Sample Data
+
+Suppose that `file3.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/join-file3.tsv
+```
+
+| node1 | label | node2 | location |
+| -- | -- | -- | -- |
+| john | zipcode | 12345 | home |
+| john | zipcode | 12346 | work |
+| peter | zipcode | 12040 | home |
+| peter | zipcode | 12040 | work |
+| steve | zipcode | 45601 | home |
+| steve | zipcode | 45601 | work |
+
+and `file4.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/join-file4.tsv
+```
+
+| node1 | label | node2 | years |
+| -- | -- | -- | -- |
+| john | position | programmer | 3 |
+| peter | position | engineer | 2 |
+| edward | position | supervisor | 10 |
+| john | laptop | dell | 4 |
+| peter | laptop | apple | 7 |
+
+### Do an inner join on two KGTK normalized edge files on `node1`.
+
+The output will contain edges from the left and right files
+got only those `node1` values that appear in both files.
+
+
+```bash
+kgtk join --left-file examples/docs/join-file3.tsv \
+          --right-file examples/docs/join-file4.tsv
+```
+
+The result will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home |  |
+| john | zipcode | 12346 | work |  |
+| peter | zipcode | 12040 | home |  |
+| peter | zipcode | 12040 | work |  |
+| john | position | programmer |  | 3 |
+| peter | position | engineer |  | 2 |
+| john | laptop | dell |  | 4 |
+| peter | laptop | apple |  | 7 |
+
+
+### Do a left outer join on two KGTK normalized edge files on `node1`.
+
+The output will contain all edges from the left file,
+and any edges from the right file with a `node1` value that
+matches at least one edge in the left file.
+
+```bash
+kgtk join --left-join \
+          --left-file examples/docs/join-file3.tsv \
+	  --right-file examples/docs/join-file4.tsv
+```
+
+The result will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home |  |
+| john | zipcode | 12346 | work |  |
+| peter | zipcode | 12040 | home |  |
+| peter | zipcode | 12040 | work |  |
+| steve | zipcode | 45601 | home |  |
+| steve | zipcode | 45601 | work |  |
+| john | position | programmer |  | 3 |
+| peter | position | engineer |  | 2 |
+| john | laptop | dell |  | 4 |
+| peter | laptop | apple |  | 7 |
+
+
+### Do a right outer join on two KGTK normalized edge files on `node1`.
+
+The output will contain all edges from the right file,
+and any edges from the left file with a `node1` value that
+matches at least one edge in the right file.
+
+```bash
+kgtk join --right-join \
+          --left-file examples/docs/join-file3.tsv \
+	  --right-file examples/docs/join-file4.tsv
+```
+
+The result will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home |  |
+| john | zipcode | 12346 | work |  |
+| peter | zipcode | 12040 | home |  |
+| peter | zipcode | 12040 | work |  |
+| john | position | programmer |  | 3 |
+| peter | position | engineer |  | 2 |
+| edward | position | supervisor |  | 10 |
+| john | laptop | dell |  | 4 |
+| peter | laptop | apple |  | 7 |
+
+### Do a full outer join on two KGTK normalized edge files on `node1`.
+
+This produces the same output as the `kgtk cat` command,
+and is included here for completeness.
+
+```bash
+kgtk join --left-join --right-join \
+          --left-file examples/docs/join-file3.tsv \
+	  --right-file examples/docs/join-file4.tsv
+```
+
+The result will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home |  |
+| john | zipcode | 12346 | work |  |
+| peter | zipcode | 12040 | home |  |
+| peter | zipcode | 12040 | work |  |
+| steve | zipcode | 45601 | home |  |
+| steve | zipcode | 45601 | work |  |
+| john | position | programmer |  | 3 |
+| peter | position | engineer |  | 2 |
+| edward | position | supervisor |  | 10 |
+| john | laptop | dell |  | 4 |
+| peter | laptop | apple |  | 7 |
 
