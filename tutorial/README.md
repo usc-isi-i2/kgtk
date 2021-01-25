@@ -34,17 +34,17 @@ pip install jupyterlab altair gensim papermill ipywidgets iprogress plotly
 ```
 python -m ipykernel install --user --name=kgtk-env
 ```
-8. Download the files needed for the tutorial:
+8. Download the files needed for the tutorial from https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing 
 
 - `wikidata.sqlite3.small.db` (~8GB). This file is optional. If you downloaded it, the tutorial will run much faster, as it won't have to spend time building this file. It will save you waiting for one to five minutes in some commands. 
 - `wikidata.sqlite3.miniwikidata.db` (~30GB). This is a larger version of the subset of wikidata (94 million edges). The embeddings part of the tutorial only works with this version. If you are intersested in the embeddings, download this version.
-- `text-embedding.tsv` (672 MB) from here: https://drive.google.com/drive/folders/19Swrp2ZzyHcdVE-ytapw21ug4dMeHW9y?usp=sharing 
+- `text-embedding.tsv` (672 MB) 
 
-9. If you are not using the cached sqlite file, you need to download the mini-version of wikidata that we use for the tutorial from the followiing locations (Right-click on the folder and select `Download`):
+9. If you are not using the cached sqlite file, you need to download the kgtk files that we use for the tutorial. These files contain the TSV files with the edges and are necessary if you want to play with KGTK commands other than `kgtk query`. Download these files from the followiing locations (Right-click on the folder and select `Download`):
 
 - minimal version of Wikidata sufficient for the first parts of the tutoria, but not adequate for the embeddings: 
 https://drive.google.com/drive/folders/1nDeNpYF8pdnN9pgD-vhbGNP4mmfiJgRJ?usp=sharing. 
-- miniwikidata with 90 million edges, appropriate for running all parts of the tutorial.
+- miniwikidata with 90 million edges, appropriate for running all parts of the tutorial: https://drive.google.com/drive/folders/140iWPMHdmIG2weBgiMqeXs-7qfU3glA7?usp=sharing
 
 10. Create the config file required for tutorial
 ```
