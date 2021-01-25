@@ -35,8 +35,8 @@ output_path = conf['output_path']
 kgtk_path = conf['kgtk_path']
 
 # The names of the output and temporary folders
-output_folder = "wikidata_os_v5"
-temp_folder = "temp.wikidata_os_v5"
+output_folder = "output"
+temp_folder = "temp"
 
 # The location of input Wikidata files
 wikidata_folder = conf['wikidata_folder']
@@ -54,7 +54,7 @@ cache_path = f"{output_path}/{temp_folder}"
 delete_database = False
 
 # shortcuts to commands
-kgtk = "time kgtk --debug"
+kgtk = "kgtk --debug"
 # kgtk = "kgtk --debug"
 
 ########################
@@ -78,6 +78,9 @@ file_names = {
 
 # We will define environment variables to hold the full paths to the files as we will use them in the shell commands
 kgtk_environment_variables = []
+
+os.environ['KGTK_PATH'] = kgtk_path
+kgtk_environment_variables.append('KGTK_PATH')
 
 os.environ['WIKIDATA'] = wikidata_folder
 kgtk_environment_variables.append('WIKIDATA')
