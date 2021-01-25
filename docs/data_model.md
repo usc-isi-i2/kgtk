@@ -10,23 +10,29 @@ For example, we can represent that the terminator movie received an academy awar
 
 KGTK represents KGs using TSV files with 4 columns labeled `id`, `node1`, `label` and `node2`. The `id` column is a symbol representing an identifier of an edge, corresponding to the orange circles in the diagram above. `node1` represents the source of the edge, `node2` represents the destination of the edge, and `label` represents the relation between `node1` and `node2`.  Note that the identifiers of edges (e.g., `t4`) is used in the `node1` column to represent an edge whose source is the edge with identifier `t4`. See File Format for the full specification of the KGTK file format.
 
-| id  | node1      | label       | node2                 |
-|-----|------------|-------------|-----------------------|
-| t1  | terminator2_jd | label       | "Terminator 2"@en     |
-| t2  | terminator2_jd | instance_of | film                  |
-| t3  | terminator2_jd | genre       | science_fiction       |
-| t3  | terminator2_jd | genre       | action                |  
-| t4  | terminator2_jd | cast        | a_schwarzenegger      |
-| t5  | t4             | role        | terminator            |  
-| t6  | terminator2_jd | cast        | l_hamilton            |
-| t7  | t4             | role        | s_connor              |
-| t8  | terminator2_jd | award       | academy-best-sound-editing              |    
-| t9  | t8             |  point_in_time | ^1992-03-30T00:00:00Z/11  |
-| t10 | t8             |  winner     | g_rydstrom            |
-| t11 | t8             |  winner     | g_borders             |
-| t12 | l_hamilton     |  label      | "Linda Hamilton"@en   |
-| t13 | a_schwarzenegger |  label      | "Arnold Schwarzenegger"@en |
-| t14 | film           |  subclass_of | visual_artwork |
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+|  | terminator2_jd | label | "Terminator 2"@en |
+|  | terminator2_jd | instance_of | film |
+|  | terminator2_jd | genre | science_fiction |
+|  | terminator2_jd | genre | action |
+| t4 | terminator2_jd | cast | a_schwarzenegger |
+|  | t4 | role | terminator |
+| t6 | terminator2_jd | cast | l_hamilton |
+|  | t6 | role | s_connor |
+| t8 | terminator2_jd | award | academy_best_sound_editing |
+|  | t8 | point_in_time | ^1992-03-30T00:00:00Z/11 |
+|  | t8 | winner | g_rydstrom |
+|  | t8 | winner | g_borders |
+|  | l_hamilton | label | "Linda Hamilton"@en |
+|  | a_schwarzenegger | label | "Arnold Schwarzenegger"@en |
+|  | film | subclass_of | visual_artwork |
+|  | terminator2_jd | publication_date | ^1984-10-26T00:00:00Z/11 |
+|  | t15 | location | united_states |
+|  | terminator2_jd | publication_date | ^1985-02-08T00:00:00Z/11 |
+|  | t17 | location | sweden |
+|  | terminator2_jd | duration | 108minute |
+|  | instance_of | label | "instance of"@en |
 
 ## Relationship To Other KG Data Models
 
