@@ -42,7 +42,7 @@ in the output file will have empty `id` values.
  * Existing `id` column values will not be checked for duplication.
 
 !!! note
-    See [`kgtk add-id`](https:../add-id) if you wish to generate new `id` column values or
+    See [`kgtk add-id`](https:../add_id) if you wish to generate new `id` column values or
     manipulate existing `id` column values.
     [`kgtk calc`](https://../calc) may also be useful for modifying `id` column values.
 
@@ -63,12 +63,16 @@ When one or both of the input edge file are denormalized, the output file will a
 The output file will contain the union of the additional columns from the input files, with empty values
 when an input file does not contain a nonempty value.
 
-!!! note
-   The left and right edges will remain distinct in the output file,
-   even if the (`node1`, `label`, `node2, and `id`) fields match.
-   If you want to create a single edge with additional columns from
-   both input files, process the output of `kgtk join` with [`kgtk compact`](https:../compact),
-   or use [`kgtk lift`](https:../lift) to merge the data records.
+### Joining on `node1`, `label`, and `node2`
+
+
+### Compacting Joined Edges
+
+The left and right edges will remain distinct in the output file,
+even if the (`node1`, `label`, `node2, and `id`) fields match.
+If you want to create a single edge with additional columns from
+both input files, process the output of `kgtk join` with [`kgtk compact`](https:../compact),
+or use [`kgtk lift`](https:../lift) to merge the data records.
 
 ### Bending the Rules
 
