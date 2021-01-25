@@ -49,7 +49,9 @@ The `--columns KEY_COLUMN_NAMES ...` option *MUST* be used to add additional col
 ### `id` Generation
 
 `kgtk compact` may be used to generate `id` column values.
-The `--id-style` option may be used to select the style of the id.
+The expert option `--id-style` may be used to select the style of the id.
+See the [`kgtk add-id`](https:../add_id) command for adidtional
+details on `--id-style` and related options.
 
 ### Processing Large Files
 
