@@ -302,7 +302,7 @@ class TestKGTKQuery(unittest.TestCase):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "g: (x)-[:loves]->(y), w: (y)-[:works]-(c)", '--graph-cache', self.sqldb)
+                  "g: (x)-[:loves]->(y), w: (y)-[:works]->(c)", '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 3)
         for i, row in df.iterrows():
@@ -320,7 +320,7 @@ class TestKGTKQuery(unittest.TestCase):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "(x)-[:loves]->(y), w: (y)-[:works]-(c)", '--graph-cache', self.sqldb)
+                  "(x)-[:loves]->(y), w: (y)-[:works]->(c)", '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 3)
         for i, row in df.iterrows():
@@ -338,7 +338,7 @@ class TestKGTKQuery(unittest.TestCase):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "g: (x)-[r:loves]->(y), w: (y)-[:works]-(c)",
+                  "g: (x)-[r:loves]->(y), w: (y)-[:works]->(c)",
                   "--return", 'r, x, r.label, y as node2, c as `node2;work`', '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 3)
@@ -352,7 +352,7 @@ class TestKGTKQuery(unittest.TestCase):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]-(c)",
+                  "g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]->(c)",
                   "--where", "cast(s, integer) >= 10000",
                   "--return", 'r, x, r.label, y as node2, c as `node2;work`, s as `node2;salary`', '--graph-cache',
                   self.sqldb)
@@ -435,7 +435,7 @@ class TestKGTKQuery(unittest.TestCase):
     def test_kgtk_query_biggest_salary(self):
         cli_entry("kgtk", "query", "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "w: (y {salary: s})-[r:works]-(c)",
+                  "w: (y {salary: s})-[r:works]->(c)",
                   "--return", 'max(cast(s, int)) as `node1;salary`, y, "works" as label, c, r', '--graph-cache',
                   self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
