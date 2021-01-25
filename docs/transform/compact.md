@@ -61,7 +61,7 @@ memory usage issues for large input files. This may be solved by
 sorting the input file using [`kgtk sort`](https:../sort),
 then using  `kgtk compact --presorted`.
 
-### Caution: Compacting `node2` Is Discouraged
+### Compacting `node2` Is Discouraged
 
 If you have a KGTK edge file with normalized edges (no additional columns),
 you might want to compact the `node2` column using (`node1`, `label`) as the
