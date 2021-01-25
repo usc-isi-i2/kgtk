@@ -422,3 +422,23 @@ The output will be the following table in KGTK format:
 | john | zipcode | 12346 | john-zipcode-12346-2 |  |  |
 | peter | zipcode | 12040 | peter-zipcode-12040-3\|4 | cabin\|home\|work | 5\|6 |
 | steve | zipcode | 45601 | steve-zipcode-45601-5\|6 | cabin\|home\|work | 1\|2\|3\|4\|5 |
+
+### Expert Example: Compacting on (`node1`, `label`)
+
+Compacting with the tuple (`node1`, `label`) as the key (removing
+the `id` and `node2` columns from the default for a KGTK edge file)
+may produce an invalid KGTK file.  Nonetheless, there may be occasions
+when this is what you want to do:
+
+```bash
+kgtk compact -i examples/docs/compact-file3.tsv \
+             --mode=NONE --columns node1 label
+```
+
+The output will be the following table in quasi-KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345\|12346 | 1\|2 | home | 10 |
+| peter | zipcode | 12040 | 3\|4 | cabin\|home\|work | 5\|6 |
+| steve | zipcode | 45601 | 5\|6 | cabin\|home\|work | 1\|2\|3\|4\|5 |
