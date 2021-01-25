@@ -1,7 +1,9 @@
 ## Overview
 
-The expand command copies its input file to its output file,
-compacting repeated items into `|` lists.
+The expand command copies its input file to its output file, compacting
+repeated items into `|` lists.  Compact is intended to operate on KGTK node
+files or on the additional columns of KGTK denormalized edge files.
+It should not be used to compact the `node2` column of a KGTK edge file.
 
 ### Key Columns
 
@@ -37,6 +39,32 @@ grouping necessary for the compaction algorithm. This may cause
 memory usage issues for large input files. This may be solved by
 sorting the input file using [`kgtk sort`](https:../sort),
 then using  `kgtk compact --presorted`.
+
+### Caution: Compacting `node2` Is Discouraged
+
+If you have a KGTK edge file with normalized edges (no additional columns),
+you might want to compact the `node2` column using (`node1`, `label`) as the
+key.
+
+For example, using movies as the topic:
+
+| node1 | label | node2 |
+| --- | --- | --- |
+| terminator2_jd | genre | science_fiction |
+| terminator2_jd | genre | action |
+
+Your intented result is:
+
+| node1 | label | node2 |
+| --- | --- | --- |
+| terminator2_jd | genre | action\|science_fiction |
+
+This would result in an invalid KGTK file, as the `node2` column is
+not allowed to contain `|` lists according to the [KGTK File Specification](https://../../specification#multi-valued-edges).
+
+If you insist on compacting the `node2` column, you can do so using:
+
+`--mode=NONE --columns node1 label`
 
 ## Usage
 
