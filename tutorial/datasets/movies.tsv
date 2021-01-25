@@ -7,7 +7,7 @@ t4	terminator2_jd	cast	a_schwarzenegger
 	t4	role	terminator
 t6	terminator2_jd	cast	l_hamilton
 	t6	role	s_connor
-t8	terminator2_jd	award	academy-best-sound-editing
+t8	terminator2_jd	award	academy_best_sound_editing
 	t8	point_in_time	^1992-03-30T00:00:00Z/11
 	t8	winner	g_rydstrom
 	t8	winner	g_borders
