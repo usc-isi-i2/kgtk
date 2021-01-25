@@ -1,7 +1,7 @@
 ## Overview
 
 The expand command copies its input file to its output file, compacting
-repeated items into [multi-valued edges (`|` lists)](https://../../specification#multi-valued-edges).
+repeated items into [multi-valued edges (`|` lists)](https:../../specification#multi-valued-edges).
 Compact is intended to operate on KGTK node
 files or on the additional columns of KGTK denormalized edge files.
 It should not be used to compact the `node2` column of a KGTK edge file.
@@ -77,7 +77,7 @@ You intend to create:
 
 This would result in an invalid KGTK file, as the `node2` column is
 not allowed to contain multi-value edges (`|` lists) according to the
-[KGTK File Specification](https://../../specification#multi-valued-edges).
+[KGTK File Specification](https:../../specification#multi-valued-edges).
 
 !!! note
     If you insist on compacting the `node2` column, you can do so using:
