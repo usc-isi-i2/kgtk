@@ -2,7 +2,7 @@
 
 Join two KGTK edge files or two KGTK node files.
 
-## Summary
+### Summary
 
 * Join keys are extracted from one or both input files and stored in memory, then the data files are processed in a second pass.  Performance will be poor, and execution may fail, if the files are very large.
 * stdin will not work as an input file if join keys are needed from it.
