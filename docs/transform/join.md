@@ -535,7 +535,7 @@ matches at least one edge in the left file.
 ```bash
 kgtk join --left-join \
           --left-file examples/docs/join-file1.tsv \
-	  --right-file examples/docs/join-file2.tsv
+          --right-file examples/docs/join-file2.tsv
 ```
 
 The result will be the following table in KGTK format:
@@ -558,7 +558,7 @@ matches at least one edge in the right file.
 ```bash
 kgtk join --right-join \
           --left-file examples/docs/join-file1.tsv \
-	  --right-file examples/docs/join-file2.tsv
+          --right-file examples/docs/join-file2.tsv
 ```
 
 The result will be the following table in KGTK format:
@@ -579,7 +579,7 @@ and is included here for completeness.
 ```bash
 kgtk join --left-join --right-join \
           --left-file examples/docs/join-file1.tsv \
-	  --right-file examples/docs/join-file2.tsv
+          --right-file examples/docs/join-file2.tsv
 ```
 
 The result will be the following table in KGTK format:
@@ -658,7 +658,7 @@ matches at least one edge in the left file.
 ```bash
 kgtk join --left-join \
           --left-file examples/docs/join-file3.tsv \
-	  --right-file examples/docs/join-file4.tsv
+          --right-file examples/docs/join-file4.tsv
 ```
 
 The result will be the following table in KGTK format:
@@ -686,7 +686,7 @@ matches at least one edge in the right file.
 ```bash
 kgtk join --right-join \
           --left-file examples/docs/join-file3.tsv \
-	  --right-file examples/docs/join-file4.tsv
+          --right-file examples/docs/join-file4.tsv
 ```
 
 The result will be the following table in KGTK format:
@@ -711,7 +711,7 @@ and is included here for completeness.
 ```bash
 kgtk join --left-join --right-join \
           --left-file examples/docs/join-file3.tsv \
-	  --right-file examples/docs/join-file4.tsv
+          --right-file examples/docs/join-file4.tsv
 ```
 
 The result will be the following table in KGTK format:
