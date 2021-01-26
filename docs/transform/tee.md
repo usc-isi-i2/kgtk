@@ -153,3 +153,49 @@ kgtk cat -i tee-out.tsv
 | steve | zipcode | 45601 | home | 1 |
 | steve | zipcode | 45601 | work | 2 |
 | steve | zipcode | 45601 | cabin |  |
+
+### Tee Making Two Copies
+
+```bash
+kgtk tee -i examples/docs/tee-file1.tsv \
+         -o tee-out1.tsv \
+         --into-file tee-out2.tsv
+```
+
+```bash
+kgtk cat -i tee-out1.tsv
+```
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 |
+| john | zipcode | 12346 |  |  |
+| peter | zipcode | 12040 | home |  |
+| peter | zipcode | 12040 | cabin |  |
+| peter | zipcode | 12040 | work | 5 |
+| peter | zipcode | 12040 |  | 6 |
+| steve | zipcode | 45601 |  | 3 |
+| steve | zipcode | 45601 |  | 4 |
+| steve | zipcode | 45601 |  | 5 |
+| steve | zipcode | 45601 | home | 1 |
+| steve | zipcode | 45601 | work | 2 |
+| steve | zipcode | 45601 | cabin |  |
+
+```bash
+kgtk cat -i tee-out2.tsv
+```
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 |
+| john | zipcode | 12346 |  |  |
+| peter | zipcode | 12040 | home |  |
+| peter | zipcode | 12040 | cabin |  |
+| peter | zipcode | 12040 | work | 5 |
+| peter | zipcode | 12040 |  | 6 |
+| steve | zipcode | 45601 |  | 3 |
+| steve | zipcode | 45601 |  | 4 |
+| steve | zipcode | 45601 |  | 5 |
+| steve | zipcode | 45601 | home | 1 |
+| steve | zipcode | 45601 | work | 2 |
+| steve | zipcode | 45601 | cabin |  |
