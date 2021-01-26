@@ -350,7 +350,7 @@ Output file:
 
 `--left-file-join-columns LEFT_JOIN_COLUMNS ...` and `--right-file-join-columns RIGHT_JOIN_COLUMNS ...`
 may be used to join on arbitrary sets of left and right file columns.  It is necessary to use these
-options when processing quasi-KGTK files (`--mode=NONE`, `--left-mode=NONE`, `--right-mode=NONE).
+options when processing quasi-KGTK files (`--mode=NONE`, `--left-mode=NONE`, `--right-mode=NONE`).
 
 ### Memory Usage and stdin Limitation
 
