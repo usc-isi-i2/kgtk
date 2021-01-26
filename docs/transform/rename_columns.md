@@ -9,7 +9,7 @@ The rename-columns command renames file columns while copying a KGTK file from i
 !!! note
     The output file should still have required columns (`id` for a KGTK node file, (`node1`, `label`, `node2`)
     for a KGTK edge file).  This requirement may be disabled with the expert option `--mode=NONE`, but the
-    output file will not be a valid KGTK edge file.
+    output file will not be a valid KGTK node or edge file.
 
 !!! info
     See [`kgtk remove-columns`](https:../remove_columns) if you wish to remove columns.

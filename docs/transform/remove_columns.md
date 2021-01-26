@@ -9,7 +9,7 @@
 !!! note
     The output file should still have required columns (`id` for a KGTK node file, (`node1`, `label`, `node2`)
     for a KGTK edge file).  This requirement may be disabled with the expert option `--mode=NONE`, but the
-    output file will not be a valid KGTK edge file.
+    output file will not be a valid KGTK node or edge file.
 
 !!! note
     [`kgtk reorder-columns --trim`](https:../reorder_columns) may be used as an alternative to `kgtk remove-columns`.
