@@ -170,7 +170,8 @@ The result will be the following table in KGTK format:
 Occasionally you may wish to create a quasi-KGTK file (e.g., a KGTK
 file that does not contain the required column names).  For example, you
 may need certain names on the columns to clarify their meaning in a
-report.
+report.  To accomplish this, you will need to include the expert option
+`--mode=NONE` on the command line.
 
 Copy `file1.tsv`, sending the output to standard output, renaming
 all columns in the output file, including renaming some of the required
