@@ -91,10 +91,10 @@ def run(input_file: KGTKFiles,
         match_type: str,
         first_match_only: bool,
 
-        pattern_separator: str,
-        word_separator: str,
+        pattern_separator: str = ";",
+        word_separator: str = ",",
 
-        show_version: bool,
+        show_version: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
