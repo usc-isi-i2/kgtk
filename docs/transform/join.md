@@ -79,7 +79,9 @@ The `label` column typically expresses a relationship between the values
 
 If the two input files to `kgtk join` contain only normalized edges then the output file will contain only normalized edges.
 
-### `id` Column
+### The Optional `id` Column
+
+The `id` columns is optional in KGTK edge files.  It is required in KGTK node files.
 
  * If either input file contains an `id` column, then the output file will
 contain an `id` column.
