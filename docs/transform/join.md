@@ -370,7 +370,7 @@ problems if the join requires more memory than is available.
 
 !!! note
     [`kgtk ifexists`](https:../ifexists) provides an experimental join mode that works with
-    presorted input files.  In the future, `kgtk join` may be offer support for
+    presorted input files and uses much less memory.  In the future, `kgtk join` may offer support for
     presorted input files.
 
 
