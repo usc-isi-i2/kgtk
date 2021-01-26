@@ -175,7 +175,7 @@ Right input file:
 Output file after joining on `node1`:
 
 | node1 | label | node2 | color | size |
-| ----- | ----- | ----- | ----- |
+| ----- | ----- | ----- | ----- | --- |
 | block1 | isa | block| | |
 | block1 | type | cube | red |       |
 | block1 | isa | block| | |
@@ -185,7 +185,7 @@ Output file after joining on `node1`:
 edges and compact the additional columns after the join:
 
 | node1 | label | node2 | color | size |
-| ----- | ----- | ----- | ----- |
+| ----- | ----- | ----- | ----- | --- |
 | block1 | isa | block| | |
 | block1 | type | cube | red | large |
 
