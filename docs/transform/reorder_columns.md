@@ -34,8 +34,12 @@ When this option is specified, all unmentioned columns will be removed
 from the output file.
 
 !!! note
-    `kgtk remove-columns --trim` will not complain if there are no columns to
-    trim.
+    An elipses (`...`) will consume all remaining column names, leaving none left
+    for `--trim` to remove.
+
+!!! note
+    `kgtk remove-columns --trim` will not complain if there are no column names to
+    remove.
 
 !!! note
     If you use this option to remove a required column name (`id` for KGTK
