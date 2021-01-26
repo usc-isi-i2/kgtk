@@ -8,8 +8,13 @@ You provide a list of column names in the order in which they should appear in t
     you use "..", `...`, or `--trim`, described below.
 
 !!! note
-    This comand can be used to reorder the columns of non-KGTK TSV files (quasi-KGTK files)
+    This comand can be used to reorder the columns of non-KGTK input TSV files (quasi-KGTK files)
     by using the expert option `--mode=NONE`.
+
+!!! note
+    The output file should still have required columns (`id` for a KGTK node file, (`node1`, `label`, `node2`)
+    for a KGTK edge file).  This requirement may be disabled with the expert option `--mode=NONE`, but the
+    output file will not be a valid KGTK edge file.
 
 !!! info
     See [`kgtk remove-columns`](https:../remove_columns) if you wish to remove columns.
@@ -284,3 +289,6 @@ The result will be the following table in KGTK format:
 | steve | home |
 | steve | work |
 | steve | cabin |
+
+!!! note
+    Quasi-KGTK input files may also be processed by specifying `--mode=NONE`.
