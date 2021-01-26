@@ -119,6 +119,7 @@ kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
 ```
 
 The result will be the following table in KGTK format:
+
 | node1 | label | node2 | where |
 | -- | -- | -- | -- |
 | john | zipcode | 12345 | home |
