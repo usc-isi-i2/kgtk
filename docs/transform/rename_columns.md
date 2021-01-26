@@ -89,7 +89,7 @@ The result will be the following table in KGTK format:
 | steve | zipcode | 45601 | home |
 | steve | zipcode | 45601 | work |
 
-### Swap `node1` and `node2`
+### Swap `node1` and `node2` Without Reordering
 
 Copy `file1.tsv`, sending the output to standard output,
 swapping the `node1` and `node2` columns by renaming them:
@@ -108,6 +108,35 @@ kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
 | peter | zipcode | 12040 | work |
 | steve | zipcode | 45601 | home |
 | steve | zipcode | 45601 | work |
+
+!!! note
+    The `node1` and `node2` columns in this example are logically swapped,
+    but not physically swapped.  If you need to reorder the data columns as well
+    as renaming them, use [`kgtk reorder-columns`](https:../reorder_columns),
+    as shown in the next example.
+
+### Swap `node1` and `node2` with Reordering
+
+Copy `file1.tsv`, sending the output to standard output,
+swapping the `node1` and `node2` columns by renaming them and
+and reordering the data:
+
+```
+kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
+                    --old-columns node1 node2 \
+                    --new-columns node2 node1 \
+   / reorder-columns --columns node1 label node2 ...
+```
+
+| node1 | label | node2 | location |
+| -- | -- | -- | -- |
+| 12345 | zipcode | john | home |
+| 12346 | zipcode | john | work |
+| 12040 | zipcode | peter | home |
+| 12040 | zipcode | peter | work |
+| 45601 | zipcode | steve | home |
+| 45601 | zipcode | steve | work |
+
 
 ### Rename All Columns
 
