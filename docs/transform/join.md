@@ -394,6 +394,17 @@ following options (enable expert mode for usage information):
 | `--mode=NONE` | Treat both input files as quasi-KGTK files.  Both `--left-file-join-columns` and `--right-file-join-columns` must be supplied. |
 | `--right-mode=NONE` | Treat the right input file as a quasi-KGTK file.  `--right-file-join-columns` must be supplied. |
 
+### `kgtk join / compact`
+
+The pipeline `kgtk join / compact` is a frequent idiom to remove duplicates and
+compact additional columns in KGTK output files.
+
+!!! info
+    In the future, `kgtk join --compact` will run `kgtk compact` automatically
+    on the output of `kgtk join`.  This will reduce the
+    number of command options that may need to be specified.  It may increase
+    performance as well. Issue #116.
+
 
 ## Usage
 
