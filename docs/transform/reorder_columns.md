@@ -20,18 +20,22 @@ order you wish them to appear in the output file.
 
 ### Column Ranges
 
-When building the list of column names, you may use `..` to indicate a range of column names (e.g., `first .. last`)
+When listing the output column names, you may use `..` to indicate a range of column names (e.g., `first .. last`)
 in the order of the columns in the input file.
 
 ### Elipses
 
-When building the list of column names, you may use `...` to indicate all columns not explicitly mentioned.
+When listing the output column names, you may use `...` to indicate all columns not explicitly mentioned.
 
 ### Trimming Columns
 
 You may remove ("trim") columns with this command using the `--trim` option.
 When this option is specified, all unmentioned columns will be removed
 from the output file.
+
+!!! note
+    `kgtk remove-columns --trim` will not complain if there are no columns to
+    trim.
 
 !!! note
     If you use this option to remove a required column name (`id` for KGTK
