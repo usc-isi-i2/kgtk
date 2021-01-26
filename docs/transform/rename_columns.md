@@ -75,7 +75,7 @@ the `location` column to `where`:
 ```
 kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
                     --old-columns location \
-		    --new-columns where
+                    --new-columns where
 ```
 
 The result will be the following table in KGTK format:
@@ -96,7 +96,7 @@ Swap the `node1` and `node2` columns by renaming them.
 ```
 kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
                     --old-columns node1 node2 \
-		    --new-columns node2 node1
+                    --new-columns node2 node1
 ```
 
 | node1 | label | node2 | location |
@@ -139,8 +139,8 @@ report.
 ```
 kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
                     --old-columns node1 node2 location \
-		    --new-columns Employee 'Zip Code' 'Home or Work' \
-		    --mode=NONE
+                    --new-columns Employee 'Zip Code' 'Home or Work' \
+                    --mode=NONE
 ```
 
 | Employee | label | Zip Code | Home or Work |
