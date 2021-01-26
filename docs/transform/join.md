@@ -397,13 +397,13 @@ following options (enable expert mode for usage information):
 ### `kgtk join / compact`
 
 The pipeline `kgtk join / compact` is a frequent idiom to remove duplicates and
-compact additional columns in KGTK output files.
+compact additional columns in the output from a join operation.
 
 !!! info
     In the future, `kgtk join --compact` will run `kgtk compact` automatically
     on the output of `kgtk join`.  This will reduce the
     number of command options that may need to be specified.  It may increase
-    performance as well. Issue #116.
+    performance as well. aIssue #116.
 
 
 ## Usage
