@@ -209,7 +209,7 @@ Result:
 | t15 | t14 | role | sarah_connor |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
-### Selecting Edges with `label` (Predicate) `genre`
+### Selecting Edges with Matching `label` (Predicate)
 
 Select all edges that have property `genre` (in the `label` column or its alias):
 
