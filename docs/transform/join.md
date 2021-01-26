@@ -222,7 +222,7 @@ Output file after joining without prefixing:
 Output file after joining on `node1` with `--left-prefix=l- --right-prefix=r-`:
 
 | node1 | label | node2 | l-color | r-color |
-| ----- | ----- | ----- | ----- |
+| ----- | ----- | ----- | ----- | --- |
 | block1 | isa | block | | |
 | block1 | type | cube | red |       |
 | block1 | isa | block | | |
@@ -254,7 +254,7 @@ Right input file:
 Output file after an inner join on (`node1`, `label`, `node2`):
 
 | node1 | label | node2 | color | size |
-| ----- | ----- | ----- | ----- |
+| ----- | ----- | ----- | ----- | --- |
 | block1 | type | cube | red |       |
 | block1 | type | cube |     | large |
 
@@ -262,7 +262,7 @@ Output file after an inner join on (`node1`, `label`, `node2`):
 compact the additional columns after the join:
 
 | node1 | label | node2 | color | size |
-| ----- | ----- | ----- | ----- |
+| ----- | ----- | ----- | ----- | --- |
 | block1 | type | cube | red | large |
 
 ### Joining Node Files: Set Intersection
