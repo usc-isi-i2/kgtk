@@ -130,8 +130,8 @@ unquoted list that allows commas inside column names
 
 !!! note
     The sample data does not include a column name with commas
-    in it.  If it did, there would be a warning message whever
-    a KGTK command read the file's header record.
+    in it, so this is not a very good example.  If it did, there would be a warning message whenever
+    a KGTK command reads the file's header record.
 
 ```
 kgtk remove-columns -i examples/docs/remove-columns-file1.tsv \
