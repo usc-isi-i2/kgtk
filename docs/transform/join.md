@@ -346,6 +346,13 @@ Output file:
 
 | id | shape | color |
 | --- | --- | --- |
+| block1 | cube | |
+| block1 | | red |
+
+After using [`kgtk compact`](https:../compact) to compact the entries:
+
+| id | shape | color |
+| --- | --- | --- |
 | block1 | cube | red |
 
 ### Joining on Arbitrary Columns
