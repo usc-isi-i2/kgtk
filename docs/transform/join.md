@@ -593,7 +593,7 @@ The result will be the following table in KGTK format:
 | peter | position | engineer |
 | edward | position | supervisor |
 
-### Deormalized Sample Data
+### Denormalized Sample Data
 
 Suppose that `file3.tsv` contains the following table in KGTK format:
 
