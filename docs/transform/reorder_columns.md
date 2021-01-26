@@ -1,11 +1,15 @@
 ## Overview
 
-The reorder-columns command reorders file columns while copying a KGTK file from input to output.
+`kgtk reorder-columns` reorders file columns while copying a KGTK file from input to output.
 You provide a list of column names in the order in which they should appear in the output file.
 
 !!! note
     You may not omit any column names from the list of column names unless
     you use "..", `...`, or `--trim`, described below.
+
+!!! note
+    This comand can be used to reorder the columns of non-KGTK TSV files (quasi-KGTK files)
+    by using the expert option `--mode=NONE`.
 
 !!! info
     See [`kgtk remove-columns`](https:../remove_columns) if you wish to remove columns.
