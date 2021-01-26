@@ -44,32 +44,25 @@ The [examples folder](examples/) provides a larger and constantly increasing num
 docker pull uscisii2/kgtk
 ```
 
-To run KGTK in the command line just type:
-
-```
-docker run -it uscisii2/kgtk /bin/bash
-```
-
-If you want to run KGTK in a **Jupyter notebook**, then you will have to type:
-```
-docker run -it -p 8888:8888 uscisii2/kgtk:latest /bin/bash -c "jupyter notebook --ip='*' --port=8888 --no-browser"
-```
-Versions 0.3.2 and 0.2.1 require `--allow-root` as part of the jupyter notebook command.
-
-To run KGTK in Docker through the command line, write the following:
+To run KGTK in the command line:
 
 ```
 docker run -it --rm  --user root -e NB_GID=100 -e GEN_CERT=yes -e GRANT_SUDO=yes uscisii2/kgtk:latest /bin/bash
 ```
 
 Note: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
-For example, to mount the current directory and launch KGTK in command line mode:
+For example, to mount the current directory (`$PWD`) and launch KGTK in command line mode:
 
 ```
 docker run -it --rm -v $PWD:/out --user root -e NB_GID=100 -e GEN_CERT=yes -e GRANT_SUDO=yes uscisii2/kgtk:latest /bin/bash
 ```
 
-More information about versions and tags is available here: https://hub.docker.com/repository/docker/uscisii2/kgtk
+If you want to run KGTK in a **Jupyter notebook**, mounting the current directory (`$PWD`) as a folder called `/out` then you will have to type:
+```
+docker run -it -v $PWD:/out -p 8888:8888 uscisii2/kgtk:latest /bin/bash -c "jupyter notebook --ip='*' --port=8888 --no-browser"
+```
+
+More information about versions and tags is available here: https://hub.docker.com/repository/docker/uscisii2/kgtk. For example, the `dev` branch is available at `uscisii2/kgtk:latest-dev`.
 
 See additional examples in [the documentation](https://kgtk.readthedocs.io/en/latest/install/).
 
