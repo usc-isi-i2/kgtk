@@ -99,7 +99,7 @@ kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
                     --new-columns node2 node1
 ```
 
-| node1 | label | node2 | location |
+| node2 | label | node1 | location |
 | -- | -- | -- | -- |
 | john | zipcode | 12345 | home |
 | john | zipcode | 12346 | work |
