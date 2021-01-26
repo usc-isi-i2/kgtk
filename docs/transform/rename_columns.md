@@ -91,7 +91,8 @@ The result will be the following table in KGTK format:
 
 ### Swap `node1` and `node2`
 
-Swap the `node1` and `node2` columns by renaming them.
+Copy `file1.tsv`, sending the output to standard output,
+swapping the `node1` and `node2` columns by renaming them:
 
 ```
 kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
@@ -136,6 +137,9 @@ file that does not contain the required column names).  For example, you
 may need certain names on the columns to clarify their meaning in a
 report.
 
+Copy `file1.tsv`, sending the output to standard output, renaming
+all columns in the output file, including renaming some of the required
+columns to nonstandard names:
 ```
 kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
                     --old-columns node1 node2 location \
