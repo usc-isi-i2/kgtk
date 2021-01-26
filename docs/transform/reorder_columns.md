@@ -226,7 +226,7 @@ The result will be the following table in KGTK format:
 | steve | zipcode | 45601 | 2 | work |
 | steve | zipcode | 45601 |  | cabin |
 
-### Trimming an Omitted Column
+### Trimming Omitted Columns
 
 Copy `file1.tsv`, sending the output to standard output, giving
 a partial list of columns and trimming the remainder:
