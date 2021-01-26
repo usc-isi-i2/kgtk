@@ -29,8 +29,8 @@ input files, adjusted for predefined name aliasing.
 
  * to perform a logical operation on two sets of edges or nodes.
 
-   * intersection (inner join, defined below)
-   * union (outer join, defined below; also, [`kgtk cat`](https:../cat))
+     * intersection (inner join, defined below)
+     * union (outer join, defined below; also, [`kgtk cat`](https:../cat))
 
 ### Left and Right Input Files
 
