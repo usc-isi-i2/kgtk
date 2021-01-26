@@ -31,11 +31,11 @@ The [examples folder](examples/) provides a larger and constantly increasing num
 * PageRank over Wikidata
 * etc.
 
+## Releases
+
+* See all [source code releases](https://github.com/usc-isi-i2/kgtk/releases)
+
 ## Installation
-
-### Releases
-
-* [Source code](https://github.com/usc-isi-i2/kgtk/releases)
 
 
 ### Installation through Docker
@@ -68,7 +68,8 @@ See additional examples in [the documentation](https://kgtk.readthedocs.io/en/la
 
 ### Local installation
 
-0. Our installations will be in a conda environment. If you don't have a conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it.
+Our installation will be in a **conda environment**. If you don't have conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it. Once installed, follow the instructions below:
+
 1. Set up your own conda environment:
 ```
 conda create -n kgtk-env python=3.7
@@ -131,11 +132,13 @@ python -W ignore -m unittest discover
 ## How to cite
 
 ```
-@article{ilievski2020kgtk,
-  title={KGTK: A Toolkit for Large Knowledge Graph Manipulation and Analysis},
+@inproceedings{ilievski2020kgtk,
+  title={{KGTK}: A Toolkit for Large Knowledge Graph Manipulation and Analysis}},
   author={Ilievski, Filip and Garijo, Daniel and Chalupsky, Hans and Divvala, Naren Teja and Yao, Yixiang and Rogers, Craig and Li, Ronpeng and Liu, Jun and Singh, Amandeep and Schwabe, Daniel and Szekely, Pedro},
-  journal={arXiv preprint arXiv:2006.00088},
+  booktitle={International Semantic Web Conference},
+  pages={278--293},
   year={2020},
-  url={https://arxiv.org/abs/2006.00088}
+  organization={Springer}
+  url={https://arxiv.org/pdf/2006.00088.pdf}
 }
 ```
