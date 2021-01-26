@@ -27,7 +27,7 @@ input files, adjusted for predefined name aliasing.
    improve the performance of future processing steps by eliminating
    unwanted edges (or nodes).
 
- * to perform a logical operation on two sets of edges or nodes.
+ * to perform a logical (set) operation on two sets of edges or nodes.
 
      * intersection (inner join, defined below)
      * union (outer join, defined below; also, [`kgtk cat`](https:../cat))
@@ -267,7 +267,8 @@ compact the additional columns after the join:
 
 ### Joining Node Files: Set Intersection
 
-Node files may be joined to perform a set intersection.
+Node files may be joined to perform a set intersection using the default
+join type (omit `--left-join` and `--right-join`).
 
 Left input file:
 
@@ -283,7 +284,7 @@ Right input file:
 | block1 |
 | block3 |
 
-Output file after an inner join:
+Output file after the inner join:
 
 | id |
 | --- |
@@ -291,7 +292,8 @@ Output file after an inner join:
 
 ### Joining Node Files: Set Union
 
-Node files may be joined to perform a set union.
+Node files may be joined to perform a set union.  Use `--left-join --right-join` to
+perform an outer join.
 
 Left input file:
 
@@ -307,7 +309,7 @@ Right input file:
 | block1 |
 | block3 |
 
-Output file after an inner join:
+Output file after the outer join:
 
 | id |
 | --- |
