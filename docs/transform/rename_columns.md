@@ -3,6 +3,10 @@
 The rename-columns command renames file columns while copying a KGTK file from input to output.
 
 !!! note
+    This comand can be used to remove the columns of non-KGTK TSV input files (quasi-KGTK files)
+    by using the expert option `--mode=NONE`.
+
+!!! note
     The output file should still have required columns (`id` for a KGTK node file, (`node1`, `label`, `node2`)
     for a KGTK edge file).  This requirement may be disabled with the expert option `--mode=NONE`, but the
     output file will not be a valid KGTK edge file.
@@ -191,3 +195,6 @@ kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
 | peter | zipcode | 12040 | work |
 | steve | zipcode | 45601 | home |
 | steve | zipcode | 45601 | work |
+
+!!! note
+    Quasi-KGTK input files may also be processed by specifying `--mode=NONE`.

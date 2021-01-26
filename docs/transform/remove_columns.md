@@ -3,8 +3,13 @@
 `kgtk remove-columns` removes a subset of the columns from a KGTK file.
 
 !!! note
-    This comand can be used to remove the columns of non-KGTK TSV files (quasi-KGTK files)
+    This comand can be used to remove the columns of non-KGTK TSV input files (quasi-KGTK files)
     by using the expert option `--mode=NONE`.
+
+!!! note
+    The output file should still have required columns (`id` for a KGTK node file, (`node1`, `label`, `node2`)
+    for a KGTK edge file).  This requirement may be disabled with the expert option `--mode=NONE`, but the
+    output file will not be a valid KGTK edge file.
 
 !!! note
     [`kgtk reorder-columns --trim`](https:../reorder_columns) may be used as an alternative to `kgtk remove-columns`.
@@ -230,3 +235,6 @@ kgtk remove-columns -i examples/docs/remove-columns-file1.tsv \
 | steve | home | 1 |
 | steve | work | 2 |
 | steve | cabin |  |
+
+!!! note
+    Quasi-KGTK input files may also be processed by specifying `--mode=NONE`.
