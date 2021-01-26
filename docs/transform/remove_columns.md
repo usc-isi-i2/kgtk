@@ -20,7 +20,7 @@ When you use this command, you supply the `--columns` option with
 a list of column names in the
 order you wish them to appear in the output file.
 
-Column names may be passed to the `--columns` option as an unquoted
+Column names may be passed to the `--columns` option as an unquoted, space-separated
 list, as with other KGTK commands.
 
 By default, column names are split on commas (`,`), unless `--split-on-commas=FALSE` is specified.
@@ -28,8 +28,7 @@ By default, column names are split on commas (`,`), unless `--split-on-commas=FA
 By default, leading and trailing whitespace is removed from column names,
 unless `--strip-spaces=FALSE` is specified.
 
-Column names can be split on spaces, as with most other KGTK commands that accept lists of
-column names, if `--split-on-spaces=TRUE` is specified.
+Column names can be passed as a quoted list and split on spaces, if `--split-on-spaces=TRUE` is specified.
 
 ## Usage
 ```
