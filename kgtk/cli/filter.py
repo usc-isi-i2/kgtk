@@ -63,6 +63,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="If true, write only to the file with the first matching pattern.  If false, write to all files with matching patterns. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument('--pattern-separator', action="store", type=str, dest='pattern_separator', default=";",
+                        help="The separator between the pattern components. (default=%(default)s.")
+
+    parser.add_argument('--word-separator', action="store", type=str, dest='word_separator', default=",",
+                        help="The separator between the words in a pattern component. (default=%(default)s.")
+
     parser.add_argument(      "--show-version", dest="show_version", type=optional_bool, nargs='?', const=True, default=False,
                               help="Print the version of this program. (default=%(default)s).", metavar="True/False")
 
@@ -84,6 +90,9 @@ def run(input_file: KGTKFiles,
         regex: bool,
         match_type: str,
         first_match_only: bool,
+
+        pattern_separator: str,
+        word_separator: str,
 
         show_version: bool,
 
@@ -138,6 +147,8 @@ def run(input_file: KGTKFiles,
         print("--regex=%s" % str(regex), file=error_file)
         print("--match-type=%s" % repr(match_type), file=error_file)
         print("--first-match-only=%s" % str(first_match_only), file=error_file)
+        print("--pattern-separator %s" % repr(pattern_separator), file=error_file)
+        print("--word-separator %s" % repr(word_separator), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -149,7 +160,7 @@ def run(input_file: KGTKFiles,
             return filt
 
         target: str
-        for target in pattern.split(","):
+        for target in pattern.split(word_separator):
             target=target.strip()
             if len(target) > 0:
                 filt.add(target)
@@ -625,9 +636,10 @@ def run(input_file: KGTKFiles,
         pattern: str
         for pattern_list in patterns:
             for pattern in pattern_list:
-                subpatterns: typing.List[str] = pattern.split(";")
+                subpatterns: typing.List[str] = pattern.split(pattern_separator)
                 if len(subpatterns) != 3:
-                    print("Error: The pattern must have three sections separated by semicolons (two semicolons total).", file=error_file, flush=True)
+                    print("Error: The pattern must have three sections separated by %s (two %s total)." % (repr(pattern_separator), repr(pattern_separator)),
+                          file=error_file, flush=True)
                     raise KGTKException("Bad pattern")
             
                 subj_filter = prepare_filter(subpatterns[0])
@@ -1052,9 +1064,10 @@ def run(input_file: KGTKFiles,
         pattern: str
         for pattern_list in patterns:
             for pattern in pattern_list:
-                subpatterns: typing.List[str] = pattern.split(";")
+                subpatterns: typing.List[str] = pattern.split(pattern_separator)
                 if len(subpatterns) != 3:
-                    print("Error: The pattern must have three sections separated by semicolons (two semicolons total).", file=error_file, flush=True)
+                    print("Error: The pattern must have three sections separated by %s (two %s total)." % (repr(pattern_separator), repr(pattern_separator)),
+                          file=error_file, flush=True)
                     raise KGTKException("Bad pattern")
             
                 subj_regex = prepare_regex(subpatterns[0])

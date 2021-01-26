@@ -15,7 +15,7 @@ Filters are composed of three patterns separated by semicolons:
 | label-pattern | This pattern applies to the `label` column (or its alias), unless a different column is selected with the `--label PRED_COL` option. |
 | node2-pattern | This pattern applies to the `node2` column (or its alias), unless a different column is selected with the `--node2 OBJ_COL` option. |
 
-Each of the patterns in a filter can consist of a list of symbols separated using commas,
+Each of the patterns in a filter can consist of a list of symbols (words) separated using commas,
 or a regular expression (when `--regex` is specified).
 
 A complete filter requires two semicolons (`;;`) with one or more nonempty patterns.  By default,
@@ -24,6 +24,14 @@ filter; however, the `--or` option may be specified to allow an input edge to ma
 nonempty pattern matches.  The `--invert` option may be used to invert the
 sense of the filter, causing matching input edges to be written to the
 reject file, and non-matching edges to be written to the output file.
+
+!!! note
+    If semicolon (`;`) is part of what you want to match, you may use
+    `--pattern-separator SEPARATOR` to supply a separator other then semicolon.
+
+!!! note
+    If comma (`,`) is part of what you want to match, you may use
+    `--word-separator SEPARATOR` to supply a separator other then comma.
 
 ### Regular Expression Patterns
 
@@ -55,12 +63,6 @@ total number of alternatives is large.
 ### Caveats
 
 !!! note
-    At the present time, semicolon (`;`) is used to separate the patterns of a filter and cannot appear within a pattern.
-
-!!! note
-    At the present time, comma (`,`) is used to separate alternatives in a non-regex pattern and cannot appear within a non-regex pattern.
-
-!!! note
     At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--node2`, `--or`, `--label`, `--regex`, and `--node1`
     options apply to all filters and patterns in the `kgtk filter` invocation. In particular, there is no support for mixing
     non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern by hand.
@@ -75,6 +77,8 @@ usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]]
                    [--regex [True|False]]
                    [--match-type {fullmatch,match,search}]
                    [--first-match-only [True|False]]
+                   [--pattern-separator PATTERN_SEPARATOR]
+                   [--word-separator WORD_SEPARATOR]
                    [--show-version [True/False]] [-v [optional True|False]]
 
 Filter KGTK file based on values in the node1 (subject), label (predicate), and node2 (object) fields.  Optionally filter based on regular expressions.
@@ -114,6 +118,12 @@ optional arguments:
                         If true, write only to the file with the first
                         matching pattern. If false, write to all files with
                         matching patterns. (default=False).
+  --pattern-separator PATTERN_SEPARATOR
+                        The separator between the pattern components.
+                        (default=;.
+  --word-separator WORD_SEPARATOR
+                        The separator between the words in a pattern
+                        component. (default=,.
   --show-version [True/False]
                         Print the version of this program. (default=False).
 
@@ -155,12 +165,13 @@ kgtk cat -i examples/docs/movies_reduced.tsv
 
 Let us use this file (or a close derivative) in the following examples.
 
-### Selecting Edges with a Matching Subject
+### Selecting Edges with a Matching `node1` (Subject)
 
-Select all edges that have subject `terminator`:
+Select all edges that have the subject `terminator` (in the `node1` column or its alias):
 
 ```
-kgtk filter -p " terminator; ; " -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            -p " terminator; ; "
 ```
 Result:
 
@@ -179,12 +190,13 @@ Result:
 | t16 | terminator | duration | 108 |
 | t17 | terminator | award | national_film_registry |
 
-### Selecting Edges without a Matching Subject
+### Selecting Edges without a Matching `node1` (Subject)
 
-Select all edges that do not have subject `terminator`:
+Select all edges that do not have the subject `terminator` (in the `node1` column or its alias):
 
 ```
-kgtk filter --invert -p " terminator; ; " -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --invert -p " terminator; ; "
 ```
 Result:
 
@@ -197,12 +209,13 @@ Result:
 | t15 | t14 | role | sarah_connor |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
-### Selecting Edges with Predicate `genre`
+### Selecting Edges with `label` (Predicate) `genre`
 
 Select all edges that have property `genre` (in the `label` column or its alias):
 
 ```bash
-kgtk filter -p " ; genre ; " -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            -p " ; genre ; "
 ```
 
 !!! info
@@ -222,7 +235,8 @@ However, you can specify any other column to filter.
 For example, if we had a column called `genre` in the input file:
 
 ```bash
-kgtk filter -p " ;action ; " --label genre -i examples/docs/movies_reduced_with_genre_column.tsv
+kgtk filter -i examples/docs/movies_reduced_with_genre_column.tsv \
+            --label genre  -p " ;action ; "
 ```
 
 Results:
@@ -236,7 +250,8 @@ Results:
 Select all edges that have properties `genre` or `cast`:
 
 ```bash
-kgtk filter -p " ; genre, cast ; " -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            -p " ; genre, cast ; "
 ```
 
 Result:
@@ -250,12 +265,37 @@ Result:
 | t14 | terminator | cast | linda_hamilton |
 
 
-### Selecting Edges with a Matching Object
+### Selecting Edges with Multiple Possible Predicate Matches and Custom Separators
 
-Select all edges that have `arnold_schwarzenegger` as object:
+Select all edges that have properties `genre` or `cast`,
+using `:` to separate the component patterns in the filter
+and using '|' to separate the alternative words:
 
 ```bash
-kgtk filter -p " ; ; arnold_schwarzenegger" -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --pattern-separator : \
+	    --word-separator '|' \
+            -p " : genre|cast : "
+```
+
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t12 | terminator | cast | michael_biehn |
+| t14 | terminator | cast | linda_hamilton |
+
+
+### Selecting Edges with a Matching `node2` (Object)
+
+Select all edges that have `arnold_schwarzenegger` as the object (in the `node2` column or its alias):
+
+```bash
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            -p " ; ; arnold_schwarzenegger"
 ```
 
 Result:
@@ -265,12 +305,14 @@ Result:
 | t10 | terminator | cast | arnold_schwarzenegger |
 
 
-### Selecting Edges with Both a Predicate and an Object Match
+### Selecting Edges with Both a `label` and `node2` Match
 
-Select all edges that have predicate values `role` or `cast` and object `terminator`:
+Select all edges that have predicate values `role` or `cast` (in the `label` column or its alias)
+and object `terminator` (in the `node2` column or its alias):
 
 ```bash
-kgtk filter -p " ; role, cast ; terminator " -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            -p " ; role, cast ; terminator "
 ```
 
 Result:
@@ -280,12 +322,14 @@ Result:
 | t11 | t10 | role | terminator |
 
 
-### Selecting Edges with a Predicate or an Object Match
+### Selecting Edges with a `label` or `node2` Match
 
-Select all edges that have predicate values `role` or `cast`, or object `sweden`:
+Select all edges that have predicate values `role` or `cast` (in the `label` column or its alias),
+or object `sweden` (in the `node2` column or its alias):
 
 ```bash
-kgtk filter --or -p " ; role, cast ; sweden " -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --or -p " ; role, cast ; sweden "
 ```
 
 Result:
@@ -306,10 +350,10 @@ Result:
 Send edges with property `cast` to one file, edges with property `genre` to another file, and the remaining edges to a third file:
 
 ```bash
-kgtk filter \
-     -p "; cast ;" -o cast.tsv \
-     -p "; genre ;" -o genre.tsv \
-     --reject-file others.tsv -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            -p "; cast ;" -o cast.tsv \
+            -p "; genre ;" -o genre.tsv \
+            --reject-file others.tsv
 ```
 (No standard output)
 
@@ -356,13 +400,13 @@ kgtk cat -i others.tsv
 
 ### Sending Different Edges to Different Files Without First Match
 
-Send edges with property `genre` to one file, edges with object `action` to another file, and ignore other edges.
+Send edges with `label`  property `genre` to one file,
+edges with `node2` object `action` to another file, and ignore other edges.
 
 ```bash
-kgtk filter \
-     -p "; genre ;" -o genre.tsv \
-     -p "; ; action" -o action.tsv \
-     -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            -p "; genre ;" -o genre.tsv \
+            -p "; ; action" -o action.tsv \
 ```
 (No standard output)
 
@@ -383,7 +427,6 @@ kgtk cat -i action.tsv
 
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
-| t3 | terminator | genre | action |
 
 !!! note
     The edge terminator/genre/action appears in both the genre and action output files.
@@ -394,10 +437,10 @@ Send edges with property `genre` to one file, edges with object `action` to anot
 Specify `--first-match-only` to ensure that a given edge will be sent to at most one output file.
 
 ```bash
-kgtk filter --first-match-only \
-     -p "; genre ;" -o genre.tsv \
-     -p "; ; action" -o action.tsv \
-     -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --first-match-only \
+            -p "; genre ;" -o genre.tsv \
+            -p "; ; action" -o action.tsv
 ```
 (No standard output)
 
@@ -431,11 +474,11 @@ Send edges with property `genre` to one file, edges with object `action` to anot
 remaining edges to standard output.  Specify `--first-match-only` to ensure that a given edge will be sent to at most one output file.
 
 ```bash
-kgtk filter --first-match-only \
-     -p "; genre ;" -o genre.tsv \
-     -p "; ; action" -o action.tsv \
-     --reject-file - \
-     -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --first-match-only \
+            -p "; genre ;" -o genre.tsv \
+            -p "; ; action" -o action.tsv \
+            --reject-file -
 ```
 
 
@@ -483,7 +526,9 @@ Select all edges with a subject value that starts with the letters `t1` (with
 unnecessary spaces trimmed out of the filter):
 
 ```
-kgtk filter -p "t1;;" --regex --match-type match -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --regex --match-type match \
+            -p "t1;;"
 ```
 Result:
 
@@ -500,7 +545,9 @@ Result:
 Select all edges with an object value that starts with a Digit:
 
 ```
-kgtk filter -p ';;[0-9].+' --regex --match-type fullmatch -i examples/docs/movies_reduced.tsv
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --regex --match-type fullmatch \
+            -p ';;[0-9].+'
 ```
 
 Result:
