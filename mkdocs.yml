@@ -37,6 +37,7 @@ nav:
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'
       - 'sort': 'transform/sort.md'
+      - 'tee': 'transform/tee.md'
       - 'unique': 'transform/unique.md'
       - 'unreify-rdf-statements': 'transform/unreify_rdf_statements.md'
       - 'unreify-values': 'transform/unreify_values.md'
