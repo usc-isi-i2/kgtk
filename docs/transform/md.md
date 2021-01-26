@@ -1,4 +1,6 @@
-Convert a KGTK input file to a GitHub markdown table on output.
+## Overview
+
+`kgtk md` converts a KGTK input file to a GitHub markdown table on output.
 
 The primary use for this command is to easily produce documentation files.
 However, there are instances in which the output of this command is more
