@@ -38,6 +38,7 @@ class KgtkJoiner(KgtkFormat):
     right_join: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # The fllowing may be specified only when both input files are edge files:
+    join_on_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     join_on_label: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     join_on_node2: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
@@ -135,8 +136,15 @@ class KgtkJoiner(KgtkFormat):
         else:
             raise ValueError("Quasi-KGTK files require an explicit list of join columns")
 
-        # join_on_label and join_on_node2 may be specified
-        if self.join_on_label or self.join_on_node2:
+        # join_on_id, join_on_label, and join_on_node2 may be specified
+        if self.join_on_id or self.join_on_label or self.join_on_node2:
+            if self.join_on_id:
+                if kr.id_column_idx < 0:
+                    raise ValueError("join_on_id may not be used because the %s input file does not have a id column." % who)
+                if self.verbose:
+                    print("Joining on id (index %s in the %s input file)" % (kr.id_column_idx, who), file=self.error_file, flush=True)
+                join_idx_list.append(kr.id_column_idx)
+                
             if self.join_on_label:
                 if kr.label_column_idx < 0:
                     raise ValueError("join_on_label may not be used because the %s input file does not have a label column." % who)
@@ -364,6 +372,10 @@ def main():
 
     parser.add_argument(      "--field-separator", dest="field_separator", help="Separator for multifield keys", default=KgtkJoiner.FIELD_SEPARATOR_DEFAULT)
 
+    parser.add_argument(      "--join-on-id", dest="join_on_id",
+                              help="If both input files are edge files, include the id column in the join (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+    
     parser.add_argument(      "--join-on-label", dest="join_on_label",
                               help="If both input files are edge files, include the label column in the join (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -411,6 +423,7 @@ def main():
                                 output_path=args.output_file_path,
                                 left_join=args.left_join,
                                 right_join=args.right_join,
+                                join_on_id=args.join_on_id,
                                 join_on_label=args.join_on_label,
                                 join_on_node2=args.join_on_node2,
                                 left_join_columns=args.left_join_columns,
