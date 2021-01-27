@@ -2,6 +2,7 @@ site_name: KGTK documentation
 nav:
   - Home: index.md
   - Getting started: install.md
+  - KGTK data model: data_model.md
   - KGTK file specification: specification.md
   - 'Import commands':
       - 'import-atomic': 'import/import_atomic.md'
@@ -31,20 +32,22 @@ nav:
       - 'join': 'transform/join.md'
       - 'lift': 'transform/lift.md'
       - 'md': 'transform/md.md'
+      - 'query': 'transform/query.md'
       - 'remove-columns': 'transform/remove_columns.md'
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'
       - 'sort': 'transform/sort.md'
+      - 'tee': 'transform/tee.md'
       - 'unique': 'transform/unique.md'
       - 'unreify-rdf-statements': 'transform/unreify_rdf_statements.md'
       - 'unreify-values': 'transform/unreify_values.md'
-      - 'zconcat': 'transform/zconcat.md'
+      # - 'zconcat': 'transform/zconcat.md' # Disabled 21-Jan-2021
   - 'Curation commands':
       - 'clean-data': 'curate/clean_data.md'
       - 'validate': 'curate/validate.md'
   - 'Analysis commands':
       - 'connected-components': 'analysis/connected_components.md'
-      - 'graph-embeddings': 'analysis/graph_embeddings.md'         
+      - 'graph-embeddings': 'analysis/graph_embeddings.md'
       - 'graph-statistics': 'analysis/graph_statistics.md'
       - 'paths': 'analysis/paths.md'
       - 'reachable-nodes': 'analysis/reachable_nodes.md'

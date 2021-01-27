@@ -7,6 +7,12 @@ import pandas as pd
 from kgtk.cli_entry import cli_entry
 
 
+# TO DO:
+# - file aliasing via --as, realiasing
+# - files not required to exist after initial import
+# - queries from stdin (query pipes not yet supported)
+# - NULL value tests and conversion functions
+
 class TestKGTKQuery(unittest.TestCase):
     def setUp(self) -> None:
         self.file_path = 'data/kypher/graph.tsv'
@@ -274,11 +280,29 @@ class TestKGTKQuery(unittest.TestCase):
         self.assertTrue('Molly' in node2_1s)
         self.assertTrue('Susi' in node2_1s)
 
+    def test_kgtk_query_multi_step_path_german_lovers_anonymous(self):
+        cli_entry("kgtk", "query", "-i", self.file_path, "-o", f'{self.temp_dir}/out.tsv', "--match",
+                  # test connection through anonymous node variables instead of a and b:
+                  "(na)<-[:name]-()-[r:loves]->()-[:name]->(nb)",
+                  "--where", 'na.kgtk_lqstring_lang = "de" OR nb.kgtk_lqstring_lang = "de"',
+                  "--return", "r, na, r.label, nb", '--graph-cache', self.sqldb)
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 2)
+        ids = list(df['id'].unique())
+        node2s = list(df['node2'].unique())
+        node2_1s = list(df['node2.1'].unique())
+        self.assertTrue('e11' in ids)
+        self.assertTrue('e12' in ids)
+        self.assertTrue("'Hans'@de" in node2s)
+        self.assertTrue("'Otto'@de" in node2s)
+        self.assertTrue('Molly' in node2_1s)
+        self.assertTrue('Susi' in node2_1s)
+
     def test_kgtk_query__named_multi_graph_join(self):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "g: (x)-[:loves]->(y), w: (y)-[:works]-(c)", '--graph-cache', self.sqldb)
+                  "g: (x)-[:loves]->(y), w: (y)-[:works]->(c)", '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 3)
         for i, row in df.iterrows():
@@ -296,7 +320,7 @@ class TestKGTKQuery(unittest.TestCase):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "(x)-[:loves]->(y), w: (y)-[:works]-(c)", '--graph-cache', self.sqldb)
+                  "(x)-[:loves]->(y), w: (y)-[:works]->(c)", '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 3)
         for i, row in df.iterrows():
@@ -314,7 +338,7 @@ class TestKGTKQuery(unittest.TestCase):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "g: (x)-[r:loves]->(y), w: (y)-[:works]-(c)",
+                  "g: (x)-[r:loves]->(y), w: (y)-[:works]->(c)",
                   "--return", 'r, x, r.label, y as node2, c as `node2;work`', '--graph-cache', self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
         self.assertTrue(len(df) == 3)
@@ -328,7 +352,7 @@ class TestKGTKQuery(unittest.TestCase):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]-(c)",
+                  "g: (x)-[r:loves]->(y), w: (y {salary: s})-[:works]->(c)",
                   "--where", "cast(s, integer) >= 10000",
                   "--return", 'r, x, r.label, y as node2, c as `node2;work`, s as `node2;salary`', '--graph-cache',
                   self.sqldb)
@@ -341,6 +365,22 @@ class TestKGTKQuery(unittest.TestCase):
                 self.assertEqual(row['node2'], 'Molly')
                 self.assertEqual(row['node2;work'], 'Renal')
 
+    def test_kgtk_query_multi_graph_ambiguous_return_alias(self):
+        # Tests bug fix for case where 'node1'/'node2' return aliases are ambiguous for the two input graphs..
+        cli_entry("kgtk", "query",
+                  "-i", self.file_path, "-i", self.works_path, "-o", f'{self.temp_dir}/out.tsv',
+                  "--match", "g: (:Susi)<-[:loves]-(n1), w: (n1)-[prop]->(n2)",
+                  "--return", "prop, prop.label, n1 as node1, n2 as node2",
+                  "--order-by", "node2",
+                  "--graph-cache", self.sqldb)
+        df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')
+        self.assertTrue(len(df) == 2)
+        for i, row in df.iterrows():
+            if row['id'] == 'w22':
+                self.assertEqual(row['node1'], 'Otto')
+                self.assertEqual(row['label'], 'department')
+                self.assertEqual(row['node2'], 'Pharm')
+                
     def test_kgtk_query_max(self):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
@@ -395,7 +435,7 @@ class TestKGTKQuery(unittest.TestCase):
     def test_kgtk_query_biggest_salary(self):
         cli_entry("kgtk", "query", "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
-                  "w: (y {salary: s})-[r:works]-(c)",
+                  "w: (y {salary: s})-[r:works]->(c)",
                   "--return", 'max(cast(s, int)) as `node1;salary`, y, "works" as label, c, r', '--graph-cache',
                   self.sqldb)
         df = pd.read_csv(f'{self.temp_dir}/out.tsv', sep='\t')

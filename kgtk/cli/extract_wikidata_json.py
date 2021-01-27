@@ -33,12 +33,20 @@ def add_arguments(parser: KGTKArgumentParser):
         help='The entity IDs to find.')
 
     parser.add_argument(
-        "--limit",
+        "--input-limit", "--limit",
         action="store",
         type=int,
-        dest="limit",
+        dest="input_limit",
         default=None,
         help='number of lines of input file to run on, default runs on all')
+
+    parser.add_argument(
+        "--output-limit",
+        action="store",
+        type=int,
+        dest="output_limit",
+        default=None,
+        help='Limit the number of lines of output (default unlimited)')
 
     parser.add_argument(
         "--use-mgzip-for-input",
@@ -77,7 +85,8 @@ def add_arguments(parser: KGTKArgumentParser):
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         entity_ids: typing.List[str],
-        limit: int,
+        input_limit: int,
+        output_limit: int,
         use_mgzip_for_input: bool,
         use_mgzip_for_output: bool,
         mgzip_threads_for_input: int,
@@ -153,12 +162,12 @@ def run(input_file: KGTKFiles,
 
     entity_id_set: typing.Set[str] = set(entity_ids)
 
-    first: bool = True
-    count: int
+    output_count: int = 0
+    input_count: int
     line: bytes
-    for count, line in enumerate(input_f):
-        if limit and count >= limit:
-            continue
+    for input_count, line in enumerate(input_f):
+        if input_limit and input_count >= input_limit:
+            break
         clean_line = line.strip()
         if clean_line.endswith(b","):
             clean_line = clean_line[:-1]
@@ -166,17 +175,20 @@ def run(input_file: KGTKFiles,
             obj = json.loads(clean_line)
             entity = obj["id"]
             if entity in entity_id_set:
-                if first:
+                if output_count == 0:
                     output_f.write(b"[\n")
-                    first = False
                 else:
                     output_f.write(b",\n")
                 output_f.write(clean_line)
+                output_count += 1
+                if output_limit is not None and output_count >= output_limit:
+                    break
             
     print('Done processing {}'.format(str(in_path)), file=sys.stderr, flush=True)
     input_f.close()
 
-    if not first:
+    if output_count > 0:
         output_f.write(b"\n]\n")
     output_f.close()
    
+    print('Wrote {} records'.format(output_count), file=sys.stderr, flush=True)

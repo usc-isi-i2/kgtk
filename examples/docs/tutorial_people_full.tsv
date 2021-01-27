@@ -1,0 +1,25 @@
+id	node1	label	node2
+h1	james_cameron	label	"James Cameron"
+h2	james_cameron	instance_of	human
+h3	james_cameron	birth_date	^1954-08-16T00:00:00Z/11
+h4	james_cameron	country	Canada
+h5	arnold_schwarzenegger	label	"Arnold Schwarzenegger"
+h6	arnold_schwarzenegger	instance_of	human
+h7	arnold_schwarzenegger	birth_date	^1947-07-30T00:00:00Z/11
+h8	arnold_schwarzenegger	country	"Austria"
+h9	michael_biehn	label	"Michael Biehn"
+h10	michael_biehn	instance_of	human
+h11	michael_biehn	birth_date	^1956-07-31T00:00:00Z/11
+h12	michael_biehn	country	"United States of America"
+h13	linda_hamilton	label	"Linda Hamilton"
+h14	linda_hamilton	instance_of	human
+h15	linda_hamilton	birth_date	^1956-09-26T00:00:00Z/11
+h16	linda_hamilton	country	"United States of America"
+h17	edward_furlong	label	"Edward Furlong"
+h18	edward_furlong	instance_of	human
+h19	edward_furlong	birth_date	^1977-08-02T00:00:00Z/11
+h20	edward_furlong	country	"United States of America"
+h21	robert_patrick	label	"Robert Patrick"
+h22	robert_patrick	instance_of	human
+h23	robert_patrick	birth_date	^1958-11-05T00:00:00Z/11
+h24	robert_patrick	country	"United States of America"

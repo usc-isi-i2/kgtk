@@ -1,8 +1,0 @@
-node1	label	node2	full-name
-P1	label	"instance of"	
-P2	label	"friend"	
-P3	label	"enemy"	
-Q1	name	"Elmo"	"Elmo Fudd"
-Q2	name	"Alice"	"Alice Cooper"
-Q5	species	"human"	
-Q6	name	"Fred"	"Fred Rogers"

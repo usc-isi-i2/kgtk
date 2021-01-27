@@ -22,7 +22,7 @@ class TestGraphEmbeddings(unittest.TestCase):
         with open(f'{self.temp_dir}/out.tsv') as f :
             data = f.readlines()
         for index,entity_emb in enumerate(data):
-            value = entity_emb.split('\t')
+            value = entity_emb.split(' ')
             if index == 0:
                 self.assertTrue(len(value) == 2 )
             else:

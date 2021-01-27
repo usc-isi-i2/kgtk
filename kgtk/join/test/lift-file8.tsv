@@ -1,5 +1,0 @@
-node1	label	node2	confident
-Q1	P1	Q5	True
-Q1	P2	Q6	True
-Q2	P1	Q5	False
-Q2	P2	Q6	False

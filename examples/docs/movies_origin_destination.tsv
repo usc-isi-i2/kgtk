@@ -1,0 +1,3 @@
+origin	label	destination	years
+terminator	label	'The Terminator'@en	4
+terminator	instance_of	film	3

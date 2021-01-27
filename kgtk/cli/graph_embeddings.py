@@ -67,12 +67,13 @@ class KgtkCreateTmpTsv(KgtkFormat):
         # node1 relation node2
         node1_index= kr.get_node1_column_index()
         node2_index = kr.get_node2_column_index()
-        relation_index = kr.get_id_column_index('relation')
+        ##relation_index = kr.get_id_column_index('relation')#
+        relation_index = kr.get_label_column_index()
       
         row: typing.List[str]
         # delete header
-        kw.file_out.seek(0)         # set the cursor to the top of the file
-        kw.file_out.truncate()      # truncate following part == delete first line
+        # kw.file_out.seek(0)         # set the cursor to the top of the file
+        # kw.file_out.truncate()      # truncate following part == delete first line
         # print(kw.file_out.tell())
 
         for row in kr:
@@ -308,6 +309,17 @@ def generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose):
 
     kw.close()
 
+def generate_w2v_output(entities_output,output_kgtk_file,kwargs):
+    fout = open(output_kgtk_file,'w')
+    fin = open(entities_output)
+    entity_num = len(fin.readlines())
+    fin.close()
+    fout.write(str(entity_num) + ' ' + str(kwargs['dimension_num']) + '\n')
+    with open(entities_output) as fin:
+        for line in fin:
+            embedding = ' '.join(line.split('\t'))
+            fout.write(embedding)
+    fout.close()
 
 def run(verbose: bool = False,
         very_verbose: bool = False,
@@ -434,13 +446,8 @@ def run(verbose: bool = False,
         if kwargs['output_format'] == 'glove': # glove format output 
             shutil.copyfile(entities_output,output_kgtk_file)
         elif kwargs['output_format'] == 'w2v': # w2v format output
-            shutil.copyfile(entities_output,output_kgtk_file)
-            with open(output_kgtk_file,'r+') as f:
-                entity_num = len(f.readlines())
-                content = f.read()
-                f.seek(0, 0)
-                f.write(str(entity_num) + '\t' + str(kwargs['dimension_num']) + '\n')
-                f.write(content)
+            generate_w2v_output(entities_output,output_kgtk_file,kwargs)
+
         else: # write to the kgtk output format tsv 
             generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose)
 

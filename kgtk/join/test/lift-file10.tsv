@@ -1,8 +1,0 @@
-node1	label	node2	full-name	action
-"instance of"	label	P1		go
-"friend"	label	P2		go
-"enemy"	label	P3		go
-"Elmo"	name	Q1	"Elmo Fudd"	go
-"Alice"	name	Q2	"Alice Cooper"	go
-"human"	species	Q5		go
-"Fred"	name	Q6	"Fred Rogers"	go

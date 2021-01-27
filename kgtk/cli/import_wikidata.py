@@ -606,6 +606,17 @@ def add_arguments(parser: KGTKArgumentParser):
         default=0,
         help='How many characters should be used to hash the claim ID? 0 means do not hash the claim ID. (default=%(default)d)')
 
+    parser.add_argument(
+        "--skip-validation",
+        nargs='?',
+        type=optional_bool,
+        dest="skip_validation",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, skip output record validation. (default=%(default)s).",
+    )
+
 def custom_progress()->bool:
     return True # We want to start a custom progress monitor.
 
@@ -673,6 +684,7 @@ def run(input_file: KGTKFiles,
         mgzip_threads_for_output: int,
         value_hash_width: int,
         claim_id_hash_width: int,
+        skip_validation: bool,
         ):
 
     # import modules locally
@@ -1133,28 +1145,53 @@ def run(input_file: KGTKFiles,
 
                 if parse_claims and "claims" not in obj:
                     if fail_if_missing:
-                        raise KGTKException("Qnode %s is missing its claims" % qnode)
+                        raise KGTKException("Qnode %s is missing its claims" % obj.get("id", "<UNKNOWN>"))
                     elif warn_if_missing:
-                        print("Object id {} is missing its claims.".format(qnode), file=sys.stderr, flush=True)
+                        print("Object id {} is missing its claims.".format(obj.get("id", "<UNKNOWN>")), file=sys.stderr, flush=True)
                     
                 if parse_claims and "claims" in obj:
                     claims = obj["claims"]
                     if keep:
-                        qnode = obj["id"]
+                        qnode = obj.get("id", "")
+                        if len(qnode) == 0:
+                            if fail_if_missing:
+                                raise KGTKException("A claim is missing its Qnode id.")
+                            elif warn_if_missing:
+                                print("A claim is missing its Qnode id", file=sys.stderr, flush=True)
+                            qnode = "UNKNOWN" # This will cause trouble down the line.
+
                         for prop, claim_property in claims.items():
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
-                                    snaktype = cp['mainsnak']['snaktype']
+                                    mainsnak = cp['mainsnak']
+                                    snaktype = mainsnak.get('snaktype')
                                     rank=cp['rank']
                                     claim_id = cp['id']
                                     claim_type = cp['type']
                                     if claim_type != "statement":
-                                        print("Unknown claim type %s" % claim_type, file=sys.stderr, flush=True)
+                                        print("Unknown claim type %s, ignoring claim_property for (%s, %s)." % (repr(claim_type), repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
 
+                                    if snaktype is None:
+                                        print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
                                     if snaktype == 'value':
-                                        datavalue = cp['mainsnak']['datavalue']
+                                        datavalue = mainsnak['datavalue']
                                         val = datavalue.get('value')
                                         val_type = datavalue.get("type", "")
+                                        if val is not None:
+                                            if val_type in ("string", "wikibase-unmapped-entityid"):
+                                                if not isinstance(val, str):
+                                                    print("Value type is %s but the value is not a string, ignoring claim_property for (%s, %s)." % (repr(val_type), repr(qnode), repr(prop)),
+                                                          file=sys.stderr, flush=True)
+                                                    continue
+                                            elif not isinstance(val, dict):
+                                                print("Value type %s is not a known string type and value is not a dict, ignoring claim_property for (%s, %s)." % (repr(val_type), repr(qnode), repr(prop)),
+                                                      file=sys.stderr, flush=True)
+                                                continue
+
                                     elif snaktype == 'somevalue':
                                         val = None
                                         val_type = "somevalue"
@@ -1162,9 +1199,15 @@ def run(input_file: KGTKFiles,
                                         val = None
                                         val_type = "novalue"
                                     else:
-                                        raise ValueError("Unknown snaktype %s" % snaktype)
-
-                                    typ = cp['mainsnak']['datatype']
+                                        print("Unknown snaktype %s, ignoring claim_property for (%s, %s)." % (repr(snaktype), repr(qnode), repr(prop)),
+                                                                                                        file=sys.stderr, flush=True)
+                                        continue
+                                    
+                                    typ = mainsnak.get('datatype')
+                                    if typ is None:
+                                        print("Mainsnak without datatype, ignoring claim_property for (%s, %s)" % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
                                     # if typ != val_type:
                                     #     print("typ %s != val_type %s" % (typ, val_type), file=sys.stderr, flush=True)
 
@@ -1184,19 +1227,47 @@ def run(input_file: KGTKFiles,
                                     if val is None:
                                         value = val_type
                                     elif typ.startswith('wikibase'):
-                                        enttype = val.get('entity-type')
-                                        value = val.get('id', '')
+                                        if isinstance(val, dict):
+                                            enttype = val.get('entity-type')
+                                            value = val.get('id', '')
+                                        else:
+                                            value = val
+                                            # TODO: Can we find something less ad-hoc to do here?
+                                            if typ == "wikibase-lexeme":
+                                                enttype = "lexeme"
+                                            else:
+                                                enttype = "unknown"
+
+                                        # Older Wikidata dumps do not have an 'id' here.
+                                        if len(value) == 0:
+                                            if isinstance(val, dict) and 'numeric-id' in val:
+                                                numeric_id = str(val['numeric-id'])
+                                            else:
+                                                raise ValueError("No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (repr(typ), repr(enttype), repr(qnode), repr(prop))) 
+
+                                            if enttype == "item":
+                                                value = 'Q' + numeric_id
+                                            elif enttype == "property":
+                                                value = 'P' + numeric_id
+                                            elif enttype == "lexeme":
+                                                value = 'L' + numeric_id
+                                            else:
+                                                raise ValueError('Unknown entity type %s for datatype %s in (%s, %s).' % (repr(enttype), repr(typ), repr(qnode), repr(prop)))
                                         item=value
                                     elif typ == 'quantity':
-                                        value = val['amount']
-                                        mag = val['amount']
+                                        # Strip whitespace from the numeric fields.  Some older Wikidata dumps
+                                        # (20150805-20160502) sometimes have trailing newlines in these fields.
+                                        # Convert actual numbers to strings before attempting to strip leading
+                                        # and trailing whitespace.
+                                        value = str(val['amount']).strip()
+                                        mag = value
                                         if val.get(
                                                 'upperBound',
                                                 None) or val.get(
                                                 'lowerBound',
                                                 None):
-                                            lower = val.get('lowerBound', '')
-                                            upper = val.get('upperBound', '')
+                                            lower = str(val.get('lowerBound', '')).strip()
+                                            upper = str(val.get('upperBound', '')).strip()
                                             value += '[' + lower + \
                                                 ',' + upper + ']'
                                         # TODO: Don't lose the single-character unit code.  At a minimum, verify that it is the value "1".
@@ -1207,8 +1278,9 @@ def run(input_file: KGTKFiles,
                                                 # TODO: don't lose track of "undefined" units.
                                                 value += unit
                                     elif typ == 'globe-coordinate':
-                                        lat = str(val['latitude'])
-                                        long = str(val['longitude'])
+                                        # Strip potential leading and trailing whitespace.
+                                        lat = str(val['latitude']).strip()
+                                        long = str(val['longitude']).strip()
                                         precision = str(val.get('precision', ''))
                                         value = '@' + lat + '/' + long
                                         # TODO: what about "globe"?
@@ -1217,12 +1289,12 @@ def run(input_file: KGTKFiles,
                                             pre="^-"
                                         else:
                                             pre="^"
+                                        # TODO: Maybe strip leading and traiming whitespace here?
                                         date = pre + val['time'][1:]
-                                        precision = str(val['precision'])
-                                        calendar = val.get(
-                                            'calendarmodel', '').split('/')[-1]
-                                        value = pre + \
-                                            val['time'][1:] + '/' + str(val['precision'])
+                                        # Cautiously strip leading and trailing whitespace from precision?
+                                        precision = str(val['precision']).strip()
+                                        calendar = val.get('calendarmodel', '').split('/')[-1]
+                                        value = date + '/' + precision
                                     elif typ == 'monolingualtext':
                                         # value = '\'' + \
                                         # val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
@@ -1310,17 +1382,49 @@ def run(input_file: KGTKFiles,
                                                         long = ''
                                                         enttype = ''
                                                         datahash = '"' + qcp['hash'] + '"'
-                                                        typ = qcp['datatype']
+                                                        typ = qcp.get('datatype')
+                                                        if typ is None:
+                                                            if fail_if_missing:
+                                                                raise KGTKException("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)))
+                                                            elif warn_if_missing:
+                                                                if val_type == "somevalue":
+                                                                    print("Somevalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                                elif val_type == "novalue":
+                                                                    print("Novalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                                else:
+                                                                    print("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
+                                                            continue
 
                                                         if val is None:
                                                             value = val_type
 
-                                                        elif typ.startswith(
-                                                                'wikibase'):
-                                                            enttype = val.get(
-                                                                'entity-type')
-                                                            value = val.get(
-                                                                'id', '')
+                                                        elif typ.startswith('wikibase'):
+                                                            if isinstance(val, dict):
+                                                                enttype = val.get('entity-type')
+                                                                value = val.get('id', '')
+                                                            else:
+                                                                value = val
+                                                                if typ == "wikibase-lexeme":
+                                                                    enttype = "lexeme"
+                                                                else:
+                                                                    enttype = "unknown"
+
+                                                            # Older Wikidata dumps do not have an 'id' here.
+                                                            if len(value) == 0:
+                                                                if isinstance(val, dict) and 'numeric-id' in val:
+                                                                    numeric_id = str(val['numeric-id'])
+                                                                else:
+                                                                    raise ValueError("No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (repr(typ), repr(enttype), repr(qnode), repr(prop)))
+                                                                
+                                                                if enttype == "item":
+                                                                    value = 'Q' + numeric_id
+                                                                elif enttype == "property":
+                                                                    value = 'P' + numeric_id
+                                                                elif enttype == "lexeme":
+                                                                    value = 'L' + numeric_id
+                                                                else:
+                                                                    raise ValueError('Unknown entity type %s for datatype %s in (%s, %s).' % (repr(enttype), repr(typ), repr(qnode), repr(prop)))
+
                                                             item=value
                                                         elif typ == 'quantity':
                                                             value = val['amount']
@@ -1581,11 +1685,13 @@ def run(input_file: KGTKFiles,
 
                     if detailed_edge_file:
                         for row in erows:
-                            self.edge_wr.writerow(row)
+                            if skip_validation or validate(row, "detailed edge uncollected"):
+                                self.edge_wr.writerow(row)
 
                     if detailed_qual_file:
                         for row in qrows:
-                            self.qual_wr.writerow(row)
+                            if skip_validation or validate(row, "detailed qual uncollected"):
+                                self.qual_wr.writerow(row)
     
     class MyCollector:
 
@@ -1962,7 +2068,8 @@ def run(input_file: KGTKFiles,
                         if self.detailed_edge_wr is None:
                             raise ValueError("Unexpected edge rows in the %s collector." % who)
                         for row in erows:
-                            self.detailed_edge_wr.write(row)
+                            if skip_validation or validate(row, "unsplit detailed edge"):
+                                self.detailed_edge_wr.write(row)
                     else:
                         for row in erows:
                             split: bool = False
@@ -1976,38 +2083,53 @@ def run(input_file: KGTKFiles,
 
                                 if self.split_property_edge_wr is not None and row[1].startswith("P"): # Hack: knows the structure of the row.
                                     # For now, split property files are minimal.
-                                    self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+                                    if skip_validation or validate(row, "split property edge"):
+                                        self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
 
                                 elif self.minimal_edge_wr is not None:
-                                    self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
+                                    if skip_validation or validate(row, "minimal edge"):
+                                        self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[5])) # Hack: knows the structure of the row.
 
                                 if self.detailed_edge_wr is not None:
-                                    self.detailed_edge_wr.write(row)
+                                    if skip_validation or validate(row, "split detailed edge"):
+                                        self.detailed_edge_wr.write(row)
                 else:
                     if self.minimal_edge_wr is None:
                         raise ValueError("Unexpected edge rows in the %s collector." % who)
 
-                    self.minimal_edge_wr.writerows(erows)
+                    if skip_validation:
+                        self.minimal_edge_wr.writerows(erows)
+                    else:
+                        for row in erows:
+                            if validate(row, "minimal edge csv"):
+                                self.minimal_edge_wr.write(row)
 
             if len(qrows) > 0:
-
                 if use_kgtkwriter:
                     if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
                         raise ValueError("Unexpected qual rows in the %s collector." % who)
                     
                     for row in qrows:
                         if self.split_property_qual_wr is not None and row[0].startswith("P"): # Hack: knows the structure of the row.
-                            self.split_property_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+                            if skip_validation or validate(row, "split property qual"):
+                                self.split_property_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
                                                               
                         elif self.minimal_qual_wr is not None:
-                            self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
+                            if skip_validation or validate(row, "minimal qual"):
+                                self.minimal_qual_wr.write((row[0], row[1], row[2], row[3], row[4])) # Hack: knows the structure of the row.
 
                         if self.detailed_qual_wr is not None:
-                            self.detailed_qual_wr.write(row)
+                            if skip_validation or validate(row, "detailed qual"):
+                                self.detailed_qual_wr.write(row)
                 else:
                     if self.detailed_qual_wr is None:
                         raise ValueError("Unexpected qual rows in the %s collector." % who)
-                    self.detailed_qual_wr.writerows(qrows)
+                    if skip_validation:
+                        self.detailed_qual_wr.writerows(qrows)
+                    else:
+                        for row in qrows:
+                            if validate(row, "detailed qual csv"):
+                                self.detailed_qual_wr.write(row)
 
         def setup_split_dispatcher(self):
             self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
@@ -2513,4 +2635,21 @@ def run(input_file: KGTKFiles,
         print('time taken : {}s'.format(end-start), file=sys.stderr, flush=True)
     except Exception as e:
         raise KGTKException(str(e))
+
+def validate(row: typing.List[str], who: str)->bool:
+    """Ensure that output edge rows meet minimal validation criteria."""
+    import sys
+
+    # There must be at least four fields (id, node1, label, node2):
+    if len(row) < 4:
+        print("%s row too short: %s" % (who, repr(row)), file=sys.stderr, flush=True)
+        return False
+
+    # Ensure that the first four fields (id, node1, label, node2) are all
+    # non-empty.
+    if len(row[0]) == 0 or len(row[1]) == 0 or len(row[2]) == 0 or len(row[3]) ==0:
+        print("Invalid %s row: (%s, %s, %s, %s)" % (who, repr(row[0]), repr(row[1]), repr(row[2]), repr(row[3])), file=sys.stderr, flush=True)
+        return False
+
+    return True
 

@@ -204,7 +204,7 @@ def run(
     if use_gz:
         if input_file:
             try:
-                fp = open(prefix_path,"rb")
+                fp = gzip.open(input_file,"rt")
             except:
                 raise KGTKException("Fail to read from compressed file {}. Exiting.".format(input_file))
         else:

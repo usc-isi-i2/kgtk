@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y \
   libgconf-2-4 \
   libxi6 \
   libxrandr-dev \
-  libxinerama-dev\
+  libxinerama-dev \
+  pv \
   gcc 
 
 RUN pip install thinc==7.4.0
