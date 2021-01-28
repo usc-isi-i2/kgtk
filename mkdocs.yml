@@ -32,6 +32,7 @@ nav:
       - 'join': 'transform/join.md'
       - 'lift': 'transform/lift.md'
       - 'md': 'transform/md.md'
+      - 'normalize-nodes': 'transform/normalize_nodes.md'
       - 'query': 'transform/query.md'
       - 'remove-columns': 'transform/remove_columns.md'
       - 'rename-columns': 'transform/rename_columns.md'

@@ -1,0 +1,19 @@
+id	AtomicNumber	Element	Symbol	AtomicMass	NumberofNeutrons	NumberofProtons	NumberofElectrons	Period	Group	Phase	Radioactive	Natural	Metal	Nonmetal	Metalloid	Type	AtomicRadius	Electronegativity	FirstIonization	Density	MeltingPoint	BoilingPoint	NumberOfIsotopes	Discoverer	Year	SpecificHeat	NumberofShells	NumberofValence
+H	1	Hydrogen	H	1.007	0	1	1	1	1	gas		yes		yes		Nonmetal	0.79	2.2	13.5984	8.99E-05	14.175	20.28	3	Cavendish	1766	14.304	1	1
+He	2	Helium	He	4.002	2	2	2	1	18	gas		yes		yes		NobleGas	0.49		24.5874	1.79E-04		4.22	5	Janssen	1868	5.193	1	
+Li	3	Lithium	Li	6.941	4	3	3	2	1	solid		yes	yes			AlkaliMetal	2.1	0.98	5.3917	5.34E-01	453.85	1615	5	Arfvedson	1817	3.582	2	1
+Be	4	Beryllium	Be	9.012	5	4	4	2	2	solid		yes	yes			AlkalineEarthMetal	1.4	1.57	9.3227	1.85E+00	1560.15	2742	6	Vaulquelin	1798	1.825	2	2
+B	5	Boron	B	10.811	6	5	5	2	13	solid		yes			yes	Metalloid	1.2	2.04	8.298	2.34E+00	2573.15	4200	6	Gay-Lussac	1808	1.026	2	3
+C	6	Carbon	C	12.011	6	6	6	2	14	solid		yes		yes		Nonmetal	0.91	2.55	11.2603	2.27E+00	3948.15	4300	7	Prehistoric		0.709	2	4
+N	7	Nitrogen	N	14.007	7	7	7	2	15	gas		yes		yes		Nonmetal	0.75	3.04	14.5341	1.25E-03	63.29	77.36	8	Rutherford	1772	1.04	2	5
+O	8	Oxygen	O	15.999	8	8	8	2	16	gas		yes		yes		Nonmetal	0.65	3.44	13.6181	1.43E-03	50.5	90.2	8	Priestley|Scheele	1774	0.918	2	6
+F	9	Fluorine	F	18.998	10	9	9	2	17	gas		yes		yes		Halogen	0.57	3.98	17.4228	1.70E-03	53.63	85.03	6	Moissan	1886	0.824	2	7
+Ne	10	Neon	Ne	20.18	10	10	10	2	18	gas		yes		yes		Noble Gas	0.51		21.5645	9.00E-04	24.703	27.07	8	Ramsay_and_Travers	1898	1.03	2	8
+Na	11	Sodium	Na	22.99	12	11	11	3	1	solid		yes	yes			AlkaliMetal	2.2	0.93	5.1391	9.71E-01	371.15	1156	7	Davy	1807	1.228	3	1
+Mg	12	Magnesium	Mg	24.305	12	12	12	3	2	solid		yes	yes			AlkalineEarthMetal	1.7	1.31	7.6462	1.74E+00	923.15	1363	8	Black	1755	1.023	3	2
+Al	13	Aluminum	Al	26.982	14	13	13	3	13	solid		yes	yes			Metal	1.8	1.61	5.9858	2.70E+00	933.4	2792	8	Wshler	1827	0.897	3	3
+Si	14	Silicon	Si	28.086	14	14	14	3	14	solid		yes			yes	Metalloid	1.5	1.9	8.1517	2.33E+00	1683.15	3538	8	Berzelius	1824	0.705	3	4
+P	15	Phosphorus	P	30.974	16	15	15	3	15	solid		yes		yes		Nonmetal	1.2	2.19	10.4867	1.82E+00	317.25	553	7	BranBrand	1669	0.769	3	5
+S	16	Sulfur	S	32.065	16	16	16	3	16	solid		yes		yes		Nonmetal	1.1	2.58	10.36	2.07E+00	388.51	717.8	10	Prehistoric		0.71	3	6
+Cl	17	Chlorine	Cl	35.453	18	17	17	3	17	gas		yes		yes		Halogen	0.97	3.16	12.9676	3.21E-03	172.31	239.11	11	Scheele	1774	0.479	3	7
+Ar	18	Argon	Ar	39.948	22	18	18	3	18	gas		yes		yes		NobleGas	0.88		15.7596	1.78E-03	83.96	87.3	8	Rayleigh_and_Ramsay	1894	0.52	3	8
