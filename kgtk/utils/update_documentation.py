@@ -134,20 +134,12 @@ class DocUpdater():
 
     def update_table(self,
                      lines: typing.List[str],
+                     table_begin: int,
+                     table_end: int,
                      current_idx: int,
                      table_count: int,
                      new_table_lines: typing.List[str])->int:
         nlines: int = len(new_table_lines)
-
-        table_begin: int
-        table_end: int
-        table_begin, table_end = self.find_table(lines, current_idx)
-        if table_begin < 0:
-            if self.verbose:
-                print ("No table found for example:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]),
-                       file=self.error_file, flush=True)
-            return current_idx, table_count
-        table_count += 1
 
         if self.very_verbose:
             print("Existing table:\n****************\n%s****************" % "".join(lines[table_begin:table_end]), file=self.error_file, flush=True)
@@ -167,7 +159,92 @@ class DocUpdater():
         else:
             current_idx = table_end
 
-        return current_idx, table_count
+        return current_idx
+
+    def find_code(self,
+                   lines: typing.List[str],
+                   start_idx: int,
+                   stop_at_next_section: bool = False,
+                   stop_at_next_block: bool = True,
+                   skip_text: bool = False,
+                   )->typing.Tuple[int, int]:
+        current_idx: int = start_idx
+        begin_idx: int = -1
+        while current_idx < len(lines):
+            line: str = lines[current_idx]
+            if stop_at_next_section and line.startswith("#"):
+                if self.very_verbose:
+                    print("find_code begin search left the section at index %d" % current_idx, file=self.error_file, flush=True)
+                return -1, -1
+            if stop_at_next_block and line.startswith("```"):
+                if self.very_verbose:
+                    print("find_code begin search found a block at index %d" % current_idx, file=self.error_file, flush=True)
+                return -1, -1
+            if line.startswith("    "):
+                begin_idx = current_idx
+                break
+            if len(line.strip()) < 0 and not skip_text:
+                if self.very_verbose:
+                    print("find_code begin search found unexpected text at index %d" % current_idx, file=self.error_file, flush=True)
+                return -1, -1
+            current_idx += 1
+
+        if begin_idx < 0:
+            if self.very_verbose:
+                print("find_code did not find the beginning of a table.", file=self.error_file, flush=True)
+            return -1, -1
+
+        while current_idx < len(lines):
+            line: str = lines[current_idx]
+            if stop_at_next_section and line.startswith("#"):
+                if self.very_verbose:
+                    print("find_code end search left the section at index %d" % current_idx, file=self.error_file, flush=True)
+                return -1, -1
+            if not line.startswith("    "):
+                if self.very_verbose:
+                    print("Code found with contents in slice %d:%d" % (begin_idx, current_idx), file=self.error_file, flush=True)
+                return begin_idx, current_idx # Return the slice of the contents of the block.
+            current_idx += 1
+
+        if self.very_verbose:
+            print("Code found ending the file with contents in slice %d:%d" % (begin_idx, current_idx), file=self.error_file, flush=True)
+        return begin_idx, current_idx # Return the slice of the contents of the block.
+
+    def update_code(self,
+                    lines: typing.List[str],
+                    current_idx: int,
+                    code_count: int,
+                    new_code_lines: typing.List[str])->int:
+        nlines: int = len(new_code_lines)
+
+        code_begin: int
+        code_end: int
+        code_begin, code_end = self.find_code(lines, current_idx)
+        if code_begin < 0:
+            if self.verbose:
+                print ("No code found for example", file=self.error_file, flush=True)
+            return current_idx, code_count
+        code_count += 1
+
+        if self.very_verbose:
+            print("Existing code:\n****************\n%s****************" % "".join(lines[code_begin:code_end]), file=self.error_file, flush=True)
+            
+        if nlines == 0:
+            if self.verbose:
+                print("Error fetching new code (no output)", file=self.error_file, flush=True)
+            current_idx = code_end
+        elif not new_code_lines[0].startswith("    "):
+            if self.verbose:
+                print("Error fetching new code:\n%s" % "".join(new_code_lines), file=self.error_file, flush=True)
+            current_idx = code_end
+        elif self.update_examples:
+            # Replace the old example code with the new example code:
+            lines[code_begin:code_end] = new_code_lines
+            current_idx = code_end + (nlines - (code_end - code_begin))
+        else:
+            current_idx = code_end
+
+        return current_idx, code_count
 
     def do_usage(self, subcommand: str, lines: typing.List[str]):
         usage_section_idx: int = self.find_section("Usage", lines)
@@ -215,6 +292,7 @@ class DocUpdater():
         current_idx = examples_section_idx + 1
 
         table_count: int = 0
+        error_count: int = 0
         while (True):
             command_block_begin: int
             command_block_end: int
@@ -222,16 +300,24 @@ class DocUpdater():
             if command_block_begin < 0:
                 if self.verbose:
                     print ("%d example tables processed" % table_count, file=self.error_file, flush=True)
+                    print ("%d example errors processed" % error_count, file=self.error_file, flush=True)
                 return
             if self.very_verbose:
                 print("Example command:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]), file=self.error_file, flush=True)
             current_idx = command_block_end + 1
 
-            command: str = "".join(lines[command_block_begin:command_block_end]).strip() + " / md"
-            if self.verbose:
-                print("Getting new table lines for:\n%s" % command, file=self.error_file, flush=True)
-                                   
-            # new_table_lines: typing.List[str] = subprocess.getoutput(command).splitlines(keepends=True)
+            command: str = "".join(lines[command_block_begin:command_block_end]).strip()
+            table_begin: int
+            table_end: int
+            table_begin, table_end = self.find_table(lines, current_idx)
+            if table_begin >= 0:
+                command += " / md"
+                if self.verbose:
+                    print("Getting new table lines for:\n%s" % command, file=self.error_file, flush=True)
+            else:
+                if self.verbose:
+                    print("Not expecting new table lines for:\n%s" % command, file=self.error_file, flush=True)
+
             result: subprocess.CompletedProcess = subprocess.run(command, capture_output=True, shell=True, text=True)
             new_table_lines: typing.List[str] = result.stdout.splitlines(keepends=True)
             nlines: int = len(new_table_lines)
@@ -244,6 +330,10 @@ class DocUpdater():
             elif self.very_verbose:
                 print("No table output.", file=self.error_file, flush=True)
 
+            if table_begin >= 0 and nlines > 0:
+                current_idx = self.update_table(lines, table_begin, table_end, current_idx, table_count, new_table_lines)
+                table_count += 1
+
             new_error_lines: typing.List[str] = result.stderr.splitlines(keepends=True)
             new_error_lines_len: int = len(new_error_lines)
             if new_error_lines_len > 0:
@@ -252,11 +342,14 @@ class DocUpdater():
                     print("%d lines of error output." % new_error_lines_len, file=self.error_file, flush=True)
                 if self.very_verbose:
                     print("Error output:\n****************\n%s****************" % "".join(new_error_lines), file=self.error_file, flush=True)
+                idx: int
+                for idx in range(new_error_lines_len):
+                    new_error_lines[idx] = "    " + new_error_lines[idx]
             elif self.very_verbose:
                 print("No error output.", file=self.error_file, flush=True)
 
-            if nlines > 0:
-                current_idx, table_count = self.update_table(lines, current_idx, table_count, new_table_lines)
+            if new_error_lines_len > 0:
+                current_idx, error_count = self.update_code(lines, current_idx, error_count, new_error_lines)
 
     def process(self, md_file: Path):
         subcommand: str = md_file.stem
