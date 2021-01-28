@@ -15,7 +15,7 @@ columns to be not empty or all of the columns to be not empty.
 
 `kgtk ifnotempty --count` reports the count of rows that passed the filter instead of
 copying the rows to the output file.  The count will normally be reported to
-standard error;  standrad output will not receive any data.
+standard error;  standard output will not receive any data.
 
 ## Usage
 
