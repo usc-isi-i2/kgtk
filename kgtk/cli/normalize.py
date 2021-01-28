@@ -17,7 +17,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 def parser():
     return {
-        'help': 'Normalize a KGTK edge file by reversing the "lift" pattern or converting escondary edge columns to new edges.',
+        'help': 'Normalize a KGTK edge file by reversing the "lift" pattern or converting secondary edge columns to new edges.',
         'description': 'Normalize a KGTK edge file by removing columns that match a "lift" pattern and converting remaining additional columns to new edges.'
     }
 
