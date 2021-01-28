@@ -125,7 +125,7 @@ kgtk ifempty -i examples/docs/ifempty-file1.tsv \
              --count --columns years
 ```
 
-The standard error output will be:
+The result on standard error will be:
 
     Read 6 records, 3 records passed the filter.
 
