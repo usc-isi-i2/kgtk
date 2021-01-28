@@ -132,6 +132,43 @@ class DocUpdater():
             print("Table found ending the file with contents in slice %d:%d" % (begin_idx, current_idx), file=self.error_file, flush=True)
         return begin_idx, current_idx # Return the slice of the contents of the block.
 
+    def update_table(self,
+                     lines: typing.List[str],
+                     current_idx: int,
+                     table_count: int,
+                     new_table_lines: typing.List[str])->int:
+        nlines: int = len(new_table_lines)
+
+        table_begin: int
+        table_end: int
+        table_begin, table_end = self.find_table(lines, current_idx)
+        if table_begin < 0:
+            if self.verbose:
+                print ("No table found for example:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]),
+                       file=self.error_file, flush=True)
+            return current_idx, table_count
+        table_count += 1
+
+        if self.very_verbose:
+            print("Existing table:\n****************\n%s****************" % "".join(lines[table_begin:table_end]), file=self.error_file, flush=True)
+            
+        if nlines == 0:
+            if self.verbose:
+                print("Error fetching new table (no output)", file=self.error_file, flush=True)
+            current_idx = table_end
+        elif not new_table_lines[0].startswith("|"):
+            if self.verbose:
+                print("Error fetching new table:\n%s" % "".join(new_table_lines), file=self.error_file, flush=True)
+            current_idx = table_end
+        elif self.update_examples:
+            # Replace the old example table with the new example table:
+            lines[table_begin:table_end] = new_table_lines
+            current_idx = table_end + (nlines - (table_end - table_begin))
+        else:
+            current_idx = table_end
+
+        return current_idx, table_count
+
     def do_usage(self, subcommand: str, lines: typing.List[str]):
         usage_section_idx: int = self.find_section("Usage", lines)
         if usage_section_idx < 0:
@@ -194,40 +231,32 @@ class DocUpdater():
             if self.verbose:
                 print("Getting new table lines for:\n%s" % command, file=self.error_file, flush=True)
                                    
-            new_table_lines: typing.List[str] = subprocess.getoutput(command).splitlines(keepends=True)
+            # new_table_lines: typing.List[str] = subprocess.getoutput(command).splitlines(keepends=True)
+            result: subprocess.CompletedProcess = subprocess.run(command, capture_output=True, shell=True, text=True)
+            new_table_lines: typing.List[str] = result.stdout.splitlines(keepends=True)
             nlines: int = len(new_table_lines)
             if nlines > 0:
                 new_table_lines[nlines-1] = new_table_lines[nlines-1].rstrip('\n') + '\n'
-            if self.very_verbose:
-                print("New table:\n****************\n%s****************" % "".join(new_table_lines), file=self.error_file, flush=True)
+                if self.verbose:
+                    print("%d lines of table output." % nlines, file=self.error_file, flush=True)
+                if self.very_verbose:
+                    print("Table output:\n****************\n%s****************" % "".join(new_table_lines), file=self.error_file, flush=True)
+            elif self.very_verbose:
+                print("No table output.", file=self.error_file, flush=True)
 
-            table_begin: int
-            table_end: int
-            table_begin, table_end = self.find_table(lines, current_idx)
-            if table_begin < 0:
+            new_error_lines: typing.List[str] = result.stderr.splitlines(keepends=True)
+            new_error_lines_len: int = len(new_error_lines)
+            if new_error_lines_len > 0:
+                new_error_lines[new_error_lines_len-1] = new_error_lines[new_error_lines_len-1].rstrip('\n') + '\n'
                 if self.verbose:
-                    print ("No table found for example:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]),
-                           file=self.error_file, flush=True)
-                continue
-            table_count += 1
+                    print("%d lines of error output." % new_error_lines_len, file=self.error_file, flush=True)
+                if self.very_verbose:
+                    print("Error output:\n****************\n%s****************" % "".join(new_error_lines), file=self.error_file, flush=True)
+            elif self.very_verbose:
+                print("No error output.", file=self.error_file, flush=True)
 
-            if self.very_verbose:
-                print("Existing table:\n****************\n%s****************" % "".join(lines[table_begin:table_end]), file=self.error_file, flush=True)
-            
-            if nlines == 0:
-                if self.verbose:
-                    print("Error fetching new table (no output)", file=self.error_file, flush=True)
-                current_idx = table_end
-            elif not new_table_lines[0].startswith("|"):
-                if self.verbose:
-                    print("Error fetching new table:\n%s" % "".join(new_table_lines), file=self.error_file, flush=True)
-                current_idx = table_end
-            elif self.update_examples:
-                # Replace the old example table with the new example table:
-                lines[table_begin:table_end] = new_table_lines
-                current_idx = table_end + (nlines - (table_end - table_begin))
-            else:
-                current_idx = table_end
+            if nlines > 0:
+                current_idx, table_count = self.update_table(lines, current_idx, table_count, new_table_lines)
 
     def process(self, md_file: Path):
         subcommand: str = md_file.stem
