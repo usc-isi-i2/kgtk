@@ -70,13 +70,32 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The separator between the base column and the label value. (default=%(default)s)."),
                               default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR)
 
-    parser.add_argument(      "--lower", dest="lower",
-                              help="When True, lower columns that match a lift pattern. (default=%(default)s)",
-                              type=optional_bool, nargs='?', const=True, default=_command != NORMALIZE_EDGES_COMMAND, metavar="True|False")
+    if _command == LOWER_COMMAND:
+        parser.add_argument(      "--lower", dest="lower",
+                                  help=h("When True, lower columns that match a lift pattern. (default=%(default)s)"),
+                                  type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+        
+        parser.add_argument(      "--normalize", dest="normalize",
+                                  help=h("When True, normalize columns that do not match a lift pattern. (default=%(default)s)"),
+                                  type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
-    parser.add_argument(      "--normalize", dest="normalize",
-                              help="When True, normalize columns that do not match a lift pattern. (default=%(default)s)",
-                              type=optional_bool, nargs='?', const=True, default=_command != LOWER_COMMAND, metavar="True|False")
+    elif _command == NORMALIZE_EDGES_COMMAND:
+        parser.add_argument(      "--lower", dest="lower",
+                                  help=h("When True, lower columns that match a lift pattern. (default=%(default)s)"),
+                                  type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+        
+        parser.add_argument(      "--normalize", dest="normalize",
+                                  help=h("When True, normalize columns that do not match a lift pattern. (default=%(default)s)"),
+                                  type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+
+    else:
+        parser.add_argument(      "--lower", dest="lower",
+                                  help="When True, lower columns that match a lift pattern. (default=%(default)s)",
+                                  type=optional_bool, nargs='?', const=True, default=_command != NORMALIZE_EDGES_COMMAND, metavar="True|False")
+
+        parser.add_argument(      "--normalize", dest="normalize",
+                                  help="When True, normalize columns that do not match a lift pattern. (default=%(default)s)",
+                                  type=optional_bool, nargs='?', const=True, default=_command != LOWER_COMMAND, metavar="True|False")
 
     parser.add_argument(      "--deduplicate-new-edges", dest="deduplicate_new_edges",
                               help="When True, deduplicate new edges. Not suitable for large files. (default=%(default)s).",
