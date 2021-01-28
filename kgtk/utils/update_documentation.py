@@ -349,6 +349,7 @@ class DocUpdater():
                 print("No error output.", file=self.error_file, flush=True)
 
             if new_error_lines_len > 0:
+                # Error lines are used to replace a Markdown code block.
                 current_idx, error_count = self.update_code(lines, current_idx, error_count, new_error_lines)
 
     def process(self, md_file: Path):
