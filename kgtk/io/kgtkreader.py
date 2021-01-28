@@ -782,10 +782,19 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if verbose:
                 print("header: %s" % header, file=error_file, flush=True)
 
+            input_format: str
+            if options.input_format is None:
+                input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
+            else:
+                input_format = options.input_format
+            if verbose:
+                print("input format: %s" % input_format, file=error_file, flush=True)
+
             # Split the first line into column names.
-            #
-            # TODO: if options.input_format == KgtkReaderOptions.INPUT_FORMAT_CSV, be smarter.
-            return header, header.split(options.column_separator)
+            if input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
+                return header, cls.csvsplit(header)
+            else:
+                return header, header.split(options.column_separator)
         else:
             # Skip the first record to override the column names in the file.
             # Do not skip the first record if the file does not hae a header record.
@@ -844,7 +853,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             print("%s" % line, file=self.reject_file)
 
-    def csvsplit(self, line: str)->typing.List[str]:
+    @classmethod
+    def csvsplit(cls, line: str)->typing.List[str]:
         row: typing.List[str] = [ ]
         item: str = ""
         c: str
