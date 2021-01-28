@@ -1,7 +1,7 @@
 ## Overview
 
 The ifempty command filters a KGTK file, passing through only those rows for
-which one (or more) specified columns contain empty values.
+which one (or more) specified columns contain *empty* values.
 
 ### Any or All
 
@@ -13,7 +13,7 @@ be empty or all of the columns to be empty.
 
 `kgtk ifempty --count` reports the count of rows that passed the filter instead of
 copying the rows to the output file.  The count will normally be reported to
-standard error;  standrd output will not be written.
+standard error;  standrd output will not receive any data.a
 
 ## Usage
 
