@@ -762,7 +762,7 @@ kgtk normalize-nodes -i examples/docs/periodic_table_of_elements_1-18.csv \
                      --mode=NONE --input-format csv \
                      --columns AtomicNumber Symbol AtomicMass \
                      --labels atomic_number symbol atomic_mass \
-                     --id-column Element --verbose
+                     --id-column Element
 ```
 
 | node1 | label | node2 |

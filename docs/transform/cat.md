@@ -644,3 +644,7 @@ The result will be the following table in KGTK format:
 !!! note
     See [`kgtk add-id`](https:../add_id) for an example of
     converting a CSV file without an `id` column to a KGTK node file by adding an `id` column.
+
+!!! note
+    See [`kgtk normalize-nodes`](https:../add_id) for an example of
+    converting a CSV file without an `id` column to a KGTK edge file.
