@@ -160,6 +160,7 @@ def cli_entry(*args):
             mod, sub_parser = subparser_lookup[cmd_name]
             add_default_arguments(sub_parser)  # call this before adding other arguments
             if hasattr(mod, 'add_arguments_extended'):
+                parsed_shared_args._command = cmd_name
                 mod.add_arguments_extended(sub_parser, parsed_shared_args)
             else:
                 mod.add_arguments(sub_parser)

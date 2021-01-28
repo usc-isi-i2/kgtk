@@ -15,8 +15,12 @@ from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
+LOWER_COMMAND: str = 'lower'
+NORMALIZE_EDGES_COMMAND: str = 'normalize-edges'
+
 def parser():
     return {
+        'aliases': [ LOWER_COMMAND, NORMALIZE_EDGES_COMMAND ],
         'help': 'Normalize a KGTK edge file by reversing the "lift" pattern or converting secondary edge columns to new edges.',
         'description': 'Normalize a KGTK edge file by removing columns that match a "lift" pattern and converting remaining additional columns to new edges.'
     }
@@ -30,6 +34,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
 
     _expert: bool = parsed_shared_args._expert
+    _command: str = parsed_shared_args._command
 
     # This helper function makes it easy to suppress options from
     # The help message.  The options are still there, and initialize
@@ -67,11 +72,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--lower", dest="lower",
                               help="When True, lower columns that match a lift pattern. (default=%(default)s)",
-                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+                              type=optional_bool, nargs='?', const=True, default=_command != NORMALIZE_EDGES_COMMAND, metavar="True|False")
 
     parser.add_argument(      "--normalize", dest="normalize",
                               help="When True, normalize columns that do not match a lift pattern. (default=%(default)s)",
-                              type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+                              type=optional_bool, nargs='?', const=True, default=_command != LOWER_COMMAND, metavar="True|False")
 
     parser.add_argument(      "--deduplicate-new-edges", dest="deduplicate_new_edges",
                               help="When True, deduplicate new edges. Not suitable for large files. (default=%(default)s).",
