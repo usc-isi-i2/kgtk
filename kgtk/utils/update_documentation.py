@@ -10,7 +10,7 @@ from kgtk.utils.argparsehelpers import optional_bool
 
 @attr.s(slots=True, frozen=True)
 class DocUpdater():
-    kgtk_command: bool = attr.ib(validator=attr.validators.instance_of(str), default="kgtk")
+    kgtk_command: str = attr.ib(validator=attr.validators.instance_of(str), default="kgtk")
 
     process_usage: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     update_usage: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -26,7 +26,7 @@ class DocUpdater():
         with open(md_file, "r") as fd:
             return list(fd) # Read all lines.  Each line (except maybe the last) will end with newline.
 
-    def writelines(self, md_file: Path, lines: typing.List[str])->typing.List[str]:
+    def writelines(self, md_file: Path, lines: typing.List[str]):
         with open(md_file, "w") as fd:
             fd.writelines(lines)
 
@@ -47,8 +47,9 @@ class DocUpdater():
                    )->typing.Tuple[int, int]:
         current_idx: int = start_idx
         begin_idx: int = -1
+        line: str
         while current_idx < len(lines):
-            line: str = lines[current_idx]
+            line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
                 if self.very_verbose:
                     print("find_block begin search left the section at index %d" % current_idx, file=self.error_file, flush=True)
@@ -69,7 +70,7 @@ class DocUpdater():
             return -1, -1
 
         while current_idx < len(lines):
-            line: str = lines[current_idx]
+            line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
                 if self.very_verbose:
                     print("find_block end search left the section at index %d" % current_idx, file=self.error_file, flush=True)
@@ -92,8 +93,9 @@ class DocUpdater():
                    )->typing.Tuple[int, int]:
         current_idx: int = start_idx
         begin_idx: int = -1
+        line: str
         while current_idx < len(lines):
-            line: str = lines[current_idx]
+            line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
                 if self.very_verbose:
                     print("find_table begin search left the section at index %d" % current_idx, file=self.error_file, flush=True)
@@ -117,7 +119,7 @@ class DocUpdater():
             return -1, -1
 
         while current_idx < len(lines):
-            line: str = lines[current_idx]
+            line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
                 if self.very_verbose:
                     print("find_table end search left the section at index %d" % current_idx, file=self.error_file, flush=True)
@@ -171,8 +173,9 @@ class DocUpdater():
                    )->typing.Tuple[int, int]:
         current_idx: int = start_idx
         begin_idx: int = -1
+        line: str
         while current_idx < len(lines):
-            line: str = lines[current_idx]
+            line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
                 if self.very_verbose:
                     print("find_code begin search left the section at index %d" % current_idx, file=self.error_file, flush=True)
@@ -200,7 +203,7 @@ class DocUpdater():
             return -1, -1
 
         while current_idx < len(lines):
-            line: str = lines[current_idx]
+            line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
                 if self.very_verbose:
                     print("find_code end search left the section at index %d" % current_idx, file=self.error_file, flush=True)
@@ -219,7 +222,7 @@ class DocUpdater():
                     lines: typing.List[str],
                     current_idx: int,
                     code_count: int,
-                    new_code_lines: typing.List[str])->int:
+                    new_code_lines: typing.List[str])->typing.Tuple[int, int]:
         nlines: int = len(new_code_lines)
 
         code_begin: int
