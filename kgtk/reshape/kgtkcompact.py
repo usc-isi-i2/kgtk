@@ -251,31 +251,35 @@ class KgtkCompact(KgtkFormat):
 
         # Build the list of key column edges:
         key_idx_list: typing.List[int] = [ ]
-        if kr.is_edge_file:
-            # Add the KGTK edge file required columns.
-            key_idx_list.append(kr.node1_column_idx)
-            key_idx_list.append(kr.label_column_idx)
-            key_idx_list.append(kr.node2_column_idx)
-            if not self.compact_id and kr.id_column_idx >= 0:
+
+        if len(self.key_column_names) == 0:
+            if kr.is_edge_file:
+                # Add the KGTK edge file required columns.
+                key_idx_list.append(kr.node1_column_idx)
+                key_idx_list.append(kr.label_column_idx)
+                key_idx_list.append(kr.node2_column_idx)
+                if not self.compact_id and kr.id_column_idx >= 0:
+                    key_idx_list.append(kr.id_column_idx)
+
+            elif kr.is_node_file:
+                # Add the KGTK node file required column:
                 key_idx_list.append(kr.id_column_idx)
 
-        elif kr.is_node_file:
-            # Add the KGTK node file required column:
-            key_idx_list.append(kr.id_column_idx)
-        elif len(self.key_column_names) == 0:
-            raise ValueError("The input file is neither an edge nor a node file.  Key columns must be supplied.")
+            else:
+                raise ValueError("The input file is neither an edge nor a node file.  Key columns must be supplied.")
 
-        # Append additional columns to the list of key column indices,
-        # silently removing duplicates, but complaining about unknown names.
-        #
-        # TODO: warn about duplicates?
-        column_name: str
-        for column_name in self.key_column_names:
-            if column_name not in kr.column_name_map:
-                raise ValueError("Column %s is not in the input file" % (column_name))
-            key_idx: int = kr.column_name_map[column_name]
-            if key_idx not in key_idx_list:
-                key_idx_list.append(key_idx)
+        else:
+            # Append additional columns to the list of key column indices,
+            # silently removing duplicates, but complaining about unknown names.
+            #
+            # TODO: warn about duplicates?
+            column_name: str
+            for column_name in self.key_column_names:
+                if column_name not in kr.column_name_map:
+                    raise ValueError("Column %s is not in the input file" % (column_name))
+                key_idx: int = kr.column_name_map[column_name]
+                if key_idx not in key_idx_list:
+                    key_idx_list.append(key_idx)
 
         if self.verbose:
             key_idx_list_str: typing.List[str] = [ ]
