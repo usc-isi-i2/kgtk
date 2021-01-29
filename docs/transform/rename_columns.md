@@ -12,9 +12,9 @@ The rename-columns command renames file columns while copying a KGTK file from i
     output file will not be a valid KGTK node or edge file.
 
 !!! info
-    See [`kgtk remove-columns`](https:../remove_columns) if you wish to remove columns.
+    See [`kgtk remove-columns`](../remove_columns) if you wish to remove columns.
 
-    See [`kgtk reorder-columns`](https:../reorder_columns) if you wish to reorder columns.
+    See [`kgtk reorder-columns`](../reorder_columns) if you wish to reorder columns.
 
 ## Usage
 
@@ -121,7 +121,7 @@ kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
 !!! note
     The `node1` and `node2` columns in this example are logically swapped,
     but not physically swapped.  If you need to reorder the columns as well
-    as renaming them, use [`kgtk reorder-columns`](https:../reorder_columns),
+    as renaming them, use [`kgtk reorder-columns`](../reorder_columns),
     as shown in the next example.
 
 ### Swap `node1` and `node2` with Reordering
@@ -129,7 +129,7 @@ kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \
 Copy `file1.tsv`, sending the output to standard output,
 swapping the `node1` and `node2` columns by renaming the columns
 with `kgtk rename-columns` and reordering the columns with
-[`kgtk reorder-columns`](https:../reorder_columns):
+[`kgtk reorder-columns`](../reorder_columns):
 
 ```
 kgtk rename-columns -i examples/docs/rename-columns-file1.tsv \

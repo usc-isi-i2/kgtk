@@ -642,9 +642,9 @@ The result will be the following table in KGTK format:
 | 18 | Argon | Ar | 39.948 | 22 | 18 | 18 | 3 | 18 | gas |  | yes |  | yes |  | NobleGas | 0.88 |  | 15.7596 | 1.78E-03 | 83.96 | 87.3 | 8 | Rayleigh_and_Ramsay | 1894 | 0.52 | 3 | 8 |
 
 !!! note
-    See [`kgtk add-id`](https:../add_id) for an example of
+    See [`kgtk add-id`](../add_id) for an example of
     converting a CSV file without an `id` column to a KGTK node file by adding an `id` column.
 
 !!! note
-    See [`kgtk normalize-nodes`](https:../add_id) for an example of
+    See [`kgtk normalize-nodes`](../normalize_nodes) for an example of
     converting a CSV file without an `id` column to a KGTK edge file.

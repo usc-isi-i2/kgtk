@@ -4,7 +4,7 @@ The ifempty command filters a KGTK file, passing through only those rows for
 which one (or more) specified columns contain *empty* values.
 
 !!! note
-    The [`kgtk ifnotempty`](https:../ifnotempty/) command computes the inverse output of this command.
+    The [`kgtk ifnotempty`](../ifnotempty/) command computes the inverse output of this command.
 
 ### Any or All
 

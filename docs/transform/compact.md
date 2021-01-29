@@ -3,7 +3,7 @@
 ### `kgtk compact`
 
 The compact command copies its input file to its output file, compacting
-repeated items into [multi-valued edges (`|` lists)](https:../../specification#multi-valued-edges).
+repeated items into [multi-valued edges (`|` lists)](../../specification#multi-valued-edges).
 Compact is intended to operate on KGTK node
 files or on the additional columns of KGTK denormalized edge files.
 It should not be used to compact the `node2` column of a KGTK edge file.
@@ -12,7 +12,7 @@ It should not be used to compact the `node2` column of a KGTK edge file.
 
 `kgtk deduplicate` is an alias for `kgtk compact --deduplicate`.  In this mode,
 duplicate edges are removed without compacting any columns into
-[multi-valued edges (`|` lists)](https:../../specification#multi-valued-edges).
+[multi-valued edges (`|` lists)](../../specification#multi-valued-edges).
 
 !!! note
     If you wish to use deduplicate mode with a presorted input file, the
@@ -71,7 +71,7 @@ The `--columns KEY_COLUMN_NAMES ...` option *MUST* be used to add additional col
 
 `kgtk compact` may be used to generate `id` column values.
 The expert option `--id-style` may be used to select the style of the id.
-See the [`kgtk add-id`](https:../add_id) command for adidtional
+See the [`kgtk add-id`](../add_id) command for adidtional
 details on `--id-style` and related options.
 
 ### Processing Large Files
@@ -79,7 +79,7 @@ details on `--id-style` and related options.
 By default, the input file is sorted in memory to achieve the
 grouping necessary for the compaction algorithm. This may cause
 memory usage issues for large input files. This may be solved by
-sorting the input file using [`kgtk sort`](https:../sort),
+sorting the input file using [`kgtk sort`](../sort),
 then using  `kgtk compact --presorted`.
 
 ### Compacting `node2` Is Discouraged
@@ -103,7 +103,7 @@ You intend to create:
 
 This would result in an invalid KGTK file, as the `node2` column is
 not allowed to contain multi-value edges (`|` lists) according to the
-[KGTK File Specification](https:../../specification#multi-valued-edges).
+[KGTK File Specification](../../specification#multi-valued-edges).
 
 !!! note
     If you insist on compacting the `node2` column, you can do so using:
@@ -279,7 +279,7 @@ The output will be the following table in KGTK format:
 ### Compact with External Sorting, No `id`
 
 This example demonstrates a pipeline that sorts edges without an `id` field,
-using [`kgtk sort`](https:../sort), before `kgtk compact`:
+using [`kgtk sort`](../sort), before `kgtk compact`:
 
 ```base
 kgtk sort -i examples/docs/compact-file2.tsv \
@@ -324,7 +324,7 @@ kgtk cat -i examples/docs/compact-file5.tsv
 | E12 | steve | zipcode | 45601 | work | 2 |
 
 This example demonstrates a pipeline that sorts edges with an `id` field,
-using [`kgtk sort`](https:../sort), before `kgtk compact`:
+using [`kgtk sort`](../sort), before `kgtk compact`:
 
 ```base
 kgtk sort -i examples/docs/compact-file5.tsv \
@@ -493,7 +493,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 |
 
 The output is sorted and duplicate lines have been removed, without creating any new
-[multi-valued edges (`|` lists)](https:../../specification#multi-valued-edges).
+[multi-valued edges (`|` lists)](../../specification#multi-valued-edges).
 
 ### Building New, Unique IDs for the Compacted Edges.
 
