@@ -428,7 +428,7 @@ kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
 | Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" | E3 |
 | E3 | confidence | 0.8 |  |  |  | E102 |
 
-### Sample Data with Other Labels
+### Reversing `kgtk lift` with Other Labels
 
 Suppose `file3`.tsv` contains the following table in KGTK format:
 
@@ -442,21 +442,118 @@ kgtk cat -i examples/docs/normalize-file3.tsv
 | Q1 | P2 | Q6 | "Elmo" | "amigo"\|"friend" | "Fred" |
 | Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" |
 
-### Reversing `kgtk lift` with Other Labels
+Lowering the additional columns with default settings:
 
 ```bash
-kgtk lower -i examples/docs/normalize-file1.tsv
+kgtk lower -i examples/docs/normalize-file3.tsv
 
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | Q1 | P1 | Q5 |
-| Q1 | label | "Elmo" |
-| P1 | label | "instance of" |
-| Q5 | label | "homo sapiens" |
-| Q5 | label | "human" |
+| Q1 | name | "Elmo" |
+| P1 | relationship | "instance of" |
+| Q5 | name | "homo sapiens" |
+| Q5 | name | "human" |
 | Q1 | P2 | Q6 |
-| P2 | label | "amigo" |
-| P2 | label | "friend" |
-| Q6 | label | "Fred" |
+| P2 | relationship | "amigo" |
+| P2 | relationship | "friend" |
+| Q6 | name | "Fred" |
 | Q6 | P1 | Q5 |
+
+### Expert Example: Lowering with Base Columns
+
+Suppose `file4`.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/normalize-file4.tsv
+```
+
+| node1 | label | node2 | color | material | size |
+| -- | -- | -- | -- | -- | -- |
+| block1 | isa | cube | red | wood | large |
+| block2 | isa | pyramid | blue | steel | small |
+
+In this case, the additional columns `color`, `material`, and `size` are
+all attributes of the entity in `node`, but without the `node1;` prefix.
+
+These columns can be lowered by supplying a base column for each
+column to be lowered using the expert option `--base-columns BASE_COLUMNS ...`.
+The columns to be lowered must be specified with `--columns COLUMNS_TO_LOWER`
+(or an alias to this option), and there must be one base column specified for each
+column to lower.
+
+```bash
+kgtk lower -i examples/docs/normalize-file4.tsv \
+           --columns      color material size \
+	   --base-columns node1  node1   node1
+```
+| node1 | label | node2 |
+| -- | -- | -- |
+| block1 | isa | cube |
+| block1 | color | red |
+| block1 | material | wood |
+| block1 | size | large |
+| block2 | isa | pyramid |
+| block2 | color | blue |
+| block2 | material | steel |
+| block2 | size | small |
+
+!!! note
+    Another approach would be to rename the columns on input to names
+    such as `node1;color`.
+    
+    See [`kgtk cat`](https:../cat) for am example of renaming columns
+    on input.
+
+### Expert Example: Lowering with Base Columns and Label Values
+
+Suppose `file4`.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/normalize-file4.tsv
+```
+
+| node1 | label | node2 | color | material | size |
+| -- | -- | -- | -- | -- | -- |
+| block1 | isa | cube | red | wood | large |
+| block2 | isa | pyramid | blue | steel | small |
+
+In this case, the additional columns `color`, `material`, and `size` are
+all attributes of the entity in `node`, but without the `node1;` prefix.
+
+These columns can be lowered by supplying a base column for each
+column to be lowered using the expert option `--base-columns BASE_COLUMNS ...`.
+The columns to be lowered must be specified with `--columns COLUMNS_TO_LOWER`
+(or an alias to this option), and there must be one base column specified for each
+column to lower.
+
+Furthermore, suppose that the relationships in the label edges must be all capital
+letters.  The expert option `--label-values LABEL_VALUES ...]` can be
+used to supply the label values to use.  There must be one label value specified
+for each column to lower.
+
+```bash
+kgtk lower -i examples/docs/normalize-file4.tsv \
+           --columns      color material size \
+	   --base-columns node1  node1   node1 \
+	   --label-values COLOR MATERIAL SIZE
+```
+| node1 | label | node2 |
+| -- | -- | -- |
+| block1 | isa | cube |
+| block1 | COLOR | red |
+| block1 | MATERIAL | wood |
+| block1 | SIZE | large |
+| block2 | isa | pyramid |
+| block2 | COLOR | blue |
+| block2 | MATERIAL | steel |
+| block2 | SIZE | small |
+
+!!! note
+    Another approach would be to rename the columns on input to names
+    such as `node1;COLOR`.
+    
+    See [`kgtk cat`](https:../cat) for am example of renaming columns
+    on input.
