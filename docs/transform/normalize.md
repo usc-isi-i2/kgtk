@@ -1,5 +1,7 @@
 ## Overview
 
+### `kgtk normalize`
+
 `kgtk normalize` removes additional columns from a KGTK edge file.
 It implements two column removal patterns:
 
