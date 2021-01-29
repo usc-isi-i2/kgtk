@@ -1,7 +1,10 @@
 ## Overview
 
 This command performs calculations on one or more columns in a KGTK file. 
-If no input filename is provided, the default is to read standard input. 
+If no input filename is provided, the default is to read standard input.
+
+The output of a calculation can be written into an existing column or into
+a new column, which will be added after all existing columns.
 
 ## Usage
 
@@ -83,7 +86,8 @@ kgtk cat -i examples/docs/calc-file1.tsv
     may be used to format the result of this calculation.
 
 ```bash
-kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do average
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do average --columns node2 "node1;total" --into result
 ```
 
 The output will be the following table in KGTK format:
@@ -112,7 +116,8 @@ The output will be the following table in KGTK format:
     The number of source and destination columns must match.
 
 ```bash
-kgtk calc -i examples/docs/calc-file1.tsv -c node2 --into node2-copy --do copy
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do copy --columns node2 --into node2-copy
 ```
 
 The output will be the following table in KGTK format:
@@ -142,7 +147,10 @@ The output will be the following table in KGTK format:
     simultaneously.  This allows column values to be swapped, shifted, permuted, etc.
 
 ```bash
-kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into "node1;total" node2 --do copy
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do copy \
+          --columns  node2        "node1;total" \
+          --into    "node1;total"  node2
 ```
 
 The output will be the following table in KGTK format:
@@ -172,7 +180,8 @@ The output will be the following table in KGTK format:
     to provide the separator between the joined fields.
 
 ```bash
-kgtk calc -i examples/docs/calc-file1.tsv -c node1 label --value : --into result --do join
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do join --columns node1 label --value : --into result
 ```
 
 The output will be the following table in KGTK format:
@@ -201,8 +210,9 @@ The output will be the following table in KGTK format:
     It also needs one `--values` argument, which may be an explicit empty value (`--values ""`),
     to provide the separator between the joined fields.
 
-```bash
-kgtk calc -i examples/docs/calc-file1.tsv -c node1 label --value "" --into result --do join
+```bashk
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do join --columns node1 label --value "" --into result
 ```
 
 The output will be the following table in KGTK format:
@@ -234,7 +244,8 @@ The output will be the following table in KGTK format:
     may be used to format the result of this calculation.
 
 ```bash
-kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do percentage
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do percentage --columns node2 "node1;total" --into result
 ```
 
 The output will be the following table in KGTK format:
@@ -256,14 +267,45 @@ The output will be the following table in KGTK format:
 | P1040 | p585-count | 1 | 45073 |  0.00 |
 | P1050 | p585-count | 246 | 226380 |  0.11 |
 
-### Set a value into a column.
+### Set a value into an existing column.
 
 !!! info
-    `--do set` requires at least one `--values` argument and a matching number of destination columnes (`--into`).
-    It does not allow any source columne (`--columns`).
+    `--do set` requires at least one `--values` argument and a matching number of destination columns (`--into`).
+    It does not allow any source column (`--columns`).
 
 ```bash
-kgtk calc -i examples/docs/calc-file1.tsv --value xxx --into result --do set
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do set --value count --into label
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | count | 73 | 3879 |
+| P1000 | count | 16 | 266 |
+| P101 | count | 5 | 157519 |
+| P1018 | count | 2 | 177 |
+| P102 | count | 295 | 414726 |
+| P1025 | count | 26 | 693 |
+| P1026 | count | 40 | 6930 |
+| P1027 | count | 14 | 10008 |
+| P1028 | count | 1131 | 4035 |
+| P1029 | count | 4 | 2643 |
+| P1035 | count | 4 | 366 |
+| P1037 | count | 60 | 9317 |
+| P1040 | count | 1 | 45073 |
+| P1050 | count | 246 | 226380 |
+
+### Set a value into a new column.
+
+!!! info
+    `--do set` requires at least one `--values` argument and a matching number of destination columns (`--into`).
+    It does not allow any source column (`--columns`).
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do set --value xxx --into result
 ```
 
 The output will be the following table in KGTK format:
@@ -295,7 +337,8 @@ The output will be the following table in KGTK format:
     may be used to format the result of the calculation.
 
 ```bash
-kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do sum
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do sum --columns node2 "node1;total" --into result
 ```
 
 The output will be the following table in KGTK format:
@@ -320,7 +363,8 @@ The output will be the following table in KGTK format:
 ### Calculate the sum of `node2` and `node1;total`, with the result formatted as an integer.
 
 ```bash
-kgtk calc -i examples/docs/calc-file1.tsv -c node2 "node1;total" --into result --do sum --format '%d'
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do sum --columns node2 "node1;total" --into result --format '%d'
 ```
 
 The output will be the following table in KGTK format:
