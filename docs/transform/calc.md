@@ -7,7 +7,7 @@ The output of a calculation can be written into an existing column or into
 a new column, which will be added after all existing columns.
 
 !!! note
-    [`kgtk query`](https:../query) can perform the same calculations as
+    [`kgtk query`](../query) can perform the same calculations as
     `kgtk calc` in a more elegant and more general manner. 
 
 ## Usage
