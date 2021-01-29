@@ -45,6 +45,7 @@ The following input file:
 Would be transformed by `kgtk lower` into:
 
 | node1 | label | node2 |
+| --- | --- | --- |
 | Q1 | P1 | Q2 |
 | Q1 | label | item1 |
 | Q2 | label | group1 |
@@ -75,6 +76,7 @@ The following input file:
 Would be transformed by `kgtk normalize-edges` to:
 
 | id | node1 | label | node2 |
+| -- | ----- | ----- | ----- |
 | E1 | Q1 | P1         | Q2 |
 |    | E1 | confidence | 0.9 |
 |    | E1 | reference  | Wikidata |
@@ -215,7 +217,7 @@ kgtk lower -i examples/docs/normalize-file1.tsv
     from the output file and their contents generated as label records.
 
 !!! note
-    The list `"amigo"\|"friend"` in the input file generated two output records.
+    The list `"amigo"|"friend"` in the input file generated two output records.
 
 ### Reversing `kgtk lift` with `kgtk lower` and Without Deduplication
 
@@ -333,7 +335,34 @@ kgtk cat -i examples/docs/normalize-file2.tsv
 | Q1 | P2 | Q6 | "Elmo" | "amigo"\|"friend" | "Fred" | E2 | 0.9 |
 | Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" | E3 | 0.8 |
 
-### Normalizing a Non-lift Additional Column
+### Normalizing Both Lift and Non-lift Additional Columns
+
+```bash
+kgtk normalize -i examples/docs/normalize-file2.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| Q1 | P1 | Q5 | E1 |
+| Q1 | label | "Elmo" |  |
+| P1 | label | "instance of" |  |
+| Q5 | label | "homo sapiens" |  |
+| Q5 | label | "human" |  |
+| E1 | confidence | 0.3 |  |
+| Q1 | P2 | Q6 | E2 |
+| P2 | label | "amigo" |  |
+| P2 | label | "friend" |  |
+| Q6 | label | "Fred" |  |
+| E2 | confidence | 0.9 |  |
+| Q6 | P1 | Q5 | E3 |
+| E3 | confidence | 0.8 |  |
+
+!!! note
+    The additional columns have been removed from the output
+    file.  Their contents appear as a mixture of label edges
+    and secondary edges.
+
+### Normalizing Just a Non-lift Additional Column
 
 Let's normalize just the non-lift additional column:
 
@@ -359,6 +388,8 @@ kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
 ### Normalizing a Non-lift Additional Column and Adding IDs
 
 Let's normalize just the non-lift additional column:
+To avoid generating the same ID values as existing IDs,
+the newly generated edge IDs are generated with the prefix `N`
 
 ```bash
 kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
@@ -375,13 +406,12 @@ kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
 | Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" | E3 |
 | E3 | confidence | 0.8 |  |  |  | N3 |
 
-!!! note
-    The newly generated edge IDs are generated with the prefix `N`
-    to avoid generating the same ID values as existing IDs.
 
 ### Normalizing a Non-lift Additional Column and Adding IDs with an Initial ID
 
-Let's normalize just the non-lift additional column:
+Let's normalize just the non-lift additional column.
+To avoid generating the same ID values as existing IDs,
+the newly generated edge IDs are generated with the initial value `E100`.
 
 ```bash
 kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
@@ -398,31 +428,35 @@ kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
 | Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" | E3 |
 | E3 | confidence | 0.8 |  |  |  | E102 |
 
-!!! note
-    The newly generated edge IDs are generated with the initial value 100
-    to avoid generating the same ID values as existing IDs.
+### Sample Data with Other Labels
 
-### Normalizing Both Lift and Non-lift Additional Columns
+Suppose `file3`.tsv` contains the following table in KGTK format:
 
 ```bash
-kgtk normalize -i examples/docs/normalize-file2.tsv
+kgtk cat -i examples/docs/normalize-file3.tsv
 ```
 
-| node1 | label | node2 | id |
-| -- | -- | -- | -- |
-| Q1 | P1 | Q5 | E1 |
-| Q1 | label | "Elmo" |  |
-| P1 | label | "instance of" |  |
-| Q5 | label | "homo sapiens" |  |
-| Q5 | label | "human" |  |
-| E1 | confidence | 0.3 |  |
-| Q1 | P2 | Q6 | E2 |
-| P2 | label | "amigo" |  |
-| P2 | label | "friend" |  |
-| Q6 | label | "Fred" |  |
-| E2 | confidence | 0.9 |  |
-| Q6 | P1 | Q5 | E3 |
-| E3 | confidence | 0.8 |  |
+| node1 | label | node2 | node1;name | label;relationship | node2;name |
+| -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | "Elmo" | "instance of" | "homo sapiens"\|"human" |
+| Q1 | P2 | Q6 | "Elmo" | "amigo"\|"friend" | "Fred" |
+| Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" |
 
+### Reversing `kgtk lift` with Other Labels
 
-	       
+```bash
+kgtk lower -i examples/docs/normalize-file1.tsv
+
+```
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q1 | P1 | Q5 |
+| Q1 | label | "Elmo" |
+| P1 | label | "instance of" |
+| Q5 | label | "homo sapiens" |
+| Q5 | label | "human" |
+| Q1 | P2 | Q6 |
+| P2 | label | "amigo" |
+| P2 | label | "friend" |
+| Q6 | label | "Fred" |
+| Q6 | P1 | Q5 |
