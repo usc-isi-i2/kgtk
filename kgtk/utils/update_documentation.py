@@ -166,6 +166,7 @@ class DocUpdater():
                    start_idx: int,
                    stop_at_next_section: bool = False,
                    stop_at_next_block: bool = True,
+                   stop_at_next_admonition: bool =True,
                    skip_text: bool = False,
                    )->typing.Tuple[int, int]:
         current_idx: int = start_idx
@@ -179,6 +180,10 @@ class DocUpdater():
             if stop_at_next_block and line.startswith("```"):
                 if self.very_verbose:
                     print("find_code begin search found a block at index %d" % current_idx, file=self.error_file, flush=True)
+                return -1, -1
+            if stop_at_next_section and line.startswith("!!!"):
+                if self.very_verbose:
+                    print("find_code begin search found an admonition at index %d" % current_idx, file=self.error_file, flush=True)
                 return -1, -1
             if line.startswith("    "):
                 begin_idx = current_idx
