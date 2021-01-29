@@ -184,7 +184,7 @@ class DocUpdater():
                 if self.very_verbose:
                     print("find_code begin search found a block at index %d" % current_idx, file=self.error_file, flush=True)
                 return -1, -1
-            if stop_at_next_section and line.startswith("!!!"):
+            if stop_at_next_admonition and line.startswith("!!!"):
                 if self.very_verbose:
                     print("find_code begin search found an admonition at index %d" % current_idx, file=self.error_file, flush=True)
                 return -1, -1

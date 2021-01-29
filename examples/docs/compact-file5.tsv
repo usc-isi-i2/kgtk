@@ -1,0 +1,13 @@
+id	node1	label	node2	location	years
+E01	steve	zipcode	45601	cabin	
+E02	john	zipcode	12345	home	10
+E03	steve	zipcode	45601		4
+E04	john	zipcode	12346		
+E05	peter	zipcode	12040	home	
+E06	steve	zipcode	45601	home	1
+E07	peter	zipcode	12040	work	5
+E08	peter	zipcode	12040		6
+E09	steve	zipcode	45601		3
+E10	peter	zipcode	12040	cabin	
+E11	steve	zipcode	45601		5
+E12	steve	zipcode	45601	work	2
