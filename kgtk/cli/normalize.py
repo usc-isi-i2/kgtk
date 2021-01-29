@@ -62,9 +62,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("Optionally, explicitly list the base column for each column being lowered. " +
                               " --base-columns and --columns-to-lower must have the same number of entries."), nargs='*')
 
-    parser.add_argument(      "--label-value", action="store", type=str, dest="label_value",
-                              help=h("The label value to use for lowered edges when --base-columns is used. (default=%(default)s)"),
-                              default=KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE)
+    parser.add_argument(      "--label-values", action="store", type=str, dest="label_values", nargs='*',
+                              help=h("When not empty, a list of label values to use for lowered edges when --base-columns is used, overriding the original column names. (default=%(default)s)"))
 
     parser.add_argument(      "--lift-separator", dest="lift_separator",
                               help=h("The separator between the base column and the label value. (default=%(default)s)."),
@@ -111,7 +110,7 @@ def run(input_file: KGTKFiles,
 
         base_columns: typing.Optional[typing.List[str]] = None,
         columns_to_lower: typing.Optional[typing.List[str]] = None,
-        label_value: str = KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE,
+        label_values: typing.Optional[typing.List[str]] = None,
         lift_separator: str = KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR,
         lower: bool = False,
         normalize: bool = False,
@@ -147,10 +146,11 @@ def run(input_file: KGTKFiles,
             print("--label-file=%s" % str(new_edges_kgtk_file), file=error_file)
 
         if base_columns is not None:
-            print("--base-columns=%s" % " ".join(base_columns), file=error_file)
+            print("--base-columns %s" % " ".join(base_columns), file=error_file)
         if columns_to_lower is not None:
-            print("--columns-to-lower=%s" % " ".join(columns_to_lower), file=error_file)
-        print("--label-value=%s" % label_value, file=error_file)
+            print("--columns-to-lower %s" % " ".join(columns_to_lower), file=error_file)
+        if label_values is not None:
+            print("--label-values %s" % " ".join(label_values), file=error_file)
         print("--lift-separator=%s" % lift_separator, file=error_file)
         print("--lower=%s" % lower, file=error_file)
         print("--normalize=%s" % normalize, file=error_file)
@@ -220,12 +220,12 @@ def run(input_file: KGTKFiles,
 
         if columns_to_lower is not None and len(columns_to_lower) > 0 and base_columns is not None and len(base_columns) > 0:
             # Pattern 1: len(columns_to_lower) > 0 and len(base_columns) == len(columns_to_lower)
-            # column_names and base_columns are paired. New records use label_value.
+            # column_names and base_columns are paired. New records use label_values if specified.
             if len(columns_to_lower) != len(base_columns):
-                raise KGTKException("There are %d columns to remove but only %d base columns." % (len(columns_to_lower), len(base_columns)))
-        
-            if len(label_value) == 0:
-                raise KGTKException("The --label-value must not be empty.")
+                raise KGTKException("There are %d columns to lower but only %d base columns." % (len(columns_to_lower), len(base_columns)))
+
+            if label_values is not None and len(label_values) > 0 and len(label_values) != len (columns_to_lower):
+                raise KGTKException("There are %d columns to lower but only %d label values." % (len(columns_to_lower), len(label_values)))
 
             for idx, column_name in enumerate(columns_to_lower):
                 base_name = base_columns[idx]
@@ -243,7 +243,10 @@ def run(input_file: KGTKFiles,
                 else:
                     if not lower:
                         raise KGTKException("--lower is not enabled for column %s, base name %s" % (repr(column_name), repr(base_name)))
-                    lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], label_value)
+                    if label_values is not None and len(label_values) > 0 and len(label_values[idx]) > 0:
+                        lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], label_values[idx])
+                    else:
+                        lower_map[kr.column_name_map[column_name]] = (kr.column_name_map[base_name], column_name)
 
         elif columns_to_lower is not None and len(columns_to_lower) > 0 and (base_columns is None or len(base_columns) == 0):
             # Pattern 2: len(columns_to_lower) > 0 and len(base_columns) == 0
