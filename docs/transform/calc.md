@@ -6,6 +6,10 @@ If no input filename is provided, the default is to read standard input.
 The output of a calculation can be written into an existing column or into
 a new column, which will be added after all existing columns.
 
+!!! note
+    [`kgtk query`](https:../query) can perform the same calculations as
+    `kgtk calc` in a more elegant and more general manner. 
+
 ## Usage
 
 ```
