@@ -8,7 +8,7 @@ Join two KGTK edge files or two KGTK node files.
 input files, adjusted for predefined name aliasing.
 * Specify `--left-join` to get a left outer join.
 * Specify `--right-join` to get a right outer join.
-* Specify both to get a full outer join (equivalent to cat).
+* Specify both to get a full outer join (equivalent to [`kgtk cat`](../cat)).
 * Specify neither to get an inner join.
 * By default, node files are joined on the id column, while edge files are joined on the node1 column. The label and node2 columns may be added to the edge file join  criteria.  Alternatively, the left and right file join columns may be
   listed explicitly.
