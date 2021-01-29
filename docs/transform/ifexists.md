@@ -433,7 +433,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | s1 | steve | title | supervisor |  |  |
 | j1 | john | title | programmer |  |  |
 
-! note
+!!! note
     This used the key field comparison:
 
     > input.id == filter.id
