@@ -3,36 +3,64 @@
 `kgtk normalize` removes additional columns from a KGTK edge file.
 It implements two column removal patterns:
 
-  * it reverses `kgtk lift`
-  * it converts additional columns to secondary edges
+  * It reverses `kgtk lift`, then
+  * it converts the remaining additional columns to secondary edges.
+
+### `kgtk lower`
+
+This alias for `kgtk normalize` removes additional columns from a KGTK edge file,
+reversing `kgtk lift`.  It does not convert other additional columns to secondary edges.
+
+### `kgtk normalize-edges`
+
+This alias for `kgtk normalize` converts all (or selected) additional columns
+in a KGTK edge file to secondary edges.
+
+### [`kgtk normalize-nodes`](https:../normalize_nodes)
+
+[`kgtk normalize-nodes`](https:../normalize_nodes) converts KGTK node files to normalized
+KGTK edge files.
+
+!!! note
+    [`kgtk normalize-nodes`](https:../normalize_nodes) is currently implemented as a seperate
+    command.  In the future, `kgtk normalize` may provide the same functionality when the
+    input file is a KGTK node file.
 
 ## Usage
 
 ```
-usage: kgtk md [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-               [-v [optional True|False]]
+usage: kgtk normalize [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                      [--new-edges-file NEW_EDGES_FILE]
+                      [--columns COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...]]
+                      [--lower [True|False]] [--normalize [True|False]]
+                      [--deduplicate-new-edges [True|False]]
+                      [-v [optional True|False]]
 
-Convert a KGTK input file to a GitHub markdown table on output. 
-
-Use this command to filter the output of any KGTK command: 
-
-kgtk xxx / md 
-
-Use it to convert a KGTK file to a GitHub Markdown table in a file: 
-
-kgtk md -i file.tsv -o file.md
-
-Additional options are shown in expert help.
-kgtk --expert md --help
+Normalize a KGTK edge file by removing columns that match a "lift" pattern and converting remaining additional columns to new edges.
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK file to convert to a GitHub markdown table.
-                        (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The GitHub markdown file to write. (May be omitted or
-                        '-' for stdout.)
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
+  --new-edges-file NEW_EDGES_FILE
+                        An optional output file for new edges (normalized
+                        and/or lowered). If omitted, new edges will go in the
+                        main output file. (Optional, use '-' for stdout.)
+  --columns COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...], --columns-to-lower COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...], --columns-to-remove COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...]
+                        Columns to lower and remove as a space-separated list.
+                        (default=all columns other than key columns)
+  --lower [True|False]  When True, lower columns that match a lift pattern.
+                        (default=True)
+  --normalize [True|False]
+                        When True, normalize columns that do not match a lift
+                        pattern. (default=True)
+  --deduplicate-new-edges [True|False]
+                        When True, deduplicate new edges. Not suitable for
+                        large files. (default=True).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
