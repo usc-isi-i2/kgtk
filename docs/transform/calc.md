@@ -16,7 +16,7 @@ a new column, which will be added after all existing columns.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into INTO_COLUMN_NAMES
                  [INTO_COLUMN_NAMES ...] --do
-                 {average,copy,join,percentage,set,sum}
+                 {average,copy,join,max,min,percentage,set,sum}
                  [--values [VALUES [VALUES ...]]] [--format FORMAT_STRING]
                  [-v [optional True|False]]
 
@@ -41,7 +41,7 @@ optional arguments:
   --into INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {average,copy,join,percentage,set,sum}
+  --do {average,copy,join,max,min,percentage,set,sum}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -237,6 +237,72 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 | P1037p585-count |
 | P1040 | p585-count | 1 | 45073 | P1040p585-count |
 | P1050 | p585-count | 246 | 226380 | P1050p585-count |
+
+### Calculate the maximum of `node2` and `node1;total`.
+
+!!! info
+    `--do max` requires at least one source column (`--columns`) and one destination column (`--into`).
+
+!!! info
+    The format option (`--format`), which takes a Python %-style format string as argument,
+    may be used to format the result of this calculation.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do max --columns node2 "node1;total" --into result
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total | result |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | 3879.00 |
+| P1000 | p585-count | 16 | 266 | 266.00 |
+| P101 | p585-count | 5 | 157519 | 157519.00 |
+| P1018 | p585-count | 2 | 177 | 177.00 |
+| P102 | p585-count | 295 | 414726 | 414726.00 |
+| P1025 | p585-count | 26 | 693 | 693.00 |
+| P1026 | p585-count | 40 | 6930 | 6930.00 |
+| P1027 | p585-count | 14 | 10008 | 10008.00 |
+| P1028 | p585-count | 1131 | 4035 | 4035.00 |
+| P1029 | p585-count | 4 | 2643 | 2643.00 |
+| P1035 | p585-count | 4 | 366 | 366.00 |
+| P1037 | p585-count | 60 | 9317 | 9317.00 |
+| P1040 | p585-count | 1 | 45073 | 45073.00 |
+| P1050 | p585-count | 246 | 226380 | 226380.00 |
+
+### Calculate the minimum of `node2` and `node1;total`.
+
+!!! info
+    `--do min` requires at least one source column (`--columns`) and one destination column (`--into`).
+
+!!! info
+    The format option (`--format`), which takes a Python %-style format string as argument,
+    may be used to format the result of this calculation.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do min --columns node2 "node1;total" --into result
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total | result |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | 73.00 |
+| P1000 | p585-count | 16 | 266 | 16.00 |
+| P101 | p585-count | 5 | 157519 |  5.00 |
+| P1018 | p585-count | 2 | 177 |  2.00 |
+| P102 | p585-count | 295 | 414726 | 295.00 |
+| P1025 | p585-count | 26 | 693 | 26.00 |
+| P1026 | p585-count | 40 | 6930 | 40.00 |
+| P1027 | p585-count | 14 | 10008 | 14.00 |
+| P1028 | p585-count | 1131 | 4035 | 1131.00 |
+| P1029 | p585-count | 4 | 2643 |  4.00 |
+| P1035 | p585-count | 4 | 366 |  4.00 |
+| P1037 | p585-count | 60 | 9317 | 60.00 |
+| P1040 | p585-count | 1 | 45073 |  1.00 |
+| P1050 | p585-count | 246 | 226380 | 246.00 |
 
 ### Calculate the percentage of `node2` and `node1;total`.
 

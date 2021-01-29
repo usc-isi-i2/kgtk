@@ -21,6 +21,8 @@ def parser():
 AVERAGE_OP: str = "average"
 COPY_OP: str = "copy"
 JOIN_OP: str = "join"
+MAX_OP: str = "max"
+MIN_OP: str = "min"
 PERCENTAGE_OP: str = "percentage"
 SET_OP: str = "set"
 SUM_OP: str = "sum"
@@ -28,6 +30,8 @@ SUM_OP: str = "sum"
 OPERATIONS: typing.List[str] = [ AVERAGE_OP,
                                  COPY_OP,
                                  JOIN_OP,
+                                 MAX_OP,
+                                 MIN_OP,
                                  PERCENTAGE_OP,
                                  SET_OP,
                                  SUM_OP,
@@ -290,6 +294,18 @@ def run(input_file: KGTKFiles,
             if len(values) != 1:
                 raise KGTKException("Join needs 1 value, got %d" % len(values))
 
+        elif operation == MAX_OP:
+            if len(sources) == 0:
+                raise KGTKException("Max needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Max needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == MIN_OP:
+            if len(sources) == 0:
+                raise KGTKException("Min needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Min needs 1 destination columns, got %d" % len(into_column_idxs))
+
         elif operation == PERCENTAGE_OP:
             if len(into_column_idxs) != 1:
                 raise KGTKException("Percent needs 1 destination columns, got %d" % len(into_column_idxs))
@@ -314,7 +330,7 @@ def run(input_file: KGTKFiles,
 
         fs: str = format_string if format_string is not None else "%5.2f"
         item: str
-        
+         
         into_column_idx = into_column_idxs[0] # for convenience
 
         input_data_lines: int = 0
@@ -342,6 +358,26 @@ def run(input_file: KGTKFiles,
 
             elif operation == JOIN_OP:
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
+
+            elif operation == MAX_OP:
+                result: typing.Optional[float] = None
+                for idx in sources:
+                    item = row[idx]
+                    if len(item) > 0:
+                        value: float = float(item)
+                        if result is None or value > result:
+                            result = value
+                output_row[into_column_idx] = (fs % result) if result is not None else ""
+
+            elif operation == MIN_OP:
+                result: typing.Optional[float] = None
+                for idx in sources:
+                    item = row[idx]
+                    if len(item) > 0:
+                        value: float = float(item)
+                        if result is None or value < result:
+                            result = value
+                output_row[into_column_idx] = (fs % result) if result is not None else ""
 
             elif operation == PERCENTAGE_OP:
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
