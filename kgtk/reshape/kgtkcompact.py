@@ -32,7 +32,9 @@ class KgtkCompact(KgtkFormat):
                                                                                          iterable_validator=attr.validators.instance_of(list)))
     compact_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # The field separator used in multifield joins.  The KGHT list character should be safe.
+    deduplicate: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
+    # The field separator used in multifield joins.  The KGTK list character should be safe.
     field_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=KgtkFormat.KEY_FIELD_SEPARATOR)
 
     sorted_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -252,7 +254,12 @@ class KgtkCompact(KgtkFormat):
         # Build the list of key column edges:
         key_idx_list: typing.List[int] = [ ]
 
-        if len(self.key_column_names) == 0:
+        if self.deduplicate:
+            # Use the columns in the order the appear in the input file.  If you want to
+            # use --presorted, then the input needs to be sorted the same way.
+            key_idx_list = range(kr.column_count)
+            
+        elif len(self.key_column_names) == 0:
             if kr.is_edge_file:
                 # Add the KGTK edge file required columns.
                 key_idx_list.append(kr.node1_column_idx)
@@ -327,14 +334,18 @@ class KgtkCompact(KgtkFormat):
                             if prev_input_key < input_key:
                                 prev_input_key = input_key
                             elif prev_input_key > input_key:
-                                raise ValueError("Line %d sort violation going up: prev='%s' curr='%s'" % (input_line_count, prev_input_key, input_key))
+                                raise ValueError("Line %d sort violation going up: prev='%s' curr='%s'" % (input_line_count,
+                                                                                                           prev_input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR),
+                                                                                                           input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR)))
                             else:
                                 pass # No change in input_key
                         else:
                             if prev_input_key > input_key:
                                 prev_input_key = input_key
                             elif prev_input_key < input_key:
-                                raise ValueError("Line %d sort violation going down: prev='%s' curr='%s'" % (input_line_count, prev_input_key, input_key))
+                                raise ValueError("Line %d sort violation going down: prev='%s' curr='%s'" % (input_line_count,
+                                                                                                             prev_input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR),
+                                                                                                             input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR)))
                             else:
                                 pass # No change in input_key
                             
@@ -390,6 +401,12 @@ def main():
                               "as there are use cases that need to maintain distinct lists of secondary edges for each ID value. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--deduplicate", dest="deduplicate",
+                              help="Treat all columns as key columns, overriding --columns and --compact-id. " +
+                              "This will remove completely duplicate records without compacting any new lists. " +
+                              "(default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     parser.add_argument(      "--presorted", dest="sorted_input",
                               help="Indicate that the input has been presorted (or at least pregrouped). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -428,6 +445,7 @@ def main():
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
         print("--columns %s" % " ".join(args.key_column_names), file=error_file, flush=True)
         print("--compact-id=%s" % str(args.compact_id), file=error_file, flush=True)
+        print("--deduplicate=%s" % str(args.deduplicate), file=error_file, flush=True)
         print("--presorted=%s" % str(args.sorted_input), file=error_file, flush=True)
         print("--verify-sort=%s" % str(args.verify_sort), file=error_file, flush=True)
         print("--lists-in-input=%s" % str(args.lists_in_input), file=error_file, flush=True)
@@ -440,6 +458,7 @@ def main():
         input_file_path=args.input_file_path,
         key_column_names=args.key_column_names,
         compact_id=args.compact_id,
+        deduplicate=args.deduplicate,
         sorted_input=args.sorted_input,
         verify_sort=args.verify_sort,
         lists_in_input=args.lists_in_input,

@@ -12,8 +12,11 @@ import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
+DEDUP_COMMAND: str = "deduplicate"
+
 def parser():
     return {
+        'aliases': [ DEDUP_COMMAND ],
         'help': 'Copy a KGTK file compacting | lists.',
         'description': 'Copy a KGTK file, compacting multiple records into | lists. ' +
         '\n\nBy default, the input file is sorted in memory to achieve the ' +
@@ -36,6 +39,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
+    _command: str = parsed_shared_args._command
     _expert: bool = parsed_shared_args._expert
 
     # This helper function makes it easy to suppress options from
@@ -50,15 +54,48 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(positional=True)
     parser.add_output_file()
 
-    parser.add_argument(      "--columns", dest="key_column_names",
-                              help="The key columns to identify records for compaction. " +
-                              "(default=id for node files, (node1, label, node2, id) for edge files).", nargs='+', default=[ ])
+    if _command == DEDUP_COMMAND:
+
+        parser.add_argument(      "--columns", dest="key_column_names",
+                                  help=h("The key columns to identify records for compaction. " +
+                                  "(default=id for node files, (node1, label, node2, id) for edge files)."), nargs='+', default=[ ])
     
-    parser.add_argument(      "--compact-id", dest="compact_id",
-                              help="Indicate that the ID column in KGTK edge files should be compacted. " +
-                              "Normally, if the ID column exists, it is not compacted, " +
-                              "as there are use cases that need to maintain distinct lists of secondary edges for each ID value. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+        parser.add_argument(      "--compact-id", dest="compact_id",
+                                  help=h("Indicate that the ID column in KGTK edge files should be compacted. " +
+                                  "Normally, if the ID column exists, it is not compacted, " +
+                                  "as there are use cases that need to maintain distinct lists of secondary edges for each ID value. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+        parser.add_argument(      "--deduplicate", dest="deduplicate",
+                                  help=h("Treat all columns as key columns, overriding --columns and --compact-id. " +
+                                  "This will remove completely duplicate records without compacting any new lists. " +
+                                  "(default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+
+        parser.add_argument(      "--lists-in-input", dest="lists_in_input",
+                                  help=h("Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, default=True)
+
+    else:
+        parser.add_argument(      "--columns", dest="key_column_names",
+                                  help="The key columns to identify records for compaction. " +
+                                  "(default=id for node files, (node1, label, node2, id) for edge files).", nargs='+', default=[ ])
+    
+        parser.add_argument(      "--compact-id", dest="compact_id",
+                                  help="Indicate that the ID column in KGTK edge files should be compacted. " +
+                                  "Normally, if the ID column exists, it is not compacted, " +
+                                  "as there are use cases that need to maintain distinct lists of secondary edges for each ID value. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+        parser.add_argument(      "--deduplicate", dest="deduplicate",
+                                  help="Treat all columns as key columns, overriding --columns and --compact-id. " +
+                                  "This will remove completely duplicate records without compacting any new lists. " +
+                                  "(default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+        parser.add_argument(      "--lists-in-input", dest="lists_in_input",
+                                  help="Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--presorted", dest="sorted_input",
                               help="Indicate that the input has been presorted (or at least pregrouped) (default=%(default)s).",
@@ -67,10 +104,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--verify-sort", dest="verify_sort",
                               help="If the input has been presorted, verify its consistency (disable if only pregrouped). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
-
-    parser.add_argument(      "--lists-in-input", dest="lists_in_input",
-                              help="Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=True)
 
     parser.add_argument(      "--build-id", dest="build_id",
                               help="Build id values in an id column. (default=%(default)s).",
@@ -85,6 +118,7 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         key_column_names: typing.List[str],
         compact_id: bool,
+        deduplicate: bool,
         sorted_input: bool,
         verify_sort: bool,
         lists_in_input: bool,
@@ -126,7 +160,8 @@ def run(input_file: KGTKFiles,
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
         print("--columns=%s" % " ".join(key_column_names), file=error_file)
         print("--compact-id=%s" % str(compact_id), file=error_file, flush=True)
-        print("--presorted=%s" % str(sorted_input))
+        print("--deduplicate=%s" % str(deduplicate), file=error_file, flush=True)
+        print("--presorted=%s" % str(sorted_input), file=error_file, flush=True)
         print("--verify-sort=%s" % str(verify_sort), file=error_file, flush=True)
         print("--lists-in-input=%s" % str(lists_in_input), file=error_file, flush=True)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
@@ -146,6 +181,7 @@ def run(input_file: KGTKFiles,
             input_file_path=input_kgtk_file,
             key_column_names=key_column_names,
             compact_id=compact_id,
+            deduplicate=deduplicate,
             sorted_input=sorted_input,
             verify_sort=verify_sort,
             lists_in_input=lists_in_input,
