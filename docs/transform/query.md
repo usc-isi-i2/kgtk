@@ -479,6 +479,26 @@ Result:
 |     Otto  | 'Otto'@de | e22 | name  |
 |     Molly | "Molly"   | e24 | name  |
 
+Sometimes we want to summarize the data in some way.  For example,
+we might want to know all the different relationship labels used.
+We can do this with the following query where we use the `distict`
+keyword in the `--return` clause to eliminate any duplicates:
+
+```
+> kgtk query -i $GRAPH \
+    --match '(p)-[r]->(n)' \
+    --return 'distinct r.label' \
+    --order-by r.label
+```
+Result:
+
+| label      |
+| ---------- |
+|     friend |
+|     loves  |
+|     name   |
+
+
 One of the most powerful features of Kypher is that we can transform
 values into new ones building modified or completely new edges.  Many
 useful transformations can be performed by applying built-in functions
@@ -813,141 +833,123 @@ Result:
 |     e11 | Hans  | loves | Molly | Renal      | 11000        |
 
 
-<b>================= REVISED UP TO HERE =================</b>
-
-
 ### Aggregation
 
-Similar to SQL, Cypher supports aggregation functions such as `COUNT, MIN, MAX, AVG`, etc.
-However, Cypher does not have an explicit `group-by` clause and infers proper grouping
-from clause type and order in the `return` statement.
+Similar to SQL and Cypher, Kypher supports aggregation functions such
+as `count`, `min`, `max`, `avg`, etc.  The simplest aggregation
+operation involves counting rows or values via the `count` function.
+For example, we might want to know how many edges have Joe as the
+starting node:
 
-Select the row with maximum `x` node based on string comparison order:
+```
+> kgtk query -i $GRAPH \
+     --match '(:Joe)-[r]->()' \
+     --return 'count(r) as N'
+```
+Result:
 
-<pre><i>
-    > kgtk query -i $GRAPH \
-         --match 'g: (x)-[r]->(y)' \
-         --return 'max(x), r.label, y, r'
-</i>    max(graph_2_c1."node1")	label	node2	id
-    Susi	name	"Susi"	e25
-</pre>
+| N    |
+| ---- |
+|    3 |
 
-But, we had to move the relation ID variable to the end, otherwise it
-would have served as the grouping criterion which is not what we want.
-Here `max(x)` computes the maximum `x` per `r`, which is a unique key
-and thus basically gives us the same as just `x`:
+The `count` function counts all rows that would have been output
+without the use of count which we can see when we remove it from the
+query:
 
-<pre><i>
-    > kgtk query -i $GRAPH \
-         --match 'g: (x)-[r]->(y)' \
-         --return 'r, max(x), r.label, y' \
-         --limit 5
-</i>    id	max(graph_2_c1."node1")	label	node2
-    e11	Hans	loves	Molly
-    e12	Otto	loves	Susi
-    e13	Joe	friend	Otto
-    e14	Joe	loves	Joe
-    e21	Hans	name	'Hans'@de
-</pre>
+```
+> kgtk query -i $GRAPH \
+     --match '(:Joe)-[r]->()' \
+     --return r
+```
+Result:
+
+| id   |
+| ---- |
+|  e13 |
+|  e14 |
+|  e23 |
+
+This would also include any duplicate values.  To exclude duplicates
+we can add the `distinct` keyword as the first argument to `count` (in
+fact, all aggregation functions take an optional `distinct` argument).
+For example, here we count all distinct labels used in the data:
+
+```
+> kgtk query -i $GRAPH \
+     --match '(:Joe)-[r]->()' \
+     --return 'count(distinct r.label) as N'
+```
+Result:
+
+| N    |
+| ---- |
+|    3 |
+
+Different than SQL, however, Kypher does not have an explicit
+`group-by` clause and infers proper grouping from clause type and
+order in the `return` statement.  Grouping refers to the process of
+sorting result rows into groups before an aggregation operation is
+applied to each group.  In the count queries above, there was only a
+single group containing the full result set.  In the next query we are
+grouping by relationship label and then select the maximum `node2`
+value for each label group (here `max` is interpreted lexicographically).
+
+```
+> kgtk query -i $GRAPH \
+     --match '(x)-[r]->(y)' \
+     --return 'r.label, max(y) as node2, x, r'
+```
+Result:
+
+| label   |  node2      |  node1  |  id  |
+| --------|-------------|---------|------|
+| friend  |  Otto       |  Joe    |  e13 |
+| loves   |  Susi       |  Otto   |  e12 |
+| name    |  'Otto'@de  |  Otto   |  e22 |
+
+In this query the `max` function was applied to groups of result rows
+where `r.label` had the same value.  But for this to do what we
+intended, we had to move the relation ID variable `r` to the end,
+otherwise it would have served as the grouping criterion which is not
+what we want.
+
+Looking at our employment data again, let us find the person with the
+biggest salary (remember the use of `cast` to convert a textual salary
+value to a number).  Since we are aggregating over all employees, the
+aggregation function needs to be the first in the `--return` clause:
+
+```
+> kgtk query -i $WORKS \
+     --match 'w: (y {salary: s})-[r:works]->(c)' \
+     --return 'max(cast(s, int)) as `node1;salary`, y, "works" as label, c, r'
+```
+Result:
+
+|  node1;salary  |  node1  |  label  |  node2   |  id   |
+|----------------|---------|---------|----------|-------|
+|         20000  |    Joe  |  works  |  Kaiser  |  w13  |
 
 
-`count` and `count(distinct ...)` (in fact, all aggregation functions take an
-optional `distinct` argument):
+Finally, let us compute an average company salary.  Here we use
+`count` as well so we can see that only one employer has a non-trivial
+average in this data:
 
-<pre><i>
-    > kgtk query -i $GRAPH \
-         --match 'g: (x)-[r]->(y)' \
-         --where 'x = "Joe"' \
-         --return 'count(x) as N'
-</i>    N
-    3
-</pre>
+```
+> kgtk query -i $WORKS \
+     --match '(x)-[:works]->(c)' \
+     --return 'c as company, count(c) as n_empl, avg(cast(x.salary, int)) as avg_salary'
+```
+Result:
 
-<pre><i>
-    > kgtk query -i $GRAPH \
-         --match 'g: (x)-[r]->(y)' \
-         --where 'x = "Joe"' \
-         --return 'count(distinct x) as N'
-</i>    N
-    1
-</pre>
+|  company  |  n_empl  |  avg_salary  |
+|-----------|----------|--------------|
+|     ACME  |       1  |     10000.0  |
+|    Cakes  |       1  |      9900.0  |
+|   Kaiser  |       2  |     14000.0  |
+|    Renal  |       1  |     11000.0  |
 
 
-Person with biggest salary:
-
-<pre><i>
-    > kgtk --debug query -i $WORKS \
-         --match 'w: (y {salary: s})-[r:works]->(c)' \
-         --return 'max(cast(s, int)) as `node1;salary`, y, "works" as label, c, r'
-</i>    [2020-10-16 13:37:19 query]: SQL Translation:
-    ---------------------------------------------
-      SELECT max(CAST(graph_3_c1."node1;salary" AS int)) "node1;salary", graph_3_c1."node1", ? "label", graph_3_c1."node2", graph_3_c1."id"
-         FROM graph_3 AS graph_3_c1
-         WHERE graph_3_c1."label"=?
-         AND graph_3_c1."node1;salary"=graph_3_c1."node1;salary"
-      PARAS: ['works', 'works']
-    ---------------------------------------------
-    node1;salary	node1	label	node2	id
-    20000	Joe	works	Kaiser	w13
-</pre>
-
-
-Remember employment data:
-
-<pre><i>
-    > kgtk query -i $WORKS
-</i>    id	node1	label	node2	node1;salary	graph
-    w11	Hans	works	ACME	10000	employ
-    w12	Otto	works	Kaiser	8000	employ
-    w13	Joe	works	Kaiser	20000	employ
-    w14	Molly	works	Renal	11000	employ
-    w15	Susi	works	Cakes	9900	employ
-    w21	Hans	department	R&D		employ
-    w22	Otto	department	Pharm		employ
-    w23	Joe	department	Medic		employ
-    w24	Molly	department	Sales		employ
-    w25	Susi	department	Sales		employ
-</pre>
-
-All companies (some duplicates):
-
-<pre><i>
-    > kgtk query -i $WORKS \
-         --match '()-[:works]->(c)' \
-         --return 'c as company'
-</i>    company
-    ACME
-    Kaiser
-    Kaiser
-    Renal
-    Cakes
-</pre>
-
-Distinct companies:
-
-<pre><i>
-    > kgtk query -i $WORKS \
-         --match '()-[:works]->(c)' \
-         --return 'distinct c as company'
-</i>    company
-    ACME
-    Kaiser
-    Renal
-    Cakes
-</pre>
-
-Average company salary (Kaiser has a non-trivial average):
-
-<pre><i>
-    > kgtk query -i $WORKS \
-         --match '(x)-[:works]->(c)' \
-         --return 'c as company, avg(cast(x.salary, int)) as avg_salary'
-</i>    company	avg_salary
-    ACME	10000.0
-    Cakes	9900.0
-    Kaiser	14000.0
-    Renal	11000.0
-</pre>
+<b>================= REVISED UP TO HERE =================</b>
 
 
 ## Input and output specifications
