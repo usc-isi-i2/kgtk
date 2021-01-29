@@ -403,7 +403,7 @@ compact additional columns in the output from a join operation.
     In the future, `kgtk join --compact` will run `kgtk compact` automatically
     on the output of `kgtk join`.  This will reduce the
     number of command options that may need to be specified.  It may increase
-    performance as well. aIssue #116.
+    performance as well. [Issue #116](https://github.com/usc-isi-i2/kgtk/issues/116).
 
 
 ## Usage
