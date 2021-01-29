@@ -45,14 +45,14 @@ Format                 | Description
 Using the `--where WHERE_COLUMN_NAME` and `--in WHERE_VALUES...` options, you
 can restrict the count to records where the value in a specified column
 matches a list of specified values.  More sophisticated filtering can be
-obtained by running [`kgtk filter`](https:../filter) to provide the input to `kgtk unique`.
+obtained by running [`kgtk filter`](../filter) to provide the input to `kgtk unique`.
 
 ### Processing Large Files
 
 `kgtk unique` normally builds an in-memory dictionary of the unique
 values and counts.  Performance will be poor, and execution may fail, if there
 are a very large number of unique values, causing main memory to be exhausted.
-If you run out of main memory, you should presort the input file with [`kgtk sort`](https:../sort) and use
+If you run out of main memory, you should presort the input file with [`kgtk sort`](../sort) and use
 `kgtk unique --presorted` to avoid  building the in-memory dictionary.
 
 ## Usage

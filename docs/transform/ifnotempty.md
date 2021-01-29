@@ -4,7 +4,7 @@ The ifnotempty command filters a KGTK file, passing through only those rows
 for which one (or more) specified columns contain *nonempty* values.
 
 !!! note
-    The [`kgtk ifempty`](https:../ifempty/) command computes the inverse output of this command.
+    The [`kgtk ifempty`](../ifempty/) command computes the inverse output of this command.
 
 ## Any or All
 

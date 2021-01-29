@@ -18,13 +18,13 @@ reversing `kgtk lift`.  It does not convert other additional columns to secondar
 This alias for `kgtk normalize` converts all (or selected) additional columns
 in a KGTK edge file to secondary edges.
 
-### [`kgtk normalize-nodes`](https:../normalize_nodes)
+### [`kgtk normalize-nodes`](../normalize_nodes)
 
-[`kgtk normalize-nodes`](https:../normalize_nodes) converts KGTK node files to normalized
+[`kgtk normalize-nodes`](../normalize_nodes) converts KGTK node files to normalized
 KGTK edge files.
 
 !!! note
-    [`kgtk normalize-nodes`](https:../normalize_nodes) is currently implemented as a seperate
+    [`kgtk normalize-nodes`](../normalize_nodes) is currently implemented as a seperate
     command.  In the future, `kgtk normalize` may provide the same functionality when the
     input file is a KGTK node file, with `kgtk normalize-nodes` as an alias.
 
@@ -59,7 +59,7 @@ must contain an `id` column.
 
 !!! note
     In the future, there may be an option to generate `id` values on input edges as needed.
-    Until then, use the [`kgtk add-id`](https:../add_id) command to generate
+    Until then, use the [`kgtk add-id`](../add_id) command to generate
     `id` field values prior to `kgtk normalize-edges`.
 
 ###  Converting Additional Columns to Normalized Secondary Edges
@@ -84,7 +84,7 @@ Would be transformed by `kgtk normalize-edges` to:
 !!! note
     The newly generated secondary edges do not themselves have `id` fields.
     In the future, there may be an option to generate `id` values on output edges as needed.
-    Until then, use the [`kgtk add-id`](https:../add_id) command to generate
+    Until then, use the [`kgtk add-id`](../add_id) command to generate
     `id` field values after `kgtk normalize-edges`.
 
 ### Selecting the Additional Columns to Normalize
@@ -117,7 +117,7 @@ file or the new edges output file).
 
 Deduplication uses an in-memory dictionary.  It is not suitable for use
 with processing large files with large numbers of unique newly-generated edges.
-In this case, use [`kgtk sort`](https:../sort) and [`kgtk compact`](https:../compact) to deduplicate the new
+In this case, use [`kgtk sort`](../sort) and [`kgtk compact`](../compact) to deduplicate the new
 edges as additional processing steps.
 
 `kgtk normalize --deduplicate-new-edges ... / sort / compact`
@@ -128,7 +128,7 @@ List of values in additional columns being lowered/normalized are expanded into 
 edges for each nonempty element of the list.
 
 !!! note
-    This is required by the [KGTK File Format v2.0](https:../../specification),
+    This is required by the [KGTK File Format v2.0](../../specification),
     which prohibits lists in the `node2` column.
 
 
@@ -189,7 +189,7 @@ kgtk cat -i examples/docs/normalize-file1.tsv
 | Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" |
 
 !!! note
-    This file was generated using [`kgtk lift`](https:../lift):
+    This file was generated using [`kgtk lift`](../lift):
     
     kgtk lift --input-file examples/docs/lift-file4.tsv -o examples/docs/normalize-file1.tsv
 
@@ -504,7 +504,7 @@ kgtk lower -i examples/docs/normalize-file4.tsv \
     Another approach would be to rename the columns on input to names
     such as `node1;color`.
     
-    See [`kgtk cat`](https:../cat) for am example of renaming columns
+    See [`kgtk cat`](../cat) for am example of renaming columns
     on input.
 
 ### Expert Example: Lowering with Base Columns and Label Values
@@ -555,5 +555,5 @@ kgtk lower -i examples/docs/normalize-file4.tsv \
     Another approach would be to rename the columns on input to names
     such as `node1;COLOR`.
     
-    See [`kgtk cat`](https:../cat) for am example of renaming columns
+    See [`kgtk cat`](../cat) for am example of renaming columns
     on input.

@@ -12,12 +12,12 @@
     output file will not be a valid KGTK node or edge file.
 
 !!! note
-    [`kgtk reorder-columns --trim`](https:../reorder_columns) may be used as an alternative to `kgtk remove-columns`.
+    [`kgtk reorder-columns --trim`](../reorder_columns) may be used as an alternative to `kgtk remove-columns`.
 
 !!! info
-    See [`kgtk rename-columns`](https:../rename_columns) if you wish to rename columns.
+    See [`kgtk rename-columns`](../rename_columns) if you wish to rename columns.
 
-    See [`kgtk reorder-columns`](https:../reorder_columns) if you wish to reorder columns.
+    See [`kgtk reorder-columns`](../reorder_columns) if you wish to reorder columns.
 
 ### List of Column Names
 
