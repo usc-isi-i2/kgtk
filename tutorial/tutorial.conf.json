@@ -1,0 +1,8 @@
+{
+	"output_path": "/Users/pedroszekely/Downloads/kgtk-tutorial",
+	"kgtk_path": "/Users/pedroszekely/Documents/GitHub/kgtk",
+	"wikidata_folder-mm": "/Users/pedroszekely/Downloads/kgtk-tutorial/wikidataos-v4-mm/",
+	"wikidata_folder": "/Users/pedroszekely/Downloads/kgtk-tutorial/miniwikidata/",
+	"wikidata_sqlite3_db_path": "/Users/pedroszekely/Downloads/kgtk-tutorial/wikidata.sqlite3.miniwikidata.db",
+	"text_embedding_path": "/Users/pedroszekely/Downloads/kgtk-tutorial/text-embedding.tsv"
+}
