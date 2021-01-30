@@ -227,7 +227,7 @@ The output will be the following table in KGTK format:
 | peter | zipcode | 12040 | cabin\|home\|work | 5\|6 |
 | steve | zipcode | 45601 | cabin\|home\|work | 1\|2\|3\|4\|5 |
 
-### Compact with Improperly Sorted Imput
+### Compact with Improperly Sorted Input
 
 This example demonstrates that feeding a non-presorted
 file to `kgtk compact --presorted` generates an error.
