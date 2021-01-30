@@ -426,7 +426,7 @@ This results in no error messages.
 
 ### Validate with verbose feedback
 
-Sometimes you may wish to get more feedback about what kgtk verbose is
+Sometimes you may wish to get more feedback about what `kgtk validate` is
 doing.
 
 ```bash
