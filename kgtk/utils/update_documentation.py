@@ -10,6 +10,67 @@ from kgtk.utils.argparsehelpers import optional_bool
 
 @attr.s(slots=True, frozen=True)
 class DocUpdater():
+    """
+    This class updates KGTK Markdown documents (COMMAND.md files) (specifically, documents in
+    mkdocs flavored Markdown).
+
+    - The Usage section, if present, is updated by running:
+      - `kgtk COMMAND --help`
+
+      ## Usage
+      ```
+       usage: ///
+      ```
+
+    - The Expert Usage section, if present, is updated by running:
+      - `kgtk --expert COMMAND --help`
+
+      ## Expert Usage
+      ```
+       usage: ///
+      ```
+
+    - The Examples section, if present, consists of a number of commands followed by
+      - stdout output in a table, or
+        - a fenced code block for raw stdout, and
+      - an indented code block for stderr output
+      - Admonitions may follow the stderr and stdout output.
+        - Admonitions may not occur before an stderr output block.
+      - Searches for srdoutput tables or blocks, and for stderr output blocks,
+        will end at the next line that starts with "#".
+      - The Examples section is assumed to run to the end of the file.
+
+      ## Examples
+
+      ### Example 1
+
+      ```bash
+      kgtk command
+      ```
+      | table |
+
+          error output
+
+      ### Example 2
+
+      ```bash
+      kgtk command \
+           continued
+      ```
+
+      ~~~
+      raw stdout
+      ~~~
+
+          error output
+
+      !!! note
+          This is an admonition.
+
+
+    """
+
+
     kgtk_command: str = attr.ib(validator=attr.validators.instance_of(str), default="kgtk")
 
     process_usage: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -196,14 +257,17 @@ class DocUpdater():
 
         return current_idx
 
-    def find_code(self,
-                   lines: typing.List[str],
-                   start_idx: int,
-                   stop_at_next_section: bool = True,
-                   stop_at_next_block: bool = True,
-                   stop_at_next_admonition: bool =True,
-                   skip_text: bool = False,
-                   )->typing.Tuple[int, int]:
+    def find_code_block(self,
+                        lines: typing.List[str],
+                        start_idx: int,
+                        stop_at_next_section: bool = True,
+                        stop_at_next_block: bool = True,
+                        stop_at_next_admonition: bool =True,
+                        skip_text: bool = False,
+                        )->typing.Tuple[int, int]:
+        """
+        A code block is a set of contiguous indented lines.
+        """
         current_idx: int = start_idx
         begin_idx: int = -1
         line: str
@@ -251,31 +315,31 @@ class DocUpdater():
             print("Code found ending the file with contents in slice %d:%d" % (begin_idx, current_idx), file=self.error_file, flush=True)
         return begin_idx, current_idx # Return the slice of the contents of the block.
 
-    def update_code(self,
+    def update_code_block(self,
                     lines: typing.List[str],
-                    code_begin: int,
-                    code_end: int,
+                    code_block_begin: int,
+                    code_block_end: int,
                     current_idx: int,
                     new_code_lines: typing.List[str])->int:
         nlines: int = len(new_code_lines)
 
         if self.very_verbose:
-            print("Existing code:\n****************\n%s****************" % "".join(lines[code_begin:code_end]), file=self.error_file, flush=True)
+            print("Existing code:\n****************\n%s****************" % "".join(lines[code_block_begin:code_block_end]), file=self.error_file, flush=True)
             
         if nlines == 0:
             if self.verbose:
                 print("Error fetching new code (no output)", file=self.error_file, flush=True)
-            current_idx = code_end
+            current_idx = code_block_end
         elif not new_code_lines[0].startswith("    "):
             if self.verbose:
                 print("Error fetching new code:\n%s" % "".join(new_code_lines), file=self.error_file, flush=True)
-            current_idx = code_end
+            current_idx = code_block_end
         elif self.update_examples:
             # Replace the old example code with the new example code:
-            lines[code_begin:code_end] = new_code_lines
-            current_idx = code_end + (nlines - (code_end - code_begin))
+            lines[code_block_begin:code_block_end] = new_code_lines
+            current_idx = code_block_end + (nlines - (code_block_end - code_block_begin))
         else:
-            current_idx = code_end
+            current_idx = code_block_end
 
         return current_idx
 
@@ -348,6 +412,7 @@ class DocUpdater():
         missed_error_count: int = 0
 
         while (True):
+            # Commands to execute are stored in a fenced code block using "```" as the boundary.
             command_block_begin: int
             command_block_end: int
             command_block_begin, command_block_end = self.find_block(lines, current_idx, stop_at_next_section=False)
@@ -367,6 +432,7 @@ class DocUpdater():
                 print("Example command:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]), file=self.error_file, flush=True)
             current_idx = command_block_end + 1
 
+            # Stdout output is processed in a table or in a fenced code block using "~~~" as the boundary..
             command: str = "".join(lines[command_block_begin:command_block_end]).strip()
             table_begin: int
             table_end: int
@@ -432,19 +498,19 @@ class DocUpdater():
             elif self.very_verbose:
                 print("No error output.", file=self.error_file, flush=True)
 
-            code_begin: int
-            code_end: int
-            code_begin, code_end = self.find_code(lines, current_idx)
+           # Error output is processed in a Markdown indented code block.
+            code_block_begin: int
+            code_block_end: int
+            code_block_begin, code_block_end = self.find_code_block(lines, current_idx)
             if new_error_lines_len > 0:
-                # Error lines are used to replace a Markdown code block.
-                if code_begin >= 0:
-                    current_idx = self.update_code(lines, code_begin, code_end, current_idx, new_error_lines)
+                if code_block_begin >= 0:
+                    current_idx = self.update_code_block(lines, code_block_begin, code_block_end, current_idx, new_error_lines)
                     expected_error_count += 1
                 else:
                     if self.verbose:
                         print ("No code block found for error output", file=self.error_file, flush=True)
                     unexpected_error_count += 1
-            elif code_begin >= 0:
+            elif code_block_begin >= 0:
                 if self.verbose:
                     print ("No error output found for code block", file=self.error_file, flush=True)
                 missed_error_count += 1
