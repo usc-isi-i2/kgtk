@@ -235,7 +235,14 @@ file to `kgtk compact --presorted` generates an error.
 ```bash
 kgtk compact -i examples/docs/compact-file2.tsv --presorted
 ```
-The output will be the following error message:
+
+The output will begin with the following on stdout:
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| steve | zipcode | 45601 | cabin |  |
+
+The output will end with the following error message on stderr:
 
     Line 3 sort violation going down: prev='john|zipcode|12345' curr='steve|zipcode|45601'
 
