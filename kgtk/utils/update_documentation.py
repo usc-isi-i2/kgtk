@@ -44,6 +44,7 @@ class DocUpdater():
                    start_idx: int,
                    stop_at_next_section: bool = True,
                    skip_text: bool = True,
+                   boundary: str = "```",
                    )->typing.Tuple[int, int]:
         current_idx: int = start_idx
         begin_idx: int = -1
@@ -54,7 +55,7 @@ class DocUpdater():
                 if self.very_verbose:
                     print("find_block begin search left the section at index %d" % current_idx, file=self.error_file, flush=True)
                 return -1, -1
-            if line.startswith("```"):
+            if line.startswith(boundary):
                 current_idx += 1
                 begin_idx = current_idx
                 break
@@ -75,7 +76,7 @@ class DocUpdater():
                 if self.very_verbose:
                     print("find_block end search left the section at index %d" % current_idx, file=self.error_file, flush=True)
                 return -1, -1
-            if line.startswith("```"):
+            if line.startswith(boundary):
                 if self.very_verbose:
                     print("Block found with contents in slice %d:%d" % (begin_idx, current_idx), file=self.error_file, flush=True)
                 return begin_idx, current_idx # Return the slice of the contents of the block.
@@ -100,7 +101,7 @@ class DocUpdater():
                 if self.very_verbose:
                     print("find_table begin search left the section at index %d" % current_idx, file=self.error_file, flush=True)
                 return -1, -1
-            if stop_at_next_block and line.startswith("```"):
+            if stop_at_next_block and line.startswith(("```", "~~~")):
                 if self.very_verbose:
                     print("find_table begin search found a block at index %d" % current_idx, file=self.error_file, flush=True)
                 return -1, -1
@@ -139,7 +140,6 @@ class DocUpdater():
                      table_begin: int,
                      table_end: int,
                      current_idx: int,
-                     table_count: int,
                      new_table_lines: typing.List[str])->int:
         nlines: int = len(new_table_lines)
 
@@ -163,10 +163,43 @@ class DocUpdater():
 
         return current_idx
 
+    def find_stdout_block(self,
+                          lines: typing.List[str],
+                          start_idx: int,
+                          stop_at_next_section: bool = True,
+                          skip_text: bool = True,
+                          )->typing.Tuple[int, int]:
+        return self.find_block(lines, start_idx, stop_at_next_section, skip_text, boundary='~~~')
+        
+
+    def update_stdout_block(self,
+                            lines: typing.List[str],
+                            stdout_begin: int,
+                            stdout_end: int,
+                            current_idx: int,
+                            new_stdout_lines: typing.List[str])->int:
+        nlines: int = len(new_stdout_lines)
+
+        if self.very_verbose:
+            print("Existing stdout:\n****************\n%s****************" % "".join(lines[stdout_begin:stdout_end]), file=self.error_file, flush=True)
+            
+        if nlines == 0:
+            if self.verbose:
+                print("Error fetching new stdout (no output)", file=self.error_file, flush=True)
+            current_idx = stdout_end
+        elif self.update_examples:
+            # Replace the old example stdout with the new example stdout:
+            lines[stdout_begin:stdout_end] = new_stdout_lines
+            current_idx = stdout_end + (nlines - (stdout_end - stdout_begin))
+        else:
+            current_idx = stdout_end
+
+        return current_idx
+
     def find_code(self,
                    lines: typing.List[str],
                    start_idx: int,
-                   stop_at_next_section: bool = False,
+                   stop_at_next_section: bool = True,
                    stop_at_next_block: bool = True,
                    stop_at_next_admonition: bool =True,
                    skip_text: bool = False,
@@ -220,19 +253,11 @@ class DocUpdater():
 
     def update_code(self,
                     lines: typing.List[str],
+                    code_begin: int,
+                    code_end: int,
                     current_idx: int,
-                    code_count: int,
-                    new_code_lines: typing.List[str])->typing.Tuple[int, int]:
+                    new_code_lines: typing.List[str])->int:
         nlines: int = len(new_code_lines)
-
-        code_begin: int
-        code_end: int
-        code_begin, code_end = self.find_code(lines, current_idx)
-        if code_begin < 0:
-            if self.verbose:
-                print ("No code found for example", file=self.error_file, flush=True)
-            return current_idx, code_count
-        code_count += 1
 
         if self.very_verbose:
             print("Existing code:\n****************\n%s****************" % "".join(lines[code_begin:code_end]), file=self.error_file, flush=True)
@@ -252,37 +277,51 @@ class DocUpdater():
         else:
             current_idx = code_end
 
-        return current_idx, code_count
+        return current_idx
 
-    def do_usage(self, subcommand: str, lines: typing.List[str]):
-        usage_section_idx: int = self.find_section("Usage", lines)
+    def do_usage(self,
+                 subcommand: str,
+                 lines: typing.List[str],
+                 expert_usage: bool = False):
+
+        section_name = "Expert Usage" if expert_usage else "Usage"
+        
+        usage_section_idx: int = self.find_section(section_name, lines)
         if usage_section_idx < 0:
             if self.verbose:
-                print("No Usage section found." , file=self.error_file, flush=True)
+                print("No %s section found." % section_name, file=self.error_file, flush=True)
             return
         if self.verbose:
-            print("Usage section found at index %d" % usage_section_idx, file=self.error_file, flush=True)
+            print("%s section found at index %d" % (section_name, usage_section_idx), file=self.error_file, flush=True)
 
         usage_block_begin: int
         usage_block_end: int
         usage_block_begin, usage_block_end = self.find_block(lines, usage_section_idx + 1)
         if usage_block_begin < 0:
             if self.verbose:
-                print("No usage block found.", file=self.error_file, flush=True)
+                print("No %s block found." % section_name, file=self.error_file, flush=True)
             return
         if self.very_verbose:
-            print("Existing usage:\n****************\n%s****************" % "".join(lines[usage_block_begin:usage_block_end]), file=self.error_file, flush=True)
+            print("Existing %s:\n****************\n%s****************" % (section_name,
+                                                                          "".join(lines[usage_block_begin:usage_block_end])),
+                  file=self.error_file, flush=True)
 
             
-        command: str = "%s %s --help" % (self.kgtk_command, subcommand)
+        command: str
+        if expert_usage:
+            command = "%s --expert %s --help" % (self.kgtk_command, subcommand)
+        else:
+            command = "%s %s --help" % (self.kgtk_command, subcommand)
         if self.verbose:
-            print("Getting new usage for %s" % repr(command), file=self.error_file, flush=True)
+            print("Getting new %s for %s" % (section_name, repr(command)), file=self.error_file, flush=True)
         new_usage: typing.List[str] = subprocess.getoutput(command).splitlines(keepends=True)
         nlines: int = len(new_usage)
         if nlines > 0:
                 new_usage[nlines-1] = new_usage[nlines-1].rstrip('\n') + '\n'
         if self.very_verbose:
-            print("new usage:\n****************\n%s****************" % "".join(new_usage), file=self.error_file, flush=True)
+            print("new %s:\n****************\n%s****************" % (section_name,
+                                                                     "".join(new_usage)),
+                  file=self.error_file, flush=True)
 
         if self.update_usage:
             # Replace the old usage with the new usage:
@@ -300,15 +339,29 @@ class DocUpdater():
         current_idx = examples_section_idx + 1
 
         table_count: int = 0
-        error_count: int = 0
+        missed_table_count: int = 0
+        stdout_block_count: int = 0
+        missed_stdout_block_count: int = 0
+        unexpected_stdout_count: int = 0
+        expected_error_count: int = 0
+        unexpected_error_count: int = 0
+        missed_error_count: int = 0
+
         while (True):
             command_block_begin: int
             command_block_end: int
             command_block_begin, command_block_end = self.find_block(lines, current_idx, stop_at_next_section=False)
             if command_block_begin < 0:
                 if self.verbose:
-                    print ("%d example tables processed" % table_count, file=self.error_file, flush=True)
-                    print ("%d example errors processed" % error_count, file=self.error_file, flush=True)
+                    print ("%d expected tables processed" % table_count, file=self.error_file, flush=True)
+                    print ("%d expected stdout blocks processed" % stdout_block_count, file=self.error_file, flush=True)
+                    print ("%d expected errors processed" % expected_error_count, file=self.error_file, flush=True)
+                    
+                    print ("\n%d missed tables processed" % missed_table_count, file=self.error_file, flush=True)
+                    print ("%d missed stdout blocks processed" % missed_stdout_block_count, file=self.error_file, flush=True)
+                    print ("%d missed errors processed" % missed_error_count, file=self.error_file, flush=True)
+                    print ("%d unexpected stdout outputs processed" % unexpected_stdout_count, file=self.error_file, flush=True)
+                    print ("%d unexpected error outputs processed" % unexpected_error_count, file=self.error_file, flush=True)
                 return
             if self.very_verbose:
                 print("Example command:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]), file=self.error_file, flush=True)
@@ -318,6 +371,12 @@ class DocUpdater():
             table_begin: int
             table_end: int
             table_begin, table_end = self.find_table(lines, current_idx)
+
+            stdout_block_begin: int = -1
+            stdout_block_end: int = -1
+            if table_begin < 0:
+                stdout_block_begin, stdout_block_end = self.find_stdout_block(lines, current_idx)
+
             if table_begin >= 0:
                 command += " / md"
                 if self.verbose:
@@ -327,20 +386,37 @@ class DocUpdater():
                     print("Not expecting new table lines for:\n%s" % command, file=self.error_file, flush=True)
 
             result: subprocess.CompletedProcess = subprocess.run(command, capture_output=True, shell=True, text=True)
-            new_table_lines: typing.List[str] = result.stdout.splitlines(keepends=True)
-            nlines: int = len(new_table_lines)
+            new_stdout_lines: typing.List[str] = result.stdout.splitlines(keepends=True)
+            nlines: int = len(new_stdout_lines)
             if nlines > 0:
-                new_table_lines[nlines-1] = new_table_lines[nlines-1].rstrip('\n') + '\n'
+                new_stdout_lines[nlines-1] = new_stdout_lines[nlines-1].rstrip('\n') + '\n'
                 if self.verbose:
-                    print("%d lines of table output." % nlines, file=self.error_file, flush=True)
+                    print("%d lines of stdout output." % nlines, file=self.error_file, flush=True)
                 if self.very_verbose:
-                    print("Table output:\n****************\n%s****************" % "".join(new_table_lines), file=self.error_file, flush=True)
+                    print("Stdout output:\n****************\n%s****************" % "".join(new_stdout_lines), file=self.error_file, flush=True)
             elif self.very_verbose:
-                print("No table output.", file=self.error_file, flush=True)
+                print("No stdout output.", file=self.error_file, flush=True)
 
-            if table_begin >= 0 and nlines > 0:
-                current_idx = self.update_table(lines, table_begin, table_end, current_idx, table_count, new_table_lines)
-                table_count += 1
+            if nlines > 0:
+                if table_begin >= 0:
+                    current_idx = self.update_table(lines, table_begin, table_end, current_idx, new_stdout_lines)
+                    table_count += 1
+                elif stdout_block_begin >= 0:
+                    current_idx = self.update_stdout_block(lines, stdout_block_begin, stdout_block_end, current_idx, new_stdout_lines)
+                    stdout_block_count += 1
+                else:
+                    if self.verbose:
+                        print ("No table or stdout block found for stdout output", file=self.error_file, flush=True)
+                    unexpected_stdout_count += 1
+            else:
+                if table_begin > 0:
+                    if self.verbose:
+                        print ("No stdout output found for table", file=self.error_file, flush=True)
+                    missed_table_count += 1
+                elif stdout_block_begin > 0:
+                    if self.verbose:
+                        print ("No stdout output found for stdout block", file=self.error_file, flush=True)
+                    missed_stdout_block_count += 1
 
             new_error_lines: typing.List[str] = result.stderr.splitlines(keepends=True)
             new_error_lines_len: int = len(new_error_lines)
@@ -356,9 +432,22 @@ class DocUpdater():
             elif self.very_verbose:
                 print("No error output.", file=self.error_file, flush=True)
 
+            code_begin: int
+            code_end: int
+            code_begin, code_end = self.find_code(lines, current_idx)
             if new_error_lines_len > 0:
                 # Error lines are used to replace a Markdown code block.
-                current_idx, error_count = self.update_code(lines, current_idx, error_count, new_error_lines)
+                if code_begin >= 0:
+                    current_idx = self.update_code(lines, code_begin, code_end, current_idx, new_error_lines)
+                    expected_error_count += 1
+                else:
+                    if self.verbose:
+                        print ("No code block found for error output", file=self.error_file, flush=True)
+                    unexpected_error_count += 1
+            elif code_begin >= 0:
+                if self.verbose:
+                    print ("No error output found for code block", file=self.error_file, flush=True)
+                missed_error_count += 1
 
     def process(self, md_file: Path):
         subcommand: str = md_file.stem
@@ -377,6 +466,7 @@ class DocUpdater():
 
         if self.process_usage:
             self.do_usage(subcommand, lines)
+            self.do_usage(subcommand, lines, expert_usage=True)
 
         if self.process_examples:
             self.do_examples(subcommand, lines)
