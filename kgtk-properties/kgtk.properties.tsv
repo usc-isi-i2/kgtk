@@ -8,12 +8,28 @@ isa	P31	Q18647519	isa-P31-Q18647519
 isa	data_type	wikibase-item	isa-data_type-643cc9
 P279star	label	"is a"@en	P279star-label-e79b73
 P279star	alias	"isa"@en	P279star-alias-7773c5
-P279star	description	"Instance or subclass relationship"@en	P279star-description-0b5cdc
+P279star	description	"Instance or subclass relationship (P279*)"@en	P279star-description-0b5cdc
 P279star	P31	Q18616576	P279star-P31-Q18616576
 P279star	P31	Q28326461	P279star-P31-Q28326461
 P279star	P31	Q18647519	P279star-P31-Q18647519
-P279star	P31	Q18647521	P279star-P31-Q18647521
-P279star	data_type	wikibase-item	P279star-data_type-643cc9
+isa_star	P31	Q18647521	isa_star-P31-Q18647521
+isa_star	label	"is star"@en	isa_star-label
+isa_star	alias	"isa star"@en	isa_star-alias
+isa_star	description	"Relationship between items defined by isa/P279*"@en	isa_star-description
+isa_star	P31	Q18616576	isa_star-P31-Q18616576
+isa_star	P31	Q28326461	isa_star-P31-Q28326461
+isa_star	P31	Q18647519	isa_star-P31-Q18647519
+isa_star	P31	Q18647521	isa_star-P31-Q18647521
+isa_star	data_type	wikibase-item	isa_star-data_type
+P31P279star	P31	Q18647521	P31P279star-P31-Q18647521
+P31P279star	label	"is star"@en	isa_star-label
+P31P279star	alias	"isa star"@en	P31P279star-alias
+P31P279star	description	"Relationship between items defined by P31/P279*"@en	P31P279star-description
+P31P279star	P31	Q18616576	P31P279star-P31-Q18616576
+P31P279star	P31	Q28326461	P31P279star-P31-Q28326461
+P31P279star	P31	Q18647519	P31P279star-P31-Q18647519
+P31P279star	P31	Q18647521	P31P279star-P31-Q18647521
+P31P279star	data_type	wikibase-item	P31P279star-data_type
 directed_pagerank	label	"pagerank"@en	directed_pagerank-label-d3bd07
 directed_pagerank	alias	"page rank"@en	directed_pagerank-alias-9d4733
 directed_pagerank	description	"pagerank canculated on the directed graph"@en	directed_pagerank-description-b62fff
