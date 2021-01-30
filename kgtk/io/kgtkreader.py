@@ -1493,19 +1493,19 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if expert:
             errors_to = egroup.add_mutually_exclusive_group()
             errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout", metavar="optional True|False",
-                                         help="Send errors to stdout instead of stderr",
+                                         help="Send errors to stdout instead of stderr. (default=%(default)s).",
                                          type=optional_bool, nargs='?', const=True, default=False)
 
             errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr", metavar="optional True|False",
-                                         help="Send errors to stderr instead of stdout",
+                                         help="Send errors to stderr instead of stdout. (default=%(default)s).",
                                          type=optional_bool, nargs='?', const=True, default=False)
         else:
             egroup.add_argument(      "--errors-to-stderr", dest="errors_to_stderr", metavar="optional True|False",
-                                      help=h("Send errors to stderr instead of stdout"),
+                                      help=h("Send errors to stderr instead of stdout. (default=%(default)s),"),
                                       type=optional_bool, nargs='?', const=True, default=False)
 
             egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout", metavar="optional True|False",
-                                      help=h("Send errors to stdout instead of stderr"),
+                                      help=h("Send errors to stdout instead of stderr. (default=%(default)s)."),
                                       type=optional_bool, nargs='?', const=True, default=False)
 
         egroup.add_argument(      "--show-options", dest="show_options", metavar="optional True|False",
