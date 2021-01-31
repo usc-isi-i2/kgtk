@@ -4,9 +4,9 @@ The ifnotexists command filters a KGTK file (the input file specified by `--inpu
 passing through only those rows forwhich one or more specified columns do not
 match records in a second KGTK file (the filter file, specified by `--filter-on`).
 
-!!! note 
-   This command computes the inverse of the output of the [`kgtk ifexists`](../ifexists) command.
-   It is provided as a seperate command for convenience and clarity in KGTK processing scripts.
+!!! note
+    This command computes the inverse of the output of the [`kgtk ifexists`](../ifexists) command.
+    It is provided as a seperate command for convenience and clarity in KGTK processing scripts.
 
 ### Memory Usage Options
 
@@ -50,10 +50,10 @@ the following defaults will be used, which depend on the KGTK file type
 | node    | edge    | input.id   == filter.node1 |
 
 !!! note
-The number of input file keys must match the number of output file keys, after
-taking into consideration the default keys.  So, if you want to match an edge file's
-node1 value to a nonstandard column in a node file, only the `--filter-keys`
-option needs to be specified.
+    The number of input file keys must match the number of output file keys, after
+    taking into consideration the default keys.  So, if you want to match an edge file's
+    node1 value to a nonstandard column in a node file, only the `--filter-keys`
+    option needs to be specified.
 
 ### Optional Output Files
 
