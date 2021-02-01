@@ -617,7 +617,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             cls = EdgeReader
         
         elif is_node_file:
-            # We'll instantiate an NodeReader, which is a subclass of KgtkReader.
+            # We'll instantiate a NodeReader, which is a subclass of KgtkReader.
             # The NodeReader import is deferred to avoid circular imports.
             from kgtk.io.nodereader import NodeReader
             
