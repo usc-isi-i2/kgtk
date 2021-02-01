@@ -1291,7 +1291,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if len(problems) == 0:
             return False
 
-        return self.exclude_line(self.options.invalid_value_action,
+        return self.exclude_line(self.options.prohibited_list_action,
                                  "\n".join(problems),
                                  line)
 
