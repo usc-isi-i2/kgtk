@@ -20,7 +20,7 @@ Input files may be (de)compressed using a algorithm selected
 by the file extension: .bz2 .gz .lz4 .xy
 
 The expert option --compression-type may be used to override the
-decompression selection algorithim;  this is useful when reading from piped input.
+decompression selection algorithm;  this is useful when reading from piped input.
 
 ### Default Rules
 By default, the following rules apply:
@@ -55,7 +55,7 @@ The action to take if a header error is detected, such as:
 - An empty column name
 - A duplicate column name
 - A missing required column name for an edge or node file
-- An ambiguous required column name (e.g., ‘id’ and ‘ID’ are both present)
+- An ambiguous required column name (e.g., `id` and `ID` are both present)
 
 Only ERROR and EXIT actions are implemented for header errors.
 
@@ -79,9 +79,18 @@ raise the error limit or set it to zero:
 |Mode|Meaning|
 |----|-------|
 |NONE|Do not require node1, node1, or id columns|
-|EDGE|Treat the input file as a KGTK edge file and require the |presence of node1 and node2 columns or their allowable aliases.
+|EDGE|Treat the input file as a KGTK edge file and require the presence of node1 and node2 columns or their allowable aliases.|
 |NODE|Treat the input file as a KGTK node file and require the presence of an id column or its allowable alias (ID).|
 |AUTO|Automatically determine if an input file is an edge file or a node file. If a node1 (or allowable alias) column is present, assume that the file is a KGTK edge file. Otherwise, assume that it is a KGTK node file|
+
+### Special Column Names and Aliases
+
+| Canonical Name | Allowed Aliases | Comments |
+| -------------- | --------------- | -------- |
+| `id`           | `ID`            | This is a required column in Node files, an optional one in Edge files (but may cause behavior changes if present). |
+| `node1`        | `from`, `subject` | This is a required column in Edge files. It may not contain empty values. |
+| `label`        | `predicate`, `relation`, `relationship` | This is a required columns in Edge files. It may contain empty values. |
+| `node2`        | `to`, `object` | This is a required column in Edge files. It may not contain empty values. |
 
 ## Usage
 ```
@@ -385,7 +394,9 @@ Data value parsing:
 
 ## Examples
 
-Suppose that `file1.tsv` contains the following table in KGTK format:
+### Sample Data: Date Containing Day `00`
+
+Suppose that `examples/docs/validate-bad-date.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat -i examples/docs/validate-bad-date.tsv
@@ -396,7 +407,7 @@ kgtk cat -i examples/docs/validate-bad-date.tsv
 | john | woke | ^2020-05-00T00:00 |
 | john | woke | ^2020-05-02T00:00 |
 
-### Validate the data, using default options
+### Validate `examples/docs/validate-bad-date.tsv`, using default options:
 
 ```bash
 kgtk validate -i examples/docs/validate-bad-date.tsv
@@ -450,3 +461,95 @@ KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
 KgtkReader: Reading an edge file.
 Validated 2 data lines
 ~~~
+
+### Validate Only the Header
+
+Validate only the header record, ignoring data records:
+
+```bash
+kgtk validate -i examples/docs/validate-bad-date.tsv \
+              --header-only
+```
+
+No output is produced.
+
+### Header Error: No Header Line in File
+
+### Header Error: No Header Line to Skip
+
+### Header Error: Column Name Is Empty
+
+### Header Error: Column Name Starts with White Space
+
+### Header Error: Column Name Ends with White Space
+
+### Header Error: Column Name Contains Internal White Space
+
+### Header Error: Column Name Contains a Comma (`,`)
+
+### Header Error: Column Name Contains a Vertical Bar (`|`)
+
+### Header Error: Column Name Is a Duplicate
+
+### Header Error: Missing Required Column
+
+### Header Error: Ambiguous Required Column
+
+### Line Check: Empty Lines
+
+### Line Check: Comment Lines
+
+### Line Check: Whitespace Lines
+
+### Line Check: Short Lines
+
+### Line Check: Fill Missing Trailing Columns
+
+### Line Check: Long Lines
+
+### Line Check: Remove Extra Trailing Columns
+
+### Line Check: Prohibited Lists in `node1`
+
+Does this apply to node files?
+
+### Line Check: Prohibited Lists in `label`
+
+Does this apply to node files?
+
+### Line Check: Prohibited Lists in `node2`
+
+Does this apply to node files?
+
+### Line Check: Ignore Prohibited Lists
+
+### Line Check: `node1` Is Blank (Edge Files)
+
+### Note: `label` May Be Blank (Edge Files)
+
+### Line Check: `node2` Is Blank (Edge Files)
+
+### Line Check: `id` Is Blank (Node Files)
+
+### Value Check: Number or Quantity: Match Failed
+
+### Value Check: Number or Quantity: Lax Match Failed
+
+### Value Check: Number or Quantity: Low Tolerance is Not Float
+
+### Value Check: Number or Quantity: High Tolerance is Not Float
+
+### Value Check: Number: Match Failed
+
+### Value Check: Quantity: Match Failed
+
+### Value Check: Quantity: Lax Match Failed
+
+### Value Check: Quantity: Low Tolerance is Not Float
+
+### Value Check: Quantity: High Tolerance is Not Float
+
+### Value Check: String: Lax Match Failed
+
+### Value Check: String: Strict Match Failed
+
