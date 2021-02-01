@@ -32,10 +32,10 @@ kgtk --debug --progress \
      lexicalize --explain --verbose \
      --input-file lexicalize-file1-without-qualifiers.tsv.gz --presorted \
      --entity-label-file lexicalize-file1-without-qualifiers.labels.en.tsv.gz \
-     --output-file lexicalize-test5-output-explained.tsv
+     --output-file lexicalize-test5-output-explained.tsv.gz
 
 kgtk --debug --progress \
      lexicalize --verbose \
      --input-file lexicalize-file1-without-qualifiers.tsv.gz --presorted \
      --entity-label-file lexicalize-file1-without-qualifiers.labels.en.tsv.gz \
-     --output-file lexicalize-test5-output-minimal.tsv
+     --output-file lexicalize-test5-output.tsv.gz
