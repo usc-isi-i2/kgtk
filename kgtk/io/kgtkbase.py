@@ -88,7 +88,7 @@ class KgtkBase(KgtkFormat):
         if column_name.lstrip() != column_name:
             results.append("Column name '%s' starts with leading white space" % column_name)
         if column_name.rstrip() != column_name:
-            results.append("Column name '%s' ends with leading white space" % column_name)
+            results.append("Column name '%s' ends with trailing white space" % column_name)
         if prohibit_whitespace_in_column_names and not (column_name.startswith('"') or column_name.startswith("'")):
             if ''.join(column_name.split()) != column_name.strip():
                 results.append("Column name '%s' contains internal white space" % column_name)
