@@ -143,7 +143,7 @@ class KgtkBase(KgtkFormat):
         column_name: str
         for column_name in column_names:
             if column_name is None or len(column_name) == 0:
-                cls._yelp("Column %d has an invalid name in the file header" % column_idx,
+                cls._yelp("Column %d has an empty name in the file header" % column_idx,
                           header_line=header_line, who=who, error_action=error_action, error_file=error_file)
 
             # Ensure that columns names are not duplicated:
