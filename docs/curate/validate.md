@@ -539,7 +539,13 @@ Does this apply to node files?
 
 ### Value Check: Number or Quantity: High Tolerance is Not Float
 
+### Value Check: Number or Quantity: Missing Numeric part
+(Shouldn't hapen)
+
 ### Value Check: Number: Match Failed
+
+### Value Check: Number: Missing Numeric part
+(Shouldn't hapen)
 
 ### Value Check: Quantity: Match Failed
 
@@ -549,7 +555,74 @@ Does this apply to node files?
 
 ### Value Check: Quantity: High Tolerance is Not Float
 
+### Value Check: Quantity: Missing Numeric part
+(Shouldn't hapen)
+
 ### Value Check: String: Lax Match Failed
 
 ### Value Check: String: Strict Match Failed
+
+### Value Check: Language Qualified String: Lax Match Failed
+
+### Value Check: Language Qualified String: Strict Match Failed
+
+### Value Check: Language Qualified String: Wikidata Match Failed
+
+### Value Check: Language Qualified String: Language Validation Failed
+
+### Value Check: Language Qualified String: Allow Language Suffixes
+
+### Value Check: Language Qualified String: Additional Language Codes
+
+### Value Check: Location Coordinates: Match Failed
+
+### Value Check: Location Coordinates: Lax Match Failed
+
+### Value Check: Location Coordinates: Lat Is Not Float
+
+### Value Check: Location Coordinates: Lat Less than Minimum
+
+### Value Check: Location Coordinates: Lat Greater Than Maximum
+
+### Value Check: Location Coordinates: Lon Is Not Float
+
+### Value Check: Location Coordinates: Lon Less than Minimum
+
+### Value Check: Location Coordinates: Lon Greater Than Maximum
+
+### Values Check: Date and Times: Lax Match Failed
+
+### Values Check: Date and Times: Missing Hyphen
+
+### Values Check: Date and Times: No Year
+
+### Values Check: Date and Times: Year Not Int
+(Shouldn't happen)
+
+### Values Check: Date and Times: Year Less than Minimum
+
+### Values Check: Date and Times: Year Greater then Maximum
+
+### Values Check: Date and Times: Month Not Int
+(Shouldn't happen)
+
+### Values Check: Date and Times: Month 0 Disallowed
+
+### Values Check: Date and Times: Day Not Int
+(Shouldn't happen)
+
+### Values Check: Date and Times: Day 0 Disallowed
+
+### Values Check: Date and Times: Hour Not Int
+(Shouldn't happen)
+
+### Values Check: Date and Times: Minutes Not Int
+(Shouldn't happen)
+
+### Values Check: Date and Times: Seconds Not Int
+(Shouldn't happen)
+
+### Values Check: Date and Times: Hour 24 and Minutes or Seconds Not Zero
+
+### Values Check: Date and Times: End-of-day Value Disallowed
 
