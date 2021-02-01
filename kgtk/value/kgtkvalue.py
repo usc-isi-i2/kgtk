@@ -1073,7 +1073,8 @@ class KgtkValue(KgtkFormat):
         self.data_type = KgtkFormat.DataType.BOOLEAN
         self.valid = True
         if self.parse_fields:
-            self.fields = KgtkValueFields(data_type=self.data_type,                                          valid=self.valid,
+            self.fields = KgtkValueFields(data_type=self.data_type,
+                                          valid=self.valid,
                                           truth=self.value == KgtkFormat.TRUE_SYMBOL)
         return True
 
