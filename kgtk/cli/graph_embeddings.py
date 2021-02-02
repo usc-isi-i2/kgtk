@@ -1,8 +1,6 @@
 """
 Generate graph embedding based on Pytorch BigGraph library  
 
-# version 1: don't use kgtk's format
-
 """
 
 from argparse import Namespace
@@ -180,11 +178,9 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument(     '-op','--operator', dest='operator',
                              help="The transformation to apply to the embedding of one of the sides of the edge " +
                              "(typically the right-hand one) before comparing it with the other one. It reflects which model that embedding uses. " +
-                             "[Default:complex_diagonal] Choice: translation |linear|diagonal|complex_diagonal TransE=>translation, " +
-                             "RESCAL=> linear, DistMult=>diagonal, ComplEx=>complex_diagonal",
+                             "[Default:ComplEx]",
                               #default will be setting to complex_diagonal later
-                             default=None,choices=['translation','linear','diagonal','complex_diagonal',None],
-                             metavar='linear|diagonal|complex_diagonal|translation')
+                             default=None,metavar='RESCAL|DistMult|ComplEx|TransE')
     parser.add_argument(     '-e','--num_epochs', dest='num_epochs',
                              help="The number of times the training loop iterates over all the edges.[Default:100]",
                              type=int,default=100, metavar='')    
@@ -234,7 +230,18 @@ def config_preprocess(raw_config):
     operator:complex_diagonal
     '''
 
-    algorithm = raw_config['relations'][0]['operator']
+    algorithm_operator = {"complex":"complex_diagonal", 
+                          "distmult": "diagonal", 
+                          "rescal":"linear",
+                          "transe":"translation"}
+    try:
+        algorithm = algorithm_operator[raw_config['relations'][0]['operator'].lower()]
+        raw_config['relations'][0]['operator'] = algorithm
+    except:
+        print('Plase use valid operator! choices: RESCAL|DistMult|ComplEx|TransE')
+        import sys
+        sys.exit()
+
     loss_fn = raw_config['loss_fn']
     learning_rate = raw_config['lr']
     if algorithm and loss_fn and learning_rate:
