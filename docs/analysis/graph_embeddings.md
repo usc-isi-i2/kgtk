@@ -40,7 +40,7 @@ Q6    graph_embeddings   014022544,-0.062030070,-0.012535412,0.038317516
 
 ## Algorithm
 
-The algorithm is defined with the `operator` (`-op`) parameter. By default, it is `complex_diagonal`, corresponding to the ComplEx algorithm. It could be switched to: `translation` (TransE-like), `diagonal` (DistMult), or `linear` (for RESCAL). For more details and pointers, see [this documentation page](https://torchbiggraph.readthedocs.io/en/latest/related.html).
+The algorithm is defined with the `operator` (`-op`) parameter. By default, it is `ComplEx`. It could be switched to: `TransE`, `DistMult`, or `RESCAL`. The `operator` is case insensitive, for example, users can input the string like `complex` to assign embedding method. For more details and pointers, see [this documentation page](https://torchbiggraph.readthedocs.io/en/latest/related.html).
 
 ## Usage
 You can call the functions directly with given args as 
@@ -111,15 +111,11 @@ optional arguments:
                         having already undergone some processing) are compared
                         to each other to produce a score[Default: dot],Choice:
                         dot|cos|l2|squared_l2
-  -op linear|diagonal|complex_diagonal|translation, --operator linear|diagonal|complex_diagonal|translation
+  -op RESCAL|DistMult|ComplEx|TransE, --operator RESCAL|DistMult|ComplEx|TransE
                         The transformation to apply to the embedding of one of
                         the sides of the edge (typically the right-hand one)
                         before comparing it with the other one. It reflects
-                        which model that embedding uses.
-                        [Default:complex_diagonal] Choice: translation
-                        |linear|diagonal|complex_diagonal TransE=>translation,
-                        RESCAL=> linear, DistMult=>diagonal,
-                        ComplEx=>complex_diagonal
+                        which model that embedding uses. [Default:ComplEx]
   -e , --num_epochs     The number of times the training loop iterates over
                         all the edges.[Default:100]
   -b True|False, --bias True|False
