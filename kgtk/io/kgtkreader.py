@@ -385,7 +385,7 @@ class KgtkReaderOptions():
             repair_and_validate_lines=lookup("repair_and_validate_lines", False),
             repair_and_validate_values=lookup("repair_and_validate_values", False),
             short_line_action=lookup("short_line_action", ValidationAction.EXCLUDE),
-            skip_header_record=lookup("skip_header_recordb", False),
+            skip_header_record=lookup("skip_header_record", False),
             tail_count=lookup("tail_count", None),
             truncate_long_lines=lookup("truncate_long_lines", False),
             unsafe_column_name_action=lookup("unsafe_column_name_action", ValidationAction.REPORT),
@@ -798,7 +798,11 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             # Skip the first record to override the column names in the file.
             # Do not skip the first record if the file does not hae a header record.
+            if verbose:
+                print("Forcing column names", file=error_file, flush=True)
             if options.skip_header_record:
+                if verbose:
+                    print("Skipping a header record", file=error_file, flush=True)
                 try:
                     next(source)
                 except StopIteration:
