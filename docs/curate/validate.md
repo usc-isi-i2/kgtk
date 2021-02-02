@@ -2,7 +2,7 @@
 
 This tool validates that KGTK files meet the rules in the [KGTK File Format v2](../../specification).
 Error messages will be generated when rule violations are detected.
-By default, the error messages are written to standard output so they may be
+By default, most error messages are written to standard output so they may be
 easily captured in a log file.
 
 One or more KGTK files may be processed at a time.  Input files will be decompressed
@@ -24,11 +24,12 @@ decompression selection algorithm;  this is useful when reading from piped input
 
 ### Default Rules
 By default, the following rules apply:
+
  - errors that occur while processing a KGTK file's column header line cause an immediate exit:
-   - An empty column name
-   - A duplicate column name
-   - A missing required column name for an edge or node file
-   - An ambiguous required column name (e.g., `id` and `ID` are both present)
+    - An empty column name
+    - A duplicate column name
+    - A missing required column name for an edge or node file
+    - An ambiguous required column name (e.g., `id` and `ID` are both present)
  - empty data lines are silently ignored and not passed through.
  - data lines containing only whitespace are silently ignored and not passed through.
  - data lines with empty required fields (node1 and node2 for KGTK edge files, id for KGTK node files) are silently ignored.
@@ -61,6 +62,7 @@ Only ERROR and EXIT actions are implemented for header errors.
 
 ### `--unsafe-column-name`
 The action to take if a header column name contains one of the following:
+
 - Leading white space
 - Trailing white space
 - Internal white space except in strings or language-qualified strings
@@ -95,7 +97,8 @@ raise the error limit or set it to zero:
 ## Usage
 ```
 usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]]
-                     [--header-only [HEADER_ONLY]] [-v [optional True|False]]
+                     [--header-only [HEADER_ONLY]]
+                     [--summary [REPORT_SUMMARY]] [-v [optional True|False]]
 
 Validate one or more KGTK files. Empty lines, whitespace lines, comment lines, and lines with empty required fields are silently skipped. Header errors cause an immediate exception. Data value errors are reported. 
 
@@ -112,6 +115,9 @@ optional arguments:
   --header-only [HEADER_ONLY]
                         Process the only the header of the input file
                         (default=False).
+  --summary [REPORT_SUMMARY]
+                        Report a summary on the lines processed.
+                        (default=True).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -122,6 +128,7 @@ optional arguments:
 ```
 usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                      [--header-only [HEADER_ONLY]]
+                     [--summary [REPORT_SUMMARY]]
                      [--errors-to-stdout [optional True|False] |
                      --errors-to-stderr [optional True|False]]
                      [--show-options [optional True|False]]
@@ -202,6 +209,9 @@ optional arguments:
   --header-only [HEADER_ONLY]
                         Process the only the header of the input file
                         (default=False).
+  --summary [REPORT_SUMMARY]
+                        Report a summary on the lines processed.
+                        (default=True).
 
 Error and feedback messages:
   Send error messages and feedback to stderr or stdout, control the amount of feedback and debugging messages.
@@ -394,7 +404,7 @@ Data value parsing:
 
 ## Examples
 
-### Sample Data: Date Containing Day `00`
+### Sample Data: a Date Containing Day `00`
 
 Suppose that `examples/docs/validate-bad-date.tsv` contains the following table in KGTK format:
 
@@ -407,24 +417,30 @@ kgtk cat -i examples/docs/validate-bad-date.tsv
 | john | woke | ^2020-05-00T00:00 |
 | john | woke | ^2020-05-02T00:00 |
 
-### Validate `examples/docs/validate-bad-date.tsv`, using default options:
+### Validate using Default Options
 
 ```bash
 kgtk validate -i examples/docs/validate-bad-date.tsv
 ```
 
-The following complaint will be issued:
+The following complaint and summary will be issued:
 
 ~~~
 Data line 1:
 john	woke	^2020-05-00T00:00
 col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
+
+====================================================
+Data lines read: 2
+Data lines passed: 1
+Data lines excluded due to invalid values: 1
+Data errors reported: 1
 ~~~
 
 The first data line was flagged because it contained "00" in the day
 field, which violates the ISO 8601 specification.
 
-### Allow month or day zero
+### Validate Allowing Month or Day Zero
 
 Instruct the validator to accept month or day 00, even though
 this is not allowed in ISO 6801.
@@ -433,9 +449,17 @@ this is not allowed in ISO 6801.
 kgtk validate -i examples/docs/validate-bad-date.tsv \
               --allow-month-or-day-zero
 ```
-This results in no error messages.
 
-### Validate with verbose feedback
+This results in no error messages, and the following summary:
+
+~~~
+
+====================================================
+Data lines read: 2
+Data lines passed: 2
+~~~
+
+### Validate with Verbose Feedback
 
 Sometimes you may wish to get more feedback about what `kgtk validate` is
 doing.
@@ -460,6 +484,10 @@ node1 column found, this is a KGTK edge file
 KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
 KgtkReader: Reading an edge file.
 Validated 2 data lines
+
+====================================================
+Data lines read: 2
+Data lines passed: 2
 ~~~
 
 ### Validate Only the Header
@@ -471,17 +499,154 @@ kgtk validate -i examples/docs/validate-bad-date.tsv \
               --header-only
 ```
 
-No output is produced.
+~~~
 
-### Header Error: No Header Line in File
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
+### Header Error: No Header Line in File (Empty File)
+
+Validate an empty input file:
+
+```bash
+kgtk validate -i examples/docs/validate-empty-file.tsv
+```
+
+This generates the following message on standard error:
+
+    No header line in file
+
+!!! note
+    At the present time, this error message is not routable
+    to standard output.
+
+### Supply a Missing Header Line
+
+Validate an empty input file, supplying a header line:
+
+```bash
+kgtk validate -i examples/docs/validate-empty-file.tsv \
+              --force-column-names node1 label node2
+```
+
+No output is produced, indicting no error.
 
 ### Header Error: No Header Line to Skip
 
+Validate an empty input file, skipping a nonexistant header line.
+
+```bash
+kgtk validate -i examples/docs/validate-empty-file.tsv \
+              --force-column-names node1 label node2 \
+	      --skip-header-record 
+```
+
+This generates the following message on standard error:
+
+    No header line to skip
+
+!!! note
+    At the present time, this error message is not routable
+    to standard output.
+
 ### Header Error: Column Name Is Empty
+
+Validate an input file with an empty column name:
+
+```bash
+kgtk validate -i examples/docs/validate-empty-column-name.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header '	label	node2': Column 0 has an empty name in the file header
+~~~
+
+The following message appears on standard error:
+
+    Exit requested
+
+!!! note
+    The `Exit requested` message cannot be routed to standard output at the present time.
+    
+### Header Error: See All Header Errors
+
+Validate an input file with an empty column name.  This will generate an error
+message, and normally an immediate exit.  If you want to see all header error
+messages, use `--header-error-action COMPLAIN` to continue processing.
+
+```bash
+kgtk validate -i examples/docs/validate-empty-column-name.tsv \
+              --header-error-action COMPLAIN \
+	      --mode=NONE
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header '	label	node2': Column 0 has an empty name in the file header
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
+Processing continues without exiting.
+
+!!! note
+    The example includes `--mode=NONE` to suppress other error messages
+    in order to simplify the example.
 
 ### Header Error: Column Name Starts with White Space
 
+Validate an input file where the column names have initial whitespace.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv \
+              --header-error-action COMPLAIN \
+	      --mode=NONE
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header ' node1	 label	 node2': Column name ' node1' starts with leading white space, Column name ' label' starts with leading white space, Column name ' node2' starts with leading white space
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
+!!! note
+    The example includes `--mode=NONE` to suppress other error messages
+    in order to simplify the example.
+
 ### Header Error: Column Name Ends with White Space
+
+Validate an input file where the column names have trailing whitespace.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv \
+              --header-error-action COMPLAIN \
+	      --mode=NONE
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1 	label 	node2 ': Column name 'node1 ' ends with trailing white space, Column name 'label ' ends with trailing white space, Column name 'node2 ' ends with trailing white space
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
+!!! note
+    The example includes `--mode=NONE` to suppress certain error messages
+    in order to simplify the example.
 
 ### Header Error: Column Name Contains Internal White Space
 

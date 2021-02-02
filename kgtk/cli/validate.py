@@ -52,6 +52,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Process the only the header of the input file (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--summary", dest="report_summary",
+                              help="Report a summary on the lines processed. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -61,6 +65,7 @@ def run(input_files: KGTKFiles,
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = False,
         header_only: bool = False,
+        report_summary: bool = False,
         show_options: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
@@ -87,6 +92,7 @@ def run(input_files: KGTKFiles,
     if show_options:
         print("--input-files: %s" % " ".join((str(kgtk_file) for kgtk_file in kgtk_files)), file=error_file)
         print("--header-only=%s" % str(header_only), file=error_file)
+        print("--report-summary=%s" % str(report_summary), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -95,7 +101,7 @@ def run(input_files: KGTKFiles,
         kgtk_file: Path
         for kgtk_file in kgtk_files:
             if verbose:
-                print("\n====================================================", flush=True)
+                print("\n====================================================", file=error_file, flush=True)
                 if str(kgtk_file) != "-":
                     print("Validating '%s'" % str(kgtk_file), file=error_file, flush=True)
                 else:
@@ -119,6 +125,11 @@ def run(input_files: KGTKFiles,
                     line_count += 1
                 if verbose:
                     print("Validated %d data lines" % line_count, file=error_file, flush=True)
+
+        if report_summary or verbose:
+            print("\n====================================================", file=error_file, flush=True)
+            kr.report_summary()
+
         return 0
 
     except SystemExit as e:
