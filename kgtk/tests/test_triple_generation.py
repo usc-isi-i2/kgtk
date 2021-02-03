@@ -26,14 +26,13 @@ class TestTripleGeneration(unittest.TestCase):
 
         f1 = open('data/dates_truthy.ttl')
         f2 = open('data/dates_truthy_tmp.ttl')
-        self.assertNotEqual(f1.readlines(), f2.readlines()) 
+        # self.assertNotEqual(f1.readlines(), f2.readlines())
         #TODO until date validation published
-        # self.assertEqual(f1.readlines(), f2.readlines()) 
+        self.assertEqual(f1.readlines(), f2.readlines())
         f1.close()
         f2.close()
-        self.assertNotEqual(os.stat("data/date_warning.log").st_size, 0)
-        # TODO
-        # self.assertEqual(f1.readlines(), f2.readlines()) 
+        self.assertEqual(os.stat("data/date_warning.log").st_size, 0)
+         
         p = Path("data/date_warning.log")
         p.unlink()
         p = Path('data/dates_truthy_tmp.ttl')
