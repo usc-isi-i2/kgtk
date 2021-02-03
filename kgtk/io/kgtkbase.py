@@ -124,7 +124,7 @@ class KgtkBase(KgtkFormat):
         if len(complaints) == 0:
             return True
         # take the error action, joining the complaints into a single message.
-        msg = ", ".join(complaints)
+        msg = "\n" + "\n".join(complaints)
         cls._yelp(msg, header_line=header_line, who=who, error_action=error_action, error_file=error_file)
         return False
 
