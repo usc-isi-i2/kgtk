@@ -22,7 +22,7 @@ jobs:
           pip install coveralls
           python -m spacy download en_core_web_sm
           conda install -c conda-forge graph-tool
-          pip uninstall rdflib
+          pip uninstall -y rdflib
           pip install git+https://github.com/RDFLib/rdflib.git@master
       - name: Run Tests
         run: |
