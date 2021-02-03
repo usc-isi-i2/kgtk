@@ -1,0 +1,35 @@
+name: Run Tests
+on: push
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    name: Run Tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: Add conda to system path
+        run: |
+          echo $CONDA/bin >> $GITHUB_PATH
+      - name: Setup env
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install coveralls
+          python -m spacy download en_core_web_sm
+          conda install -c conda-forge graph-tool
+          pip uninstall rdflib
+          pip install git+https://github.com/RDFLib/rdflib.git@master
+      - name: Run Tests
+        run: |
+          cd kgtk/tests
+          coverage run --source=kgtk -m unittest discover      
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.COVERALLS_TOKEN }}
+          parallel-finished: true
