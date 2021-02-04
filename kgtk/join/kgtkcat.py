@@ -130,7 +130,7 @@ class KgtkCat():
         if self.verbose or self.very_verbose:
             print("There are %d merged columns." % len(kmc.column_names), file=self.error_file, flush=True)
         if self.very_verbose:
-            print(" ".join(self.column_names), file=self.error_file, flush=True)
+            print(" ".join(kmc.column_names), file=self.error_file, flush=True)
             
         if self.output_column_names is not None:
             if self.verbose:
