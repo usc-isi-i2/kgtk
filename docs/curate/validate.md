@@ -1104,7 +1104,7 @@ Data errors reported: 1
 
 !!! note
     See the table of Action Codes for a discussion of other
-    `--long-liine-action` values.
+    `--long-line-action` values.
 
 ### Line Check: Remove Extra Trailing Columns
 
@@ -1135,19 +1135,172 @@ Data lines passed: 3
 Data lines truncated: 1
 ~~~
 
-### Line Check: Prohibited Lists in `node1`
+### Line Check: Prohibited Lists in the `node1` Column of Edge Files
 
-Does this apply to node files?
+Multivalue lists (`|`) are prohibited in the `node1` column of a KGTK edge file
+by the [KGTK File Specification v2](../../specification#multi-valued-edges).
+This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
 
-### Line Check: Prohibited Lists in `label`
+```bash
+cat examples/docs/validate-node1-list.tsv
+```
+~~~
+node1	label	node2	id
+line1|line3	isa	line	id1
+~~~
 
-Does this apply to node files?
+```bash
+kgtk validate -i examples/docs/validate-node1-list.tsv
+```
 
-### Line Check: Prohibited Lists in `node2`
+~~~
+Data line 1:
+line1|line3	isa	line	id1
+col 0 (node1) value 'line1|line3'is a prohibited list
 
-Does this apply to node files?
+====================================================
+Data lines read: 1
+Data lines passed: 0
+Data lines excluded due to prohibited lists: 1
+Data errors reported: 1
+~~~
 
-### Line Check: Ignore Prohibited Lists
+!!! note
+    This constraint does not apply to KGTK node files or to
+    quasi-KGTK (`--mode=NONE`) files.
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--prohibited-list-action` values.
+
+### Line Check: Prohibited Lists in the `label` Column of Edge Files
+
+Multivalue lists (`|`) are prohibited in the `label` column of a KGTK edge file
+by the [KGTK File Specification v2](../../specification#multi-valued-edges).
+This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
+
+```bash
+cat examples/docs/validate-label-list.tsv
+```
+~~~
+node1	label	node2	id
+line1	isa|equals	line	id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-label-list.tsv
+```
+
+~~~
+Data line 1:
+line1	isa|equals	line	id1
+col 1 (label) value 'isa|equals'is a prohibited list
+
+====================================================
+Data lines read: 1
+Data lines passed: 0
+Data lines excluded due to prohibited lists: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    This constraint does not apply to KGTK node files or to
+    quasi-KGTK (`--mode=NONE`) files.
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--prohibited-list-action` values.
+
+### Line Check: Prohibited Lists in the `node2` Column of Edge Files
+
+Multivalue lists (`|`) are prohibited in the `node2` column of a KGTK edge file
+by the [KGTK File Specification v2](../../specification#multi-valued-edges).
+This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
+
+```bash
+cat examples/docs/validate-node2-list.tsv
+```
+~~~
+node1	label	node2	id
+line1	isa	line|record	id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node2-list.tsv
+```
+
+~~~
+Data line 1:
+line1	isa	line|record	id1
+col 2 (node2) value 'line|record'is a prohibited list
+
+====================================================
+Data lines read: 1
+Data lines passed: 0
+Data lines excluded due to prohibited lists: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    This constraint does not apply to KGTK node files or to
+    quasi-KGTK (`--mode=NONE`) files.
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--prohibited-list-action` values.
+
+### Line Check: Allow Multivalue Lists in the `node1`, `label`, and `node2` Columns of Edge Files
+
+Multivalue lists (`|`) are prohibited in the `node1`, `label`, and `node2`
+columns of a KGTK edge file by the [KGTK File Specification
+v2](../../specification#multi-valued-edges).  This constraint is applied when
+`--prohibited-list-action==COMPLAIN` (the default).  The constraint can be
+removed by specifying `--prohibited-list-action=PASS` or
+`--prohibited-list-action=REPORT`.  The REPORT option will allow lines with
+prob=hibited multivalue lists to pass, but will report them to the output file
+(normailly standard output for `kgtk validate`).
+
+```bash
+cat examples/docs/validate-node2-list.tsv
+```
+~~~
+node1	label	node2	id
+line1	isa	line|record	id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node2-list.tsv \
+              --prohibited-list-action=PASS
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node2-list.tsv \
+              --prohibited-list-action=REPORT
+```
+
+~~~
+Data line 1:
+line1	isa	line|record	id1
+col 2 (node2) value 'line|record'is a prohibited list
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    This constraint does not apply to KGTK node files or to
+    quasi-KGTK (`--mode=NONE`) files, so setting `--mode=NONE`
+    is another way to remove this constraint, although it also
+    removes many other constraints.
 
 ### Line Check: `node1` Is Blank (Edge Files)
 
