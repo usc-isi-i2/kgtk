@@ -1008,7 +1008,8 @@ Data lines ignored: 1
 ### Line Check: Short Lines
 
 Short lines, lines with too few columns, are stripped from input files
-during validation if `fill-short-lines=True` (the default).
+during validation if `fill-short-lines=False` (the default) and
+`--short-line-action=COMPLAIN` (the default) 
 
 ```bash
 cat examples/docs/validate-short-lines.tsv
@@ -1036,10 +1037,15 @@ Data lines excluded due to too few columns: 1
 Data errors reported: 1
 ~~~
 
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--short-line-action` settings.
+
 ### Line Check: Fill Missing Trailing Columns
 
 Short lines, lines with too few columns, are padded on input
-if `--fill-short-lines=True` is specified.
+if `--fill-short-lines=True` is specified.  `--short-line-action`
+will not be triggered.
 
 ```bash
 cat examples/docs/validate-short-lines.tsv
@@ -1066,7 +1072,68 @@ Data lines filled: 1
 
 ### Line Check: Long Lines
 
+Long lines, lines with extra columns, are stripped from input files
+during validation if `truncate-long-lines=True` (the default) and
+`--long-line-action=COMPLAIN` (the default).
+
+```bash
+cat examples/docs/validate-long-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+line2	isa	long	line
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-long-lines.tsv
+```
+
+~~~
+Data line 2:
+line2	isa	long	line
+Required 3 columns, saw 4 (1 extra): 'line2	isa	long	line'
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines excluded due to too many columns: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--long-liine-action` values.
+
 ### Line Check: Remove Extra Trailing Columns
+
+Long lines, lines with extra columns, are truncated on input
+if `--truncate-longt-lines=True` is specified.  `--long-line-action`
+will not be triggered.
+
+```bash
+cat examples/docs/validate-long-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+line2	isa	long	line
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-long-lines.tsv \
+              --truncate-long-lines
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 3
+Data lines truncated: 1
+~~~
 
 ### Line Check: Prohibited Lists in `node1`
 
