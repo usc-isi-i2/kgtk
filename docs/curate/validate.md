@@ -41,14 +41,30 @@ These defaults may be changed through expert options.
 
 ### Action Codes
 
+The action codes are used to control what happens when `kgtk validate`
+discovers a rule violation. 
+
 | Action keyword | Action when condition detected |
 | -------------- | ------------------------------ |
-| PASS           | Silently allow the data line to pass through |
-| REPORT         | Report the data line and let it pass through |
-| EXCLUDE        | Silently exclude (ignore) the data line |
-| COMPLAIN       | Report the data line and exclude (ignore) it |
-| ERROR          | Raise a ValueError |
-| EXIT           | sys.exit(1) |
+| PASS           | Silently allow the data line to pass through. |
+| REPORT         | Report the data line and let it pass through. |
+| EXCLUDE        | Silently exclude (ignore) the data line. |
+| COMPLAIN       | Report the data line and exclude (ignore) it. |
+| ERROR          | Raise a ValueError. This may be useful when you wish to interrupt processing of a large file. |
+| EXIT           | sys.exit(1)  This may be useful when you wish to interrupt processing of a large file.|
+
+These codes apply to the following `kgtk validate` comand line options:
+
+| Option | Default |
+| ------ | ------- |
+|    `--blank-required-field-line-action` | EXCLUDE |
+|    `--comment-line-action` | EXCLUDE |
+|    `--empty-line-action` | EXCLUDE |
+|    `--invalid-value-action` | EXCLUDE |
+|    `--long-line-action` | COMPLAIN |
+|    `--prohibited-list-action` | COMPLAIN |
+|    `--short-line-action` | COMPLAIN | 
+|    `--whitespace-line-action` | EXCLUDE |
 
 ### `--header-error-action`
 The action to take if a header error is detected, such as:
@@ -933,7 +949,8 @@ The following is reported on standard error:
 
 ### Line Check: Empty Lines
 
-Empty lines are stripped from input files during validation.
+Empty lines are silently ignored from input files during validation
+when `--empty-line-action=EXCLUDE` (the default).
 
 ```bash
 cat examples/docs/validate-empty-lines.tsv
@@ -957,12 +974,15 @@ Data lines passed: 2
 Data lines ignored: 1
 ~~~
 
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--empty-line-action` values.
+
 ### Line Check: Comment Lines
 
 Comment lines (lines that begin with hash (`#`))
-are stripped from input files during validation.
-
-
+are silently ignored in input files during validation when
+`--comment-line-action=EXCLUDE` (the default).
 
 ```bash
 kgtk validate -i examples/docs/validate-comment-lines.tsv
@@ -977,11 +997,16 @@ Data lines ignored: 1
 ~~~
 
 !!! note
-    At the present time the input file cannot be shown for this example.
+    At the present time the input file cannot be shown in this document for this example.
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--comment-line-action` values.
 
 ### Line Check: Whitespace Lines
 
-Whitespace lines are stripped from input files during validation.
+Whitespace lines are silently ignored in input files during validation whe
+`--whitespace-line-action=EXCLUDE` (the default).
 
 ```bash
 cat examples/docs/validate-whitespace-lines.tsv
@@ -1005,9 +1030,13 @@ Data lines passed: 2
 Data lines ignored: 1
 ~~~
 
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--whitespace-line-action` values.
+
 ### Line Check: Short Lines
 
-Short lines, lines with too few columns, are stripped from input files
+Short lines, lines with too few columns, are silently ignored input files
 during validation if `fill-short-lines=False` (the default) and
 `--short-line-action=COMPLAIN` (the default) 
 
@@ -1072,7 +1101,7 @@ Data lines filled: 1
 
 ### Line Check: Long Lines
 
-Long lines, lines with extra columns, are stripped from input files
+Long lines, lines with extra columns, are silently ignored input files
 during validation if `truncate-long-lines=True` (the default) and
 `--long-line-action=COMPLAIN` (the default).
 
@@ -1137,8 +1166,8 @@ Data lines truncated: 1
 
 ### Line Check: Prohibited Lists in the `node1` Column of Edge Files
 
-Multivalue lists (`|`) are prohibited in the `node1` column of a KGTK edge file
-by the [KGTK File Specification v2](../../specification#multi-valued-edges).
+[Multivalue lists (`|`) are prohibited by the KGTK File Specification v2](../../specification#multi-valued-edges)
+in the `node1`, `label`, and `node2` columns of a KGTK edge file.
 This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
 
 ```bash
@@ -1175,8 +1204,8 @@ Data errors reported: 1
 
 ### Line Check: Prohibited Lists in the `label` Column of Edge Files
 
-Multivalue lists (`|`) are prohibited in the `label` column of a KGTK edge file
-by the [KGTK File Specification v2](../../specification#multi-valued-edges).
+[Multivalue lists (`|`) are prohibited by the KGTK File Specification v2](../../specification#multi-valued-edges)
+in the `node1`, `label`, and `node2` columns of a KGTK edge file.
 This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
 
 ```bash
@@ -1213,8 +1242,8 @@ Data errors reported: 1
 
 ### Line Check: Prohibited Lists in the `node2` Column of Edge Files
 
-Multivalue lists (`|`) are prohibited in the `node2` column of a KGTK edge file
-by the [KGTK File Specification v2](../../specification#multi-valued-edges).
+[Multivalue lists (`|`) are prohibited by the KGTK File Specification v2](../../specification#multi-valued-edges)
+in the `node1`, `label`, and `node2` columns of a KGTK edge file.
 This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
 
 ```bash
@@ -1251,14 +1280,11 @@ Data errors reported: 1
 
 ### Line Check: Allow Multivalue Lists in the `node1`, `label`, and `node2` Columns of Edge Files
 
-Multivalue lists (`|`) are prohibited in the `node1`, `label`, and `node2`
-columns of a KGTK edge file by the [KGTK File Specification
-v2](../../specification#multi-valued-edges).  This constraint is applied when
+[Multivalue lists (`|`) are prohibited by the KGTK File Specification v2](../../specification#multi-valued-edges)
+in the `node1`, `label`, and `node2` columns of a KGTK edge file.  This constraint is applied when
 `--prohibited-list-action==COMPLAIN` (the default).  The constraint can be
 removed by specifying `--prohibited-list-action=PASS` or
-`--prohibited-list-action=REPORT`.  The REPORT option will allow lines with
-prob=hibited multivalue lists to pass, but will report them to the output file
-(normailly standard output for `kgtk validate`).
+`--prohibited-list-action=REPORT`.
 
 ```bash
 cat examples/docs/validate-node2-list.tsv
@@ -1279,6 +1305,10 @@ kgtk validate -i examples/docs/validate-node2-list.tsv \
 Data lines read: 1
 Data lines passed: 1
 ~~~
+
+The REPORT option will allow lines with
+prohibited multivalue lists to pass, but will report them to the output file
+(normally standard output for `kgtk validate`).
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-list.tsv \
