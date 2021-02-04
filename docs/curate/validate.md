@@ -514,12 +514,18 @@ Validate an empty input file:
 kgtk validate -i examples/docs/validate-empty-file.tsv
 ```
 
-This generates the following message on standard error:
+This generates the following message on standard output:
 
-    No header line in file
+~~~
+Error: No header line in file
+~~~
+
+This also generates the following message on standard error:
+
+    Exiting due to error
 
 !!! note
-    At the present time, this error message is not routable
+    At the present time, the latter error message is not routable
     to standard output.
 
 ### Supply a Missing Header Line
@@ -531,7 +537,14 @@ kgtk validate -i examples/docs/validate-empty-file.tsv \
               --force-column-names node1 label node2
 ```
 
-No output is produced, indicting no error.
+This generates the following message on standard output:
+
+~~~
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
 
 ### Header Error: No Header Line to Skip
 
@@ -543,12 +556,18 @@ kgtk validate -i examples/docs/validate-empty-file.tsv \
 	      --skip-header-record 
 ```
 
-This generates the following message on standard error:
+This generates the following message on standard output:
 
-    No header line to skip
+~~~
+Error: No header line to skip
+~~~
+
+This also generates the following message on standard error:
+
+    Exiting due to error
 
 !!! note
-    At the present time, this error message is not routable
+    At the present time, this latter error message is not routable
     to standard output.
 
 ### Header Error: Column Name Is Empty
@@ -580,14 +599,14 @@ messages, use `--header-error-action COMPLAIN` to continue processing.
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv \
-              --header-error-action COMPLAIN \
-	      --mode=NONE
+              --header-error-action COMPLAIN
 ```
 
 The following error is reported on standard output:
 
 ~~~
 In input header '	label	node2': Column 0 has an empty name in the file header
+In input header '	label	node2': Missing required column: id | ID
 
 ====================================================
 Data lines read: 0
@@ -596,69 +615,236 @@ Data lines passed: 0
 
 Processing continues without exiting.
 
-!!! note
-    The example includes `--mode=NONE` to suppress other error messages
-    in order to simplify the example.
 
 ### Header Error: Column Name Starts with White Space
 
-Validate an input file where the column names have initial whitespace.
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have initial whitespace.
 
 ```bash
-kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv \
-              --header-error-action COMPLAIN \
-	      --mode=NONE
+kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv
 ```
 
 The following error is reported on standard output:
 
 ~~~
-In input header ' node1	 label	 node2': Column name ' node1' starts with leading white space, Column name ' label' starts with leading white space, Column name ' node2' starts with leading white space
+In input header 'id	 node1	 label	 node2': 
+Column name ' node1' starts with leading white space
+Column name ' label' starts with leading white space
+Column name ' node2' starts with leading white space
 
 ====================================================
 Data lines read: 0
 Data lines passed: 0
 ~~~
-
-!!! note
-    The example includes `--mode=NONE` to suppress other error messages
-    in order to simplify the example.
 
 ### Header Error: Column Name Ends with White Space
 
-Validate an input file where the column names have trailing whitespace.
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have trailing whitespace.
 
 ```bash
-kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv \
-              --header-error-action COMPLAIN \
-	      --mode=NONE
+kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
 
 The following error is reported on standard output:
 
 ~~~
-In input header 'node1 	label 	node2 ': Column name 'node1 ' ends with trailing white space, Column name 'label ' ends with trailing white space, Column name 'node2 ' ends with trailing white space
+In input header 'id	node1 	label 	node2 ': 
+Column name 'node1 ' ends with trailing white space
+Column name 'label ' ends with trailing white space
+Column name 'node2 ' ends with trailing white space
 
 ====================================================
 Data lines read: 0
 Data lines passed: 0
 ~~~
 
-!!! note
-    The example includes `--mode=NONE` to suppress certain error messages
-    in order to simplify the example.
-
 ### Header Error: Column Name Contains Internal White Space
+
+Validate an input file where the intended `node1` and `node2`
+column names have internal whitespace.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
 
 ### Header Error: Column Name Contains a Comma (`,`)
 
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have a comma (`,`) at the end.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-comma.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1,	label,	node2,	id': 
+Warning: Column name 'node1,' contains a comma (,)
+Warning: Column name 'label,' contains a comma (,)
+Warning: Column name 'node2,' contains a comma (,)
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
 ### Header Error: Column Name Contains a Vertical Bar (`|`)
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have a vertical bar (`|) at the end.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-vertical-bar.tsv
+```
+
+The following warnings is reported on standard output:
+
+~~~
+In input header 'node1|	label|	node2|	id': 
+Warning: Column name 'node1|' contains a vertical bar (|)
+Warning: Column name 'label|' contains a vertical bar (|)
+Warning: Column name 'node2|' contains a vertical bar (|)
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
 
 ### Header Error: Column Name Is a Duplicate
 
-### Header Error: Missing Required Column
+Validate an input file with two `node1` columns instead of
+`node1` and `node2` columns.
 
-### Header Error: Ambiguous Required Column
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-duplicates.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1	label	node1	id': Column 2 (node1) is a duplicate of column 0
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+### Header Error: Missing Required Column in a Node File
+
+Validate an input file as a KGTK Node file when the input
+file does not have the required column (`id`) for a Node file.  We force
+the file to be treated as a Node file by specifying `--mode=NODE`.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
+              --mode=NODE
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'col1	col2	col3': Missing required column: id | ID
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+### Header Error: Missing Required Columns in an Edge File
+
+Validate an input file as a KGTK Edge file when the input
+file does not have the required columns (`node1`, `label`, `node2`) for a Edge file.  We force
+the file to be treated as a Edge file by specifying `--mode=EDGE`.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
+              --mode=EDGE
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'col1	col2	col3': Missing required column: node1 | from | subject
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+### Header Error: Missing Required Column with `--mode=AUTO`
+
+Validate an input file when the input
+file does not have the required columns for as Edge or Node file,
+and we force auto-mode sensing with `--mode=AUTO`.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
+              --mode=AUTO
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'col1	col2	col3': Missing required column: id | ID
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+### Note: No Columns are Required with `--mode=NONE`
+
+Validate an input file with required column validtion
+disabled with `--mode=NONE`
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
+              --mode=NONE
+```
+
+The following is reported on standard output:
+
+~~~
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
+### Header Error: Ambiguous Required Columns
+
+Validate an input file with a `node1` column abd its alias `from`.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-ambiguities.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1	label	node2	id	from': Ambiguous required column names node1 and from
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+!!! note
+    When there are multiple ambiguous column names, only the first pair of
+    ambiguous names is reported.  This behavior may change in the future to
+    report all ambiguous column names sets.
 
 ### Line Check: Empty Lines
 
