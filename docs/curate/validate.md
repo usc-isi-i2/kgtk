@@ -1007,7 +1007,62 @@ Data lines ignored: 1
 
 ### Line Check: Short Lines
 
+Short lines, lines with too few columns, are stripped from input files
+during validation if `fill-short-lines=True` (the default).
+
+```bash
+cat examples/docs/validate-short-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+line2	isashortline
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-short-lines.tsv
+```
+
+~~~
+Data line 2:
+line2	isashortline
+Required 3 columns, saw 2: 'line2	isashortline'
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines excluded due to too few columns: 1
+Data errors reported: 1
+~~~
+
 ### Line Check: Fill Missing Trailing Columns
+
+Short lines, lines with too few columns, are padded on input
+if `--fill-short-lines=True` is specified.
+
+```bash
+cat examples/docs/validate-short-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+line2	isashortline
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-short-lines.tsv \
+              --fill-short-lines
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 3
+Data lines filled: 1
+~~~
 
 ### Line Check: Long Lines
 
