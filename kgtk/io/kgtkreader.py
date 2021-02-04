@@ -1299,22 +1299,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             return
         problems.append("col %d (%s) value '%s'is a prohibited list" % (idx, self.column_names[idx], item))
 
+
+    # May be overridden
     def _ignore_prohibited_lists(self, row: typing.List[str], line: str)->bool:
-        """
-        KGTK File Format v2 prohibits "|" lists in the node1, label, and node2 columns.
-        """
-        problems: typing.List[str] = [ ] # Build a list of problems.
-
-        self._ignore_prohibited_list(self.node1_column_idx, row, line, problems)
-        self._ignore_prohibited_list(self.label_column_idx, row, line, problems)
-        self._ignore_prohibited_list(self.node2_column_idx, row, line, problems)
-
-        if len(problems) == 0:
-            return False
-
-        return self.exclude_line(self.options.prohibited_list_action,
-                                 "\n".join(problems),
-                                 line)
+        return False
 
     # May be overridden
     def _ignore_if_blank_fields(self, values: typing.List[str], line: str)->bool:
