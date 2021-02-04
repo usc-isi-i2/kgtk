@@ -550,6 +550,7 @@ Data lines passed: 0
 
 Validate an empty input file, skipping a nonexistant header line.
 
+
 ```bash
 kgtk validate -i examples/docs/validate-empty-file.tsv \
               --force-column-names node1 label node2 \
@@ -575,6 +576,13 @@ This also generates the following message on standard error:
 Validate an input file with an empty column name:
 
 ```bash
+cat examples/docs/validate-empty-column-name.tsv
+```
+~~~
+	label	node2
+~~~
+
+```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv
 ```
 
@@ -596,6 +604,13 @@ The following message appears on standard error:
 Validate an input file with an empty column name.  This will generate an error
 message, and normally an immediate exit.  If you want to see all header error
 messages, use `--header-error-action COMPLAIN` to continue processing.
+
+```bash
+cat examples/docs/validate-empty-column-name.tsv
+```
+~~~
+	label	node2
+~~~
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv \
@@ -622,6 +637,13 @@ Validate an input file where the intended `node1`, `label`, and `node2`
 column names have initial whitespace.
 
 ```bash
+cat examples/docs/validate-column-names-initial-whitespace.tsv
+```
+~~~
+id	 node1	 label	 node2
+~~~
+
+```bash
 kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv
 ```
 
@@ -642,6 +664,13 @@ Data lines passed: 0
 
 Validate an input file where the intended `node1`, `label`, and `node2`
 column names have trailing whitespace.
+
+```bash
+cat examples/docs/validate-column-names-trailing-whitespace.tsv
+```
+~~~
+id	node1 	label 	node2 
+~~~
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv
@@ -666,6 +695,13 @@ Validate an input file where the intended `node1` and `node2`
 column names have internal whitespace.
 
 ```bash
+cat examples/docs/validate-column-names-internal-whitespace.tsv
+```
+~~~
+id	node 1	label	node 2
+~~~
+
+```bash
 kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv
 ```
 
@@ -682,6 +718,13 @@ Data lines passed: 0
 
 Validate an input file where the intended `node1`, `label`, and `node2`
 column names have a comma (`,`) at the end.
+
+```bash
+cat examples/docs/validate-column-names-with-comma.tsv
+```
+~~~
+node1,	label,	node2,	id
+~~~
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-comma.tsv
@@ -728,6 +771,13 @@ Validate an input file with two `node1` columns instead of
 `node1` and `node2` columns.
 
 ```bash
+cat examples/docs/validate-column-names-with-duplicates.tsv
+```
+~~~
+node1	label	node1	id
+~~~
+
+```bash
 kgtk validate -i examples/docs/validate-column-names-with-duplicates.tsv
 ```
 
@@ -746,6 +796,13 @@ The following is reported on standard error:
 Validate an input file as a KGTK Node file when the input
 file does not have the required column (`id`) for a Node file.  We force
 the file to be treated as a Node file by specifying `--mode=NODE`.
+
+```bash
+cat examples/docs/validate-column-names-without-required-columns.tsv
+```
+~~~
+col1	col2	col3
+~~~
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -769,6 +826,13 @@ file does not have the required columns (`node1`, `label`, `node2`) for a Edge f
 the file to be treated as a Edge file by specifying `--mode=EDGE`.
 
 ```bash
+cat examples/docs/validate-column-names-without-required-columns.tsv
+```
+~~~
+col1	col2	col3
+~~~
+
+```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
               --mode=EDGE
 ```
@@ -788,6 +852,13 @@ The following is reported on standard error:
 Validate an input file when the input
 file does not have the required columns for as Edge or Node file,
 and we force auto-mode sensing with `--mode=AUTO`.
+
+```bash
+cat examples/docs/validate-column-names-without-required-columns.tsv
+```
+~~~
+col1	col2	col3
+~~~
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -810,6 +881,13 @@ Validate an input file with required column validtion
 disabled with `--mode=NONE`
 
 ```bash
+cat examples/docs/validate-column-names-without-required-columns.tsv
+```
+~~~
+col1	col2	col3
+~~~
+
+```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
               --mode=NONE
 ```
@@ -826,6 +904,13 @@ Data lines passed: 0
 ### Header Error: Ambiguous Required Columns
 
 Validate an input file with a `node1` column abd its alias `from`.
+
+```bash
+cat examples/docs/validate-column-names-with-ambiguities.tsv
+```
+~~~
+node1	label	node2	id	from
+~~~
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-ambiguities.tsv
@@ -848,9 +933,77 @@ The following is reported on standard error:
 
 ### Line Check: Empty Lines
 
+Empty lines are stripped from input files during validation.
+
+```bash
+cat examples/docs/validate-empty-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-empty-lines.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines ignored: 1
+~~~
+
 ### Line Check: Comment Lines
 
+Comment lines (lines that begin with hash (`#`))
+are stripped from input files during validation.
+
+
+
+```bash
+kgtk validate -i examples/docs/validate-comment-lines.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines ignored: 1
+~~~
+
+!!! note
+    At the present time the input file cannot be shown for this example.
+
 ### Line Check: Whitespace Lines
+
+Whitespace lines are stripped from input files during validation.
+
+```bash
+cat examples/docs/validate-whitespace-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+		
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-whitespace-lines.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines ignored: 1
+~~~
 
 ### Line Check: Short Lines
 
