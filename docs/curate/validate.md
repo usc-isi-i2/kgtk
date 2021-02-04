@@ -41,14 +41,30 @@ These defaults may be changed through expert options.
 
 ### Action Codes
 
+The action codes are used to control what happens when `kgtk validate`
+discovers a rule violation. 
+
 | Action keyword | Action when condition detected |
 | -------------- | ------------------------------ |
-| PASS           | Silently allow the data line to pass through |
-| REPORT         | Report the data line and let it pass through |
-| EXCLUDE        | Silently exclude (ignore) the data line |
-| COMPLAIN       | Report the data line and exclude (ignore) it |
-| ERROR          | Raise a ValueError |
-| EXIT           | sys.exit(1) |
+| PASS           | Silently allow the data line to pass through. |
+| REPORT         | Report the data line and let it pass through. |
+| EXCLUDE        | Silently exclude (ignore) the data line. |
+| COMPLAIN       | Report the data line and exclude (ignore) it. |
+| ERROR          | Raise a ValueError. This may be useful when you wish to interrupt processing of a large file. |
+| EXIT           | sys.exit(1)  This may be useful when you wish to interrupt processing of a large file.|
+
+These codes apply to the following `kgtk validate` comand line options:
+
+| Option | Default |
+| ------ | ------- |
+|    `--blank-required-field-line-action` | EXCLUDE |
+|    `--comment-line-action` | EXCLUDE |
+|    `--empty-line-action` | EXCLUDE |
+|    `--invalid-value-action` | EXCLUDE |
+|    `--long-line-action` | COMPLAIN |
+|    `--prohibited-list-action` | COMPLAIN |
+|    `--short-line-action` | COMPLAIN | 
+|    `--whitespace-line-action` | EXCLUDE |
 
 ### `--header-error-action`
 The action to take if a header error is detected, such as:
@@ -514,12 +530,18 @@ Validate an empty input file:
 kgtk validate -i examples/docs/validate-empty-file.tsv
 ```
 
-This generates the following message on standard error:
+This generates the following message on standard output:
 
-    No header line in file
+~~~
+Error: No header line in file
+~~~
+
+This also generates the following message on standard error:
+
+    Exiting due to error
 
 !!! note
-    At the present time, this error message is not routable
+    At the present time, the latter error message is not routable
     to standard output.
 
 ### Supply a Missing Header Line
@@ -531,11 +553,19 @@ kgtk validate -i examples/docs/validate-empty-file.tsv \
               --force-column-names node1 label node2
 ```
 
-No output is produced, indicting no error.
+This generates the following message on standard output:
+
+~~~
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
 
 ### Header Error: No Header Line to Skip
 
 Validate an empty input file, skipping a nonexistant header line.
+
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-file.tsv \
@@ -543,17 +573,30 @@ kgtk validate -i examples/docs/validate-empty-file.tsv \
 	      --skip-header-record 
 ```
 
-This generates the following message on standard error:
+This generates the following message on standard output:
 
-    No header line to skip
+~~~
+Error: No header line to skip
+~~~
+
+This also generates the following message on standard error:
+
+    Exiting due to error
 
 !!! note
-    At the present time, this error message is not routable
+    At the present time, this latter error message is not routable
     to standard output.
 
 ### Header Error: Column Name Is Empty
 
 Validate an input file with an empty column name:
+
+```bash
+cat examples/docs/validate-empty-column-name.tsv
+```
+~~~
+	label	node2
+~~~
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv
@@ -579,15 +622,22 @@ message, and normally an immediate exit.  If you want to see all header error
 messages, use `--header-error-action COMPLAIN` to continue processing.
 
 ```bash
+cat examples/docs/validate-empty-column-name.tsv
+```
+~~~
+	label	node2
+~~~
+
+```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv \
-              --header-error-action COMPLAIN \
-	      --mode=NONE
+              --header-error-action COMPLAIN
 ```
 
 The following error is reported on standard output:
 
 ~~~
 In input header '	label	node2': Column 0 has an empty name in the file header
+In input header '	label	node2': Missing required column: id | ID
 
 ====================================================
 Data lines read: 0
@@ -596,97 +646,691 @@ Data lines passed: 0
 
 Processing continues without exiting.
 
-!!! note
-    The example includes `--mode=NONE` to suppress other error messages
-    in order to simplify the example.
 
 ### Header Error: Column Name Starts with White Space
 
-Validate an input file where the column names have initial whitespace.
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have initial whitespace.
 
 ```bash
-kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv \
-              --header-error-action COMPLAIN \
-	      --mode=NONE
+cat examples/docs/validate-column-names-initial-whitespace.tsv
+```
+~~~
+id	 node1	 label	 node2
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv
 ```
 
 The following error is reported on standard output:
 
 ~~~
-In input header ' node1	 label	 node2': Column name ' node1' starts with leading white space, Column name ' label' starts with leading white space, Column name ' node2' starts with leading white space
+In input header 'id	 node1	 label	 node2': 
+Column name ' node1' starts with leading white space
+Column name ' label' starts with leading white space
+Column name ' node2' starts with leading white space
 
 ====================================================
 Data lines read: 0
 Data lines passed: 0
 ~~~
-
-!!! note
-    The example includes `--mode=NONE` to suppress other error messages
-    in order to simplify the example.
 
 ### Header Error: Column Name Ends with White Space
 
-Validate an input file where the column names have trailing whitespace.
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have trailing whitespace.
 
 ```bash
-kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv \
-              --header-error-action COMPLAIN \
-	      --mode=NONE
+cat examples/docs/validate-column-names-trailing-whitespace.tsv
+```
+~~~
+id	node1 	label 	node2 
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
 
 The following error is reported on standard output:
 
 ~~~
-In input header 'node1 	label 	node2 ': Column name 'node1 ' ends with trailing white space, Column name 'label ' ends with trailing white space, Column name 'node2 ' ends with trailing white space
+In input header 'id	node1 	label 	node2 ': 
+Column name 'node1 ' ends with trailing white space
+Column name 'label ' ends with trailing white space
+Column name 'node2 ' ends with trailing white space
 
 ====================================================
 Data lines read: 0
 Data lines passed: 0
 ~~~
 
-!!! note
-    The example includes `--mode=NONE` to suppress certain error messages
-    in order to simplify the example.
-
 ### Header Error: Column Name Contains Internal White Space
+
+Validate an input file where the intended `node1` and `node2`
+column names have internal whitespace.
+
+```bash
+cat examples/docs/validate-column-names-internal-whitespace.tsv
+```
+~~~
+id	node 1	label	node 2
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
 
 ### Header Error: Column Name Contains a Comma (`,`)
 
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have a comma (`,`) at the end.
+
+```bash
+cat examples/docs/validate-column-names-with-comma.tsv
+```
+~~~
+node1,	label,	node2,	id
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-comma.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1,	label,	node2,	id': 
+Warning: Column name 'node1,' contains a comma (,)
+Warning: Column name 'label,' contains a comma (,)
+Warning: Column name 'node2,' contains a comma (,)
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
 ### Header Error: Column Name Contains a Vertical Bar (`|`)
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have a vertical bar (`|) at the end.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-vertical-bar.tsv
+```
+
+The following warnings is reported on standard output:
+
+~~~
+In input header 'node1|	label|	node2|	id': 
+Warning: Column name 'node1|' contains a vertical bar (|)
+Warning: Column name 'label|' contains a vertical bar (|)
+Warning: Column name 'node2|' contains a vertical bar (|)
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
 
 ### Header Error: Column Name Is a Duplicate
 
-### Header Error: Missing Required Column
+Validate an input file with two `node1` columns instead of
+`node1` and `node2` columns.
 
-### Header Error: Ambiguous Required Column
+```bash
+cat examples/docs/validate-column-names-with-duplicates.tsv
+```
+~~~
+node1	label	node1	id
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-duplicates.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1	label	node1	id': Column 2 (node1) is a duplicate of column 0
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+### Header Error: Missing Required Column in a Node File
+
+Validate an input file as a KGTK Node file when the input
+file does not have the required column (`id`) for a Node file.  We force
+the file to be treated as a Node file by specifying `--mode=NODE`.
+
+```bash
+cat examples/docs/validate-column-names-without-required-columns.tsv
+```
+~~~
+col1	col2	col3
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
+              --mode=NODE
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'col1	col2	col3': Missing required column: id | ID
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+### Header Error: Missing Required Columns in an Edge File
+
+Validate an input file as a KGTK Edge file when the input
+file does not have the required columns (`node1`, `label`, `node2`) for a Edge file.  We force
+the file to be treated as a Edge file by specifying `--mode=EDGE`.
+
+```bash
+cat examples/docs/validate-column-names-without-required-columns.tsv
+```
+~~~
+col1	col2	col3
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
+              --mode=EDGE
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'col1	col2	col3': Missing required column: node1 | from | subject
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+### Header Error: Missing Required Column with `--mode=AUTO`
+
+Validate an input file when the input
+file does not have the required columns for as Edge or Node file,
+and we force auto-mode sensing with `--mode=AUTO`.
+
+```bash
+cat examples/docs/validate-column-names-without-required-columns.tsv
+```
+~~~
+col1	col2	col3
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
+              --mode=AUTO
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'col1	col2	col3': Missing required column: id | ID
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+### Note: No Columns are Required with `--mode=NONE`
+
+Validate an input file with required column validtion
+disabled with `--mode=NONE`
+
+```bash
+cat examples/docs/validate-column-names-without-required-columns.tsv
+```
+~~~
+col1	col2	col3
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
+              --mode=NONE
+```
+
+The following is reported on standard output:
+
+~~~
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
+### Header Error: Ambiguous Required Columns
+
+Validate an input file with a `node1` column abd its alias `from`.
+
+```bash
+cat examples/docs/validate-column-names-with-ambiguities.tsv
+```
+~~~
+node1	label	node2	id	from
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-ambiguities.tsv
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1	label	node2	id	from': Ambiguous required column names node1 and from
+~~~
+
+The following is reported on standard error:
+
+    Exit requested
+
+!!! note
+    When there are multiple ambiguous column names, only the first pair of
+    ambiguous names is reported.  This behavior may change in the future to
+    report all ambiguous column names sets.
 
 ### Line Check: Empty Lines
 
+Empty lines are silently ignored from input files during validation
+when `--empty-line-action=EXCLUDE` (the default).
+
+```bash
+cat examples/docs/validate-empty-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-empty-lines.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines ignored: 1
+~~~
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--empty-line-action` values.
+
 ### Line Check: Comment Lines
+
+Comment lines (lines that begin with hash (`#`))
+are silently ignored in input files during validation when
+`--comment-line-action=EXCLUDE` (the default).
+
+```bash
+kgtk validate -i examples/docs/validate-comment-lines.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines ignored: 1
+~~~
+
+!!! note
+    At the present time the input file cannot be shown in this document for this example.
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--comment-line-action` values.
 
 ### Line Check: Whitespace Lines
 
+Whitespace lines are silently ignored in input files during validation whe
+`--whitespace-line-action=EXCLUDE` (the default).
+
+```bash
+cat examples/docs/validate-whitespace-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+		
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-whitespace-lines.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines ignored: 1
+~~~
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--whitespace-line-action` values.
+
 ### Line Check: Short Lines
+
+Short lines, lines with too few columns, are silently ignored input files
+during validation if `fill-short-lines=False` (the default) and
+`--short-line-action=COMPLAIN` (the default) 
+
+```bash
+cat examples/docs/validate-short-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+line2	isashortline
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-short-lines.tsv
+```
+
+~~~
+Data line 2:
+line2	isashortline
+Required 3 columns, saw 2: 'line2	isashortline'
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines excluded due to too few columns: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--short-line-action` settings.
 
 ### Line Check: Fill Missing Trailing Columns
 
+Short lines, lines with too few columns, are padded on input
+if `--fill-short-lines=True` is specified.  `--short-line-action`
+will not be triggered.
+
+```bash
+cat examples/docs/validate-short-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+line2	isashortline
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-short-lines.tsv \
+              --fill-short-lines
+```
+
+~~~
+
+====================================================
+Data lines read: 3
+Data lines passed: 3
+Data lines filled: 1
+~~~
+
 ### Line Check: Long Lines
+
+Long lines, lines with extra columns, are silently ignored input files
+during validation if `truncate-long-lines=True` (the default) and
+`--long-line-action=COMPLAIN` (the default).
+
+```bash
+cat examples/docs/validate-long-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+line2	isa	long	line
+line3	isa	line
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-long-lines.tsv
+```
+
+~~~
+Data line 2:
+line2	isa	long	line
+Required 3 columns, saw 4 (1 extra): 'line2	isa	long	line'
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines excluded due to too many columns: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--long-line-action` values.
 
 ### Line Check: Remove Extra Trailing Columns
 
-### Line Check: Prohibited Lists in `node1`
+Long lines, lines with extra columns, are truncated on input
+if `--truncate-longt-lines=True` is specified.  `--long-line-action`
+will not be triggered.
 
-Does this apply to node files?
+```bash
+cat examples/docs/validate-long-lines.tsv
+```
+~~~
+node1	label	node2
+line1	isa	line
+line2	isa	long	line
+line3	isa	line
+~~~
 
-### Line Check: Prohibited Lists in `label`
+```bash
+kgtk validate -i examples/docs/validate-long-lines.tsv \
+              --truncate-long-lines
+```
 
-Does this apply to node files?
+~~~
 
-### Line Check: Prohibited Lists in `node2`
+====================================================
+Data lines read: 3
+Data lines passed: 3
+Data lines truncated: 1
+~~~
 
-Does this apply to node files?
+### Line Check: Prohibited Lists in the `node1` Column of Edge Files
 
-### Line Check: Ignore Prohibited Lists
+[Multivalue lists (`|`) are prohibited by the KGTK File Specification v2](../../specification#multi-valued-edges)
+in the `node1`, `label`, and `node2` columns of a KGTK edge file.
+This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
+
+```bash
+cat examples/docs/validate-node1-list.tsv
+```
+~~~
+node1	label	node2	id
+line1|line3	isa	line	id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node1-list.tsv
+```
+
+~~~
+Data line 1:
+line1|line3	isa	line	id1
+col 0 (node1) value 'line1|line3'is a prohibited list
+
+====================================================
+Data lines read: 1
+Data lines passed: 0
+Data lines excluded due to prohibited lists: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    This constraint does not apply to KGTK node files or to
+    quasi-KGTK (`--mode=NONE`) files.
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--prohibited-list-action` values.
+
+### Line Check: Prohibited Lists in the `label` Column of Edge Files
+
+[Multivalue lists (`|`) are prohibited by the KGTK File Specification v2](../../specification#multi-valued-edges)
+in the `node1`, `label`, and `node2` columns of a KGTK edge file.
+This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
+
+```bash
+cat examples/docs/validate-label-list.tsv
+```
+~~~
+node1	label	node2	id
+line1	isa|equals	line	id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-label-list.tsv
+```
+
+~~~
+Data line 1:
+line1	isa|equals	line	id1
+col 1 (label) value 'isa|equals'is a prohibited list
+
+====================================================
+Data lines read: 1
+Data lines passed: 0
+Data lines excluded due to prohibited lists: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    This constraint does not apply to KGTK node files or to
+    quasi-KGTK (`--mode=NONE`) files.
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--prohibited-list-action` values.
+
+### Line Check: Prohibited Lists in the `node2` Column of Edge Files
+
+[Multivalue lists (`|`) are prohibited by the KGTK File Specification v2](../../specification#multi-valued-edges)
+in the `node1`, `label`, and `node2` columns of a KGTK edge file.
+This constraint is applied when `--prohibited-list-action==COMPLAIN` (the default).
+
+```bash
+cat examples/docs/validate-node2-list.tsv
+```
+~~~
+node1	label	node2	id
+line1	isa	line|record	id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node2-list.tsv
+```
+
+~~~
+Data line 1:
+line1	isa	line|record	id1
+col 2 (node2) value 'line|record'is a prohibited list
+
+====================================================
+Data lines read: 1
+Data lines passed: 0
+Data lines excluded due to prohibited lists: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    This constraint does not apply to KGTK node files or to
+    quasi-KGTK (`--mode=NONE`) files.
+
+!!! note
+    See the table of Action Codes for a discussion of other
+    `--prohibited-list-action` values.
+
+### Line Check: Allow Multivalue Lists in the `node1`, `label`, and `node2` Columns of Edge Files
+
+[Multivalue lists (`|`) are prohibited by the KGTK File Specification v2](../../specification#multi-valued-edges)
+in the `node1`, `label`, and `node2` columns of a KGTK edge file.  This constraint is applied when
+`--prohibited-list-action==COMPLAIN` (the default).  The constraint can be
+removed by specifying `--prohibited-list-action=PASS` or
+`--prohibited-list-action=REPORT`.
+
+```bash
+cat examples/docs/validate-node2-list.tsv
+```
+~~~
+node1	label	node2	id
+line1	isa	line|record	id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node2-list.tsv \
+              --prohibited-list-action=PASS
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+The REPORT option will allow lines with
+prohibited multivalue lists to pass, but will report them to the output file
+(normally standard output for `kgtk validate`).
+
+```bash
+kgtk validate -i examples/docs/validate-node2-list.tsv \
+              --prohibited-list-action=REPORT
+```
+
+~~~
+Data line 1:
+line1	isa	line|record	id1
+col 2 (node2) value 'line|record'is a prohibited list
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+Data errors reported: 1
+~~~
+
+!!! note
+    This constraint does not apply to KGTK node files or to
+    quasi-KGTK (`--mode=NONE`) files, so setting `--mode=NONE`
+    is another way to remove this constraint, although it also
+    removes many other constraints.
 
 ### Line Check: `node1` Is Blank (Edge Files)
 
