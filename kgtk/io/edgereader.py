@@ -51,6 +51,23 @@ class EdgeReader(KgtkReader):
         #    raise ValueError("open_edge_file expected to produce an EdgeReader")
         return typing.cast(EdgeReader, result)
 
+    def _ignore_prohibited_lists(self, row: typing.List[str], line: str)->bool:
+        """
+        KGTK File Format v2 prohibits "|" lists in the node1, label, and node2 columns of edge files.
+        """
+        problems: typing.List[str] = [ ] # Build a list of problems.
+
+        self._ignore_prohibited_list(self.node1_column_idx, row, line, problems)
+        self._ignore_prohibited_list(self.label_column_idx, row, line, problems)
+        self._ignore_prohibited_list(self.node2_column_idx, row, line, problems)
+
+        if len(problems) == 0:
+            return False
+
+        return self.exclude_line(self.options.prohibited_list_action,
+                                 "\n".join(problems),
+                                 line)
+
     def _ignore_if_blank_required_fields(self, values: typing.List[str], line: str)->bool:
         # Ignore line_action with blank node1 fields.  This code comes after
         # filling missing trailing columns, although it could be reworked
