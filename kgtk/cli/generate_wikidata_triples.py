@@ -16,18 +16,6 @@ def parser():
     }
 
 
-def str2bool(v):
-    import argparse
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
 def add_arguments_extended(parser: KGTKArgumentParser):
     """
     Parse arguments
@@ -160,6 +148,16 @@ def add_arguments_extended(parser: KGTKArgumentParser):
         help="set the path of the prefix kgtk file that provides customized uri prefix binding",
         dest="prefix_path",
     )
+    parser.add_argument(
+        "--error-action",
+        action="store",
+        type=str,
+        required=False,
+        default="log",
+        help="Defines the command behavior in case there are errors in execution, [log|raise]. "
+             "'log': log the errors to a log file and continue,  'raise': raise exception and quit. Default: 'log'",
+        dest="error_action",
+    )
     parser.add_input_file(positional=True)
     parser.add_output_file(
         who="Output triples file path.",
@@ -179,7 +177,8 @@ def run(
         prop_declaration: bool,
         prefix_path: str,
         input_file: KGTKFiles,
-        output_file: str
+        output_file: str,
+        error_action: str
 ):
     # import modules locally
 
@@ -199,7 +198,8 @@ def run(
         log_path=log_path,
         prop_declaration=prop_declaration,
         prefix_path=prefix_path,
-        input_file=input_file
+        input_file=input_file,
+        error_action=error_action
     )
 
     try:
