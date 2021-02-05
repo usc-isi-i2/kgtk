@@ -103,24 +103,6 @@ class Generator:
         self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(
             alias_set.split(",")), set(description_set.split(","))
 
-    def initialize_order_map(self, edge: str):
-        edge_list = edge.strip("\r\n").split("\t")
-        node1_index = edge_list.index("node1")
-        node2_index = edge_list.index("node2")
-        prop_index = edge_list.index("label")
-        id_index = edge_list.index("id")
-        if not all([node1_index > -1, node2_index > -1, prop_index > -1, id_index > -1]):
-            raise KGTKException(
-                "Header of kgtk file misses at least one of required column names: (node1, node2, property and id)")
-        else:
-            self.order_map["node1"] = node1_index
-            self.order_map["node2"] = node2_index
-            self.order_map["label"] = prop_index
-            self.order_map["id"] = id_index
-            if hasattr(self, 'has_rank') and self.has_rank == True:
-                rank_index = edge_list.index("rank")
-                self.order_map["rank"] = rank_index
-
     def parse_edges(self, edge: str):
         # use the order_map to map the node
         edge_list = edge.strip("\r\n").split("\t")
@@ -596,22 +578,82 @@ class JsonGenerator(Generator):
         self.output_prefix = kwargs.pop("output_prefix")
         self.has_rank = kwargs.pop("has_rank")
         self.file_num = 0
+        # this data_type mapping is to comply with the SQID UI parsing requirements
+        self.datatype_mapping = {
+            "item": "wikibase-item",
+            "WikibaseItem": "wikibase-item",
+            "wikibase-item": "wikibase-item",
+
+            "property": "wikibase-item",
+            "WikibaseProperty": "wikibase-item",
+            "wikibase-property": "wikibase-item",
+
+            "time": "time",
+            "Time": "time",
+
+            "globe-coordinate": "globe-coordinate",
+            "GlobeCoordinate": "globe-coordinate",
+
+            "quantity": "quantity",
+            "Quantity": "quantity",
+
+            "monolingualtext": "monolingualtext",
+            "Monolingualtext": "monolingualtext",
+
+            "string": "string",
+            "String": "string",
+
+            "external-identifier": "external-id",
+            "ExternalId": "external-id",
+            "external-id": "external-id",
+
+            "url": "url",
+            "Url": "url"
+        }
         self.set_properties(self.prop_file)
         self.set_json_dict()
         self.previous_qnode = None
+        self.node1_idx = -1
+        self.node2_idx = -1
+        self.id_idx = -1
+        self.label_idx = -1
+        self.kr = None
+        self.initialize(kwargs.pop('input_file'))
 
-    def entry_point(self, line_number, edge):
+    def initialize(self, input_file):
+        self.input_file = input_file
+        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+        self.node1_idx = self.kr.get_node1_column_index()
+        self.node2_idx = self.kr.get_node2_column_index()
+        self.label_idx = self.kr.get_label_column_index()
+        self.id_idx = self.kr.get_id_column_index()
+        if hasattr(self, 'has_rank') and self.has_rank == True:
+            rank_index = self.kr.get_node1_column_index('rank')
+            self.rank_idx = rank_index
+
+    def process(self):
+        input_row_count: int = 2
+
+        if self.prop_declaration:
+            for row in self.kr:
+                self.read_prop_declaration(row)
+        self.kr.close()
+        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+        for row in self.kr:
+            self.entry_point(input_row_count, row)
+            input_row_count += 1
+
+        self.finalize()
+
+    def entry_point(self, line_number, row):
         self.read_num_of_lines += 1
-        if line_number == 1:
-            self.initialize_order_map(edge)
-            return
-        edge_list = edge.strip("\r\n").split("\t")
-        node1 = edge_list[self.order_map["node1"]].strip()
-        node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["label"]].strip()
-        e_id = edge_list[self.order_map["id"]].strip()
+
+        node1 = row[self.node1_idx]
+        node2 = row[self.node2_idx]
+        prop = row[self.label_idx]
+        e_id = row[self.id_idx]
         if self.has_rank:
-            rank = edge_list[self.order_map["rank"]].strip()
+            rank = row[self.rank_idx]
         else:
             rank = "normal"  # TODO default rank
 
