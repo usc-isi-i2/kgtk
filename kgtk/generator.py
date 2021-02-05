@@ -2,6 +2,7 @@ import re
 import json
 import gzip
 import rfc3986
+from typing import List
 from etk.etk import ETK
 from etk.etk_module import ETKModule
 from etk.wikidata.statement import Rank
@@ -9,6 +10,7 @@ from etk.knowledge_graph import KGSchema
 from etk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
 from etk.wikidata.entity import WDItem, WDProperty
+from kgtk.io.kgtkreader import KgtkReader
 
 from etk.wikidata.value import (
     Precision,
@@ -55,6 +57,38 @@ class Generator:
         self.corrupted_statement_id = None
         self.to_append_statement = None  # for Json generator
         self.wiki_import_prop_types = set(["wikipedia_sitelink", "language"])
+        self.datatype_mapping = {
+            # nomenclature from https://w.wiki/Tfn
+            "item": Item,
+            "WikibaseItem": Item,
+            "wikibase-item": Item,
+
+            "time": TimeValue,
+            "Time": TimeValue,
+
+            "globe-coordinate": GlobeCoordinate,
+            "GlobeCoordinate": GlobeCoordinate,
+
+            "quantity": QuantityValue,
+            "Quantity": QuantityValue,
+
+            "monolingualtext": MonolingualText,
+            "Monolingualtext": MonolingualText,
+
+            "string": StringValue,
+            "String": StringValue,
+
+            "external-identifier": ExternalIdentifier,
+            "ExternalId": ExternalIdentifier,
+            "external-id": ExternalIdentifier,
+
+            "url": StringValue,  # TODO bug potentially in rdflib
+            "Url": StringValue,
+
+            "property": WDProperty,
+            "WikibaseProperty": WDProperty,
+            "wikibase-property": WDProperty
+        }
 
     def serialize(self):
         raise NotImplemented
@@ -165,38 +199,7 @@ class TripleGenerator(Generator):
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
         prefix_path = kwargs.pop("prefix_path")
-        self.datatype_mapping = {
-            # nomenclature from https://w.wiki/Tfn
-            "item": Item,
-            "WikibaseItem": Item,
-            "wikibase-item": Item,
 
-            "time": TimeValue,
-            "Time": TimeValue,
-
-            "globe-coordinate": GlobeCoordinate,
-            "GlobeCoordinate": GlobeCoordinate,
-
-            "quantity": QuantityValue,
-            "Quantity": QuantityValue,
-
-            "monolingualtext": MonolingualText,
-            "Monolingualtext": MonolingualText,
-
-            "string": StringValue,
-            "String": StringValue,
-
-            "external-identifier": ExternalIdentifier,
-            "ExternalId": ExternalIdentifier,
-            "external-id": ExternalIdentifier,
-
-            "url": StringValue,  # TODO bug potentially in rdflib
-            "Url": StringValue,
-
-            "property": WDProperty,
-            "WikibaseProperty": WDProperty,
-            "wikibase-property": WDProperty
-        }
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
         self.set_properties(self.prop_file)
@@ -205,6 +208,34 @@ class TripleGenerator(Generator):
         self.reset_etk_doc()
         self.serialize_prefix()
         self.use_id = use_id
+        self.node1_idx = -1
+        self.node2_idx = -1
+        self.id_idx = -1
+        self.label_idx = -1
+        self.kr = None
+        self.initialize(kwargs.pop('input_file'))
+
+    def initialize(self, input_file):
+        self.input_file = input_file
+        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+        self.node1_idx = self.kr.get_node1_column_index()
+        self.node2_idx = self.kr.get_node2_column_index()
+        self.label_idx = self.kr.get_label_column_index()
+        self.id_idx = self.kr.get_id_column_index()
+
+    def process(self):
+        input_row_count: int = 2
+
+        if self.prop_declaration:
+            for row in self.kr:
+                self.read_prop_declaration(row)
+        self.kr.close()
+        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+        for row in self.kr:
+            self.entry_point(input_row_count, row)
+            input_row_count += 1
+
+        self.finalize()
 
     def set_prefix(self, prefix_path: str):
         self.prefix_dict = {}
@@ -218,11 +249,10 @@ class TripleGenerator(Generator):
                         prefix, expand = edge_list[node1_index], edge_list[node2_index]
                         self.prefix_dict[prefix] = expand
 
-    def read_prop_declaration(self, line_number: int, edge: str):
-        node1, node2, prop, e_id = self.parse_edges(edge)
+    def read_prop_declaration(self, row: List[str]):
+        node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
         if prop == "data_type":
             self.prop_types[node1] = self.datatype_mapping[node2.strip()]
-        return
 
     def set_properties(self, prop_file: str):
         self.prop_types = dict()
@@ -338,7 +368,8 @@ class TripleGenerator(Generator):
         # update the known prop_types
         if node1 in self.prop_types:
             if not self.prop_declaration:
-                raise KGTKException("Duplicated property definition of {} found!".format(node1))
+                self.warn_log.write("IMPORTANT: Duplicated property definition of {} found!".format(node1))
+                # raise KGTKException("Duplicated property definition of {} found!".format(node1))
         else:
             self.prop_types[node1] = node2
 
@@ -396,7 +427,8 @@ class TripleGenerator(Generator):
                         precision=precision,
                         time_zone=0,
                     )
-                except:
+                except Exception as e:
+                    print(e)
                     return False
 
         elif edge_type == GlobeCoordinate:
@@ -478,20 +510,20 @@ class TripleGenerator(Generator):
             self.doc.kg.add_subject(entity)
         return True
 
-    def entry_point(self, line_number: int, edge: str):
+    def entry_point(self, line_number: int, row: List[str]):
         # print(line_number,edge)
         """
         generates a list of two, the first element is the determination of the edge type using corresponding edge type
         the second element is a bool indicating whether this is a valid property edge or qualifier edge.
         Call corresponding downstream functions
         """
-        if line_number == 1:
-            # initialize the order_map
-            self.initialize_order_map(edge)
-            return
+        # if line_number == 1:
+        #     # initialize the order_map
+        #     self.initialize_order_map(edge)
+        #     return
 
         # use the order_map to map the node
-        node1, node2, prop, e_id = self.parse_edges(edge)
+        node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
         if line_number == 2:
             # by default a statement edge
             is_qualifier_edge = False
@@ -519,17 +551,18 @@ class TripleGenerator(Generator):
             success = self.generate_alias_triple(node1, node2)
         elif prop == "data_type" or prop == 'datatype':
             # special edge of prop declaration
-            success = self.generate_prop_declaration_triple(
-                node1, node2)
+            success = self.generate_prop_declaration_triple(node1, node2)
         else:
             if prop in self.prop_types:
                 success = self.generate_normal_triple(
                     node1, prop, node2, is_qualifier_edge, e_id, line_number)
             else:
-                raise KGTKException(
-                    "property [{}]'s type is unknown at line [{}].\n".format(
-                        prop, line_number)
-                )
+                self.warn_log.write("IMPORTANT: property [{}]'s type is unknown at line [{}].\n".format(
+                    prop, line_number))
+                # raise KGTKException(
+                #     "property [{}]'s type is unknown at line [{}].\n".format(
+                #         prop, line_number)
+                # )
         if (not success) and self.warning:
             if not is_qualifier_edge:
                 self.warn_log.write(
@@ -560,38 +593,6 @@ class JsonGenerator(Generator):
         self.output_prefix = kwargs.pop("output_prefix")
         self.has_rank = kwargs.pop("has_rank")
         self.file_num = 0
-        # this data_type mapping is to comply with the SQID UI parsing requirements
-        self.datatype_mapping = {
-            "item": "wikibase-item",
-            "WikibaseItem": "wikibase-item",
-            "wikibase-item": "wikibase-item",
-
-            "property": "wikibase-item",
-            "WikibaseProperty": "wikibase-item",
-            "wikibase-property": "wikibase-item",
-
-            "time": "time",
-            "Time": "time",
-
-            "globe-coordinate": "globe-coordinate",
-            "GlobeCoordinate": "globe-coordinate",
-
-            "quantity": "quantity",
-            "Quantity": "quantity",
-
-            "monolingualtext": "monolingualtext",
-            "Monolingualtext": "monolingualtext",
-
-            "string": "string",
-            "String": "string",
-
-            "external-identifier": "external-id",
-            "ExternalId": "external-id",
-            "external-id": "external-id",
-
-            "url": "url",
-            "Url": "url"
-        }
         self.set_properties(self.prop_file)
         self.set_json_dict()
         self.previous_qnode = None

@@ -8,22 +8,16 @@ class TestTripleGeneration(unittest.TestCase):
     def test_truthy_dates_generation(self):
         # to reproduce standard file
         # kgtk generate_wikidata_triples -pf wikidata_properties.tsv -w yes --log-path date_warning.log -n 100 --use-id yes -gt yes < dates.tsv > dates_truthy.ttl
-        dates_tsv_file = 'data/dates.tsv'
+        dates_tsv_file = Path('data/dates.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = open('data/dates_truthy_tmp.ttl', 'w')
         generator = TripleGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
                                     dest_fp=o, log_path="data/date_warning.log", prop_declaration=False,
-                                    prefix_path="NONE")
-        fp = open(dates_tsv_file)
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#"):
-                continue
-            else:
-                generator.entry_point(line_num + 1, edge)
+                                    prefix_path="NONE", input_file=dates_tsv_file)
+        generator.process()
         generator.finalize()
         o.close()
-        fp.close()
 
         f1 = open('data/dates_truthy.ttl')
         f2 = open('data/dates_truthy_tmp.ttl')
@@ -34,10 +28,10 @@ class TestTripleGeneration(unittest.TestCase):
         f2.close()
         self.assertEqual(os.stat("data/date_warning.log").st_size, 0)
 
-        p = Path("data/date_warning.log")
-        p.unlink()
-        p = Path('data/dates_truthy_tmp.ttl')
-        p.unlink()
+        # p = Path("data/date_warning.log")
+        # p.unlink()
+        # p = Path('data/dates_truthy_tmp.ttl')
+        # p.unlink()
 
     def test_truthy_property_triple_generation(self):
         property_tsv_file = 'data/P10.tsv'
