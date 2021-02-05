@@ -179,15 +179,12 @@ def run(
         prop_declaration: bool,
         prefix_path: str,
         input_file: KGTKFiles,
-        output_file: KGTKFiles
+        output_file: str
 ):
     # import modules locally
 
     from kgtk.generator import TripleGenerator
-    import sys
     from kgtk.exceptions import KGTKException
-
-
 
     generator = TripleGenerator(
         prop_file=property_file,
@@ -205,50 +202,7 @@ def run(
         input_file=input_file
     )
 
-    generator.process()
-
-
-
-    #
-    # if prop_declaration:
-    #     if input_file:
-    #         for line_num, edge in enumerate(fp):
-    #             generator.read_prop_declaration(line_num + 1, edge)
-    #         fp.seek(0)
-    #         for line_num, edge in enumerate(fp):
-    #             generator.entry_point(line_num + 1, edge)
-    #     else:
-    #         file_lines = 0
-    #         begining_edge = None
-    #         start_generation = False
-    #         for line_num, edge in enumerate(fp):
-    #             if line_num == 0:
-    #                 begining_edge = edge
-    #                 generator.entry_point(line_num + 1, edge)
-    #                 file_lines += 1
-    #             else:
-    #                 if start_generation:
-    #                     # start triple generation because reached the starting position of the second `cat`
-    #                     line_number = line_num - file_lines
-    #                     # print("creating triples at line {} {} with total number of lines: {}".format(line_number+1, edge, file_lines))
-    #                     generator.entry_point(line_number + 1, edge)  # file generator
-    #                     # print("# {}".format(generator.read_num_of_lines))
-    #                 else:
-    #                     if edge == begining_edge:
-    #                         start_generation = True
-    #                     else:
-    #                         file_lines += 1
-    #                         # print("creating property declarations at line {} {}".format(line_num, edge))
-    #                         generator.read_prop_declaration(line_num + 1, edge)
-    #
-    #     generator.finalize()
-    # else:
-    #     # not declaration
-    #     for line_num, edge in enumerate(fp):
-    #         if edge.startswith("#") or len(edge.strip("\n")) == 0:
-    #             continue
-    #         else:
-    #             generator.entry_point(line_num + 1, edge)
-    #     generator.finalize()
-    # if input_file:
-    #     fp.close()
+    try:
+        generator.process()
+    except Exception as e:
+        raise KGTKException(e)
