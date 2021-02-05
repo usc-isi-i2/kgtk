@@ -11,7 +11,6 @@ from etk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
 from etk.wikidata.entity import WDItem, WDProperty
 from kgtk.io.kgtkreader import KgtkReader
-from kgtk.io.kgtkwriter import KgtkWriter
 
 from etk.wikidata.value import (
     Precision,
@@ -182,6 +181,7 @@ class TripleGenerator(Generator):
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
         prefix_path = kwargs.pop("prefix_path")
+        self.error_action = kwargs.pop('error_action')
 
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
@@ -207,6 +207,17 @@ class TripleGenerator(Generator):
         self.node2_idx = self.kr.get_node2_column_index()
         self.label_idx = self.kr.get_label_column_index()
         self.id_idx = self.kr.get_id_column_index()
+        if self.node1_idx == -1:
+            raise KGTKException("'node1' column not found")
+
+        if self.node2_idx == -1:
+            raise KGTKException("'node2' column not found")
+
+        if self.label_idx == -1:
+            raise KGTKException("'label' column not found")
+
+        if self.id_idx == -1:
+            raise KGTKException("'id' column not found")
 
     def process(self):
         input_row_count: int = 2
@@ -266,11 +277,13 @@ class TripleGenerator(Generator):
                     self.prop_types[node1] = self.datatype_mapping[node2.strip()]
                 except:
                     self.prop_types[node1] = StringValue
-                    self.warn_log.write(
-                        "DataType {} of node {} is not supported.\n".format(
-                            node2, node1
+                    if self.error_action == 'log':
+                        self.warn_log.write(
+                            "DataType {} of node {} is not supported. "
+                            "{}'s DataType has been defaulted to StringValue.\n".format(node2, node1, node1)
                         )
-                    )
+                    if self.error_action == 'raise':
+                        raise KGTKException("DataType {} of node {} is not supported.\n".format(node2, node1))
 
     def _node_2_entity(self, node: str):
         '''
@@ -353,8 +366,12 @@ class TripleGenerator(Generator):
         # update the known prop_types
         if node1 in self.prop_types:
             if not self.prop_declaration:
-                self.warn_log.write("IMPORTANT: Duplicated property definition of {} found!".format(node1))
-                # raise KGTKException("Duplicated property definition of {} found!".format(node1))
+                if self.error_action == 'log':
+                    self.warn_log.write("IMPORTANT: Duplicated property definition of {} found!."
+                                        "Using data type: {} for property {}".format(node1, self.prop_types[node1],
+                                                                                     node1))
+                if self.error_action == 'raise':
+                    raise KGTKException("Duplicated property definition of {} found!".format(node1))
         else:
             self.prop_types[node1] = node2
 
@@ -424,21 +441,25 @@ class TripleGenerator(Generator):
                 latitude, longitude, 0.0001, globe=Item("Q2"))  # earth
 
         elif edge_type == QuantityValue:
-            # +70[+60,+80]Q743895
             try:
                 res = self.quantity_pattern.match(node2)
-                if self.warning and res == None:
-                    warnings.warn("Node2 [{}] at line [{}] is not a legal quantity. Skipping it.\n".format(
+                if res == None:
+                    self.warn_log.write("Node2 [{}] at line [{}] is not a legal quantity. Skipping it.\n".format(
                         node2, line_number))
-
                     return False
                 res = res.groups()
 
             except:
-                raise KGTKException(
-                    "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
-                        node2, line_number)
-                )
+                if self.error_action == 'log':
+                    self.warn_log.write(
+                        "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
+                            node2, line_number)
+                    )
+                if self.error_action == 'raise':
+                    raise KGTKException(
+                        "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
+                            node2, line_number)
+                    )
 
             amount, lower_bound, upper_bound, unit = res
 
@@ -508,6 +529,7 @@ class TripleGenerator(Generator):
         #     return
 
         # use the order_map to map the node
+        success = True
         node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
         if line_number == 2:
             # by default a statement edge
@@ -542,13 +564,15 @@ class TripleGenerator(Generator):
                 success = self.generate_normal_triple(
                     node1, prop, node2, is_qualifier_edge, e_id, line_number)
             else:
-                self.warn_log.write("IMPORTANT: property [{}]'s type is unknown at line [{}].\n".format(
-                    prop, line_number))
-                # raise KGTKException(
-                #     "property [{}]'s type is unknown at line [{}].\n".format(
-                #         prop, line_number)
-                # )
-        if (not success) and self.warning:
+                if self.error_action == 'log':
+                    self.warn_log.write("IMPORTANT: property [{}]'s type is unknown at line [{}].\n".format(
+                        prop, line_number))
+                if self.error_action == 'raise':
+                    raise KGTKException(
+                        "property [{}]'s type is unknown at line [{}].\n".format(
+                            prop, line_number)
+                    )
+        if (not success):
             if not is_qualifier_edge:
                 self.warn_log.write(
                     "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
