@@ -16,7 +16,7 @@ class TestTripleGeneration(unittest.TestCase):
                                     dest_fp=o, log_path="data/date_warning.log", prop_declaration=False,
                                     prefix_path="NONE", input_file=dates_tsv_file)
         generator.process()
-        generator.finalize()
+
 
         f1 = open('data/dates_truthy.ttl')
         f2 = open('data/dates_truthy_tmp.ttl')
@@ -41,7 +41,7 @@ class TestTripleGeneration(unittest.TestCase):
                                     dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
                                     input_file=property_tsv_file)
         generator.process()
-        generator.finalize()
+
 
         f1 = open('data/P10_truthy.ttl')
         f2 = open('data/P10_truthy_tmp.ttl')
@@ -64,7 +64,7 @@ class TestTripleGeneration(unittest.TestCase):
                                     dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
                                     input_file=property_tsv_file)
         generator.process()
-        generator.finalize()
+
 
         f1 = open('data/P10_not_truthy.ttl')
         f2 = open('data/P10_not_truthy_tmp.ttl')
@@ -86,7 +86,7 @@ class TestTripleGeneration(unittest.TestCase):
                                     dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
                                     input_file=qnode_tsv_file)
         generator.process()
-        generator.finalize()
+
 
         f1 = open('data/Q57160439_truthy.ttl')
         f2 = open('data/Q57160439_truthy_tmp.ttl')
@@ -108,7 +108,7 @@ class TestTripleGeneration(unittest.TestCase):
                                     dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
                                     input_file=qnode_tsv_file)
         generator.process()
-        generator.finalize()
+
 
         f1 = open('data/Q57160439_not_truthy.ttl')
         f2 = open('data/Q57160439_not_truthy_tmp.ttl')
@@ -133,7 +133,7 @@ class TestTripleGeneration(unittest.TestCase):
                                     dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
                                     input_file=small_values_file)
         generator.process()
-        generator.finalize()
+
 
         f1 = open('data/small_values.ttl')
         f2 = open('data/small_values_tmp.ttl')
@@ -155,7 +155,7 @@ class TestTripleGeneration(unittest.TestCase):
                                     dest_fp=o, log_path="data/corrupted_warning_tmp.log", prop_declaration=False,
                                     prefix_path="NONE", input_file=corrupted_kgtk_file)
         generator.process()
-        generator.finalize()
+
 
         f1 = open('data/corrupted.ttl')
         f2 = open('data/corrupted_tmp.ttl')
