@@ -11,6 +11,7 @@ from etk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
 from etk.wikidata.entity import WDItem, WDProperty
 from kgtk.io.kgtkreader import KgtkReader
+from kgtk.io.kgtkwriter import KgtkWriter
 
 from etk.wikidata.value import (
     Precision,
@@ -203,7 +204,9 @@ class TripleGenerator(Generator):
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
         self.set_properties(self.prop_file)
-        self.fp = dest_fp
+        if dest_fp.endswith('.gz'):
+            self.fp = gzip.open(dest_fp, 'wt')
+        self.fp = open(dest_fp, 'w')
         self.truthy = truthy
         self.reset_etk_doc()
         self.serialize_prefix()
