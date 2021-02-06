@@ -517,18 +517,12 @@ class TripleGenerator(Generator):
         return True
 
     def entry_point(self, line_number: int, row: List[str]):
-        # print(line_number,edge)
         """
         generates a list of two, the first element is the determination of the edge type using corresponding edge type
         the second element is a bool indicating whether this is a valid property edge or qualifier edge.
         Call corresponding downstream functions
         """
-        # if line_number == 1:
-        #     # initialize the order_map
-        #     self.initialize_order_map(edge)
-        #     return
 
-        # use the order_map to map the node
         success = True
         node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
         if line_number == 2:
@@ -601,6 +595,7 @@ class JsonGenerator(Generator):
         self.prop_declaration = kwargs.pop("prop_declaration")
         self.output_prefix = kwargs.pop("output_prefix")
         self.has_rank = kwargs.pop("has_rank")
+        self.error_action = kwargs.pop('error_action')
         self.file_num = 0
         # this data_type mapping is to comply with the SQID UI parsing requirements
         self.datatype_mapping = {
@@ -687,10 +682,9 @@ class JsonGenerator(Generator):
                 self.prop_types[node1] = self.datatype_mapping[node2.strip()]
                 return
             else:
-                if self.warning:
-                    self.warn_log.write(
-                        "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
-                            line_number, e_id))
+                self.warn_log.write(
+                    "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
+                        line_number, e_id))
 
         # add qualifier logic
         if line_number == 2:
@@ -708,11 +702,10 @@ class JsonGenerator(Generator):
             else:
                 is_qualifier_edge = True
                 if node1 == self.corrupted_statement_id:
-                    if self.warning:
-                        self.warn_log.write(
-                            "QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n".format(
-                                line_number, self.corrupted_statement_id)
-                        )
+                    self.warn_log.write(
+                        "QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n".format(
+                            line_number, self.corrupted_statement_id)
+                    )
 
         # update info_json_dict
         if not is_qualifier_edge:
@@ -752,16 +745,26 @@ class JsonGenerator(Generator):
         else:
             success = self.update_misc_json_dict(node1, prop, node2, line_number, rank, "statement")
 
-        if (not success) and self.warning:
+        if (not success):
             if not is_qualifier_edge:
-                self.warn_log.write(
-                    "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
+                if self.error_action == 'log':
+                    self.warn_log.write(
+                        "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
+
+                    self.corrupted_statement_id = e_id
+                if self.error_action == 'raise':
+                    raise KGTKException("CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
                         line_number, e_id))
-                self.corrupted_statement_id = e_id
             else:
-                self.warn_log.write(
-                    "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
-                        line_number, e_id))
+                if self.error_action == 'log':
+                    self.warn_log.write(
+                        "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
+                if self.error_action == 'raise':
+                    raise KGTKException(
+                        "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
         else:
             # success
             if not is_qualifier_edge:
@@ -810,8 +813,11 @@ class JsonGenerator(Generator):
                     "id": node}
             )
         else:
-            if self.warning:
+            if self.error_action == 'log':
                 self.warn_log.write(
+                    "node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number))
+            if self.error_action == 'raise':
+                raise KGTKException(
                     "node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number))
         return True
 
@@ -847,9 +853,8 @@ class JsonGenerator(Generator):
 
         if prop not in self.prop_types:
             if prop in self.wiki_import_prop_types:
-                if self.warning:
-                    self.warn_log.write(
-                        "Property {} created by wikidata json dump at line {} is skipped.\n".format(prop, line_number))
+                self.warn_log.write(
+                    "Property {} created by wikidata json dump at line {} is skipped.\n".format(prop, line_number))
                 return True
             else:
                 raise KGTKException("property {} at line {} is not defined.".format(prop, line_number))
@@ -876,9 +881,12 @@ class JsonGenerator(Generator):
             elif self.prop_types[prop] == "url":
                 object = self.update_misc_json_dict_url(node1, prop, node2, rank, is_qualifier_edge)
             else:
-                raise KGTKException(
-                    "property tyepe {} of property {} at line {} is not defined.".format(self.prop_types[prop], prop,
-                                                                                         line_number))
+                if self.error_action == 'log':
+                    self.warn_log.write("property tyepe {} of property {} at line {} is not defined."
+                                        .format(self.prop_types[prop], prop, line_number))
+                if self.error_action == 'raise':
+                    raise KGTKException("property tyepe {} of property {} at line {} is not defined."
+                                        .format(self.prop_types[prop], prop, line_number))
 
             if not object:
                 if self.warning:
