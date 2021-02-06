@@ -24,7 +24,6 @@ from etk.wikidata.value import (
     URLValue
 )
 from etk.knowledge_graph.node import LiteralType
-import warnings
 
 BAD_CHARS = [":", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
@@ -102,18 +101,6 @@ class Generator:
         self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(
             alias_set.split(",")), set(description_set.split(","))
 
-    def parse_edges(self, edge: str):
-        # use the order_map to map the node
-        edge_list = edge.strip("\r\n").split("\t")
-        try:
-            node1 = edge_list[self.order_map["node1"]].strip()
-            node2 = edge_list[self.order_map["node2"]].strip()
-            prop = edge_list[self.order_map["label"]].strip()
-            e_id = edge_list[self.order_map["id"]].strip()
-        except:
-            print(edge_list)
-        return node1, node2, prop, e_id
-
     @staticmethod
     def process_text_string(string: str) -> [str, str]:
         ''' 
@@ -182,7 +169,6 @@ class TripleGenerator(Generator):
         use_id = kwargs.pop("use_id")
         prefix_path = kwargs.pop("prefix_path")
         self.error_action = kwargs.pop('error_action')
-
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
         self.set_properties(self.prop_file)
@@ -247,7 +233,7 @@ class TripleGenerator(Generator):
 
     def read_prop_declaration(self, row: List[str]):
         node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
-        if prop == "data_type":
+        if prop == "data_type" or prop == "datatype":
             self.prop_types[node1] = self.datatype_mapping[node2.strip()]
 
     def set_properties(self, prop_file: str):
@@ -1251,11 +1237,10 @@ class JsonGenerator(Generator):
             }
         return temp_url_dict
 
-    def read_prop_declaration(self, line_number: int, edge: str):
-        node1, node2, prop, e_id = self.parse_edges(edge)
-        if prop == "data_type":
+    def read_prop_declaration(self, row: List[str]):
+        node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
+        if prop == "data_type" or prop == "datatype":
             self.prop_types[node1] = self.datatype_mapping[node2.strip()]
-        return
 
     def set_properties(self, prop_file: str):
         self.prop_types = {}
