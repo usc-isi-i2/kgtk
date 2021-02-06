@@ -1332,13 +1332,194 @@ Data errors reported: 1
     is another way to remove this constraint, although it also
     removes many other constraints.
 
-### Line Check: `node1` Is Blank (Edge Files)
+### Line Check: `node1` May Not Be Blank in an Edge File
 
-### Note: `label` May Be Blank (Edge Files)
+The `node1` field may not be blank in a KGTK edge file.
 
-### Line Check: `node2` Is Blank (Edge Files)
+```bash
+cat examples/docs/validate-node1-blank-edge.tsv
+```
+~~~
+node1	label	node2	id
+	isa	line	id1
+~~~
 
-### Line Check: `id` Is Blank (Node Files)
+```bash
+kgtk validate -i examples/docs/validate-node1-blank-edge.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+### Line Check: `node1` May Be Blank in a Node File
+
+The `node1` field may be blank in a KGTK node file.
+
+```bash
+cat examples/docs/validate-node1-blank-node.tsv
+```
+~~~
+id	size	color	node1
+id1	large	red	
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node1-blank-node.tsv \
+              --mode=NODE
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+!!! note
+    In this example it was necessary to specify `--mode=NODE` to
+    prevent the input file from being treated as an edge file.
+
+### Line Check: `label` May Be Blank in an Edge File
+
+The `label` field may be blank in a KGTK edge file.
+
+```bash
+cat examples/docs/validate-label-blank-edge.tsv
+```
+~~~
+node1	label	node2	id
+line1		line	id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-label-blank-edge.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+### Line Check: `label` May Be Blank in a Node File
+
+The `label` field may be blank in a KGTK node file.
+
+```bash
+cat examples/docs/validate-label-blank-node.tsv
+```
+~~~
+id	size	color	label
+id1	large	red	
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-label-blank-node.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+### Line Check: `node2` May Not Be Blank in an Edge File
+
+The `node2` field may not be blank in a KGTK edge file.
+
+```bash
+cat examples/docs/validate-node2-blank-edge.tsv
+```
+~~~
+node1	label	node2	id
+line1	isa		id1
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node2-blank-edge.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+### Line Check: `node2` May Be Blank in a Node File
+
+The `node2` field may be blank in a KGTK node file.
+
+```bash
+cat examples/docs/validate-node2-blank-node.tsv
+```
+~~~
+id	size	color	node2
+id1	large	red	
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-node2-blank-node.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+### Line Check: `id` May Be Blank in an Edge File
+
+The `id` field may be blank in a KGTK edge file.
+
+```bash
+cat examples/docs/validate-id-blank-edge.tsv
+```
+~~~
+node1	label	node2	id
+line1	isa	line	
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-id-blank-edge.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+### Line Check: `id` May Not Be Blank in a Node File
+
+The `id` field may not be blank in a KGTK node file.
+
+```bash
+cat examples/docs/validate-id-blank-node.tsv
+```
+~~~
+id	size	color
+	large	red
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-id-blank-node.tsv
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
 
 ### Value Check: Number or Quantity: Match Failed
 
