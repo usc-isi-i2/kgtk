@@ -6,8 +6,6 @@ from pathlib import Path
 
 class TestJSONGeneration(unittest.TestCase):
     def test_dates_generation(self):
-        # to reproduce standard file in the `data` folder
-        # cat dates.tsv | kgtk generate-mediawiki-jsons -n 100 -pf wikidata_properties.tsv -pr dates 
         dates_tsv_file = Path('data/dates.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
         generator = JsonGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliase',
@@ -22,8 +20,7 @@ class TestJSONGeneration(unittest.TestCase):
         f1 = open('data/dates0.jsonl')
         f2 = open('data/dates_tmp0.jsonl')
         self.assertEqual(f1.readlines(), f2.readlines())
-        # TODO until date validation published
-        # self.assertEqual(f1.readlines(), f2.readlines()) 
+
         f1.close()
         f2.close()
         self.assertEqual(os.stat("data/date_warning.log").st_size, 0)
@@ -33,8 +30,6 @@ class TestJSONGeneration(unittest.TestCase):
         p.unlink()
 
     def test_property_json_generation(self):
-        # to reproduce standard file in the `data` folder
-        # cat P10.tsv | kgtk generate-mediawiki-jsons -n 100 -pf wikidata_properties.tsv -pr P10 -ap aliases -dp descriptions
         property_tsv_file = Path('data/P10.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
         generator = JsonGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
@@ -58,8 +53,6 @@ class TestJSONGeneration(unittest.TestCase):
         p.unlink()
 
     def test_qnode_json_generation(self):
-        # to reproduce standard file in the `data` folder
-        # cat Q57160439.tsv | kgtk generate-mediawiki-jsons -n 100 -pf wikidata_properties.tsv -pr Q57160439 -ap aliases -dp descriptions
         qnode_tsv_file = Path('data/Q57160439.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
         generator = JsonGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
@@ -83,8 +76,6 @@ class TestJSONGeneration(unittest.TestCase):
         p.unlink()
 
     def test_ranked_kgtk_generation(self):
-        # to reproduce standard file in the `data` folder
-        # kgtk generate_mediawiki_jsons -i ranked_example.tsv --debug -pf wikidata_properties.tsv -pr ranked
         ranked_tsv_file = Path('data/ranked_example.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
         generator = JsonGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='alias',
