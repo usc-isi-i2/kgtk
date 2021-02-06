@@ -6,8 +6,6 @@ from pathlib import Path
 
 class TestTripleGeneration(unittest.TestCase):
     def test_truthy_dates_generation(self):
-        # to reproduce standard file
-        # kgtk generate_wikidata_triples -pf wikidata_properties.tsv -w yes --log-path date_warning.log -n 100 --use-id yes -gt yes < dates.tsv > dates_truthy.ttl
         dates_tsv_file = Path('data/dates.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
         o = 'data/dates_truthy_tmp.ttl'
@@ -20,7 +18,6 @@ class TestTripleGeneration(unittest.TestCase):
         f1 = open('data/dates_truthy.ttl')
         f2 = open('data/dates_truthy_tmp.ttl')
 
-        # TODO until date validation published
         self.assertEqual(f1.readlines(), f2.readlines())
         f1.close()
         f2.close()
