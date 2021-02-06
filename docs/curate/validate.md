@@ -1525,36 +1525,119 @@ Data lines passed: 0
 Data lines excluded due to blank fields: 1
 ~~~
 
-### Value Check: Number or Quantity: Match Failed
+### Value Check: Invalid Quantity
 
-### Value Check: Number or Quantity: Lax Match Failed
+Invalid numbers (dimensionless) or quantities (numbers with SI
+dimension suffixes or Wikidata Qnode suffixes) are excluded
+by default.
 
-### Value Check: Number or Quantity: Low Tolerance is Not Float
+```bash
+cat examples/docs/validate-invalid-quantity.tsv
+```
+~~~
+node1	label	node2
+line1	invalid	9x
+line2	invalid	9[8,10j]
+line3	invalid	--9
+line4	valid	9
+line5	valid	9m
 
-### Value Check: Number or Quantity: High Tolerance is Not Float
+~~~
 
-### Value Check: Number or Quantity: Missing Numeric part
-(Shouldn't hapen)
+```bash
+kgtk validate -i examples/docs/validate-invalid-quantity.tsv
+```
 
-### Value Check: Number: Match Failed
+~~~
+Data line 1:
+line1	invalid	9x
+col 2 (node2) value '9x' is an Invalid Quantity
+Data line 2:
+line2	invalid	9[8,10j]
+col 2 (node2) value '9[8,10j]' is an Invalid Quantity
+Data line 3:
+line3	invalid	--9
+col 2 (node2) value '--9' is an Invalid Quantity
 
-### Value Check: Number: Missing Numeric part
-(Shouldn't hapen)
+====================================================
+Data lines read: 6
+Data lines passed: 2
+Data lines ignored: 1
+Data lines excluded due to invalid values: 3
+Data errors reported: 3
+~~~
 
-### Value Check: Quantity: Match Failed
+### Value Check: Invalid String
 
-### Value Check: Quantity: Lax Match Failed
+Invalid strings are excluded by default. Strings
+with internal double quote characters(`"`) that are not escaped
+(`\"`) are considered invalid when `--allow-lax-strings=FALSE` (the default).
 
-### Value Check: Quantity: Low Tolerance is Not Float
+```bash
+cat examples/docs/validate-invalid-string.tsv
+```
+~~~
+node1	label	node2
+line1	invalid	"xxx
+line2	valid	"xxx\"yyy"
+line3	invalid	"xxx"yyy"
+line4	valid	"xxx\\yyy"
+line5	valid	"xxx\tyyy"
+~~~
 
-### Value Check: Quantity: High Tolerance is Not Float
+```bash
+kgtk validate -i examples/docs/validate-invalid-string.tsv
+```
 
-### Value Check: Quantity: Missing Numeric part
-(Shouldn't hapen)
+~~~
+Data line 1:
+line1	invalid	"xxx
+col 2 (node2) value '"xxx' is an Invalid String
+Data line 3:
+line3	invalid	"xxx"yyy"
+col 2 (node2) value '"xxx"yyy"' is an Invalid String
 
-### Value Check: String: Lax Match Failed
+====================================================
+Data lines read: 5
+Data lines passed: 3
+Data lines excluded due to invalid values: 2
+Data errors reported: 2
+~~~
 
-### Value Check: String: Strict Match Failed
+### Value Check: Invalid String with Lax Strings
+
+Invalid strings are excluded by default. Strings
+with internal double quote characters(`"`) that are not escaped
+(`\"`) are considered valid when `--allow-lax-strings=TRUE`.
+
+```bash
+cat examples/docs/validate-invalid-lax-string.tsv
+```
+~~~
+node1	label	node2
+line1	invalid	"xxx
+line2	valid	"xxx\"yyy"
+line3	valid	"xxx"yyy"
+line4	valid	"xxx\\yyy"
+line5	valid	"xxx\tyyy"
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-invalid-lax-string.tsv \
+              --allow-lax-strings
+```
+
+~~~
+Data line 1:
+line1	invalid	"xxx
+col 2 (node2) value '"xxx' is an Invalid String
+
+====================================================
+Data lines read: 5
+Data lines passed: 4
+Data lines excluded due to invalid values: 1
+Data errors reported: 1
+~~~
 
 ### Value Check: Language Qualified String: Lax Match Failed
 
