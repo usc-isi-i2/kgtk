@@ -627,6 +627,11 @@ class KgtkValue(KgtkFormat):
     floatnumber_pat: str = r'(?:{pointfloat}|{exponentfloat})'.format(pointfloat=pointfloat_pat,
                                                                       exponentfloat=exponentfloat_pat)
 
+    # Real literals (nothing imaginary).
+    real_pat: str = r'(?:{plus_or_minus}?(?:{integer}|{floatnumber}))'.format(plus_or_minus=plus_or_minus_pat,
+                                                                              integer=integer_pat,
+                                                                              floatnumber=floatnumber_pat)
+
     # Imaginary literals.
     imagnumber_pat: str = r'(?:{floatnumber}|{digitpart})[jJ]'.format(floatnumber=floatnumber_pat,
                                                                       digitpart=digitpart_pat)
@@ -636,6 +641,8 @@ class KgtkValue(KgtkFormat):
                                                                                               integer=integer_pat,
                                                                                               floatnumber=floatnumber_pat,
                                                                                               imagnumber=imagnumber_pat)
+
+    # TODO: We may wish to exclude imaginary numbers in some circumstances.
 
     # Numeric literals with component labeling:
     number_pat: str = r'(?P<number>{numeric})'.format(numeric=numeric_pat)
