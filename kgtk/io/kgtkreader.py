@@ -1029,7 +1029,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                         self.data_lines_excluded_long += 1
                         continue
 
-                if self._ignore_if_blank_fields(row, line):
+                if self._ignore_if_blank_required_fields(row, line):
                     self.reject(line)
                     self.data_lines_excluded_blank_fields += 1
                     continue
@@ -1305,7 +1305,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         return False
 
     # May be overridden
-    def _ignore_if_blank_fields(self, values: typing.List[str], line: str)->bool:
+    def _ignore_if_blank_required_fields(self, values: typing.List[str], line: str)->bool:
         return False
 
     # May be overridden

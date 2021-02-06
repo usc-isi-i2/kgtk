@@ -1095,8 +1095,9 @@ kgtk validate -i examples/docs/validate-short-lines.tsv \
 
 ====================================================
 Data lines read: 3
-Data lines passed: 3
+Data lines passed: 2
 Data lines filled: 1
+Data lines excluded due to blank fields: 1
 ~~~
 
 ### Line Check: Long Lines
@@ -1352,7 +1353,8 @@ kgtk validate -i examples/docs/validate-node1-blank-edge.tsv
 
 ====================================================
 Data lines read: 1
-Data lines passed: 1
+Data lines passed: 0
+Data lines excluded due to blank fields: 1
 ~~~
 
 ### Line Check: `node1` May Be Blank in a Node File
@@ -1449,7 +1451,8 @@ kgtk validate -i examples/docs/validate-node2-blank-edge.tsv
 
 ====================================================
 Data lines read: 1
-Data lines passed: 1
+Data lines passed: 0
+Data lines excluded due to blank fields: 1
 ~~~
 
 ### Line Check: `node2` May Be Blank in a Node File
@@ -1518,7 +1521,8 @@ kgtk validate -i examples/docs/validate-id-blank-node.tsv
 
 ====================================================
 Data lines read: 1
-Data lines passed: 1
+Data lines passed: 0
+Data lines excluded due to blank fields: 1
 ~~~
 
 ### Value Check: Number or Quantity: Match Failed
