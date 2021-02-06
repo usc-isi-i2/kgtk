@@ -1,0 +1,1 @@
+{"epoch_idx": 0, "edge_path_idx": 0, "edge_chunk_idx": 0, "lhs_partition": 0, "rhs_partition": 0, "index": 1, "stats": {"count": 99, "metrics": {"loss": 2.3953352456141, "violators_lhs": 30.252525252525253, "violators_rhs": 26.171717171717173}}}
