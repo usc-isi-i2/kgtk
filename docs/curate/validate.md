@@ -112,6 +112,9 @@ raise the error limit or set it to zero:
 
 ### Escapes in Strings and Language Qualified Strings
 
+KGTK strings (`"..."`) and language-qualified strings (`'...'@lan`) may contain
+the following escape sequences.
+
 | Sequence | Description | Comments |
 | -------- | ----------- |  ------- |
 | \a       | alarm (bell) - ASCII &lt;BEL&gt; | |
