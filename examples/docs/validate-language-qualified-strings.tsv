@@ -1,0 +1,4 @@
+node1	label	node2
+line1	valid	'abc'@en
+line1	valid	'a\'bc'@en
+line1	invalid	'a'bc'@en

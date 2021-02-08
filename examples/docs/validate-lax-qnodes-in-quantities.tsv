@@ -1,0 +1,7 @@
+node1	label	node2
+line6	valid	9Q12345
+line7	valid	9Q012345
+line8	valid	9Q123_45
+line9	valid	9Q123-45
+line10	valid	9Q123az
+line11	valid	9Q123AZ
