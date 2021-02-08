@@ -2,6 +2,7 @@ import re
 import json
 import gzip
 import rfc3986
+from typing import List
 from etk.etk import ETK
 from etk.etk_module import ETKModule
 from etk.wikidata.statement import Rank
@@ -9,6 +10,7 @@ from etk.knowledge_graph import KGSchema
 from etk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
 from etk.wikidata.entity import WDItem, WDProperty
+from kgtk.io.kgtkreader import KgtkReader
 
 from etk.wikidata.value import (
     Precision,
@@ -22,7 +24,6 @@ from etk.wikidata.value import (
     URLValue
 )
 from etk.knowledge_graph.node import LiteralType
-import warnings
 
 BAD_CHARS = [":", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
@@ -55,6 +56,38 @@ class Generator:
         self.corrupted_statement_id = None
         self.to_append_statement = None  # for Json generator
         self.wiki_import_prop_types = set(["wikipedia_sitelink", "language"])
+        self.datatype_mapping = {
+            # nomenclature from https://w.wiki/Tfn
+            "item": Item,
+            "WikibaseItem": Item,
+            "wikibase-item": Item,
+
+            "time": TimeValue,
+            "Time": TimeValue,
+
+            "globe-coordinate": GlobeCoordinate,
+            "GlobeCoordinate": GlobeCoordinate,
+
+            "quantity": QuantityValue,
+            "Quantity": QuantityValue,
+
+            "monolingualtext": MonolingualText,
+            "Monolingualtext": MonolingualText,
+
+            "string": StringValue,
+            "String": StringValue,
+
+            "external-identifier": ExternalIdentifier,
+            "ExternalId": ExternalIdentifier,
+            "external-id": ExternalIdentifier,
+
+            "url": StringValue,  # TODO bug potentially in rdflib
+            "Url": StringValue,
+
+            "property": WDProperty,
+            "WikibaseProperty": WDProperty,
+            "wikibase-property": WDProperty
+        }
 
     def serialize(self):
         raise NotImplemented
@@ -68,39 +101,9 @@ class Generator:
         self.label_set, self.alias_set, self.description_set = set(label_set.split(",")), set(
             alias_set.split(",")), set(description_set.split(","))
 
-    def initialize_order_map(self, edge: str):
-        edge_list = edge.strip("\r\n").split("\t")
-        node1_index = edge_list.index("node1")
-        node2_index = edge_list.index("node2")
-        prop_index = edge_list.index("label")
-        id_index = edge_list.index("id")
-        if not all([node1_index > -1, node2_index > -1, prop_index > -1, id_index > -1]):
-            raise KGTKException(
-                "Header of kgtk file misses at least one of required column names: (node1, node2, property and id)")
-        else:
-            self.order_map["node1"] = node1_index
-            self.order_map["node2"] = node2_index
-            self.order_map["label"] = prop_index
-            self.order_map["id"] = id_index
-            if hasattr(self, 'has_rank') and self.has_rank == True:
-                rank_index = edge_list.index("rank")
-                self.order_map["rank"] = rank_index
-
-    def parse_edges(self, edge: str):
-        # use the order_map to map the node
-        edge_list = edge.strip("\r\n").split("\t")
-        try:
-            node1 = edge_list[self.order_map["node1"]].strip()
-            node2 = edge_list[self.order_map["node2"]].strip()
-            prop = edge_list[self.order_map["label"]].strip()
-            e_id = edge_list[self.order_map["id"]].strip()
-        except:
-            print(edge_list)
-        return node1, node2, prop, e_id
-
     @staticmethod
     def process_text_string(string: str) -> [str, str]:
-        ''' 
+        '''
         Language detection is removed from triple generation. The user is responsible for detect the language
         '''
         if len(string) == 0:
@@ -165,46 +168,56 @@ class TripleGenerator(Generator):
         truthy = kwargs.pop("truthy")
         use_id = kwargs.pop("use_id")
         prefix_path = kwargs.pop("prefix_path")
-        self.datatype_mapping = {
-            # nomenclature from https://w.wiki/Tfn
-            "item": Item,
-            "WikibaseItem": Item,
-            "wikibase-item": Item,
-
-            "time": TimeValue,
-            "Time": TimeValue,
-
-            "globe-coordinate": GlobeCoordinate,
-            "GlobeCoordinate": GlobeCoordinate,
-
-            "quantity": QuantityValue,
-            "Quantity": QuantityValue,
-
-            "monolingualtext": MonolingualText,
-            "Monolingualtext": MonolingualText,
-
-            "string": StringValue,
-            "String": StringValue,
-
-            "external-identifier": ExternalIdentifier,
-            "ExternalId": ExternalIdentifier,
-            "external-id": ExternalIdentifier,
-
-            "url": StringValue,  # TODO bug potentially in rdflib
-            "Url": StringValue,
-
-            "property": WDProperty,
-            "WikibaseProperty": WDProperty,
-            "wikibase-property": WDProperty
-        }
+        self.error_action = kwargs.pop('error_action')
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
         self.set_properties(self.prop_file)
-        self.fp = dest_fp
+        if dest_fp.endswith('.gz'):
+            self.fp = gzip.open(dest_fp, 'wt')
+        self.fp = open(dest_fp, 'w')
         self.truthy = truthy
         self.reset_etk_doc()
         self.serialize_prefix()
         self.use_id = use_id
+        self.node1_idx = -1
+        self.node2_idx = -1
+        self.id_idx = -1
+        self.label_idx = -1
+        self.kr = None
+        self.initialize(kwargs.pop('input_file'))
+
+    def initialize(self, input_file):
+        self.input_file = input_file
+        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+        self.node1_idx = self.kr.get_node1_column_index()
+        self.node2_idx = self.kr.get_node2_column_index()
+        self.label_idx = self.kr.get_label_column_index()
+        self.id_idx = self.kr.get_id_column_index()
+        if self.node1_idx == -1:
+            raise KGTKException("'node1' column not found")
+
+        if self.node2_idx == -1:
+            raise KGTKException("'node2' column not found")
+
+        if self.label_idx == -1:
+            raise KGTKException("'label' column not found")
+
+        if self.id_idx == -1:
+            raise KGTKException("'id' column not found")
+
+    def process(self):
+        input_row_count: int = 2
+
+        if self.prop_declaration:
+            for row in self.kr:
+                self.read_prop_declaration(row)
+        self.kr.close()
+        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+        for row in self.kr:
+            self.entry_point(input_row_count, row)
+            input_row_count += 1
+
+        self.finalize()
 
     def set_prefix(self, prefix_path: str):
         self.prefix_dict = {}
@@ -218,11 +231,10 @@ class TripleGenerator(Generator):
                         prefix, expand = edge_list[node1_index], edge_list[node2_index]
                         self.prefix_dict[prefix] = expand
 
-    def read_prop_declaration(self, line_number: int, edge: str):
-        node1, node2, prop, e_id = self.parse_edges(edge)
-        if prop == "data_type":
+    def read_prop_declaration(self, row: List[str]):
+        node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
+        if prop == "data_type" or prop == "datatype":
             self.prop_types[node1] = self.datatype_mapping[node2.strip()]
-        return
 
     def set_properties(self, prop_file: str):
         self.prop_types = dict()
@@ -251,11 +263,13 @@ class TripleGenerator(Generator):
                     self.prop_types[node1] = self.datatype_mapping[node2.strip()]
                 except:
                     self.prop_types[node1] = StringValue
-                    self.warn_log.write(
-                        "DataType {} of node {} is not supported.\n".format(
-                            node2, node1
+                    if self.error_action == 'log':
+                        self.warn_log.write(
+                            "DataType {} of node {} is not supported. "
+                            "{}'s DataType has been defaulted to StringValue.\n".format(node2, node1, node1)
                         )
-                    )
+                    if self.error_action == 'raise':
+                        raise KGTKException("DataType {} of node {} is not supported.\n".format(node2, node1))
 
     def _node_2_entity(self, node: str):
         '''
@@ -338,7 +352,12 @@ class TripleGenerator(Generator):
         # update the known prop_types
         if node1 in self.prop_types:
             if not self.prop_declaration:
-                raise KGTKException("Duplicated property definition of {} found!".format(node1))
+                if self.error_action == 'log':
+                    self.warn_log.write("IMPORTANT: Duplicated property definition of {} found!."
+                                        "Using data type: {} for property {}".format(node1, self.prop_types[node1],
+                                                                                     node1))
+                if self.error_action == 'raise':
+                    raise KGTKException("Duplicated property definition of {} found!".format(node1))
         else:
             self.prop_types[node1] = node2
 
@@ -396,7 +415,8 @@ class TripleGenerator(Generator):
                         precision=precision,
                         time_zone=0,
                     )
-                except:
+                except Exception as e:
+                    print(e)
                     return False
 
         elif edge_type == GlobeCoordinate:
@@ -407,21 +427,25 @@ class TripleGenerator(Generator):
                 latitude, longitude, 0.0001, globe=Item("Q2"))  # earth
 
         elif edge_type == QuantityValue:
-            # +70[+60,+80]Q743895
             try:
                 res = self.quantity_pattern.match(node2)
-                if self.warning and res == None:
-                    warnings.warn("Node2 [{}] at line [{}] is not a legal quantity. Skipping it.\n".format(
+                if res == None:
+                    self.warn_log.write("Node2 [{}] at line [{}] is not a legal quantity. Skipping it.\n".format(
                         node2, line_number))
-
                     return False
                 res = res.groups()
 
             except:
-                raise KGTKException(
-                    "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
-                        node2, line_number)
-                )
+                if self.error_action == 'log':
+                    self.warn_log.write(
+                        "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
+                            node2, line_number)
+                    )
+                if self.error_action == 'raise':
+                    raise KGTKException(
+                        "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
+                            node2, line_number)
+                    )
 
             amount, lower_bound, upper_bound, unit = res
 
@@ -478,20 +502,15 @@ class TripleGenerator(Generator):
             self.doc.kg.add_subject(entity)
         return True
 
-    def entry_point(self, line_number: int, edge: str):
-        # print(line_number,edge)
+    def entry_point(self, line_number: int, row: List[str]):
         """
         generates a list of two, the first element is the determination of the edge type using corresponding edge type
         the second element is a bool indicating whether this is a valid property edge or qualifier edge.
         Call corresponding downstream functions
         """
-        if line_number == 1:
-            # initialize the order_map
-            self.initialize_order_map(edge)
-            return
 
-        # use the order_map to map the node
-        node1, node2, prop, e_id = self.parse_edges(edge)
+        success = True
+        node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
         if line_number == 2:
             # by default a statement edge
             is_qualifier_edge = False
@@ -519,18 +538,21 @@ class TripleGenerator(Generator):
             success = self.generate_alias_triple(node1, node2)
         elif prop == "data_type" or prop == 'datatype':
             # special edge of prop declaration
-            success = self.generate_prop_declaration_triple(
-                node1, node2)
+            success = self.generate_prop_declaration_triple(node1, node2)
         else:
             if prop in self.prop_types:
                 success = self.generate_normal_triple(
                     node1, prop, node2, is_qualifier_edge, e_id, line_number)
             else:
-                raise KGTKException(
-                    "property [{}]'s type is unknown at line [{}].\n".format(
-                        prop, line_number)
-                )
-        if (not success) and self.warning:
+                if self.error_action == 'log':
+                    self.warn_log.write("IMPORTANT: property [{}]'s type is unknown at line [{}].\n".format(
+                        prop, line_number))
+                if self.error_action == 'raise':
+                    raise KGTKException(
+                        "property [{}]'s type is unknown at line [{}].\n".format(
+                            prop, line_number)
+                    )
+        if (not success):
             if not is_qualifier_edge:
                 self.warn_log.write(
                     "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
@@ -559,6 +581,7 @@ class JsonGenerator(Generator):
         self.prop_declaration = kwargs.pop("prop_declaration")
         self.output_prefix = kwargs.pop("output_prefix")
         self.has_rank = kwargs.pop("has_rank")
+        self.error_action = kwargs.pop('error_action')
         self.file_num = 0
         # this data_type mapping is to comply with the SQID UI parsing requirements
         self.datatype_mapping = {
@@ -595,19 +618,47 @@ class JsonGenerator(Generator):
         self.set_properties(self.prop_file)
         self.set_json_dict()
         self.previous_qnode = None
+        self.node1_idx = -1
+        self.node2_idx = -1
+        self.id_idx = -1
+        self.label_idx = -1
+        self.kr = None
+        self.initialize(kwargs.pop('input_file'))
 
-    def entry_point(self, line_number, edge):
+    def initialize(self, input_file):
+        self.input_file = input_file
+        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+        self.node1_idx = self.kr.get_node1_column_index()
+        self.node2_idx = self.kr.get_node2_column_index()
+        self.label_idx = self.kr.get_label_column_index()
+        self.id_idx = self.kr.get_id_column_index()
+        if hasattr(self, 'has_rank') and self.has_rank == True:
+            rank_index = self.kr.get_node1_column_index('rank')
+            self.rank_idx = rank_index
+
+    def process(self):
+        input_row_count: int = 2
+
+        if self.prop_declaration:
+            for row in self.kr:
+                self.read_prop_declaration(row)
+        self.kr.close()
+        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+        for row in self.kr:
+            self.entry_point(input_row_count, row)
+            input_row_count += 1
+
+        self.finalize()
+
+    def entry_point(self, line_number, row):
         self.read_num_of_lines += 1
-        if line_number == 1:
-            self.initialize_order_map(edge)
-            return
-        edge_list = edge.strip("\r\n").split("\t")
-        node1 = edge_list[self.order_map["node1"]].strip()
-        node2 = edge_list[self.order_map["node2"]].strip()
-        prop = edge_list[self.order_map["label"]].strip()
-        e_id = edge_list[self.order_map["id"]].strip()
+
+        node1 = row[self.node1_idx]
+        node2 = row[self.node2_idx]
+        prop = row[self.label_idx]
+        e_id = row[self.id_idx]
         if self.has_rank:
-            rank = edge_list[self.order_map["rank"]].strip()
+            rank = row[self.rank_idx]
         else:
             rank = "normal"  # TODO default rank
 
@@ -617,10 +668,9 @@ class JsonGenerator(Generator):
                 self.prop_types[node1] = self.datatype_mapping[node2.strip()]
                 return
             else:
-                if self.warning:
-                    self.warn_log.write(
-                        "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
-                            line_number, e_id))
+                self.warn_log.write(
+                    "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
+                        line_number, e_id))
 
         # add qualifier logic
         if line_number == 2:
@@ -638,11 +688,10 @@ class JsonGenerator(Generator):
             else:
                 is_qualifier_edge = True
                 if node1 == self.corrupted_statement_id:
-                    if self.warning:
-                        self.warn_log.write(
-                            "QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n".format(
-                                line_number, self.corrupted_statement_id)
-                        )
+                    self.warn_log.write(
+                        "QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n".format(
+                            line_number, self.corrupted_statement_id)
+                    )
 
         # update info_json_dict
         if not is_qualifier_edge:
@@ -682,16 +731,26 @@ class JsonGenerator(Generator):
         else:
             success = self.update_misc_json_dict(node1, prop, node2, line_number, rank, "statement")
 
-        if (not success) and self.warning:
+        if (not success):
             if not is_qualifier_edge:
-                self.warn_log.write(
-                    "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
+                if self.error_action == 'log':
+                    self.warn_log.write(
+                        "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
+
+                    self.corrupted_statement_id = e_id
+                if self.error_action == 'raise':
+                    raise KGTKException("CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
                         line_number, e_id))
-                self.corrupted_statement_id = e_id
             else:
-                self.warn_log.write(
-                    "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
-                        line_number, e_id))
+                if self.error_action == 'log':
+                    self.warn_log.write(
+                        "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
+                if self.error_action == 'raise':
+                    raise KGTKException(
+                        "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
         else:
             # success
             if not is_qualifier_edge:
@@ -740,8 +799,11 @@ class JsonGenerator(Generator):
                     "id": node}
             )
         else:
-            if self.warning:
+            if self.error_action == 'log':
                 self.warn_log.write(
+                    "node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number))
+            if self.error_action == 'raise':
+                raise KGTKException(
                     "node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number))
         return True
 
@@ -777,9 +839,8 @@ class JsonGenerator(Generator):
 
         if prop not in self.prop_types:
             if prop in self.wiki_import_prop_types:
-                if self.warning:
-                    self.warn_log.write(
-                        "Property {} created by wikidata json dump at line {} is skipped.\n".format(prop, line_number))
+                self.warn_log.write(
+                    "Property {} created by wikidata json dump at line {} is skipped.\n".format(prop, line_number))
                 return True
             else:
                 raise KGTKException("property {} at line {} is not defined.".format(prop, line_number))
@@ -806,9 +867,12 @@ class JsonGenerator(Generator):
             elif self.prop_types[prop] == "url":
                 object = self.update_misc_json_dict_url(node1, prop, node2, rank, is_qualifier_edge)
             else:
-                raise KGTKException(
-                    "property tyepe {} of property {} at line {} is not defined.".format(self.prop_types[prop], prop,
-                                                                                         line_number))
+                if self.error_action == 'log':
+                    self.warn_log.write("property tyepe {} of property {} at line {} is not defined."
+                                        .format(self.prop_types[prop], prop, line_number))
+                if self.error_action == 'raise':
+                    raise KGTKException("property tyepe {} of property {} at line {} is not defined."
+                                        .format(self.prop_types[prop], prop, line_number))
 
             if not object:
                 if self.warning:
@@ -1173,11 +1237,10 @@ class JsonGenerator(Generator):
             }
         return temp_url_dict
 
-    def read_prop_declaration(self, line_number: int, edge: str):
-        node1, node2, prop, e_id = self.parse_edges(edge)
-        if prop == "data_type":
+    def read_prop_declaration(self, row: List[str]):
+        node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
+        if prop == "data_type" or prop == "datatype":
             self.prop_types[node1] = self.datatype_mapping[node2.strip()]
-        return
 
     def set_properties(self, prop_file: str):
         self.prop_types = {}
@@ -1203,7 +1266,7 @@ class JsonGenerator(Generator):
 
     def serialize(self):
         '''
-        serialize the dictionaries. 
+        serialize the dictionaries.
         '''
         with open("{}{}.jsonl".format(self.output_prefix, self.file_num), "w") as fp:
             for key, value in self.misc_json_dict.items():
