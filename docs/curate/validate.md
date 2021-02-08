@@ -1912,21 +1912,202 @@ Data lines read: 2
 Data lines passed: 2
 ~~~
 
-### Value Check: Location Coordinates: Match Failed
+### Value Check: Location Coordinates
 
-### Value Check: Location Coordinates: Lax Match Failed
+KGTk location coodinates values start with the at sign (`@`), followed
+by the latitude and longitude separated by a slash (`/`).
 
-### Value Check: Location Coordinates: Lat Is Not Float
+Latitude and longitude are indegrees.  They may be integers or
+floating point numbers.
 
-### Value Check: Location Coordinates: Lat Less than Minimum
+When `--allow-lax-coordinates=FALSE` (the dafault), latitude and
+longitude may not include exponents.  When `--allow-lax-coordinates=TRUE`,
+latitude and longitude may be floating point numbers with exponents.
 
-### Value Check: Location Coordinates: Lat Greater Than Maximum
+When `--allow-out-of-range-coordinates=FALSE` (the default),
+the latitude and longitude must fit within specified ranges.
+When `--allow-out-of-range-coordinates=TRUE), the following checks are not applied.
 
-### Value Check: Location Coordinates: Lon Is Not Float
+`--minimum-valid-lat` (default -90.00) is the minimum valid
+latitide.  When `--clamp-minimum-lat=FALSE` (the default), a latitude
+value less than the minimum value will result in an error.  When `--clamp-minimum-lat=TRUE`,
+a latitude value less than the minimum value will be set to the minimum value.
 
-### Value Check: Location Coordinates: Lon Less than Minimum
 
-### Value Check: Location Coordinates: Lon Greater Than Maximum
+`--maximum-valid-lat` (default 90.00) is the maximum valid
+latitide.  When `--clamp-maximum-lat=FALSE` (the default), a latitude
+value less than the maximum value will result in an error.  When `--clamp-maximum-lat=TRUE`,
+a latitude value greater than the maximum value will be set to the maximum value.
+
+
+`--minimum-valid-lon` (default -180.00) is the minimum valid
+latitide.  When `--clamp-minimum-lon=FALSE` (the default), a longitude
+value less than the minimum value will result in an error.  When `--clamp-minimum-lon=TRUE`,
+a longitude value less than the minimum value will be set to the minimum value.
+
+
+`--maximum-valid-lon` (default 180.00) is the maximum valid
+latitide.  When `--clamp-maximum-lon=FALSE` (the default), a longitude
+value less than the maximum value will result in an error.  When `--clamp-maximum-lon=TRUE`,
+a longitude value greater than the maximum value will be set to the maximum value.
+
+[`kgtk clean`](../clean) can update KGTK latitudes or longitudes with clamped
+values.
+
+
+```bash
+kgtk cat -i examples/docs/validate-location-coordinates.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | @34/118 |
+| line2 | valid | @33.9803/118.4517 |
+| line3 | invalid | @33.9803/118.4517e1 |
+| line4 | invalid | @100/118 |
+| line5 | invalid | @-100/118 |
+| line6 | invalid | @34/200 |
+| line7 | invalid | @34/-200 |
+
+```bash
+kgtk validate -i examples/docs/validate-location-coordinates.tsv
+```
+
+~~~
+Data line 3:
+line3	invalid	@33.9803/118.4517e1
+col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
+Data line 4:
+line4	invalid	@100/118
+col 2 (node2) value '@100/118' is an Invalid Location Coordinates
+Data line 5:
+line5	invalid	@-100/118
+col 2 (node2) value '@-100/118' is an Invalid Location Coordinates
+Data line 6:
+line6	invalid	@34/200
+col 2 (node2) value '@34/200' is an Invalid Location Coordinates
+Data line 7:
+line7	invalid	@34/-200
+col 2 (node2) value '@34/-200' is an Invalid Location Coordinates
+
+====================================================
+Data lines read: 7
+Data lines passed: 2
+Data lines excluded due to invalid values: 5
+Data errors reported: 5
+~~~
+
+### Value Check: Allow Lax Location Coordinates
+
+```bash
+kgtk cat -i examples/docs/validate-location-coordinates.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | @34/118 |
+| line2 | valid | @33.9803/118.4517 |
+| line3 | invalid | @33.9803/118.4517e1 |
+| line4 | invalid | @100/118 |
+| line5 | invalid | @-100/118 |
+| line6 | invalid | @34/200 |
+| line7 | invalid | @34/-200 |
+
+```bash
+kgtk validate -i examples/docs/validate-location-coordinates.tsv \
+              --allow-lax-coordinates
+```
+
+~~~
+Data line 3:
+line3	invalid	@33.9803/118.4517e1
+col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
+Data line 4:
+line4	invalid	@100/118
+col 2 (node2) value '@100/118' is an Invalid Location Coordinates
+Data line 5:
+line5	invalid	@-100/118
+col 2 (node2) value '@-100/118' is an Invalid Location Coordinates
+Data line 6:
+line6	invalid	@34/200
+col 2 (node2) value '@34/200' is an Invalid Location Coordinates
+Data line 7:
+line7	invalid	@34/-200
+col 2 (node2) value '@34/-200' is an Invalid Location Coordinates
+
+====================================================
+Data lines read: 7
+Data lines passed: 2
+Data lines excluded due to invalid values: 5
+Data errors reported: 5
+~~~
+
+### Value Check: Allow Out of Range Location Coordinates
+
+```bash
+kgtk cat -i examples/docs/validate-location-coordinates.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | @34/118 |
+| line2 | valid | @33.9803/118.4517 |
+| line3 | invalid | @33.9803/118.4517e1 |
+| line4 | invalid | @100/118 |
+| line5 | invalid | @-100/118 |
+| line6 | invalid | @34/200 |
+| line7 | invalid | @34/-200 |
+
+```bash
+kgtk validate -i examples/docs/validate-location-coordinates.tsv \
+              --allow-out-of-range-coordinates
+```
+
+~~~
+Data line 3:
+line3	invalid	@33.9803/118.4517e1
+col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
+
+====================================================
+Data lines read: 7
+Data lines passed: 6
+Data lines excluded due to invalid values: 1
+Data errors reported: 1
+~~~
+
+### Value Check: Clamp Out of Range Location Coordinates
+
+```bash
+kgtk cat -i examples/docs/validate-location-coordinates.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | @34/118 |
+| line2 | valid | @33.9803/118.4517 |
+| line3 | invalid | @33.9803/118.4517e1 |
+| line4 | invalid | @100/118 |
+| line5 | invalid | @-100/118 |
+| line6 | invalid | @34/200 |
+| line7 | invalid | @34/-200 |
+
+```bash
+kgtk validate -i examples/docs/validate-location-coordinates.tsv \
+              --clamp-minimum-lat --clamp-maximum-lat \
+              --clamp-minimum-lon --clamp-maximum-lon
+```
+
+~~~
+Data line 3:
+line3	invalid	@33.9803/118.4517e1
+col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
+
+====================================================
+Data lines read: 7
+Data lines passed: 6
+Data lines excluded due to invalid values: 1
+Data errors reported: 1
+~~~
 
 ### Values Check: Date and Times: Lax Match Failed
 
