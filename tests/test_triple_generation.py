@@ -6,29 +6,18 @@ from pathlib import Path
 
 class TestTripleGeneration(unittest.TestCase):
     def test_truthy_dates_generation(self):
-        # to reproduce standard file
-        # kgtk generate_wikidata_triples -pf wikidata_properties.tsv -w yes --log-path date_warning.log -n 100 --use-id yes -gt yes < dates.tsv > dates_truthy.ttl
-        dates_tsv_file = 'data/dates.tsv'
+        dates_tsv_file = Path('data/dates.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        o = open('data/dates_truthy_tmp.ttl', 'w')
+        o = 'data/dates_truthy_tmp.ttl'
         generator = TripleGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
                                     dest_fp=o, log_path="data/date_warning.log", prop_declaration=False,
-                                    prefix_path="NONE")
-        fp = open(dates_tsv_file)
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#"):
-                continue
-            else:
-                generator.entry_point(line_num + 1, edge)
-        generator.finalize()
-        o.close()
-        fp.close()
+                                    prefix_path="NONE", input_file=dates_tsv_file, error_action='log')
+        generator.process()
 
         f1 = open('data/dates_truthy.ttl')
         f2 = open('data/dates_truthy_tmp.ttl')
-        # self.assertNotEqual(f1.readlines(), f2.readlines())
-        # TODO until date validation published
+
         self.assertEqual(f1.readlines(), f2.readlines())
         f1.close()
         f2.close()
@@ -40,26 +29,21 @@ class TestTripleGeneration(unittest.TestCase):
         p.unlink()
 
     def test_truthy_property_triple_generation(self):
-        property_tsv_file = 'data/P10.tsv'
+        property_tsv_file = Path('data/P10.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        o = open('data/P10_truthy_tmp.ttl', 'w')
+        o = 'data/P10_truthy_tmp.ttl'
         generator = TripleGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
-                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE")
-        fp = open(property_tsv_file)
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#"):
-                continue
-            else:
-                generator.entry_point(line_num + 1, edge)
-        generator.finalize()
-        o.close()
-        fp.close()
+                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
+                                    input_file=property_tsv_file, error_action='log')
+        generator.process()
+
         f1 = open('data/P10_truthy.ttl')
         f2 = open('data/P10_truthy_tmp.ttl')
         self.assertEqual(f1.readlines(), f2.readlines())
         f1.close()
         f2.close()
+
         self.assertEqual(os.stat("data/warning.log").st_size, 0)
         p = Path("data/warning.log")
         p.unlink()
@@ -67,21 +51,15 @@ class TestTripleGeneration(unittest.TestCase):
         p.unlink()
 
     def test_property_triple_generation(self):
-        property_tsv_file = 'data/P10.tsv'
+        property_tsv_file = Path('data/P10.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        o = open('data/P10_not_truthy_tmp.ttl', 'w')
+        o = 'data/P10_not_truthy_tmp.ttl'
         generator = TripleGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=False, use_id=True,
-                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE")
-        fp = open(property_tsv_file)
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#"):
-                continue
-            else:
-                generator.entry_point(line_num + 1, edge)
-        generator.finalize()
-        fp.close()
-        o.close()
+                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
+                                    input_file=property_tsv_file, error_action='log')
+        generator.process()
+
         f1 = open('data/P10_not_truthy.ttl')
         f2 = open('data/P10_not_truthy_tmp.ttl')
         self.assertEqual(f1.readlines(), f2.readlines())
@@ -94,21 +72,15 @@ class TestTripleGeneration(unittest.TestCase):
         p.unlink()
 
     def test_truthy_qnode_triple_generation(self):
-        qnode_tsv_file = 'data/Q57160439.tsv'
+        qnode_tsv_file = Path('data/Q57160439.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        o = open('data/Q57160439_truthy_tmp.ttl', 'w')
+        o = 'data/Q57160439_truthy_tmp.ttl'
         generator = TripleGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
-                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE")
-        fp = open(qnode_tsv_file)
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#"):
-                continue
-            else:
-                generator.entry_point(line_num + 1, edge)
-        generator.finalize()
-        o.close()
-        fp.close()
+                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
+                                    input_file=qnode_tsv_file, error_action='log')
+        generator.process()
+
         f1 = open('data/Q57160439_truthy.ttl')
         f2 = open('data/Q57160439_truthy_tmp.ttl')
         self.assertEqual(f1.readlines(), f2.readlines())
@@ -121,49 +93,39 @@ class TestTripleGeneration(unittest.TestCase):
         p.unlink()
 
     def test_not_truthy_qnode_triple_generation(self):
-        qnode_tsv_file = 'data/Q57160439.tsv'
+        qnode_tsv_file = Path('data/Q57160439.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        o = open('data/Q57160439_not_truthy_tmp.ttl', 'w')
+        o = 'data/Q57160439_not_truthy_tmp.ttl'
         generator = TripleGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=False, use_id=True,
-                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE")
-        fp = open(qnode_tsv_file)
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#"):
-                continue
-            else:
-                generator.entry_point(line_num + 1, edge)
-        generator.finalize()
-        fp.close()
-        o.close()
+                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
+                                    input_file=qnode_tsv_file, error_action='log')
+        generator.process()
+
         f1 = open('data/Q57160439_not_truthy.ttl')
         f2 = open('data/Q57160439_not_truthy_tmp.ttl')
+
         self.assertEqual(f1.readlines(), f2.readlines())
         f1.close()
         f2.close()
+
         self.assertEqual(os.stat("data/warning.log").st_size, 0)
+
         p = Path("data/warning.log")
         p.unlink()
         p = Path('data/Q57160439_not_truthy_tmp.ttl')
         p.unlink()
 
     def test_triple_small_values(self):
-        small_values_file = 'data/small_values.tsv'
+        small_values_file = Path('data/small_values.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        o = open('data/small_values_tmp.ttl', 'w')
+        o = 'data/small_values_tmp.ttl'
         generator = TripleGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
-                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE")
-        fp = open(small_values_file)
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#"):
-                continue
-            else:
-                generator.entry_point(line_num + 1, edge)
-        generator.finalize()
+                                    dest_fp=o, log_path="data/warning.log", prop_declaration=False, prefix_path="NONE",
+                                    input_file=small_values_file, error_action='log')
+        generator.process()
 
-        o.close()
-        fp.close()
         f1 = open('data/small_values.ttl')
         f2 = open('data/small_values_tmp.ttl')
         self.assertEqual(f1.readlines(), f2.readlines())
@@ -176,23 +138,15 @@ class TestTripleGeneration(unittest.TestCase):
         p.unlink()
 
     def test_triple_corrupted_edges(self):
-        corrupted_kgtk_file = 'data/corrupted_kgtk.tsv'
+        corrupted_kgtk_file = Path('data/corrupted_kgtk.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        o = open('data/corrupted_tmp.ttl', 'w')
+        o = 'data/corrupted_tmp.ttl'
         generator = TripleGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
                                     description_set='descriptions', warning=True, n=100, truthy=True, use_id=True,
                                     dest_fp=o, log_path="data/corrupted_warning_tmp.log", prop_declaration=False,
-                                    prefix_path="NONE")
-        fp = open(corrupted_kgtk_file)
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#") or len(edge.strip("\n")) == 0:
-                continue
-            else:
-                generator.entry_point(line_num + 1, edge)
-        generator.finalize()
+                                    prefix_path="NONE", input_file=corrupted_kgtk_file, error_action='log')
+        generator.process()
 
-        o.close()
-        fp.close()
         f1 = open('data/corrupted.ttl')
         f2 = open('data/corrupted_tmp.ttl')
         self.assertEqual(f1.readlines(), f2.readlines())
