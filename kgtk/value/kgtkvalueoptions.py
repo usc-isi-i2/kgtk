@@ -156,7 +156,7 @@ class KgtkValueOptions:
         vgroup = parser.add_argument_group(h(prefix3 + "Data value parsing"),
                                            h("Options controlling the parsing and processing of KGTK data values" + desc))
         vgroup.add_argument(      prefix1 + "additional-language-codes", dest=prefix2 + "additional_language_codes",
-                                  help=h(prefix3 + "Additional language codes. (default=None)."),
+                                  help=h(prefix3 + "Additional language codes. (default=use internal list)."),
                                   nargs="*", default=None)
 
         vgroup.add_argument(      prefix1 + "allow-lax-qnodes", dest=prefix2 + "allow_lax_qnodes",

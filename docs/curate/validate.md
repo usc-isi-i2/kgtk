@@ -366,7 +366,8 @@ Data value parsing:
   Options controlling the parsing and processing of KGTK data values.
 
   --additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]
-                        Additional language codes. (default=None).
+                        Additional language codes. (default=use internal
+                        list).
   --allow-lax-qnodes [ALLOW_LAX_QNODES]
                         Allow qnode suffixes in quantities to include alphas
                         and dash as well as digits. (default=False).
@@ -1758,6 +1759,18 @@ Tab characters inside a language-qualified string must be represented by `\t` wh
 
 List separators (`|`) must be escaped (`\|`) inside a language-qualified string when `--escape-list-separators=True` (the default).
 
+The language qualifier is an ISO 639-3 (or ISO 639-5) two- or three-character language code
+when `--allow-wikidata-lq-strings=FALSE` (the default).  The language
+qualifiers are validated against internal tables of ISO 639-3 (or ISO 639-5) codes and additional
+language codes.
+
+When `--additional-language-codes` is specified it overrides the internal table
+of additional language codes.
+
+By default, `--allow-language-suffixes=FALSE`.  When `--allow-language-suffixes=TRUE`, the
+language qualifier may be followed by a language suffix, which is a dash (`-`) followed by
+ a string matching the pattern `[-a-zA-Z0-9]+`.
+
 Invalid language-qualified strings are excluded by default.
 
 ```bash
@@ -1767,8 +1780,10 @@ kgtk cat -i examples/docs/validate-language-qualified-strings.tsv
 | node1 | label | node2 |
 | -- | -- | -- |
 | line1 | valid | 'abc'@en |
-| line1 | valid | 'a\'bc'@en |
-| line1 | invalid | 'a'bc'@en |
+| line2 | valid | 'a\'bc'@en |
+| line3 | invalid | 'a'bc'@en |
+| line4 | invalid | 'abc'@en-gb |
+| line5 | invalid | 'abc'@xxx |
 
 ```bash
 kgtk validate -i examples/docs/validate-language-qualified-strings.tsv
@@ -1776,14 +1791,46 @@ kgtk validate -i examples/docs/validate-language-qualified-strings.tsv
 
 ~~~
 Data line 3:
-line1	invalid	'a'bc'@en
+line3	invalid	'a'bc'@en
 col 2 (node2) value "'a'bc'@en" is an Invalid Language Qualified String
+Data line 4:
+line4	invalid	'abc'@en-gb
+col 2 (node2) value "'abc'@en-gb" is an Invalid Language Qualified String
+Data line 5:
+line5	invalid	'abc'@xxx
+col 2 (node2) value "'abc'@xxx" is an Invalid Language Qualified String
 
 ====================================================
-Data lines read: 3
+Data lines read: 5
 Data lines passed: 2
-Data lines excluded due to invalid values: 1
-Data errors reported: 1
+Data lines excluded due to invalid values: 3
+Data errors reported: 3
+~~~
+
+### Value Check: Language-Qualified Strings with Suffixes
+
+When `--allow-language-suffixes=TRUE`, the
+language qualifier may be followed by a language suffix, which is a dash (`-`) followed by
+ a string matching the pattern `[-a-zA-Z0-9]+`.
+
+```bash
+kgtk cat -i examples/docs/validate-language-qualified-strings-with-suffixes.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | 'abc'@en-gb |
+
+```bash
+kgtk validate -i examples/docs/validate-language-qualified-strings-with-suffixes.tsv \
+              --allow-language-suffixes
+```
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
 ~~~
 
 ### Value Check: Lax Language-Qualified Strings
@@ -1814,17 +1861,56 @@ Data lines read: 2
 Data lines passed: 2
 ~~~
 
-### Value Check: Language Qualified String: Lax Match Failed
+### Value Check: Wikidata Language-Qualified Strings
 
-### Value Check: Language Qualified String: Strict Match Failed
+When `--allow-wikidata-lq-strings=TRUE`, the language qualifier
+may be two or more alpha characters, optionally followed by a
+language suffix (a dash (`-`) followed by a string matching the pattern `[-a-zA-Z0-9]+`).
+The language qualifier is not validated against known values.
 
-### Value Check: Language Qualified String: Wikidata Match Failed
+```bash
+kgtk cat -i examples/docs/validate-wikidata-language-qualified-strings.tsv
+```
 
-### Value Check: Language Qualified String: Language Validation Failed
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | 'abc'@english |
+| line2 | valid | 'abc'@english-gb |
 
-### Value Check: Language Qualified String: Allow Language Suffixes
+```bash
+kgtk validate -i examples/docs/validate-wikidata-language-qualified-strings.tsv \
+              --allow-wikidata-lq-strings
+```
 
-### Value Check: Language Qualified String: Additional Language Codes
+~~~
+
+====================================================
+Data lines read: 2
+Data lines passed: 2
+~~~
+
+### Value Check: Language Qualified Strings with Additional Language Codes
+
+```bash
+kgtk cat -i examples/docs/validate-language-qualified-strings-with-addl-codes.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | 'abc'@xxx |
+| line2 | valid | 'abc'@yyy |
+
+```bash
+kgtk validate -i examples/docs/validate-language-qualified-strings-with-addl-codes.tsv \
+              --additional-language-codes xxx yyy
+```
+
+~~~
+
+====================================================
+Data lines read: 2
+Data lines passed: 2
+~~~
 
 ### Value Check: Location Coordinates: Match Failed
 
