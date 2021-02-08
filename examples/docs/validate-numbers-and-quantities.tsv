@@ -1,0 +1,12 @@
+node1	label	node2
+line1	invalid	9x
+line2	invalid	9[8,10j]
+line3	invalid	--9
+line4	valid	9
+line5	valid	9m
+line6	valid	9Q12345
+line7	invalid	9Q012345
+line8	invalid	9Q123_45
+line9	invalid	9Q123-45
+line10	invalid	9Q123az
+line11	invalid	9Q123AZ
