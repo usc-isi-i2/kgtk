@@ -110,6 +110,28 @@ raise the error limit or set it to zero:
 | `label`        | `predicate`, `relation`, `relationship` | This is a required columns in Edge files. It may contain empty values. |
 | `node2`        | `to`, `object` | This is a required column in Edge files. It may not contain empty values. |
 
+### Escapes in Strings and Language Qualified Strings
+
+| Sequence | Description | Comments |
+| -------- | ----------- |  ------- |
+| \a       | alarm (bell) - ASCII &lt;BEL&gt; | |
+| \b       | backspace - ASCII &lt;BS&gt; | |
+| \f       | formfeed - ASCII &lt;FF&gt; | |
+| \n       | newline (linefeed) - ASCII &lt;LF&gt; | |
+| \r       | carriage return - ASCII &lt;CR&gt; | |
+| \t       | horizontal tab - ASCII &lt;TAB&gt; | |
+| \v       | vertical tab - ASCII &lt;VT&gt; | |
+| \\\\       | backslash - (\\) | |
+| \'       | single quote - (') | The KGTK sigil for language qualified strings. |
+| \"       | double quote - (") | The KGTK sigil for strings. |
+| \\\|       | vertical bar - (\|) | The KGTK multi-valued list separator. |
+
+!!! info
+    A `sigil` is a symbol attached to (usually prefixing) a variable
+    name, usually expressing the variable's datatype or scope (see [Wikipedia](https://en.wikipedia.org/wiki/Sigil_(computer_programming))). Here,
+    it means the introductory character that determines the datatype
+    of a KGTK value.
+
 ## Usage
 ```
 usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]]
@@ -1525,27 +1547,44 @@ Data lines passed: 0
 Data lines excluded due to blank fields: 1
 ~~~
 
-### Value Check: Invalid Quantity
+### Value Check: Numbers and Quantities
 
-Invalid numbers (dimensionless) or quantities (numbers with SI
-dimension suffixes or Wikidata Qnode suffixes) are excluded
+Numbers are dimensionless.  They may be integers (decimal, binary,
+octal, or hexadecimal), 
+floating point (with or without exponential), or imaginary.
+
+Quanties are numbers with an attached tolerance and/or dimension.  The dimemsion
+may be indicated by SI units or by a QNode (a Wikidata QID or Q identifier).
+
+By default, standard Wikidata QNodes are allowed as dimension
+qualifiers in quantities.  When `--allow-lax-qnodes=FALSE` (the
+default), a QNode is an initial `Q` followed by an initial digit
+other than `0`, followed by zero or more digits `0-9`.
+
+Lines with invalid numbers quantities are excluded
 by default.
 
+
 ```bash
-cat examples/docs/validate-invalid-quantity.tsv
+kgtk cat -i examples/docs/validate-numbers-and-quantities.tsv
 ```
-~~~
-node1	label	node2
-line1	invalid	9x
-line2	invalid	9[8,10j]
-line3	invalid	--9
-line4	valid	9
-line5	valid	9m
 
-~~~
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | invalid | 9x |
+| line2 | invalid | 9[8,10j] |
+| line3 | invalid | --9 |
+| line4 | valid | 9 |
+| line5 | valid | 9m |
+| line6 | valid | 9Q12345 |
+| line7 | invalid | 9Q012345 |
+| line8 | invalid | 9Q123_45 |
+| line9 | invalid | 9Q123-45 |
+| line10 | invalid | 9Q123az |
+| line11 | invalid | 9Q123AZ |
 
 ```bash
-kgtk validate -i examples/docs/validate-invalid-quantity.tsv
+kgtk validate -i examples/docs/validate-numbers-and-quantities.tsv
 ```
 
 ~~~
@@ -1558,35 +1597,96 @@ col 2 (node2) value '9[8,10j]' is an Invalid Quantity
 Data line 3:
 line3	invalid	--9
 col 2 (node2) value '--9' is an Invalid Quantity
+Data line 7:
+line7	invalid	9Q012345
+col 2 (node2) value '9Q012345' is an Invalid Quantity
+Data line 8:
+line8	invalid	9Q123_45
+col 2 (node2) value '9Q123_45' is an Invalid Quantity
+Data line 9:
+line9	invalid	9Q123-45
+col 2 (node2) value '9Q123-45' is an Invalid Quantity
+Data line 10:
+line10	invalid	9Q123az
+col 2 (node2) value '9Q123az' is an Invalid Quantity
+Data line 11:
+line11	invalid	9Q123AZ
+col 2 (node2) value '9Q123AZ' is an Invalid Quantity
+
+====================================================
+Data lines read: 11
+Data lines passed: 3
+Data lines excluded due to invalid values: 8
+Data errors reported: 8
+~~~
+
+### Value Check: Lax QNodes in Quantities
+
+By default, standard QNodes (Wikidata QIDs or Q identifiers) are allowed as dimension
+qualifiers in quantities.  When `--allow-lax-qnodes=FALSE` (the
+default), a QNode is an initial `Q` followed by an initial digit
+other than `0`, followed by zero or more digits `0-9`.
+
+When `--allow-lax-qnodes=TRUE`, 
+the QNode pattern is generalized with the addition of `-`,
+`_`, and upper- and lower-case alphas (`a-zA-Z`) after the initial `Q`.
+
+```bash
+kgtk cat -i examples/docs/validate-lax-qnodes-in-quantities.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line6 | valid | 9Q12345 |
+| line7 | valid | 9Q012345 |
+| line8 | valid | 9Q123_45 |
+| line9 | valid | 9Q123-45 |
+| line10 | valid | 9Q123az |
+| line11 | valid | 9Q123AZ |
+
+```bash
+kgtk validate -i examples/docs/validate-lax-qnodes-in-quantities.tsv \
+         --allow-lax-qnodes
+```
+
+~~~
 
 ====================================================
 Data lines read: 6
-Data lines passed: 2
-Data lines ignored: 1
-Data lines excluded due to invalid values: 3
-Data errors reported: 3
+Data lines passed: 6
 ~~~
 
-### Value Check: Invalid String
+### Value Check: Strings
 
-Invalid strings are excluded by default. Strings
-with internal double quote characters(`"`) that are not escaped
-(`\"`) are considered invalid when `--allow-lax-strings=FALSE` (the default).
+Strings begin and end with double quotes (`"`).
+
+Strings that start with a double quote but do not end with one are
+invalid.
+
+Internal double quotes in a string must be escaped with backslash (`\"`) when `--allow-lax-strings=FALSE` (the default),
+otherwise the string is invalid.
+
+Tab characters inside a string must be represented by `\t` whens the tab character is the column separator
+(controlled by `--column-separator`).
+
+List separators (`|`) must be escaped (`\|`) inside a string when `--escape-list-separators=True` (the default).
+
+Invalid strings are excluded by default.
 
 ```bash
-cat examples/docs/validate-invalid-string.tsv
+kgtk cat -i examples/docs/validate-strings.tsv
 ```
-~~~
-node1	label	node2
-line1	invalid	"xxx
-line2	valid	"xxx\"yyy"
-line3	invalid	"xxx"yyy"
-line4	valid	"xxx\\yyy"
-line5	valid	"xxx\tyyy"
-~~~
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | invalid | "xxx |
+| line2 | valid | "xxx\"yyy" |
+| line3 | invalid | "xxx"yyy" |
+| line4 | valid | "xxx\\yyy" |
+| line5 | valid | "xxx\tyyy" |
 
 ```bash
-kgtk validate -i examples/docs/validate-invalid-string.tsv
+kgtk validate -i examples/docs/validate-strings.tsv
 ```
 
 ~~~
@@ -1604,26 +1704,28 @@ Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
 
-### Value Check: Invalid String with Lax Strings
+### Value Check: Lax Strings
 
-Invalid strings are excluded by default. Strings
-with internal double quote characters(`"`) that are not escaped
+Strings with internal double quote characters(`"`) that are not escaped
 (`\"`) are considered valid when `--allow-lax-strings=TRUE`.
 
-```bash
-cat examples/docs/validate-invalid-lax-string.tsv
-```
-~~~
-node1	label	node2
-line1	invalid	"xxx
-line2	valid	"xxx\"yyy"
-line3	valid	"xxx"yyy"
-line4	valid	"xxx\\yyy"
-line5	valid	"xxx\tyyy"
-~~~
+[`kgtk clean`](../clean) can convert lax strings into strict KGTK strings.
 
 ```bash
-kgtk validate -i examples/docs/validate-invalid-lax-string.tsv \
+kgtk cat -i examples/docs/validate-lax-strings.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | invalid | "xxx |
+| line2 | valid | "xxx\"yyy" |
+| line3 | valid | "xxx"yyy" |
+| line4 | valid | "xxx\\yyy" |
+| line5 | valid | "xxx\tyyy" |
+
+
+```bash
+kgtk validate -i examples/docs/validate-lax-strings.tsv \
               --allow-lax-strings
 ```
 
@@ -1637,6 +1739,79 @@ Data lines read: 5
 Data lines passed: 4
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
+~~~
+
+### Value Check: Language-Qualified Strings
+
+KGTK language-qualified strings begin with single quotes (`'`).
+They end with single quotes (`'`) followed by an at sign (`@`) and
+a language qualifier (e.g., `en`).  Example: `'abc'@en`.
+
+Language-qualified strings that start with a single quote but do not end with one, followed by
+at sign and the language qualifier, are invalid.
+
+Internal single quotes in a language-qualified string must be escaped with backslash (`\'`) when `--allow-lax-lq-strings=FALSE` (the default),
+otherwise the language-qualified string is invalid.
+
+Tab characters inside a language-qualified string must be represented by `\t` whens the tab character is the column separator
+(controlled by `--column-separator`).
+
+List separators (`|`) must be escaped (`\|`) inside a language-qualified string when `--escape-list-separators=True` (the default).
+
+Invalid language-qualified strings are excluded by default.
+
+```bash
+kgtk cat -i examples/docs/validate-language-qualified-strings.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | 'abc'@en |
+| line1 | valid | 'a\'bc'@en |
+| line1 | invalid | 'a'bc'@en |
+
+```bash
+kgtk validate -i examples/docs/validate-language-qualified-strings.tsv
+```
+
+~~~
+Data line 3:
+line1	invalid	'a'bc'@en
+col 2 (node2) value "'a'bc'@en" is an Invalid Language Qualified String
+
+====================================================
+Data lines read: 3
+Data lines passed: 2
+Data lines excluded due to invalid values: 1
+Data errors reported: 1
+~~~
+
+### Value Check: Lax Language-Qualified Strings
+
+KGTK language-qualified strings with internal double quote characters(`"`) that are not escaped
+(`\"`) are considered valid when `--allow-lax-lq-strings=TRUE`.
+
+[`kgtk clean`](../clean) can convert lax language-qualified strings into strict KGTK strings.
+
+```bash
+kgtk cat -i examples/docs/validate-lax-language-qualified-strings.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | valid | 'abc'@en |
+| line1 | valid | 'a'bc'@en |
+
+```bash
+kgtk validate -i examples/docs/validate-lax-language-qualified-strings.tsv \
+              --allow-lax-lq-strings TRUE
+```
+
+~~~
+
+====================================================
+Data lines read: 2
+Data lines passed: 2
 ~~~
 
 ### Value Check: Language Qualified String: Lax Match Failed
