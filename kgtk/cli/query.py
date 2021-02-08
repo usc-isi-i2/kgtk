@@ -181,11 +181,13 @@ def run(input_files: KGTKFiles,
                 result = query.execute()
                 # we are forcing \n line endings here instead of \r\n, since those
                 # can be re/imported efficiently with the new SQLite import command;
-                # we also specify `escapechar' now so any unexpected column or line
-                # separators in fields will be quoted and visible:
+                # we force `escapechar' back to None to avoid generation of double
+                # backslashes as in 'Buffalo \'66', which in turn will now raise errors
+                # if separators in fields are encountered (which seems what we want):
                 csvwriter = csv.writer(output, dialect=None, delimiter='\t',
                                        quoting=csv.QUOTE_NONE, quotechar=None,
-                                       lineterminator='\n', escapechar='\\')
+                                       lineterminator='\n',
+                                       escapechar=None)
                 if not options.get('no_header'):
                     csvwriter.writerow(query.result_header)
                 csvwriter.writerows(result)
