@@ -9,7 +9,7 @@ One or more KGTK files may be processed at a time.  Input files will be decompre
 automatically in certain conditions.
 
 !!! note
-    All of the validations shown here are done by KgtkReader and mey be
+    All of the validations shown here are done by KgtkReader.  They may be
     enabled in any KGTK tool that uses KgtkReader to read its input files.
     `kgtk validate` enables line and data value validation by default, while
     other KGTK tools disable these processing steps by default.
