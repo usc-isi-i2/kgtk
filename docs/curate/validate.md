@@ -448,21 +448,21 @@ Data value parsing:
 
 ### Sample Data: a Date Containing Day `00`
 
-Suppose that `examples/docs/validate-bad-date.tsv` contains the following table in KGTK format:
+Suppose that `examples/docs/validate-date-with-day-zero.tsv` contains the following table in KGTK format:
 
 ```bash
-kgtk cat -i examples/docs/validate-bad-date.tsv
+kgtk cat -i examples/docs/validate-date-with-day-zero.tsv
 ```
 
 | node1 | label | node2 |
 | -- | -- | -- |
 | john | woke | ^2020-05-00T00:00 |
-| john | woke | ^2020-05-02T00:00 |
+| john | woke | ^2020-00-00T00:00 |
 
 ### Validate using Default Options
 
 ```bash
-kgtk validate -i examples/docs/validate-bad-date.tsv
+kgtk validate -i examples/docs/validate-date-with-day-zero.tsv
 ```
 
 The following complaint and summary will be issued:
@@ -471,35 +471,19 @@ The following complaint and summary will be issued:
 Data line 1:
 john	woke	^2020-05-00T00:00
 col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
+Data line 2:
+john	woke	^2020-00-00T00:00
+col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 2
-Data lines passed: 1
-Data lines excluded due to invalid values: 1
-Data errors reported: 1
+Data lines passed: 0
+Data lines excluded due to invalid values: 2
+Data errors reported: 2
 ~~~
 
 The first data line was flagged because it contained "00" in the day
 field, which violates the ISO 8601 specification.
-
-### Validate Allowing Month or Day Zero
-
-Instruct the validator to accept month or day 00, even though
-this is not allowed in ISO 6801.
-
-```bash
-kgtk validate -i examples/docs/validate-bad-date.tsv \
-              --allow-month-or-day-zero
-```
-
-This results in no error messages, and the following summary:
-
-~~~
-
-====================================================
-Data lines read: 2
-Data lines passed: 2
-~~~
 
 ### Validate with Verbose Feedback
 
@@ -507,8 +491,7 @@ Sometimes you may wish to get more feedback about what `kgtk validate` is
 doing.
 
 ```bash
-kgtk validate -i examples/docs/validate-bad-date.tsv \
-              --allow-month-or-day-zero \
+kgtk validate -i examples/docs/validate-date-with-day-zero.tsv \
               --verbose
 ```
 
@@ -517,19 +500,31 @@ This results in the following output:
 ~~~
 
 ====================================================
-Validating 'examples/docs/validate-bad-date.tsv'
+Validating 'examples/docs/validate-date-with-day-zero.tsv'
 KgtkReader: File_path.suffix: .tsv
-KgtkReader: reading file examples/docs/validate-bad-date.tsv
+KgtkReader: reading file examples/docs/validate-date-with-day-zero.tsv
 header: node1	label	node2
 input format: kgtk
 node1 column found, this is a KGTK edge file
 KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
 KgtkReader: Reading an edge file.
-Validated 2 data lines
+KgtkValue.is_date_and_times: day 0 disallowed in '^2020-05-00T00:00'.
+Data line 1:
+john	woke	^2020-05-00T00:00
+col 2 (node2) value '^2020-05-00T00:00': 
+col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
+KgtkValue.is_date_and_times: month 0 disallowed in '^2020-00-00T00:00'.
+Data line 2:
+john	woke	^2020-00-00T00:00
+col 2 (node2) value '^2020-00-00T00:00': 
+col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
+Validated 0 data lines
 
 ====================================================
 Data lines read: 2
-Data lines passed: 2
+Data lines passed: 0
+Data lines excluded due to invalid values: 2
+Data errors reported: 2
 ~~~
 
 ### Validate Only the Header
@@ -537,7 +532,7 @@ Data lines passed: 2
 Validate only the header record, ignoring data records:
 
 ```bash
-kgtk validate -i examples/docs/validate-bad-date.tsv \
+kgtk validate -i examples/docs/validate-date-with-day-zero.tsv \
               --header-only
 ```
 
@@ -2111,3 +2106,65 @@ Data lines passed: 6
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+### Value Check: Dates with Month or Day Zero
+
+Wikidata uses day 0 on date/time values with coarser than day granularity.
+Wikidata uses month 0 on date/time values with coarser than month granularity.
+If these date strings are imported into KGTK files without modification, the result is
+a date/time string that does not meet KGTK's ISO 8601 requirement.
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-day-zero.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | woke | ^2020-05-00T00:00 |
+| john | woke | ^2020-00-00T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-day-zero.tsv \
+              --allow-month-or-day-zero
+```
+
+This results in no error messages, and the following summary:
+
+~~~
+
+====================================================
+Data lines read: 2
+Data lines passed: 2
+~~~
+
+### Value Check: Allow Dates with Month or Day Zero
+
+Instruct the validator to accept month or day 00, even though
+this is not allowed in ISO 6801.
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-day-zero.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | woke | ^2020-05-00T00:00 |
+| john | woke | ^2020-00-00T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-day-zero.tsv \
+              --allow-month-or-day-zero
+```
+
+This results in no error messages, and the following summary:
+
+~~~
+
+====================================================
+Data lines read: 2
+Data lines passed: 2
+~~~
+
+!!! info
+    Wikidata use day 0 on date/time values with coarser than day granularity.
+    Wikidata uses month 0 on date/time values with coarser than month granularity.
