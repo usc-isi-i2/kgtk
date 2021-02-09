@@ -30,6 +30,7 @@ nav:
       - 'ifnotexists': 'transform/ifnotexists.md'
       - 'implode': 'transform/implode.md'
       - 'join': 'transform/join.md'
+      - 'lexicalize': 'transform/lexicalize.md'
       - 'lift': 'transform/lift.md'
       - 'lower': 'transform/normalize.md'
       - 'md': 'transform/md.md'
