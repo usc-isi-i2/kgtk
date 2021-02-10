@@ -1,0 +1,8 @@
+node1	label	node2
+john	born	^1583-01-01T00:00
+jack	born	^1582-01-01T00:00
+jorge	born	^0922-01-01T00:00
+jerry	born	^0000-01-01T00:00
+jon	born	^+0000-01-01T00:00
+jared	born	^-0001-01-01T00:00
+jimmy	born	^-10001-01-01T00:00

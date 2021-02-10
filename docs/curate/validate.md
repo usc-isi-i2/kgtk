@@ -2176,7 +2176,7 @@ Data lines passed: 2
     Wikidata use day 0 on date/time values with coarser than day granularity.
     Wikidata uses month 0 on date/time values with coarser than month granularity.
 
-### Value Check: Dates with End of Day (24:00) Allowed by Dafault
+### Value Check: Dates with End of Day Markers (24:00) Allowed by Dafault
 
 KGTK uses [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) dates.  Prior to
 the 2019 revision of this standard, ISO 8601-1:2019, "24:00" could be used to
@@ -2236,3 +2236,189 @@ Data lines passed: 0
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+### Value Check: Minimum Valid Year (1583 by Default)
+
+The [KGTK File Specification v 2](../../specification) uses [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)
+date format.  ISO 8601 is based on the Gregorian calendar, which started on 15 October 1582.
+The default minimum valid year in ISO 8601 is 1583.
+
+Extending the Gregorian calendar before its start date is called
+the [proleptic Gregorian calendar](https://en.wikipedia.org/wiki/Proleptic_Gregorian_calendar).
+ISO 8601 can be used to represent dates prior to year 1583, and has special
+rules for representing the year 1 BC and earlier years.  KGTK generally
+follows these rules. The following points should be noted:
+
+  - The year `1 BC` is represented as the year `0000`.
+  - An optional `+` may be used in front of year `0000` and later years.
+  - The year `2 BC` and earlier years require minus signs (`-`) in front of the year number.
+  - The year `2 BC` is represented as year `-0001`
+  - KGTK allows dates with more than four digits in the year, but only in ISO 8601 `extended` mode (with dashes (`-`) between date components and colons (`:`) between time components, see the `--force-iso8601-extended` and `--require-iso8601-extended` examples, below)
+
+`--minimum-valid-year` is used to specify the minimum allowed year.  The default value is 1583.
+`--ignore-minimum-year`, when TRUE, disables the minimym valid year check.  The default for this option is FALSE.
+`--clamp-minimum-year`, when TRUE, forces all years below the minimum value to be set to the minium value.  The default for this option is FALSE.
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-minimum-year.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | born | ^1583-01-01T00:00 |
+| jack | born | ^1582-01-01T00:00 |
+| jorge | born | ^0922-01-01T00:00 |
+| jerry | born | ^0000-01-01T00:00 |
+| jon | born | ^+0000-01-01T00:00 |
+| jared | born | ^-0001-01-01T00:00 |
+| jimmy | born | ^-10001-01-01T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-minimum-year.tsv
+```
+
+This results in the following summary:
+
+~~~
+Data line 2:
+jack	born	^1582-01-01T00:00
+col 2 (node2) value '^1582-01-01T00:00' is an Invalid Date and Times
+Data line 3:
+jorge	born	^0922-01-01T00:00
+col 2 (node2) value '^0922-01-01T00:00' is an Invalid Date and Times
+Data line 4:
+jerry	born	^0000-01-01T00:00
+col 2 (node2) value '^0000-01-01T00:00' is an Invalid Date and Times
+Data line 5:
+jon	born	^+0000-01-01T00:00
+col 2 (node2) value '^+0000-01-01T00:00' is an Invalid Date and Times
+Data line 6:
+jared	born	^-0001-01-01T00:00
+col 2 (node2) value '^-0001-01-01T00:00' is an Invalid Date and Times
+Data line 7:
+jimmy	born	^-10001-01-01T00:00
+col 2 (node2) value '^-10001-01-01T00:00' is an Invalid Date and Times
+
+====================================================
+Data lines read: 7
+Data lines passed: 1
+Data lines excluded due to invalid values: 6
+Data errors reported: 6
+~~~
+
+### Value Check: Change the Minimum Valid Year
+
+Suppose we want to exclude all dates before the year 1000.
+Here's our sample data:
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-minimum-year.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | born | ^1583-01-01T00:00 |
+| jack | born | ^1582-01-01T00:00 |
+| jorge | born | ^0922-01-01T00:00 |
+| jerry | born | ^0000-01-01T00:00 |
+| jon | born | ^+0000-01-01T00:00 |
+| jared | born | ^-0001-01-01T00:00 |
+| jimmy | born | ^-10001-01-01T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-minimum-year.tsv \
+              --minimum-valid-year 1000
+```
+
+This results in the following summary:
+
+~~~
+Data line 3:
+jorge	born	^0922-01-01T00:00
+col 2 (node2) value '^0922-01-01T00:00' is an Invalid Date and Times
+Data line 4:
+jerry	born	^0000-01-01T00:00
+col 2 (node2) value '^0000-01-01T00:00' is an Invalid Date and Times
+Data line 5:
+jon	born	^+0000-01-01T00:00
+col 2 (node2) value '^+0000-01-01T00:00' is an Invalid Date and Times
+Data line 6:
+jared	born	^-0001-01-01T00:00
+col 2 (node2) value '^-0001-01-01T00:00' is an Invalid Date and Times
+Data line 7:
+jimmy	born	^-10001-01-01T00:00
+col 2 (node2) value '^-10001-01-01T00:00' is an Invalid Date and Times
+
+====================================================
+Data lines read: 7
+Data lines passed: 2
+Data lines excluded due to invalid values: 5
+Data errors reported: 5
+~~~
+
+### Value Check: Clamp the Minimum Valid Year
+
+Suppose we want to validate all records, converting any negative
+dates to year 0000.  This will not make a significant difference to
+`kgtk validate` compared to ignoring the minimum valid year check
+(see the example below), but clamping may be useful in other contexts.
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-minimum-year.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | born | ^1583-01-01T00:00 |
+| jack | born | ^1582-01-01T00:00 |
+| jorge | born | ^0922-01-01T00:00 |
+| jerry | born | ^0000-01-01T00:00 |
+| jon | born | ^+0000-01-01T00:00 |
+| jared | born | ^-0001-01-01T00:00 |
+| jimmy | born | ^-10001-01-01T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-minimum-year.tsv \
+              --minimum-valid-year 0000 \
+              --clamp-minimum-year
+```
+
+This results in the following summary:
+
+~~~
+
+====================================================
+Data lines read: 7
+Data lines passed: 7
+~~~
+
+### Value Check: Ignore the Minimum Valid Year Check
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-minimum-year.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | born | ^1583-01-01T00:00 |
+| jack | born | ^1582-01-01T00:00 |
+| jorge | born | ^0922-01-01T00:00 |
+| jerry | born | ^0000-01-01T00:00 |
+| jon | born | ^+0000-01-01T00:00 |
+| jared | born | ^-0001-01-01T00:00 |
+| jimmy | born | ^-10001-01-01T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-minimum-year.tsv \
+              --ignore-minimum-year
+```
+
+This results in the following summary:
+
+~~~
+
+====================================================
+Data lines read: 7
+Data lines passed: 7
+~~~
+
