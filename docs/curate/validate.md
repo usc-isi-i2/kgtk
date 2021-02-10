@@ -2112,7 +2112,7 @@ Data errors reported: 1
 Wikidata uses day 0 on date/time values with coarser than day granularity.
 Wikidata uses month 0 on date/time values with coarser than month granularity.
 If these date strings are imported into KGTK files without modification, the result is
-a date/time string that does not meet KGTK's ISO 8601 requirement.
+a date/time string that does not meet KGTK's [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) requirement.
 
 ```bash
 kgtk cat -i examples/docs/validate-date-with-day-zero.tsv
@@ -2127,7 +2127,7 @@ kgtk cat -i examples/docs/validate-date-with-day-zero.tsv
 kgtk validate -i examples/docs/validate-date-with-day-zero.tsv
 ```
 
-This results in no error messages, and the following summary:
+This results in the following summary:
 
 ~~~
 Data line 1:
@@ -2147,7 +2147,7 @@ Data errors reported: 2
 ### Value Check: Allow Dates with Month or Day Zero
 
 Instruct the validator to accept month or day 00, even though
-this is not allowed in ISO 6801.
+this is not allowed by [ISO 6801](https://en.wikipedia.org/wiki/ISO_8601).
 
 ```bash
 kgtk cat -i examples/docs/validate-date-with-day-zero.tsv
@@ -2175,3 +2175,64 @@ Data lines passed: 2
 !!! info
     Wikidata use day 0 on date/time values with coarser than day granularity.
     Wikidata uses month 0 on date/time values with coarser than month granularity.
+
+### Value Check: Dates with End of Day (24:00) Allowed by Dafault
+
+KGTK uses [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) dates.  Prior to
+the 2019 revision of this standard, ISO 8601-1:2019, "24:00" could be used to
+indicate midnight at the end of a day.  The 2019 revision disallowed this usage, but
+KGTK continues to support it, as end-of-day markers may appear in earlier sources,
+such as Wikidata.
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-end-of-day.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | woke | ^2020-05-01T24:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-end-of-day.tsv
+```
+
+This results in no error messages, and the following summary:
+
+~~~
+
+====================================================
+Data lines read: 1
+Data lines passed: 1
+~~~
+
+### Value Check: Disallow Dates with End of Day Marker (24:00)
+
+Instruct the validator to disallow the end-of-day marker (24:00),
+in conformity to the current (ISO 8601)[https://en.wikipedia.org/wiki/ISO_8601) standard.
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-end-of-day.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | woke | ^2020-05-01T24:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-end-of-day.tsv \
+              --allow-end-of-day False
+```
+
+This results in the following summary:
+
+~~~
+Data line 1:
+john	woke	^2020-05-01T24:00
+col 2 (node2) value '^2020-05-01T24:00' is an Invalid Date and Times
+
+====================================================
+Data lines read: 1
+Data lines passed: 0
+Data lines excluded due to invalid values: 1
+Data errors reported: 1
+~~~
