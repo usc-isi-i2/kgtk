@@ -2124,17 +2124,24 @@ kgtk cat -i examples/docs/validate-date-with-day-zero.tsv
 | john | woke | ^2020-00-00T00:00 |
 
 ```bash
-kgtk validate -i examples/docs/validate-date-with-day-zero.tsv \
-              --allow-month-or-day-zero
+kgtk validate -i examples/docs/validate-date-with-day-zero.tsv
 ```
 
 This results in no error messages, and the following summary:
 
 ~~~
+Data line 1:
+john	woke	^2020-05-00T00:00
+col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
+Data line 2:
+john	woke	^2020-00-00T00:00
+col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 2
-Data lines passed: 2
+Data lines passed: 0
+Data lines excluded due to invalid values: 2
+Data errors reported: 2
 ~~~
 
 ### Value Check: Allow Dates with Month or Day Zero
