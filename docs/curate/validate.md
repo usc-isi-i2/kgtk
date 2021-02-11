@@ -2256,7 +2256,9 @@ follows these rules. The following points should be noted:
   - KGTK allows dates with more than four digits in the year, but only in ISO 8601 `extended` mode (with dashes (`-`) between date components and colons (`:`) between time components, see the `--force-iso8601-extended` and `--require-iso8601-extended` examples, below)
 
 `--minimum-valid-year` is used to specify the minimum allowed year.  The default value is 1583.
+
 `--ignore-minimum-year`, when TRUE, disables the minimym valid year check.  The default for this option is FALSE.
+
 `--clamp-minimum-year`, when TRUE, forces all years below the minimum value to be set to the minium value.  The default for this option is FALSE.
 
 ```bash
