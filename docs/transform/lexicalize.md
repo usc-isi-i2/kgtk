@@ -301,6 +301,11 @@ sorted internally during processing.
 
 ### Two `isa` Properties, Presorted Input
 
+When an input file is presorted on the `node1` column, and the labels are
+read from an external file, `kgtk lexicalize` can use an optimized
+implementation that reduces the amount of memory it requires to process
+large files.
+
 The following input file has a single entity with two `isa` relationships.
 There is only one `node1` value, so we can use this as an example of
 presorted input in a degenerate case.
@@ -336,4 +341,5 @@ kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-input.tsv \
 
 | node1 | label | node2 |
 | -- | -- | -- |
+| Q75952971 | sentence | "Philippe Greenway is a human and male." |
 
