@@ -324,7 +324,7 @@ class Lexicalize:
 
             # Ensure that the input file is sorted (node1 lowest to highest):
             if previous_node_id is None:
-                each_node_attributes = self.new_each_node_attributes(node_id)
+                each_node_attributes = self.new_each_node_attributes()
                 previous_node_id = node_id
             elif previous_node_id > node_id:
                 raise KGTKException("Row %d is out of order: %s > %s" % (rownum + 1, previous_node_id, node_id))

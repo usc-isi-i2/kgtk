@@ -238,27 +238,102 @@ kgtk lexicalize --input-file examples/docs/lexicalize-one-isa-combined.tsv \
 ### Two `isa` Properties
 
 The following input file has a single entity with two `isa` relationships.
-The matching labels are in the same file.
 
 ```bash
-kgtk cat -i examples/docs/lexicalize-two-isas.tsv
+kgtk cat -i examples/docs/lexicalize-two-isas-input.tsv
 ```
 
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
-| Q75952971-label-en | Q75952971 | label | 'Philippe Greenway'@en |
 | Q75952971-P31-Q5-d020ba0c-0 | Q75952971 | P31 | Q5 |
 | Q75952971-P21-Q6581097-018e8019-0 | Q75952971 | P21 | Q6581097 |
+
+Here are the matching labels:
+
+```bash
+kgtk cat -i examples/docs/lexicalize-two-isas-labels.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
 | Q5-label-en | Q5 | label | 'human'@en |
 | Q6581097-label-en | Q6581097 | label | 'male'@en |
+| Q75952971-label-en | Q75952971 | label | 'Philippe Greenway'@en |
 
 Convert this data to a sentence:
 
 ```bash
-kgtk lexicalize --input-file examples/docs/lexicalize-two-isas.tsv \
-                --add-entity-labels-from-input
+kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-input.tsv \
+                --entity-label-file examples/docs/lexicalize-two-isas-labels.tsv
 ```
 
 | node1 | label | node2 |
 | -- | -- | -- |
 | Q75952971 | sentence | "Philippe Greenway is a human and male." |
+
+### Two `isa` Properties Reordered
+
+The following input file has a single entity with two `isa` relationships.
+The order of the `isa` relationships in the input file is different from the order in the example above.
+
+```bash
+kgtk cat -i examples/docs/lexicalize-two-isas-reordered.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q75952971-P21-Q6581097-018e8019-0 | Q75952971 | P21 | Q6581097 |
+| Q75952971-P31-Q5-d020ba0c-0 | Q75952971 | P31 | Q5 |
+
+Convert this data to a sentence:
+
+```bash
+kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-reordered.tsv \
+                --entity-label-file examples/docs/lexicalize-two-isas-labels.tsv
+```
+
+The output sentence is the same, because the properties are collected and
+sorted internally during processing.
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q75952971 | sentence | "Philippe Greenway is a human and male." |
+
+### Two `isa` Properties, Presorted Input
+
+The following input file has a single entity with two `isa` relationships.
+There is only one `node1` value, so we can use this as an example of
+presorted input in a degenerate case.
+
+```bash
+kgtk cat -i examples/docs/lexicalize-two-isas-input.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q75952971-P31-Q5-d020ba0c-0 | Q75952971 | P31 | Q5 |
+| Q75952971-P21-Q6581097-018e8019-0 | Q75952971 | P21 | Q6581097 |
+
+Here are the matching labels:
+
+```bash
+kgtk cat -i examples/docs/lexicalize-two-isas-labels.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q5-label-en | Q5 | label | 'human'@en |
+| Q6581097-label-en | Q6581097 | label | 'male'@en |
+| Q75952971-label-en | Q75952971 | label | 'Philippe Greenway'@en |
+
+Convert this data to a sentence:
+
+```bash
+kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-input.tsv \
+                --presorted \
+                --entity-label-file examples/docs/lexicalize-two-isas-labels.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+
