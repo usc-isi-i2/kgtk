@@ -367,6 +367,8 @@ class Lexicalize:
         row: typing.List[str]
         for row in kr:
             input_rows += 1
+            if self.very_verbose:
+                print("%s" "|".join(row), file=self.error_file, flush=True)
             node_id = row[kr.node1_column_idx]
 
             if add_entity_labels:
