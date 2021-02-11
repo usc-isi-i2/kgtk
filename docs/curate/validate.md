@@ -2239,7 +2239,7 @@ Data errors reported: 1
 
 ### Value Check: Minimum Valid Year (1583 by Default)
 
-The [KGTK File Specification v 2](../../specification) uses [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)
+The [KGTK File Specification v2](../../specification) uses [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)
 date format.  ISO 8601 is based on the Gregorian calendar, which started on 15 October 1582.
 The default minimum valid year in ISO 8601 is 1583.
 
