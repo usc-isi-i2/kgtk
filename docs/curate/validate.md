@@ -2422,3 +2422,163 @@ Data lines read: 7
 Data lines passed: 7
 ~~~
 
+### Value Check: Maximum Valid Year (2100 by Default)
+
+The [KGTK File Specification v 2](../../specification) uses [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)
+date format.  ISO 8601 is based on the Gregorian calendar, which started on 15 October 1582.
+The default maximum valid year in ISO 8601 is 9999, although additional digits can be used
+incertain circumstances.
+
+KGTK somewhat arbitrarily has a default maximum date of 2100.
+The rationale is that dates beyond that are unlikely in
+most datasets.
+
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-maximum-year.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | date | ^2099-01-01T00:00 |
+| jack | date | ^2100-01-01T00:00 |
+| jack | date | ^2101-01-01T00:00 |
+| jorge | born | ^9999-01-01T00:00 |
+| jon | born | ^+9999-01-01T00:00 |
+| jared | born | ^10000-01-01T00:00 |
+| jared | born | ^+10000-01-01T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-maximum-year.tsv
+```
+
+This results in the following summary:
+
+~~~
+Data line 3:
+jack	date	^2101-01-01T00:00
+col 2 (node2) value '^2101-01-01T00:00' is an Invalid Date and Times
+Data line 4:
+jorge	born	^9999-01-01T00:00
+col 2 (node2) value '^9999-01-01T00:00' is an Invalid Date and Times
+Data line 5:
+jon	born	^+9999-01-01T00:00
+col 2 (node2) value '^+9999-01-01T00:00' is an Invalid Date and Times
+Data line 6:
+jared	born	^10000-01-01T00:00
+col 2 (node2) value '^10000-01-01T00:00' is an Invalid Date and Times
+Data line 7:
+jared	born	^+10000-01-01T00:00
+col 2 (node2) value '^+10000-01-01T00:00' is an Invalid Date and Times
+
+====================================================
+Data lines read: 7
+Data lines passed: 2
+Data lines excluded due to invalid values: 5
+Data errors reported: 5
+~~~
+
+### Value Check: Changing the Maximum Valid Year
+
+Let's change the maximum valid year to 9999:
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-maximum-year.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | date | ^2099-01-01T00:00 |
+| jack | date | ^2100-01-01T00:00 |
+| jack | date | ^2101-01-01T00:00 |
+| jorge | born | ^9999-01-01T00:00 |
+| jon | born | ^+9999-01-01T00:00 |
+| jared | born | ^10000-01-01T00:00 |
+| jared | born | ^+10000-01-01T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-maximum-year.tsv \
+              --maximum-valid-year 9999
+```
+
+This results in the following summary:
+
+~~~
+Data line 6:
+jared	born	^10000-01-01T00:00
+col 2 (node2) value '^10000-01-01T00:00' is an Invalid Date and Times
+Data line 7:
+jared	born	^+10000-01-01T00:00
+col 2 (node2) value '^+10000-01-01T00:00' is an Invalid Date and Times
+
+====================================================
+Data lines read: 7
+Data lines passed: 5
+Data lines excluded due to invalid values: 2
+Data errors reported: 2
+~~~
+
+
+### Value Check: Changing the Maximum Valid Year #2
+
+Let's change the maximum valid year to 99999:
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-maximum-year.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | date | ^2099-01-01T00:00 |
+| jack | date | ^2100-01-01T00:00 |
+| jack | date | ^2101-01-01T00:00 |
+| jorge | born | ^9999-01-01T00:00 |
+| jon | born | ^+9999-01-01T00:00 |
+| jared | born | ^10000-01-01T00:00 |
+| jared | born | ^+10000-01-01T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-maximum-year.tsv \
+              --maximum-valid-year 99999
+```
+
+This results in the following summary:
+
+~~~
+
+====================================================
+Data lines read: 7
+Data lines passed: 7
+~~~
+
+
+### Value Check: Ignoring the Maximum Valid Year
+
+```bash
+kgtk cat -i examples/docs/validate-date-with-maximum-year.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | date | ^2099-01-01T00:00 |
+| jack | date | ^2100-01-01T00:00 |
+| jack | date | ^2101-01-01T00:00 |
+| jorge | born | ^9999-01-01T00:00 |
+| jon | born | ^+9999-01-01T00:00 |
+| jared | born | ^10000-01-01T00:00 |
+| jared | born | ^+10000-01-01T00:00 |
+
+```bash
+kgtk validate -i examples/docs/validate-date-with-maximum-year.tsv \
+              --ignore-maximum-year
+```
+
+This results in the following summary:
+
+~~~
+
+====================================================
+Data lines read: 7
+Data lines passed: 7
+~~~
+

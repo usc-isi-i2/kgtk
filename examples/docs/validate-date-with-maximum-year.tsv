@@ -1,0 +1,8 @@
+node1	label	node2
+john	date	^2099-01-01T00:00
+jack	date	^2100-01-01T00:00
+jack	date	^2101-01-01T00:00
+jorge	born	^9999-01-01T00:00
+jon	born	^+9999-01-01T00:00
+jared	born	^10000-01-01T00:00
+jared	born	^+10000-01-01T00:00
