@@ -179,7 +179,7 @@ The following input file has a single entity with a single `isa` relationship
 (`P31`, `instance of`).
 
 ```bash
-kgtk cat -i examples/docs/lexicalize-sample1-input.tsv
+kgtk cat -i examples/docs/lexicalize-one-isa-input.tsv
 ```
 
 | id | node1 | label | node2 |
@@ -189,7 +189,7 @@ kgtk cat -i examples/docs/lexicalize-sample1-input.tsv
 The following label file has the labels needed by the input file:
 
 ```bash
-kgtk cat -i examples/docs/lexicalize-sample1-labels.tsv
+kgtk cat -i examples/docs/lexicalize-one-isa-labels.tsv
 ```
 
 | id | node1 | label | node2 |
@@ -200,8 +200,8 @@ kgtk cat -i examples/docs/lexicalize-sample1-labels.tsv
 Convert this data to a sentence:
 
 ```bash
-kgtk lexicalize --input-file examples/docs/lexicalize-sample1-input.tsv \
-                --entity-label-file examples/docs/lexicalize-sample1-labels.tsv
+kgtk lexicalize --input-file examples/docs/lexicalize-one-isa-input.tsv \
+                --entity-label-file examples/docs/lexicalize-one-isa-labels.tsv
 ```
 
 | node1 | label | node2 |
@@ -214,7 +214,7 @@ The following input file has a single entity with a single `isa` relationship.
 The matching labels are in the same file.
 
 ```bash
-kgtk cat -i examples/docs/lexicalize-sample1-combined.tsv
+kgtk cat -i examples/docs/lexicalize-one-isa-combined.tsv
 ```
 
 | id | node1 | label | node2 |
@@ -226,10 +226,39 @@ kgtk cat -i examples/docs/lexicalize-sample1-combined.tsv
 Convert this data to a sentence:
 
 ```bash
-kgtk lexicalize --input-file examples/docs/lexicalize-sample1-combined.tsv \
+kgtk lexicalize --input-file examples/docs/lexicalize-one-isa-combined.tsv \
                 --add-entity-labels-from-input
 ```
 
 | node1 | label | node2 |
 | -- | -- | -- |
 | Q75952971 | sentence | "Philippe Greenway is a human." |
+
+
+### Two `isa` Properties
+
+The following input file has a single entity with two `isa` relationships.
+The matching labels are in the same file.
+
+```bash
+kgtk cat -i examples/docs/lexicalize-two-isas.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q75952971-label-en | Q75952971 | label | 'Philippe Greenway'@en |
+| Q75952971-P31-Q5-d020ba0c-0 | Q75952971 | P31 | Q5 |
+| Q75952971-P21-Q6581097-018e8019-0 | Q75952971 | P21 | Q6581097 |
+| Q5-label-en | Q5 | label | 'human'@en |
+| Q6581097-label-en | Q6581097 | label | 'male'@en |
+
+Convert this data to a sentence:
+
+```bash
+kgtk lexicalize --input-file examples/docs/lexicalize-two-isas.tsv \
+                --add-entity-labels-from-input
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q75952971 | sentence | "Philippe Greenway is a human and male." |
