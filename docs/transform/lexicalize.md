@@ -408,5 +408,43 @@ kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-and-property-valu
 !!! note
     The code that produces a readable sentence for this example is
     hard coded for property value `P17.` The use of other property
-    values will probably require changes ot the code in order to
+    values might require changes to the code in order to
     produce reasonable sentences.
+
+### Two `isa` Properties and Property Values P569 and P570
+
+The following input file has a single entity with two `isa` relationships (`P31`, `instance of`)
+and two property value (`P569`, `date of birth`, and `P570`, `date of death`).
+he input file also contains the matching labels.
+
+```bash
+kgtk cat -i examples/docs/lexicalize-two-isas-and-property-values-P569-P570.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q75952971-P31-Q5-d020ba0c-0 | Q75952971 | P31 | Q5 |
+| Q75952971-P21-Q6581097-018e8019-0 | Q75952971 | P21 | Q6581097 |
+| Q5-label-en | Q5 | label | 'human'@en |
+| Q6581097-label-en | Q6581097 | label | 'male'@en |
+| Q75952971-label-en | Q75952971 | label | 'Philippe Greenway'@en |
+| Q75952971-P569-52d50d-5fe626e5-0 | Q75952971 | P569 | ^1876-05-07T00:00:00Z/11 |
+| Q75952971-P570-5f1346-586e365b-0 | Q75952971 | P570 | ^1957-02-26T00:00:00Z/11 |
+| P569-label-en | P569 | label | 'date of birth'@en |
+| P570-label-en | P570 | label | 'date of death'@en |
+
+Convert this data to a sentence:
+
+```bash
+kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-and-property-values-P569-P570.tsv \
+                --add-entity-labels-from-input \
+		--property-values P569 P570
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q75952971 | sentence | "Philippe Greenway is a human and male date of birth ^1876-05-07T00:00:00Z/11 and date of death ^1957-02-26T00:00:00Z/11." |
+
+!!! note
+	At present, changes to the code would be needed to improve the quality
+	of the output.

@@ -1,0 +1,10 @@
+id	node1	label	node2
+Q75952971-P31-Q5-d020ba0c-0	Q75952971	P31	Q5
+Q75952971-P21-Q6581097-018e8019-0	Q75952971	P21	Q6581097
+Q5-label-en	Q5	label	'human'@en
+Q6581097-label-en	Q6581097	label	'male'@en
+Q75952971-label-en	Q75952971	label	'Philippe Greenway'@en
+Q75952971-P569-52d50d-5fe626e5-0	Q75952971	P569	^1876-05-07T00:00:00Z/11
+Q75952971-P570-5f1346-586e365b-0	Q75952971	P570	^1957-02-26T00:00:00Z/11
+P569-label-en	P569	label	'date of birth'@en
+P570-label-en	P570	label	'date of death'@en
