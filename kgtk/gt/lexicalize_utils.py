@@ -54,25 +54,13 @@ class Lexicalize:
 
     HAS_PROPERTIES: str = "has_properties"
     ISA_PROPERTIES: str = "isa_properties"
-    LABEL_PROPERTIES: str = "label_properties"
     DESCRIPTION_PROPERTIES: str = "description_properties"
     PROPERTY_VALUES: str = "property_values"
 
-    def new_each_node_attributes(self, node_id: typing.Optional[str] = None)->EACH_NODE_ATTRIBUTES:
-        label_list: typing.List[str]
-        if node_id is None:
-            label_list = [ ]
-
-        elif node_id not in self.node_labels:
-            label_list = [ ]
-            
-        else:
-            label_list = [ self.node_labels[node_id] ]
-
+    def new_each_node_attributes(self)->EACH_NODE_ATTRIBUTES:
         return {
             self.HAS_PROPERTIES: set(),
             self.ISA_PROPERTIES: set(),
-            self.LABEL_PROPERTIES:label_list,
             self.DESCRIPTION_PROPERTIES: [],
             self.PROPERTY_VALUES: [],
         }
@@ -195,7 +183,6 @@ class Lexicalize:
         target_properties = {
             self.HAS_PROPERTIES: set(self.has_properties),
             self.ISA_PROPERTIES: set(self.isa_properties),
-            self.LABEL_PROPERTIES: self.label_properties,
             self.DESCRIPTION_PROPERTIES: self.description_properties,
             self.PROPERTY_VALUES: self.property_values,
         }
@@ -225,6 +212,12 @@ class Lexicalize:
                     ):
         if self.very_verbose:
             print("Processing row (%s, %s, %s)" % (repr(node_id), repr(node_property), repr(node_value)), file=self.error_file, flush=True)
+
+        if self.add_entity_if_label(node_id, node_property, node_value, self.label_properties):
+            if self.very_verbose:
+                print("Label processed.", file=self.error_file, flush=True)
+            return
+        
 
         # CMR: the following code looks like it was intended to remove
         # any language code and language suffix.  It would have the
@@ -337,7 +330,7 @@ class Lexicalize:
                 raise KGTKException("Row %d is out of order: %s > %s" % (rownum + 1, previous_node_id, node_id))
             elif previous_node_id < node_id:
                 self.process_qnode(kw, previous_node_id, each_node_attributes)
-                each_node_attributes = self.new_each_node_attributes(node_id)
+                each_node_attributes = self.new_each_node_attributes()
                 previous_node_id = node_id
 
             self.process_row(node_id,
@@ -379,6 +372,7 @@ class Lexicalize:
             if add_entity_labels:
                 if self.add_entity_if_label(node_id, row[kr.label_column_idx], row[kr.node2_column_idx], self.label_properties):
                     entity_label_count += 1
+                    continue
 
             if node_id in rows_by_node_id:
                 node_id_rows = rows_by_node_id[node_id]
@@ -401,7 +395,7 @@ class Lexicalize:
 
         for node_id in sorted(rows_by_node_id.keys()):
             node_id_rows = rows_by_node_id[node_id]
-            each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes(node_id)
+            each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes()
             for row in node_id_rows:
                 self.process_row(node_id,
                                  row[kr.label_column_idx],
@@ -446,49 +440,22 @@ class Lexicalize:
             return node
 
     def add_label_properties_to_sentence(self,
-                                         attribute_dict: EACH_NODE_ATTRIBUTES,
+                                         node_id: str,
                                          concated_sentence: str,
                                          explanation: str)->typing.Tuple[str, str]:
-        label_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES]= attribute_dict.get(self.LABEL_PROPERTIES)
-        if label_properties is None:
-            if self.very_verbose:
-                print("add_label_properties_to_sentence: %s not found in attribute_dict." % repr(self.LABEL_PROPERTIES), file=self.error_file, flush=True)
-            return concated_sentence, explanation
 
-        if not isinstance(label_properties, list):
+        
+        label_value: typing.Optional[str] = self.node_labels.get(node_id)
+        if label_value is None:
             if self.very_verbose:
-                print("add_label_properties_to_sentence: label_properties is not a list.", file=self.error_file, flush=True)
+                print("add_label_properties_to_sentence: no label for %s." % repr(node_id), file=self.error_file, flush=True)
             return concated_sentence, explanation
-            
-        if len(label_properties) == 0:
-            if self.very_verbose:
-                print("add_label_properties_to_sentence: label_properties is an empty list.", file=self.error_file, flush=True)
-            return concated_sentence, explanation
-
-        if self.very_verbose:
-            print("add_label_properties_to_sentence: label_properties unsorted = [ %s ]" % ",".join([repr(x) for x in label_properties]),
-                  file=self.error_file, flush=True)
-            
-        label_properties = sorted(label_properties)
-        if self.very_verbose:
-            print("add_label_properties_to_sentence: label_properties sorted =   [ %s ]" % ",".join([repr(x) for x in label_properties]),
-                  file=self.error_file, flush=True)
-            
-        label_property: str = label_properties[0]
-        if self.very_verbose:
-            print('attribute_dict["label_properties"][0] = %s' % repr(label_property), file=self.error_file, flush=True)
-        label_value: str = self.get_real_label_name(label_property)
-        if self.very_verbose:
-            print("add_label_properties_to_sentence: label_value = %s" % repr(label_value), file=self.error_file, flush=True)
 
         concated_sentence += label_value
         if self.explain:
-            if label_value == label_property:
-                explanation += "label(%s)" % (repr(label_property))
-            else:
-                explanation += "label(%s->%s)" % (repr(label_property), repr(label_value))
+            explanation += "label(%s)" % (repr(label_property))
         if self.very_verbose:
-            print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
+            print('add_label_properties_to_sentence: concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
         return concated_sentence, explanation
 
     def add_description_properties_to_sentence(self,
@@ -692,7 +659,7 @@ class Lexicalize:
         explanation: str = ""
         have_isa_properties: bool = False
 
-        concated_sentence, explanation = self.add_label_properties_to_sentence(attribute_dict, concated_sentence, explanation)
+        concated_sentence, explanation = self.add_label_properties_to_sentence(node_id, concated_sentence, explanation)
         concated_sentence, explanation = self.add_description_properties_to_sentence(attribute_dict, concated_sentence, explanation)
         concated_sentence, explanation, have_isa_properties = self.add_isa_properties_to_sentence(attribute_dict, concated_sentence, explanation)
         concated_sentence , explanation = self.add_property_values_to_sentence(attribute_dict, concated_sentence, explanation, have_isa_properties)

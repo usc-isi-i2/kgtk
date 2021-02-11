@@ -173,3 +173,63 @@ optional arguments:
 
 ## Examples
 
+### One `isa` Property, Seperate Labels
+
+The following input file has a single entity with a single `isa` relationship
+(`P31`, `instance of`).
+
+```bash
+kgtk cat -i examples/docs/lexicalize-sample1-input.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q75952971-P31-Q5-d020ba0c-0 | Q75952971 | P31 | Q5 |
+
+The following label file has the labels needed by the input file:
+
+```bash
+kgtk cat -i examples/docs/lexicalize-sample1-labels.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q75952971-label-en | Q75952971 | label | 'Philippe Greenway'@en |
+| Q5-label-en | Q5 | label | 'human'@en |
+
+Convert this data to a sentence:
+
+```bash
+kgtk lexicalize --input-file examples/docs/lexicalize-sample1-input.tsv \
+                --entity-label-file examples/docs/lexicalize-sample1-labels.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q75952971 | sentence | "Philippe Greenway is a human." |
+
+### One `isa` Property, a Single File
+
+The following input file has a single entity with a single `isa` relationship.
+The matching labels are in the same file.
+
+```bash
+kgtk cat -i examples/docs/lexicalize-sample1-combined.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q75952971-P31-Q5-d020ba0c-0 | Q75952971 | P31 | Q5 |
+| Q75952971-label-en | Q75952971 | label | 'Philippe Greenway'@en |
+| Q5-label-en | Q5 | label | 'human'@en |
+
+Convert this data to a sentence:
+
+```bash
+kgtk lexicalize --input-file examples/docs/lexicalize-sample1-combined.tsv \
+                --add-entity-labels-from-input
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q75952971 | sentence | "Philippe Greenway is a human." |
