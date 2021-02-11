@@ -373,3 +373,40 @@ kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-and-description.t
 | -- | -- | -- |
 | Q75952971 | sentence | "Philippe Greenway, born 1991, is a human and male." |
 
+### Two `isa` Properties and Property Value P17
+
+The following input file has a single entity with two `isa` relationships (`P31`, `instance of`)
+and a property value (`P17`, `country`).  The input file also contains the matching labels.
+
+```bash
+kgtk cat -i examples/docs/lexicalize-two-isas-and-property-value-P17.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| Q75952971-P31-Q5-d020ba0c-0 | Q75952971 | P31 | Q5 |
+| Q75952971-P21-Q6581097-018e8019-0 | Q75952971 | P21 | Q6581097 |
+| Q5-label-en | Q5 | label | 'human'@en |
+| Q6581097-label-en | Q6581097 | label | 'male'@en |
+| Q75952971-label-en | Q75952971 | label | 'Philippe Greenway'@en |
+| Q75952971-description-en | Q75952971 | description | 'born 1991'@en |
+| Q75952971-P17-Q28513-33ddd57d-0 | Q75952971 | P17 | Q28513 |
+| Q28513-label-en | Q28513 | label | 'Austria-Hungary'@en |
+| P17-label-en | P17 | label | 'country'@en |
+
+Convert this data to a sentence:
+
+```bash
+kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-and-property-value-P17.tsv \
+                --add-entity-labels-from-input
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q75952971 | sentence | "Philippe Greenway, born 1991, is a human and male in Austria-Hungary." |
+
+!!! note
+    The code that produces a readable sentence for this example is
+    hard coded for property value `P17.` The use of other property
+    values will probably require changes ot the code in order to
+    produce reasonable sentences.
