@@ -25,7 +25,6 @@ DEFAULT_DESCRIPTION_PROPERTIES: typing.List[str] = [ "description" ]
 DEFAULT_ISA_PROPERTIES: typing.List[str] = [ "P21", "P31", "P39", "P106", "P279" ]
 DEFAULT_HAS_PROPERTIES: typing.List[str] = [ ]
 DEFAULT_PROPERTY_VALUES: typing.List[str] = [ "P17" ]
-DEFAULT_PROPERTY_LABELS_FILTER: typing.List[str] = [ "label" ]
 DEFAULT_SENTENCE_LABEL: str = "sentence"
 
 OUTPUT_COLUMNS: typing.List[str] = [ "node1", "label", "node2" ]

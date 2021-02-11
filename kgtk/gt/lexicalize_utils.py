@@ -58,11 +58,21 @@ class Lexicalize:
     DESCRIPTION_PROPERTIES: str = "description_properties"
     PROPERTY_VALUES: str = "property_values"
 
-    def new_each_node_attributes(self)->EACH_NODE_ATTRIBUTES:
+    def new_each_node_attributes(self, node_id: typing.Optional[str] = None)->EACH_NODE_ATTRIBUTES:
+        label_list: typing.List[str]
+        if node_id is None:
+            label_list = [ ]
+
+        elif node_id not in self.node_labels:
+            label_list = [ ]
+            
+        else:
+            label_list = [ self.node_labels[node_id] ]
+
         return {
             self.HAS_PROPERTIES: set(),
             self.ISA_PROPERTIES: set(),
-            self.LABEL_PROPERTIES: [],
+            self.LABEL_PROPERTIES:label_list,
             self.DESCRIPTION_PROPERTIES: [],
             self.PROPERTY_VALUES: [],
         }
@@ -277,7 +287,8 @@ class Lexicalize:
                 if isinstance(attrs, set):
                     attrs.add(node_value)
                 elif isinstance(attrs, list):
-                    attrs.append(node_value)
+                    if node_value not in attrs:
+                        attrs.append(node_value)
                 else:
                     raise ValueError('each_node_attributes[%s] is not a list or set.' % repr(each_role))
                 if self.very_verbose:
@@ -320,12 +331,13 @@ class Lexicalize:
 
             # Ensure that the input file is sorted (node1 lowest to highest):
             if previous_node_id is None:
+                each_node_attributes = self.new_each_node_attributes(node_id)
                 previous_node_id = node_id
             elif previous_node_id > node_id:
                 raise KGTKException("Row %d is out of order: %s > %s" % (rownum + 1, previous_node_id, node_id))
             elif previous_node_id < node_id:
                 self.process_qnode(kw, previous_node_id, each_node_attributes)
-                each_node_attributes = self.new_each_node_attributes()
+                each_node_attributes = self.new_each_node_attributes(node_id)
                 previous_node_id = node_id
 
             self.process_row(node_id,
@@ -389,7 +401,7 @@ class Lexicalize:
 
         for node_id in sorted(rows_by_node_id.keys()):
             node_id_rows = rows_by_node_id[node_id]
-            each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes()
+            each_node_attributes: Lexicalize.EACH_NODE_ATTRIBUTES = self.new_each_node_attributes(node_id)
             for row in node_id_rows:
                 self.process_row(node_id,
                                  row[kr.label_column_idx],
@@ -425,8 +437,12 @@ class Lexicalize:
 
     def get_real_label_name(self, node: str)->str:
         if node in self.node_labels:
+            if self.very_verbose:
+                print("get_real_label_name: the label for %s is %s" % (repr(node), repr(self.node_labels[node])), file=self.error_file, flush=True)
             return self.node_labels[node].replace('"', "") # Should use KgtkFormat.unstringify(node)
         else:
+            if self.very_verbose:
+                print("get_real_label_name: no label found for %s" % repr(node), file=self.error_file, flush=True)
             return node
 
     def add_label_properties_to_sentence(self,
