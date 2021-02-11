@@ -80,6 +80,9 @@ class Lexicalize:
 
         # The following code will take the last-read English label,
         # otherwise, the first-read non-English label.
+        #
+        # TODO: add properties to optionally allow non-English
+        # labels to take priority, and/or to allow non-blank suffixes.
         if language == "en" and language_suffix == "":
             if node_id in self.node_labels:
                 self.english_labels_reloaded += 1
@@ -431,20 +434,45 @@ class Lexicalize:
                                          concated_sentence: str,
                                          explanation: str)->typing.Tuple[str, str]:
         label_properties: typing.Optional[Lexicalize.ATTRIBUTE_TYPES]= attribute_dict.get(self.LABEL_PROPERTIES)
-        if label_properties is not None and  isinstance(label_properties, list) and len(label_properties) > 0:
-            label_properties = sorted(label_properties)
-            label_property: str = label_properties[0]
+        if label_properties is None:
             if self.very_verbose:
-                print('attribute_dict["label_properties"][0] = %s' % repr(label_property), file=self.error_file, flush=True)
-            label_value: str = self.get_real_label_name(label_property)
-            concated_sentence += label_value
-            if self.explain:
-                if label_value == label_property:
-                    explanation += "label(%s)" % (repr(label_property))
-                else:
-                    explanation += "label(%s->%s)" % (repr(label_property), repr(label_value))
+                print("add_label_properties_to_sentence: %s not found in attribute_dict." % repr(self.LABEL_PROPERTIES), file=self.error_file, flush=True)
+            return concated_sentence, explanation
+
+        if not isinstance(label_properties, list):
             if self.very_verbose:
-                print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
+                print("add_label_properties_to_sentence: label_properties is not a list.", file=self.error_file, flush=True)
+            return concated_sentence, explanation
+            
+        if len(label_properties) == 0:
+            if self.very_verbose:
+                print("add_label_properties_to_sentence: label_properties is an empty list.", file=self.error_file, flush=True)
+            return concated_sentence, explanation
+
+        if self.very_verbose:
+            print("add_label_properties_to_sentence: label_properties unsorted = [ %s ]" % ",".join([repr(x) for x in label_properties]),
+                  file=self.error_file, flush=True)
+            
+        label_properties = sorted(label_properties)
+        if self.very_verbose:
+            print("add_label_properties_to_sentence: label_properties sorted =   [ %s ]" % ",".join([repr(x) for x in label_properties]),
+                  file=self.error_file, flush=True)
+            
+        label_property: str = label_properties[0]
+        if self.very_verbose:
+            print('attribute_dict["label_properties"][0] = %s' % repr(label_property), file=self.error_file, flush=True)
+        label_value: str = self.get_real_label_name(label_property)
+        if self.very_verbose:
+            print("add_label_properties_to_sentence: label_value = %s" % repr(label_value), file=self.error_file, flush=True)
+
+        concated_sentence += label_value
+        if self.explain:
+            if label_value == label_property:
+                explanation += "label(%s)" % (repr(label_property))
+            else:
+                explanation += "label(%s->%s)" % (repr(label_property), repr(label_value))
+        if self.very_verbose:
+            print('concated_sentence = %s' % repr(concated_sentence), file=self.error_file, flush=True)
         return concated_sentence, explanation
 
     def add_description_properties_to_sentence(self,
