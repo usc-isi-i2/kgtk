@@ -373,7 +373,7 @@ kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-and-description.t
 | -- | -- | -- |
 | Q75952971 | sentence | "Philippe Greenway, born 1991, is a human and male." |
 
-### Two `isa` Properties and Property Value P17
+### Two `isa` Properties, a Description, and and Property Value P17
 
 The following input file has a single entity with two `isa` relationships (`P31`, `instance of`)
 and a property value (`P17`, `country`).  The input file also contains the matching labels.
@@ -448,3 +448,55 @@ kgtk lexicalize --input-file examples/docs/lexicalize-two-isas-and-property-valu
 !!! note
 	At present, changes to the code would be needed to improve the quality
 	of the output.
+
+### Complex Example: QQ75992564, a Music Track
+
+Here is a more complex looking example.  Most of the work is
+done by the description property.
+
+```bash
+kgtk cat -i examples/docs/lexicalize-Q75992564.tsv
+```
+
+| id | node1 | label | node2 | rank | node2;wikidatatype |
+| -- | -- | -- | -- | -- | -- |
+| Q75992564-P136-Q83440-5a7171a8-0 | Q75992564 | P136 | Q83440 | normal | wikibase-item |
+| Q75992564-P1433-Q2598379-92fd18d2-0 | Q75992564 | P1433 | Q2598379 | normal | wikibase-item |
+| Q75992564-P1433-Q75998294-3aa16bcc-0 | Q75992564 | P1433 | Q75998294 | normal | wikibase-item |
+| Q75992564-P1476-7e22ec-4db02c7e-0 | Q75992564 | P1476 | 'Because of You'@en | normal | monolingualtext |
+| Q75992564-P1552-Q109940-802348fe-0 | Q75992564 | P1552 | Q109940 | normal | wikibase-item |
+| Q75992564-P1552-Q155171-582f91ae-0 | Q75992564 | P1552 | Q155171 | normal | wikibase-item |
+| Q75992564-P1552-Q15975575-a54239e8-0 | Q75992564 | P1552 | Q15975575 | normal | wikibase-item |
+| Q75992564-P162-Q229430-4d2b5fa7-0 | Q75992564 | P162 | Q229430 | normal | wikibase-item |
+| Q75992564-P162-Q7821969-674ded3a-0 | Q75992564 | P162 | Q7821969 | normal | wikibase-item |
+| Q75992564-P175-Q229430-aefd7965-0 | Q75992564 | P175 | Q229430 | normal | wikibase-item |
+| Q75992564-P175-Q483507-a1ad6642-0 | Q75992564 | P175 | Q483507 | normal | wikibase-item |
+| Q75992564-P1889-Q400557-94928f8d-0 | Q75992564 | P1889 | Q400557 | normal | wikibase-item |
+| Q75992564-P2550-Q868569-cbe8942c-0 | Q75992564 | P2550 | Q868569 | normal | wikibase-item |
+| Q75992564-P31-Q55850593-156262eb-0 | Q75992564 | P31 | Q55850593 |  |  |
+| Q75992564-P31-Q55850593-156262eb-0 | Q75992564 | P31 | Q55850593 | normal | wikibase-item |
+| Q75992564-P4404-69fc83-9222fd1e-0 | Q75992564 | P4404 | "1c5c05d6-dff6-440a-ba1f-54000e2d04bd" | normal | external-id |
+| Q75992564-P4404-fa8703-43654e34-0 | Q75992564 | P4404 | "102eb099-3119-4d08-80f5-06511af875a4" | normal | external-id |
+| Q75992564-description-en | Q75992564 | description | 'vocal track by Reba in duet with Kelly Clarkson; 2007 studio recording; cover version'@en |  |  |
+| Q75992564-directed_pagerank-31405997 | Q75992564 | directed_pagerank | 8.715560990765719e-09 |  |  |
+| Q75992564-in_degree-2-0000 | Q75992564 | in_degree | 2 |  |  |
+| Q75992564-isa-Q55850593-0000 | Q75992564 | isa | Q55850593 |  |  |
+| Q75992564-label-en | Q75992564 | label | 'Because of You'@en |  |  |
+| Q75992564-out_degree-16-0000 | Q75992564 | out_degree | 16 |  |  |
+| Q75992564-undirected_pagerank-31405997 | Q75992564 | undirected_pagerank | 8.715560990765719e-09 |  |  |
+| Q75992564-vertex_in_degree-31405995 | Q75992564 | vertex_in_degree | 2 |  |  |
+| Q75992564-vertex_in_degree-31405995 | Q75992564 | vertex_in_degree | 2 |  |  |
+| Q75992564-vertex_out_degree-31405996 | Q75992564 | vertex_out_degree | 13 |  |  |
+| Q75992564-vertex_out_degree-31405996 | Q75992564 | vertex_out_degree | 13 |  |  |
+| Q55850593-label-en | Q55850593 | label | 'music track with vocals'@en |  |  |
+
+Convert this data to a sentence:
+
+```bash
+kgtk lexicalize --input-file examples/docs/lexicalize-Q75992564.tsv \
+                --add-entity-labels-from-input
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q75992564 | sentence | "Because of You, vocal track by Reba in duet with Kelly Clarkson; 2007 studio recording; cover version, is a music track with vocals." |
