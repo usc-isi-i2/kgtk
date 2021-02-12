@@ -505,7 +505,7 @@ kgtk lexicalize --input-file examples/docs/lexicalize-Q75992564.tsv \
 | -- | -- | -- |
 | Q75992564 | sentence | "Because of You, vocal track by Reba in duet with Kelly Clarkson; 2007 studio recording; cover version, is a music track with vocals." |
 
-### Complex Example: Q75992564, a Music Track, with `has` Properties Omitting the Description
+### Complex Example: Q75992564, a Music Track, with `has` Properties and Omitting the Description
 
 Let's try adding `P1552` (`has quality`) to the list of `has` properties
 and omit the description property.
