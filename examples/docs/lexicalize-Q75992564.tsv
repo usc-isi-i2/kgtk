@@ -28,3 +28,7 @@ Q75992564-vertex_in_degree-31405995	Q75992564	vertex_in_degree	2
 Q75992564-vertex_out_degree-31405996	Q75992564	vertex_out_degree	13		
 Q75992564-vertex_out_degree-31405996	Q75992564	vertex_out_degree	13		
 Q55850593-label-en	Q55850593	label	'music track with vocals'@en		
+P1552-label-en	P1552	label	'has quality'@en		
+Q109940-label-en	Q109940	label	'duet'@en		
+Q155171-label-en	Q155171	label	'cover version'@en		
+Q15975575-label-en	Q15975575	label	'studio recording'@en		
