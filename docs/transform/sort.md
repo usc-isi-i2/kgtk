@@ -388,7 +388,7 @@ kgtk filter -i examples/docs/movies_full.tsv \
 | t16 | terminator | duration | 108 |
 | s18 | terminator2_jd | duration | 137 |
 
-!!! info
+!!! note
     Ties should retain the order of the input file, but the present sample data
     does not demonstrate this.
 
@@ -409,7 +409,7 @@ kgtk filter -i examples/docs/movies_full.tsv \
 | s18 | terminator2_jd | duration | 137 |
 | t16 | terminator | duration | 108 |
 
-!!! info
+!!! note
     Ties should retain the order of the input file, but the present sample data
     does not demonstrate this.
 
@@ -431,7 +431,7 @@ kgtk filter -i examples/docs/movies_full.tsv \
 | s18 | terminator2_jd | duration | 137 |
 | t16 | terminator | duration | 108 |
 
-!!! info
+!!! note
     Ties should retain the order of the input file, but the present sample data
     does not demonstrate this.
 
