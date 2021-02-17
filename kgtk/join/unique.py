@@ -23,7 +23,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 class Unique(KgtkFormat):
     input_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
-    column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)))
+    column_names: typing.Optional[typing.List[str]] = attr.ib() # TODO: complete this validator!
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
@@ -163,7 +163,7 @@ class Unique(KgtkFormat):
     def process_unsorted(self,
                          output_columns: typing.List[str],
                          kr: KgtkReader,
-                         column_idx: int,
+                         column_idxs: typing.List[int],
                          where_column_idx: int,
                          where_value_set: typing.Set[str]):
 
@@ -182,16 +182,18 @@ class Unique(KgtkFormat):
                 if row[where_column_idx] not in where_value_set:
                     skip_line_count += 1
                     continue
-            if len(row) <= column_idx:
-                raise ValueError("Line %d: Short row (len(row)=%d, column_idx=%d): %s" % (input_line_count, len(row), column_idx, repr(row)))
-            value: str = row[column_idx]
-            if len(value) == 0:
-                value = self.empty_value
-            if len(value) > 0:
-                value = self.prefix + value
-                value_counts[value] = value_counts.get(value, 0) + 1
-            else:
-                empty_value_count += 1
+            column_idx: int
+            for column_idx in column_idxs:
+                if len(row) <= column_idx:
+                    raise ValueError("Line %d: Short row (len(row)=%d, column_idx=%d): %s" % (input_line_count, len(row), column_idx, repr(row)))
+                value: str = row[column_idx]
+                if len(value) == 0:
+                    value = self.empty_value
+                if len(value) > 0:
+                    value = self.prefix + value
+                    value_counts[value] = value_counts.get(value, 0) + 1
+                else:
+                    empty_value_count += 1
                 
         if self.verbose:
             print("Read %d records, skipped %d, found %d unique non-empty values, %d empty values." % (input_line_count,
@@ -282,15 +284,18 @@ class Unique(KgtkFormat):
                                           very_verbose=self.very_verbose,
         )
 
-        column_idx: int
-        if self.column_name is None:
-            column_idx = kr.node2_column_idx
-            if column_idx < 0:
+        column_idxs: typing.List[int]
+        if self.column_names is None:
+            if kr.node2_column_idx < 0:
                 raise ValueError("No node2 default column name in the input file.")
+            column_idxs = [ kr.node2_column_idx ]
         else:
-            if self.column_name not in kr.column_name_map:
-                raise ValueError("Column %s is not in the input file" % (self.column_name))
-            column_idx = kr.column_name_map[self.column_name]
+            column_idxs = [ ]
+            column_name: str
+            for column_name in self.column_names:
+                if column_name not in kr.column_name_map:
+                    raise ValueError("Column %s is not in the input file" % (column_name))
+                column_idxs.append(kr.column_name_map[column_name])
 
         where_column_idx: int = -1
         where_value_set: typing.Set[str] = { }
@@ -303,10 +308,10 @@ class Unique(KgtkFormat):
             else:
                 where_value_set = set(self.where_values)
 
-        if self.presorted and self.output_format != self.NODE_FORMAT:
-            self.process_presorted(output_columns, kr, column_idx, where_column_idx, where_value_set)
+        if self.presorted and self.output_format != self.NODE_FORMAT and len(column_idxs) == 1:
+            self.process_presorted(output_columns, kr, column_idxs[0], where_column_idx, where_value_set)
         else:
-            self.process_unsorted(output_columns, kr, column_idx, where_column_idx, where_value_set)
+            self.process_unsorted(output_columns, kr, column_idxs, where_column_idx, where_value_set)
        
 def main():
     """

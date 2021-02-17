@@ -43,8 +43,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(positional=True)
     parser.add_output_file()
 
-    parser.add_argument(      "--column", dest="column_name",
-                              help="The column to count unique values (default=node2 or its alias).")
+    parser.add_argument('-c', "--column", "--columns", dest="column_names", nargs='*',
+                        metavar="COLUMN_NAME",
+                              help="The column(s) to count unique values (default=node2 or its alias).")
 
     parser.add_argument(      "--empty", dest="empty_value", help="A value to substitute for empty values (default=%(default)s).", default="")
 
@@ -73,7 +74,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
 
-        column_name: typing.Optional[str] = None,
+        column_names: typing.Optional[typing.List[str]] = None,
         empty_value: str = "",
         label_value: str = "count",
 
@@ -117,8 +118,8 @@ def run(input_file: KGTKFiles,
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
-        if column_name is not None:
-            print("--column=%s" % str(column_name), file=error_file)
+        if column_names is not None:
+            print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
         print("--empty=%s" % str(empty_value), file=error_file)
         print("--label=%s" % str(label_value), file=error_file)
         print("--format=%s" % output_format, file=error_file)
@@ -136,7 +137,7 @@ def run(input_file: KGTKFiles,
         uniq: Unique = Unique(
             input_file_path=input_kgtk_file,
             output_file_path=output_kgtk_file,
-            column_name=column_name,
+            column_names=column_names,
             label_value=label_value,
             empty_value=empty_value,
             output_format=output_format,
