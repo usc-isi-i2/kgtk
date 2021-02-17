@@ -372,3 +372,93 @@ kgtk filter -i examples/docs/movies_full.tsv \
 | -- | -- | -- | -- |
 | s18 | terminator2_jd | duration | 137 |
 | t16 | terminator | duration | 108 |
+
+### Filter certain records and sort a single column using the system sort program.
+
+In this example, we will sort on just the `node2` column, which we list explicitly.
+
+```
+kgtk filter -i examples/docs/movies_full.tsv \
+            -p ';duration;' / \
+     sort --columns node2
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t16 | terminator | duration | 108 |
+| s18 | terminator2_jd | duration | 137 |
+
+!!! info
+    Ties should retain the order of the input file, but the present sample data
+    does not demonstrate this.
+
+### Filter certain records and reverse numeric sort a single column using the system sort program.
+
+In this example we will list just a single column to sort on, then use `--numeric` and `--reverse`.
+
+```
+kgtk filter -i examples/docs/movies_full.tsv \
+            -p ';duration;' / \
+     sort --columns node2 \
+          --numeric \
+	  --reverse
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| s18 | terminator2_jd | duration | 137 |
+| t16 | terminator | duration | 108 |
+
+!!! info
+    Ties should retain the order of the input file, but the present sample data
+    does not demonstrate this.
+
+### Filter certain records and reverse numeric sort a single column using the pure Python sort.
+
+In this example we will list just a single column to sort on, then use `--numeric` and `--reverse`.
+
+```
+kgtk filter -i examples/docs/movies_full.tsv \
+            -p ';duration;' / \
+     sort --columns node2 \
+          --numeric \
+	  --reverse \
+	  --pure-python
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| s18 | terminator2_jd | duration | 137 |
+| t16 | terminator | duration | 108 |
+
+!!! info
+    Ties should retain the order of the input file, but the present sample data
+    does not demonstrate this.
+
+### Bad Example: Filter certain records and reverse sort a specific column using the pure Python sort.
+
+The pure Python sorting code does not currently support the `--reverse-column` option.
+
+```
+kgtk filter -i examples/docs/movies_full.tsv \
+            -p ';duration;' / \
+     sort --columns node2 \
+	  --reverse-column node2 \
+	  --pure-python
+```
+
+    Error: the pure Python sorter does not currently support reverse column sorts.
+
+### Bad Example: Filter certain records and numeric sort a specific column using the pure Python sort.
+
+The pure Python sorting code does not currently support the `--numeric-column` option.
+
+```
+kgtk filter -i examples/docs/movies_full.tsv \
+            -p ';duration;' / \
+     sort --columns node2 \
+          --numeric-column node2 \
+	  --pure-python
+```
+
+    Error: the pure Python sorter does not currently support numeric column sorts.
