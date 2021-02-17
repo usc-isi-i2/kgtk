@@ -30,14 +30,15 @@ optional arguments:
   --locale LOCALE       LC_ALL locale controls the sorting order. (default=C)
   -r [True|False], --reverse [True|False]
                         When True, generate output in reverse (descending)
-                        sort order. All key columns are reverse sorted.
-                        (default=False)
+                        sort order. All key columns are sorted in reverse
+                        order. (default=False)
   --reverse-columns [REVERSE_COLUMNS [REVERSE_COLUMNS ...]]
                         List specific key columns for reverse (descending)
                         sorting. Overidden by --reverse. (default=none)
   --numeric [True|False]
                         When True, generate output in numeric sort order. All
-                        key columns are numeric sorted. (default=False)
+                        key columns are sorted in numeric order.
+                        (default=False)
   --numeric-columns [NUMERIC_COLUMNS [NUMERIC_COLUMNS ...]]
                         List specific key columns for numeric sorting.
                         Overridden by --numeric. (default=none)

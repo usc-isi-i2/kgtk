@@ -86,14 +86,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="LC_ALL locale controls the sorting order. (default=%(default)s)")
 
     parser.add_argument('-r', '--reverse', dest='reverse_sort', metavar="True|False",
-                        help="When True, generate output in reverse (descending) sort order.  All key columns are reverse sorted. (default=%(default)s)",
+                        help="When True, generate output in reverse (descending) sort order.  All key columns are sorted in reverse order. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      '--reverse-columns', action='store', dest='reverse_columns', nargs='*',
                         help="List specific key columns for reverse (descending) sorting. Overidden by --reverse. (default=none)")
                        
     parser.add_argument(      '--numeric', dest='numeric_sort', metavar="True|False",
-                        help="When True, generate output in numeric sort order. All key columns are numeric sorted. (default=%(default)s)",
+                        help="When True, generate output in numeric sort order. All key columns are sorted in numeric order. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      '--numeric-columns', action='store', dest='numeric_columns', nargs='*',
