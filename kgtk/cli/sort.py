@@ -1,7 +1,12 @@
 """
-This runs the Posix sort command to sort KGTK files.
-A backgropund data processing pipeline is initiated that
-runs in parallel with the Python process.
+This KGTK command runs the Posix sort command to sort KGTK files.  In normal operation,
+the system sort program is used to sort the data, which is expected to provide
+good performance when properly configured.  The system sort program is run in
+a background data processing pipeline that runs in parallel with the Python
+control process.  The Python control process and the data processing pipeline
+interact in a clever way to allow the Python code to use KgtkReader to process
+the input file's header line without sending the rest of the data through
+Python's expensive I/O path.
 
 1) The data processing pipeline reads stdin or a named file.
    The named file is fed to the data processing pipeline by `cat`,
@@ -34,6 +39,11 @@ runs in parallel with the Python process.
 
 11) The sort command reads the rest of the input stream,
     sorts it, and writes the sorted data to the output stream.
+
+An alternate mode of operation is available in which pure Python code is used
+to sort the input data.  This mode is more portable but slower than using the
+system sort program to sort the input KGTK file.
+
 """
 from argparse import Namespace, SUPPRESS
 import typing
