@@ -1,5 +1,4 @@
-"""
-This KGTK command runs the Posix sort command to sort KGTK files.  In normal operation,
+"""This KGTK command runs the Posix sort command to sort KGTK files.  In normal operation,
 the system sort program is used to sort the data, which is expected to provide
 good performance when properly configured.  The system sort program is run in
 a background data processing pipeline that runs in parallel with the Python
@@ -41,8 +40,8 @@ Python's expensive I/O path.
     sorts it, and writes the sorted data to the output stream.
 
 An alternate mode of operation is available in which pure Python code is used
-to sort the input data.  This mode is more portable but slower than using the
-system sort program to sort the input KGTK file.
+to sort the input data.  This mode is more portable but slower and mor memory
+intensive than using the system sort program to sort the input KGTK file.
 
 """
 from argparse import Namespace, SUPPRESS
@@ -79,16 +78,26 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            who='Output file to write to.')
 
     parser.add_argument('-c', '--column', '--columns', action='store', dest='columns', nargs='*',
-                        help="space and/or comma-separated list of column names to sort on. " +
+                        help="space and/or comma-separated list of column names to sort on (the key columns). " +
                         "(defaults to id for node files, " +
                         "(node1, label, node2) for edge files without ID, (id, node1, label, node2) for edge files with ID)")
 
     parser.add_argument(      '--locale', dest='locale', type=str, default='C',
                               help="LC_ALL locale controls the sorting order. (default=%(default)s)")
 
-    parser.add_argument('-r', '--reverse', dest='reverse', metavar="True|False",
-                        help="When True, generate output in reverse sort order. (default=%(default)s)",
+    parser.add_argument('-r', '--reverse', dest='reverse_sort', metavar="True|False",
+                        help="When True, generate output in reverse (descending) sort order.  All key columns are reverse sorted. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      '--reverse-columns', action='store', dest='reverse_columns', nargs='*',
+                        help="List specific key columns for reverse (descending) sorting. Overidden by --reverse. (default=none)")
+                       
+    parser.add_argument(      '--numeric', dest='numeric_sort', metavar="True|False",
+                        help="When True, generate output in numeric sort order. All key columns are numeric sorted. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      '--numeric-columns', action='store', dest='numeric_columns', nargs='*',
+                        help="List specific key columns for numeric sorting. Overridden by --numeric. (default=none)")
 
     parser.add_argument(      '--pure-python', dest='pure_python', metavar="True|False",
                         help="When True, sort in-memory with Python code. (default=%(default)s)",
@@ -178,7 +187,10 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         columns: typing.Optional[typing.List[str]] = None,
         locale: str = "C",
-        reverse: bool = False,
+        reverse_sort: bool = False,
+        reverse_columns: typing.Optional[typing.List[str]] = None,
+        numeric_sort: bool = False,
+        numeric_columns: typing.Optional[typing.List[str]] = None,
         pure_python: bool = False,
         extra: typing.Optional[str] = None,
 
@@ -221,6 +233,12 @@ def run(input_file: KGTKFiles,
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     def python_sort():
+        if numeric_columns is not None and len(numeric_columns) > 0:
+            raise KGTKException('Error: the pure Python sorter does not currently support numeric column sorts.')
+
+        if reverse_columns is not None and len(reverse_columns) > 0:
+            raise KGTKException('Error: the pure Python sorter does not currently support reverse column sorts.')
+
         if verbose:
             print("Opening the input file: %s" % str(input_path), file=error_file, flush=True)
         kr: KgtkReader = KgtkReader.open(input_path,
@@ -274,15 +292,23 @@ def run(input_file: KGTKFiles,
         if verbose:
             print("sorting keys: %s" % " ".join([str(x) for x in key_idxs]), file=error_file, flush=True)
 
+        if numeric_sort and len(key_idxs) > 1:
+            raise KGTKException('Error: the pure Python sorter does not currently support numeric sorts on multiple columns.')
 
-        lines: typing.MutableMapping[str, typing.List[str]] = dict()
+        lines: typing.MutableMapping[typing.Union[str, float], typing.List[typing.List[str]]] = dict()
 
         progress_startup()
-        key: str
+        key: typing.Union[str, float]
         row: typing.List[str]
         for row in kr:
             key = KgtkFormat.KEY_FIELD_SEPARATOR.join(row[idx] for idx in key_idxs)
-            lines[key] = row
+            if numeric_sort:
+                key = float(key)
+            if key in lines:
+                # There are multiple rows with the same key.  Make this a stable sort.
+                lines[key].append(row)
+            else:
+                lines[key] = [ row ]
         if verbose:
             print("\nRead %d data lines." % len(lines), file=error_file, flush=True)
 
@@ -291,8 +317,11 @@ def run(input_file: KGTKFiles,
                              mode=KgtkWriter.Mode[kr.mode.name],
                              verbose=verbose,
                              very_verbose=very_verbose)
-        for key in sorted(lines.keys()):
-            kw.write(lines[key])
+        
+        for key in sorted(lines.keys(), reverse=reverse_sort):
+            for row in lines[key]:
+                kw.write(row)
+
         kw.close()
         kr.close()
 
@@ -479,7 +508,7 @@ def run(input_file: KGTKFiles,
             print("KGTK header: %s" % " ".join(kr.column_names), file=error_file, flush=True)
 
         sort_options: str = ""
-        if reverse:
+        if reverse_sort:
             sort_options += " --reverse"
 
         if extra is not None and len(extra) > 0:

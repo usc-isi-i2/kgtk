@@ -9,6 +9,9 @@ The command expects a KGTK file with a header line which will be included in the
 ```
 usage: kgtk sort [-h] [-i INPUT] [-o OUTPUT_FILE] [-c [COLUMNS [COLUMNS ...]]]
                  [--locale LOCALE] [-r [True|False]]
+                 [--reverse-columns [REVERSE_COLUMNS [REVERSE_COLUMNS ...]]]
+                 [--numeric [True|False]]
+                 [--numeric-columns [NUMERIC_COLUMNS [NUMERIC_COLUMNS ...]]]
                  [--pure-python [True|False]] [-X EXTRA]
                  [-v [optional True|False]]
 
@@ -21,13 +24,23 @@ optional arguments:
                         stdout.)
   -c [COLUMNS [COLUMNS ...]], --column [COLUMNS [COLUMNS ...]], --columns [COLUMNS [COLUMNS ...]]
                         space and/or comma-separated list of column names to
-                        sort on. (defaults to id for node files, (node1,
-                        label, node2) for edge files without ID, (id, node1,
-                        label, node2) for edge files with ID)
+                        sort on (the key columns). (defaults to id for node
+                        files, (node1, label, node2) for edge files without
+                        ID, (id, node1, label, node2) for edge files with ID)
   --locale LOCALE       LC_ALL locale controls the sorting order. (default=C)
   -r [True|False], --reverse [True|False]
-                        When True, generate output in reverse sort order.
+                        When True, generate output in reverse (descending)
+                        sort order. All key columns are reverse sorted.
                         (default=False)
+  --reverse-columns [REVERSE_COLUMNS [REVERSE_COLUMNS ...]]
+                        List specific key columns for reverse (descending)
+                        sorting. Overidden by --reverse. (default=none)
+  --numeric [True|False]
+                        When True, generate output in numeric sort order. All
+                        key columns are numeric sorted. (default=False)
+  --numeric-columns [NUMERIC_COLUMNS [NUMERIC_COLUMNS ...]]
+                        List specific key columns for numeric sorting.
+                        Overridden by --numeric. (default=none)
   --pure-python [True|False]
                         When True, sort in-memory with Python code.
                         (default=False)
@@ -105,7 +118,7 @@ kgtk cat -i examples/docs/movies_reduced.tsv.gz / \
 ```
 kgtk sort -c 'label, id' \
           -i examples/docs/movies_reduced.tsv.gz \
-	  -o nodes-sort.tsv
+	  -o movies_sorted.tsv
 ```
 
 ### Sort on a larger system using more resources.
@@ -115,15 +128,112 @@ a nonstandard temporary file folder.
 
 ```
 kgtk sort -i examples/docs/movies_reduced.tsv \
-          -o movies_sorted.tsv \
 	  -X "--parallel 24 --buffer-size 60% -T /data1/tmp"
 ```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t1 | terminator | label | 'The Terminator'@en |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t11 | t10 | role | terminator |
+| t12 | terminator | cast | michael_biehn |
+| t13 | t12 | role | kyle_reese |
+| t14 | terminator | cast | linda_hamilton |
+| t15 | t14 | role | sarah_connor |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t2 | terminator | instance_of | film |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t8 | t7 | location | sweden |
+| t9 | terminator | director | james_cameron |
 
 ### Sort in memory using pure Python instead of the system sort program.
 
 ```
 kgtk sort -i examples/docs/movies_reduced.tsv \
-          -o movies_sorted.tsv \
 	  --pure-python
 ```
 
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t1 | terminator | label | 'The Terminator'@en |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t11 | t10 | role | terminator |
+| t12 | terminator | cast | michael_biehn |
+| t13 | t12 | role | kyle_reese |
+| t14 | terminator | cast | linda_hamilton |
+| t15 | t14 | role | sarah_connor |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t2 | terminator | instance_of | film |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t8 | t7 | location | sweden |
+| t9 | terminator | director | james_cameron |
+
+
+### Reverse sort using the system sort program.
+
+```
+kgtk sort -i examples/docs/movies_reduced.tsv \
+          --reverse
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t9 | terminator | director | james_cameron |
+| t8 | t7 | location | sweden |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t4 | terminator | genre | science_fiction |
+| t3 | terminator | genre | action |
+| t2 | terminator | instance_of | film |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t17 | terminator | award | national_film_registry |
+| t16 | terminator | duration | 108 |
+| t15 | t14 | role | sarah_connor |
+| t14 | terminator | cast | linda_hamilton |
+| t13 | t12 | role | kyle_reese |
+| t12 | terminator | cast | michael_biehn |
+| t11 | t10 | role | terminator |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t1 | terminator | label | 'The Terminator'@en |
+
+### Reverse sort in memory using pure Python.
+
+```
+kgtk sort -i examples/docs/movies_reduced.tsv \
+          --reverse \
+	  --pure-python
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t9 | terminator | director | james_cameron |
+| t8 | t7 | location | sweden |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t4 | terminator | genre | science_fiction |
+| t3 | terminator | genre | action |
+| t2 | terminator | instance_of | film |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t17 | terminator | award | national_film_registry |
+| t16 | terminator | duration | 108 |
+| t15 | t14 | role | sarah_connor |
+| t14 | terminator | cast | linda_hamilton |
+| t13 | t12 | role | kyle_reese |
+| t12 | terminator | cast | michael_biehn |
+| t11 | t10 | role | terminator |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t1 | terminator | label | 'The Terminator'@en |
