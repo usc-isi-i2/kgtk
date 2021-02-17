@@ -10,7 +10,7 @@ runs in parallel with the Python process.
 2) The header line is stripped out of the input stream by a
    shell `read` command.
 
-3) The header line is then coped to the output stream using a shell
+3) The header line is then copied to the output stream using a shell
    'printf' command.
 
 4) A copy of the header line is sent via a pipe to the Python control
@@ -19,17 +19,21 @@ runs in parallel with the Python process.
 5) The data processing pipeline then waits to read sort options
    from a second pipe.
 
-6) The Python control process feeds the header line to KgtkReader and
-   and builds the sort key options.
+6) The Python control process reads the header line from the dirst pipe
 
-6) The sort key options are sent from Python to the data processing pipeline
+7) The Python control process feeds the header line to KgtkReader.
+
+8) The Python control process builds the sort key options using
+   column indexes obtained from KgtkReader.
+
+9) The sort key options are sent from Python to the data processing pipeline
    via the second pipe.
 
-7) The data processing pipeline receives the sort command options via
+10) The data processing pipeline receives the sort command options via
    the shell `read` command, and passes them to the `sort` program.
 
-8) The sort command reads the rest of the input stream,
-   sorts it, and writes the sorted data ro the output stream.
+11) The sort command reads the rest of the input stream,
+    sorts it, and writes the sorted data to the output stream.
 """
 from argparse import Namespace, SUPPRESS
 import typing
