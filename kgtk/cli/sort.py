@@ -510,15 +510,24 @@ def run(input_file: KGTKFiles,
         sort_options: str = ""
         if reverse_sort:
             sort_options += " --reverse"
+        if numeric_sort:
+            sort_options += " --numeric"
 
         if extra is not None and len(extra) > 0:
             sort_options += " " + extra
 
+        # We will consume entries in reverse_columns and numeric_columns,
+        # then complain if any are left over.
+        if reverse_columns is not None:
+            reverse_columns = reverse_columns[:] # Protect against modifying a shared list.
+        if numeric_columns is not None:
+            numeric_columns = numeric_columns[:] # Protect against modifying a shared list.
+
+        column_name: str
         sort_idx: int
         if columns is not None and len(columns) > 0:
             # Process the list of column names, including splitting
             # comma-separated lists of column names.
-            column_name: str
             for column_name in columns:
                 column_name_2: str
                 for column_name_2 in column_name.split(","):
@@ -535,30 +544,80 @@ def run(input_file: KGTKFiles,
                         if column_name_2 not in kr.column_names:
                             kr.close()
                             cleanup()
-                            raise KGTKException("Unknown column_name %s" % column_name_2)
+                            raise KGTKException("Unknown column_name %s" % repr(column_name_2))
                         sort_idx = kr.column_name_map[column_name_2] + 1
                     sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                    if reverse_columns is not None and column_name_2 in reverse_columns:
+                        sort_options += "r"
+                        reverse_columns.remove(column_name_2)
+                    if numeric_columns is not None and column_name_2 in numeric_columns:
+                        sort_options += "n"
+                        numeric_columns.remove(column_name_2)
         else:
+            # TODO: support the case where the column name in reverse_columns
+            # or numeric_columns is an alias of the name used in the file header.
             if kr.is_node_file:
                 sort_idx = kr.id_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                column_name = kr.column_names[kr.id_column_idx]
+                if reverse_columns is not None and column_name in reverse_columns:
+                    sort_options += "r"
+                    reverse_columns.remove(column_name)
+                if numeric_columns is not None and column_name in numeric_columns:
+                    sort_options += "n"
+                    numeric_columns.remove(column_name)
 
             elif kr.is_edge_file:
                 if kr.id_column_idx >= 0:
                     sort_idx = kr.id_column_idx + 1
                     sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                    column_name = kr.column_names[kr.id_column_idx]
+                    if reverse_columns is not None and column_name in reverse_columns:
+                        sort_options += "r"
+                        reverse_columns.remove(column_name)
+                    if numeric_columns is not None and column_name in numeric_columns:
+                        sort_options += "n"
+                        numeric_columns.remove(column_name)
 
                 sort_idx = kr.node1_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                column_name = kr.column_names[kr.node1_column_idx]
+                if reverse_columns is not None and column_name in reverse_columns:
+                    sort_options += "r"
+                    reverse_columns.remove(column_name)
+                if numeric_columns is not None and column_name in numeric_columns:
+                    sort_options += "n"
+                    numeric_columns.remove(column_name)
 
                 sort_idx = kr.label_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                column_name = kr.column_names[kr.label_column_idx]
+                if reverse_columns is not None and column_name in reverse_columns:
+                    sort_options += "r"
+                    reverse_columns.remove(column_name)
+                if numeric_columns is not None and column_name in numeric_columns:
+                    sort_options += "n"
+                    numeric_columns.remove(column_name)
 
                 sort_idx = kr.node2_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                column_name = kr.column_names[kr.node2_column_idx]
+                if reverse_columns is not None and column_name in reverse_columns:
+                    sort_options += "r"
+                    reverse_columns.remove(column_name)
+                if numeric_columns is not None and column_name in numeric_columns:
+                    numeric_columns.remove(column_name)
+                    sort_options += "n"
+
             else:
                 cleanup()
                 raise KGTKException("Unknown KGTK file mode, please specify the sorting columns.")
+
+        # Check for unconsumed entries in reverse_columns and numeric_columns:
+        if reverse_columns is not None and len(reverse_columns) > 0:
+            raise KGTKException("Unknown reverse column(s) %s" % " ".join([repr(column_name) for column_name in reverse_columns]))
+        if numeric_columns is not None and len(numeric_columns) > 0:
+            raise KGTKException("Unknown numeric column(s) %s" % " ".join([repr(column_name) for column_name in numeric_columns]))
 
         if verbose:
             print("sort options: %s" % sort_options, file=error_file, flush=True)
