@@ -24,7 +24,9 @@ JOIN_OP: str = "join"
 MAX_OP: str = "max"
 MIN_OP: str = "min"
 PERCENTAGE_OP: str = "percentage"
+REPLACE_OP: str = "replace"
 SET_OP: str = "set"
+SUBSTITUTE_OP: str = "substitute"
 SUM_OP: str = "sum"
 
 OPERATIONS: typing.List[str] = [ AVERAGE_OP,
@@ -33,7 +35,9 @@ OPERATIONS: typing.List[str] = [ AVERAGE_OP,
                                  MAX_OP,
                                  MIN_OP,
                                  PERCENTAGE_OP,
+                                 REPLACE_OP,
                                  SET_OP,
+                                 SUBSTITUTE_OP,
                                  SUM_OP,
                                 ]
 
@@ -68,15 +72,24 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         metavar="COLUMN_NAME",
                         help="The list of source column names, optionally containing '..' for column ranges " +
                         "and '...' for column names not explicitly mentioned.")
+
     parser.add_argument(      "--into", dest="into_column_names",
                               help="The name of the column to receive the result of the calculation.",
                               required=True, nargs="+")
+
     parser.add_argument(      "--do", dest="operation", help="The name of the operation.", required=True,
                               choices=OPERATIONS)
 
     parser.add_argument(      "--values", dest="values", nargs='*',
                         metavar="VALUES",
                         help="An optional list of values")
+
+    parser.add_argument(      "--with-values", dest="with_values", nargs='*',
+                        metavar="WITH_VALUES",
+                        help="An optional list of additional values")
+
+    parser.add_argument(      "--limit", dest="limit", type=int,
+                              help="A limit count.")
 
     parser.add_argument(      "--format", dest="format_string", help="The format string for the calculation.")
 
@@ -92,6 +105,8 @@ def run(input_file: KGTKFiles,
         into_column_names: typing.List[str],
         operation: str,
         values: typing.Optional[typing.List[str]],
+        with_values: typing.Optional[typing.List[str]],
+        limit: typing.Optional[int],
         format_string: typing.Optional[str],
 
         errors_to_stdout: bool = False,
@@ -104,8 +119,9 @@ def run(input_file: KGTKFiles,
 )->int:
     # import modules locally
     from pathlib import Path
+    import re
     import sys
-    
+
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
@@ -134,6 +150,10 @@ def run(input_file: KGTKFiles,
         print("--operation=%s" % str(operation), file=error_file, flush=True)
         if values is not None:
             print("--values %s" % " ".join(values), file=error_file, flush=True)
+        if with_values is not None:
+            print("--with-values %s" % " ".join(with_values), file=error_file, flush=True)
+        if limit is not None:
+            print("--limit %d" % limit, file=error_file, flush=True)
         if format_string is not None:
             print("--format=%s" % format_string, file=error_file, flush=True)
 
@@ -274,6 +294,14 @@ def run(input_file: KGTKFiles,
         if values is None:
             values = [ ]
 
+        if with_values is None:
+            with_values = [ ]
+
+        if limit is None:
+            limit = 0
+
+        substitute_re: typing.Optional[typing.Pattern] = None
+
         if operation == AVERAGE_OP:
             if len(sources) == 0:
                 raise KGTKException("Average needs at least one source, got %d" % len(sources))
@@ -312,6 +340,16 @@ def run(input_file: KGTKFiles,
             if len(selected_names) != 2:
                 raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
 
+        elif operation == REPLACE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Replace needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(selected_names) != 1:
+                raise KGTKException("Replace needs 1 input column, got %d" % len(selected_names))
+            if len(values) != 1:
+                raise KGTKException("Replace needs one value, got %d" % len(values))
+            if len(with_values) != 1:
+                raise KGTKException("Replace needs one with-value, got %d" % len(with_values))
+
         elif operation == SET_OP:
             if len(sources) != 0:
                 raise KGTKException("Set needs no sources, got %d" % len(sources))
@@ -321,6 +359,17 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Set needs at least one value, got %d" % len(values))
             if len(into_column_idxs) != len(values):
                 raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
+
+        elif operation == SUBSTITUTE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Substitute needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(selected_names) != 1:
+                raise KGTKException("Substitute needs 1 input column, got %d" % len(selected_names))
+            if len(values) != 1:
+                raise KGTKException("Substitute needs one value, got %d" % len(values))
+            if len(with_values) != 1:
+                raise KGTKException("Substitute needs one with-value, got %d" % len(with_values))
+            substitute_re = re.compile(values[0])
 
         elif operation == SUM_OP:
             if len(sources) == 0:
@@ -360,31 +409,40 @@ def run(input_file: KGTKFiles,
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
 
             elif operation == MAX_OP:
-                result: typing.Optional[float] = None
+                max_result: typing.Optional[float] = None
                 for idx in sources:
                     item = row[idx]
                     if len(item) > 0:
-                        value: float = float(item)
-                        if result is None or value > result:
-                            result = value
-                output_row[into_column_idx] = (fs % result) if result is not None else ""
+                        max_value: float = float(item)
+                        if max_result is None or max_value > max_result:
+                            max_result = max_value
+                output_row[into_column_idx] = (fs % max_result) if max_result is not None else ""
 
             elif operation == MIN_OP:
-                result: typing.Optional[float] = None
+                min_result: typing.Optional[float] = None
                 for idx in sources:
                     item = row[idx]
                     if len(item) > 0:
-                        value: float = float(item)
-                        if result is None or value < result:
-                            result = value
-                output_row[into_column_idx] = (fs % result) if result is not None else ""
+                        min_value: float = float(item)
+                        if min_result is None or min_value < min_result:
+                            min_result = min_value
+                output_row[into_column_idx] = (fs % min_result) if min_result is not None else ""
 
             elif operation == PERCENTAGE_OP:
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
 
+            elif operation == REPLACE_OP:
+                if limit == 0:
+                    output_row[into_column_idx] = row[sources[0]].replace(values[0], with_values[0])
+                else:
+                    output_row[into_column_idx] = row[sources[0]].replace(values[0], with_values[0], limit)
+
             elif operation == SET_OP:
                 for idx in range(len(values)):
                     output_row[into_column_idxs[idx]] = values[idx]
+
+            elif operation == SUBSTITUTE_OP and substitute_re is not None:
+                output_row[into_column_idx] = substitute_re.sub(with_values[0], row[sources[0]], count=limit)
 
             elif operation == SUM_OP:
                 total: float = 0

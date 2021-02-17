@@ -16,8 +16,10 @@ a new column, which will be added after all existing columns.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into INTO_COLUMN_NAMES
                  [INTO_COLUMN_NAMES ...] --do
-                 {average,copy,join,max,min,percentage,set,sum}
-                 [--values [VALUES [VALUES ...]]] [--format FORMAT_STRING]
+                 {average,copy,join,max,min,percentage,replace,set,substitute,sum}
+                 [--values [VALUES [VALUES ...]]]
+                 [--with-values [WITH_VALUES [WITH_VALUES ...]]]
+                 [--limit LIMIT] [--format FORMAT_STRING]
                  [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
@@ -41,10 +43,13 @@ optional arguments:
   --into INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {average,copy,join,max,min,percentage,set,sum}
+  --do {average,copy,join,max,min,percentage,replace,set,substitute,sum}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
+  --with-values [WITH_VALUES [WITH_VALUES ...]]
+                        An optional list of additional values
+  --limit LIMIT         A limit count.
   --format FORMAT_STRING
                         The format string for the calculation.
 
@@ -337,6 +342,86 @@ The output will be the following table in KGTK format:
 | P1040 | p585-count | 1 | 45073 |  0.00 |
 | P1050 | p585-count | 246 | 226380 |  0.11 |
 
+### Replace a String into a New Column
+
+We want to do a string replacement, replacing a lower-case
+"p" with an upper-cas "P" in the `label` column, storing the result
+in the `result` column.
+
+!!! info
+    `--do replace` requires one source column (`--column`), one destination column (`--into`,
+    one search value (`--value`), and one replacement value (--with-value`).  Optionally,
+    it takes a limit (`--limit`) on th enumber of replacements per edge.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do replace --columns label --into result \
+          --value p --with P
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total | result |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | P585-count |
+| P1000 | p585-count | 16 | 266 | P585-count |
+| P101 | p585-count | 5 | 157519 | P585-count |
+| P1018 | p585-count | 2 | 177 | P585-count |
+| P102 | p585-count | 295 | 414726 | P585-count |
+| P1025 | p585-count | 26 | 693 | P585-count |
+| P1026 | p585-count | 40 | 6930 | P585-count |
+| P1027 | p585-count | 14 | 10008 | P585-count |
+| P1028 | p585-count | 1131 | 4035 | P585-count |
+| P1029 | p585-count | 4 | 2643 | P585-count |
+| P1035 | p585-count | 4 | 366 | P585-count |
+| P1037 | p585-count | 60 | 9317 | P585-count |
+| P1040 | p585-count | 1 | 45073 | P585-count |
+| P1050 | p585-count | 246 | 226380 | P585-count |
+
+!!! note
+    If you want to perform a more complex replacement operation,
+    use the regular expression-based substitute command (`kgtk calc --do substitute`).
+
+### Replace a String in Place
+
+We want to do a string replacement, replacing a lower-case
+"p" with an upper-case "P" in the label column, overwriting
+the original value in the `label` column.
+
+!!! info
+    `--do replace` requires one source column (`--column`), one destination column (`--into`,
+    one search value (`--value`), and one replacement value (--with-value`).  Optionally,
+    it takes a limit (`--limit`) on the number of replacements per edge.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do replace --columns label --into label \
+          --value p --with P
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | P585-count | 73 | 3879 |
+| P1000 | P585-count | 16 | 266 |
+| P101 | P585-count | 5 | 157519 |
+| P1018 | P585-count | 2 | 177 |
+| P102 | P585-count | 295 | 414726 |
+| P1025 | P585-count | 26 | 693 |
+| P1026 | P585-count | 40 | 6930 |
+| P1027 | P585-count | 14 | 10008 |
+| P1028 | P585-count | 1131 | 4035 |
+| P1029 | P585-count | 4 | 2643 |
+| P1035 | P585-count | 4 | 366 |
+| P1037 | P585-count | 60 | 9317 |
+| P1040 | P585-count | 1 | 45073 |
+| P1050 | P585-count | 246 | 226380 |
+
+!!! note
+    If you want to perform a more complex replacement operation,
+    use the regular expression-based substitute command (`kgtk calc --do substitute`).
+
 ### Set a value into an existing column.
 
 !!! info
@@ -396,6 +481,53 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 | xxx |
 | P1040 | p585-count | 1 | 45073 | xxx |
 | P1050 | p585-count | 246 | 226380 | xxx |
+
+### Substitute a String in Place
+
+We want to do a regular expression substitution, replacing a lower-case
+"p" with an upper-case "P" and a dash in the label column, appending a "-x", and overwriting
+the original value in the `label` column.
+
+!!! info
+    `--do substitute` requires one source column (`--column`), one destination column (`--into`,
+    one search value (`--value`), and one replacement value (--with-value`).  Optionally,
+    it takes a limit (`--limit`) on the number of replacements per edge.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do substitute --columns label --into label \
+          --value '^p(.*)$' --with 'P-\g<1>-x'
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | P-585-count-x | 73 | 3879 |
+| P1000 | P-585-count-x | 16 | 266 |
+| P101 | P-585-count-x | 5 | 157519 |
+| P1018 | P-585-count-x | 2 | 177 |
+| P102 | P-585-count-x | 295 | 414726 |
+| P1025 | P-585-count-x | 26 | 693 |
+| P1026 | P-585-count-x | 40 | 6930 |
+| P1027 | P-585-count-x | 14 | 10008 |
+| P1028 | P-585-count-x | 1131 | 4035 |
+| P1029 | P-585-count-x | 4 | 2643 |
+| P1035 | P-585-count-x | 4 | 366 |
+| P1037 | P-585-count-x | 60 | 9317 |
+| P1040 | P-585-count-x | 1 | 45073 |
+| P1050 | P-585-count-x | 246 | 226380 |
+
+!!! note
+    If you want to perform a simpler replacement operation,
+    use the string-based replace command (`kgtk calc --do replace`).
+
+!!! note
+    Be certain to include shell escapes when needed.
+
+!!! note
+    See Python 3 documentation on regular expressions for more details
+    on pattern matching and substitution.
 
 ### Calculate the sum of `node2` and `node1;total`.
 
