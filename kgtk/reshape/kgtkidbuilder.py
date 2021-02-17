@@ -48,6 +48,8 @@ class KgtkIdBuilderOptions(KgtkFormat):
     DEFAULT_INITIAL_ID: int = 1
     DEFAULT_PREFIX_NUM_WIDTH: int = 1
 
+    DEFAULT_ID_SEPARATOR: str = "-"
+
     old_id_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     new_id_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     overwrite_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_OVERWRITE)
@@ -60,6 +62,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
     value_hash_width: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_VALUE_HASH_WIDTH)
     claim_id_hash_width: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_CLAIM_ID_HASH_WIDTH)
     claim_id_column_name: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_CLAIM_ID_COLUMN_NAME)
+    id_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_ID_SEPARATOR)
 
     @classmethod
     def add_arguments(cls, parser: ArgumentParser, expert: bool = False, overwrite: typing.Optional[bool] = None):
@@ -129,6 +132,9 @@ class KgtkIdBuilderOptions(KgtkFormat):
         parser.add_argument(     '--claim-id-column-name', action="store", type=str, dest="claim_id_column_name", default=cls.DEFAULT_CLAIM_ID_COLUMN_NAME,
                                  help='The name of the claim_id column. (default=%(default)s)')
 
+        parser.add_argument(     '--id-separator', action="store", type=str, dest="id_separator", default=cls.DEFAULT_ID_SEPARATOR,
+                                 help='The separator user between ID subfields. (default=%(default)s)')
+
 
     @classmethod
     def from_dict(cls, d: dict)->'KgtkIdBuilderOptions':
@@ -145,6 +151,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
             value_hash_width=d.get("value_hash_width", cls.DEFAULT_VALUE_HASH_WIDTH),
             claim_id_hash_width=d.get("claim_id_hash_width", cls.DEFAULT_CLAIM_ID_HASH_WIDTH),
             claim_id_column_name=d.get("claim_id_column_name", cls.DEFAULT_CLAIM_ID_COLUMN_NAME),
+            id_separator=d.get("id_separator", cls.DEFAULT_ID_SEPARATOR),
         )
 
     # Build the value parsing option structure.
@@ -160,13 +167,14 @@ class KgtkIdBuilderOptions(KgtkFormat):
         print("--overwrite-id=%s" % str(self.overwrite_id), file=out, flush=True)
         print("--verify_id_unique=%s" % str(self.verify_id_unique), file=out, flush=True)
         print("--id-style=%s" % str(self.id_style), file=out, flush=True)
-        print("--id-prefix=%s" % str(self.id_prefix), file=out, flush=True)
+        print("--id-prefix=%s" % repr(self.id_prefix), file=out, flush=True)
         print("--initial-id=%s" % str(self.initial_id), file=out, flush=True)
         print("--id-prefix-num-width=%s" % str(self.id_prefix_num_width), file=out, flush=True)
         print("--id-concat-num-width=%s" % str(self.id_concat_num_width), file=out, flush=True)
         print("--value-hash-width=%s" % str(self.value_hash_width), file=out, flush=True)
         print("--claim-id-hash-width=%s" % str(self.claim_id_hash_width), file=out, flush=True)
-        print("--claim-id-column-name=%s" % str(self.claim_id_column_name), file=out, flush=True)
+        print("--claim-id-column-name=%s" % repr(self.claim_id_column_name), file=out, flush=True)
+        print("--id-separator=%s" % repr(self.id_separator), file=out, flush=True)
 
 
 @attr.s(slots=True, frozen=False)
@@ -434,32 +442,32 @@ class KgtkIdBuilder(KgtkFormat):
         return row
 
     def build_concat_nln(self, row: typing.List[str])->str:
-        return row[self.node1_column_idx] + "-" + row[self.label_column_idx] + "-" + row[self.node2_column_idx]
+        return row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx] + self.options.id_separator + row[self.node2_column_idx]
 
     def build_concat_nl_num(self, row: typing.List[str])->str:
         # Returns node1-label-### where ### starts at 0.
         # Assumes that records are compact on (node2) or (node2, id), as needed.
-        key: str = row[self.node1_column_idx] + "-" + row[self.label_column_idx]
+        key: str = row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx]
         if key in self.nl_keys:
             self.nl_keys[key] += 1
         else:
             self.nl_keys[key] = 0
-        return key + "-" + str(self.nl_keys[key]).zfill(self.options.id_concat_num_width)
+        return key + self.options.id_separator + str(self.nl_keys[key]).zfill(self.options.id_concat_num_width)
 
     def build_concat_nln_num(self, row: typing.List[str])->str:
         # Returns node1-label-node2-### where ### starts at 0.
         # Assumes that records are compact on (node2) or (node2, id), as needed.
-        key: str = row[self.node1_column_idx] + "-" + row[self.label_column_idx] + "-" + row[self.node2_column_idx]
+        key: str = row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx] + self.options.id_separator + row[self.node2_column_idx]
         if key in self.nl_keys:
             self.nl_keys[key] += 1
         else:
             self.nl_keys[key] = 0
-        return key + "-" + str(self.nl_keys[key]).zfill(self.options.id_concat_num_width)
+        return key + self.options.id_separator + str(self.nl_keys[key]).zfill(self.options.id_concat_num_width)
 
     def build_concat_with_old_id(self, row: typing.List[str])->str:
-        key: str = row[self.node1_column_idx] + "-" + row[self.label_column_idx] + "-" + row[self.node2_column_idx]
+        key: str = row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx] + self.options.id_separator + row[self.node2_column_idx]
         if row[self.old_id_column_idx] != "":
-            key += "-" + row[self.old_id_column_idx]
+            key += self.options.id_separator + row[self.old_id_column_idx]
         return key
 
     def build_prefixed(self, row: typing.List[str])->str:
@@ -470,9 +478,9 @@ class KgtkIdBuilder(KgtkFormat):
     def build_wikidata_id(self, row: typing.List[str])->str:
         node2_value: str = row[self.node2_column_idx]
         if node2_value.startswith(('P', 'Q')):
-            return row[self.node1_column_idx] + "-" + row[self.label_column_idx] + "-" + node2_value
+            return row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx] + self.options.id_separator + node2_value
         else:
-            return row[self.node1_column_idx] + "-" + row[self.label_column_idx] + "-" + \
+            return row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx] + self.options.id_separator + \
                 hashlib.sha256(node2_value.encode('utf-8')).hexdigest()[:self.options.value_hash_width]
 
     def build_wikidata_id_with_claim_id(self, row: typing.List[str])->str:
@@ -482,10 +490,10 @@ class KgtkIdBuilder(KgtkFormat):
             return self.build_wikidata_id(row)
 
         elif self.options.claim_id_hash_width == 0:
-            return self.build_wikidata_id(row) + "-" + claim_id.lower()
+            return self.build_wikidata_id(row) + self.options.id_separator + claim_id.lower()
 
         else:
-            return self.build_wikidata_id(row) + "-" + hashlib.sha256(claim_id.lower().encode('utf-8')).hexdigest()[:self.options.claim_id_hash_width]
+            return self.build_wikidata_id(row) + self.options.id_separator + hashlib.sha256(claim_id.lower().encode('utf-8')).hexdigest()[:self.options.claim_id_hash_width]
 
     def process(self, kr: KgtkReader, kw: KgtkWriter):
         line_number: int = 0

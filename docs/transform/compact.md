@@ -124,7 +124,7 @@ usage: kgtk compact [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--value-hash-width VALUE_HASH_WIDTH]
                     [--claim-id-hash-width CLAIM_ID_HASH_WIDTH]
                     [--claim-id-column-name CLAIM_ID_COLUMN_NAME]
-                    [-v [optional True|False]]
+                    [--id-separator ID_SEPARATOR] [-v [optional True|False]]
 
 Copy a KGTK file, compacting multiple records into | lists. 
 
@@ -186,6 +186,8 @@ optional arguments:
                         ID? 0 means do not hash the claim ID. (default=8)
   --claim-id-column-name CLAIM_ID_COLUMN_NAME
                         The name of the claim_id column. (default=claim_id)
+  --id-separator ID_SEPARATOR
+                        The separator user between ID subfields. (default=-)
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).

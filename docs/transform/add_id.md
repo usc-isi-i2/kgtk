@@ -40,7 +40,7 @@ usage: kgtk add-id [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                    [--value-hash-width VALUE_HASH_WIDTH]
                    [--claim-id-hash-width CLAIM_ID_HASH_WIDTH]
                    [--claim-id-column-name CLAIM_ID_COLUMN_NAME]
-                   [-v [optional True|False]]
+                   [--id-separator ID_SEPARATOR] [-v [optional True|False]]
 
 Copy a KGTK file, adding ID values.
 
@@ -93,6 +93,8 @@ optional arguments:
                         ID? 0 means do not hash the claim ID. (default=8)
   --claim-id-column-name CLAIM_ID_COLUMN_NAME
                         The name of the claim_id column. (default=claim_id)
+  --id-separator ID_SEPARATOR
+                        The separator user between ID subfields. (default=-)
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -331,6 +333,34 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-3f5bb8-00e13ed7 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-3f5bb8-2764182d |
 
+
+### Add an ID column using Colon (`:`) as an ID Separator
+
+We will add an ID column using the node1-label-node2-num ID
+stype, but with colon (`:`) as the ID separator.
+
+```bash
+kgtk add-id -i examples/docs/add-id-file1.tsv \
+            --id-style node1-label-node2-num \
+            --id-separator ":"
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | john:zipcode:12345:0000 |
+| john | zipcode | 12346 |  |  | john:zipcode:12346:0000 |
+| peter | zipcode | 12040 | home |  | peter:zipcode:12040:0000 |
+| peter | zipcode | 12040 | cabin |  | peter:zipcode:12040:0001 |
+| peter | zipcode | 12040 | work | 5 | peter:zipcode:12040:0002 |
+| peter | zipcode | 12040 |  | 6 | peter:zipcode:12040:0003 |
+| steve | zipcode | 45601 |  | 3 | steve:zipcode:45601:0000 |
+| steve | zipcode | 45601 |  | 4 | steve:zipcode:45601:0001 |
+| steve | zipcode | 45601 |  | 5 | steve:zipcode:45601:0002 |
+| steve | zipcode | 45601 | home | 1 | steve:zipcode:45601:0003 |
+| steve | zipcode | 45601 | work | 2 | steve:zipcode:45601:0004 |
+| steve | zipcode | 45601 | cabin |  | steve:zipcode:45601:0005 |
 
 ### Expert Topic: Converting a CSV File to a KGTK TSV File
 
