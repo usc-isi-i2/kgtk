@@ -41,12 +41,18 @@ Format                 | Description
 `--format node-counts` | This format creates a KGTK node file with two columns.  The `id` column will contain the (optionally prefixed) unique values, while the second column, named `count`, unless changed by `--label LABEL_VALUE`, will contain the count.
 `--format node-only`   | This creates a KGTK node file with a single column, the `id` column, containing the unique values.  The counts are computed but not written.
 
-### Quick Input Filtering
+### Quick Input Edge Filtering
 
 Using the `--where WHERE_COLUMN_NAME` and `--in WHERE_VALUES...` options, you
-can restrict the count to records where the value in a specified column
+can restrict the count to edges where the value in a specified column
 matches a list of specified values.  More sophisticated filtering can be
 obtained by running [`kgtk filter`](../filter) to provide the input to `kgtk unique`.
+
+### Input Value Filtering
+
+Using the `--value-filter VALUE_FILTER_RE" and "--value-match-type" options,
+you can restrict the set of values to ones that match a particular regular
+expression.
 
 ### Processing Large Files
 
@@ -69,6 +75,8 @@ usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                    [--format {edge,node,node-counts,node-only}]
                    [--prefix PREFIX] [--where WHERE_COLUMN_NAME]
                    [--in WHERE_VALUES [WHERE_VALUES ...]]
+                   [--value-filter VALUE_FILTER_RE]
+                   [--value-match-type {fullmatch,match,search}]
                    [--presorted [True|False]] [-v [optional True|False]]
 
 Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.
@@ -98,6 +106,12 @@ optional arguments:
   --in WHERE_VALUES [WHERE_VALUES ...]
                         The list of values for a record selection test.
                         (default=None).
+  --value-filter VALUE_FILTER_RE
+                        A regular expression filter on the extracted values.
+                        (default=).
+  --value-match-type {fullmatch,match,search}
+                        Which type of regular expression value match:
+                        fullmatch, match, search. (default=match).
   --presorted [True|False]
                         When True, the input file is presorted.
                         (default=False).
@@ -203,6 +217,24 @@ kgtk unique -i examples/docs/unique-file1.tsv \
 | 12346 | count | 1 |
 | 12347 | count | 1 |
 | 45601 | count | 2 |
+| eric | count | 1 |
+| home | count | 2 |
+| john | count | 3 |
+| peter | count | 2 |
+| steve | count | 2 |
+| work | count | 3 |
+| zipcode | count | 8 |
+
+### Count the unique all-alpha values in the `node1`, `label`, `node2`, and `location` columns.
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv \
+            --columns node1 label node2 location \
+            --value-filter '[A-Za-z]+'
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
 | eric | count | 1 |
 | home | count | 2 |
 | john | count | 3 |

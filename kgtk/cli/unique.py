@@ -63,6 +63,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--in", dest="where_values", nargs="+",
                               help="The list of values for a record selection test. (default=%(default)s).", default=None)
 
+    parser.add_argument(      "--value-filter", dest="value_filter", metavar="VALUE_FILTER_RE",
+                              help="A regular expression filter on the extracted values. (default=%(default)s).", default="")
+
+    parser.add_argument(      "--value-match-type", dest="value_match_type", 
+                              help="Which type of regular expression value match: %(choices)s. (default=%(default)s).",
+                              type=str, default="match", choices=["fullmatch", "match", "search"])
+
     parser.add_argument(      "--presorted", dest="presorted", metavar="True|False",
                               help="When True, the input file is presorted. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -83,6 +90,9 @@ def run(input_file: KGTKFiles,
 
         where_column_name: typing.Optional[str] = None,
         where_values: typing.Optional[typing.List[str]] = None,
+
+        value_filter: str = "",
+        value_match_type: str = "match",
 
         presorted: bool = False,
 
@@ -128,6 +138,8 @@ def run(input_file: KGTKFiles,
             print("--where=%s" % where_column_name, file=error_file)
         if where_values is not None and len(where_values) > 0:
             print("--in=%s" % " ".join(where_values), file=error_file)
+        print("--value-filter=%s" % repr(value_filter), file=error_file)
+        print("--value-match-type=%s" % repr(value_match_type), file=error_file)
         print("--prefix=%s" % repr(presorted), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -144,6 +156,8 @@ def run(input_file: KGTKFiles,
             prefix=prefix,
             where_column_name=where_column_name,
             where_values=where_values,
+            value_filter=value_filter,
+            value_match_type=value_match_type,
             presorted=presorted,
             reader_options=reader_options,
             value_options=value_options,

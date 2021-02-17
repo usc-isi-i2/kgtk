@@ -10,6 +10,7 @@ TODO: Consider other output formats. Perhaps seperate counts for each node1
 from argparse import ArgumentParser, Namespace
 import attr
 from pathlib import Path
+import re
 import sys
 import typing
 
@@ -33,6 +34,9 @@ class Unique(KgtkFormat):
 
     where_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     where_values: typing.Optional[typing.List[str]] = attr.ib(default=None) # TODO: Complete this validator!
+
+    value_filter: str = attr.ib(validator=attr.validators.instance_of(str), default="")
+    value_match_type: str = attr.ib(validator=attr.validators.instance_of(str), default="match")
 
     # TODO: make this an enum
     output_format: str = attr.ib(validator=attr.validators.instance_of(str), default="edge")
@@ -67,6 +71,7 @@ class Unique(KgtkFormat):
             print("Counting unique values from the %s column in presorted %s" % (kr.column_names[column_idx], self.input_file_path), file=self.error_file, flush=True)
         input_line_count: int = 0
         skip_line_count: int = 0
+        skip_value_count: int = 0
         empty_value_count: int = 0
         unique_value_count: int = 0
 
@@ -87,6 +92,8 @@ class Unique(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
 
+        value_filter_re: typing.Optional[typing.Pattern] = None if len(self.value_filter) == 0 else re.compile(self.value_filter)
+
         row: typing.List[str]
         for row in kr:
             input_line_count += 1
@@ -97,6 +104,19 @@ class Unique(KgtkFormat):
             if len(row) <= column_idx:
                 raise ValueError("Line %d: Short row (len(row)=%d, column_idx=%d): %s" % (input_line_count, len(row), column_idx, repr(row)))
             value: str = row[column_idx]
+
+            if value_filter_re is not None:
+                match: typing.Optional[typing.Match]
+                if self.value_match_type == "fullmatch":
+                    match = value_filter_re.fullmatch(value)
+                elif self.value_match_type == "match":
+                    match = value_filter_re.match(value)
+                elif self.value_match_type == "search":
+                    match = value_filter_re.search(value)
+                if match is None:
+                    skip_value_count += 1
+                    continue
+
             if len(value) == 0:
                 value = self.empty_value
             if len(value) > 0:
@@ -152,10 +172,11 @@ class Unique(KgtkFormat):
             
 
         if self.verbose:
-            print("Read %d records, skipped %d, found %d unique non-empty values, %d empty values." % (input_line_count,
-                                                                                                       skip_line_count,
-                                                                                                       unique_value_count,
-                                                                                                       empty_value_count),
+            print("Read %d records, skipped %d, skipped %d values, found %d unique non-empty values, %d empty values." % (input_line_count,
+                                                                                                                          skip_line_count,
+                                                                                                                          skip_value_count,
+                                                                                                                          unique_value_count,
+                                                                                                                          empty_value_count),
                   file=self.error_file, flush=True)
 
         ew.close()
@@ -168,13 +189,17 @@ class Unique(KgtkFormat):
                          where_value_set: typing.Set[str]):
 
         if self.verbose:
-            print("Counting unique values from the %s column in %s" % (kr.column_names[column_idx], self.input_file_path), file=self.error_file, flush=True)
+            print("Counting unique values from the %s columns in %s" % (" ".join([repr(kr.column_names[column_idx]) for column_idx in column_idxs]),
+                                                                        repr(str(self.input_file_path))), file=self.error_file, flush=True)
         input_line_count: int = 0
         skip_line_count: int = 0
+        skip_value_count: int = 0
         empty_value_count: int = 0
 
         value_counts: typing.MutableMapping[str, int] = { }
         
+        value_filter_re: typing.Optional[typing.Pattern] = None if len(self.value_filter) == 0 else re.compile(self.value_filter)
+
         row: typing.List[str]
         for row in kr:
             input_line_count += 1
@@ -187,6 +212,19 @@ class Unique(KgtkFormat):
                 if len(row) <= column_idx:
                     raise ValueError("Line %d: Short row (len(row)=%d, column_idx=%d): %s" % (input_line_count, len(row), column_idx, repr(row)))
                 value: str = row[column_idx]
+
+                if value_filter_re is not None:
+                    match: typing.Optional[typing.Match]
+                    if self.value_match_type == "fullmatch":
+                        match = value_filter_re.fullmatch(value)
+                    elif self.value_match_type == "match":
+                        match = value_filter_re.match(value)
+                    elif self.value_match_type == "search":
+                        match = value_filter_re.search(value)
+                    if match is None:
+                        skip_value_count += 1
+                        continue
+
                 if len(value) == 0:
                     value = self.empty_value
                 if len(value) > 0:
@@ -196,10 +234,11 @@ class Unique(KgtkFormat):
                     empty_value_count += 1
                 
         if self.verbose:
-            print("Read %d records, skipped %d, found %d unique non-empty values, %d empty values." % (input_line_count,
-                                                                                                       skip_line_count,
-                                                                                                       len(value_counts),
-                                                                                                       empty_value_count),
+            print("Read %d records, skipped %d, skipped %d values, found %d unique non-empty values, %d empty values." % (input_line_count,
+                                                                                                                          skip_line_count,
+                                                                                                                          skip_value_count,
+                                                                                                                          len(value_counts),
+                                                                                                                          empty_value_count),
                   file=self.error_file, flush=True)
 
         # In node format we can't open the output file until we are done
