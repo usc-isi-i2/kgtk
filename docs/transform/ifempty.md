@@ -21,10 +21,10 @@ standard error;  standard output will not receive any data.
 ## Usage
 
 ```
-usage: kgtk ifempty [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --columns
-                    FILTER_COLUMN_NAMES [FILTER_COLUMN_NAMES ...]
-                    [--count [True|False]] [--all [True|False]]
-                    [-v [optional True|False]]
+usage: kgtk ifempty [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                    [--reject-file REJECT_FILE] --columns FILTER_COLUMN_NAMES
+                    [FILTER_COLUMN_NAMES ...] [--count [True|False]]
+                    [--all [True|False]] [-v [optional True|False]]
 
 Filter a KGTK file based on whether one or more fields are empty. When multiple fields are specified, either any field or all fields must be empty.
 
@@ -39,6 +39,9 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
+  --reject-file REJECT_FILE
+                        The KGTK file for input records that fail the filter.
+                        (Optional, use '-' for stdout.)
   --columns FILTER_COLUMN_NAMES [FILTER_COLUMN_NAMES ...]
                         The columns in the file being filtered (Required).
   --count [True|False]  Only count the records, do not copy them.
@@ -107,6 +110,32 @@ kgtk ifempty -i examples/docs/ifempty-file1.tsv \
 | steve | zipcode | 45601 |  | 3 |
 | steve | zipcode | 45601 | work |  |
 
+### Pass Records with Empty Cells in Either of Two Columns with Rejects
+
+```bash
+kgtk ifempty -i examples/docs/ifempty-file1.tsv \
+             --columns location years \
+             --reject-file ifempty-file1-rejects.tsv
+```
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12346 |  |  |
+| peter | zipcode | 12040 | home |  |
+| steve | zipcode | 45601 |  | 3 |
+| steve | zipcode | 45601 | work |  |
+
+Here are the rejected edges:
+
+```bash
+kgtk cat -i ifempty-file1-rejects.tsv
+```
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 |
+| peter | zipcode | 12040 | work | 6 |
+
+
 ### Pass Records with Empty Cells in Both of Two Columns
 
 ```bash
@@ -127,7 +156,7 @@ kgtk ifempty -i examples/docs/ifempty-file1.tsv \
 
 The result on standard error will be:
 
-    Read 6 records, 3 records passed the filter.
+    Read 6 records, 3 records passed the filter, 3 rejected.
 
 !!! note
     The expert option `--errors-to-stdout` can be used to route this message to standard output.

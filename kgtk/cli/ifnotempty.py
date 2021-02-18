@@ -32,6 +32,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
+    parser.add_output_file(who="The KGTK file for input records that fail the filter.",
+                           dest="reject_file",
+                           options=["--reject-file"],
+                           metavar="REJECT_FILE",
+                           optional=True)
 
     parser.add_argument(      "--columns", dest="filter_column_names",
                               help="The columns in the file being filtered (Required).", nargs='+', required=True)
@@ -50,6 +55,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
+        reject_file: KGTKFiles,
         filter_column_names: typing.List[str],
         all_are: bool = False,
 
@@ -75,6 +81,7 @@ def run(input_file: KGTKFiles,
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    reject_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(reject_file, who="KGTK reject file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -87,6 +94,8 @@ def run(input_file: KGTKFiles,
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
+        if reject_kgtk_file is not None:
+            print("--reject-file=%s" % str(reject_kgtk_file), file=error_file)
         print("--columns=%s" % " ".join(filter_column_names), file=error_file)
         print("--count=%s" % str(only_count), file=error_file)
         print("--all=%s" % str(all_are), file=error_file)
@@ -99,6 +108,7 @@ def run(input_file: KGTKFiles,
             input_file_path=input_kgtk_file,
             filter_column_names=filter_column_names,
             output_file_path=output_kgtk_file,
+            reject_file_path=reject_kgtk_file,
             all_are=all_are,
             notempty=True,
             only_count=only_count,
