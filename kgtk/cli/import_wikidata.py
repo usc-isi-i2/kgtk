@@ -20,6 +20,7 @@ https://www.wikidata.org/wiki/Help:Data_type
 
 """
 
+from argparse import Namespace
 import typing
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
@@ -29,7 +30,7 @@ def parser():
     }
 
 
-def add_arguments(parser: KGTKArgumentParser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
@@ -38,7 +39,10 @@ def add_arguments(parser: KGTKArgumentParser):
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.io.kgtkreader import KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
     
+    _expert: bool = parsed_shared_args._expert
+
     parser.add_input_file(positional=True, who='input path file (may be .bz2)')
 
     parser.add_argument(
@@ -606,6 +610,28 @@ def add_arguments(parser: KGTKArgumentParser):
         default=0,
         help='How many characters should be used to hash the claim ID? 0 means do not hash the claim ID. (default=%(default)d)')
 
+    parser.add_argument(
+        "--clean",
+        nargs='?',
+        type=optional_bool,
+        dest="clean_input_values",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, clean the input values before writing it. (default=%(default)s).")
+
+    parser.add_argument(
+        "--clean-verbose",
+        nargs='?',
+        type=optional_bool,
+        dest="clean_verbose",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, give verbose feedback when cleaning input values. (default=%(default)s).")
+
+    KgtkValueOptions.add_arguments(parser, expert=_expert)
+
 def custom_progress()->bool:
     return True # We want to start a custom progress monitor.
 
@@ -673,6 +699,9 @@ def run(input_file: KGTKFiles,
         mgzip_threads_for_output: int,
         value_hash_width: int,
         claim_id_hash_width: int,
+        clean_input_values: bool,
+        clean_verbose: bool,
+        **kwargs # Whatever KgtkValueOptions wants.
         ):
 
     # import modules locally
@@ -680,6 +709,7 @@ def run(input_file: KGTKFiles,
     import simplejson as json
     import csv
     import hashlib
+    import io
     import multiprocessing as mp
     import os
     from pathlib import Path
@@ -691,6 +721,10 @@ def run(input_file: KGTKFiles,
     from kgtk.cli_entry import progress_startup
     from kgtk.exceptions import KGTKException
     from kgtk.utils.cats import platform_cat
+    from kgtk.value.kgtkvalue import KgtkValue
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
+    value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     languages=lang.split(',')
 
@@ -826,6 +860,33 @@ def run(input_file: KGTKFiles,
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
 
+            if clean:
+                error_buffer: typing.Optional[io.StringIO] = io.StringIO() if clean_verbose else None
+                values_are_valid: bool = True
+                kv: KgtkValue
+                kv = KgtkValue(edge_id, options=value_options, error_file=error_buffer, verbose=clean_verbose)
+                values_are_valid &= kv.is_valid()
+                if kv.repaired:
+                    edge_id = kv.value
+                kv = KgtkValue(node1, options=value_options, error_file=error_buffer, verbose=clean_verbose)
+                values_are_valid &= kv.is_valid()
+                if kv.repaired:
+                    node1 = kv.value
+                kv = KgtkValue(label, options=value_options, error_file=error_buffer, verbose=clean_verbose)
+                values_are_valid &= kv.is_valid()
+                if kv.repaired:
+                    label = kv.value
+                kv = KgtkValue(node2, options=value_options, error_file=error_buffer, verbose=clean_verbose)
+                values_are_valid &= kv.is_valid()
+                if kv.repaired:
+                    node2 = kv.value
+                if not values_are_valid and error_buffer is not None:
+                    print("Value validation error in edge %s: %s" % ("|".join([repr(edge_id), repr(node1), repr(label), repr(node2)]),
+                                                                     error_buffer.getvalue().rstrip()),
+                          file=sys.stderr, flush=True)
+                if error_buffer is not None:
+                    error_buffer.close()
+
             if explode_values:
                 erows.append([edge_id,
                               node1,
@@ -882,6 +943,33 @@ def run(input_file: KGTKFiles,
                          calendar="",
         ):
 
+            if clean:
+                error_buffer: typing.Optional[io.StringIO] = io.StringIO() if clean_verbose else None
+                values_are_valid: bool = True
+                kv: KgtkValue
+                kv = KgtkValue(edge_id, options=value_options, error_file=error_buffer, verbose=clean_verbose)
+                values_are_valid &= kv.is_valid()
+                if kv.repaired:
+                    edge_id = kv.value
+                kv = KgtkValue(node1, options=value_options, error_file=error_buffer, verbose=clean_verbose)
+                values_are_valid &= kv.is_valid()
+                if kv.repaired:
+                    node1 = kv.value
+                kv = KgtkValue(label, options=value_options, error_file=error_buffer, verbose=clean_verbose)
+                values_are_valid &= kv.is_valid()
+                if kv.repaired:
+                    label = kv.value
+                kv = KgtkValue(node2, options=value_options, error_file=error_buffer, verbose=clean_verbose)
+                values_are_valid &= kv.is_valid()
+                if kv.repaired:
+                    node2 = kv.value
+                if not values_are_valid and error_buffer is not None:
+                    print("Value validation error in qual %s: %s" % ("|".join([repr(edge_id), repr(node1), repr(label), repr(node2)]),
+                                                                     error_buffer.getvalue().rstrip()),
+                          file=sys.stderr, flush=True)
+                if error_buffer is not None:
+                    error_buffer.close()
+                    
             if minimal_qual_file is not None or detailed_qual_file is not None:
                 if explode_values:
                     qrows.append([edge_id,
