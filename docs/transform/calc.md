@@ -16,7 +16,7 @@ a new column, which will be added after all existing columns.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into INTO_COLUMN_NAMES
                  [INTO_COLUMN_NAMES ...] --do
-                 {average,copy,join,max,min,percentage,replace,set,substitute,sum}
+                 {average,capitalize,casefold,copy,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
@@ -43,7 +43,7 @@ optional arguments:
   --into INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {average,copy,join,max,min,percentage,replace,set,substitute,sum}
+  --do {average,capitalize,casefold,copy,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -84,6 +84,68 @@ kgtk cat -i examples/docs/calc-file1.tsv
 | P1040 | p585-count | 1 | 45073 |
 | P1050 | p585-count | 246 | 226380 |
 
+
+### Convert the `node1` column value with capitalization.
+
+!!! info
+    Multiple columns may be converted if ther is a matching number of `--into` columns.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do capitalize \
+          --columns  node1 \
+          --into     node1
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
+
+### Convert the `node1` column value with case folding.
+
+!!! info
+    Multiple columns may be converted if ther is a matching number of `--into` columns.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do casefold \
+          --columns  node1 \
+          --into     node1
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| p10 | p585-count | 73 | 3879 |
+| p1000 | p585-count | 16 | 266 |
+| p101 | p585-count | 5 | 157519 |
+| p1018 | p585-count | 2 | 177 |
+| p102 | p585-count | 295 | 414726 |
+| p1025 | p585-count | 26 | 693 |
+| p1026 | p585-count | 40 | 6930 |
+| p1027 | p585-count | 14 | 10008 |
+| p1028 | p585-count | 1131 | 4035 |
+| p1029 | p585-count | 4 | 2643 |
+| p1035 | p585-count | 4 | 366 |
+| p1037 | p585-count | 60 | 9317 |
+| p1040 | p585-count | 1 | 45073 |
+| p1050 | p585-count | 246 | 226380 |
 
 ### Calculate the average of `node2` and `node1;total`.
 
@@ -242,6 +304,37 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 | P1037p585-count |
 | P1040 | p585-count | 1 | 45073 | P1040p585-count |
 | P1050 | p585-count | 246 | 226380 | P1050p585-count |
+
+### Convert the `node1` column value into lower case.
+
+!!! info
+    Multiple columns may be converted if ther is a matching number of `--into` columns.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do lower \
+          --columns  node1 \
+          --into     node1
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| p10 | p585-count | 73 | 3879 |
+| p1000 | p585-count | 16 | 266 |
+| p101 | p585-count | 5 | 157519 |
+| p1018 | p585-count | 2 | 177 |
+| p102 | p585-count | 295 | 414726 |
+| p1025 | p585-count | 26 | 693 |
+| p1026 | p585-count | 40 | 6930 |
+| p1027 | p585-count | 14 | 10008 |
+| p1028 | p585-count | 1131 | 4035 |
+| p1029 | p585-count | 4 | 2643 |
+| p1035 | p585-count | 4 | 366 |
+| p1037 | p585-count | 60 | 9317 |
+| p1040 | p585-count | 1 | 45073 |
+| p1050 | p585-count | 246 | 226380 |
 
 ### Calculate the maximum of `node2` and `node1;total`.
 
@@ -587,3 +680,97 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 | 9377 |
 | P1040 | p585-count | 1 | 45073 | 45074 |
 | P1050 | p585-count | 246 | 226380 | 226626 |
+
+### Convert the `node1` column value by swapping case.
+
+!!! info
+    Multiple columns may be converted if there is a matching number of `--into` columns.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do swapcase \
+          --columns  label \
+          --into     label
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | P585-COUNT | 73 | 3879 |
+| P1000 | P585-COUNT | 16 | 266 |
+| P101 | P585-COUNT | 5 | 157519 |
+| P1018 | P585-COUNT | 2 | 177 |
+| P102 | P585-COUNT | 295 | 414726 |
+| P1025 | P585-COUNT | 26 | 693 |
+| P1026 | P585-COUNT | 40 | 6930 |
+| P1027 | P585-COUNT | 14 | 10008 |
+| P1028 | P585-COUNT | 1131 | 4035 |
+| P1029 | P585-COUNT | 4 | 2643 |
+| P1035 | P585-COUNT | 4 | 366 |
+| P1037 | P585-COUNT | 60 | 9317 |
+| P1040 | P585-COUNT | 1 | 45073 |
+| P1050 | P585-COUNT | 246 | 226380 |
+
+### Convert the `node1` column value into title case.
+
+!!! info
+    Multiple columns may be converted if there is a matching number of `--into` columns.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do title \
+          --columns  label \
+          --into     label
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | P585-Count | 73 | 3879 |
+| P1000 | P585-Count | 16 | 266 |
+| P101 | P585-Count | 5 | 157519 |
+| P1018 | P585-Count | 2 | 177 |
+| P102 | P585-Count | 295 | 414726 |
+| P1025 | P585-Count | 26 | 693 |
+| P1026 | P585-Count | 40 | 6930 |
+| P1027 | P585-Count | 14 | 10008 |
+| P1028 | P585-Count | 1131 | 4035 |
+| P1029 | P585-Count | 4 | 2643 |
+| P1035 | P585-Count | 4 | 366 |
+| P1037 | P585-Count | 60 | 9317 |
+| P1040 | P585-Count | 1 | 45073 |
+| P1050 | P585-Count | 246 | 226380 |
+
+### Convert the `node1` column value into upper case.
+
+!!! info
+    Multiple columns may be converted if there is a matching number of `--into` columns.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do upper \
+          --columns  label \
+          --into     label
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | P585-COUNT | 73 | 3879 |
+| P1000 | P585-COUNT | 16 | 266 |
+| P101 | P585-COUNT | 5 | 157519 |
+| P1018 | P585-COUNT | 2 | 177 |
+| P102 | P585-COUNT | 295 | 414726 |
+| P1025 | P585-COUNT | 26 | 693 |
+| P1026 | P585-COUNT | 40 | 6930 |
+| P1027 | P585-COUNT | 14 | 10008 |
+| P1028 | P585-COUNT | 1131 | 4035 |
+| P1029 | P585-COUNT | 4 | 2643 |
+| P1035 | P585-COUNT | 4 | 366 |
+| P1037 | P585-COUNT | 60 | 9317 |
+| P1040 | P585-COUNT | 1 | 45073 |
+| P1050 | P585-COUNT | 246 | 226380 |
+

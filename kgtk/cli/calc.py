@@ -18,9 +18,53 @@ def parser():
     }
 
 
+# Numeric:
+ABS_OP: str = "abs"
+DIV_OP: str = "div"
+MOD_OP: str = "mod"
+POW_OP: str = "pow"
+
+# Boolean
+AND_OP: str = "and"
+ALL_OP: str = "all"
+ANY_OP: str = "any"
+NAND_OP: str = "nand"
+NOR_OP: str = "nor"
+NOT_OP: str = "not"
+OR_OP: str = "or"
+XOR_OP: str = "xor"
+
+# String
+CENTER_OP: str = "center"
+COUNT_OP: str = "count"
+ENDSWITH_OP: str = "endswidth"
+EXPANDTABS_OP: str = "expandtabs"
+FIND_OP: str = "find"
+ISALNUM_OP: str = "isalnum"
+# ...
+LJUST_OP: str = "ljust"
+LSTRIP_OP: str = "lstrip"
+PARTITION_OP: str = "partition"
+REMOVEPREFIX_OP: str = "removeprefix"
+REMOVESUFFIX_OP: str = "removesuffix"
+RFIND_OP: str = "rfind"
+RJUST_OP: str = "rjust"
+RPARTITION_OP: str = "rpartition"
+RSPLIT_OP: str = "rsplit"
+RSTRIP_OP: str = "rstrip"
+SPLIT_OP: str = " split"
+SPLITLINES_OP: str = "splitlines"
+STARTSWITH_OP: str = "startswith"
+STRIP_OP: str = "strip"
+ZFILL_OP: str = "zfill"
+
+# Implemented:
 AVERAGE_OP: str = "average"
+CAPITALIZE_OP: str = "capitalize"
+CASEFOLD_OP: str = "casefold"
 COPY_OP: str = "copy"
 JOIN_OP: str = "join"
+LOWER_OP: str = "lower"
 MAX_OP: str = "max"
 MIN_OP: str = "min"
 PERCENTAGE_OP: str = "percentage"
@@ -28,10 +72,16 @@ REPLACE_OP: str = "replace"
 SET_OP: str = "set"
 SUBSTITUTE_OP: str = "substitute"
 SUM_OP: str = "sum"
+SWAPCASE_OP: str = "swapcase"
+TITLE_OP: str = "title"
+UPPER_OP: str = "upper"
 
 OPERATIONS: typing.List[str] = [ AVERAGE_OP,
+                                 CAPITALIZE_OP,
+                                 CASEFOLD_OP,
                                  COPY_OP,
                                  JOIN_OP,
+                                 LOWER_OP,
                                  MAX_OP,
                                  MIN_OP,
                                  PERCENTAGE_OP,
@@ -39,6 +89,9 @@ OPERATIONS: typing.List[str] = [ AVERAGE_OP,
                                  SET_OP,
                                  SUBSTITUTE_OP,
                                  SUM_OP,
+                                 SWAPCASE_OP,
+                                 TITLE_OP,
+                                 UPPER_OP,
                                 ]
 
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
@@ -308,6 +361,18 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != 1:
                 raise KGTKException("Average needs 1 destination columns, got %d" % len(into_column_idxs))
 
+        elif operation == CAPITALIZE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Capitalize needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Capitalize needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+        elif operation == CASEFOLD_OP:
+            if len(sources) == 0:
+                raise KGTKException("Casefold needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Casefold needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
         elif operation == COPY_OP:
             if len(sources) == 0:
                 raise KGTKException("Copy needs at least one source, got %d" % len(sources))
@@ -321,6 +386,12 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Join needs 1 destination columns, got %d" % len(into_column_idxs))
             if len(values) != 1:
                 raise KGTKException("Join needs 1 value, got %d" % len(values))
+
+        elif operation == LOWER_OP:
+            if len(sources) == 0:
+                raise KGTKException("Lower needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Lower needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
         elif operation == MAX_OP:
             if len(sources) == 0:
@@ -377,6 +448,25 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != 1:
                 raise KGTKException("Sum needs 1 destination columns, got %d" % len(into_column_idxs))
 
+        elif operation == SWAPCASE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Swapcase needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Swapcase needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+        elif operation == TITLE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Title needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Title needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+        elif operation == UPPER_OP:
+            if len(sources) == 0:
+                raise KGTKException("Upper needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Upper needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+
         fs: str = format_string if format_string is not None else "%5.2f"
         item: str
          
@@ -401,12 +491,24 @@ def run(input_file: KGTKFiles,
                         acount += 1
                 output_row[into_column_idx] = (fs % (atotal / float(acount))) if acount > 0 else ""                
 
+            elif operation == CAPITALIZE_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].capitalize()
+
+            elif operation == CASEFOLD_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].casefold()
+
             elif operation == COPY_OP:
                 for idx in range(len(sources)):
                     output_row[into_column_idxs[idx]] = row[sources[idx]]
 
             elif operation == JOIN_OP:
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
+
+            elif operation == LOWER_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].lower()
 
             elif operation == MAX_OP:
                 max_result: typing.Optional[float] = None
@@ -452,6 +554,18 @@ def run(input_file: KGTKFiles,
                         total += float(item)
                 output_row[into_column_idx] = fs % total
                 
+            elif operation == SWAPCASE_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].swapcase()
+
+            elif operation == TITLE_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].title()
+
+            elif operation == UPPER_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].upper()
+
 
             kw.write(output_row)
 
