@@ -11,3 +11,4 @@ kgtk ${KGTK_FLAGS} \
      --filter-file ${DATADIR}/claims.${SORTED_KGTK} \
      --filter-keys id \
      --output-file ${DATADIR}/qualifiers.unclaimed.${SORTED_KGTK} \
+    | tee ${LOGDIR}/qualifiers.unclaimed.log

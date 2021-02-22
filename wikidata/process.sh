@@ -1,6 +1,6 @@
 #! /bin/bash
 
-./import-split-wikidata-gzipped.sh
+./import-split-wikidata-gzipped-clean.sh
 ./split-missing-values.sh
 ./split-sitelink-qualifiers.sh
 ./sort-split-wikidata.sh

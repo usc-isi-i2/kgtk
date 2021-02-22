@@ -3,7 +3,7 @@
 # This script expects to be executed with the current working directory.
 
 # This is the Wikidata version we will analyze:
-WIKIDATA_VERSION=wikidata-20201130
+WIKIDATA_VERSION=wikidata-20210215
 KGTK_WORK_DIR=/data3/rogers
 
 # The `kgtk validate-properties` pattern files are expected to
