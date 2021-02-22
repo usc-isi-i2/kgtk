@@ -1255,7 +1255,7 @@ o        Return True if the value looks like a language-qualified string.
                     fixup_needed = True
                 else:
                     if self.verbose:
-                        print("KgtkValue.is_location_coordinates: lon less than minimum %f for %s" % (self.options.minimum_valid_lat, repr(self.value)),
+                        print("KgtkValue.is_location_coordinates: lon less than minimum %f for %s" % (self.options.minimum_valid_lon, repr(self.value)),
                               file=self.error_file, flush=True)
                     self.valid = False
                     return False
@@ -1270,7 +1270,7 @@ o        Return True if the value looks like a language-qualified string.
                     fixup_needed = True
                 else:
                     if self.verbose:
-                        print("KgtkValue.is_location_coordinates: lon greater than maximum %f for %s" % (self.options.maximum_valid_lat, repr(self.value)),
+                        print("KgtkValue.is_location_coordinates: lon greater than maximum %f for %s" % (self.options.maximum_valid_lon, repr(self.value)),
                               file=self.error_file, flush=True)
                     self.valid = False
                     return False
