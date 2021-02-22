@@ -18,19 +18,80 @@ def parser():
     }
 
 
+# Numeric:
+ABS_OP: str = "abs"
+DIV_OP: str = "div"
+MOD_OP: str = "mod"
+POW_OP: str = "pow"
+
+# Boolean
+AND_OP: str = "and"
+ALL_OP: str = "all"
+ANY_OP: str = "any"
+NAND_OP: str = "nand"
+NOR_OP: str = "nor"
+NOT_OP: str = "not"
+OR_OP: str = "or"
+XOR_OP: str = "xor"
+
+# String
+CENTER_OP: str = "center"
+COUNT_OP: str = "count"
+ENDSWITH_OP: str = "endswidth"
+EXPANDTABS_OP: str = "expandtabs"
+FIND_OP: str = "find"
+ISALNUM_OP: str = "isalnum"
+# ...
+LJUST_OP: str = "ljust"
+LSTRIP_OP: str = "lstrip"
+PARTITION_OP: str = "partition"
+REMOVEPREFIX_OP: str = "removeprefix"
+REMOVESUFFIX_OP: str = "removesuffix"
+RFIND_OP: str = "rfind"
+RJUST_OP: str = "rjust"
+RPARTITION_OP: str = "rpartition"
+RSPLIT_OP: str = "rsplit"
+RSTRIP_OP: str = "rstrip"
+SPLIT_OP: str = " split"
+SPLITLINES_OP: str = "splitlines"
+STARTSWITH_OP: str = "startswith"
+STRIP_OP: str = "strip"
+ZFILL_OP: str = "zfill"
+
+# Implemented:
 AVERAGE_OP: str = "average"
+CAPITALIZE_OP: str = "capitalize"
+CASEFOLD_OP: str = "casefold"
 COPY_OP: str = "copy"
 JOIN_OP: str = "join"
+LOWER_OP: str = "lower"
+MAX_OP: str = "max"
+MIN_OP: str = "min"
 PERCENTAGE_OP: str = "percentage"
+REPLACE_OP: str = "replace"
 SET_OP: str = "set"
+SUBSTITUTE_OP: str = "substitute"
 SUM_OP: str = "sum"
+SWAPCASE_OP: str = "swapcase"
+TITLE_OP: str = "title"
+UPPER_OP: str = "upper"
 
 OPERATIONS: typing.List[str] = [ AVERAGE_OP,
+                                 CAPITALIZE_OP,
+                                 CASEFOLD_OP,
                                  COPY_OP,
                                  JOIN_OP,
+                                 LOWER_OP,
+                                 MAX_OP,
+                                 MIN_OP,
                                  PERCENTAGE_OP,
+                                 REPLACE_OP,
                                  SET_OP,
+                                 SUBSTITUTE_OP,
                                  SUM_OP,
+                                 SWAPCASE_OP,
+                                 TITLE_OP,
+                                 UPPER_OP,
                                 ]
 
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
@@ -64,15 +125,24 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         metavar="COLUMN_NAME",
                         help="The list of source column names, optionally containing '..' for column ranges " +
                         "and '...' for column names not explicitly mentioned.")
+
     parser.add_argument(      "--into", dest="into_column_names",
                               help="The name of the column to receive the result of the calculation.",
                               required=True, nargs="+")
+
     parser.add_argument(      "--do", dest="operation", help="The name of the operation.", required=True,
                               choices=OPERATIONS)
 
     parser.add_argument(      "--values", dest="values", nargs='*',
                         metavar="VALUES",
                         help="An optional list of values")
+
+    parser.add_argument(      "--with-values", dest="with_values", nargs='*',
+                        metavar="WITH_VALUES",
+                        help="An optional list of additional values")
+
+    parser.add_argument(      "--limit", dest="limit", type=int,
+                              help="A limit count.")
 
     parser.add_argument(      "--format", dest="format_string", help="The format string for the calculation.")
 
@@ -88,6 +158,8 @@ def run(input_file: KGTKFiles,
         into_column_names: typing.List[str],
         operation: str,
         values: typing.Optional[typing.List[str]],
+        with_values: typing.Optional[typing.List[str]],
+        limit: typing.Optional[int],
         format_string: typing.Optional[str],
 
         errors_to_stdout: bool = False,
@@ -100,8 +172,9 @@ def run(input_file: KGTKFiles,
 )->int:
     # import modules locally
     from pathlib import Path
+    import re
     import sys
-    
+
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
@@ -130,6 +203,10 @@ def run(input_file: KGTKFiles,
         print("--operation=%s" % str(operation), file=error_file, flush=True)
         if values is not None:
             print("--values %s" % " ".join(values), file=error_file, flush=True)
+        if with_values is not None:
+            print("--with-values %s" % " ".join(with_values), file=error_file, flush=True)
+        if limit is not None:
+            print("--limit %d" % limit, file=error_file, flush=True)
         if format_string is not None:
             print("--format=%s" % format_string, file=error_file, flush=True)
 
@@ -169,7 +246,7 @@ def run(input_file: KGTKFiles,
                     raise KGTKException("Elipses may appear only once")
 
                 if saw_ranger:
-                    raise KGTKException("ELipses may not appear directly after a range operator ('..').")
+                    raise KGTKException("Elipses may not appear directly after a range operator ('..').")
 
                 save_selected_names = selected_names
                 selected_names = [ ]
@@ -270,11 +347,31 @@ def run(input_file: KGTKFiles,
         if values is None:
             values = [ ]
 
+        if with_values is None:
+            with_values = [ ]
+
+        if limit is None:
+            limit = 0
+
+        substitute_re: typing.Optional[typing.Pattern] = None
+
         if operation == AVERAGE_OP:
             if len(sources) == 0:
                 raise KGTKException("Average needs at least one source, got %d" % len(sources))
             if len(into_column_idxs) != 1:
                 raise KGTKException("Average needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == CAPITALIZE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Capitalize needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Capitalize needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+        elif operation == CASEFOLD_OP:
+            if len(sources) == 0:
+                raise KGTKException("Casefold needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Casefold needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
         elif operation == COPY_OP:
             if len(sources) == 0:
@@ -290,21 +387,60 @@ def run(input_file: KGTKFiles,
             if len(values) != 1:
                 raise KGTKException("Join needs 1 value, got %d" % len(values))
 
+        elif operation == LOWER_OP:
+            if len(sources) == 0:
+                raise KGTKException("Lower needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Lower needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+        elif operation == MAX_OP:
+            if len(sources) == 0:
+                raise KGTKException("Max needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Max needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == MIN_OP:
+            if len(sources) == 0:
+                raise KGTKException("Min needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Min needs 1 destination columns, got %d" % len(into_column_idxs))
+
         elif operation == PERCENTAGE_OP:
             if len(into_column_idxs) != 1:
                 raise KGTKException("Percent needs 1 destination columns, got %d" % len(into_column_idxs))
             if len(selected_names) != 2:
                 raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
 
+        elif operation == REPLACE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Replace needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(selected_names) != 1:
+                raise KGTKException("Replace needs 1 input column, got %d" % len(selected_names))
+            if len(values) != 1:
+                raise KGTKException("Replace needs one value, got %d" % len(values))
+            if len(with_values) != 1:
+                raise KGTKException("Replace needs one with-value, got %d" % len(with_values))
+
         elif operation == SET_OP:
             if len(sources) != 0:
                 raise KGTKException("Set needs no sources, got %d" % len(sources))
             if len(into_column_idxs) == 0:
-                raise KGTKException("Set needsat least one destination column, got %d" % len(into_column_idxs))
+                raise KGTKException("Set needs at least one destination column, got %d" % len(into_column_idxs))
             if len(values) == 0:
-                raise KGTKException("Set needsat least one value, got %d" % len(values))
+                raise KGTKException("Set needs at least one value, got %d" % len(values))
             if len(into_column_idxs) != len(values):
                 raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
+
+        elif operation == SUBSTITUTE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Substitute needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(selected_names) != 1:
+                raise KGTKException("Substitute needs 1 input column, got %d" % len(selected_names))
+            if len(values) != 1:
+                raise KGTKException("Substitute needs one value, got %d" % len(values))
+            if len(with_values) != 1:
+                raise KGTKException("Substitute needs one with-value, got %d" % len(with_values))
+            substitute_re = re.compile(values[0])
 
         elif operation == SUM_OP:
             if len(sources) == 0:
@@ -312,9 +448,28 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != 1:
                 raise KGTKException("Sum needs 1 destination columns, got %d" % len(into_column_idxs))
 
+        elif operation == SWAPCASE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Swapcase needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Swapcase needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+        elif operation == TITLE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Title needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Title needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+        elif operation == UPPER_OP:
+            if len(sources) == 0:
+                raise KGTKException("Upper needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Upper needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+
         fs: str = format_string if format_string is not None else "%5.2f"
         item: str
-        
+         
         into_column_idx = into_column_idxs[0] # for convenience
 
         input_data_lines: int = 0
@@ -336,6 +491,14 @@ def run(input_file: KGTKFiles,
                         acount += 1
                 output_row[into_column_idx] = (fs % (atotal / float(acount))) if acount > 0 else ""                
 
+            elif operation == CAPITALIZE_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].capitalize()
+
+            elif operation == CASEFOLD_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].casefold()
+
             elif operation == COPY_OP:
                 for idx in range(len(sources)):
                     output_row[into_column_idxs[idx]] = row[sources[idx]]
@@ -343,12 +506,45 @@ def run(input_file: KGTKFiles,
             elif operation == JOIN_OP:
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
 
+            elif operation == LOWER_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].lower()
+
+            elif operation == MAX_OP:
+                max_result: typing.Optional[float] = None
+                for idx in sources:
+                    item = row[idx]
+                    if len(item) > 0:
+                        max_value: float = float(item)
+                        if max_result is None or max_value > max_result:
+                            max_result = max_value
+                output_row[into_column_idx] = (fs % max_result) if max_result is not None else ""
+
+            elif operation == MIN_OP:
+                min_result: typing.Optional[float] = None
+                for idx in sources:
+                    item = row[idx]
+                    if len(item) > 0:
+                        min_value: float = float(item)
+                        if min_result is None or min_value < min_result:
+                            min_result = min_value
+                output_row[into_column_idx] = (fs % min_result) if min_result is not None else ""
+
             elif operation == PERCENTAGE_OP:
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
+
+            elif operation == REPLACE_OP:
+                if limit == 0:
+                    output_row[into_column_idx] = row[sources[0]].replace(values[0], with_values[0])
+                else:
+                    output_row[into_column_idx] = row[sources[0]].replace(values[0], with_values[0], limit)
 
             elif operation == SET_OP:
                 for idx in range(len(values)):
                     output_row[into_column_idxs[idx]] = values[idx]
+
+            elif operation == SUBSTITUTE_OP and substitute_re is not None:
+                output_row[into_column_idx] = substitute_re.sub(with_values[0], row[sources[0]], count=limit)
 
             elif operation == SUM_OP:
                 total: float = 0
@@ -358,6 +554,18 @@ def run(input_file: KGTKFiles,
                         total += float(item)
                 output_row[into_column_idx] = fs % total
                 
+            elif operation == SWAPCASE_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].swapcase()
+
+            elif operation == TITLE_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].title()
+
+            elif operation == UPPER_OP:
+                for idx in range(len(sources)):
+                    output_row[into_column_idxs[idx]] = row[sources[idx]].upper()
+
 
             kw.write(output_row)
 

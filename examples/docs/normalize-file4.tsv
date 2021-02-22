@@ -1,0 +1,3 @@
+node1	label	node2	color	material	size
+block1	isa	cube	red	wood	large
+block2	isa	pyramid	blue	steel	small

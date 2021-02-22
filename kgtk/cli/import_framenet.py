@@ -76,34 +76,62 @@ def run(output_file: KGTKFiles):
             for fe in frm.FE.values():
                 if isinstance(fe.semType, nltk.corpus.reader.framenet.AttrDict):
 
-                    edges.append([fe_id(fe.name),
-                                    'fn:HasSemType',
-                                   fe_semtype_id(fe.semType.name)])
+                    # Sem type
+                    semtype_edge=[fe_id(fe.name),
+                                    '/r/IsA', #'fn:HasSemType',
+                                   fe_semtype_id(fe.semType.name)]
+                    if semtype_edge not in edges:
+                        edges.append(semtype_edge)
 
-                    edges.append([fe_semtype_id(fe.semType.name),
-                                    'fn:st:RootType',
-                                   fe_semtype_id(fe.semType.rootType.name)])
 
-                    edges.append([fe_semtype_id(fe.semType.name),
-                                    'fn:st:SuperType',
-                                   fe_semtype_id(fe.semType.superType.name)])
+                    # Root type
+                    root_edge=[fe_semtype_id(fe.semType.name),
+                                    '/r/IsA', # 'fn:st:RootType'
+                                   fe_semtype_id(fe.semType.rootType.name)]
+                    if root_edge not in edges:
+                        edges.append(root_edge)
 
+
+                    # Super type
+                    super_edge=[fe_semtype_id(fe.semType.name),
+                                    '/r/IsA', #'fn:st:SuperType',
+                                   fe_semtype_id(fe.semType.superType.name)]
+                    if super_edge not in edges:
+                        edges.append(super_edge)
+
+
+                    # Sub type
                     for fesub in fe.semType.subTypes:
-                        edges.append([fe_semtype_id(fe.semType.name),
-                                    'fn:st:SubType',
-                                    fe_semtype_id(fesub.name)])
+                        sub_edge=[fe_semtype_id(fesub.name),
+                                    '/r/IsA',
+                                    fe_semtype_id(fe.semType.name)]
+                        if sub_edge not in edges:
+                            edges.append(sub_edge)
+                        #edges.append([fe_semtype_id(fe.semType.name),
+                        #            'fn:st:SubType',
+                        #            fe_semtype_id(fesub.name)])
 
 
+                # Requires FE
                 if isinstance(fe.requiresFE, nltk.corpus.reader.framenet.AttrDict):
-                    edges.append([fe_id(fe.name), 'fn:fe:RequiresFE', fe_id(fe.requiresFE.name)])
+                    req_edge=[fe_id(fe.name), '/r/HasPrerequisite', fe_id(fe.requiresFE.name)]
+                    if req_edge not in edges:
+                        edges.append(req_edge)
+                    #edges.append([fe_id(fe.name), 'fn:fe:RequiresFE', fe_id(fe.requiresFE.name)])
 
+                # Excludes FE
                 if isinstance(fe.excludesFE, nltk.corpus.reader.framenet.AttrDict):
-                    edges.append([fe_id(fe.name), 'fn:fe:ExcludesFE', fe_id(fe.excludesFE.name)])
+                    excl_edge=[fe_id(fe.name), '/r/RelatedTo', fe_id(fe.excludesFE.name)]
+                    if excl_edge not in edges:
+                        edges.append(excl_edge)
+                    #edges.append([fe_id(fe.name), 'fn:fe:ExcludesFE', fe_id(fe.excludesFE.name)])
 
-                # coreType as edge feature
-                edges.append([frm_id(frm.name), 
-                            'fn:HasFrameElement',
-                            fe_id(fe.name)])
+                # HasFrameElement - coreType as edge feature
+                hasfe_edge=[frm_id(frm.name),
+                            '/r/HasA', #'fn:HasFrameElement',
+                            fe_id(fe.name)]
+                if hasfe_edge not in edges:
+                    edges.append(hasfe_edge)
         return edges
 
     def nosp(s):
@@ -138,37 +166,29 @@ def run(output_file: KGTKFiles):
     def pretty_frame_edge(edges, s, o, p):
         pn = nosp(p)
         if pn == 'inheritance':
-            edges.append([s, 'fn:IsInheritedBy', o])
-            edges.append([o, 'fn:InheritsFrom', s])
+            edges.append([o, '/r/IsA', s])
         elif pn == 'using':
-            edges.append([s, 'fn:IsUsedBy', o])
-            edges.append([o, 'fn:Uses', s])
+            edges.append([s, '/r/UsedFor', o])
         elif pn == 'subframe':
-            edges.append([s, 'fn:HasSubframe', o])
-            edges.append([o, 'fn:SubframeOf', s])
+            edges.append([s, '/r/HasSubevent', o])
         elif pn == 'precedes':
-            edges.append([s, 'fn:Precedes', o])
-            edges.append([o, 'fn:IsPrecededBy', s])
+            edges.append([o, '/r/HasPrerequisite', s])
         elif pn == 'perspective_on':
-            edges.append([s, 'fn:IsPerspectivizedIn', o])
-            edges.append([o, 'fn:PerspectiveOn', s])
+            edges.append([o, '/r/IsA', s])
         else:
-            # 'Is Inchoative of:'
-            # 'Is Causative of:'
-            # 'See also:'
             name = {
-                'is_inchoative_of': 'IsInchoativeOf',
-                'inchoative_of': 'IsInchoativeOf',
+                'is_inchoative_of': '/r/Causes',
+                'inchoative_of': '/r/Causes',
                 #
-                'is_causative_of': 'IsCausativeOf',
-                'causative_of': 'IsCausativeOf',
+                'is_causative_of': '/r/Causes',
+                'causative_of': '/r/Causes',
                 #
-                'see_also': 'SeeAlso',
+                'see_also': '/r/RelatedTo',
                 #
-                'reframing_mapping': 'ReframingMapping',
-                'metaphor': 'Metaphor',
+                'reframing_mapping': '/r/SimilarTo',
+                'metaphor': '/r/SimilarTo',
             }[pn]
-            edges.append([s, f'fn:{name}', o])
+            edges.append([s, name, o])
         return edges
 
     try:

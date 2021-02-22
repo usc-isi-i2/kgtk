@@ -41,7 +41,8 @@ def make_tsv(
         model.load_state_dict(state_dict, strict=False)
 
     make_tsv_for_entities(model, checkpoint_manager, entity_storage, entities_tf)
-    make_tsv_for_relation_types(model, relation_type_storage, relation_types_tf)
+    if config.relations[0].operator != 'linear': # when the operator is linear, the relations type will raise an error
+        make_tsv_for_relation_types(model, relation_type_storage, relation_types_tf)
 
 
 def make_tsv_for_entities(

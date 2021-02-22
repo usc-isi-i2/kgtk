@@ -385,7 +385,7 @@ class KgtkReaderOptions():
             repair_and_validate_lines=lookup("repair_and_validate_lines", False),
             repair_and_validate_values=lookup("repair_and_validate_values", False),
             short_line_action=lookup("short_line_action", ValidationAction.EXCLUDE),
-            skip_header_record=lookup("skip_header_recordb", False),
+            skip_header_record=lookup("skip_header_record", False),
             tail_count=lookup("tail_count", None),
             truncate_long_lines=lookup("truncate_long_lines", False),
             unsafe_column_name_action=lookup("unsafe_column_name_action", ValidationAction.REPORT),
@@ -484,6 +484,13 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     data_lines_skipped: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_lines_passed: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_lines_ignored: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_filled: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_truncated: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_excluded_short: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_excluded_long: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_excluded_blank_fields: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_excluded_invalid_values: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_excluded_prohibited_lists: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_errors_reported: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # Is this an edge file or a node file?
@@ -617,7 +624,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             cls = EdgeReader
         
         elif is_node_file:
-            # We'll instantiate an NodeReader, which is a subclass of KgtkReader.
+            # We'll instantiate a NodeReader, which is a subclass of KgtkReader.
             # The NodeReader import is deferred to avoid circular imports.
             from kgtk.io.nodereader import NodeReader
             
@@ -782,14 +789,27 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if verbose:
                 print("header: %s" % header, file=error_file, flush=True)
 
+            input_format: str
+            if options.input_format is None:
+                input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
+            else:
+                input_format = options.input_format
+            if verbose:
+                print("input format: %s" % input_format, file=error_file, flush=True)
+
             # Split the first line into column names.
-            #
-            # TODO: if options.input_format == KgtkReaderOptions.INPUT_FORMAT_CSV, be smarter.
-            return header, header.split(options.column_separator)
+            if input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
+                return header, cls.csvsplit(header)
+            else:
+                return header, header.split(options.column_separator)
         else:
             # Skip the first record to override the column names in the file.
             # Do not skip the first record if the file does not hae a header record.
+            if verbose:
+                print("Forcing column names", file=error_file, flush=True)
             if options.skip_header_record:
+                if verbose:
+                    print("Skipping a header record", file=error_file, flush=True)
                 try:
                     next(source)
                 except StopIteration:
@@ -844,7 +864,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             print("%s" % line, file=self.reject_file)
 
-    def csvsplit(self, line: str)->typing.List[str]:
+    @classmethod
+    def csvsplit(cls, line: str)->typing.List[str]:
         row: typing.List[str] = [ ]
         item: str = ""
         c: str
@@ -950,18 +971,21 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 if self.options.empty_line_action != ValidationAction.PASS and len(line) == 0:
                     if self.exclude_line(self.options.empty_line_action, "saw an empty line", line):
                         self.reject(line)
+                        self.data_lines_ignored += 1
                         continue
 
                 # Ignore comment lines:
                 if self.options.comment_line_action != ValidationAction.PASS  and line[0] == self.COMMENT_INDICATOR:
                     if self.exclude_line(self.options.comment_line_action, "saw a comment line", line):
                         self.reject(line)
+                        self.data_lines_ignored += 1
                         continue
 
                 # Ignore whitespace lines
                 if self.options.whitespace_line_action != ValidationAction.PASS and line.isspace():
                     if self.exclude_line(self.options.whitespace_line_action, "saw a whitespace line", line):
                         self.reject(line)
+                        self.data_lines_ignored += 1
                         continue
 
             if input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
@@ -974,10 +998,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 if self.options.fill_short_lines and len(row) < self.column_count:
                     while len(row) < self.column_count:
                         row.append("")
+                    self.data_lines_filled += 1
                     
                 # Optionally remove extra trailing columns:
                 if self.options.truncate_long_lines and len(row) > self.column_count:
                     row = row[:self.column_count]
+                    self.data_lines_truncated += 1
                             
                 # Optionally validate that the line contained the right number of columns:
                 #
@@ -989,6 +1015,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                 line),
                                          line):
                         self.reject(line)
+                        self.data_lines_excluded_short += 1
                         continue
                              
                 if self.options.long_line_action != ValidationAction.PASS and len(row) > self.column_count:
@@ -999,10 +1026,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                            line),
                                          line):
                         self.reject(line)
+                        self.data_lines_excluded_long += 1
                         continue
 
-                if self._ignore_if_blank_fields(row, line):
+                if self._ignore_if_blank_required_fields(row, line):
                     self.reject(line)
+                    self.data_lines_excluded_blank_fields += 1
                     continue
 
             if repair_and_validate_values:
@@ -1012,11 +1041,13 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     # and iterator methods below.
                     if self._ignore_invalid_values(row, line):
                         self.reject(line)
+                        self.data_lines_excluded_invalid_values += 1
                         continue
 
                 if self.options.prohibited_list_action != ValidationAction.PASS:
                     if self._ignore_prohibited_lists(row, line):
                         self.reject(line)
+                        self.data_lines_excluded_prohibited_lists += 1
                         continue
 
             self.data_lines_passed += 1
@@ -1268,25 +1299,13 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             return
         problems.append("col %d (%s) value '%s'is a prohibited list" % (idx, self.column_names[idx], item))
 
-    def _ignore_prohibited_lists(self, row: typing.List[str], line: str)->bool:
-        """
-        KGTK File Format v2 prohibits "|" lists in the node1, label, and node2 columns.
-        """
-        problems: typing.List[str] = [ ] # Build a list of problems.
-
-        self._ignore_prohibited_list(self.node1_column_idx, row, line, problems)
-        self._ignore_prohibited_list(self.label_column_idx, row, line, problems)
-        self._ignore_prohibited_list(self.node2_column_idx, row, line, problems)
-
-        if len(problems) == 0:
-            return False
-
-        return self.exclude_line(self.options.invalid_value_action,
-                                 "\n".join(problems),
-                                 line)
 
     # May be overridden
-    def _ignore_if_blank_fields(self, values: typing.List[str], line: str)->bool:
+    def _ignore_prohibited_lists(self, row: typing.List[str], line: str)->bool:
+        return False
+
+    # May be overridden
+    def _ignore_if_blank_required_fields(self, values: typing.List[str], line: str)->bool:
         return False
 
     # May be overridden
@@ -1483,19 +1502,19 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if expert:
             errors_to = egroup.add_mutually_exclusive_group()
             errors_to.add_argument(      "--errors-to-stdout", dest="errors_to_stdout", metavar="optional True|False",
-                                         help="Send errors to stdout instead of stderr",
+                                         help="Send errors to stdout instead of stderr. (default=%(default)s).",
                                          type=optional_bool, nargs='?', const=True, default=False)
 
             errors_to.add_argument(      "--errors-to-stderr", dest="errors_to_stderr", metavar="optional True|False",
-                                         help="Send errors to stderr instead of stdout",
+                                         help="Send errors to stderr instead of stdout. (default=%(default)s).",
                                          type=optional_bool, nargs='?', const=True, default=False)
         else:
             egroup.add_argument(      "--errors-to-stderr", dest="errors_to_stderr", metavar="optional True|False",
-                                      help=h("Send errors to stderr instead of stdout"),
+                                      help=h("Send errors to stderr instead of stdout. (default=%(default)s),"),
                                       type=optional_bool, nargs='?', const=True, default=False)
 
             egroup.add_argument(      "--errors-to-stdout", dest="errors_to_stdout", metavar="optional True|False",
-                                      help=h("Send errors to stdout instead of stderr"),
+                                      help=h("Send errors to stdout instead of stderr. (default=%(default)s)."),
                                       type=optional_bool, nargs='?', const=True, default=False)
 
         egroup.add_argument(      "--show-options", dest="show_options", metavar="optional True|False",
@@ -1528,6 +1547,30 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             print("--verbose", file=out)
         if very_verbose:
             print("--very-verbose", file=out)
+
+    def report_summary(self):
+        print("Data lines read: %d" % self.data_lines_read, file=self.error_file, flush=True)
+        print("Data lines passed: %d" % self.data_lines_passed, file=self.error_file, flush=True)
+        if self.data_lines_skipped > 0:
+            print("Data lines skipped: %d" % self.data_lines_skipped, file=self.error_file, flush=True)
+        if self.data_lines_ignored > 0:
+            print("Data lines ignored: %d" % self.data_lines_ignored, file=self.error_file, flush=True)
+        if self.data_lines_filled > 0:
+            print("Data lines filled: %d" % self.data_lines_filled, file=self.error_file, flush=True)
+        if self.data_lines_truncated > 0:
+            print("Data lines truncated: %d" % self.data_lines_truncated, file=self.error_file, flush=True)
+        if self.data_lines_excluded_short > 0:
+            print("Data lines excluded due to too few columns: %d" % self.data_lines_excluded_short, file=self.error_file, flush=True)
+        if self.data_lines_excluded_long > 0:
+            print("Data lines excluded due to too many columns: %d" % self.data_lines_excluded_long, file=self.error_file, flush=True)
+        if self.data_lines_excluded_blank_fields > 0:
+            print("Data lines excluded due to blank fields: %d" % self.data_lines_excluded_blank_fields, file=self.error_file, flush=True)
+        if self.data_lines_excluded_invalid_values > 0:
+            print("Data lines excluded due to invalid values: %d" % self.data_lines_excluded_invalid_values, file=self.error_file, flush=True)
+        if self.data_lines_excluded_prohibited_lists > 0:
+            print("Data lines excluded due to prohibited lists: %d" % self.data_lines_excluded_prohibited_lists, file=self.error_file, flush=True)
+        if self.data_errors_reported > 0:
+            print("Data errors reported: %d" % self.data_errors_reported, file=self.error_file, flush=True)
 
         
 def main():

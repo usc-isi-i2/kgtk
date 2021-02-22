@@ -11,6 +11,7 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
+        'aliases': [ 'filter-properties' ],
         'help': 'Validate property patterns in a KGTK file. ',
         'description': 'Validate property patterns in a KGTK file. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert clean-data --help'

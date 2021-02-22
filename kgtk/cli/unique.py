@@ -23,6 +23,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.kgtkformat import KgtkFormat
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.join.unique import Unique
     from kgtk.utils.argparsehelpers import optional_bool
@@ -42,24 +43,32 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(positional=True)
     parser.add_output_file()
 
-    parser.add_argument(      "--column", dest="column_name",
-                              help="The column to count unique values (required).", required=True)
+    parser.add_argument('-c', "--column", "--columns", dest="column_names", nargs='*',
+                        metavar="COLUMN_NAME",
+                              help="The column(s) to count unique values (default=node2 or its alias).")
 
     parser.add_argument(      "--empty", dest="empty_value", help="A value to substitute for empty values (default=%(default)s).", default="")
 
     parser.add_argument(      "--label", dest="label_value", help="The output file label column value (default=%(default)s).", default="count")
 
     # TODO: use an emum
-    parser.add_argument(      "--format", dest="output_format", help=h("The output file format and mode (default=%(default)s)."),
+    parser.add_argument(      "--format", dest="output_format", help="The output file format and mode (default=%(default)s).",
                               default=Unique.DEFAULT_FORMAT, choices=Unique.OUTPUT_FORMATS)
 
-    parser.add_argument(      "--prefix", dest="prefix", help=h("The value prefix (default=%(default)s)."), default="")
+    parser.add_argument(      "--prefix", dest="prefix", help="The value prefix (default=%(default)s).", default="")
 
     parser.add_argument(      "--where", dest="where_column_name",
                               help="The name of a column for a record selection test. (default=%(default)s).", default=None)
 
     parser.add_argument(      "--in", dest="where_values", nargs="+",
                               help="The list of values for a record selection test. (default=%(default)s).", default=None)
+
+    parser.add_argument(      "--value-filter", dest="value_filter", metavar="VALUE_FILTER_RE",
+                              help="A regular expression filter on the extracted values. (default=%(default)s).", default="")
+
+    parser.add_argument(      "--value-match-type", dest="value_match_type", 
+                              help="Which type of regular expression value match: %(choices)s. (default=%(default)s).",
+                              type=str, default="match", choices=["fullmatch", "match", "search"])
 
     parser.add_argument(      "--presorted", dest="presorted", metavar="True|False",
                               help="When True, the input file is presorted. (default=%(default)s).",
@@ -72,7 +81,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
 
-        column_name: str,
+        column_names: typing.Optional[typing.List[str]] = None,
         empty_value: str = "",
         label_value: str = "count",
 
@@ -81,6 +90,9 @@ def run(input_file: KGTKFiles,
 
         where_column_name: typing.Optional[str] = None,
         where_values: typing.Optional[typing.List[str]] = None,
+
+        value_filter: str = "",
+        value_match_type: str = "match",
 
         presorted: bool = False,
 
@@ -116,7 +128,8 @@ def run(input_file: KGTKFiles,
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
-        print("--column=%s" % str(column_name), file=error_file)
+        if column_names is not None:
+            print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
         print("--empty=%s" % str(empty_value), file=error_file)
         print("--label=%s" % str(label_value), file=error_file)
         print("--format=%s" % output_format, file=error_file)
@@ -125,6 +138,8 @@ def run(input_file: KGTKFiles,
             print("--where=%s" % where_column_name, file=error_file)
         if where_values is not None and len(where_values) > 0:
             print("--in=%s" % " ".join(where_values), file=error_file)
+        print("--value-filter=%s" % repr(value_filter), file=error_file)
+        print("--value-match-type=%s" % repr(value_match_type), file=error_file)
         print("--prefix=%s" % repr(presorted), file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -134,13 +149,15 @@ def run(input_file: KGTKFiles,
         uniq: Unique = Unique(
             input_file_path=input_kgtk_file,
             output_file_path=output_kgtk_file,
-            column_name=column_name,
+            column_names=column_names,
             label_value=label_value,
             empty_value=empty_value,
             output_format=output_format,
             prefix=prefix,
             where_column_name=where_column_name,
             where_values=where_values,
+            value_filter=value_filter,
+            value_match_type=value_match_type,
             presorted=presorted,
             reader_options=reader_options,
             value_options=value_options,

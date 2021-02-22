@@ -1,0 +1,7 @@
+id	node1	label	node2
+Q75952971-P31-Q5-d020ba0c-0	Q75952971	P31	Q5
+Q75952971-P21-Q6581097-018e8019-0	Q75952971	P21	Q6581097
+Q5-label-en	Q5	label	'human'@en
+Q6581097-label-en	Q6581097	label	'male'@en
+Q75952971-label-en	Q75952971	label	'Philippe Greenway'@en
+Q75952971-description-en	Q75952971	description	'born 1991'@en

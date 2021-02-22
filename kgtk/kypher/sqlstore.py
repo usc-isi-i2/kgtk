@@ -26,7 +26,7 @@ pp = pprint.PrettyPrinter(indent=4)
 #   - we decided to only do this for indexes for now
 # - support naming of graphs which would allow deleting of the source data
 #   as well as graphs fed in from stdin
-# - absolute file names are an issue when distributing the store
+# + absolute file names are an issue when distributing the store
 # - support some minimal sanity checking such as empty files, etc.
 # - handle column name dealiasing and normalization
 # - explanation runs outside the sqlite connection and thus does not see
@@ -34,10 +34,11 @@ pp = pprint.PrettyPrinter(indent=4)
 #   see if we can fix this somehow
 # - support declaring and dropping of (temporary) graphs that are only used
 #   once or a few times
-# - allow in-memory graphs
+# - allow in-memory graphs, or better, support memory-mapped IO via
+#   PRAGMA mmap_size=NNN bytes, which would be transparent and usable on demand
 # - support other DB maintenance ops such as drop, list, info, etc.
 # - see how we could better support fine-grained querying via prepared statements
-#   and persistent connections that avoid the KGTK startup overhead
+#   and persistent connections that avoid the KGTK startup overhead, or scripts
 # - check for version of sqlite3, since older versions do not support ascii mode
 # - protect graph data import from failure or aborts through transactions
 # - handle table/index creation locking when we might have parallel invocations,
@@ -1260,3 +1261,31 @@ def kgtk_geo_coords_long(x):
 SqliteStore.register_user_function('kgtk_geo_coords', 1, kgtk_geo_coords, deterministic=True)
 SqliteStore.register_user_function('kgtk_geo_coords_lat', 1, kgtk_geo_coords_lat, deterministic=True)
 SqliteStore.register_user_function('kgtk_geo_coords_long', 1, kgtk_geo_coords_long, deterministic=True)
+
+
+# NULL value utilities:
+
+# In the KGTK file format we cannot distinguish between empty and NULL values.
+# Both KGTKReader and SQLite map missing values onto empty strings, however,
+# database functions as well as our KGTK user functions return NULL for undefined
+# values.  These can be tested via 'IS [NOT] NULL', however, in some cases it is
+# convenient to convert from one to the other for more uniform tests and queries.
+
+def kgtk_null_to_empty(x):
+    """If 'x' is NULL map it onto the empty string, otherwise return 'x' unmodified.
+    """
+    if x is None:
+        return ''
+    else:
+        return x
+
+def kgtk_empty_to_null(x):
+    """If 'x' is the empty string, map it onto NULL, otherwise return 'x' unmodified.
+    """
+    if x == '':
+        return None
+    else:
+        return x
+
+SqliteStore.register_user_function('kgtk_null_to_empty', 1, kgtk_null_to_empty, deterministic=True)
+SqliteStore.register_user_function('kgtk_empty_to_null', 1, kgtk_empty_to_null, deterministic=True)
