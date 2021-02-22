@@ -860,7 +860,7 @@ def run(input_file: KGTKFiles,
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
 
-            if clean:
+            if clean_input_values:
                 error_buffer: typing.Optional[io.StringIO] = io.StringIO() if clean_verbose else None
                 values_are_valid: bool = True
                 kv: KgtkValue
@@ -943,7 +943,7 @@ def run(input_file: KGTKFiles,
                          calendar="",
         ):
 
-            if clean:
+            if clean_input_values:
                 error_buffer: typing.Optional[io.StringIO] = io.StringIO() if clean_verbose else None
                 values_are_valid: bool = True
                 kv: KgtkValue
@@ -2191,7 +2191,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2020-12-08T23:35:07.113207+00:00#g4xo5tTabYAJX0cxMKB6wjezb1k3fGAPtNPYELzeAmrESNU2wiKR2wQVS4cBMsjz9KGTL0J0Mmp0pE+iLSTYOQ=="
+        UPDATE_VERSION: str = "2021-02-22T01:07:37.861469+00:00#tEe3m0122+kuayQ+dd6CbQHG+JsyLDUD8K4psoWwwggJ1NKvTY3aBTtGUd7s9ImlAwB+qRytkHIjT7y5hMn8kw=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
