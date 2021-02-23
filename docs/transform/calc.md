@@ -8,7 +8,29 @@ a new column, which will be added after all existing columns.
 
 !!! note
     [`kgtk query`](../query) can perform the same calculations as
-    `kgtk calc` in a more elegant and more general manner. 
+    `kgtk calc` in a more elegant and more general manner.
+
+### fromisoformat
+
+`--do fromisoformat` validates date-and-time values and extracts
+named subfields.
+
+`--values VALUE1 VALUE2 ...` is a list of subfields to extract.
+`--into COL1 COL2 ...` is a list of columns into which to store the subfields.
+
+| Value |
+| ----- |
+| year |
+| month |
+| day |
+| hour |
+| minute |
+| second |
+| microsecond |
+
+!!! note
+    The `--into` columns should be new columns, as existing colums are
+    not cleared for edges without dates in the source column.
 
 ## Usage
 
@@ -16,7 +38,7 @@ a new column, which will be added after all existing columns.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into INTO_COLUMN_NAMES
                  [INTO_COLUMN_NAMES ...] --do
-                 {average,capitalize,casefold,copy,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
+                 {average,capitalize,casefold,copy,fromisoformat,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
@@ -43,7 +65,7 @@ optional arguments:
   --into INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {average,capitalize,casefold,copy,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
+  --do {average,capitalize,casefold,copy,fromisoformat,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -774,3 +796,23 @@ The output will be the following table in KGTK format:
 | P1040 | P585-COUNT | 1 | 45073 |
 | P1050 | P585-COUNT | 246 | 226380 |
 
+### Extract Date Subfields into New Columns.
+
+!!! info
+    The number of `--value` names must match the number of `--into` columns.
+
+```bash
+kgtk calc -i examples/docs/calc-dates-and-times.tsv \
+          --do fromisoformat \
+          --columns  node2 \
+          --values   year month day \
+          --into     year month day
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | year | month | day |
+| -- | -- | -- | -- | -- | -- |
+| Q619 | P569 | ^1952-02-19T00:00:00Z/11 | 1952 | 2 | 19 |
+| Q620 | P569 | ^1955-03-14T00:00:00Z/11 | 1955 | 3 | 14 |
+| Q621 | P569 | ^1957-06-01T00:00:00Z/11 | 1957 | 6 | 1 |
