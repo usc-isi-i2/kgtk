@@ -92,8 +92,9 @@ def split_list(sequence, sep):
             chunk.append(val)
     yield chunk
 
-def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built):
+def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     # parse internal pipe
+    ret_code: int = 0
     pipe = [list(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
     if len(pipe) == 0:
         parser.print_usage()
@@ -225,11 +226,17 @@ def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, s
             # mimic parser exit
             parser.exit(KGTKArgumentParseException.return_code, e.stderr.decode('utf-8'))
     
+    return ret_code
 
-def cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built):
+def cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     # parse internal sequence of pipes
+    ret_code: int = 0
     for commands in split_list(args, sequential_delimiter):
-        cli_entry_pipe(commands, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+        ret_code = cli_entry_pipe(commands, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+        if ret_code != 0:
+            break
+
+    return ret_code
 
 def cli_entry(*args):
     """
@@ -301,7 +308,7 @@ def cli_entry(*args):
     # this won't pollute help info in sub-parsers
     parser.usage = '%(prog)s [options] command [ / command]*'
 
-    cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+    ret_code = cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
 
     if parsed_shared_args._timing:
         end_time: float = time.time()
