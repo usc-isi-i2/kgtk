@@ -63,6 +63,7 @@ AVERAGE_OP: str = "average"
 CAPITALIZE_OP: str = "capitalize"
 CASEFOLD_OP: str = "casefold"
 COPY_OP: str = "copy"
+FROMISOFORMAT_OP: str = "fromisoformat"
 JOIN_OP: str = "join"
 LOWER_OP: str = "lower"
 MAX_OP: str = "max"
@@ -80,6 +81,7 @@ OPERATIONS: typing.List[str] = [ AVERAGE_OP,
                                  CAPITALIZE_OP,
                                  CASEFOLD_OP,
                                  COPY_OP,
+                                 FROMISOFORMAT_OP,
                                  JOIN_OP,
                                  LOWER_OP,
                                  MAX_OP,
@@ -171,11 +173,13 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    import datetime as dt
     from pathlib import Path
     import re
     import sys
 
     from kgtk.exceptions import KGTKException
+    from kgtk.kgtkformat import KgtkFormat
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -379,6 +383,12 @@ def run(input_file: KGTKFiles,
             if len(selected_names) != len(into_column_idxs):
                 raise KGTKException("Copy needs the same number of input columns and into columns, got %d and %d" % (len(selected_names), len(into_column_idxs)))
 
+        elif operation == FROMISOFORMAT_OP:
+            if len(sources) != 1:
+                raise KGTKException("Fromisoformat needs one source, got %d" % len(sources))
+            if len(values) != len(into_column_idxs):
+                raise KGTKException("Fromisoformat needs the same number of values and into columns, got %d and %d" % (len(values), len(info_column_idxs)))
+
         elif operation == JOIN_OP:
             if len(sources) == 0:
                 raise KGTKException("Join needs at least one source, got %d" % len(sources))
@@ -503,6 +513,53 @@ def run(input_file: KGTKFiles,
                 for idx in range(len(sources)):
                     output_row[into_column_idxs[idx]] = row[sources[idx]]
 
+            elif operation == FROMISOFORMAT_OP:
+                dtval: str = row[sources[0]]
+                if dtval.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
+                    kgtkdatestr: str = row[sources[0]][1:] # Strip the leading ^
+                    isodatestr: str
+                    precisionstr: str
+                    if "/" in kgtkdatestr:
+                        isodatestr, precisionstr = kgtkdatestr.split("/")
+                    else:
+                        isodatestr = kgtkdatestr
+                        precisionstr = ""
+                    if isodatestr.endswith("Z"):
+                        isodatestr = isodatestr[:-1]
+                    try:
+                        dtvar: dt.datetime = dt.datetime.fromisoformat(isodatestr)
+                        for idx in range(len(values)):
+                            value_name: str = values[idx]
+                            into_column_idx: int = into_column_idxs[idx]
+                            
+                            if value_name == "year":
+                                output_row[into_column_idx] = str(dtvar.year)
+
+                            elif value_name == "month":
+                                output_row[into_column_idx] = str(dtvar.month)
+                    
+                            elif value_name == "day":
+                                output_row[into_column_idx] = str(dtvar.day)
+
+                            elif value_name == "hour":
+                                output_row[into_column_idx] = str(dtvar.hour)
+                    
+                            elif value_name == "minute":
+                                output_row[into_column_idx] = str(dtvar.minute)
+                    
+                            elif value_name == "second":
+                                output_row[into_column_idx] = str(dtvar.second)
+                    
+                            elif value_name == "microsecond":
+                                output_row[into_column_idx] = str(dtvar.microsecond)
+
+                            else:
+                                raise KGTKException("Unknown date component %s" % repr(value_name))
+
+                    except ValueError as e:
+                        print("Error parsing %s in [%s]: %s" % (repr(isodatestr), "|".join([repr(x) for x in row]), str(e)),
+                              file=error_file, flush=True)
+                    
             elif operation == JOIN_OP:
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
 
