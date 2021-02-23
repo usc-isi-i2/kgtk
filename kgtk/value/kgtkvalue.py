@@ -4,6 +4,7 @@ Validate KGTK File data types.
 
 from argparse import ArgumentParser, Namespace
 import attr
+import datetime as dt
 import math
 import re
 import sys
@@ -1630,6 +1631,23 @@ o        Return True if the value looks like a language-qualified string.
         if fixup_needed:
             # Repair a month or day zero problem.
             self.update_date_and_times(yearstr, monthstr, daystr, hourstr, minutesstr, secondsstr, zonestr, precisionstr, iso8601extended)
+
+        if self.options.validate_fromisoformat:
+            try:
+                kgtkdatestr: str = self.value[1:] # Strip the leading ^ sigil.
+                isodatestr: str
+                if "/" in kgtkdatestr:
+                    isodatestr, _ = kgtkdatestr.split("/")
+                else:
+                    isodatestr = self.value
+                if isodatestr.endswith("Z"): # Might there be other time zones?
+                    isodatestr = isodatestr[:-1]
+                _ = dt.datetime.fromisoformat(isodatestr)
+            except ValueError:
+                if self.verbose:
+                    print("KgtkValue.is_date_and_times: datetime.fromisoformat(...) cannot parse %s." % repr(self.value),  file=self.error_file, flush=True)
+                self.valid = False
+                return False # might happen
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True
