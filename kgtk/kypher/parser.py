@@ -422,12 +422,15 @@ class NodePattern(QueryElement):
             self.labels = [lab.name for lab in self.labels]
         return self
 
+    def is_anonymous(self):
+        return self.variable is None or self.variable.name is None
+
     def normalize_term(self, implied_clauses):
         # TO DO: handle implied clauses from properties
         query = self._query
         labels = self.labels
         assert labels is None or len(labels) == 1, 'Multiple node labels are not allowed'
-        if self.variable is None or self.variable.name is None:
+        if self.is_anonymous():
             self.variable = query.create_anonymous_variable()
         return self
 
@@ -472,12 +475,17 @@ class RelationshipPattern(QueryElement):
         delattr(self, 'detail')
         return self
 
+    def is_anonymous(self):
+        return self.variable is None or self.variable.name is None
+    
     def normalize_term(self, implied_clauses):
         # TO DO: handle implied clauses from properties
         query = self._query
         labels = self.labels
+        arrow = self.arrow
         assert labels is None or len(labels) == 1, 'Multiple relationship labels are not (yet) allowed'
-        if self.variable is None or self.variable.name is None:
+        assert arrow != '--', 'Undirected relationships are not (yet) allowed'
+        if self.is_anonymous():
             self.variable = query.create_anonymous_variable()
         return self
 
@@ -617,7 +625,7 @@ class PathPattern(QueryElement):
                 # we create a connecting variable node, but we do not copy any of the other attributes if any,
                 # since those might result in additional clauses which we only want to create once:
                 conn_nodepat = pattern[2]
-                if conn_nodepat.variable is None:
+                if conn_nodepat.is_anonymous():
                     conn_nodepat.variable = query.create_anonymous_variable()
                 nodepat = NodePattern(query, None, None, None)
                 nodepat.variable = conn_nodepat.variable

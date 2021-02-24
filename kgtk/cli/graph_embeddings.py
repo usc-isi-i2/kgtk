@@ -154,7 +154,7 @@ def add_arguments(parser: KGTKArgumentParser):
                               type=Path,default=None, metavar="")
     parser.add_argument(     '-T','--temporary_directory', dest='temporary_directory',
                              help="Sepecify the directory location to store temporary file",
-                             type=Path,default=Path('tmp/'), metavar='')
+                             type=Path,default=Path('/tmp/'), metavar='')
     parser.add_argument(     '-ot','--output_format', dest='output_format',
                              help="Outputformat for embeddings [Default: w2v] Choice: kgtk | w2v | glove",
                              default='w2v', metavar='')

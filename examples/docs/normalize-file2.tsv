@@ -1,0 +1,4 @@
+node1	label	node2	node1;label	label;label	node2;label	id	confidence
+Q1	P1	Q5	"Elmo"	"instance of"	"homo sapiens"|"human"	E1	0.3
+Q1	P2	Q6	"Elmo"	"amigo"|"friend"	"Fred"	E2	0.9
+Q6	P1	Q5	"Fred"	"instance of"	"homo sapiens"|"human"	E3	0.8

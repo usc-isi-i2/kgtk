@@ -1,0 +1,4 @@
+node1	label	node2	node1;name	label;relationship	node2;name
+Q1	P1	Q5	"Elmo"	"instance of"	"homo sapiens"|"human"
+Q1	P2	Q6	"Elmo"	"amigo"|"friend"	"Fred"
+Q6	P1	Q5	"Fred"	"instance of"	"homo sapiens"|"human"

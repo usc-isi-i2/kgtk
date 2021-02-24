@@ -13,9 +13,9 @@ def parser():
         'help': 'Convert a KGTK file to a GitHub Markdown Table.',
         'description': 'Convert a KGTK input file to a GitHub markdown table on output. ' +
         '\n\nUse this command to filter the output of any KGTK command: ' +
-        '\n\nkgtk md ' +
+        '\n\nkgtk xxx / md ' +
         '\n\nUse it to convert a KGTK file to a GitHub Markdown table in a file: ' +
-        '\n\nkgtk md file.tsv ' +
+        '\n\nkgtk md -i file.tsv -o file.md' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert md --help'
     }
 
@@ -67,7 +67,7 @@ def run(input_file: KGTKFiles,
     import typing
     
     from kgtk.exceptions import KGTKException
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.join.kgtkcat import KgtkCat
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -81,7 +81,7 @@ def run(input_file: KGTKFiles,
     # TODO: check that at most one input file is stdin?
 
     # Build the option structures.
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, mode=KgtkReaderMode.NONE)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     # Show the final option structures for debugging and documentation.

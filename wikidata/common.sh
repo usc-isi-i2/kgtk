@@ -3,7 +3,7 @@
 # This script expects to be executed with the current working directory.
 
 # This is the Wikidata version we will analyze:
-WIKIDATA_VERSION=wikidata-20200803
+WIKIDATA_VERSION=wikidata-20201130
 KGTK_WORK_DIR=/data3/rogers
 
 # The `kgtk validate-properties` pattern files are expected to
@@ -11,7 +11,7 @@ KGTK_WORK_DIR=/data3/rogers
 PATTERNDIR=/data1/rogers/kgtk/github/kgtk/wikidata/patterns
 
 # This will be our working directory:
-WIKIDATA_WORK_DIR=${KGTK_WORK_DIR}/kgtk/gd/kgtk/cache/datasets/${WIKIDATA_VERSION}
+WIKIDATA_WORK_DIR=${KGTK_WORK_DIR}/kgtk/gd/kgtk_public_graphs/cache/${WIKIDATA_VERSION}
 
 # The working data files will be stored in:
 DATADIR=${WIKIDATA_WORK_DIR}/data
@@ -26,11 +26,11 @@ LOGDIR=${WIKIDATA_WORK_DIR}/logs
 COUNTDIR=${WIKIDATA_WORK_DIR}/counts
 
 # Completed data products will be stored in:
-PRODUCTDIR=/data1/rogers/kgtk/gd/kgtk/drive/datasets/${WIKIDATA_VERSION}-v4
+PRODUCTDIR=/data1/rogers/kgtk/gd/kgtk_public_graphs/drive/${WIKIDATA_VERSION}
 
 # This script expects to see the wikidata dump JSON file in the
 # following location:
-WIKIDATA_JSON_DIR=${WIKIDATA_WORK_DIR}/json
+WIKIDATA_JSON_DIR=${WIKIDATA_WORK_DIR}/dumps
 
 # The Wikidata JSON file is named as follows:
 WIKIDATA_ALL=${WIKIDATA_VERSION}-all

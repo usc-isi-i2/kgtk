@@ -8,7 +8,7 @@ SPARQLWrapper
 tqdm
 rdflib
 simplejson
-pyrallel.lib>=0.0.8
+pyrallel.lib>=0.0.9
 redis
 dill>=0.3.2
 mgzip>=0.2.1

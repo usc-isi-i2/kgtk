@@ -1,0 +1,6 @@
+node1	label	node2	location	years
+john	zipcode	12345|12346	home	10
+peter	zipcode	12040	home|cabin	
+peter	zipcode	12040	work	5|6
+steve	zipcode	45601		3|4|5
+steve	zipcode	45601	home|work|cabin	1|2

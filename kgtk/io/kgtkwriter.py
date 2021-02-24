@@ -354,16 +354,16 @@ class KgtkWriter(KgtkBase):
             if len(old_column_names) != len(new_column_names):
                 raise ValueError("%s: old/new column name length mismatch: %d != %d" % (who, len(old_column_names), len(new_column_names)))
 
-            # Rename columns in place.  Start by copyin the output column name
+            # Rename columns in place.  Start by copying the output column name
             # list so the changes don't inadvertantly propogate.
-            output_column_names = output_column_names.copy()
+            new_output_column_names: typing.List[str] = output_column_names.copy()
             column_name: str
             idx: int
             for idx, column_name in enumerate(old_column_names):
                 if column_name not in output_column_names:
                     raise ValueError("%s: old column names %s not in the output column names." % (who, column_name))
-                output_column_names[output_column_names.index(column_name)] = new_column_names[idx]
-                
+                new_output_column_names[output_column_names.index(column_name)] = new_column_names[idx]
+            output_column_names = new_output_column_names # Update the outptu column names.
 
         # Build a map from column name to column index.  This is used for
         # self.writemap(...)  and self.build_shuffle_list(...)

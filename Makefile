@@ -25,7 +25,7 @@ update-version:
 	python3 kgtk/utils/updateversion.py --show-changes=True $(FILES)
 
 unittest:
-	cd kgtk/tests && python3 -m unittest discover --verbose
+	cd tests && python3 -m unittest discover --verbose
 
 coverage:
 	cd kgtk/tests && coverage run --source=kgtk -m unittest discover --verbose

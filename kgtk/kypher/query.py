@@ -20,7 +20,10 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### TO DO:
 
+# - support node property access without having to introduce the property variable in the
+#   match clause first (e.g., y.salary in the multi-graph join example)
 # + support parameters in lists
+# - support concat function (|| operator in sqlite)
 # - maybe support positional parameters $0, $1,...
 # - intelligent interpretation of ^ and $ when regex-matching to string literals?
 #   - one can use kgtk_unstringify first to get to the text content
@@ -32,10 +35,10 @@ pp = pprint.PrettyPrinter(indent=4)
 # - bump graph timestamps when they get queried
 # + allow order-by on column aliases (currently they are undefined variables)
 # - (not) exists pattern handling
-# - null-value handling and testing
+# + null-value handling and testing
 # - handle properties that are ambiguous across graphs
-# - graphs fed in from stdin
-# - graph naming independent from files, so we don't have to have source data files
+# + graphs fed in from stdin
+# + graph naming independent from files, so we don't have to have source data files
 #   available after import for querying, e.g.: ... -i $FILE1 --as g1 -i $FILE2 --as g2 ...
 # - with named graphs, we probably also need some kind of --info command to list content
 # - --create and --remove to instantiate and add/remove edge patterns from result bindings
@@ -306,9 +309,11 @@ class KgtkQuery(object):
             # not sure if they could ever be equal, but just in case:
             if sql_var != best_var:
                 varmap[query_var].add(sql_var)
-                equiv = [best_var, sql_var]
-                equiv.sort()
-                joins.add(tuple(equiv))
+                # we never join an alias with anything:
+                if this_graph != self.ALIAS_GRAPH:
+                    equiv = [best_var, sql_var]
+                    equiv.sort()
+                    joins.add(tuple(equiv))
         
     def pattern_clause_to_sql(self, clause, graph, litmap, varmap, restrictions, joins):
         node1 = clause[0]
@@ -319,14 +324,16 @@ class KgtkQuery(object):
         if node1.labels is not None:
             para = self.get_literal_parameter(node1.labels[0], litmap)
             restrictions.add(((graph, node1col), para))
-        if node1.variable is not None and not isinstance(node1.variable, parser.AnonymousVariable):
+        # we do not exclude anonymous vars here, since they can connect edges: <-[]-()-[]->
+        if node1.variable is not None:
             self.register_clause_variable(node1.variable.name, (graph, node1col), varmap, joins)
 
         node2col = self.get_node2_column(graph)
         if node2.labels is not None:
             para = self.get_literal_parameter(node2.labels[0], litmap)
             restrictions.add(((graph, node2col), para))
-        if node2.variable is not None and not isinstance(node2.variable, parser.AnonymousVariable):
+        # we do not exclude anonymous vars here (see above):
+        if node2.variable is not None:
             self.register_clause_variable(node2.variable.name, (graph, node2col), varmap, joins)
             
         labelcol = self.get_label_column(graph)
@@ -334,6 +341,7 @@ class KgtkQuery(object):
         if rel.labels is not None:
             para = self.get_literal_parameter(rel.labels[0], litmap)
             restrictions.add(((graph, labelcol), para))
+        # but an anonymous relation variable cannot connect to anything else:
         if rel.variable is not None and not isinstance(rel.variable, parser.AnonymousVariable):
             self.register_clause_variable(rel.variable.name, (graph, idcol), varmap, joins)
 
@@ -399,12 +407,15 @@ class KgtkQuery(object):
             sql_vars = varmap.get(query_var)
             if sql_vars is None:
                 raise Exception('Undefined variable: %s' % query_var)
+            # we allow regular and alias variables of the same name, but once an alias
+            # of name 'x' is defined, it will shadow access to any regular variable 'x':
+            for graph, col in sql_vars:
+                if graph == self.ALIAS_GRAPH:
+                    # variable names a return column alias, rename it apart to avoid name conflicts:
+                    return sql_quote_ident(self.alias_column_name(col))
+            # otherwise, pick a representative from the set of equiv-joined column vars:
             graph, col = list(sql_vars)[0]
-            if graph == '_':
-                # we have a return column alias:
-                return sql_quote_ident(col)
-            else:
-                return '%s.%s' % (graph, sql_quote_ident(col))
+            return '%s.%s' % (graph, sql_quote_ident(col))
         
         elif expr_type == parser.List:
             # we only allow literals in lists, Cypher also supports variables:
@@ -482,8 +493,12 @@ class KgtkQuery(object):
         
         elif expr_type == parser.Expression3:
             arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
-            arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
             op = expr.operator.upper()
+            if op in ('IS_NULL', 'IS_NOT_NULL'):
+                return '(%s %s)' % (arg1, op.replace('_', ' '))
+            if expr.arg2 is None:
+                raise Exception('Unhandled operator: %s' % str(op))
+            arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
             if op in ('IN'):
                 return '(%s %s %s)' % (arg1, op, arg2)
             elif op in ('REGEX'):
@@ -500,6 +515,21 @@ class KgtkQuery(object):
         else:
             return self.expression_to_sql(where_clause.expression, litmap, varmap)
 
+    ALIAS_GRAPH = '_'
+    ALIAS_COLUMN_PREFIX = '_aLias.'
+
+    def alias_column_name(self, column):
+        """Rename an alias 'column' apart so it doesn't conflict with any data table column names.
+        """
+        # for now we simply prepend this prefix, a more thorough solution would look at actual
+        # table columns to make sure none of the column names starts with the prefix:
+        return self.ALIAS_COLUMN_PREFIX + column
+
+    def unalias_column_name(self, column):
+        """If 'column' is a renamed alias, unrename it; otherwise leave it unmodified.
+        """
+        return column.startswith(self.ALIAS_COLUMN_PREFIX) and column[len(self.ALIAS_COLUMN_PREFIX):] or column
+
     def return_clause_to_sql_selection(self, clause, litmap, varmap):
         select = clause.distinct and 'DISTINCT ' or ''
         first = True
@@ -515,11 +545,14 @@ class KgtkQuery(object):
             is_agg = parser.has_element(
                 item.expression, lambda x: isinstance(x, parser.Call) and self.store.is_aggregate_function(x.function))
             if item.name is not None:
+                # we create an alias variable object here, so we can evaluate it for proper renaming:
+                alias_var = parser.Variable(item._query, item.name)
                 # we have to register the alias as a variable, otherwise it can't be referenced in --order-by,
-                # but it is not tied to a specific graph table, thus that part is '_' in the registration below:
-                self.register_clause_variable(item.name, ('_', item.name), varmap, set())
-                select += ' ' + sql_quote_ident(item.name)
-                agg_info.append(not is_agg and item.name or None)
+                # but it is not tied to a specific graph table, thus that part is ALIAS_GRAPH below:
+                self.register_clause_variable(item.name, (self.ALIAS_GRAPH, item.name), varmap, set())
+                sql_alias = self.expression_to_sql(alias_var, litmap, varmap)
+                select += ' ' + sql_alias
+                agg_info.append(not is_agg and sql_alias or None)
             else:
                 agg_info.append(not is_agg and expr or None)
                 
@@ -695,7 +728,7 @@ class KgtkQuery(object):
         query, params, graphs, indexes = self.translate_to_sql()
         self.ensure_relevant_indexes(query, graphs=graphs, auto_indexes=indexes)
         result = self.store.execute(query, params)
-        self.result_header = [c[0] for c in result.description]
+        self.result_header = [self.unalias_column_name(c[0]) for c in result.description]
         return result
 
     def explain(self, mode='plan'):

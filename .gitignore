@@ -145,3 +145,4 @@ wikidata_props.tsv
 
 # Keep intermediate files in GitHub so people can eecute individual cells of the notebook
 # examples/sample_data/aida/results/*.tsv
+tutorial/tutorial.conf.json

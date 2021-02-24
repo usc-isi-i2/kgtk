@@ -1,0 +1,8 @@
+node1	label	node2
+line1	valid	@34/118
+line2	valid	@33.9803/118.4517
+line3	invalid	@33.9803/118.4517e1
+line4	invalid	@100/118
+line5	invalid	@-100/118
+line6	invalid	@34/200
+line7	invalid	@34/-200

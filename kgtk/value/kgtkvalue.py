@@ -4,6 +4,7 @@ Validate KGTK File data types.
 
 from argparse import ArgumentParser, Namespace
 import attr
+import datetime as dt
 import math
 import re
 import sys
@@ -627,6 +628,11 @@ class KgtkValue(KgtkFormat):
     floatnumber_pat: str = r'(?:{pointfloat}|{exponentfloat})'.format(pointfloat=pointfloat_pat,
                                                                       exponentfloat=exponentfloat_pat)
 
+    # Real literals (nothing imaginary).
+    real_pat: str = r'(?:{plus_or_minus}?(?:{integer}|{floatnumber}))'.format(plus_or_minus=plus_or_minus_pat,
+                                                                              integer=integer_pat,
+                                                                              floatnumber=floatnumber_pat)
+
     # Imaginary literals.
     imagnumber_pat: str = r'(?:{floatnumber}|{digitpart})[jJ]'.format(floatnumber=floatnumber_pat,
                                                                       digitpart=digitpart_pat)
@@ -636,6 +642,8 @@ class KgtkValue(KgtkFormat):
                                                                                               integer=integer_pat,
                                                                                               floatnumber=floatnumber_pat,
                                                                                               imagnumber=imagnumber_pat)
+
+    # TODO: We may wish to exclude imaginary numbers in some circumstances.
 
     # Numeric literals with component labeling:
     number_pat: str = r'(?P<number>{numeric})'.format(numeric=numeric_pat)
@@ -1073,7 +1081,8 @@ class KgtkValue(KgtkFormat):
         self.data_type = KgtkFormat.DataType.BOOLEAN
         self.valid = True
         if self.parse_fields:
-            self.fields = KgtkValueFields(data_type=self.data_type,                                          valid=self.valid,
+            self.fields = KgtkValueFields(data_type=self.data_type,
+                                          valid=self.valid,
                                           truth=self.value == KgtkFormat.TRUE_SYMBOL)
         return True
 
@@ -1622,6 +1631,23 @@ o        Return True if the value looks like a language-qualified string.
         if fixup_needed:
             # Repair a month or day zero problem.
             self.update_date_and_times(yearstr, monthstr, daystr, hourstr, minutesstr, secondsstr, zonestr, precisionstr, iso8601extended)
+
+        if self.options.validate_fromisoformat:
+            try:
+                kgtkdatestr: str = self.value[1:] # Strip the leading ^ sigil.
+                isodatestr: str
+                if "/" in kgtkdatestr:
+                    isodatestr, _ = kgtkdatestr.split("/")
+                else:
+                    isodatestr = self.value
+                if isodatestr.endswith("Z"): # Might there be other time zones?
+                    isodatestr = isodatestr[:-1]
+                _ = dt.datetime.fromisoformat(isodatestr)
+            except ValueError:
+                if self.verbose:
+                    print("KgtkValue.is_date_and_times: datetime.fromisoformat(...) cannot parse %s." % repr(self.value),  file=self.error_file, flush=True)
+                self.valid = False
+                return False # might happen
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True

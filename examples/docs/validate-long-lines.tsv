@@ -1,0 +1,4 @@
+node1	label	node2
+line1	isa	line
+line2	isa	long	line
+line3	isa	line

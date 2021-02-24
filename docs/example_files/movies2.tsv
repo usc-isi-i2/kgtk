@@ -1,0 +1,21 @@
+id	node1	label	node2
+t1	terminator2_jd	label	"Terminator 2"@en
+t2	terminator2_jd	instance_of	film
+t3	terminator2_jd	genre	science_fiction
+t3	terminator2_jd	genre	action
+t4	terminator2_jd	cast	a_schwarzenegger
+t5	t4	role	terminator
+t6	terminator2_jd	cast	l_hamilton
+t7	t4	role	s_connor
+t8	terminator2_jd	award	academy-best-sound-editing
+t9	t8	point_in_time	^1992-03-30T00:00:00Z/11
+t10	t8	winner	g_rydstrom
+t11	t8	winner	g_borders
+t12	l_hamilton	label	"Linda Hamilton"@en
+t13	a_schwarzenegger	label	"Arnold Schwarzenegger"@en
+t14	film	subclass_of	visual_artwork
+t15	terminator2_jd	publication_date	^1984-10-26T00:00:00Z/11
+t16	t15	location	united_states
+t17	terminator2_jd	publication_date	^1985-02-08T00:00:00Z/11
+t18	t17	location	sweden
+t16	terminator2_jd	duration	108minute
