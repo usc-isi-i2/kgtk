@@ -27,10 +27,15 @@ named subfields.
 | minute |
 | second |
 | microsecond |
+| error |
+
+All columns are cleared if the input column's value is not a
+date-and-time value.  All columns except the `--into error` column are
+cleared if an error occurs processing the input date-and-time value.
 
 !!! note
-    The `--into` columns should be new columns, as existing colums are
-    not cleared for edges without dates in the source column.
+    See (`kgtk explode`)[../explode] for a more general approach to accessing
+    subfields of KGTK structured data.
 
 ## Usage
 
@@ -802,6 +807,17 @@ The output will be the following table in KGTK format:
     The number of `--value` names must match the number of `--into` columns.
 
 ```bash
+kgtk cat -i examples/docs/calc-dates-and-times.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q619 | P569 | ^1952-02-19T00:00:00Z/11 |
+| Q620 | P569 | ^1955-03-14T00:00:00Z/11 |
+| Q621 | P569 | ^1957-06-01T00:00:00Z/11 |
+| Q622 | P569 | ^1960-02-29T00:00:00Z/11 |
+
+```bash
 kgtk calc -i examples/docs/calc-dates-and-times.tsv \
           --do fromisoformat \
           --columns  node2 \
@@ -816,3 +832,59 @@ The output will be the following table in KGTK format:
 | Q619 | P569 | ^1952-02-19T00:00:00Z/11 | 1952 | 2 | 19 |
 | Q620 | P569 | ^1955-03-14T00:00:00Z/11 | 1955 | 3 | 14 |
 | Q621 | P569 | ^1957-06-01T00:00:00Z/11 | 1957 | 6 | 1 |
+| Q622 | P569 | ^1960-02-29T00:00:00Z/11 | 1960 | 2 | 29 |
+
+### Error Example: Extract Bad Date Subfields into New Columns.
+
+This example shows what happens when `--do fromisoformat` is
+given erroneous dates as input, or dates that are outside the
+year range (1..9999, inclusive) supported by Python's standard library
+modules for processing dates and times.
+
+!!! info
+    The number of `--value` names must match the number of `--into` columns.
+
+```bash
+kgtk cat -i examples/docs/calc-bad-dates-and-times.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q619 | P569 | ^1952-02-30T00:00:00Z/11 |
+| Q620 | P569 | ^0000-03-14T00:00:00Z/11 |
+| Q621 | P569 | ^99999-06-01T00:00:00Z/11 |
+| Q622 | P569 | ^1961-02-29T00:00:00Z/11 |
+| Q623 | P569 | ^1961-02-28T25:00:00Z/11 |
+| Q624 | P569 | ^1962-02-28T12:60:00Z/11 |
+| Q625 | P569 | ^1963-02-28T12:12:99Z/11 |
+
+```bash
+kgtk calc -i examples/docs/calc-bad-dates-and-times.tsv \
+          --do fromisoformat \
+          --columns  node2 \
+          --values   year month day error \
+          --into     year month day error
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | year | month | day | error |
+| -- | -- | -- | -- | -- | -- | -- |
+| Q619 | P569 | ^1952-02-30T00:00:00Z/11 |  |  |  | day is out of range for month |
+| Q620 | P569 | ^0000-03-14T00:00:00Z/11 |  |  |  | year 0 is out of range |
+| Q621 | P569 | ^99999-06-01T00:00:00Z/11 |  |  |  | Invalid isoformat string: '99999-06-01T00:00:00' |
+| Q622 | P569 | ^1961-02-29T00:00:00Z/11 |  |  |  | day is out of range for month |
+| Q623 | P569 | ^1961-02-28T25:00:00Z/11 |  |  |  | hour must be in 0..23 |
+| Q624 | P569 | ^1962-02-28T12:60:00Z/11 |  |  |  | minute must be in 0..59 |
+| Q625 | P569 | ^1963-02-28T12:12:99Z/11 |  |  |  | second must be in 0..59 |
+
+The following messages will be produced on standard error:
+
+    Error parsing '1952-02-30T00:00:00' in ['Q619'|'P569'|'^1952-02-30T00:00:00Z/11']: day is out of range for month
+    Error parsing '0000-03-14T00:00:00' in ['Q620'|'P569'|'^0000-03-14T00:00:00Z/11']: year 0 is out of range
+    Error parsing '99999-06-01T00:00:00' in ['Q621'|'P569'|'^99999-06-01T00:00:00Z/11']: Invalid isoformat string: '99999-06-01T00:00:00'
+    Error parsing '1961-02-29T00:00:00' in ['Q622'|'P569'|'^1961-02-29T00:00:00Z/11']: day is out of range for month
+    Error parsing '1961-02-28T25:00:00' in ['Q623'|'P569'|'^1961-02-28T25:00:00Z/11']: hour must be in 0..23
+    Error parsing '1962-02-28T12:60:00' in ['Q624'|'P569'|'^1962-02-28T12:60:00Z/11']: minute must be in 0..59
+    Error parsing '1963-02-28T12:12:99' in ['Q625'|'P569'|'^1963-02-28T12:12:99Z/11']: second must be in 0..59
+

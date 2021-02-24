@@ -553,12 +553,28 @@ def run(input_file: KGTKFiles,
                             elif value_name == "microsecond":
                                 output_row[into_column_idx] = str(dtvar.microsecond)
 
+                            elif value_name == "error":
+                                output_row[into_column_idx] = ""
+
                             else:
                                 raise KGTKException("Unknown date component %s" % repr(value_name))
 
                     except ValueError as e:
                         print("Error parsing %s in [%s]: %s" % (repr(isodatestr), "|".join([repr(x) for x in row]), str(e)),
                               file=error_file, flush=True)
+
+                        for idx in range(len(values)):
+                            value_name: str = values[idx]
+                            into_column_idx: int = into_column_idxs[idx]
+                            if value_name == "error":
+                                output_row[into_column_idx] = str(e)
+                            else:
+                                output_row[into_column_idx] = ""
+
+                else:
+                    # Not a date/time value, clear the result columns.
+                    for idx in range(len(values)):
+                        output_row[into_column_idxs[idx]] = ""
                     
             elif operation == JOIN_OP:
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
