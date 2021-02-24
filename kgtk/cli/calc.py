@@ -123,24 +123,21 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
 
-    parser.add_argument('-c', "--columns", dest="column_names", nargs='*',
-                        metavar="COLUMN_NAME",
+    parser.add_argument('-c', "--columns", dest="column_names_list", nargs='*', metavar="COLUMN_NAME", action='append',
                         help="The list of source column names, optionally containing '..' for column ranges " +
                         "and '...' for column names not explicitly mentioned.")
 
-    parser.add_argument(      "--into", dest="into_column_names",
+    parser.add_argument(      "--into", dest="into_column_names_list", nargs='+', metavar="COLUMN_NAME", action='append',
                               help="The name of the column to receive the result of the calculation.",
-                              required=True, nargs="+")
+                              required=True)
 
     parser.add_argument(      "--do", dest="operation", help="The name of the operation.", required=True,
                               choices=OPERATIONS)
 
-    parser.add_argument(      "--values", dest="values", nargs='*',
-                        metavar="VALUES",
+    parser.add_argument(      "--values", dest="values_list", nargs='*', metavar="VALUES", action='append',
                         help="An optional list of values")
 
-    parser.add_argument(      "--with-values", dest="with_values", nargs='*',
-                        metavar="WITH_VALUES",
+    parser.add_argument(      "--with-values", dest="with_values_list", nargs='*', metavar="WITH_VALUES", action='append',
                         help="An optional list of additional values")
 
     parser.add_argument(      "--limit", dest="limit", type=int,
@@ -152,15 +149,29 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
+def flatten_arg_list(arg: typing.Optional[typing.List[typing.List[str]]])->typing.List[str]:
+    result: typing.List[str] = [ ]
+    if arg is None:
+        return result
+
+    arglist: typing.List[str]
+    for arglist in arg:
+        value: str
+        for value in arglist:
+            if value is not None:
+                result.append(value)
+
+    return result
+
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         output_format: typing.Optional[str],
 
-        column_names: typing.Optional[typing.List[str]],
-        into_column_names: typing.List[str],
+        column_names_list: typing.List[typing.List[str]],
+        into_column_names_list: typing.List[typing.List[str]],
         operation: str,
-        values: typing.Optional[typing.List[str]],
-        with_values: typing.Optional[typing.List[str]],
+        values_list: typing.List[typing.List[str]],
+        with_values_list: typing.List[typing.List[str]],
         limit: typing.Optional[int],
         format_string: typing.Optional[str],
 
@@ -194,20 +205,26 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
+    # Flatten the input lists.
+    column_names: typing.List[str] = flatten_arg_list(column_names_list)
+    into_column_names: typing.List[str] = flatten_arg_list(into_column_names_list)
+    values: typing.List[str] = flatten_arg_list(values_list)
+    with_values: typing.List[str] = flatten_arg_list(with_values_list)
+
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
-        if column_names is not None:
+        if len(column_names) > 0:
             print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
-        if into_column_names is not None:
+        if len(into_column_names) > 0:
             print("--into %s" % " ".join(into_column_names), file=error_file, flush=True)
         print("--operation=%s" % str(operation), file=error_file, flush=True)
-        if values is not None:
+        if len(values) > 0:
             print("--values %s" % " ".join(values), file=error_file, flush=True)
-        if with_values is not None:
+        if len(with_values) > 0:
             print("--with-values %s" % " ".join(with_values), file=error_file, flush=True)
         if limit is not None:
             print("--limit %d" % limit, file=error_file, flush=True)
@@ -238,9 +255,6 @@ def run(input_file: KGTKFiles,
         ranger: str = ".." # All columns between two columns.
 
         idx: int
-
-        if column_names is None:
-            column_names = [ ]
 
         saw_ranger: bool = False
         column_name: str
@@ -348,12 +362,6 @@ def run(input_file: KGTKFiles,
                                          very_verbose=very_verbose,
         )
 
-        if values is None:
-            values = [ ]
-
-        if with_values is None:
-            with_values = [ ]
-
         if limit is None:
             limit = 0
 
@@ -387,7 +395,7 @@ def run(input_file: KGTKFiles,
             if len(sources) != 1:
                 raise KGTKException("Fromisoformat needs one source, got %d" % len(sources))
             if len(values) != len(into_column_idxs):
-                raise KGTKException("Fromisoformat needs the same number of values and into columns, got %d and %d" % (len(values), len(info_column_idxs)))
+                raise KGTKException("Fromisoformat needs the same number of values and into columns, got %d and %d" % (len(values), len(into_column_idxs)))
 
         elif operation == JOIN_OP:
             if len(sources) == 0:
@@ -526,35 +534,38 @@ def run(input_file: KGTKFiles,
                         precisionstr = ""
                     if isodatestr.endswith("Z"):
                         isodatestr = isodatestr[:-1]
+
+                    into_idx: int
+                    value_name: str
                     try:
                         dtvar: dt.datetime = dt.datetime.fromisoformat(isodatestr)
                         for idx in range(len(values)):
-                            value_name: str = values[idx]
-                            into_column_idx: int = into_column_idxs[idx]
+                            value_name = values[idx]
+                            into_idx = into_column_idxs[idx]
                             
                             if value_name == "year":
-                                output_row[into_column_idx] = str(dtvar.year)
+                                output_row[into_idx] = str(dtvar.year)
 
                             elif value_name == "month":
-                                output_row[into_column_idx] = str(dtvar.month)
+                                output_row[into_idx] = str(dtvar.month)
                     
                             elif value_name == "day":
-                                output_row[into_column_idx] = str(dtvar.day)
+                                output_row[into_idx] = str(dtvar.day)
 
                             elif value_name == "hour":
-                                output_row[into_column_idx] = str(dtvar.hour)
+                                output_row[into_idx] = str(dtvar.hour)
                     
                             elif value_name == "minute":
-                                output_row[into_column_idx] = str(dtvar.minute)
+                                output_row[into_idx] = str(dtvar.minute)
                     
                             elif value_name == "second":
-                                output_row[into_column_idx] = str(dtvar.second)
+                                output_row[into_idx] = str(dtvar.second)
                     
                             elif value_name == "microsecond":
-                                output_row[into_column_idx] = str(dtvar.microsecond)
+                                output_row[into_idx] = str(dtvar.microsecond)
 
                             elif value_name == "error":
-                                output_row[into_column_idx] = ""
+                                output_row[into_idx] = ""
 
                             else:
                                 raise KGTKException("Unknown date component %s" % repr(value_name))
@@ -564,12 +575,12 @@ def run(input_file: KGTKFiles,
                               file=error_file, flush=True)
 
                         for idx in range(len(values)):
-                            value_name: str = values[idx]
-                            into_column_idx: int = into_column_idxs[idx]
+                            value_name = values[idx]
+                            into_idx = into_column_idxs[idx]
                             if value_name == "error":
-                                output_row[into_column_idx] = str(e)
+                                output_row[into_idx] = str(e)
                             else:
-                                output_row[into_column_idx] = ""
+                                output_row[into_idx] = ""
 
                 else:
                     # Not a date/time value, clear the result columns.

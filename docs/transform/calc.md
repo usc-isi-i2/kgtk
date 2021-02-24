@@ -41,8 +41,8 @@ cleared if an error occurs processing the input date-and-time value.
 
 ```
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                 [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into INTO_COLUMN_NAMES
-                 [INTO_COLUMN_NAMES ...] --do
+                 [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into COLUMN_NAME
+                 [COLUMN_NAME ...] --do
                  {average,capitalize,casefold,copy,fromisoformat,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
@@ -67,7 +67,7 @@ optional arguments:
                         The list of source column names, optionally containing
                         '..' for column ranges and '...' for column names not
                         explicitly mentioned.
-  --into INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...]
+  --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
   --do {average,capitalize,casefold,copy,fromisoformat,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
@@ -823,6 +823,40 @@ kgtk calc -i examples/docs/calc-dates-and-times.tsv \
           --columns  node2 \
           --values   year month day \
           --into     year month day
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | year | month | day |
+| -- | -- | -- | -- | -- | -- |
+| Q619 | P569 | ^1952-02-19T00:00:00Z/11 | 1952 | 2 | 19 |
+| Q620 | P569 | ^1955-03-14T00:00:00Z/11 | 1955 | 3 | 14 |
+| Q621 | P569 | ^1957-06-01T00:00:00Z/11 | 1957 | 6 | 1 |
+| Q622 | P569 | ^1960-02-29T00:00:00Z/11 | 1960 | 2 | 29 |
+
+### Extract Date Subfields into New Columns: Alternative Syntax
+
+!!! info
+    The number of `--value` names must match the number of `--into` columns.
+
+```bash
+kgtk cat -i examples/docs/calc-dates-and-times.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q619 | P569 | ^1952-02-19T00:00:00Z/11 |
+| Q620 | P569 | ^1955-03-14T00:00:00Z/11 |
+| Q621 | P569 | ^1957-06-01T00:00:00Z/11 |
+| Q622 | P569 | ^1960-02-29T00:00:00Z/11 |
+
+```bash
+kgtk calc -i examples/docs/calc-dates-and-times.tsv \
+          --do fromisoformat \
+          --columns  node2 \
+          --value year --into year \
+	  --value month --into month \
+          --value day --into day
 ```
 
 The output will be the following table in KGTK format:
