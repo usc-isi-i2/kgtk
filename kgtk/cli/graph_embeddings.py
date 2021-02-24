@@ -180,7 +180,7 @@ def add_arguments(parser: KGTKArgumentParser):
                              "(typically the right-hand one) before comparing it with the other one. It reflects which model that embedding uses. " +
                              "[Default:ComplEx]",
                               #default will be setting to complex_diagonal later
-                             default='ComplEx',metavar='RESCAL|DistMult|ComplEx|TransE')
+                             default=None,metavar='RESCAL|DistMult|ComplEx|TransE')
     parser.add_argument(     '-e','--num_epochs', dest='num_epochs',
                              help="The number of times the training loop iterates over all the edges.[Default:100]",
                              type=int,default=100, metavar='')    
