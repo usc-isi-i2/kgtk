@@ -63,6 +63,9 @@ kgtk ${KGTK_FLAGS} \
      --clean \
      --allow-end-of-day False \
      --repair-month-or-day-zero \
+     --minimum-valid-year 1 \
+     --maximum-valid-year 9999 \
+     --validate-fromisoformat \
      --repair-lax-coordinates \
      --allow-language-suffixes \
      --allow-wikidata-lq-strings \

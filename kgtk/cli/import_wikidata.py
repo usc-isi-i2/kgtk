@@ -770,6 +770,25 @@ def run(input_file: KGTKFiles,
     SITELINK_TITLE_LABEL: str = "sitelink-title"
     TYPE_LABEL: str = "type"
 
+    SNAKTYPE_NOVALUE: str = "novalue"
+    SNAKTYPE_SOMEVALUE: str =  "somevalue"
+    SNAKTYPE_VALUE: str = "value"
+
+    NOVALUE_VALUE: str = "novalue"
+    SOMEVALUE_VALUE: str =  "somevalue"
+
+    CLAIM_TYPE_STATEMENT: str = "statement"
+
+    MAINSNAK_DATATYPE: str = "datatype"
+    MAINSNAK_DATAVALUE: str = "datavalue"
+    MAINSNAK_SNAKTYPE: str = "snaktype"
+
+    DATATYPE_WIKIBASE_PREFIX: str = "wikibase"
+    DATATYPE_QUANTITY: str = "quantity"
+    DATATYPE_GLOBECOORDINATE: str = "globe-coordinate"
+    DATATYPE_TIME: str = "time"
+    DATATYPE_MONOLINGUALTEXT: str = "monolingualtext"
+
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     edge_collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -933,13 +952,13 @@ def run(input_file: KGTKFiles,
                          calendar="",
                          entrylang="",
                          invalid_erows=None,
-        ):
+        )->bool:
             if len(claim_type) > 0 and claim_type != "statement":
                 raise ValueError("Unexpected claim type %s" % claim_type)
 
+            values_are_valid: bool = True
             if clean_input_values:
-                error_buffer: typing.Optional[io.StringIO] = io.StringIO() if clean_verbose else None
-                values_are_valid: bool = True
+                error_buffer: io.StringIO = io.StringIO()
                 kv: KgtkValue
                 kv = KgtkValue(edge_id, options=value_options, error_file=error_buffer, verbose=clean_verbose)
                 values_are_valid &= kv.is_valid()
@@ -961,12 +980,11 @@ def run(input_file: KGTKFiles,
                 if not values_are_valid and invalid_erows is not None:
                     erows = invalid_erows
 
-                if not values_are_valid and error_buffer is not None:
+                if not values_are_valid and clean_verbose:
                     print("Value validation error in edge %s: %s" % ("|".join([repr(edge_id), repr(node1), repr(label), repr(node2)]),
                                                                      error_buffer.getvalue().rstrip()),
                           file=sys.stderr, flush=True)
-                if error_buffer is not None:
-                    error_buffer.close()
+                error_buffer.close()
 
             if explode_values:
                 erows.append([edge_id,
@@ -1006,6 +1024,7 @@ def run(input_file: KGTKFiles,
                               entrylang,
                               ]
                              )
+            return values_are_valid
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
                          magnitude="",
@@ -1025,11 +1044,11 @@ def run(input_file: KGTKFiles,
                          invalid_qrows=None,
                          erows=None,
                          invalid_erows=None,
-        ):
+        )->bool:
 
+            values_are_valid: bool = True
             if clean_input_values:
-                error_buffer: typing.Optional[io.StringIO] = io.StringIO() if clean_verbose else None
-                values_are_valid: bool = True
+                error_buffer: io.StringIO = io.StringIO()
                 kv: KgtkValue
                 kv = KgtkValue(edge_id, options=value_options, error_file=error_buffer, verbose=clean_verbose)
                 values_are_valid &= kv.is_valid()
@@ -1051,12 +1070,11 @@ def run(input_file: KGTKFiles,
                 if not values_are_valid and invalid_qrows is not None:
                     qrows = invalid_qrows
 
-                if not values_are_valid and error_buffer is not None:
+                if not values_are_valid and clean_verbose:
                     print("Value validation error in qual %s: %s" % ("|".join([repr(edge_id), repr(node1), repr(label), repr(node2)]),
                                                                      error_buffer.getvalue().rstrip()),
                           file=sys.stderr, flush=True)
-                if error_buffer is not None:
-                    error_buffer.close()
+                error_buffer.close()
                     
             if minimal_qual_file is not None or detailed_qual_file is not None:
                 if explode_values:
@@ -1111,6 +1129,7 @@ def run(input_file: KGTKFiles,
                                   precision=precision,
                                   calendar=calendar,
                                   invalid_erows=invalid_erows)
+            return values_are_valid
             
         # def process(self,line,node_file,edge_file,qual_file,languages,source):
         def process(self, line):
@@ -1336,11 +1355,11 @@ def run(input_file: KGTKFiles,
                             for cp in claim_property:
                                 if (deprecated or cp['rank'] != 'deprecated'):
                                     mainsnak = cp['mainsnak']
-                                    snaktype = mainsnak.get('snaktype')
+                                    snaktype = mainsnak.get(MAINSNAK_SNAKTYPE)
                                     rank=cp['rank']
                                     claim_id = cp['id']
                                     claim_type = cp['type']
-                                    if claim_type != "statement":
+                                    if claim_type != CLAIM_TYPE_STATEMENT:
                                         print("Unknown claim type %s, ignoring claim_property for (%s, %s)." % (repr(claim_type), repr(qnode), repr(prop)),
                                               file=sys.stderr, flush=True)
                                         continue
@@ -1349,8 +1368,8 @@ def run(input_file: KGTKFiles,
                                         print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (repr(qnode), repr(prop)),
                                               file=sys.stderr, flush=True)
                                         continue
-                                    if snaktype == 'value':
-                                        datavalue = mainsnak['datavalue']
+                                    if snaktype == SNAKTYPE_VALUE:
+                                        datavalue = mainsnak[MAINSNAK_DATAVALUE]
                                         val = datavalue.get('value')
                                         val_type = datavalue.get("type", "")
                                         if val is not None:
@@ -1364,18 +1383,20 @@ def run(input_file: KGTKFiles,
                                                       file=sys.stderr, flush=True)
                                                 continue
 
-                                    elif snaktype == 'somevalue':
+                                    elif snaktype == SNAKTYPE_SOMEVALUE:
                                         val = None
-                                        val_type = "somevalue"
-                                    elif snaktype == 'novalue':
+                                        val_type = SOMEVALUE_LABEL
+
+                                    elif snaktype == SNAKTYPE_NOVALUE:
                                         val = None
-                                        val_type = "novalue"
+                                        val_type = NOVALUE_LABEL
+
                                     else:
                                         print("Unknown snaktype %s, ignoring claim_property for (%s, %s)." % (repr(snaktype), repr(qnode), repr(prop)),
                                                                                                         file=sys.stderr, flush=True)
                                         continue
                                     
-                                    typ = mainsnak.get('datatype')
+                                    typ = mainsnak.get(MAINSNAK_DATATYPE)
                                     if typ is None:
                                         print("Mainsnak without datatype, ignoring claim_property for (%s, %s)" % (repr(qnode), repr(prop)),
                                               file=sys.stderr, flush=True)
@@ -1398,7 +1419,7 @@ def run(input_file: KGTKFiles,
 
                                     if val is None:
                                         value = val_type
-                                    elif typ.startswith('wikibase'):
+                                    elif typ.startswith(DATATYPE_WIKIBASE_PREFIX):
                                         if isinstance(val, dict):
                                             enttype = val.get('entity-type')
                                             value = val.get('id', '')
@@ -1426,7 +1447,8 @@ def run(input_file: KGTKFiles,
                                             else:
                                                 raise ValueError('Unknown entity type %s for datatype %s in (%s, %s).' % (repr(enttype), repr(typ), repr(qnode), repr(prop)))
                                         item=value
-                                    elif typ == 'quantity':
+
+                                    elif typ == DATATYPE_QUANTITY:
                                         # Strip whitespace from the numeric fields.  Some older Wikidata dumps
                                         # (20150805-20160502) sometimes have trailing newlines in these fields.
                                         # Convert actual numbers to strings before attempting to strip leading
@@ -1449,14 +1471,16 @@ def run(input_file: KGTKFiles,
                                             if unit not in ["undefined"]:
                                                 # TODO: don't lose track of "undefined" units.
                                                 value += unit
-                                    elif typ == 'globe-coordinate':
+
+                                    elif typ == DATATYPE_GLOBECOORDINATE:
                                         # Strip potential leading and trailing whitespace.
                                         lat = str(val['latitude']).strip()
                                         long = str(val['longitude']).strip()
                                         precision = str(val.get('precision', ''))
                                         value = '@' + lat + '/' + long
                                         # TODO: what about "globe"?
-                                    elif typ == 'time':
+
+                                    elif typ == DATATYPE_TIME:
                                         if val['time'][0]=='-':
                                             pre="^-"
                                         else:
@@ -1467,10 +1491,12 @@ def run(input_file: KGTKFiles,
                                         precision = str(val['precision']).strip()
                                         calendar = val.get('calendarmodel', '').split('/')[-1]
                                         value = date + '/' + precision
-                                    elif typ == 'monolingualtext':
+
+                                    elif typ == DATATYPE_MONOLINGUALTEXT:
                                         # value = '\'' + \
                                         # val['text'].replace("'","\\'").replace("|", "\\|") + '\'' + '@' + val['language']
                                         value = KgtkFormat.stringify(val['text'], language=val['language'])
+
                                     else:
                                         # value = '\"' + val.replace('"','\\"').replace("|", "\\|") + '\"'
                                         value = KgtkFormat.stringify(val)
@@ -1523,20 +1549,20 @@ def run(input_file: KGTKFiles,
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
                                                 for qcp in qual_claim_property:
-                                                    snaktype = qcp['snaktype']
+                                                    snaktype = qcp[MAINSNAK_DATATYPE]
 
-                                                    if snaktype == 'value':
-                                                        datavalue = qcp['datavalue']
+                                                    if snaktype == SNAKTYPE_VALUE:
+                                                        datavalue = qcp[MAINSNAK_DATAVALUE]
                                                         val = datavalue.get('value')
                                                         val_type = datavalue.get("type", "")
 
-                                                    elif snaktype == 'somevalue':
+                                                    elif snaktype == SNAKTYPE_SOMEVALUE:
                                                         val = None
-                                                        val_type = "somevalue"
+                                                        val_type = SOMEVALUE_LABEL
 
-                                                    elif snaktype == 'novalue':
+                                                    elif snaktype == SNAKTYPE_NOVALUE:
                                                         val = None
-                                                        val_type = "novalue"
+                                                        val_type = NOVALUE_LABEL
 
                                                     else:
                                                         raise ValueError("Unknown qualifier snaktype %s" % snaktype)
@@ -1555,14 +1581,14 @@ def run(input_file: KGTKFiles,
                                                         long = ''
                                                         enttype = ''
                                                         datahash = '"' + qcp['hash'] + '"'
-                                                        typ = qcp.get('datatype')
+                                                        typ = qcp.get(MAINSNAK_DATATYPE)
                                                         if typ is None:
                                                             if fail_if_missing:
                                                                 raise KGTKException("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)))
                                                             elif warn_if_missing:
-                                                                if val_type == "somevalue":
+                                                                if val_type == SOMEVALUE_LABEL:
                                                                     print("Somevalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
-                                                                elif val_type == "novalue":
+                                                                elif val_type == NOVALUE_LABEL:
                                                                     print("Novalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
                                                                 else:
                                                                     print("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
@@ -1571,7 +1597,7 @@ def run(input_file: KGTKFiles,
                                                         if val is None:
                                                             value = val_type
 
-                                                        elif typ.startswith('wikibase'):
+                                                        elif typ.startswith(DATATYPE_WIKIBASE_PREFIX):
                                                             if isinstance(val, dict):
                                                                 enttype = val.get('entity-type')
                                                                 value = val.get('id', '')
@@ -1599,7 +1625,8 @@ def run(input_file: KGTKFiles,
                                                                     raise ValueError('Unknown entity type %s for datatype %s in (%s, %s).' % (repr(enttype), repr(typ), repr(qnode), repr(prop)))
 
                                                             item=value
-                                                        elif typ == 'quantity':
+
+                                                        elif typ == DATATYPE_QUANTITY:
                                                             value = val['amount']
                                                             mag = val['amount']
                                                             if val.get(
@@ -1618,7 +1645,8 @@ def run(input_file: KGTKFiles,
                                                                 unit = val.get(
                                                                     'unit').split('/')[-1]
                                                                 value += unit
-                                                        elif typ == 'globe-coordinate':
+
+                                                        elif typ == DATATYPE_GLOBECOORDINATE:
                                                             lat = str(
                                                                 val['latitude'])
                                                             long = str(
@@ -1626,7 +1654,8 @@ def run(input_file: KGTKFiles,
                                                             precision = str(val.get(
                                                                 'precision', ''))
                                                             value = '@' + lat + '/' + long
-                                                        elif typ == 'time':
+
+                                                        elif typ == DATATYPE_TIME:
                                                             if val['time'][0]=='-':
                                                                 pre="^-"
                                                             else:
@@ -1639,7 +1668,8 @@ def run(input_file: KGTKFiles,
                                                                 'calendarmodel', '').split('/')[-1]
                                                             value = pre + \
                                                                 val['time'][1:] + '/' + str(val['precision'])
-                                                        elif typ == 'monolingualtext':
+
+                                                        elif typ == DATATYPE_MONOLINGUALTEXT:
                                                             # value = '\'' + \
                                                             #     val['text'].replace("'","\\'") + '\'' + '@' + val['language']
                                                             value = KgtkFormat.stringify(val['text'], language=val['language'])
@@ -1661,7 +1691,7 @@ def run(input_file: KGTKFiles,
                                                             qual_seq_no = 0
                                                         qual_id_collision_map[qualid] = qual_seq_no + 1
                                                         qualid += '-' + str(qual_seq_no)
-                                                        self.qrows_append(qrows,
+                                                        self.qrows_append(qrows=qrows,
                                                                           edge_id=qualid,
                                                                           node1=edgeid,
                                                                           label=qual_prop,
