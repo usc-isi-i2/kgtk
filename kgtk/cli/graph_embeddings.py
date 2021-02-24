@@ -154,7 +154,7 @@ def add_arguments(parser: KGTKArgumentParser):
                               type=Path,default=None, metavar="")
     parser.add_argument(     '-T','--temporary_directory', dest='temporary_directory',
                              help="Sepecify the directory location to store temporary file",
-                             type=Path,default=None, metavar='')
+                             type=Path,default=Path('tmp/'), metavar='')
     parser.add_argument(     '-ot','--output_format', dest='output_format',
                              help="Outputformat for embeddings [Default: w2v] Choice: kgtk | w2v | glove",
                              default='w2v', metavar='')
@@ -350,8 +350,6 @@ def run(verbose: bool = False,
     from torchbiggraph.util import SubprocessInitializer, setup_logging
     from kgtk.graph_embeddings.export_to_tsv import make_tsv
     # from torchbiggraph.converters.export_to_tsv import make_tsv
-    import shutil
-    import tempfile
 
     try:
         # store the data into log file, then the console will not output anything
@@ -365,16 +363,7 @@ def run(verbose: bool = False,
             print(f'In Processing, Please go to {kwargs["log_file_path"]} to check details')
 
         input_kgtk_file: Path = kwargs['input_file_path']
-        # tmp_folder = kwargs['temporary_directory']
-        if kwargs['temporary_directory'] == None:
-            tmp_folder = tempfile.mkdtemp() # use tempfile to create a temp dir
-            tmp_folder = Path(tmp_folder)
-            kwargs['temporary_directory'] = tmp_folder
-        else:
-            tmp_folder = kwargs['temporary_directory'] # use the dir specified by user
-            tmp_folder = Path(tmp_folder)
-            kwargs['temporary_directory'] = tmp_folder
-
+        tmp_folder = kwargs['temporary_directory']
         tmp_tsv_path:Path = tmp_folder / f'tmp_{input_kgtk_file.name}'
         # tmp_tsv_path:Path = input_kgtk_file.parent/f'tmp_{input_kgtk_file.name}'
 

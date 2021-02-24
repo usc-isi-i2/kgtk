@@ -5,8 +5,6 @@ import pandas as pd
 from kgtk.cli_entry import cli_entry
 import os
 
-# Notice: When you run this file, cd to the first kgtk folder 
-# and run `python kgtk/tests/test_graph_embeddings.py `
 class TestGraphEmbeddings(unittest.TestCase):
     def setUp(self):
         self.file_path = 'kgtk/tests/data/test_graphemb.tsv' # input file path
