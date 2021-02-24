@@ -1385,11 +1385,11 @@ def run(input_file: KGTKFiles,
 
                                     elif snaktype == SNAKTYPE_SOMEVALUE:
                                         val = None
-                                        val_type = SOMEVALUE_LABEL
+                                        val_type = SOMEVALUE_VALUE
 
                                     elif snaktype == SNAKTYPE_NOVALUE:
                                         val = None
-                                        val_type = NOVALUE_LABEL
+                                        val_type = NOVALUE_VALUE
 
                                     else:
                                         print("Unknown snaktype %s, ignoring claim_property for (%s, %s)." % (repr(snaktype), repr(qnode), repr(prop)),
@@ -1549,7 +1549,7 @@ def run(input_file: KGTKFiles,
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
                                                 for qcp in qual_claim_property:
-                                                    snaktype = qcp[MAINSNAK_DATATYPE]
+                                                    snaktype = qcp[MAINSNAK_SNAKTYPE]
 
                                                     if snaktype == SNAKTYPE_VALUE:
                                                         datavalue = qcp[MAINSNAK_DATAVALUE]
@@ -1558,14 +1558,14 @@ def run(input_file: KGTKFiles,
 
                                                     elif snaktype == SNAKTYPE_SOMEVALUE:
                                                         val = None
-                                                        val_type = SOMEVALUE_LABEL
+                                                        val_type = SOMEVALUE_VALUE
 
                                                     elif snaktype == SNAKTYPE_NOVALUE:
                                                         val = None
-                                                        val_type = NOVALUE_LABEL
+                                                        val_type = NOVALUE_VALUE
 
                                                     else:
-                                                        raise ValueError("Unknown qualifier snaktype %s" % snaktype)
+                                                        raise ValueError("Unknown qualifier snaktype %s" % repr(snaktype))
 
                                                     if True:
                                                         value = ''
@@ -1586,9 +1586,9 @@ def run(input_file: KGTKFiles,
                                                             if fail_if_missing:
                                                                 raise KGTKException("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)))
                                                             elif warn_if_missing:
-                                                                if val_type == SOMEVALUE_LABEL:
+                                                                if val_type == SOMEVALUE_VALUE:
                                                                     print("Somevalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
-                                                                elif val_type == NOVALUE_LABEL:
+                                                                elif val_type == NOVALUE_VALUE:
                                                                     print("Novalue qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
                                                                 else:
                                                                     print("Found qualifier %s without a datatype for (%s, %s)" % (repr(qual_prop), repr(qnode), repr(prop)), file=sys.stderr, flush=True)
@@ -2551,7 +2551,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2021-02-22T20:50:15.927543+00:00#tYeC+x7xRLCHn3O86hCB2Bv6fLIKnlsaMfIbCPt87Fifnu5MywtTBjD6YFXWTewAWoZP27ejVo4jYql1LwLKww=="
+        UPDATE_VERSION: str = "2021-02-24T20:23:08.960978+00:00#5xTUIntAu3fvm55Sw7SOt2F8us+1W6eYbqkPfaaB9Zw0nZnqfXYLvd9lYTg3wKBy3z5jxNJaWfkbk0n1wxV84g=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)

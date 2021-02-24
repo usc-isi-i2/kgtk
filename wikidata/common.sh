@@ -85,9 +85,16 @@ WIKIDATATYPES=( \
 # The wikidata import split files to be sorted:
 WIKIDATA_IMPORT_SPLIT_FILES=( \
 	"claims" \
-	"claims.missingValues" \
+	"claims.badvalue" \
+	"claims.novalue" \
+	"claims.somevalue" \
 	"qualifiers" \
-	"qualifiers.missingValues" \
+	"qualifiers.badvalue" \
+	"qualifiers.badvalueClaims" \
+	"qualifiers.novalue" \
+	"qualifiers.novalueClaims" \
+	"qualifiers.somevalue" \
+	"qualifiers.somevalueClaims" \
 	"aliases" \
 	"aliases.en" \
 	"descriptions" \

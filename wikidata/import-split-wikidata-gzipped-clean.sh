@@ -23,8 +23,8 @@ kgtk ${KGTK_FLAGS} \
      --node-file ${TEMPDIR}/metadata.node.${UNSORTED_KGTK} \
      --minimal-edge-file ${TEMPDIR}/claims.raw.${UNSORTED_KGTK} \
      --minimal-qual-file ${TEMPDIR}/qualifiers.raw.${UNSORTED_KGTK} \
-     --invalid-edge-file ${DATADIR}/invalid-claims.${UNSORTED_KGTK} \
-     --invalid-qual-file ${DATADIR}/invalid-qualifiers.${UNSORTED_KGTK} \
+     --invalid-edge-file ${TEMPDIR}/claims.badvalue.${UNSORTED_KGTK} \
+     --invalid-qual-file ${TEMPDIR}/qualifiers.badvalue.${UNSORTED_KGTK} \
      --node-file-id-only \
      --explode-values False \
      --all-languages \
