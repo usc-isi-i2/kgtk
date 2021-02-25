@@ -8,15 +8,42 @@ a new column, which will be added after all existing columns.
 
 !!! note
     [`kgtk query`](../query) can perform the same calculations as
-    `kgtk calc` in a more elegant and more general manner. 
+    `kgtk calc` in a more elegant and more general manner.
+
+### fromisoformat
+
+`--do fromisoformat` validates date-and-time values and extracts
+named subfields.
+
+`--values VALUE1 VALUE2 ...` is a list of subfields to extract.
+`--into COL1 COL2 ...` is a list of columns into which to store the subfields.
+
+| Value |
+| ----- |
+| year |
+| month |
+| day |
+| hour |
+| minute |
+| second |
+| microsecond |
+| error |
+
+All columns are cleared if the input column's value is not a
+date-and-time value.  All columns except the `--into error` column are
+cleared if an error occurs processing the input date-and-time value.
+
+!!! note
+    See (`kgtk explode`)[../explode] for a more general approach to accessing
+    subfields of KGTK structured data.
 
 ## Usage
 
 ```
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                 [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into INTO_COLUMN_NAMES
-                 [INTO_COLUMN_NAMES ...] --do
-                 {average,capitalize,casefold,copy,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
+                 [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into COLUMN_NAME
+                 [COLUMN_NAME ...] --do
+                 {average,capitalize,casefold,copy,fromisoformat,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
@@ -40,10 +67,10 @@ optional arguments:
                         The list of source column names, optionally containing
                         '..' for column ranges and '...' for column names not
                         explicitly mentioned.
-  --into INTO_COLUMN_NAMES [INTO_COLUMN_NAMES ...]
+  --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {average,capitalize,casefold,copy,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
+  --do {average,capitalize,casefold,copy,fromisoformat,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -773,4 +800,125 @@ The output will be the following table in KGTK format:
 | P1037 | P585-COUNT | 60 | 9317 |
 | P1040 | P585-COUNT | 1 | 45073 |
 | P1050 | P585-COUNT | 246 | 226380 |
+
+### Extract Date Subfields into New Columns.
+
+!!! info
+    The number of `--value` names must match the number of `--into` columns.
+
+```bash
+kgtk cat -i examples/docs/calc-dates-and-times.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q619 | P569 | ^1952-02-19T00:00:00Z/11 |
+| Q620 | P569 | ^1955-03-14T00:00:00Z/11 |
+| Q621 | P569 | ^1957-06-01T00:00:00Z/11 |
+| Q622 | P569 | ^1960-02-29T00:00:00Z/11 |
+
+```bash
+kgtk calc -i examples/docs/calc-dates-and-times.tsv \
+          --do fromisoformat \
+          --columns  node2 \
+          --values   year month day \
+          --into     year month day
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | year | month | day |
+| -- | -- | -- | -- | -- | -- |
+| Q619 | P569 | ^1952-02-19T00:00:00Z/11 | 1952 | 2 | 19 |
+| Q620 | P569 | ^1955-03-14T00:00:00Z/11 | 1955 | 3 | 14 |
+| Q621 | P569 | ^1957-06-01T00:00:00Z/11 | 1957 | 6 | 1 |
+| Q622 | P569 | ^1960-02-29T00:00:00Z/11 | 1960 | 2 | 29 |
+
+### Extract Date Subfields into New Columns: Alternative Syntax
+
+!!! info
+    The number of `--value` names must match the number of `--into` columns.
+
+```bash
+kgtk cat -i examples/docs/calc-dates-and-times.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q619 | P569 | ^1952-02-19T00:00:00Z/11 |
+| Q620 | P569 | ^1955-03-14T00:00:00Z/11 |
+| Q621 | P569 | ^1957-06-01T00:00:00Z/11 |
+| Q622 | P569 | ^1960-02-29T00:00:00Z/11 |
+
+```bash
+kgtk calc -i examples/docs/calc-dates-and-times.tsv \
+          --do fromisoformat \
+          --columns  node2 \
+          --value year --into year \
+	  --value month --into month \
+          --value day --into day
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | year | month | day |
+| -- | -- | -- | -- | -- | -- |
+| Q619 | P569 | ^1952-02-19T00:00:00Z/11 | 1952 | 2 | 19 |
+| Q620 | P569 | ^1955-03-14T00:00:00Z/11 | 1955 | 3 | 14 |
+| Q621 | P569 | ^1957-06-01T00:00:00Z/11 | 1957 | 6 | 1 |
+| Q622 | P569 | ^1960-02-29T00:00:00Z/11 | 1960 | 2 | 29 |
+
+### Error Example: Extract Bad Date Subfields into New Columns.
+
+This example shows what happens when `--do fromisoformat` is
+given erroneous dates as input, or dates that are outside the
+year range (1..9999, inclusive) supported by Python's standard library
+modules for processing dates and times.
+
+!!! info
+    The number of `--value` names must match the number of `--into` columns.
+
+```bash
+kgtk cat -i examples/docs/calc-bad-dates-and-times.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q619 | P569 | ^1952-02-30T00:00:00Z/11 |
+| Q620 | P569 | ^0000-03-14T00:00:00Z/11 |
+| Q621 | P569 | ^99999-06-01T00:00:00Z/11 |
+| Q622 | P569 | ^1961-02-29T00:00:00Z/11 |
+| Q623 | P569 | ^1961-02-28T25:00:00Z/11 |
+| Q624 | P569 | ^1962-02-28T12:60:00Z/11 |
+| Q625 | P569 | ^1963-02-28T12:12:99Z/11 |
+
+```bash
+kgtk calc -i examples/docs/calc-bad-dates-and-times.tsv \
+          --do fromisoformat \
+          --columns  node2 \
+          --values   year month day error \
+          --into     year month day error
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | year | month | day | error |
+| -- | -- | -- | -- | -- | -- | -- |
+| Q619 | P569 | ^1952-02-30T00:00:00Z/11 |  |  |  | day is out of range for month |
+| Q620 | P569 | ^0000-03-14T00:00:00Z/11 |  |  |  | year 0 is out of range |
+| Q621 | P569 | ^99999-06-01T00:00:00Z/11 |  |  |  | Invalid isoformat string: '99999-06-01T00:00:00' |
+| Q622 | P569 | ^1961-02-29T00:00:00Z/11 |  |  |  | day is out of range for month |
+| Q623 | P569 | ^1961-02-28T25:00:00Z/11 |  |  |  | hour must be in 0..23 |
+| Q624 | P569 | ^1962-02-28T12:60:00Z/11 |  |  |  | minute must be in 0..59 |
+| Q625 | P569 | ^1963-02-28T12:12:99Z/11 |  |  |  | second must be in 0..59 |
+
+The following messages will be produced on standard error:
+
+    Error parsing '1952-02-30T00:00:00' in ['Q619'|'P569'|'^1952-02-30T00:00:00Z/11']: day is out of range for month
+    Error parsing '0000-03-14T00:00:00' in ['Q620'|'P569'|'^0000-03-14T00:00:00Z/11']: year 0 is out of range
+    Error parsing '99999-06-01T00:00:00' in ['Q621'|'P569'|'^99999-06-01T00:00:00Z/11']: Invalid isoformat string: '99999-06-01T00:00:00'
+    Error parsing '1961-02-29T00:00:00' in ['Q622'|'P569'|'^1961-02-29T00:00:00Z/11']: day is out of range for month
+    Error parsing '1961-02-28T25:00:00' in ['Q623'|'P569'|'^1961-02-28T25:00:00Z/11']: hour must be in 0..23
+    Error parsing '1962-02-28T12:60:00' in ['Q624'|'P569'|'^1962-02-28T12:60:00Z/11']: minute must be in 0..59
+    Error parsing '1963-02-28T12:12:99' in ['Q625'|'P569'|'^1963-02-28T12:12:99Z/11']: second must be in 0..59
 

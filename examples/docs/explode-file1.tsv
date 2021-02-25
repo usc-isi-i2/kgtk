@@ -9,6 +9,8 @@ john	number	+186.2e-6
 john	quantity	84.3[84,85]kg
 john	date_and_time	^1960-11-05T00:00
 john	date_and_time	^1980-11-05T00:00Z/6
+john	date_and_time	^1990-12-07T13:45Z/6
+john	date_and_time	^2005-03-22T13:40:15Z/6
 john	location	@60.2/134.3
 john	boolean	True
 john	symbol	quadrature
