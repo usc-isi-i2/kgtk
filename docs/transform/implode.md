@@ -49,7 +49,8 @@ the `precision` column used to build quantities:
 ```
 kgtk implode --without precision
 ```
-See the table of KGTK Data Types and Columns for more details.
+!!! info
+    See the table of KGTK Data Types and Columns, below, for more details.
 
 ### `--escape-pipes`
 
@@ -63,14 +64,16 @@ KGTK data types:
  * language qualified strings
  * symbols
 
-Note: in C/C++, "\|" in a string literal is equivalent to "|".  In Python,
-it is processed unchanged ("\|").
+!!! note
+   In C/C++, "\|" in a string literal is equivalent to "|".  In Python,
+   it is processed unchanged ("\|").
 
-`kgtk implode` is intended to assist with importing data to KGTK format.  It
-does not import list values from exploded columns.  If you specify
-`--escape-pipes` (`--escape-pipes True, not the default value), then it `kgtk
-implode` will escape any vertical bar (pipe) characters it finds inside
-strings, language qualified strings, or symbols.
+!!! note
+    `kgtk implode` is intended to assist with importing data to KGTK format.  It
+    does not import list values from exploded columns.  If you specify
+    `--escape-pipes` (`--escape-pipes True, not the default value), then `kgtk
+    implode` will escape any vertical bar (pipe) characters it finds inside
+    strings, language qualified strings, or symbols.
 
 ### `--ignore-unselected-types` and `--retain-unselected-types`
 
@@ -151,20 +154,24 @@ The `extension` and `list` KGTK data types cannot be built by `kgtk implode`.
 Except for the `text` column, all of values in the the exploded columns may be
 optionally wrapped as quoted strings in one of the following formats:
 
- * triple double quotes
- * triple single quotes
- * double quotes
- * single quotes
+ * triple double quotes (`"""..."""`)
+ * triple single quotes (`'''...'''`)
+ * double quotes (`"..."`)
+ * single quotes (`'...'`)
 
 !!! note
     `kgtk implode` does *not* attempt to remove backslash escape characters (\) from the body of
      the value when unwrapping the string: backslash escape characters should not
      appear in numbers or date-and-times values, and are discouraged in symbols.
 
-!!1 note
+!!! note
     `kgtk implode` does *not* attempt to undouble internal quotes from the body of the value
     when unwrapping the string: internal single or double quotes should not appear
     in numbers or date-and-times values, and are discouraged in symbols.
+
+### Building an `id` Column
+
+`kgtk implode` can build a new `id` column or overwrite an existing `id` column.
 
 ## Usage
 ```
@@ -173,15 +180,15 @@ usage: kgtk implode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--prefix PREFIX]
                     [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]]
                     [--without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]]
-                    [--overwrite [OVERWRITE_COLUMN]] [--validate [VALIDATE]]
-                    [--escape-pipes [ESCAPE_PIPES]]
-                    [--quantities-include-numbers [QUANTITIES_INCLUDE_NUMBERS]]
-                    [--general-strings [GENERAL_STRINGS]]
-                    [--remove-prefixed-columns [REMOVE_PREFIXED_COLUMNS]]
-                    [--ignore-unselected-types [IGNORE_UNSELECTED_TYPES]]
-                    [--retain-unselected-types [RETAIN_UNSELECTED_TYPES]]
-                    [--build-id [BUILD_ID]]
-                    [--show-data-types [SHOW_DATA_TYPES]] [--quiet [QUIET]]
+                    [--overwrite [True/False]] [--validate [True/False]]
+                    [--escape-pipes [True/False]]
+                    [--quantities-include-numbers [True/False]]
+                    [--general-strings [True/False]]
+                    [--remove-prefixed-columns [True/False]]
+                    [--ignore-unselected-types [True/False]]
+                    [--retain-unselected-types [True/False]]
+                    [--build-id [True/False]] [--show-data-types [True/False]]
+                    [--quiet [True/False]]
                     [--overwrite-id [optional true|false]]
                     [--verify-id-unique [optional true|false]]
                     [--value-hash-width VALUE_HASH_WIDTH]
@@ -220,37 +227,37 @@ optional arguments:
                         'boolean', 'symbol']).
   --without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]
                         The KGTK fields to do without. (default=None).
-  --overwrite [OVERWRITE_COLUMN]
+  --overwrite [True/False]
                         Indicate that it is OK to overwrite an existing
                         imploded column. (default=True).
-  --validate [VALIDATE]
+  --validate [True/False]
                         Validate imploded values. (default=True).
-  --escape-pipes [ESCAPE_PIPES]
+  --escape-pipes [True/False]
                         When true, pipe characters (|) need to be escaped (\|)
                         per KGTK file format. (default=False).
-  --quantities-include-numbers [QUANTITIES_INCLUDE_NUMBERS]
+  --quantities-include-numbers [True/False]
                         When true, numbers are acceptable quantities.
                         (default=True).
-  --general-strings [GENERAL_STRINGS]
+  --general-strings [True/False]
                         When true, strings may include language qualified
                         strings. (default=True).
-  --remove-prefixed-columns [REMOVE_PREFIXED_COLUMNS]
+  --remove-prefixed-columns [True/False]
                         When true, remove all columns beginning with the
                         prefix from the output file. (default=False).
-  --ignore-unselected-types [IGNORE_UNSELECTED_TYPES]
+  --ignore-unselected-types [True/False]
                         When true, input records with valid but unselected
                         data types will be passed through to output.
                         (default=True).
-  --retain-unselected-types [RETAIN_UNSELECTED_TYPES]
+  --retain-unselected-types [True/False]
                         When true, input records with valid but unselected
                         data types will be retain existing data on output.
                         (default=True).
-  --build-id [BUILD_ID]
+  --build-id [True/False]
                         Build id values in an id column. (default=False).
-  --show-data-types [SHOW_DATA_TYPES]
+  --show-data-types [True/False]
                         Print the list of data types and exit.
                         (default=False).
-  --quiet [QUIET]       When true, suppress certain complaints unless verbose.
+  --quiet [True/False]  When true, suppress certain complaints unless verbose.
                         (default=False).
   --overwrite-id [optional true|false]
                         When true, replace existing ID values. When false,
