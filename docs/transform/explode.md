@@ -3,6 +3,9 @@
 The explode command copies its input file to its output file, exploding one
 column (normally node2) into separate columns for each structured subfield.
 
+!!! note
+    [`kgtk implode`](../implode) is the inverse of `kgtk explode`.
+
 ### Exploding a Multivalue (List) Cell
 
 If a cell in the column being exploded contains a list, that record is optionally
