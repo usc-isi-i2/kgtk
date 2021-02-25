@@ -1,14 +1,170 @@
+## Summary
+
 The implode command copies its input file to its output file, building one
 column (normally node2) from separate columns for each structured subfield.
 
-By default, all KGTK data types are candidates to be build.  The --types option allows the
+### Data Type and Column Selection
+
+By default, all KGTK data types are candidates to be build.  The ``--types` option allows the
 user to specify the set of data types to build.  Each data type is built from
 one or more columns.  Some columns, such as text, are shared between
 data types (e.g., string and language qualified string).  Some columns are optional,
 and need not be present in the data.
 
-By default, KGKT quantities man include KGTK numbers, and KGTK strings may include
+By default, KGKT quantities may include KGTK numbers, and KGTK strings may include
 KGTK language qualified strings.
+
+### `--reject-file REJECT_KGTK_FILE`
+
+When a reject file is provided, input records with invalid data will be
+copied to the reject file instead of the output file.
+
+Records can be rejected for the following general reasons:
+
+ * missing or unrecognized value in the `data_type` column
+ * missing data in a column that is required for the data type
+ * missing data in a column that is optional for the data type, when at least one optional value must be supplied
+ * poorly formatted data in a column that is used to build the data type
+
+### `--types [TYPE_LIST]`
+
+Normally, `kgtk implode` will process all KGTK data types, and will expect all
+of the required exploded columns to be present in the KGTK file.
+
+By specifying `--types TYPE_LIST`, which TYPE_LIST is a space-separated list
+of KGTK type names, the user can tell `kgtk implode` to expect only the listed
+data types when processing the input file.  Only the required columns for the
+selected data types must appear in the input KGTK file; optional columns may
+be excluded with the `--without COLUMN_LIST` option.
+
+See the table of KGTK Data Types and Columns for more details.
+
+### `--without [COLUMN_LIST]`
+
+The KGTK data types proessed by `kgtk implode` may have optional columns of
+exploded data.  These columns may be excluded by specifying them in the
+`--without [COLUMN_LIST]` option, e.g. if the input file does not contain
+the `precision` column used to build quantities:
+
+```
+kgtk implode --without precision
+```
+See the table of KGTK Data Types and Columns for more details.
+
+### `--escape-pipes`
+
+KGTK File Format allows lists of values in all columns except `node1`, `label`, and
+`node2` in a KGTK edge file.  Lists are valid KGTK values separated by thevertical
+bar (pipe) character(|).  Any vertical bar (pipe) characters inside a KGTK value
+may be escaped by backslash (\), i.e. "\|".  These may appear in the following
+KGTK data types:
+
+ * strings
+ * language qualified strings
+ * symbols
+
+Note: in C/C++, "\|" in a string literal is equivalent to "|".  In Python,
+it is processed unchanged ("\|").
+
+`kgtk implode` is intended to assist with importing data to KGTK format.  It
+does not import list values from exploded columns.  If you specify
+`--escape-pipes` (`--escape-pipes True, not the default value), then it `kgtk
+implode` will escape any vertical bar (pipe) characters it finds inside
+strings, language qualified strings, or symbols.
+
+### `--ignore-unselected-types` and `--retain-unselected-types`
+
+Unrecognized data type names will generate an error.  The input record will be
+rejected if a reject file is available.
+
+When a data type that is recognized but unselected appears in the input record,
+the following will happen:
+
+ * When `--retain-unselected-types` (`--retain-unselected-types True, the default
+   value) is specified and the destination column exists in
+   the input file, then the record will be passed through to the output
+   file with its exisiting value in the destination column.
+
+ * Else, when `--ignore-unselected-types` (`--ignore-unselected-types True`, the
+   default value) is specified, then the record will be passed through to
+   the output file with an empty value in the destination column.
+
+ * Else, an error has taken place. The input record will be sent to the reject
+   file if a reject file is available, otherwise the input record will be passed
+   through to the output file with an empty value in the destination column.
+
+### `--quantities-include-numbers`
+
+When `--quantities-include-numbers` (`--quantities-include-numbers True`, the
+default setting) is specified, if `quantity` is specified in the `data_type`
+column (normally `node2;kgtk:data_type`) but none of the optional fields for
+quantity are present, a KGTK number will be built in the destination column
+(normally `node2`).  When `--quantities-include-numbers False` is specified, a
+`quantity` will be built and at least one of the optional fields must be
+present for the quantity to be considered valid.
+
+### `--general-strings`
+
+When `--general-strings` (`--general-strings True`, the default setting) is
+specified, if `string` is specified in the `data_type` column and a `language`
+value appears, then a language_qualified-string will be built in the
+destination column.  When `--general-strings False` is specified and `string`
+is specified in the `data_type` column, then the `language` column will be
+ignored and only a `string` value will be built.
+
+### `--validate`
+
+When `--validate` (`--validate True`, the default setting) is specified,
+then values built for the destination column (normally `node2`) will be validated.
+When `--validate False` is specified, then values will not be validated after
+they are built.  Skipping the validation step will lead to faster execution,
+but will allow potentially invalid values to appear in the output KGTK file.
+
+
+### KGTK Data Types and Exploded Columns
+
+This table shows the exploded columns (without the prefix value, normally `node2;kgtk:`) that are used for each KGTK data type.
+
+| Data Type                 | Required Columns | Optional Columns |
+| ------------------------- | --------------- | --------------- |
+| boolean                   | truth           |                 |
+| date_and_times            | date_and_time   | precision       |
+| empty                     |                 |                 |
+| extension                 |                 |                 |
+| language_qualified_string | text language   | language_suffix |
+| list                      |                 |                 |
+| location_coordinates      | latitude longitude |              |
+| number                    | number          |                 |
+| quantity                  | number          | low_tolerance* high_tolerance* si_units* units_node* |
+| string                    | text            |                 |
+| symbol                    | symbol          |                 |
+
+Data types may have required columns and optional columns.  If an optional
+column is listed in the `--without` list (which by default is empty), then it
+will not be used to to build KGTK values and need not be present in the KGTK
+file.
+
+The `extension` and `list` KGTK data types cannot be built by `kgtk implode`.
+
+### String Wrappers in Exploded Columns
+
+Except for the `text` column, all of values in the the exploded columns may be
+optionally wrapped as quoted strings in one of the following formats:
+
+ * triple double quotes
+ * triple single quotes
+ * double quotes
+ * single quotes
+
+!!! note
+    `kgtk implode` does *not* attempt to remove backslash escape characters (\) from the body of
+     the value when unwrapping the string: backslash escape characters should not
+     appear in numbers or date-and-times values, and are discouraged in symbols.
+
+!!1 note
+    `kgtk implode` does *not* attempt to undouble internal quotes from the body of the value
+    when unwrapping the string: internal single or double quotes should not appear
+    in numbers or date-and-times values, and are discouraged in symbols.
 
 ## Usage
 ```
@@ -121,161 +277,13 @@ optional arguments:
                         Print additional progress messages (default=False).
 ```
 
-## Additional usage notes
-
-### `--reject-file REJECT_KGTK_FILE`
-
-When a reject file is provided, input records with invalid data will be
-copied to the reject file instead of the output file.
-
-Records can be rejected for the following general reasons:
-
- * missing or unrecognized value in the `data_type` column
- * missing data in a column that is required for the data type
- * missing data in a column that is optional for the data type, when at least one optional value must be supplied
- * poorly formatted data in a column that is used to build the data type
-
-### `--types [TYPE_LIST]`
-
-Normally, `kgtk implode` will process all KGTK data types, and will expect all
-of the required exploded columns to be present in the KGTK file.
-
-By specifying `--types TYPE_LIST`, which TYPE_LIST is a space-separated list
-of KGTK type names, the user can tell `kgtk implode` to expect only the listed
-data types when processing the input file.  Only the required columns for the
-selected data types must appear in the input KGTK file; optional columns may
-be excluded with the `--without COLUMN_LIST` option.
-
-See the table of KGTK Data Types and Columns for more details.
-
-### `--without [COLUMN_LIST]`
-
-The KGTK data types proessed by `kgtk implode` may have optional columns of
-exploded data.  These columns may be excluded by wpecifying them in the
-`--without [COLUMN_LIST]` option, e.g. if the input file does not contain
-the `precision` column used to build quantities:
-
-```
-kgtk implode --without precision
-```
-See the table of KGTK Data Types and Columns for more details.
-
-### `--escape-pipes`
-
-KGTK File Format allows lists of values in all columns except `node1`, `label`, and
-`node2` in a KGTK edge file.  Lists are valid KGTK values separated by thevertical
-bar (pipe) character(|).  Any vertical bar (pipe) characters inside a KGTK value
-myse be escaped by backslash (\), i.e. "\|".  These may appear in the following
-KGTK data types:
-
- * strings
- * language qualified strings
- * symbols
-
-Note: in C/C++, "\|" in a string literal is equivalent to "|".  In Python,
-it is process unchanged ("\|").
-
-`kgtk implode` is intended to assist with importing data to KGTK format.  It
-does not import list values from exploded columns.  If you specify
-`--escape-pipes` (`--escape-pipes True, not the default value), then it `kgtk
-implode` will escape any vertical bar (pipe) characters it finds inside
-strings, language qualified strings, or symbols.
-
-### `--ignore-unselected-types` and `--retain-unselected-types`
-
-Unrecognized data type names will generate an error.  The input record will be
-rejected if a reject file is available.
-
-When a data type that is recognized but unselected appears in the input record,
-the following will happen:
-
- * When `--retain-unselected-types` (`--retain-unselected-types True, the default
-   value) is specified and the destination column exists in
-   the input file, then the record will be passed through to the output
-   file with its exisiting value in the destination column.
-
- * Else, when `--ignore-unselected-types` (`--ignore-unselected-types True`, the
-   default value) is specified, then the record will be passed through to
-   the output file with an empty value in the destination column.
-
- * Else, an error has taken place. The input record will be sent to the reject
-   file if a reject file is available, otherwise the input record will be passed
-   through to the output file with an empty value in the destination column.
-
-### `--quantities-include-numbers`
-
-When `--quantities-include-numbers` (`--quantities-include-numbers True`, the
-default setting) is specified, if `quantity` is specified in the `data_type`
-column (normally `node2;kgtk:data_type`) but none of the optional fields for
-quantity are present, a KGTK number will be built in the destination column
-(normally `node2`).  When `--quantities-include-numbers False` is specified, a
-`quantity` will be built and at least one of the optional fields must be
-present for the quantity to be considered valid.
-
-### `--general-strings`
-
-When `--general-strings` (`--general-strings True`, the default setting) is
-specified, if `string` is specified in the `data_type` column and a `language`
-value appears, then a language_qualified-string will be built in the
-destination column.  When `--general-strings False` is specified and `string`
-is specified in the `data_type` column, then the `language` column will be
-ignored and only a `string` value will be built.
-
-### `--validate`
-
-When `--validate` (`--validate True`, the default setting) is specified,
-then values built for the destination column (normally `node2`) will be validated.
-When `--validate False` is specified, then values will not be validated after
-they are built.  Skipping the validation step will lead to faster execution,
-but will allow potentially invalid values to appear in the output KGTK file.
-
-
-## KGTK Data Types and Exploded Columns
-
-This table shows the exploded columns (without the prefix value, normally `node2;kgtk:`) that are used for each KGTK data type.
-
-| Data Type                 | Required Columns | Optional Columns |
-| ------------------------- | --------------- | --------------- |
-| boolean                   | truth           |                 |
-| date_and_times            | date_and_time   | precision       |
-| empty                     |                 |                 |
-| extension                 |                 |                 |
-| language_qualified_string | text language   | language_suffix |
-| list                      |                 |                 |
-| location_coordinates      | latitude longitude |              |
-| number                    | number          |                 |
-| quantity                  | number          | low_tolerance* high_tolerance* si_units* units_node* |
-| string                    | text            |                 |
-| symbol                    | symbol          |                 |
-
-Data types may have required columns and optional columns.  If an optional
-column is listed in the `--without` list (which by default is empty), then it
-will not be used to to build KGTK values and need not be present in the KGTK
-file.
-
-The `extension` and `list` KGTK data types cannot be built by `kgtk implode`.
-
-## String Wrappers in Exploded Columns
-
-Except for the `text` column, all of values in the the exploded columns may be
-optionally wrapped as quoted strings in one of the following formats:
-
- * triple double quotes
- * triple single quotes
- * double quotes
- * single quotes
-
-We do *not* attempt to remove backslash escape characters (\) from the body of
-the value when unwrapping the string: backslash escape characters should not
-appear in numbers or date-and-times, and are discouraged in symbols.
-
-We do *not* attempt to undouble internal quotes from the body of the value
-whtn unwrapping the string: internal single or double quotes should not appear
-in numbers or date-and-times, and are discouraged in symbols.
-
 ## Examples
 
-Suppose that `file2.tsv` contains the following table in KGTK format:
+Suppose that `implode-file2.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/implode-file2.tsv --mode=NONE
+```
 
 | node1 | label | old_node2 | node2;kgtk:data_type | node2;kgtk:valid | node2;kgtk:list_len | node2;kgtk:number | node2;kgtk:low_tolerance | node2;kgtk:high_tolerance | node2;kgtk:si_units | node2;kgtk:units_node | node2;kgtk:text | node2;kgtk:language | node2;kgtk:language_suffix | node2;kgtk:latitude | node2;kgtk:longitude | node2;kgtk:date_and_time | node2;kgtk:precision | node2;kgtk:truth | node2;kgtk:symbol |
 | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
@@ -309,8 +317,15 @@ Suppose that `file2.tsv` contains the following table in KGTK format:
 | john | lqstring-with-escaped-prime-and-quote | 'Joh\'\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\'\"n" | en |  |  |  |  |  |  |  |
 | john | lqstring-with-triple-double-quotes | 'John'@en | language_qualified_string | True | 0 |  |  |  |  |  | """John""" | en |  |  |  |  |  |  |  |
 
+!!! note
+    This is *not* a valid KGTK node file because it doee not have and `id` column,
+    and it is not a valid KGTK edge file because it does not have a `node2` column.
+    Thus, `--mode=NONE` is required.
+ 
+### Imploding a Quasi-KGTK File with Default Settings
+
 ```bash
-kgtk explode -i file2.tsv --mode=NONE
+kgtk implode -i examples/docs/implode-file2.tsv --mode=NONE
 ```
 The output will be the following table in KGTK format:
 
@@ -346,11 +361,27 @@ The output will be the following table in KGTK format:
 | john | lqstring-with-escaped-prime-and-quote | 'Joh\'\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\'\"n" | en |  |  |  |  |  |  |  | 'Joh\'\"n'@en |
 | john | lqstring-with-triple-double-quotes | 'John'@en | language_qualified_string | True | 0 |  |  |  |  |  | """John""" | en |  |  |  |  |  |  |  | 'John'@en |
 
-A new `node2` column has been created with the imploded data.  The
-`--mode=NONE` option was required because the input file did not have a
-`node2` column, and thus was not a valid KGTK edge file.
+One line was not imploded, as indicated by the following error message:
+
+    Input line 17: data type 'list' is not supported for implode.
+
+!!! note
+    A new `node2` column has been created with the imploded data.  The
+    `--mode=NONE` option was required because the input file did not have a
+    `node2` column, and thus was not a valid KGTK edge file.
+
+### Imploding a KGTK Edge File Missing Certain Exploded Columns
 
 Suppose that `file1.tsv` contains the following table in KGTK format.
+
+The file does not include the `si_units` or `language_suffix` optional columns.
+It does include a `node2` column, so the `--mode=NONE` option is not required.
+The existing `node2` column, which is empty, will be overwritten with the
+imploded data.
+
+```bash
+kgtk cat -i examples/docs/implode-file1.tsv
+```
 
 | id | node1 | label | node2 | node2;kgtk:data_type | node2;kgtk:number | node2;kgtk:low_tolerance | node2;kgtk:high_tolerance | node2;kgtk:units_node | node2;kgtk:date_and_time | node2;kgtk:precision | node2;kgtk:calendar | node2;kgtk:truth | node2;kgtk:symbol | node2;kgtk:latitude | node2;kgtk:longitude | node2;kgtk:text | node2;kgtk:language |
 | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
@@ -364,15 +395,14 @@ Suppose that `file1.tsv` contains the following table in KGTK format.
 | oecd;OECD-Latvia g2g9e7f8-en...csv;D8;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P585 |  | date_and_times |  |  |  |  | 2011-01-01T00:00:00 | 9 | Q1985727 |  |  |  |  |  |  |
 | oecd;OECD-Latvia g2g9e7f8-en...csv;D8; | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P248 |  | symbol |  |  |  |  |  |  |  |  | Q41550 |  |  |  |  |
 | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | Q211 | P1082 |  | quantity | 6.4 |  |  | Q10000000040002 |  |  |  |  |  |  |  |  |  |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D10;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | P585 |  | date_and_times |  |  |  |  | 2011-01-01T00:00:00 | 9 | Q1985727 |  |  |  |  |  |  |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D10; | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | P248 |  | symbol |  |  |  |  |  |  |  |  | Q41550 |  |  |  |  |
+| oecd;OECD-Latvia g2g9e7f8-en..csv;D11 | Q211 | P1082 |  | quantity | -15.9 |  |  | Q10000000040003 |  |  |  |  |  |  |  |  |  |
 
-
-The file does not include the `si_units` or `language_suffix` optional columns.
-It does include a `node2` column, so the `--mode=NONE` option is not required.
-The existing `node2` column, which is empty, will be overwritten with the
-imploded data.
 
 ```bash
-kgtk implode -i file1.tsv -v --without si_units language_suffix
+kgtk implode -i examples/docs/implode-file1.tsv \
+             --without si_units language_suffix
 ```
 
 The output will be the following table in KGTK format:
@@ -389,12 +419,19 @@ The output will be the following table in KGTK format:
 | oecd;OECD-Latvia g2g9e7f8-en...csv;D8;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P585 | ^2011-01-01T00:00:00/9 | date_and_times |  |  |  |  | 2011-01-01T00:00:00 | 9 | Q1985727 |  |  |  |  |  |  |
 | oecd;OECD-Latvia g2g9e7f8-en...csv;D8; | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P248 | Q41550 | symbol |  |  |  |  |  |  |  |  | Q41550 |  |  |  |  |
 | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | Q211 | P1082 | 6.4Q10000000040002 | quantity | 6.4 |  |  | Q10000000040002 |  |  |  |  |  |  |  |  |  |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D10;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | P585 | ^2011-01-01T00:00:00/9 | date_and_times |  |  |  |  | 2011-01-01T00:00:00 | 9 | Q1985727 |  |  |  |  |  |  |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D10; | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | P248 | Q41550 | symbol |  |  |  |  |  |  |  |  | Q41550 |  |  |  |  |
+| oecd;OECD-Latvia g2g9e7f8-en..csv;D11 | Q211 | P1082 | -15.9Q10000000040003 | quantity | -15.9 |  |  | Q10000000040003 |  |  |  |  |  |  |  |  |  |
 
+
+### Implode Removing Exploded Columns
 
 Suppose you now wish to remove the exploded columns from the final output file.
 
 ```bash
-kgtk implode -i file1.tsv -v --without si_units language_suffix --remove-prefixed-columns
+kgtk implode -i examples/docs/implode-file1.tsv \
+             --without si_units language_suffix \
+             --remove-prefixed-columns
 ```
 
 The output will be the following table in KGTK format:
@@ -411,3 +448,6 @@ The output will be the following table in KGTK format:
 | oecd;OECD-Latvia g2g9e7f8-en...csv;D8;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P585 | ^2011-01-01T00:00:00/9 |
 | oecd;OECD-Latvia g2g9e7f8-en...csv;D8; | oecd;OECD-Latvia g2g9e7f8-en..csv;D8 | P248 | Q41550 |
 | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | Q211 | P1082 | 6.4Q10000000040002 |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D10;D4 | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | P585 | ^2011-01-01T00:00:00/9 |
+| oecd;OECD-Latvia g2g9e7f8-en...csv;D10; | oecd;OECD-Latvia g2g9e7f8-en..csv;D10 | P248 | Q41550 |
+| oecd;OECD-Latvia g2g9e7f8-en..csv;D11 | Q211 | P1082 | -15.9Q10000000040003 |
