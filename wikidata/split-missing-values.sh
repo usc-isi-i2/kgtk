@@ -44,18 +44,18 @@ kgtk ${KGTK_FLAGS} \
      --input-keys node1 \
      --filter-file ${TEMPDIR}/claims.novalue.${UNSORTED_KGTK} \
      --filter-keys id \
-     --output-file -o ${TEMPDIR}/qualifiers.novalueClaims.${UNSORTED_KGTK} \
+     --output-file ${TEMPDIR}/qualifiers.novalueClaims.${UNSORTED_KGTK} \
      --reject-file - \
      / ifexists ${VERBOSE} \
      --input-keys node1 \
      --filter-file ${TEMPDIR}/claims.somevalue.${UNSORTED_KGTK} \
      --filter-keys id \
-     --output-file -o ${TEMPDIR}/qualifiers.somevalueClaims.${UNSORTED_KGTK} \
+     --output-file ${TEMPDIR}/qualifiers.somevalueClaims.${UNSORTED_KGTK} \
      --reject-file - \
      / ifexists ${VERBOSE} \
      --input-keys node1 \
      --filter-file ${TEMPDIR}/claims.badvalue.${UNSORTED_KGTK} \
      --filter-keys id \
-     --output-file -o ${TEMPDIR}/qualifiers.badvalueClaims.${UNSORTED_KGTK} \
+     --output-file ${TEMPDIR}/qualifiers.badvalueClaims.${UNSORTED_KGTK} \
      --reject-file ${TEMPDIR}/qualifiers.${UNSORTED_KGTK} \
     |& tee ${LOGDIR}/split-qualifiers-missing-values.log
