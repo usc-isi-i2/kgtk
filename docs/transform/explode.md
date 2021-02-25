@@ -985,3 +985,39 @@ The output will be the following table in KGTK format:
 | john | boolean | True |  |  |  |  |  |  |
 | john | symbol | quadrature |  |  |  |  |  |  |
 | john | list | home\|work |  |  |  |  |  |  |
+
+### Exploding Dates into Year and Yearstr, Month and Monthstr, Day and Daystr
+
+Explode the default column (`node2`), extracting certain `date_and_times` fields.
+Don't prefix the extracted field names.
+
+The fields without `str` at the end of the name (`year`, `month`, `day`) appear as KGTK
+numbers.  The fields with `str` at the end of the name (`yearstr`, `monthstr`, `daystr`)
+appear as KGTK strings.
+
+```bash
+kgtk explode -i examples/docs/explode-file1.tsv \
+             --fields year yearstr month monthstr day  daystr \
+	     --prefix=
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | year | yearstr | month | monthstr | day | daystr |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| john | string | "John" |  |  |  |  |  |  |
+| john | lqstring | 'John'@en |  |  |  |  |  |  |
+| john | integer | 12345 |  |  |  |  |  |  |
+| john | number | 186.2 |  |  |  |  |  |  |
+| john | number | 186.2e04 |  |  |  |  |  |  |
+| john | number | -186.2 |  |  |  |  |  |  |
+| john | number | +186.2e-6 |  |  |  |  |  |  |
+| john | quantity | 84.3[84,85]kg |  |  |  |  |  |  |
+| john | date_and_time | ^1960-11-05T00:00 | 1960 | "1960" | 11 | "11" | 5 | "05" |
+| john | date_and_time | ^1980-11-05T00:00Z/6 | 1980 | "1980" | 11 | "11" | 5 | "05" |
+| john | date_and_time | ^1990-12-07T13:45Z/6 | 1990 | "1990" | 12 | "12" | 7 | "07" |
+| john | date_and_time | ^2005-03-22T13:40:15Z/6 | 2005 | "2005" | 3 | "03" | 22 | "22" |
+| john | location | @60.2/134.3 |  |  |  |  |  |  |
+| john | boolean | True |  |  |  |  |  |  |
+| john | symbol | quadrature |  |  |  |  |  |  |
+| john | list | home\|work |  |  |  |  |  |  |
