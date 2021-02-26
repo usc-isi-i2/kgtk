@@ -1256,17 +1256,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         Returns True to indicate that the row should be ignored (skipped).
 
         """
-        error_buffer: typing.Optional[io.StringIO] = None
         problems: typing.List[str] = [ ] # Build a list of problems.
         idx: int
         item: str
         for idx, item in enumerate(row):
             if len(item) > 0: # Optimize the common case of empty columns.
-                if self.verbose:
-                    error_file = io.StringIO()
+                error_buffer: io.StringIO = io.StringIO()
                 kv: KgtkValue = KgtkValue(item, options=self.value_options, error_file=error_buffer, verbose=self.verbose)
                 if not kv.is_valid():
-                    if error_file is not None:
+                    if self.verbose:
                         problems.append("col %d (%s) value %s: %s" % (idx, self.column_names[idx], repr(item), error_buffer.getvalue().rstrip()))
                     problems.append("col %d (%s) value %s is an %s" % (idx, self.column_names[idx], repr(item), kv.describe()))
                 if kv.repaired:
@@ -1274,8 +1272,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     #
                     # Warning: We expect this change to be seen by the caller.
                     row[idx] = kv.value
-                if error_file is not None:
-                    error_file.close()
+                error_buffer.close()
 
         if len(problems) == 0:
             return False
