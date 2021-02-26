@@ -43,7 +43,7 @@ cleared if an error occurs processing the input date-and-time value.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into COLUMN_NAME
                  [COLUMN_NAME ...] --do
-                 {average,capitalize,casefold,copy,fromisoformat,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
+                 {and,average,capitalize,casefold,copy,fromisoformat,is,is_in,is_not,join,lower,max,min,nand,nor,not,or,percentage,replace,set,substitute,sum,swapcase,title,upper,xor}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
@@ -70,7 +70,7 @@ optional arguments:
   --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {average,capitalize,casefold,copy,fromisoformat,join,lower,max,min,percentage,replace,set,substitute,sum,swapcase,title,upper}
+  --do {and,average,capitalize,casefold,copy,fromisoformat,is,is_in,is_not,join,lower,max,min,nand,nor,not,or,percentage,replace,set,substitute,sum,swapcase,title,upper,xor}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -115,7 +115,7 @@ kgtk cat -i examples/docs/calc-file1.tsv
 ### Convert the `node1` column value with capitalization.
 
 !!! info
-    Multiple columns may be converted if ther is a matching number of `--into` columns.
+    Multiple columns may be converted if there is a matching number of `--into` columns.
 
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv \
@@ -146,7 +146,7 @@ The output will be the following table in KGTK format:
 ### Convert the `node1` column value with case folding.
 
 !!! info
-    Multiple columns may be converted if ther is a matching number of `--into` columns.
+    Multiple columns may be converted if there is a matching number of `--into` columns.
 
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv \
@@ -335,7 +335,7 @@ The output will be the following table in KGTK format:
 ### Convert the `node1` column value into lower case.
 
 !!! info
-    Multiple columns may be converted if ther is a matching number of `--into` columns.
+    Multiple columns may be converted if there is a matching number of `--into` columns.
 
 ```bash
 kgtk calc -i examples/docs/calc-file1.tsv \

@@ -17,22 +17,21 @@ def parser():
         '\n\nAdditional options are shown in expert help.\nkgtk --expert rename_columns --help'
     }
 
+# Future:
 
 # Numeric:
-ABS_OP: str = "abs"
-DIV_OP: str = "div"
-MOD_OP: str = "mod"
+ABS_OP: str = "abs" # column
+DIV_OP: str = "div" # (column / column) or (column / value)
+MOD_OP: str = "mod" # (column mod column) or (column mod value)
 POW_OP: str = "pow"
-
-# Boolean
-AND_OP: str = "and"
-ALL_OP: str = "all"
-ANY_OP: str = "any"
-NAND_OP: str = "nand"
-NOR_OP: str = "nor"
-NOT_OP: str = "not"
-OR_OP: str = "or"
-XOR_OP: str = "xor"
+LT_OP: str = "lt" # (column < column) or (column < value) -> boolean
+LE_OP: str = "le" # (column <= column) or (column <= value) -> boolean
+GE_OP: str = "ge" # (column > column) or (column > value) -> boolean
+GT_OP: str = "gt" # (column >= column) or (column >= value) -> boolean
+EQ_OP: str = "eq" # (column == column) or (column == value) -> boolean
+NE_OP: str = "ne" # (column != column) or (column != value) -> boolean
+MINUS_OP: str = "minus" # (column - column) or (column - value)
+NEGATE_OP: str = "negate"
 
 # String
 CENTER_OP: str = "center"
@@ -59,33 +58,60 @@ STRIP_OP: str = "strip"
 ZFILL_OP: str = "zfill"
 
 # Implemented:
+
+# Boolean
+AND_OP: str = "and" # (boolean, boolean) -> boolean
+NAND_OP: str = "nand" # (boolean, boolean) -> boolean
+NOR_OP: str = "nor" # (boolean, boolean) -> boolean
+NOT_OP: str = "not" # (boolean, ...) -> (boolean, ...)
+OR_OP: str = "or" # (boolean, boolean) -> boolean
+XOR_OP: str = "xor" # (boolean, boolean) -> boolean
+
+# Numeric
 AVERAGE_OP: str = "average"
-CAPITALIZE_OP: str = "capitalize"
-CASEFOLD_OP: str = "casefold"
-COPY_OP: str = "copy"
-FROMISOFORMAT_OP: str = "fromisoformat"
-JOIN_OP: str = "join"
-LOWER_OP: str = "lower"
 MAX_OP: str = "max"
 MIN_OP: str = "min"
 PERCENTAGE_OP: str = "percentage"
+SUM_OP: str = "sum" # Sums the columns and the values.
+
+# String
+CAPITALIZE_OP: str = "capitalize"
+CASEFOLD_OP: str = "casefold"
+JOIN_OP: str = "join"
+LOWER_OP: str = "lower"
 REPLACE_OP: str = "replace"
-SET_OP: str = "set"
 SUBSTITUTE_OP: str = "substitute"
-SUM_OP: str = "sum"
 SWAPCASE_OP: str = "swapcase"
 TITLE_OP: str = "title"
 UPPER_OP: str = "upper"
 
-OPERATIONS: typing.List[str] = [ AVERAGE_OP,
+# General
+COPY_OP: str = "copy"
+IS_OP: str = "is" # (column == column) or (column == value) -> boolean
+IS_IN_OP: str = "is_in" # column in values -> boolean
+IS_NOT_OP: str = "is_not" # (column != column) or (column != value) -> boolean
+SET_OP: str = "set"
+
+# Date/Time
+FROMISOFORMAT_OP: str = "fromisoformat"
+
+OPERATIONS: typing.List[str] = [ AND_OP,
+                                 AVERAGE_OP,
                                  CAPITALIZE_OP,
                                  CASEFOLD_OP,
                                  COPY_OP,
                                  FROMISOFORMAT_OP,
+                                 IS_OP,
+                                 IS_IN_OP,
+                                 IS_NOT_OP,
                                  JOIN_OP,
                                  LOWER_OP,
                                  MAX_OP,
                                  MIN_OP,
+                                 NAND_OP,
+                                 NOR_OP,
+                                 NOT_OP,
+                                 OR_OP,
                                  PERCENTAGE_OP,
                                  REPLACE_OP,
                                  SET_OP,
@@ -94,6 +120,7 @@ OPERATIONS: typing.List[str] = [ AVERAGE_OP,
                                  SWAPCASE_OP,
                                  TITLE_OP,
                                  UPPER_OP,
+                                 XOR_OP,
                                 ]
 
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
@@ -194,6 +221,7 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+    from kgtk.value.kgtkvalue import KgtkValue
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
@@ -367,11 +395,17 @@ def run(input_file: KGTKFiles,
 
         substitute_re: typing.Optional[typing.Pattern] = None
 
-        if operation == AVERAGE_OP:
+        if operation == AND_OP:
+            if len(sources) == 0:
+                raise KGTKException("And needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("And needs 1 destination column, got %d" % len(into_column_idxs))
+
+        elif operation == AVERAGE_OP:
             if len(sources) == 0:
                 raise KGTKException("Average needs at least one source, got %d" % len(sources))
             if len(into_column_idxs) != 1:
-                raise KGTKException("Average needs 1 destination columns, got %d" % len(into_column_idxs))
+                raise KGTKException("Average needs 1 destination column, got %d" % len(into_column_idxs))
 
         elif operation == CAPITALIZE_OP:
             if len(sources) == 0:
@@ -396,6 +430,26 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Fromisoformat needs one source, got %d" % len(sources))
             if len(values) != len(into_column_idxs):
                 raise KGTKException("Fromisoformat needs the same number of values and into columns, got %d and %d" % (len(values), len(into_column_idxs)))
+
+        elif operation == IS_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Is needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Is needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == IS_IN_OP:
+            if len(sources) != 1:
+                raise KGTKException("Is in needs one source, got %d" % len(sources))
+            if len(values) == 0:
+                raise KGTKException("Is in needs at least one value, got %d" % len(values))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Is in needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == IS_NOT_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Is not needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Is not needs 1 destination columns, got %d" % len(into_column_idxs))
 
         elif operation == JOIN_OP:
             if len(sources) == 0:
@@ -422,6 +476,24 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Min needs at least one source, got %d" % len(sources))
             if len(into_column_idxs) != 1:
                 raise KGTKException("Min needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == NOR_OP:
+            if len(sources) == 0:
+                raise KGTKException("Nor needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Nor needs 1 destination column, got %d" % len(into_column_idxs))
+
+        elif operation == NOT_OP:
+            if len(sources) == 0:
+                raise KGTKException("Not needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != len(sources):
+                raise KGTKException("Nand needs the same number of input columns and into colums, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+        elif operation == OR_OP:
+            if len(sources) == 0:
+                raise KGTKException("Or needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Or needs 1 destination column, got %d" % len(into_column_idxs))
 
         elif operation == PERCENTAGE_OP:
             if len(into_column_idxs) != 1:
@@ -484,10 +556,19 @@ def run(input_file: KGTKFiles,
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("Upper needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
+        elif operation == XOR_OP:
+            if len(sources) == 0:
+                raise KGTKException("Xor needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Xor needs 1 destination column, got %d" % len(into_column_idxs))
+
 
         fs: str = format_string if format_string is not None else "%5.2f"
         item: str
-         
+        item2: str
+        kv: KgtkValue
+        bresult: bool
+
         into_column_idx = into_column_idxs[0] # for convenience
 
         input_data_lines: int = 0
@@ -499,7 +580,16 @@ def run(input_file: KGTKFiles,
             for idx in range(new_column_count):
                 output_row.append("") # Easiest way to add a new column.
 
-            if operation == AVERAGE_OP:
+            if operation == AND_OP:
+                bresult = True
+                for idx in sources:
+                    kv = KgtkValue(row[idx])
+                    if kv.is_boolean():
+                        bresult = bresult and kv.is_true()
+
+                output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
+
+            elif operation == AVERAGE_OP:
                 atotal: float = 0
                 acount: int = 0
                 for idx in sources:
@@ -587,6 +677,27 @@ def run(input_file: KGTKFiles,
                     for idx in range(len(values)):
                         output_row[into_column_idxs[idx]] = ""
                     
+            elif operation == IS_OP:
+                if len(sources) == 1:
+                    output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] == row[sources[1]])
+                else:
+                    output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] == values[0])
+
+            elif operation == IS_IN_OP:
+                bresult = False
+                item = row[sources[0]]
+                for item2 in values:
+                    if item == item2:
+                        bresult = True
+                        break
+                output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
+
+            elif operation == IS_NOT_OP:
+                if len(sources) == 1:
+                    output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] != row[sources[1]])
+                else:
+                    output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] != values[0])
+
             elif operation == JOIN_OP:
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
 
@@ -614,6 +725,41 @@ def run(input_file: KGTKFiles,
                             min_result = min_value
                 output_row[into_column_idx] = (fs % min_result) if min_result is not None else ""
 
+            elif operation == NAND_OP:
+                bresult = True
+                for idx in sources:
+                    kv = KgtkValue(row[idx])
+                    if kv.is_boolean():
+                        bresult = bresult and kv.is_true()
+
+                output_row[into_column_idx] = KgtkValue.to_boolean(not bresult)
+
+            elif operation == NOR_OP:
+                bresult = False
+                for idx in sources:
+                    kv = KgtkValue(row[idx])
+                    if kv.is_boolean():
+                        bresult = bresult or kv.is_true()
+
+                output_row[into_column_idx] = KgtkValue.to_boolean(not bresult)
+
+            elif operation == NOT_OP:
+                for idx in sources:
+                    kv = KgtkValue(row[idx])
+                    if kv.is_boolean():
+                        output_row[into_column_idxs[idx]] = KgtkValue.to_boolean(not kv.is_true())
+                    else:
+                        output_row[into_column_idxs[idx]] = ""
+
+            elif operation == OR_OP:
+                bresult = False
+                for idx in sources:
+                    kv = KgtkValue(row[idx])
+                    if kv.is_boolean():
+                        bresult = bresult or kv.is_true()
+
+                output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
+
             elif operation == PERCENTAGE_OP:
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
 
@@ -636,6 +782,9 @@ def run(input_file: KGTKFiles,
                     item = row[idx]
                     if len(item) > 0:
                         total += float(item)
+                for item in values:
+                    if len(item) > 0:
+                        total += float(item)
                 output_row[into_column_idx] = fs % total
                 
             elif operation == SWAPCASE_OP:
@@ -650,6 +799,14 @@ def run(input_file: KGTKFiles,
                 for idx in range(len(sources)):
                     output_row[into_column_idxs[idx]] = row[sources[idx]].upper()
 
+            elif operation == XOR_OP:
+                bresult = False
+                for idx in sources:
+                    kv = KgtkValue(row[idx])
+                    if kv.is_boolean():
+                        bresult = bresult != kv.is_true()
+
+                output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
 
             kw.write(output_row)
 
