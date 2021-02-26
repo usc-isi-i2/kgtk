@@ -46,6 +46,50 @@ This table shows the fields (without the prefix value, normally `node2;kgtk:`) t
 | string                    | valid text                  | |
 | symbol                    | valid symbol                | |
 
+### KGTK Data Fields
+
+| Field Name           | Format  |
+| -------------------- | ----  |
+|            data_type | sym   |
+|                 date | str   |
+|        date_and_time | str   |
+|                  day | int   |
+|               daystr | str   |
+|       high_tolerance | num   |
+|    high_tolerancestr | str   |
+|                 hour | int   |
+|              hourstr | str   |
+|      iso8601extended | bool  |
+|             language | sym   |
+|      language_suffix | sym   |
+|             latitude | num   |
+|          latitudestr | str   |
+|             list_len | int   |
+|            longitude | num   |
+|         longitudestr | str   |
+|        low_tolerance | num   |
+|     low_tolerancestr | str   |
+|              minutes | int   |
+|           minutesstr | str   |
+|                month | int   |
+|             monthstr | str   |
+|               number | num   |
+|            numberstr | str   |
+|            precision | int   |
+|         precisionstr | str   |
+|              seconds | int   |
+|           secondsstr | str   |
+|             si_units | sym   |
+|               symbol | sym   |
+|                 text | str   |
+|                 time | str   |
+|                truth | bool  |
+|           units_node | sym   |
+|                valid | bool  |
+|                 year | int   |
+|              yearstr | str   |
+|              zonestr | str   |
+
 ## Usage
 
 ```
