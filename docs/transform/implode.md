@@ -126,7 +126,7 @@ but will allow potentially invalid values to appear in the output KGTK file.
 
 ### KGTK Data Types and Exploded Columns
 
-This table shows the exploded columns (without the prefix value, normally `node2;kgtk:`) that are used for each KGTK data type.
+This table shows the exploded columns (without the prefix value, normally `node2;kgtk:`) that are used to build each KGTK data type.
 
 | Data Type                 | Required Columns | Optional Columns |
 | ------------------------- | --------------- | --------------- |
@@ -138,7 +138,7 @@ This table shows the exploded columns (without the prefix value, normally `node2
 | list                      |                 |                 |
 | location_coordinates      | latitude longitude |              |
 | number                    | number          |                 |
-| quantity                  | number          | low_tolerance* high_tolerance* si_units* units_node* |
+| quantity                  | number          | low_tolerance high_tolerance si_units units_node |
 | string                    | text            |                 |
 | symbol                    | symbol          |                 |
 
@@ -147,7 +147,11 @@ column is listed in the `--without` list (which by default is empty), then it
 will not be used to to build KGTK values and need not be present in the KGTK
 file.
 
-The `extension` and `list` KGTK data types cannot be built by `kgtk implode`.
+!!! note
+    The `extension` and `list` KGTK data types cannot be built by `kgtk implode`.
+
+!!! note
+    For `quantity`, at least one of the optional columns must be present.
 
 ### String Wrappers in Exploded Columns
 
@@ -172,6 +176,7 @@ optionally wrapped as quoted strings in one of the following formats:
 ### Building an `id` Column
 
 `kgtk implode` can build a new `id` column or overwrite an existing `id` column.
+See [`kgtk add-id`](../add_id] for additional details.
 
 ## Usage
 ```
