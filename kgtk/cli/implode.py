@@ -110,7 +110,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="When true, suppress certain complaints unless verbose. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    KgtkIdBuilderOptions.add_arguments(parser)
+    KgtkIdBuilderOptions.add_arguments(parser, expert=_expert)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
