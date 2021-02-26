@@ -1086,6 +1086,22 @@ class KgtkValue(KgtkFormat):
                                           truth=self.value == KgtkFormat.TRUE_SYMBOL)
         return True
 
+    def is_true(self)->bool:
+        """
+        Return True if the value is the boolean truth symbol.
+        """
+        return self.value == KgtkFormat.TRUE_SYMBOL
+
+    def is_false(self)->bool:
+        """
+        Return True if the value is the boolean false symbol.
+        """
+        return self.value == KgtkFormat.FALSE_SYMBOL
+
+    @classmethod
+    def to_boolean(cls, b: bool)->str:
+        return KgtkFormat.TRUE_SYMBOL if b else KgtkFormat.FALSE_SYMBOL
+
     # Support two or three character language codes.  Suports hyphenated codes
     # with a country code or dialect name suffix after the language code.
     lax_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>.*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z0-9]+)?)$")
