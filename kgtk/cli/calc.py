@@ -24,12 +24,6 @@ ABS_OP: str = "abs" # column
 DIV_OP: str = "div" # (column / column) or (column / value)
 MOD_OP: str = "mod" # (column mod column) or (column mod value)
 POW_OP: str = "pow"
-LT_OP: str = "lt" # (column < column) or (column < value) -> boolean
-LE_OP: str = "le" # (column <= column) or (column <= value) -> boolean
-GE_OP: str = "ge" # (column > column) or (column > value) -> boolean
-GT_OP: str = "gt" # (column >= column) or (column >= value) -> boolean
-EQ_OP: str = "eq" # (column == column) or (column == value) -> boolean
-NE_OP: str = "ne" # (column != column) or (column != value) -> boolean
 MINUS_OP: str = "minus" # (column - column) or (column - value)
 NEGATE_OP: str = "negate"
 
@@ -73,6 +67,12 @@ MAX_OP: str = "max"
 MIN_OP: str = "min"
 PERCENTAGE_OP: str = "percentage"
 SUM_OP: str = "sum" # Sums the columns and the values.
+GE_OP: str = "ge" # (column > column) or (column > value) -> boolean
+GT_OP: str = "gt" # (column >= column) or (column >= value) -> boolean
+LT_OP: str = "lt" # (column < column) or (column < value) -> boolean
+LE_OP: str = "le" # (column <= column) or (column <= value) -> boolean
+EQ_OP: str = "eq" # (column == column) or (column == value) -> boolean
+NE_OP: str = "ne" # (column != column) or (column != value) -> boolean
 
 # String
 CAPITALIZE_OP: str = "capitalize"
@@ -100,15 +100,21 @@ OPERATIONS: typing.List[str] = [ AND_OP,
                                  CAPITALIZE_OP,
                                  CASEFOLD_OP,
                                  COPY_OP,
+                                 EQ_OP,
                                  FROMISOFORMAT_OP,
+                                 GE_OP,
+                                 GT_OP,
                                  IS_OP,
                                  IS_IN_OP,
                                  IS_NOT_OP,
                                  JOIN_OP,
                                  LOWER_OP,
+                                 LE_OP,
+                                 LT_OP,
                                  MAX_OP,
                                  MIN_OP,
                                  NAND_OP,
+                                 NE_OP,
                                  NOR_OP,
                                  NOT_OP,
                                  OR_OP,
@@ -425,11 +431,29 @@ def run(input_file: KGTKFiles,
             if len(selected_names) != len(into_column_idxs):
                 raise KGTKException("Copy needs the same number of input columns and into columns, got %d and %d" % (len(selected_names), len(into_column_idxs)))
 
+        elif operation == EQ_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Eq needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Eq needs 1 destination columns, got %d" % len(into_column_idxs))
+
         elif operation == FROMISOFORMAT_OP:
             if len(sources) != 1:
                 raise KGTKException("Fromisoformat needs one source, got %d" % len(sources))
             if len(values) != len(into_column_idxs):
                 raise KGTKException("Fromisoformat needs the same number of values and into columns, got %d and %d" % (len(values), len(into_column_idxs)))
+
+        elif operation == GE_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Ge needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Ge needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == GT_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Gt needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Gt needs 1 destination columns, got %d" % len(into_column_idxs))
 
         elif operation == IS_OP:
             if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
@@ -459,6 +483,18 @@ def run(input_file: KGTKFiles,
             if len(values) != 1:
                 raise KGTKException("Join needs 1 value, got %d" % len(values))
 
+        elif operation == LE_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Le needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Le needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == LT_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Lt needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Lt needs 1 destination columns, got %d" % len(into_column_idxs))
+
         elif operation == LOWER_OP:
             if len(sources) == 0:
                 raise KGTKException("Lower needs at least one source, got %d" % len(sources))
@@ -476,6 +512,12 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Min needs at least one source, got %d" % len(sources))
             if len(into_column_idxs) != 1:
                 raise KGTKException("Min needs 1 destination columns, got %d" % len(into_column_idxs))
+
+        elif operation == NE_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Ne needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Ne needs 1 destination columns, got %d" % len(into_column_idxs))
 
         elif operation == NOR_OP:
             if len(sources) == 0:
@@ -611,6 +653,18 @@ def run(input_file: KGTKFiles,
                 for idx in range(len(sources)):
                     output_row[into_column_idxs[idx]] = row[sources[idx]]
 
+            elif operation == EQ_OP:
+                if len(sources) == 1:
+                    if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) == float(row[sources[1]]))
+                    else:
+                        output_row[into_column_idx] = ""
+                else:
+                    if len(row[sources[0]]) > 0 and len(values[0]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) == float(values[0]))
+                    else:
+                        output_row[into_column_idx] = ""
+
             elif operation == FROMISOFORMAT_OP:
                 dtval: str = row[sources[0]]
                 if dtval.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
@@ -677,6 +731,30 @@ def run(input_file: KGTKFiles,
                     for idx in range(len(values)):
                         output_row[into_column_idxs[idx]] = ""
                     
+            elif operation == GE_OP:
+                if len(sources) == 1:
+                    if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) >= float(row[sources[1]]))
+                    else:
+                        output_row[into_column_idx] = ""
+                else:
+                    if len(row[sources[0]]) > 0 and len(values[0]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) >= float(values[0]))
+                    else:
+                        output_row[into_column_idx] = ""
+
+            elif operation == GT_OP:
+                if len(sources) == 1:
+                    if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) > float(row[sources[1]]))
+                    else:
+                        output_row[into_column_idx] = ""
+                else:
+                    if len(row[sources[0]]) > 0 and len(values[0]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) > float(values[0]))
+                    else:
+                        output_row[into_column_idx] = ""
+
             elif operation == IS_OP:
                 if len(sources) == 1:
                     output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] == row[sources[1]])
@@ -700,6 +778,30 @@ def run(input_file: KGTKFiles,
 
             elif operation == JOIN_OP:
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
+
+            elif operation == LE_OP:
+                if len(sources) == 1:
+                    if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) <= float(row[sources[1]]))
+                    else:
+                        output_row[into_column_idx] = ""
+                else:
+                    if len(row[sources[0]]) > 0 and len(values[0]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) <= float(values[0]))
+                    else:
+                        output_row[into_column_idx] = ""
+
+            elif operation == LT_OP:
+                if len(sources) == 1:
+                    if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) < float(row[sources[1]]))
+                    else:
+                        output_row[into_column_idx] = ""
+                else:
+                    if len(row[sources[0]]) > 0 and len(values[0]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) < float(values[0]))
+                    else:
+                        output_row[into_column_idx] = ""
 
             elif operation == LOWER_OP:
                 for idx in range(len(sources)):
@@ -733,6 +835,18 @@ def run(input_file: KGTKFiles,
                         bresult = bresult and kv.is_true()
 
                 output_row[into_column_idx] = KgtkValue.to_boolean(not bresult)
+
+            elif operation == NE_OP:
+                if len(sources) == 1:
+                    if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) != float(row[sources[1]]))
+                    else:
+                        output_row[into_column_idx] = ""
+                else:
+                    if len(row[sources[0]]) > 0 and len(values[0]) > 0:
+                        output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) != float(values[0]))
+                    else:
+                        output_row[into_column_idx] = ""
 
             elif operation == NOR_OP:
                 bresult = False
