@@ -48,33 +48,33 @@ This table shows the fields (without the prefix value, normally `node2;kgtk:`) t
 
 ### KGTK Data Fields
 
-| Field Name           | Format  |
-| -------------------- | ----  |
-|            data_type | sym   |
-|                 date | str   |
-|        date_and_time | str   |
-|                  day | int   |
-|               daystr | str   |
-|       high_tolerance | num   |
-|    high_tolerancestr | str   |
-|                 hour | int   |
-|              hourstr | str   |
-|      iso8601extended | bool  |
-|             language | sym   |
-|      language_suffix | sym   |
-|             latitude | num   |
-|          latitudestr | str   |
-|             list_len | int   |
-|            longitude | num   |
-|         longitudestr | str   |
-|        low_tolerance | num   |
-|     low_tolerancestr | str   |
-|              minutes | int   |
-|           minutesstr | str   |
-|                month | int   |
-|             monthstr | str   |
-|               number | num   |
-|            numberstr | str   |
+| Field Name           | Format  | Data Type | Comments |
+| -------------------- | ------  | --------- | -------- |
+|            data_type | sym   | (all) | This field identifies the KGTK data type of the item being exploded. |
+|                 date | str   | date_and_times | The date (year/month/day) sectin of an ISO 8601 date and time item. |
+|        date_and_time | str   | date_and_times | The ISO 8601 date and time string, excluding the KGTK date-and-tmes sigil (`^`) and the optional precision suffix.  |
+|                  day | int   | date_and_times | The day of the month of an ISO 8601 date and time item as an integer. |
+|               daystr | str   | date_and_times | The day of the month of an ISO 8610 date and time item as a sting with a leading zero if needed. |
+|       high_tolerance | num   | quantity       | The upper end of the tolerance range of a KGTK quantity, as a floating point number. |
+|    high_tolerancestr | str   | quantity       | The upper end of the tolerance range of a KGTK quantity, as a string. |
+|                 hour | int   | date_and_times | The hour of the dat of an ISO 8601 date and time item as an integer. |
+|              hourstr | str   | date_and_times | The hour of the dat of an ISO 8601 date and time item as a string with a leading zero if needed. |
+|      iso8601extended | bool  | date_and_times | A boolean indicating whether or not an ISO 8601 date and time item has internal field separators (`-` and `:`). |
+|             language | sym   | date and times | A language code from a KGTK date and times item, without the `@` separator and without the optional language suffix. This is typically a 2- and 3-character ISO 639-3 or ISO 639-5 code, although other codes are possible. |
+|      language_suffix | sym   | date_and_times | A language code suffix, including the suffix separator (typically `-`).
+|             latitude | num   | location_coordinates | A latitude, validly limited to the interval [-90 .. 90], as a floating point number. |
+|          latitudestr | str   | location_coordinates | A latitude, validly limited to the interval[-90 .. 90], as a string. |
+|             list_len | int   | list | The number of items in a multivalued (list, `|`) cell. |
+|            longitude | num   | location_coordinates |  A longitude, validly limited to the interval [-180 .. 1800], as a floating point number. |
+|         longitudestr | str   | location_coordinates |  A longitude, validly limited to the interval [-180 .. 1800], as a string. |
+|        low_tolerance | num   | quantity       | The lower end of the tolerance range of a KGTK quantity, as a floating point number. |
+|     low_tolerancestr | str   | quantity       | The lower end of the tolerance range of a KGTK quantity, as a string. |
+|              minutes | int   | date_and_times | The minutes of the hour of an ISO 8601 date and time item as an integer. |
+|           minutesstr | str   | date_and_times | The minutes of the hour of an ISO 8601 date and time item as a string. |
+|                month | int   | date_and_times | The month of the year of an ISO 8601 date and time item as an integer. |
+|             monthstr | str   | date_and_times | The month of the year of an ISO 8601 date and time item as an string. |
+|               number | num   | number quantity | The numeric part of a KGTK number or quantity data type, as a floating point number. |
+|            numberstr | str   | number quantity | The numeric part of a KGTK number or quantity data type, as s string. |
 |            precision | int   |
 |         precisionstr | str   |
 |              seconds | int   |
