@@ -51,13 +51,13 @@ This table shows the fields (without the prefix value, normally `node2;kgtk:`) t
 | Field Name           | Format  | Data Type | Comments |
 | -------------------- | ------  | --------- | -------- |
 |            data_type | sym   | (all) | This field identifies the KGTK data type of the item being exploded. |
-|                 date | str   | date_and_times | The date (year/month/day) sectin of an ISO 8601 date and time item. |
+|                 date | str   | date_and_times | The date (year/month/day) section of an ISO 8601 date and time item. |
 |        date_and_time | str   | date_and_times | The ISO 8601 date and time string, excluding the KGTK date-and-tmes sigil (`^`) and the optional precision suffix.  |
-|                  day | int   | date_and_times | The day of the month of an ISO 8601 date and time item as an integer. |
+|                  day | int   | date_and_times | The day of the month of an ISO 8601 date and time item as an integer. 1-31 |
 |               daystr | str   | date_and_times | The day of the month of an ISO 8610 date and time item as a sting with a leading zero if needed. |
 |       high_tolerance | num   | quantity       | The upper end of the tolerance range of a KGTK quantity, as a floating point number. |
 |    high_tolerancestr | str   | quantity       | The upper end of the tolerance range of a KGTK quantity, as a string. |
-|                 hour | int   | date_and_times | The hour of the dat of an ISO 8601 date and time item as an integer. |
+|                 hour | int   | date_and_times | The hour of the dat of an ISO 8601 date and time item as an integer. 0-24 |
 |              hourstr | str   | date_and_times | The hour of the dat of an ISO 8601 date and time item as a string with a leading zero if needed. |
 |      iso8601extended | bool  | date_and_times | A boolean indicating whether or not an ISO 8601 date and time item has internal field separators (`-` and `:`). |
 |             language | sym   | date and times | A language code from a KGTK date and times item, without the `@` separator and without the optional language suffix. This is typically a 2- and 3-character ISO 639-3 or ISO 639-5 code, although other codes are possible. |
@@ -69,26 +69,26 @@ This table shows the fields (without the prefix value, normally `node2;kgtk:`) t
 |         longitudestr | str   | location_coordinates |  A longitude, validly limited to the interval [-180 .. 1800], as a string. |
 |        low_tolerance | num   | quantity       | The lower end of the tolerance range of a KGTK quantity, as a floating point number. |
 |     low_tolerancestr | str   | quantity       | The lower end of the tolerance range of a KGTK quantity, as a string. |
-|              minutes | int   | date_and_times | The minutes of the hour of an ISO 8601 date and time item as an integer. |
+|              minutes | int   | date_and_times | The minutes of the hour of an ISO 8601 date and time item as an integer. 0-59|
 |           minutesstr | str   | date_and_times | The minutes of the hour of an ISO 8601 date and time item as a string. |
-|                month | int   | date_and_times | The month of the year of an ISO 8601 date and time item as an integer. |
+|                month | int   | date_and_times | The month of the year of an ISO 8601 date and time item as an integer. 1-12 |
 |             monthstr | str   | date_and_times | The month of the year of an ISO 8601 date and time item as an string. |
 |               number | num   | number quantity | The numeric part of a KGTK number or quantity data type, as a floating point number. |
-|            numberstr | str   | number quantity | The numeric part of a KGTK number or quantity data type, as s string. |
-|            precision | int   |
-|         precisionstr | str   |
-|              seconds | int   |
-|           secondsstr | str   |
-|             si_units | sym   |
-|               symbol | sym   |
-|                 text | str   |
-|                 time | str   |
-|                truth | bool  |
-|           units_node | sym   |
-|                valid | bool  |
-|                 year | int   |
-|              yearstr | str   |
-|              zonestr | str   |
+|            numberstr | str   | number quantity | The numeric part of a KGTK number or quantity data type, as a string. |
+|            precision | int   | date_and_times  | A code indicating the precision of the value.  Currently 0 to 19, without the `/` separator, as an integer. |
+|         precisionstr | str   | date_and_times  | A code indicating the precision of the value.  Currently 0 to 19, without the `/` separator, as a string. |
+|              seconds | int   | date_and_times  | The seconds of the minute of an ISO 8601 date and time item as an integer. Fractional seconds are not supported. |
+|           secondsstr | str   | date_and_times  | The seconds of the minute of an ISO 8601 date and time item as a string.  Fractional seconds are not supported. |
+|             si_units | sym   | quantity        | A dimensional pattern using SI units. |
+|               symbol | sym   | symbol          | A named symbol. |
+|                 text | str   | language_qualified_string string | The text contents of a string or language qualified string. |
+|                 time | str   | date_and_times  | The time (hour/minute/second) section of an ISO 8601 date and time item. |
+|                truth | bool  | boolean         | The value of a boolean item. |
+|           units_node | sym   | quantity        | A generalized Wikipedia node symbol, which may be used an alternative dimensional identifier. |
+|                valid | bool  | (all)           | An indicator of whether the item is a valid KGTK value representation. |
+|                 year | int   | date_and_times  | The year of an ISO 8601 date and time string as an integer.  May be negative. |
+|              yearstr | str   | date_and_times  | The year of an ISO 8601 date and time string as a string.  May be negative. |
+|              zonestr | str   | date_and_times  | The time zone portion of an ISO 8601 date and time string. May start with `+` or `-`.|
 
 ## Usage
 
