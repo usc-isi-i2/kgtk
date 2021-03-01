@@ -294,8 +294,12 @@ kgtk cat -i examples/docs/clean-data-file1.tsv
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| john | woke | ^2020-05-00T00:00 |
 | john | woke | ^2020-05-02T00:00 |
+| john | woke | ^2020-05-00T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+| year9999 | ends | ^9999-12-31T11:59:59 |
 
 ### Clean the data, using default options
 
@@ -308,18 +312,38 @@ Standard output will get the following data:
 | node1 | label | node2 |
 | -- | -- | -- |
 | john | woke | ^2020-05-02T00:00 |
+| john | slept | ^2020-05-02T24:00 |
 
-The following complaint will be issued on standard error:
+The following complaints will be issued on standard error:
 
-    Data line 1:
+    Data line 2:
     john	woke	^2020-05-00T00:00
     col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
+    Data line 4:
+    lionheart	born	^1157-09-08T00:00
+    col 2 (node2) value '^1157-09-08T00:00' is an Invalid Date and Times
+    Data line 5:
+    year0001	starts	^0001-01-01T00:00
+    col 2 (node2) value '^0001-01-01T00:00' is an Invalid Date and Times
+    Data line 6:
+    year9999	ends	^9999-12-31T11:59:59
+    col 2 (node2) value '^9999-12-31T11:59:59' is an Invalid Date and Times
 
 
-The first data line was excluded because it contained "00" in the day
+The second data line was excluded because it contained "00" in the day
 field, which violates the ISO 8601 specification.
 
-### Clean the data, repairing the invalid date/time string
+The fourth data line was excluded because year 1157 is before the
+start of the ISO 8601 normal era, year 1583.
+
+The fifth data line was excluded because year 1157 is before the
+start of the ISO 8601 normal era, year 1583.
+
+The sixth data line was excluded because year 9999 is after the
+sanity check 2100 cutoff.
+
+
+### Repair Month or Day "00"
 
 Change day "00" to day "01:
 
@@ -328,9 +352,74 @@ kgtk clean-data -i examples/docs/clean-data-file1.tsv \
                 --repair-month-or-day-zero
 ```
 
-Standard output will get the following data, and no errors will be issued:
+Standard output will get the following data, and other errors will be issued:
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| john | woke | ^2020-05-01T00:00 |
 | john | woke | ^2020-05-02T00:00 |
+| john | woke | ^2020-05-01T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+
+
+    Data line 4:
+    lionheart	born	^1157-09-08T00:00
+    col 2 (node2) value '^1157-09-08T00:00' is an Invalid Date and Times
+    Data line 5:
+    year0001	starts	^0001-01-01T00:00
+    col 2 (node2) value '^0001-01-01T00:00' is an Invalid Date and Times
+    Data line 6:
+    year9999	ends	^9999-12-31T11:59:59
+    col 2 (node2) value '^9999-12-31T11:59:59' is an Invalid Date and Times
+
+### Accept Years from 1 AD
+
+
+```bash
+kgtk clean-data -i examples/docs/clean-data-file1.tsv \
+                --repair-month-or-day-zero \
+                --minimum-valid-year 1
+```
+
+Standard output will get the following data, and other errors will be issued:
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | woke | ^2020-05-02T00:00 |
+| john | woke | ^2020-05-01T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+
+
+    Data line 6:
+    year9999	ends	^9999-12-31T11:59:59
+    col 2 (node2) value '^9999-12-31T11:59:59' is an Invalid Date and Times
+
+!!! note
+    Year 0001 is the earliest year that can be processed by the Python standard
+    library date and time modules.
+
+### Accept Years up to 9999 AD
+
+
+```bash
+kgtk clean-data -i examples/docs/clean-data-file1.tsv \
+                --repair-month-or-day-zero \
+                --minimum-valid-year 1 \
+                --maximum-valid-year 9999
+```
+
+Standard output will get the following data, and no other errors will be issued:
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | woke | ^2020-05-02T00:00 |
+| john | woke | ^2020-05-01T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+| year9999 | ends | ^9999-12-31T11:59:59 |
+
+!!! note
+    Year 9999 is the latest year that can be processed by the Python standard
+    library date and time modules.
