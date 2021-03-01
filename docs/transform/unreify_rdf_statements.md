@@ -275,9 +275,12 @@ optional arguments:
 
 ## Examples
 
+### Example 1
+
 ```bash
 kgtk cat -i examples/docs/unreify-rdf-statements-file1.tsv
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:confidence | XJAABmv8vGfJZZasjV6DAXY:g4 |
@@ -299,3 +302,41 @@ kgtk unreify-rdf-statements -i examples/docs/unreify-rdf-statements-file1.tsv
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:confidence | XJAABmv8vGfJZZasjV6DAXY:g4 | XJAABmv8vGfJZZasjV6DAXY:g3-1 |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:justifiedBy | XJAABmv8vGfJZZasjV6DAXY:g5 | XJAABmv8vGfJZZasjV6DAXY:g3-2 |
 | XJAABmv8vGfJZZasjV6DAXY:g3 | ont:system | nJAABmv8vGfJZZasjV6DAXY-1: | XJAABmv8vGfJZZasjV6DAXY:g3-3 |
+
+### Example 2
+
+```bash
+kgtk cat -i examples/docs/unreify-rdf-statements-file2.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| _:g2301 | ont:confidence | _:g2302 |
+| _:g2301 | ont:justifiedBy | _:g2303 |
+| _:g2301 | ont:system | rpi1: |
+| _:g2301 | rdf:object | entity:c6f32b90-6038-40c0-97e4-6d3f7fd76c03 |
+| _:g2301 | rdf:predicate | ldc:Movement.TransportPerson.SelfMotion_Transporter |
+| _:g2301 | rdf:subject | event:03a41b2b-e0ef-42f9-a192-433e0abc3a70 |
+| _:g2301 | rdf:type | rdf:Statement |
+| _:g3910 | ont:confidence | _:g3911 |
+| _:g3910 | ont:justifiedBy | _:g3912 |
+| _:g3910 | ont:system | rpi1: |
+| _:g3910 | rdf:object | entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd |
+| _:g3910 | rdf:predicate | ldc:Movement.TransportPerson.SelfMotion_Destination |
+| _:g3910 | rdf:subject | event:03a41b2b-e0ef-42f9-a192-433e0abc3a70 |
+| _:g3910 | rdf:type | rdf:Statement |
+
+```bash
+kgtk unreify-rdf-statements -i examples/docs/unreify-rdf-statements-file2.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| event:03a41b2b-e0ef-42f9-a192-433e0abc3a70 | ldc:Movement.TransportPerson.SelfMotion_Transporter | entity:c6f32b90-6038-40c0-97e4-6d3f7fd76c03 | _:g2301 |
+| _:g2301 | ont:confidence | _:g2302 | _:g2301-1 |
+| _:g2301 | ont:justifiedBy | _:g2303 | _:g2301-2 |
+| _:g2301 | ont:system | rpi1: | _:g2301-3 |
+| event:03a41b2b-e0ef-42f9-a192-433e0abc3a70 | ldc:Movement.TransportPerson.SelfMotion_Destination | entity:fcb78e77-4962-4fca-977b-aea84bfa3ddd | _:g3910 |
+| _:g3910 | ont:confidence | _:g3911 | _:g3910-1 |
+| _:g3910 | ont:justifiedBy | _:g3912 | _:g3910-2 |
+| _:g3910 | ont:system | rpi1: | _:g3910-3 |
