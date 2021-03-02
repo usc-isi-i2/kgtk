@@ -94,6 +94,7 @@ def split_list(sequence, sep):
 
 def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     # parse internal pipe
+    import copy
     ret_code: int = 0
     pipe = [list(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
     if len(pipe) == 0:
@@ -109,8 +110,9 @@ def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, s
             add_default_arguments(sub_parser)  # call this before adding other arguments
             if cmd_name not in subparsers_built:
                 if hasattr(mod, 'add_arguments_extended'):
-                    parsed_shared_args._command = cmd_name
-                    mod.add_arguments_extended(sub_parser, parsed_shared_args)
+                    psa = copy.deepcopy(parsed_shared_args)
+                    psa._command = cmd_name
+                    mod.add_arguments_extended(sub_parser, psa)
                 else:
                     mod.add_arguments(sub_parser)
                 subparsers_built.add(cmd_name)
