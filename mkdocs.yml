@@ -50,6 +50,7 @@ nav:
   - 'Curation commands':
       - 'clean-data': 'curate/clean_data.md'
       - 'validate': 'curate/validate.md'
+      - 'validate-properties': 'curate/validate_properties.md'
   - 'Analysis commands':
       - 'connected-components': 'analysis/connected_components.md'
       - 'graph-embeddings': 'analysis/graph_embeddings.md'
