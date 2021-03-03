@@ -126,7 +126,7 @@ kgtk cat -i examples/docs/add-id-file1.tsv
 !!! note
     The `years` column means years employed, not age.
 
-### Add an ID column using the default ID style (prefix###)
+### Add an ID column using the default ID style (`prefix###`)
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv
@@ -149,7 +149,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | E11 |
 | steve | zipcode | 45601 | cabin |  | E12 |
 
-### Add an ID column using the node1-label-node2 ID style
+### Add an ID column using the `node1-label-node2` ID style
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style node1-label-node2
@@ -172,7 +172,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-45601 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-45601 |
 
-### Add an ID column using the node1-label-num ID style
+### Add an ID column using the `node1-label-num` ID style
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style node1-label-num
@@ -237,7 +237,7 @@ kgtk add-id -i examples/docs/add-id-file1.tsv / add-id --id-style node1-label-no
 | steve | zipcode | 45601 | work | 2 | E11 | steve-zipcode-45601-E11 |
 | steve | zipcode | 45601 | cabin |  | E12 | steve-zipcode-45601-E12 |
 
-### Add an ID column using the node1-label-node2-num ID style
+### Add an ID column using the `node1-label-node2-num` ID style
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style node1-label-node2-num
@@ -260,7 +260,7 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-45601-0004 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-45601-0005 |
 
-### Add an ID column using the node1-label-num ID style
+### Add an ID column using the `node1-label-num` ID style
 
 ```bash
 kgtk add-id -i examples/docs/add-id-file1.tsv --id-style node1-label-num
@@ -283,10 +283,31 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | work | 2 | steve-zipcode-0004 |
 | steve | zipcode | 45601 | cabin |  | steve-zipcode-0005 |
 
-### Add an ID column using the wikidata ID style
+### Add an ID column using the `wikidata` ID style
+
+When `node2` does not contain a Qnode or Property ID, for example when it is a string
+value, and `--value-hash-width` is not 0, the Wikidata style computes a hash of `node2` and
+generates `node1-label-node2hash`.
+
+Otherwise, `wikidata` ID  style is the same as `node1-label-node2` ID style.
 
 ```bash
-kgtk add-id -i examples/docs/add-id-file1.tsv --id-style wikidata
+kgtk cat -i examples/docs/add-id-file2.tsv
+```
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 |
+| john | zipcode | 12346 |  |  |
+| peter | zipcode | 12040 | home |  |
+| peter | zipcode | 12040 | cabin |  |
+| peter | zipcode | 12040 | work | 5 |
+| peter | zipcode | 12040 |  | 6 |
+| george | property | P1234 | home |  |
+| larry | title | Q5678 | work |  |
+
+```bash
+kgtk add-id -i examples/docs/add-id-file2.tsv --id-style wikidata
 ```
 
 The output will be the following table in KGTK format:
@@ -299,21 +320,34 @@ The output will be the following table in KGTK format:
 | peter | zipcode | 12040 | cabin |  | peter-zipcode-a5ceb2 |
 | peter | zipcode | 12040 | work | 5 | peter-zipcode-a5ceb2 |
 | peter | zipcode | 12040 |  | 6 | peter-zipcode-a5ceb2 |
-| steve | zipcode | 45601 |  | 3 | steve-zipcode-3f5bb8 |
-| steve | zipcode | 45601 |  | 4 | steve-zipcode-3f5bb8 |
-| steve | zipcode | 45601 |  | 5 | steve-zipcode-3f5bb8 |
-| steve | zipcode | 45601 | home | 1 | steve-zipcode-3f5bb8 |
-| steve | zipcode | 45601 | work | 2 | steve-zipcode-3f5bb8 |
-| steve | zipcode | 45601 | cabin |  | steve-zipcode-3f5bb8 |
-
-!!! note
-   The existing test dataset doesn't have any entries with node2 values starting with P or Q,
-   so this example doesn't  doesn't illustrate the full range of IDs generated inthis style.
+| george | property | P1234 | home |  | george-property-P1234 |
+| larry | title | Q5678 | work |  | larry-title-Q5678 |
 
 ### Add an ID column using the wikidata-with-claim-id ID style, using the location column as a placeholder for the claim-id column
 
+When the `claim-id` value (from the column named by `--claim-id-column-name`, which defaults to `claim_id`) is not empty,
+and `--claim-id-hash-width` is not 0, this ID style computes a hash of the `claim-id` value and
+appends it to the `wikidata` ID style result.
+
+Otherwise, `wikidata-with-claim-id` ID style is the same as `wikidata` ID style.
+
 ```bash
-kgtk add-id -i examples/docs/add-id-file1.tsv --id-style wikidata-with-claim-id --claim-id-column-name location
+kgtk cat -i examples/docs/add-id-file2.tsv
+```
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 |
+| john | zipcode | 12346 |  |  |
+| peter | zipcode | 12040 | home |  |
+| peter | zipcode | 12040 | cabin |  |
+| peter | zipcode | 12040 | work | 5 |
+| peter | zipcode | 12040 |  | 6 |
+| george | property | P1234 | home |  |
+| larry | title | Q5678 | work |  |
+
+```bash
+kgtk add-id -i examples/docs/add-id-file2.tsv --id-style wikidata-with-claim-id --claim-id-column-name location
 ```
 
 The output will be the following table in KGTK format:
@@ -326,12 +360,8 @@ The output will be the following table in KGTK format:
 | peter | zipcode | 12040 | cabin |  | peter-zipcode-a5ceb2-2764182d |
 | peter | zipcode | 12040 | work | 5 | peter-zipcode-a5ceb2-00e13ed7 |
 | peter | zipcode | 12040 |  | 6 | peter-zipcode-a5ceb2 |
-| steve | zipcode | 45601 |  | 3 | steve-zipcode-3f5bb8 |
-| steve | zipcode | 45601 |  | 4 | steve-zipcode-3f5bb8 |
-| steve | zipcode | 45601 |  | 5 | steve-zipcode-3f5bb8 |
-| steve | zipcode | 45601 | home | 1 | steve-zipcode-3f5bb8-4ea14058 |
-| steve | zipcode | 45601 | work | 2 | steve-zipcode-3f5bb8-00e13ed7 |
-| steve | zipcode | 45601 | cabin |  | steve-zipcode-3f5bb8-2764182d |
+| george | property | P1234 | home |  | george-property-P1234-4ea14058 |
+| larry | title | Q5678 | work |  | larry-title-Q5678-00e13ed7 |
 
 
 ### Add an ID column using Colon (`:`) as an ID Separator
