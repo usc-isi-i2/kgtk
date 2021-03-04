@@ -352,7 +352,7 @@ class PropertyPattern:
                     raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.text is None:
                     raise ValueError("Filter row %d: %s: Node2 has no text" % (rownum, action.value)) # TODO: better complaint
-                print("pattern=%s" % repr(node2_value.fields.decoded_text), file=sys.stderr, flush=True) # ***
+                # print("pattern=%s" % repr(node2_value.fields.decoded_text), file=sys.stderr, flush=True)
                 patterns.append(re.compile(node2_value.fields.decoded_text))
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():

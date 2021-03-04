@@ -739,7 +739,7 @@ kgtk validate-properties \
 
     Row 2: the node2 value 'mauve' is not in the list of allowed node2 values for colorname: blue|green|red|yellow
 
-### `--add-isa-column` Reveals Class Membership
+### Colored Blocks: `--add-isa-column` Reveals Class Membership
 
 When the `--add-isa-column` option is True (the default is False),
 a column is added to the output and reject files to display the
@@ -782,3 +782,62 @@ kgtk validate-properties \
 | block2 | blue | 0.0 |  | blue->rgbcolor->colorclass |
 | block3 | colorname | red |  | colorname->colorclass |
 | block4 | colorname | green |  | colorname->colorclass |
+
+### Colored Blocks: Use `matches` Instead of `isa`
+
+Instead of declaring that a subclass isa superclass, you can
+say superclass matches <subclass pattern>.
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-pattern-matches.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| red | property | True |  |
+| red | maxoccurs | 1 |  |
+| green | property | True |  |
+| green | maxoccurs | 1 |  |
+| blue | property | True |  |
+| blue | maxoccurs | 1 |  |
+| rgbcolor | datatype | True |  |
+| rgbcolor | node1_type | symbol |  |
+| rgbcolor | node2_type | number |  |
+| rgbcolor | minval | 0.0 |  |
+| rgbcolor | maxval | 1.0 |  |
+| rgbcolor | matches | "red\\|green\\|blue" |  |
+| rgbcolor | requires | red |  |
+| rgbcolor | requires | green |  |
+| rgbcolor | requires | blue |  |
+| rgbcolor | isa | colorclass |  |
+| rgbcolor | prohibits | colorname |  |
+| colorname | property | True |  |
+| colorname | isa | colorclass |  |
+| colorname | node1_type | symbol |  |
+| colorname | node2_type | symbol |  |
+| colorname | node2_values | red |  |
+| colorname | node2_values | green |  |
+| colorname | node2_values | blue |  |
+| colorname | node2_values | yellow |  |
+| colorclass | mustoccur | True |  |
+
+```bash
+kgtk validate-properties \
+     --input-file examples/docs/valprop-colored-blocks-mixed-types.tsv \
+     --pattern-file examples/docs/valprop-colored-blocks-pattern-matches.tsv \
+     --output-file - \
+     --add-isa-column --isa-column-name Classes
+```
+
+| node1 | label | node2 | id | Classes |
+| -- | -- | -- | -- | -- |
+| block1 | red | 1.0 |  | blue->rgbcolor->colorclass |
+| block1 | green | 0.0 |  | blue->rgbcolor->colorclass |
+| block1 | blue | 0.0 |  | blue->rgbcolor->colorclass |
+| block2 | red | 0.0 |  | blue->rgbcolor->colorclass |
+| block2 | green | 1.0 |  | blue->rgbcolor->colorclass |
+| block2 | blue | 0.0 |  | blue->rgbcolor->colorclass |
+| block3 | colorname | red |  | colorname->colorclass |
+| block4 | colorname | green |  | colorname->colorclass |
+
+
