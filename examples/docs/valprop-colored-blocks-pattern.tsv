@@ -21,7 +21,7 @@ rgbcolor	prohibits	colorname
 colorname	property	True	
 colorname	isa	colorclass	
 colorname	node1_type	symbol	
-colorname	node2_type	number	
+colorname	node2_type	symbol	
 colorname	node2_values	red	
 colorname	node2_values	green	
 colorname	node2_values	blue	

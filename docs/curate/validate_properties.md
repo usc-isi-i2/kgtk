@@ -236,7 +236,7 @@ kgtk cat -i examples/docs/valprop-colored-blocks-pattern.tsv
 | colorname | property | True |  |
 | colorname | isa | colorclass |  |
 | colorname | node1_type | symbol |  |
-| colorname | node2_type | number |  |
+| colorname | node2_type | symbol |  |
 | colorname | node2_values | red |  |
 | colorname | node2_values | green |  |
 | colorname | node2_values | blue |  |
@@ -673,7 +673,6 @@ kgtk validate-properties \
 | block2 | green | 1.0 |  |
 | block2 | blue | 0.0 |  |
 
-    Row 4: the node2 KGTK datatype 'symbol' is not in the list of allowed node2 types for colorname: number
     Node 'block1': Property or datatype 'rgbcolor' prohibits colorname.
 
 ```bash
@@ -686,3 +685,56 @@ kgtk cat -i rejects.tsv
 | block1 | green | 0.0 |  |
 | block1 | blue | 0.0 |  |
 | block1 | colorname | red |  |
+
+### Colored Blocks: Good Named Colors
+
+The colorname values must match one of the names on a list
+in the pattern file.
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-good-colornames.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | colorname | red |  |
+| block2 | colorname | green |  |
+
+```bash
+kgtk validate-properties \
+     --input-file examples/docs/valprop-colored-blocks-good-colornames.tsv \
+     --pattern-file examples/docs/valprop-colored-blocks-pattern.tsv \
+     --output-file -
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | colorname | red |  |
+| block2 | colorname | green |  |
+
+### Colored Blocks: Unknown Color Name
+
+The color `mauve` is not a known color name.
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-color-mauve.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | colorname | red |  |
+| block2 | colorname | mauve |  |
+
+```bash
+kgtk validate-properties \
+     --input-file examples/docs/valprop-colored-blocks-color-mauve.tsv \
+     --pattern-file examples/docs/valprop-colored-blocks-pattern.tsv \
+     --output-file -
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | colorname | red |  |
+
+    Row 2: the node2 value 'mauve' is not in the list of allowed node2 values for colorname: blue|green|red|yellow
+
