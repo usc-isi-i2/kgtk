@@ -16,4 +16,14 @@ rgbcolor	maxval	1.0
 rgbcolor	requires	red	
 rgbcolor	requires	green	
 rgbcolor	requires	blue	
-rgbcolor	mustoccur	True	
+rgbcolor	isa	colorclass	
+rgbcolor	prohibits	colorname	
+colorname	property	True	
+colorname	isa	colorclass	
+colorname	node1_type	symbol	
+colorname	node2_type	number	
+colorname	node2_values	red	
+colorname	node2_values	green	
+colorname	node2_values	blue	
+colorname	node2_values	yellow	
+colorclass	mustoccur	True	

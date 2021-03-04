@@ -78,29 +78,34 @@ components, and which constrain the values of each component to be numbers in
 the range 0..1 inclusive.
 
 | node1 | label | node2 | id |
-| ----- | ----- | ----- | -- |
-| red | `property` | True | |
-| red | `isa` | rgbcolor | |
-| red | `maxoccurs` | 1 | |
-| green | `property` | True | |
-| green | `isa` | rgbcolor | |
-| green | `maxoccurs` | 1 | |
-| blue | `property` | True | |
-| blue | `isa` | rgbcolor | |
-| blue | `maxoccurs` | 1 | |
-| rgbcolor | `datatype` | True | |
-| rgbcolor | `node1_type` | symbol | |
-| rgbcolor | `node2_type` | number | |
-| rgbcolor | `minval` | 0.0 | |
-| rgbcolor | `maxval` | 1.0 | |
-| rgbcolor | `requires` | red | |
-| rgbcolor | `requires` | green | |
-| rgbcolor | `requires` | blue | |
-| rgbcolor | `mustoccur` | True | |
+| -- | -- | -- | -- |
+| red | property | True |  |
+| red | isa | rgbcolor |  |
+| red | maxoccurs | 1 |  |
+| green | property | True |  |
+| green | isa | rgbcolor |  |
+| green | maxoccurs | 1 |  |
+| blue | property | True |  |
+| blue | isa | rgbcolor |  |
+| blue | maxoccurs | 1 |  |
+| rgbcolor | datatype | True |  |
+| rgbcolor | node1_type | symbol |  |
+| rgbcolor | node2_type | number |  |
+| rgbcolor | minval | 0.0 |  |
+| rgbcolor | maxval | 1.0 |  |
+| rgbcolor | requires | red |  |
+| rgbcolor | requires | green |  |
+| rgbcolor | requires | blue |  |
+| rgbcolor | isa | colorclass |  |
+| rgbcolor | prohibits | colorname |  |
+| colorname | property | True |  |
+| colorname | isa | colorclass |  |
+| colorclass | mustoccur | True |  |
 
  * `property` declares that the property class is a property
    that may appear in the `label` column of a data file.
-   At the moment, this is solely documentation.
+   Although these eentries are mainly documentation, they also
+   prevent the specied property from being considered `unknown`.
  * `isa` says that the `node1` class is a subclass of the `node2` class.
  * `maxoccurs` indicates that properties of the specified class may
    occur a maximum number of times per `node1` group.
@@ -126,7 +131,10 @@ the range 0..1 inclusive.
    a property or class of the `node2` value.  In this instance,
    we state that if an object has at least one RCB color component,
    it must have all three RGB color components.
- * `mustoccur` says that each `node1` group must contain at least
+ * `prohibits` says that if a `node1` data group contains an instance of
+   the class in the `node1` of the pattern, then the `node1` data group must
+   not contain an instance of a property in the `node2` of the pattern.
+ * `mustoccur` says that each `node1` data group must contain at least
    one property of the specified class.
 
 ### Processing `node1` Groups
@@ -223,7 +231,17 @@ kgtk cat -i examples/docs/valprop-colored-blocks-pattern.tsv
 | rgbcolor | requires | red |  |
 | rgbcolor | requires | green |  |
 | rgbcolor | requires | blue |  |
-| rgbcolor | mustoccur | True |  |
+| rgbcolor | isa | colorclass |  |
+| rgbcolor | prohibits | colorname |  |
+| colorname | property | True |  |
+| colorname | isa | colorclass |  |
+| colorname | node1_type | symbol |  |
+| colorname | node2_type | number |  |
+| colorname | node2_values | red |  |
+| colorname | node2_values | green |  |
+| colorname | node2_values | blue |  |
+| colorname | node2_values | yellow |  |
+| colorclass | mustoccur | True |  |
 
 ### Colored Blocks: Good Data
 
@@ -612,7 +630,7 @@ kgtk validate-properties \
 | block1 | blue | 0.0 |  |
 | block1 | shape | cube |  |
 
-    Property or datatype 'rgbcolor' did not occur for node1 'block2'.
+    Property or datatype 'colorclass' did not occur for node1 'block2'.
 
 ```bash
 kgtk cat -i rejects.tsv
@@ -621,3 +639,50 @@ kgtk cat -i rejects.tsv
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | block2 | shape | cylinder |  |
+
+### Colored Blocks: Prohibited Class Co-occurance
+
+In this example, one of the blocks nas both `rgbcolor` and
+`colorname`.  Only one of the two is allowed.
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-prohibited-colorname.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | red | 1.0 |  |
+| block1 | green | 0.0 |  |
+| block1 | blue | 0.0 |  |
+| block1 | colorname | red |  |
+| block2 | red | 0.0 |  |
+| block2 | green | 1.0 |  |
+| block2 | blue | 0.0 |  |
+
+```bash
+kgtk validate-properties \
+     --input-file examples/docs/valprop-colored-blocks-prohibited-colorname.tsv \
+     --pattern-file examples/docs/valprop-colored-blocks-pattern.tsv \
+     --output-file - \
+     --reject-file rejects.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block2 | red | 0.0 |  |
+| block2 | green | 1.0 |  |
+| block2 | blue | 0.0 |  |
+
+    Row 4: the node2 KGTK datatype 'symbol' is not in the list of allowed node2 types for colorname: number
+    Node 'block1': Property or datatype 'rgbcolor' prohibits colorname.
+
+```bash
+kgtk cat -i rejects.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | red | 1.0 |  |
+| block1 | green | 0.0 |  |
+| block1 | blue | 0.0 |  |
+| block1 | colorname | red |  |
