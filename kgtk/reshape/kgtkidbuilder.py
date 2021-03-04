@@ -477,8 +477,8 @@ class KgtkIdBuilder(KgtkFormat):
 
     def build_wikidata_id(self, row: typing.List[str])->str:
         node2_value: str = row[self.node2_column_idx]
-        if node2_value.startswith(('P', 'Q')):
-            return row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx] + self.options.id_separator + node2_value
+        if self.options.value_hash_width > 0 and node2_value.startswith(('L', 'P', 'Q')):
+            return self.build_concat_nln(row)
         else:
             return row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx] + self.options.id_separator + \
                 hashlib.sha256(node2_value.encode('utf-8')).hexdigest()[:self.options.value_hash_width]
