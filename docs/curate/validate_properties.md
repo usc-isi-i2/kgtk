@@ -774,11 +774,11 @@ kgtk validate-properties \
 
 | node1 | label | node2 | id | Classes |
 | -- | -- | -- | -- | -- |
-| block1 | red | 1.0 |  | blue->rgbcolor->colorclass |
-| block1 | green | 0.0 |  | blue->rgbcolor->colorclass |
+| block1 | red | 1.0 |  | red->rgbcolor->colorclass |
+| block1 | green | 0.0 |  | green->rgbcolor->colorclass |
 | block1 | blue | 0.0 |  | blue->rgbcolor->colorclass |
-| block2 | red | 0.0 |  | blue->rgbcolor->colorclass |
-| block2 | green | 1.0 |  | blue->rgbcolor->colorclass |
+| block2 | red | 0.0 |  | red->rgbcolor->colorclass |
+| block2 | green | 1.0 |  | green->rgbcolor->colorclass |
 | block2 | blue | 0.0 |  | blue->rgbcolor->colorclass |
 | block3 | colorname | red |  | colorname->colorclass |
 | block4 | colorname | green |  | colorname->colorclass |
@@ -787,6 +787,8 @@ kgtk validate-properties \
 
 Instead of declaring that a subclass isa superclass, you can
 say superclass matches <subclass pattern>.
+
+Here is a pattern file using `matches`:
 
 ```bash
 kgtk cat -i examples/docs/valprop-colored-blocks-pattern-matches.tsv
@@ -831,11 +833,11 @@ kgtk validate-properties \
 
 | node1 | label | node2 | id | Classes |
 | -- | -- | -- | -- | -- |
-| block1 | red | 1.0 |  | blue->rgbcolor->colorclass |
-| block1 | green | 0.0 |  | blue->rgbcolor->colorclass |
+| block1 | red | 1.0 |  | red->rgbcolor->colorclass |
+| block1 | green | 0.0 |  | green->rgbcolor->colorclass |
 | block1 | blue | 0.0 |  | blue->rgbcolor->colorclass |
-| block2 | red | 0.0 |  | blue->rgbcolor->colorclass |
-| block2 | green | 1.0 |  | blue->rgbcolor->colorclass |
+| block2 | red | 0.0 |  | red->rgbcolor->colorclass |
+| block2 | green | 1.0 |  | green->rgbcolor->colorclass |
 | block2 | blue | 0.0 |  | blue->rgbcolor->colorclass |
 | block3 | colorname | red |  | colorname->colorclass |
 | block4 | colorname | green |  | colorname->colorclass |
@@ -843,3 +845,106 @@ kgtk validate-properties \
 
 ### Colored Blocks: Multiple Inheritance
 
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-with-shapes.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | cube | True |  |
+| block1 | red | 1.0 |  |
+| block1 | green | 0.0 |  |
+| block1 | blue | 0.0 |  |
+| block2 | red | 0.0 |  |
+| block2 | green | 1.0 |  |
+| block2 | blue | 0.0 |  |
+| block2 | sphere | True |  |
+| block3 | red | 0.0 |  |
+| block3 | green | 0.0 |  |
+| block3 | blue | 1.0 |  |
+| block3 | cone | True |  |
+| block4 | red | 1.0 |  |
+| block4 | green | 1.0 |  |
+| block4 | blue | 0.0 |  |
+| block4 | pyramid | True |  |
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-pattern-with-shapes.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| red | property | True |  |
+| red | isa | rgbcolor |  |
+| red | maxoccurs | 1 |  |
+| green | property | True |  |
+| green | isa | rgbcolor |  |
+| green | maxoccurs | 1 |  |
+| blue | property | True |  |
+| blue | isa | rgbcolor |  |
+| blue | maxoccurs | 1 |  |
+| rgbcolor | datatype | True |  |
+| rgbcolor | node1_type | symbol |  |
+| rgbcolor | node2_type | number |  |
+| rgbcolor | minval | 0.0 |  |
+| rgbcolor | maxval | 1.0 |  |
+| rgbcolor | requires | red |  |
+| rgbcolor | requires | green |  |
+| rgbcolor | requires | blue |  |
+| rgbcolor | isa | colorclass |  |
+| rgbcolor | prohibits | colorname |  |
+| colorname | property | True |  |
+| colorname | isa | colorclass |  |
+| colorname | node1_type | symbol |  |
+| colorname | node2_type | symbol |  |
+| colorname | node2_values | red |  |
+| colorname | node2_values | green |  |
+| colorname | node2_values | blue |  |
+| colorname | node2_values | yellow |  |
+| colorclass | mustoccur | True |  |
+| cube | property | True |  |
+| cube | isa | boxshape |  |
+| cone | property | True |  |
+| cone | isa | pointyshape |  |
+| cone | isa | roundshape |  |
+| sphere | property | True |  |
+| sphere | isa | roundshape |  |
+| pyramid | property | True |  |
+| pyramid | isa | pointyshape |  |
+| cylinder | property | True |  |
+| cylinder | isa | roundshape |  |
+| boxshape | datatype | True |  |
+| boxshape | isa | shape |  |
+| pointyshape | datatype | True |  |
+| pointyshape | isa | shape |  |
+| roundshape | datatype | True |  |
+| roundshape | isa | shape |  |
+| shape | datatype | True |  |
+| shape | mustoccur | True |  |
+
+```bash
+kgtk validate-properties \
+     --input-file examples/docs/valprop-colored-blocks-with-shapes.tsv \
+     --pattern-file examples/docs/valprop-colored-blocks-pattern-with-shapes.tsv \
+     --output-file - \
+     --add-isa-column --isa-column-name Classes
+```
+
+| node1 | label | node2 | id | Classes |
+| -- | -- | -- | -- | -- |
+| block1 | cube | True |  | cube->boxshape->shape |
+| block1 | red | 1.0 |  | red->rgbcolor->colorclass |
+| block1 | green | 0.0 |  | green->rgbcolor->colorclass |
+| block1 | blue | 0.0 |  | blue->rgbcolor->colorclass |
+| block2 | red | 0.0 |  | red->rgbcolor->colorclass |
+| block2 | green | 1.0 |  | green->rgbcolor->colorclass |
+| block2 | blue | 0.0 |  | blue->rgbcolor->colorclass |
+| block2 | sphere | True |  | sphere->roundshape->shape |
+| block3 | red | 0.0 |  | red->rgbcolor->colorclass |
+| block3 | green | 0.0 |  | green->rgbcolor->colorclass |
+| block3 | blue | 1.0 |  | blue->rgbcolor->colorclass |
+| block3 | cone | True |  | cone->(pointyshape->shape, roundshape->shape) |
+| block4 | red | 1.0 |  | red->rgbcolor->colorclass |
+| block4 | green | 1.0 |  | green->rgbcolor->colorclass |
+| block4 | blue | 0.0 |  | blue->rgbcolor->colorclass |
+| block4 | pyramid | True |  | pyramid->pointyshape->shape |

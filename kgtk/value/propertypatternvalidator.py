@@ -1845,6 +1845,7 @@ class PropertyPatternValidator:
         first: bool = True
         new_datatype: str
         for new_datatype in new_datatypes:
+            # print("row %d: new_datatype: %s isa_tree: %s" % (rownum, repr(new_datatype), repr(self.isa_tree_scoreboard)), file=sys.stderr, flush=True) # ***
             if new_datatype in self.isa_current_scoreboard:
                 self.grouse("Row %d: isa loop detected with %s." % (rownum, new_datatype))
                 return False
@@ -2201,10 +2202,11 @@ class PropertyPatternValidator:
         if self.isa_column_idx < 0:
             return row
         row = row.copy()
+        isa_tree: str = self.build_isa_tree(isa_tree_scoreboard)
         if self.isa_column_idx < len(row):
-            row[self.isa_column_idx] = self.build_isa_tree(isa_tree_scoreboard)
+            row[self.isa_column_idx] = isa_tree
         else:
-            row.append(self.build_isa_tree(isa_tree_scoreboard))
+            row.append(isa_tree)
         return row
 
     def process_node1_group(self,
@@ -2223,7 +2225,8 @@ class PropertyPatternValidator:
         row: PropertyPatternValidator.ROW_TYPE
         for row_number, row in row_group:
             result &= self.validate_row(row_number, row)
-            save_isa_tree_scoreboards[row_number] = self.isa_tree_scoreboard
+            # print("row %d: isa_tree_scoreboard %s" % (row_number, repr(self.isa_tree_scoreboard)), file=sys.stderr, flush=True) # ***
+            save_isa_tree_scoreboards[row_number] = self.isa_tree_scoreboard.copy()
 
         self.show_complaints()
         result &= self.report_occurance_violations()
@@ -2242,12 +2245,14 @@ class PropertyPatternValidator:
             self.valid_row_count += len(row_group)
             if okw is not None:
                 for row_num, row in row_group:
+                    # print("valid: row %d: isa_tree_scodeboard %s" % (row_num, repr(save_isa_tree_scoreboards[row_num])), file=sys.stderr, flush=True) # ***
                     row = self.maybe_add_isa_column(row, save_isa_tree_scoreboards[row_num])
                     okw.write(row)
                     self.output_row_count += 1
         else:
             if rkw is not None:
                 for row_num, row in row_group:
+                    # print("reject: row %d: isa_tree_scodeboard %s" % (row_num, repr(save_isa_tree_scoreboards[row_num])), file=sys.stderr, flush=True) # ***
                     row = self.maybe_add_isa_column(row, save_isa_tree_scoreboards[row_num])
                     rkw.write(row)
                     self.reject_row_count += 1
