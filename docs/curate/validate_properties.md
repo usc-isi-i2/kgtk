@@ -34,7 +34,8 @@ rather than specific individual objects or properties.  `kgtk validate-propertie
 tools for identifying the class heirarchy to which an object or property belongs.
 
 In addition to focusing on constraints applicable to edges grouped around objects,
-`kgtk validate-properties` supports the application of constraints to additional columns.
+`kgtk validate-properties` supports the application of constraints to any additional columns
+that are present.
 
 ### Pattern Files
 
@@ -697,8 +698,8 @@ kgtk cat -i examples/docs/valprop-colored-blocks-good-colornames.tsv
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
-| block1 | colorname | red |  |
-| block2 | colorname | green |  |
+| block3 | colorname | red |  |
+| block4 | colorname | green |  |
 
 ```bash
 kgtk validate-properties \
@@ -709,8 +710,8 @@ kgtk validate-properties \
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
-| block1 | colorname | red |  |
-| block2 | colorname | green |  |
+| block3 | colorname | red |  |
+| block4 | colorname | green |  |
 
 ### Colored Blocks: Unknown Color Name
 
@@ -722,8 +723,8 @@ kgtk cat -i examples/docs/valprop-colored-blocks-color-mauve.tsv
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
-| block1 | colorname | red |  |
-| block2 | colorname | mauve |  |
+| block3 | colorname | red |  |
+| block4 | colorname | mauve |  |
 
 ```bash
 kgtk validate-properties \
@@ -734,7 +735,50 @@ kgtk validate-properties \
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
-| block1 | colorname | red |  |
+| block3 | colorname | red |  |
 
     Row 2: the node2 value 'mauve' is not in the list of allowed node2 values for colorname: blue|green|red|yellow
 
+### `--add-isa-column` Reveals Class Membership
+
+When the `--add-isa-column` option is True (the default is False),
+a column is added to the output and reject files to display the
+class memberships deduced for each edge.
+
+The default ISA column name is `isa;node2`.  The `--isa-column-name COLUMN_NAME`
+option may be used to change that.
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-mixed-types.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | red | 1.0 |  |
+| block1 | green | 0.0 |  |
+| block1 | blue | 0.0 |  |
+| block2 | red | 0.0 |  |
+| block2 | green | 1.0 |  |
+| block2 | blue | 0.0 |  |
+| block3 | colorname | red |  |
+| block4 | colorname | green |  |
+
+
+```bash
+kgtk validate-properties \
+     --input-file examples/docs/valprop-colored-blocks-mixed-types.tsv \
+     --pattern-file examples/docs/valprop-colored-blocks-pattern.tsv \
+     --output-file - \
+     --add-isa-column --isa-column-name Classes
+```
+
+| node1 | label | node2 | id | Classes |
+| -- | -- | -- | -- | -- |
+| block1 | red | 1.0 |  | blue->rgbcolor->colorclass |
+| block1 | green | 0.0 |  | blue->rgbcolor->colorclass |
+| block1 | blue | 0.0 |  | blue->rgbcolor->colorclass |
+| block2 | red | 0.0 |  | blue->rgbcolor->colorclass |
+| block2 | green | 1.0 |  | blue->rgbcolor->colorclass |
+| block2 | blue | 0.0 |  | blue->rgbcolor->colorclass |
+| block3 | colorname | red |  | colorname->colorclass |
+| block4 | colorname | green |  | colorname->colorclass |
