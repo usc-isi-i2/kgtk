@@ -1494,7 +1494,7 @@ class PropertyPatternValidator:
                           pp1: PropertyPattern,
                           who: str,
     )->bool:
-        whor = who + "_field"
+        who = who + "_field"
         node2_value.validate()
         if node2_value.fields is None:
             self.grouse("Row %d: no fields for prop/datatype %s op %s: %s" % (rownum, prop_or_datatype, ", ".join(pp1.values), node2_value.value))
