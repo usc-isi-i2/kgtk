@@ -98,6 +98,8 @@ usage: kgtk explode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]]
                     [--prefix PREFIX] [--overwrite [True|False]]
                     [--expand [True|False]] [--show-data-types [True|False]]
+                    [--show-field-names [True|False]]
+                    [--show-field-formats [True|False]]
                     [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
                     [-v [optional True|False]]
 
@@ -133,6 +135,12 @@ optional arguments:
   --show-data-types [True|False]
                         Print the list of data types and exit.
                         (default=False).
+  --show-field-names [True|False]
+                        Print the list of field names and exit.
+                        (default=False).
+  --show-field-formats [True|False]
+                        Print the list of field names and formats, then exit.
+                        (default=False).
   --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
 
@@ -147,9 +155,11 @@ usage: kgtk explode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--column COLUMN_NAME]
                     [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]
                     | --fields
-                    [{list_len,data_type,valid,text,language,language_suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,units_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,language_suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,units_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]]
+                    [{list_len,data_type,valid,text,decoded_text,language,language_suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,units_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,decoded_text,language,language_suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,units_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]]
                     [--prefix PREFIX] [--overwrite [True|False]]
                     [--expand [True|False]] [--show-data-types [True|False]]
+                    [--show-field-names [True|False]]
+                    [--show-field-formats [True|False]]
                     [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
                     [--errors-to-stdout [optional True|False] |
                     --errors-to-stderr [optional True|False]]
@@ -237,7 +247,7 @@ optional arguments:
                         'quantity', 'string', 'language_qualified_string',
                         'location_coordinates', 'date_and_times', 'extension',
                         'boolean', 'symbol']).
-  --fields [{list_len,data_type,valid,text,language,language_suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,units_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,language,language_suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,units_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]
+  --fields [{list_len,data_type,valid,text,decoded_text,language,language_suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,units_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} [{list_len,data_type,valid,text,decoded_text,language,language_suffix,numberstr,number,low_tolerancestr,low_tolerance,high_tolerancestr,high_tolerance,si_units,units_node,latitudestr,latitude,longitudestr,longitude,date,time,date_and_time,yearstr,year,monthstr,month,daystr,day,hourstr,hour,minutesstr,minutes,secondsstr,seconds,zonestr,precisionstr,precision,iso8601extended,truth,symbol} ...]]
                         The names of the fields to extract (overrides
                         --types). (default=None).
   --prefix PREFIX       The prefix for exploded column names.
@@ -251,6 +261,12 @@ optional arguments:
                         (default=False).
   --show-data-types [True|False]
                         Print the list of data types and exit.
+                        (default=False).
+  --show-field-names [True|False]
+                        Print the list of field names and exit.
+                        (default=False).
+  --show-field-formats [True|False]
+                        Print the list of field names and formats, then exit.
                         (default=False).
   --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
