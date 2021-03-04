@@ -805,7 +805,7 @@ kgtk cat -i examples/docs/valprop-colored-blocks-pattern-matches.tsv
 | rgbcolor | node2_type | number |  |
 | rgbcolor | minval | 0.0 |  |
 | rgbcolor | maxval | 1.0 |  |
-| rgbcolor | matches | "red\\|green\\|blue" |  |
+| rgbcolor | matches | "red\\\|green\\\|blue" |  |
 | rgbcolor | requires | red |  |
 | rgbcolor | requires | green |  |
 | rgbcolor | requires | blue |  |
@@ -840,4 +840,6 @@ kgtk validate-properties \
 | block3 | colorname | red |  | colorname->colorclass |
 | block4 | colorname | green |  | colorname->colorclass |
 
+
+### Colored Blocks: Multiple Inheritance
 
