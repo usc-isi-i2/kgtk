@@ -948,3 +948,95 @@ kgtk validate-properties \
 | block4 | green | 1.0 |  | green->rgbcolor->colorclass |
 | block4 | blue | 0.0 |  | blue->rgbcolor->colorclass |
 | block4 | pyramid | True |  | pyramid->pointyshape->shape |
+
+### Colored Blocks: Unordered Switch
+
+The unordered `switch` statement provides class inheritance on a row-by-row
+basis.  The first class in list is selected, but there is no guarantee on the
+order in which the list is evaluated.
+
+In this example, the `shape` property has a shape name in `node2`.
+We use the `node2` value in each `shape` edge to select a specific
+class.
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-for-switch.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | colorname | red |  |
+| block1 | shape | cube |  |
+| block2 | colorname | green |  |
+| block2 | shape | sphere |  |
+| block3 | colorname | blue |  |
+| block3 | shape | cone |  |
+| block4 | colorname | yellow |  |
+| block4 | shape | pyramid |  |
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-pattern-unordered-switch.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| colorname | property | True |  |
+| colorname | isa | colorclass |  |
+| colorname | node1_type | symbol |  |
+| colorname | node2_type | symbol |  |
+| colorname | node2_values | red |  |
+| colorname | node2_values | green |  |
+| colorname | node2_values | blue |  |
+| colorname | node2_values | yellow |  |
+| colorclass | mustoccur | True |  |
+| shape | property | True |  |
+| shape | node1_type | symbol |  |
+| shape | node2_type | symbol |  |
+| shape | switch | cube |  |
+| shape | switch | cone |  |
+| shape | switch | sphere |  |
+| shape | switch | pyramid |  |
+| shape | switch | cylinder |  |
+| cube | datatype | True |  |
+| cube | isa | boxshape |  |
+| cube | node2_values | cube |  |
+| cone | datatype | True |  |
+| cone | isa | pointyshape |  |
+| cone | isa | roundshape |  |
+| cone | node2_values | cone |  |
+| sphere | datatype | True |  |
+| sphere | isa | roundshape |  |
+| sphere | node2_values | sphere |  |
+| pyramid | datatype | True |  |
+| pyramid | isa | pointyshape |  |
+| pyramid | node2_values | pyramid |  |
+| cylinder | datatype | True |  |
+| cylinder | isa | roundshape |  |
+| cylinder | node2_values | cylinder |  |
+| boxshape | datatype | True |  |
+| boxshape | isa | shapeclass |  |
+| pointyshape | datatype | True |  |
+| pointyshape | isa | shapeclass |  |
+| roundshape | datatype | True |  |
+| roundshape | isa | shapeclass |  |
+| shapeclass | datatype | True |  |
+| shapeclass | mustoccur | True |  |
+
+```bash
+kgtk validate-properties \
+     --input-file examples/docs/valprop-colored-blocks-for-switch.tsv \
+     --pattern-file examples/docs/valprop-colored-blocks-pattern-unordered-switch.tsv \
+     --output-file - \
+     --add-isa-column --isa-column-name Classes
+```
+
+| node1 | label | node2 | id | Classes |
+| -- | -- | -- | -- | -- |
+| block1 | colorname | red |  | colorname->colorclass |
+| block1 | shape | cube |  | shape->cube->boxshape->shapeclass |
+| block2 | colorname | green |  | colorname->colorclass |
+| block2 | shape | sphere |  | shape->sphere->roundshape->shapeclass |
+| block3 | colorname | blue |  | colorname->colorclass |
+| block3 | shape | cone |  | shape->cone->(pointyshape->shapeclass, roundshape->shapeclass) |
+| block4 | colorname | yellow |  | colorname->colorclass |
+| block4 | shape | pyramid |  | shape->pyramid->pointyshape->shapeclass |
