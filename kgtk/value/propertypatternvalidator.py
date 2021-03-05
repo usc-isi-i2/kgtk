@@ -265,7 +265,7 @@ class PropertyPattern:
         EQUAL_TO_DATE = "equal_to_date" # EQ, may take a list of dates
         NOT_EQUAL_TO_DATE = "not_equal_to_date" # NE, may take a list of dates
 
-        ID_ALLOW_LIST = "node2_allow_list"
+        ID_ALLOW_LIST = "id_allow_list"
         ID_PATTERN = "id_pattern"
         ID_NOT_PATTERN = "id_not_pattern"
         ID_BLANK = "id_blank"
