@@ -952,8 +952,8 @@ kgtk validate-properties \
 ### Colored Blocks: Unordered Switch
 
 The unordered `switch` statement provides class inheritance on a row-by-row
-basis.  The first class in list is selected, but there is no guarantee on the
-order in which the list is evaluated.
+basis.  The first class that matches the row is selected, but there is no guarantee on the
+order in which the list of classes is evaluated.
 
 In this example, the `shape` property has a shape name in `node2`.
 We use the `node2` value in each `shape` edge to select a specific
@@ -1040,3 +1040,100 @@ kgtk validate-properties \
 | block3 | shape | cone |  | shape->cone->(pointyshape->shapeclass, roundshape->shapeclass) |
 | block4 | colorname | yellow |  | colorname->colorclass |
 | block4 | shape | pyramid |  | shape->pyramid->pointyshape->shapeclass |
+
+### Colored Blocks: Ordered Switch
+
+The ordered `switch` statement provides class inheritance on a row-by-row
+basis.  The first class that matches is selected, with a guarantee on the
+order in which the list is evaluated.
+
+In this example, the `shape` property has a shape name in `node2`.
+We use the `node2` value in each `shape` edge to select a specific
+class.
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-for-switch.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| block1 | colorname | red |  |
+| block1 | shape | cube |  |
+| block2 | colorname | green |  |
+| block2 | shape | sphere |  |
+| block3 | colorname | blue |  |
+| block3 | shape | cone |  |
+| block4 | colorname | yellow |  |
+| block4 | shape | pyramid |  |
+
+```bash
+kgtk cat -i examples/docs/valprop-colored-blocks-pattern-ordered-switch.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| colorname | property | True |  |
+| colorname | isa | colorclass |  |
+| colorname | node1_type | symbol |  |
+| colorname | node2_type | symbol |  |
+| colorname | node2_values | red |  |
+| colorname | node2_values | green |  |
+| colorname | node2_values | blue |  |
+| colorname | node2_values | yellow |  |
+| colorclass | mustoccur | True |  |
+| shape | property | True |  |
+| shape | node1_type | symbol |  |
+| shape | node2_type | symbol |  |
+| shape | switch | shapetest1 |  |
+| shapetest1 | isa | cube |  |
+| shapetest1 | nextcase | shapetest2 |  |
+| shapetest2 | isa | cone |  |
+| shapetest2 | nextcase | shapetest3 |  |
+| shapetest3 | isa | sphere |  |
+| shapetest3 | nextcase | shapetest4 |  |
+| shapetest4 | isa | pyramid |  |
+| shapetedt4 | nextcase | shapetest5 |  |
+| shapetest5 | isa | cylinder |  |
+| cube | datatype | True |  |
+| cube | isa | boxshape |  |
+| cube | node2_values | cube |  |
+| cone | datatype | True |  |
+| cone | isa | pointyshape |  |
+| cone | isa | roundshape |  |
+| cone | node2_values | cone |  |
+| sphere | datatype | True |  |
+| sphere | isa | roundshape |  |
+| sphere | node2_values | sphere |  |
+| pyramid | datatype | True |  |
+| pyramid | isa | pointyshape |  |
+| pyramid | node2_values | pyramid |  |
+| cylinder | datatype | True |  |
+| cylinder | isa | roundshape |  |
+| cylinder | node2_values | cylinder |  |
+| boxshape | datatype | True |  |
+| boxshape | isa | shapeclass |  |
+| pointyshape | datatype | True |  |
+| pointyshape | isa | shapeclass |  |
+| roundshape | datatype | True |  |
+| roundshape | isa | shapeclass |  |
+| shapeclass | datatype | True |  |
+| shapeclass | mustoccur | True |  |
+
+```bash
+kgtk validate-properties \
+     --input-file examples/docs/valprop-colored-blocks-for-switch.tsv \
+     --pattern-file examples/docs/valprop-colored-blocks-pattern-ordered-switch.tsv \
+     --output-file - \
+     --add-isa-column --isa-column-name Classes
+```
+
+| node1 | label | node2 | id | Classes |
+| -- | -- | -- | -- | -- |
+| block1 | colorname | red |  | colorname->colorclass |
+| block1 | shape | cube |  | shape->shapetest1->cube->boxshape->shapeclass |
+| block2 | colorname | green |  | colorname->colorclass |
+| block2 | shape | sphere |  | shape->shapetest3->sphere->roundshape->shapeclass |
+| block3 | colorname | blue |  | colorname->colorclass |
+| block3 | shape | cone |  | shape->shapetest2->cone->(pointyshape->shapeclass, roundshape->shapeclass) |
+| block4 | colorname | yellow |  | colorname->colorclass |
+| block4 | shape | pyramid |  | shape->shapetest4->pyramid->pointyshape->shapeclass |

@@ -1907,7 +1907,7 @@ class PropertyPatternValidator:
                 matched: bool
                 valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
                 if valid:
-                    # TODO: SWITCH and ISA need coorperate on the isa_tree., or we should
+                    # TODO: SWITCH and ISA need to coorporate on the isa_tree, or we should
                     # prohibit having both for the same datatype.
                     self.complaints = save_complaints # Forget any complaints on failed cases
                     self.isa_current_scoreboard = save_isa_current_scoreboard.copy()
