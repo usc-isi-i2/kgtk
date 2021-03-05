@@ -147,6 +147,69 @@ edge in a group fails validation, the entire group is rejected.
 When `--process-node1-groups` is False, edges are processed individually.
 Only the edges that fail validation are rejected.
 
+### Pattern Actions
+
+| Action | Description |
+| ------ | ----------- |
+| datatype | The `node1` symbol of theis pattern edge is a property class. |
+| equal_to | The `node2` value or field value in the data edge is a number that equals one of the `node2` numbers in the pattern edge(s). |
+| equal_to_date | The `node2` value or field value in the data edge is a date that equals one of the `node2` dates in the pattern edge(s). |
+| field_blank | The selected field is blank. |
+| field_name | The `node2` symbol in the pattern edge is a field name selector. May be repeated (or `node2` may contain a list if permitted). |
+| field_not_blank | The selected field is not blank. |
+| field_not_pattern | The selected field does not matcn the pattern in the pattern edge `node2` value. |
+| field_not_values | The value of the field is not the same as the value in the pattern edge `node2`.  May be repeated (or `node2` may contain a list if permitted).|
+| field_pattern | The selected field matches the pattern in the pattern edge `node2` value. |
+| field_values | The value of the field is the same as the value in the pattern edge `node2`.  May be repeated (or `node2` may contain a list if permitted). |
+| greater_than | The `node2` value or field value in the data edge is a number that is greated than the `node2` number in the pattern edge.  |
+| greater_than_date | The `node2` value or field value in the data edge is a date that is greated than the `node2` number in the pattern edge.|
+| groupbyprop | |
+| id_allow_list | |
+| id_blank | |
+| id_chain | |
+| id_not_blank | |
+| id_not_pattern | |
+| id_pattern | |
+| isa | |
+| label_allow_list | |
+| label_pattern | |
+| less_than | |
+| less_than_date | |
+| matches | |
+| maxdate | |
+| maxoccurs | |
+| maxval | |
+| mindate | |
+| minoccurs | |
+| minval | |
+| mustoccur | |
+| nextcase | |
+| node1_type | |
+| node1_allow_list | |
+| node1_values | |
+| node2_allow_list | |
+| node2_blank | |
+| node2_chain | |
+| node2_column | |
+| node2_is_valid | |
+| node2_not_blank | |
+| node2_not_pattern | |
+| node2_not_type | |
+| node2_not_values | |
+| node2_pattern | |
+| node2_type | |
+| node2_values | |
+| not_equal_to | |
+| not_equal_to_date | |
+| not_in_columns | |
+| node2_field_op | |
+| prohibits | |
+| property | |
+| reject | |
+| requires | |
+| switch | |
+| unknown | |
+
 ## Usage
 ```
 usage: kgtk validate-properties [-h] [-i INPUT_FILE] --pattern-file
