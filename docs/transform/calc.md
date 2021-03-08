@@ -646,6 +646,12 @@ The output will be the following table in KGTK format:
     Be certain to include shell escapes when needed.
 
 !!! note
+    If you use a value pattern that might match an empty string,
+    e.g. `(.*)`, you may get an unexpected result.  Use a pattern
+    that will not match an empty string (`(.+)`), or anchor the
+    pattern to match the entire input field (`^(.*)$`).
+
+!!! note
     See Python 3 documentation on regular expressions for more details
     on pattern matching and substitution.
 
