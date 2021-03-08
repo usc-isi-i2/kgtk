@@ -649,7 +649,8 @@ The output will be the following table in KGTK format:
     If you use a value pattern that might match an empty string,
     e.g. `(.*)`, you may get an unexpected result.  Use a pattern
     that will not match an empty string (`(.+)`), or anchor the
-    pattern to match the entire input field (`^(.*)$`).
+    pattern to match the entire input field (`^(.*)$`), or limit
+    the number of replacements (`--limit 1`).
 
 !!! note
     See Python 3 documentation on regular expressions for more details
