@@ -130,8 +130,7 @@ to protect it from interpretation by the shell. The result of the
 queries are shown in tables to facilitate readability:
 
 ```
-DATA_HOME=kgtk/tests/data/kypher
-GRAPH=$DATA_HOME/graph.tsv
+GRAPH=examples/docs/query-graph.tsv
  
 kgtk query -i $GRAPH --match '()-[]->()'
 ```
@@ -705,7 +704,7 @@ Result:
 Cypher also supports the following idiom which is not yet available in Kypher:
 
 ```
-time kgtk query -i $GRAPH --match '(:Joe)-[:friend|loves]->()'
+kgtk query -i $GRAPH --match '(:Joe)-[:friend|loves]->()'
 Multiple relationship labels are not (yet) allowed
 ```
 
@@ -735,9 +734,9 @@ extra columns such as a `salary` for each `node1` and a `graph` qualifier naming
 a graph each edge belongs to:
 
 ```
-WORKS=$DATA_HOME/works.tsv
+WORKS=examples/docs/query-works.tsv
 
-kgtk query -i $WORKS --match '()-[]->()' 
+kgtk query -i $WORKS --match '()-[]->()'
 ```   
 Result:
 
@@ -1699,6 +1698,46 @@ achieved with the `--index [MODE]` option (experts only).  Mode can
 be one of `auto` (the default), `expert`, `quad`, `triple`, `node1+label`,
 `node1`, `label`, `node2` and `none`.
 
+#### Sorting the data before querying
+
+Knowledge graphs encoded in KGTK files are schema-free tables with often
+highly skewed data statistics that violate many assumptions commonly made
+by relational database systems such as SQLite.  This can become a problem
+with certain types of queries over large Wikidata-style datasets with
+O(1B) edges.  In such datasets certain types of edges might have O(1M)
+occurrances (e.g., the `P31` instance-of relation), while others only
+occur a few times.
+
+If a dataset is sorted by `node1`, such high-frequency edges will be
+spread out throughout the corresponding data table, making a query for
+all such edges scan a large number of the underlying data pages, even
+if a label index is available.  The reason is that each page will
+generally only hold a few of the edges sought, while a lot of other
+data is read purely because data is read from disk in large blocks.
+Sorting a dataset appropriately before importing, for example by the
+`label` column, can vastly improve locality and query performance in
+such cases.  For example, the following command would sort a Wikidata
+claims file (we use some extra Unix-sort options to facilitate sorting
+of very large files):
+
+```
+kgtk sort -i claims.tsv.gz -c label \
+     -X "-T /data/tmp/ --parallel 8 --buffer-size 60%" \
+     -o claims.sorted.tsv.gz
+```
+
+Of course, sorting by one column will damage locality of another such
+as `node1`.  In a Wikidata-style dataset, however, `node1` skew is
+generally much less than `label` skew, so `node1` queries will be less
+affected by this resorting.  In the end what is the best strategy is
+an experimental question that will vary from dataset to dataset and
+use case.
+
+Another thing to consider for very large datasets is to split them
+into separate files with different sets of edge labels.  This will
+keep data tables smaller, improve locality, but for the cost of some
+extra query complexity due to the multiple data files.
+
 
 ### Explanation
 
@@ -1778,6 +1817,8 @@ proceeds in the following steps:
 First let us list the qualifier data and temporal properties used below:
 
 ```
+QUALS=examples/docs/query-quals.tsv
+
 kgtk query -i $QUALS
 ```
 Result:
@@ -1792,6 +1833,8 @@ Result:
 
 
 ```
+PROPS=examples/docs/query-props.tsv
+
 kgtk query -i $PROPS
 ```
 Result:
