@@ -1705,7 +1705,7 @@ highly skewed data statistics that violate many assumptions commonly made
 by relational database systems such as SQLite.  This can become a problem
 with certain types of queries over large Wikidata-style datasets with
 O(1B) edges.  In such datasets certain types of edges might have O(1M)
-occurrances (e.g., the `P31` instance-of relation), while others only
+occurrences (e.g., the `P31` instance-of relation), while others only
 occur a few times.
 
 If a dataset is sorted by `node1`, such high-frequency edges will be
