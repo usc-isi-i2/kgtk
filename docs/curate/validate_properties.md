@@ -191,7 +191,7 @@ Only the edges that fail validation are rejected.
 | node2_blank | When the `node2` value of this pattern edge is True, the `node2` value for data rows with `label` values in this class must be empty.  When False, the `node2` value for data rows with `label` value in this class must not be empty. Note: The KGTK File Specification requires that `node2` value be non-empty in KGTK edge files. |
 | node2_chain | The `node2` value of the data edge with a `label` value matching the `node1` value of the pattern edge must match the `node1` value of a second data edge (the remote data edge), and the remore data edge must match at least one class in the `node2` value of the pattern edge. |
 | node2_column | The `node2` value of the pattern edge specifies a additional column to use instead of `node2`. |
-| node2_is_valid | |
+| node2_is_valid | When `node2` of the pattern edge is True, the `node2` value of data edges for this class must be valid KGTK valies. |
 | node2_not_blank | When the `node2` value of this pattern edge is True, the `node2` value for data rows with `label` values in this class must not be empty.  When False, the `node2` value for data rows with `label` value in this class must be empty. Note: The KGTK File Specification requires that `node2` value be non-empty in KGTK edge files. |
 | node2_not_pattern | |
 | node2_not_type | |
