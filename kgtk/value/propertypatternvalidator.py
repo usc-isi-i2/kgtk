@@ -265,7 +265,7 @@ class PropertyPattern:
         EQUAL_TO_DATE = "equal_to_date" # EQ, may take a list of dates
         NOT_EQUAL_TO_DATE = "not_equal_to_date" # NE, may take a list of dates
 
-        ID_ALLOW_LIST = "node2_allow_list"
+        ID_ALLOW_LIST = "id_allow_list"
         ID_PATTERN = "id_pattern"
         ID_NOT_PATTERN = "id_not_pattern"
         ID_BLANK = "id_blank"
@@ -352,7 +352,8 @@ class PropertyPattern:
                     raise ValueError("Filter row %d: %s: Node2 has no fields" % (rownum, action.value)) # TODO: better complaint
                 if node2_value.fields.text is None:
                     raise ValueError("Filter row %d: %s: Node2 has no text" % (rownum, action.value)) # TODO: better complaint
-                patterns.append(re.compile(node2_value.fields.text))
+                # print("pattern=%s" % repr(node2_value.fields.decoded_text), file=sys.stderr, flush=True)
+                patterns.append(re.compile(node2_value.fields.decoded_text))
             elif node2_value.is_list():
                 for kv in node2_value.get_list_items():
                     if not kv.is_string(validate=True):
@@ -1494,7 +1495,7 @@ class PropertyPatternValidator:
                           pp1: PropertyPattern,
                           who: str,
     )->bool:
-        whor = who + "_field"
+        who = who + "_field"
         node2_value.validate()
         if node2_value.fields is None:
             self.grouse("Row %d: no fields for prop/datatype %s op %s: %s" % (rownum, prop_or_datatype, ", ".join(pp1.values), node2_value.value))
@@ -1844,6 +1845,7 @@ class PropertyPatternValidator:
         first: bool = True
         new_datatype: str
         for new_datatype in new_datatypes:
+            # print("row %d: new_datatype: %s isa_tree: %s" % (rownum, repr(new_datatype), repr(self.isa_tree_scoreboard)), file=sys.stderr, flush=True) # ***
             if new_datatype in self.isa_current_scoreboard:
                 self.grouse("Row %d: isa loop detected with %s." % (rownum, new_datatype))
                 return False
@@ -1905,7 +1907,7 @@ class PropertyPatternValidator:
                 matched: bool
                 valid, matched = self.validate_prop_or_datatype(rownum, row, new_datatype, orig_prop)
                 if valid:
-                    # TODO: SWITCH and ISA need coorperate on the isa_tree., or we should
+                    # TODO: SWITCH and ISA need to coorporate on the isa_tree, or we should
                     # prohibit having both for the same datatype.
                     self.complaints = save_complaints # Forget any complaints on failed cases
                     self.isa_current_scoreboard = save_isa_current_scoreboard.copy()
@@ -2200,10 +2202,11 @@ class PropertyPatternValidator:
         if self.isa_column_idx < 0:
             return row
         row = row.copy()
+        isa_tree: str = self.build_isa_tree(isa_tree_scoreboard)
         if self.isa_column_idx < len(row):
-            row[self.isa_column_idx] = self.build_isa_tree(isa_tree_scoreboard)
+            row[self.isa_column_idx] = isa_tree
         else:
-            row.append(self.build_isa_tree(isa_tree_scoreboard))
+            row.append(isa_tree)
         return row
 
     def process_node1_group(self,
@@ -2222,7 +2225,8 @@ class PropertyPatternValidator:
         row: PropertyPatternValidator.ROW_TYPE
         for row_number, row in row_group:
             result &= self.validate_row(row_number, row)
-            save_isa_tree_scoreboards[row_number] = self.isa_tree_scoreboard
+            # print("row %d: isa_tree_scoreboard %s" % (row_number, repr(self.isa_tree_scoreboard)), file=sys.stderr, flush=True) # ***
+            save_isa_tree_scoreboards[row_number] = self.isa_tree_scoreboard.copy()
 
         self.show_complaints()
         result &= self.report_occurance_violations()
@@ -2241,12 +2245,14 @@ class PropertyPatternValidator:
             self.valid_row_count += len(row_group)
             if okw is not None:
                 for row_num, row in row_group:
+                    # print("valid: row %d: isa_tree_scodeboard %s" % (row_num, repr(save_isa_tree_scoreboards[row_num])), file=sys.stderr, flush=True) # ***
                     row = self.maybe_add_isa_column(row, save_isa_tree_scoreboards[row_num])
                     okw.write(row)
                     self.output_row_count += 1
         else:
             if rkw is not None:
                 for row_num, row in row_group:
+                    # print("reject: row %d: isa_tree_scodeboard %s" % (row_num, repr(save_isa_tree_scoreboards[row_num])), file=sys.stderr, flush=True) # ***
                     row = self.maybe_add_isa_column(row, save_isa_tree_scoreboards[row_num])
                     rkw.write(row)
                     self.reject_row_count += 1

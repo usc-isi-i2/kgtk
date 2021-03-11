@@ -1,0 +1,17 @@
+node1	label	node2	id
+block1	cube	True	
+block1	red	1.0	
+block1	green	0.0	
+block1	blue	0.0	
+block2	red	0.0	
+block2	green	1.0	
+block2	blue	0.0	
+block2	sphere	True	
+block3	red	0.0	
+block3	green	0.0	
+block3	blue	1.0	
+block3	cone	True	
+block4	red	1.0	
+block4	green	1.0	
+block4	blue	0.0	
+block4	pyramid	True	

@@ -37,8 +37,11 @@ class KgtkValueFields():
     list_len: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # Offer the components of a string or language-qualified string, after validating the item.
-    # String contents without the enclosing quotes
+    # String contents without the enclosing quotes.  Backslash quoted sequences remain unprocessed.
     text: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    # String contents without the enclosing quotes.  Backslash quoted sequences have been procesed..
+    decoded_text: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # 2- or 3-character language code code without suffix.
     language: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
@@ -109,6 +112,7 @@ class KgtkValueFields():
 
     DATA_TYPE_FIELD_NAME: str = "data_type"
     DATE_AND_TIMES_FIELD_NAME: str = "date_and_time"
+    DECODED_TEXT_FIELD_NAME: str = "decoded_text"
     HIGH_TOLERANCE_FIELD_NAME: str = "high_tolerance"
     LANGUAGE_FIELD_NAME: str = "language"
     LANGUAGE_SUFFIX_FIELD_NAME: str = "language_suffix"
@@ -130,6 +134,7 @@ class KgtkValueFields():
         DATA_TYPE_FIELD_NAME,
         VALID_FIELD_NAME,
         TEXT_FIELD_NAME,
+        DECODED_TEXT_FIELD_NAME,
         LANGUAGE_FIELD_NAME,
         LANGUAGE_SUFFIX_FIELD_NAME,
         "numberstr",
@@ -201,6 +206,7 @@ class KgtkValueFields():
         DATA_TYPE_FIELD_NAME: "sym",
         VALID_FIELD_NAME: "bool",
         TEXT_FIELD_NAME: "str",
+        DECODED_TEXT_FIELD_NAME: "str",
         LANGUAGE_FIELD_NAME: "sym",
         LANGUAGE_SUFFIX_FIELD_NAME: "sym",
         "numberstr": "str",
@@ -307,6 +313,8 @@ class KgtkValueFields():
             results[self.VALID_FIELD_NAME] = self.valid
         if self.text is not None:
             results[self.TEXT_FIELD_NAME] = self.text
+        if self.decoded_text is not None:
+            results[self.DECODED_TEXT_FIELD_NAME] = self.decoded_text
         if self.language is not None:
             results[self.LANGUAGE_FIELD_NAME] = self.language
         if self.language_suffix is not None:
@@ -1032,7 +1040,8 @@ class KgtkValue(KgtkFormat):
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.STRING,
                                           valid=self.valid,
-                                          text=m.group("text"))
+                                          text=m.group("text"),
+                                          decoded_text=KgtkFormat.unstringify('"' + m.group("text") + '"'))
         return True
 
     def is_structured_literal(self)->bool:
@@ -1163,6 +1172,7 @@ o        Return True if the value looks like a language-qualified string.
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING,
                                           valid=self.valid,
                                           text=m.group("text"),
+                                          decoded_text=KgtkFormat.unstringify('"' + m.group("text") + '"'),
                                           language=m.group("lang"),
                                           language_suffix=m.group("suffix"))
         return True

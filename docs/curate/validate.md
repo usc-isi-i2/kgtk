@@ -221,6 +221,7 @@ usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                      [--maximum-valid-year MAXIMUM_VALID_YEAR]
                      [--clamp-maximum-year [CLAMP_MAXIMUM_YEAR]]
                      [--ignore-maximum-year [IGNORE_MAXIMUM_YEAR]]
+                     [--validate-fromisoformat [VALIDATE_FROMISOFORMAT]]
                      [--allow-lax-coordinates [ALLOW_LAX_COORDINATES]]
                      [--repair-lax-coordinates [REPAIR_LAX_COORDINATES]]
                      [--allow-out-of-range-coordinates [ALLOW_OUT_OF_RANGE_COORDINATES]]
@@ -410,6 +411,11 @@ Data value parsing:
                         Clamp years at the maximum value. (default=False).
   --ignore-maximum-year [IGNORE_MAXIMUM_YEAR]
                         Ignore the maximum year constraint. (default=False).
+  --validate-fromisoformat [VALIDATE_FROMISOFORMAT]
+                        Validate that datetim.fromisoformat(...) can parse
+                        this date and time. This checks that the
+                        year/month/day combination is valid. The year must be
+                        in the range 1..9999, inclusive. (default=False).
   --allow-lax-coordinates [ALLOW_LAX_COORDINATES]
                         Allow coordinates using scientific notation.
                         (default=False).
@@ -508,15 +514,13 @@ input format: kgtk
 node1 column found, this is a KGTK edge file
 KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
 KgtkReader: Reading an edge file.
-KgtkValue.is_date_and_times: day 0 disallowed in '^2020-05-00T00:00'.
 Data line 1:
 john	woke	^2020-05-00T00:00
-col 2 (node2) value '^2020-05-00T00:00': 
+col 2 (node2) value '^2020-05-00T00:00': KgtkValue.is_date_and_times: day 0 disallowed in '^2020-05-00T00:00'.
 col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
-KgtkValue.is_date_and_times: month 0 disallowed in '^2020-00-00T00:00'.
 Data line 2:
 john	woke	^2020-00-00T00:00
-col 2 (node2) value '^2020-00-00T00:00': 
+col 2 (node2) value '^2020-00-00T00:00': KgtkValue.is_date_and_times: month 0 disallowed in '^2020-00-00T00:00'.
 col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 Validated 0 data lines
 
