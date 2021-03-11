@@ -1,0 +1,3 @@
+id	node1	label	node2	graph
+p11	starts	member	set1	props
+p12	ends	member	set1	props
