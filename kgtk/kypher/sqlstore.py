@@ -1263,6 +1263,19 @@ SqliteStore.register_user_function('kgtk_geo_coords_lat', 1, kgtk_geo_coords_lat
 SqliteStore.register_user_function('kgtk_geo_coords_long', 1, kgtk_geo_coords_long, deterministic=True)
 
 
+# Literals:
+
+literal_regex = re.compile(r'''^["'^@!0-9.+-]|^True$|^False$''')
+
+def kgtk_literal(x):
+    """Return True if 'x' is any KGTK literal.  This assumes valid literals
+    and only tests the first character (except for booleans).
+    """
+    return isinstance(x, str) and literal_regex.match(x) is not None
+
+SqliteStore.register_user_function('kgtk_literal', 1, kgtk_literal, deterministic=True)
+
+
 # NULL value utilities:
 
 # In the KGTK file format we cannot distinguish between empty and NULL values.
@@ -1289,3 +1302,74 @@ def kgtk_empty_to_null(x):
 
 SqliteStore.register_user_function('kgtk_null_to_empty', 1, kgtk_null_to_empty, deterministic=True)
 SqliteStore.register_user_function('kgtk_empty_to_null', 1, kgtk_empty_to_null, deterministic=True)
+
+
+### Experimental transitive taxonomy relation indexing:
+
+@lru_cache(maxsize=1000)
+def kgtk_decode_taxonomy_node_intervals(intervals):
+    """Decode a difference-encoded list of 'intervals' into a numpy array with full intervals.
+    """
+    # expensive imports we don't want to run unless needed, lru cache will eliminate repeat overhead:
+    import gzip, binascii, numpy
+    if intervals[0] == 'z':
+        intervals = gzip.decompress(binascii.a2b_base64(intervals[1:])).decode()
+    intervals = intervals.replace(';', ',0,')
+    if intervals.endswith(','):
+        intervals = intervals[0:-1]
+    intervals = list(map(int, intervals.split(',')))
+    # we special-case single intervals and binary search on more than one interval:
+    if len(intervals) > 2:
+        # add sentinel, so we always have a sort insertion point before the end of the array:
+        intervals.append(0)
+    intervals = numpy.array(intervals, dtype=numpy.int32)
+    # decode difference encoding:
+    for i in range(1, len(intervals)):
+        intervals[i] += intervals[i-1]
+    if len(intervals) > 2:
+        # initialize sentinel:
+        intervals[-1] = 2**31 - 1
+    return intervals
+
+# timing on 2.5M calls:
+# - just call and return: Q123: 0.95s, Q5: 1.05s
+# - int(label):           Q123: 1.38s, Q5: 1.45s
+# - decode intervals:     Q123: 1.68s, Q5: 2.12s
+# - single int range:     Q123: 3.10s, Q5: 2.20s
+# - single int >=,<=:     Q123: 2.60s, Q5: 2.20s
+# - range shortcut:       Q123: 2.60s, Q5: 2.20s
+# - searchsorted:         Q123: 2.60s, Q5: 4.90s
+# - result1:              Q123: 2.60s, Q5:11.10s
+# - result2: (wrong)      Q123: 2.60s, Q5: 6.95s
+# - result3:              Q123: 2.60s, Q5:10.80s 
+# - result4: (wrong)      Q123: 2.60s, Q5: 6.30s
+# - result5:              Q123: 2.60s, Q5: 6.60s
+# - bool(result5)         Q123: 2.60s, Q5: 6.70s
+
+def kgtk_is_subnode(label, encoded_intervals):
+    """Return True if 'label' is contained in one of the encoded 'intervals'.
+    'intervals' is a flat list of sorted, closed integer intervals.
+    """
+    # NOTE: it took us a while to optimize this properly; the crucial bit was
+    # to use 'int' to cast array elements before comparing them via >=,<= and ==
+    label = int(label)
+    # cached lookup is fast, trying to use a shorter key string (e.g., edge ID) does not help:
+    intervals = kgtk_decode_taxonomy_node_intervals(encoded_intervals)
+    # check single interval shortcut:
+    if len(intervals) == 2:
+        # "casting" to int first significantly speeds things up (also beats 'range'):
+        return label >= int(intervals[0]) and label <= int(intervals[1])
+    i = intervals.searchsorted(label)
+    # this runs on lists but is 3x slower, not sure why, it says there is a C-implementation:
+    #i = bisect.bisect_left(intervals, label)
+    #result1 = (i & 1) or (i < len(intervals) and intervals[i] == label)
+    #result2 = (i & 1) or (i < len(intervals) and intervals[i] is label)
+    #result3 = (i & 1) or (intervals[i] == label)
+    #result4 = (i & 1) or (intervals[i] is label)
+    # "casting" to int first gives us a much faster equality test:
+    result5 = (i & 1) or (int(intervals[i]) == label)
+    #sys.stderr.write('%s  %s  %s\n' % (label, intervals, result))
+    # TO DO: figure out whether we should add this to all predicates above:
+    return bool(result5)
+
+SqliteStore.register_user_function('kgtk_is_subnode', 2, kgtk_is_subnode, deterministic=True)
