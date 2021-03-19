@@ -147,11 +147,11 @@ edge in a group fails validation, the entire group is rejected.
 When `--process-node1-groups` is False, edges are processed individually.
 Only the edges that fail validation are rejected.
 
-### Pattern Actions
+### Table of Actions
 
 | Action | Description |
 | ------ | ----------- |
-| datatype | The `node1` symbol of theis pattern edge is a property class. |
+| datatype | The `node1` symbol of this pattern edge is a property class. |
 | equal_to | The `node2` value or field value in the data edge is a number that equals one of the `node2` numbers in the pattern edge(s). |
 | equal_to_date | The `node2` value or field value in the data edge is a date that equals one of the `node2` dates in the pattern edge(s). |
 | field_blank | The selected field is blank. |
@@ -161,38 +161,38 @@ Only the edges that fail validation are rejected.
 | field_not_values | The value of the field is not the same as the value in the pattern edge `node2`.  May be repeated (or `node2` may contain a list if permitted).|
 | field_pattern | The selected field matches the pattern in the pattern edge `node2` value. |
 | field_values | The value of the field is the same as the value in the pattern edge `node2`.  May be repeated (or `node2` may contain a list if permitted). |
-| greater_than | The `node2` value or field value in the data edge is a number that is greated than the `node2` number in the pattern edge.  |
-| greater_than_date | The `node2` value or field value in the data edge is a date that is greated than the `node2` number in the pattern edge.|
-| groupbyprop | |
-| id_allow_list | |
-| id_blank | |
-| id_chain | |
-| id_not_blank | |
-| id_not_pattern | |
-| id_pattern | |
-| isa | |
-| label_allow_list | |
-| label_pattern | |
-| less_than | |
-| less_than_date | |
-| matches | |
-| maxdate | |
-| maxoccurs | |
-| maxval | |
-| mindate | |
-| minoccurs | |
-| minval | |
-| mustoccur | |
-| nextcase | |
-| node1_type | |
-| node1_allow_list | |
-| node1_values | |
-| node2_allow_list | |
-| node2_blank | |
-| node2_chain | |
-| node2_column | |
-| node2_is_valid | |
-| node2_not_blank | |
+| greater_than | The `node2` value or field value in the data edge is a number that is greater than the `node2` number in the pattern edge.  |
+| greater_than_date | The `node2` value or field value in the data edge is a date that is greater than the `node2` number in the pattern edge.|
+| groupbyprop | When specified, a list of classes that serve as aggregation levels for max/min distinct/occurs calculations. |
+| id_allow_list | When the `node2` value of this pattern edge is True, the `id` value for data rows with `label` values in the class of the `node1` value of the pattern edge may be a KGTK list. |
+| id_blank | When the `node2` value of this pattern edge is True, the `id` value for data rows with `label` values in the class of the `node1` value of the pattern edge must be empty.  When False, the `id` value for data rows with `label` value in this class must not be empty. |
+| id_chain | The `id` value of the data edge with a `label` value matching the `node1` value of the pattern edge must match the `node1` value of a second data edge (the remote data edge), and the remote data edge must match at least one class in the `node2` value of the pattern edge. |
+| id_not_blank | When the `node2` value of this pattern edge is True, the `id` value for data rows with `label` values in this class must not be empty.  When False, the `id` value for data rows with `label` value in this class must be empty. |
+| id_not_pattern | The `id` value of a data edge with a `label` value in the class of the `node1` value of the pattern edge must not match the regular expression in the `node2` value of the pattern edge.|
+| id_pattern | The `id` value of a data edge with a `label` value in the class of the `node1` value of the pattern edge must match the regular expression in the `node2` value of the pattern edge.|
+| isa | The class in the `node1` value of the pattern edge is a subclass of the class in the `node2` value of the pattern edge. |
+| label_allow_list | For data edges with `label` values matching the `node1` value of the pattern edge, the `label` value of the data edge may be a KGTK list when the `node2` value of the pattern edge is True. When the `node2` value of the pattern edge is False, the `label` value of the data edge must not be a KGTK list. Note that the KGTK File Specification does not allow KGTK lists in KGTK edge files.|
+| label_pattern | The `label` value of a data edte with a `label` value in the class of the `node1` value of the pattern edge must match the regular expression in the `node2` value of the pattern edge. |
+| less_than | The `node2` value or field value in the data edge is a number that is less than the `node2` number in the pattern edge. |
+| less_than_date | The `node2` value or field value in the data edge is a date that is less than the `node2` number in the pattern edge. |
+| matches | The `node1` value of the pattern edge is a superclass of any class that matches the regular expresison in the `node2` value of the pattern edge. |
+| maxdate | For each data edge attempting to match the class name in the `node1` value of the pattern edge, the `node2` value of the data edge must be a date/time value less than or equal to the date/time `node2` value in the pattern edge. |
+| maxoccurs | For each `node1` group in the data file, there must be no more data edges matching the `node1` class of the pattern edge than the `node2` value of the pattern edge. |
+| maxval | The `node2` value of each data edge matching the `node1` class in the pattern edge must have a numeric value no greater than the `node2` value of the pattern edge. |
+| mindate | For each data edge attempting to match the class name in the `node1` value of the pattern edge, the `node2` value of the data edge must be a date/time value no less than the date/time `node2` value in the pattern edge.  |
+| minoccurs | For each `node1` group in the data file, there must be no fewer data edges matching the `node1` class of the pattern edge than the `node2` value of the pattern edge.  |
+| minval | The `node2` value of each data edge matching the `node1` class in the pattern edge must have a numeric value no less than the `node2` value of the pattern edge. |
+| mustoccur | When the `node2` value of the pattern edge is True, the `node1` value of the pattern edge is a class that must orrure in each `node1` group of the data edges. |
+| nextcase | The `node2` value of the pattern edge is the `node1` value of the next case in an ordered switch. |
+| node1_type | The `node1` value of the data edge that matches the class in the `label of the pattern edge must be of the KGTK data type listed in the `node2` column of the pattern edge.|
+| node1_allow_list | When the `node2` value of the pattern edge is True, any data edge with a clss matching the `label` value of the pattern edge may allow KGTK lists in the `node1` value of the data edge.  When the `node2` value of the pattern edge is False, any data edges in this class must not have KGTK list value in `node2`.  Note: The KGTK File Specificaiton prohibits KGTK lists in the `node1` value of a KGTK edge. |
+| node1_values | For data edges in classes that match the `node1` value of the pattern edge, the `node2` value of the data edge must be one of the `node2` values in the pattern edge.  |
+| node2_allow_list | When the `node2` value of the pattern edge is True, any data edge with a clss matching the `label` value of the pattern edge may allow KGTK lists in the `node2` value of the data edge.  When the `node2` value of the pattern edge is False, any data edges in this class must not have KGTK list value in `node2`.  Note: The KGTK File Specificaiton prohibits KGTK lists in the `node1` value of a KGTK edge.|
+| node2_blank | When the `node2` value of this pattern edge is True, the `node2` value for data rows with `label` values in this class must be empty.  When False, the `node2` value for data rows with `label` value in this class must not be empty. Note: The KGTK File Specification requires that `node2` value be non-empty in KGTK edge files. |
+| node2_chain | The `node2` value of the data edge with a `label` value matching the `node1` value of the pattern edge must match the `node1` value of a second data edge (the remote data edge), and the remore data edge must match at least one class in the `node2` value of the pattern edge. |
+| node2_column | The `node2` value of the pattern edge specifies a additional column to use instead of `node2`. |
+| node2_is_valid | When `node2` of the pattern edge is True, the `node2` value of data edges for this class must be valid KGTK valies. |
+| node2_not_blank | When the `node2` value of this pattern edge is True, the `node2` value for data rows with `label` values in this class must not be empty.  When False, the `node2` value for data rows with `label` value in this class must be empty. Note: The KGTK File Specification requires that `node2` value be non-empty in KGTK edge files. |
 | node2_not_pattern | |
 | node2_not_type | |
 | node2_not_values | |
