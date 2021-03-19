@@ -182,12 +182,23 @@ class SqliteStore(SqlStore):
         ]
     ]
 
-    def __init__(self, dbfile, create=False, loglevel=0):
+    def __init__(self, dbfile=None, create=False, loglevel=0, conn=None):
+        """Open or create an SQLStore on the provided database file 'dbfile'
+        or SQLite connection object 'conn'.  If 'dbfile' is provided and does
+        not yet exist, it will only be created if 'create' is True.  Passing
+        in a connection object directly provides more flexibility with creation
+        options.  In that case any 'dbfile' value will be ignored.
+        """
         self.loglevel = loglevel
-        if not os.path.exists(dbfile) and not create:
-            raise KGTKException('sqlite DB file does not exist: %s' % dbfile)
         self.dbfile = dbfile
-        self.conn = None
+        self.conn = conn
+        if not isinstance(self.conn, sqlite3.Connection):
+            if self.conn is not None:
+                raise KGTKException('invalid sqlite connection object: %s' % self.conn)
+            if self.dbfile is None:
+                raise KGTKException('no sqlite DB file or connection object provided')
+            if not os.path.exists(self.dbfile) and not create:
+                raise KGTKException('sqlite DB file does not exist: %s' % self.dbfile)
         self.user_functions = set()
         self.init_meta_tables()
         self.configure()
