@@ -1315,6 +1315,37 @@ SqliteStore.register_user_function('kgtk_null_to_empty', 1, kgtk_null_to_empty, 
 SqliteStore.register_user_function('kgtk_empty_to_null', 1, kgtk_empty_to_null, deterministic=True)
 
 
+# Math:
+
+# Temporary Python implementation of SQLite math built-ins until they become standardly available.
+# Should happen once SQLite3 3.35.0 is used by Python - or soon thereafter.  Once we've determined
+# the cutoff point we can make the function registration dependent on 'sqlite3.version'.
+# User-defined functions override built-ins, which means this should work even after math built-ins
+# come online - we hope.
+
+# minor trickery so we only import the math module when we absolutely have to:
+math_module = sys.modules.get('math')
+
+def import_math_module():
+    global math_module
+    import math
+    math_module = math
+
+def math_log2(x):
+    """Implement the SQLite3 built-in 'log2' via Python.
+    """
+    try:
+        return math_module.log2(x)
+    except:
+        # we need the exception robustness primarily to mirror what SQLite3
+        # is doing, but we can also exploit it for lazy module importing:
+        if math_module is None:
+            import_math_module()
+            return math_log2(x)
+    
+SqliteStore.register_user_function('log2', 1, math_log2, deterministic=True)
+        
+
 ### Experimental transitive taxonomy relation indexing:
 
 @lru_cache(maxsize=1000)
