@@ -1855,8 +1855,8 @@ use the `id` of the base edge `r` as the `node1` of the qualifier edge
 ```
 kgtk query -i $WORKS -i $QUALS -i $PROPS  \
      --match "work: (x)-[r {label: rl}]->(y),  \
-            qual: (r)-[q {label: ql}]->(time), \
-            prop: (ql)-[:member]->(:set1)" \
+              qual: (r)-[q {label: ql}]->(time), \
+              prop: (ql)-[:member]->(:set1)" \
      --where "time.kgtk_date_year <= 2000" \
      --return "r as id, x, rl, y, ql as trel, time as time"
 ```
