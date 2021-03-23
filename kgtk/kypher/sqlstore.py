@@ -1101,6 +1101,40 @@ SqliteStore.register_user_function('kgtk_date_precision', 1, kgtk_date_precision
 
 # Number and quantity literals:
 
+sqlite3_max_integer = +2 ** 63 - 1
+sqlite3_min_integer = -2 ** 63
+
+def to_sqlite3_int(x):
+    """Similar to Python 'int' but map numbers outside the 64-bit range onto their extremes.
+    This is identical to what SQLite's 'cast' function does for numbers outside the range.
+    """
+    x = int(x)
+    if x > sqlite3_max_integer:
+        return sqlite3_max_integer
+    elif x < sqlite3_min_integer:
+        return sqlite3_min_integer
+    else:
+        return x
+
+def to_sqlite3_float(x):
+    """Identical to Python 'float', maps 'x' onto an 8-byte IEEE floating point number.
+    """
+    # TO DO: this might need more work to do the right thing at the boundaries
+    #        and with infinity values, see 'sys.float_info'; seems to work
+    return float(x)
+
+def to_sqlite3_int_or_float(x):
+    """Similar to Python 'int' but map numbers outside the 64-bit range onto floats.
+    """
+    x = int(x)
+    if x > sqlite3_max_integer:
+        return float(x)
+    elif x < sqlite3_min_integer:
+        return float(x)
+    else:
+        return x
+
+
 def kgtk_number(x):
     """Return True if 'x' is a dimensionless KGTK number literal.
     """
@@ -1144,9 +1178,9 @@ def kgtk_quantity_number(x):
         if m:
             numeral = m.group('number')
             if float_numeral_regex.match(numeral):
-                return float(numeral)
+                return to_sqlite3_float(numeral)
             else:
-                return int(numeral)
+                return to_sqlite3_int_or_float(numeral)
             
 def kgtk_quantity_number_int(x):
     """Return the number value of a KGTK quantity literal as an int.
@@ -1156,9 +1190,9 @@ def kgtk_quantity_number_int(x):
         if m:
             numeral = m.group('number')
             if float_numeral_regex.match(numeral):
-                return int(float(numeral))
+                return to_sqlite3_int(float(numeral))
             else:
-                return int(numeral)
+                return to_sqlite3_int(numeral)
             
 def kgtk_quantity_number_float(x):
     """Return the number value component of a KGTK quantity literal as a float.
@@ -1168,10 +1202,10 @@ def kgtk_quantity_number_float(x):
         if m:
             numeral = m.group('number')
             if float_numeral_regex.match(numeral):
-                return float(numeral)
+                return to_sqlite3_float(numeral)
             else:
                 # because the numeral could be in octal or hex:
-                return float(int(numeral))
+                return to_sqlite3_float(int(numeral))
 
 def kgtk_quantity_si_units(x):
     """Return the SI-units component of a KGTK quantity literal.
@@ -1214,7 +1248,7 @@ def kgtk_quantity_low_tolerance(x):
         if m:
             lowtol = m.group('low_tolerance')
             if lowtol:
-                return float(lowtol)
+                return to_sqlite3_float(lowtol)
             
 def kgtk_quantity_high_tolerance(x):
     """Return the high tolerance component of a KGTK quantity literal as a float.
@@ -1224,7 +1258,7 @@ def kgtk_quantity_high_tolerance(x):
         if m:
             hightol = m.group('high_tolerance')
             if hightol:
-                return float(hightol)
+                return to_sqlite3_float(hightol)
 
 SqliteStore.register_user_function('kgtk_number', 1, kgtk_number, deterministic=True)
 SqliteStore.register_user_function('kgtk_quantity', 1, kgtk_quantity, deterministic=True)
@@ -1259,7 +1293,7 @@ def kgtk_geo_coords_lat(x):
     if isinstance(x, str):
         m = KgtkValue.lax_location_coordinates_re.match(x)
         if m:
-            return float(m.group('lat'))
+            return to_sqlite3_float(m.group('lat'))
         
 def kgtk_geo_coords_long(x):
     """Return the longitude component of a KGTK geo coordinates literal as a float.
@@ -1267,7 +1301,7 @@ def kgtk_geo_coords_long(x):
     if isinstance(x, str):
         m = KgtkValue.lax_location_coordinates_re.match(x)
         if m:
-            return float(m.group('lon'))
+            return to_sqlite3_float(m.group('lon'))
 
 SqliteStore.register_user_function('kgtk_geo_coords', 1, kgtk_geo_coords, deterministic=True)
 SqliteStore.register_user_function('kgtk_geo_coords_lat', 1, kgtk_geo_coords_lat, deterministic=True)
