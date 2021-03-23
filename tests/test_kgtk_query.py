@@ -1094,3 +1094,25 @@ class TestKGTKQuery(unittest.TestCase):
                 """egl1\tgl1\tgeoloc\t@-42.42/69.123\t69.123""",
                 """egl2\tgl2\tgeoloc\t@19.42/-69.123e-1\t-6.9123"""]
         self.assert_literal_access_query_result(query, result)
+
+    def test_kgtk_query_literal_access_big_numbers(self):
+        """Test overflow from very long integer values and parsing of floating point constants.
+        """
+        query = """kgtk query -i {LITERALS} -o {OUTPUT} --graph-cache {DB}
+                        --match  '(n1)-[r]->(v)' --limit 1
+                        --return 'kgtk_quantity_number("+162000000000000000000000Q122922") as n1, \
+                                  kgtk_quantity_number("-162000000000000000000000Q122922") as n2, \
+                                  kgtk_quantity_number_int("+162000000000000000000000Q122922") as n3, \
+                                  kgtk_quantity_number_int("+162000000000000000000000Q122922") as n4, \
+                                  kgtk_quantity_number_float("+162000000000000000000000Q122922") as n5, \
+                                  kgtk_quantity_number_float("-162000000000000000000000Q122922") as n6, \
+                                  1.7976931348623157e+308 as f1, +1.7976931348623157e+308 as f2, -1.7976931348623157e+308 as f3, \
+                                  2.2250738585072014e-308 as f4, +2.2250738585072014e-308 as f5, -2.2250738585072014e-308 as f6 \
+                                 '
+                """
+        # TO DO: we might need to make this test more tolerant to work around any floating point precision issues:
+        result=["""n1\tn2\tn3\tn4\tn5\tn6\tf1\tf2\tf3\tf4\tf5\tf6""",
+                """1.62e+23\t-1.62e+23\t9223372036854775807\t9223372036854775807\t1.62e+23\t-1.62e+23"""
+                + """\t1.7976931348623157e+308\t1.7976931348623157e+308\t-1.7976931348623157e+308\t"""
+                + """2.2250738585072014e-308\t2.2250738585072014e-308\t-2.2250738585072014e-308"""]
+        self.assert_literal_access_query_result(query, result)

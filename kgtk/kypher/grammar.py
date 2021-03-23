@@ -350,9 +350,9 @@ KYPHER_GRAMMAR = r"""
     DoubleLiteral = ExponentDecimalReal
                   | RegularDecimalReal
 
-    ExponentDecimalReal = <(DecimalInteger | RegularDecimalReal) E DecimalInteger>:ds -> float(ds)
+    ExponentDecimalReal = <(RegularDecimalReal | DecimalInteger) E ('+' | '-')? DecimalInteger>:ds -> float(ds)
 
-    RegularDecimalReal = <digit+ '.' digit+>:ds -> float(ds)
+    RegularDecimalReal = (<digit+ '.' digit+> | <digit+ '.'> | <'.' digit+>):ds -> float(ds)
 
     SymbolicName = UnescapedSymbolicName
                  | EscapedSymbolicName

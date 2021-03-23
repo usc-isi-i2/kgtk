@@ -472,16 +472,16 @@ class DocUpdater():
                     stdout_block_count += 1
                 else:
                     if self.verbose:
-                        print ("No table or stdout block found for stdout output", file=self.error_file, flush=True)
+                        print (">>> No table or stdout block found for stdout output", file=self.error_file, flush=True)
                     unexpected_stdout_count += 1
             else:
                 if table_begin > 0:
                     if self.verbose:
-                        print ("No stdout output found for table", file=self.error_file, flush=True)
+                        print (">>> No stdout output found for table", file=self.error_file, flush=True)
                     missed_table_count += 1
                 elif stdout_block_begin > 0:
                     if self.verbose:
-                        print ("No stdout output found for stdout block", file=self.error_file, flush=True)
+                        print (">>> No stdout output found for stdout block", file=self.error_file, flush=True)
                     missed_stdout_block_count += 1
 
             new_error_lines: typing.List[str] = result.stderr.splitlines(keepends=True)
@@ -508,11 +508,11 @@ class DocUpdater():
                     expected_error_count += 1
                 else:
                     if self.verbose:
-                        print ("No code block found for error output", file=self.error_file, flush=True)
+                        print (">>> No code block found for error output", file=self.error_file, flush=True)
                     unexpected_error_count += 1
             elif code_block_begin >= 0:
                 if self.verbose:
-                    print ("No error output found for code block", file=self.error_file, flush=True)
+                    print (">>> No error output found for code block", file=self.error_file, flush=True)
                 missed_error_count += 1
 
     def process(self, md_file: Path):
