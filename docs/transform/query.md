@@ -1638,6 +1638,11 @@ example, `x.kgtk_lqstring_text` instead of `kgtk_lqstring_text(x)`.
 | kgtk_quantity_low_tolerance(x)    | Return the low tolerance component of a KGTK quantity literal as a float.        |
 | kgtk_quantity_high_tolerance(x)   | Return the high tolerance component of a KGTK quantity literal as a float.       |
 
+!!! note
+    Functions that return numeric values are restricted to 8-byte integers and 8-byte IEEE floats.
+    Values that fall outside those ranges will be mapped onto floats when allowed or clamped to
+    the respective data type boundary values.
+
 
 #### Functions on KGTK geo coordinates
 
