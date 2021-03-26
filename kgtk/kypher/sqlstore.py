@@ -5,6 +5,8 @@ SQLStore to support Kypher queries over KGTK graphs.
 import sys
 import os.path
 import sqlite3
+# sqlite3 already loads math, so no extra cost:
+import math
 from   odictliteral import odict
 import time
 import csv
@@ -14,6 +16,7 @@ import pprint
 
 import sh
 
+# this is expensive to import (120ms), so maybe make it lazy:
 from   kgtk.value.kgtkvalue import KgtkValue
 from   kgtk.exceptions import KGTKException
 
@@ -1357,28 +1360,261 @@ SqliteStore.register_user_function('kgtk_empty_to_null', 1, kgtk_empty_to_null, 
 # User-defined functions override built-ins, which means this should work even after math built-ins
 # come online - we hope.
 
-# minor trickery so we only import the math module when we absolutely have to:
-math_module = sys.modules.get('math')
-
-def import_math_module():
-    global math_module
-    import math
-    math_module = math
-
-def math_log2(x):
-    """Implement the SQLite3 built-in 'log2' via Python.
+def math_acos(x):
+    """"Implement the SQLite3 math built-in 'acos' via Python.
     """
     try:
-        return math_module.log2(x)
+        return math.acos(x)
     except:
-        # we need the exception robustness primarily to mirror what SQLite3
-        # is doing, but we can also exploit it for lazy module importing:
-        if math_module is None:
-            import_math_module()
-            return math_log2(x)
-    
+        pass
+
+def math_acosh(x):
+    """Implement the SQLite3 math built-in 'acosh' via Python.
+    """
+    try:
+        return math.acosh(x)
+    except:
+        pass
+
+def math_asin(x):
+    """Implement the SQLite3 math built-in 'asin' via Python.
+    """
+    try:
+        return math.asin(x)
+    except:
+        pass
+
+def math_asinh(x):
+    """Implement the SQLite3 math built-in 'asinh' via Python.
+    """
+    try:
+        return math.asinh(x)
+    except:
+        pass
+
+def math_atan(x):
+    """Implement the SQLite3 math built-in 'atan' via Python.
+    """
+    try:
+        return math.atan(x)
+    except:
+        pass
+
+def math_atan2(x, y):
+    """Implement the SQLite3 math built-in 'atan2' via Python.
+    """
+    try:
+        return math.atan2(y, x) # flips args
+    except:
+        pass
+
+def math_atanh(x):
+    """Implement the SQLite3 math built-in 'atanh' via Python.
+    """
+    try:
+        return math.atanh(x)
+    except:
+        pass
+
+# alias: ceiling(X)
+def math_ceil(x):
+    """Implement the SQLite3 math built-in 'ceil' via Python.
+    """
+    try:
+        return math.ceil(x)
+    except:
+        pass
+
+def math_cos(x):
+    """Implement the SQLite3 math built-in 'cos' via Python.
+    """
+    try:
+        return math.cos(x)
+    except:
+        pass
+
+def math_cosh(x):
+    """Implement the SQLite3 math built-in 'cosh' via Python.
+    """
+    try:
+        return math.cosh(x)
+    except:
+        pass
+
+def math_degrees(x):
+    """Implement the SQLite3 math built-in 'degrees' via Python.
+    Convert value X from radians into degrees. 
+    """
+    try:
+        return math.degrees(x)
+    except:
+        pass
+
+def math_exp(x):
+    """Implement the SQLite3 math built-in 'exp' via Python.
+    """
+    try:
+        return math.exp(x)
+    except:
+        pass
+
+def math_floor(x):
+    """Implement the SQLite3 math built-in 'floor' via Python.
+    """
+    try:
+        return math.floor(x)
+    except:
+        pass
+
+# NOTE: naming and invocation of logarithm functions is different from
+# standard SQL or Python math for that matter (more like Postgres).
+
+def math_ln(x):
+    """Implement the SQLite3 math built-in 'ln' via Python.
+    """
+    try:
+        return math.log(x)
+    except:
+        pass
+
+# alias: log(X)
+def math_log10(x):
+    """Implement the SQLite3 math built-in 'log10' via Python.
+    """
+    try:
+        return math.log10(x)
+    except:
+        pass
+
+def math_logb(b, x):
+    """Implement the SQLite3 math built-in 'log(b,x)' via Python.
+    NOTE: this uses a different name, since we cannot support optionals
+    (which would require special handling in the query translator).
+    This means the function needs to stay even if we use the real built-ins.
+    """
+    try:
+        return math.log(x, b)
+    except:
+        pass
+
+def math_log2(x):
+    """Implement the SQLite3 math built-in 'log2' via Python.
+    """
+    try:
+        return math.log2(x)
+    except:
+        pass
+
+def math_mod(x, y):
+    """Implement the SQLite3 math built-in 'mod' via Python.
+    """
+    try:
+        return math.fmod(x, y) # preferred over 'x % y' for floats
+    except:
+        pass
+
+def math_pi():
+    """Implement the SQLite3 math built-in 'pi' via Python.
+    """
+    return math.pi
+
+# alias: power(X,Y)
+def math_pow(x, y):
+    """Implement the SQLite3 math built-in 'pow' via Python.
+    """
+    try:
+        return math.pow(x, y)
+    except:
+        pass
+
+def math_radians(x):
+    """Implement the SQLite3 math built-in 'radians' via Python.
+    """
+    try:
+        return math.radians(x)
+    except:
+        pass
+
+def math_sin(x):
+    """Implement the SQLite3 math built-in 'sin' via Python.
+    """
+    try:
+        return math.sin(x)
+    except:
+        pass
+
+def math_sinh(x):
+    """Implement the SQLite3 math built-in 'sinh' via Python.
+    """
+    try:
+        return math.sinh(x)
+    except:
+        pass
+
+def math_sqrt(x):
+    """Implement the SQLite3 math built-in 'sqrt' via Python.
+    """
+    try:
+        return math.sqrt(x)
+    except:
+        pass
+
+def math_tan(x):
+    """Implement the SQLite3 math built-in 'tan' via Python.
+    """
+    try:
+        return math.tan(x)
+    except:
+        pass
+
+def math_tanh(x):
+    """Implement the SQLite3 math built-in 'tanh' via Python.
+    """
+    try:
+        return math.tanh(x)
+    except:
+        pass
+
+def math_trunc(x):
+    """Implement the SQLite3 math built-in 'trunc' via Python.
+    """
+    try:
+        return math.trunc(x)
+    except:
+        pass
+
+SqliteStore.register_user_function('acos', 1, math_acos, deterministic=True)
+SqliteStore.register_user_function('acosh', 1, math_acosh, deterministic=True)
+SqliteStore.register_user_function('asin', 1, math_asin, deterministic=True)
+SqliteStore.register_user_function('asinh', 1, math_asinh, deterministic=True)
+SqliteStore.register_user_function('atan', 1, math_atan, deterministic=True)
+SqliteStore.register_user_function('atan2', 2, math_atan2, deterministic=True)
+SqliteStore.register_user_function('atanh', 1, math_atanh, deterministic=True)
+SqliteStore.register_user_function('ceil', 1, math_ceil, deterministic=True)
+SqliteStore.register_user_function('ceiling', 1, math_ceil, deterministic=True)
+SqliteStore.register_user_function('cos', 1, math_cos, deterministic=True)
+SqliteStore.register_user_function('cosh', 1, math_cosh, deterministic=True)
+SqliteStore.register_user_function('degrees', 1, math_degrees, deterministic=True)
+SqliteStore.register_user_function('exp', 1, math_exp, deterministic=True)
+SqliteStore.register_user_function('floor', 1, math_floor, deterministic=True)
+SqliteStore.register_user_function('ln', 1, math_ln, deterministic=True)
+SqliteStore.register_user_function('log', 1, math_log10, deterministic=True)
+SqliteStore.register_user_function('log10', 1, math_log10, deterministic=True)
 SqliteStore.register_user_function('log2', 1, math_log2, deterministic=True)
-        
+# this one needs to stay if we conditionalize on availability of real math built-ins:
+SqliteStore.register_user_function('logb', 2, math_logb, deterministic=True)
+SqliteStore.register_user_function('mod', 2, math_mod, deterministic=True)
+SqliteStore.register_user_function('pi', 0, math_pi, deterministic=True)
+SqliteStore.register_user_function('pow', 2, math_pow, deterministic=True)
+SqliteStore.register_user_function('power', 2, math_pow, deterministic=True)
+SqliteStore.register_user_function('radians', 1, math_radians, deterministic=True)
+SqliteStore.register_user_function('sin', 1, math_sin, deterministic=True)
+SqliteStore.register_user_function('sinh', 1, math_sinh, deterministic=True)
+SqliteStore.register_user_function('sqrt', 1, math_sqrt, deterministic=True)
+SqliteStore.register_user_function('tan', 1, math_tan, deterministic=True)
+SqliteStore.register_user_function('tanh', 1, math_tanh, deterministic=True)
+SqliteStore.register_user_function('trunc', 1, math_trunc, deterministic=True)
+
 
 ### Experimental transitive taxonomy relation indexing:
 
