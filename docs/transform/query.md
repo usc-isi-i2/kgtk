@@ -1560,6 +1560,23 @@ to their full documentation.
 | upper(x)                  | Convert `x` to upper case                         ([full doc](https://sqlite.org/lang_corefunc.html#upper)).   |
 
 
+#### SQLite built-in math functions
+
+All of [SQLite3's built-in math
+functions](https://www.sqlite.org/lang_mathfunc.html) can be used.
+The implementation is either native (once available with version
+3.35.0 or later), or through equivalent Python functions.  For a
+comprehensive list of those functions please follow the link.  The
+only difference is that SQLite's two-argument version of the general
+logarithm `log(B, X)` has been renamed into `logb(B, X)`, since the
+function registration API cannot support optional arguments.
+
+!!! note
+    Some of the built-in math functions use slightly different naming
+    or argument order than standard SQL or the Python `math` module,
+    so be sure to carefully follow the documentation.
+
+
 #### SQLite built-in aggregation functions
 
 TO DO
