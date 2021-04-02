@@ -144,6 +144,14 @@ cd kgtk/tests
 python -W ignore -m unittest discover
 ```
 
+## KGTK Text Search API
+
+The documentation for the KGTK Text Search API is [here](https://github.com/usc-isi-i2/kgtk-search)
+
+## KGTK Semantic Similarity API
+
+The documentation for the KGTK Semantic Similarity API is [here](https://github.com/usc-isi-i2/wikidata-semantic-similarity)
+
 ## How to cite
 
 ```
