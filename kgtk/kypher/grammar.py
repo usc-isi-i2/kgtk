@@ -62,8 +62,13 @@ KYPHER_GRAMMAR = r"""
 
     SingleQuery = Match?:m WS With?:w WS Return:r -> ["SingleQuery", m, w, r]
 
-    # TODO: Not sure if I need to handle optional !!
-    Match = (O P T I O N A L SP)? M A T C H WS Pattern:p (WS Where)?:w -> ["Match", p, w]
+    StrictMatch = M A T C H WS Pattern:p (WS Where)?:w -> ["StrictMatch", p, w]
+
+    OptionalMatch = O P T I O N A L WS M A T C H WS Pattern:p (WS Where)?:w -> ["OptionalMatch", p, w]
+
+    # for Kypher we require exactly one strict match and zero or more optional matches following it:
+
+    Match = StrictMatch:head (WS OptionalMatch)*:tail -> ["Match", head] + tail
 
     Unwind = U N W I N D WS Expression:ex SP A S SP Variable:v -> ["Unwind", ex, v]
 
