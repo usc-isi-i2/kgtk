@@ -46,6 +46,25 @@ class InputOptionAction(argparse.Action):
         input_options.setdefault(input_file, {})[self.dest] = values
         setattr(namespace, 'input_file_options', input_options)
 
+class MatchOptionAction(argparse.Action):
+    """Special-purpose argparse action that handles --match and --optional match
+    and associates any --where option with the appropriate match preceding it.
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        match_options = getattr(namespace, 'match_options', []) or []
+        if option_string in ('--match', '--opt', '--optional'):
+            match_options.append([option_string, values, None])
+            # for --match/--where use the same destinations as before:
+            if option_string == '--match':
+                setattr(namespace, self.dest, values)
+        elif option_string == '--where':
+            if len(match_options) < 1 or match_options[-1][2] is not None:
+                raise KGTKException('out-of-place --where option: %s' % values)
+            match_options[-1][2] = values
+            if match_options[-1][0] == '--match':
+                setattr(namespace, self.dest, values)
+        setattr(namespace, 'match_options', match_options)
+
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.accept_shared_argument('_debug')
     parser.accept_shared_argument('_expert')
@@ -60,10 +79,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.add_argument('--query', default=None, action='store', dest='query',
                         help="complete Kypher query combining all clauses," +
                         " if supplied, all other specialized clause arguments will be ignored")
-    parser.add_argument('--match', metavar='PATTERN', default='()', action='store', dest='match',
+    parser.add_argument('--match', metavar='PATTERN', default='()', action=MatchOptionAction, dest='match',
                         help="MATCH pattern of a Kypher query, defaults to universal node pattern `()'")
-    parser.add_argument('--where', metavar='CLAUSE', default=None, action='store', dest='where',
-                        help="WHERE clause of a Kypher query")
+    parser.add_argument('--where', metavar='CLAUSE', default=None, action=MatchOptionAction, dest='where',
+                        help="WHERE clause to a preceding --match or --optional clause")
+    parser.add_argument('--opt', '--optional', metavar='PATTERN', default=None, action=MatchOptionAction,
+                        help="OPTIONAL MATCH pattern(s) of a Kypher query (zero or more)")
     parser.add_argument('--return', metavar='CLAUSE', default='*', action='store', dest='return_',
                         help="RETURN clause of a Kypher query (defaults to *)")
     parser.add_argument('--order-by', metavar='CLAUSE', default=None, action='store', dest='order',
@@ -165,6 +186,7 @@ def run(input_files: KGTKFiles,
                                       options=options.get('input_file_options'),
                                       query=options.get('query'),
                                       match=options.get('match'),
+                                      optionals=[(pat, where) for (opt, pat, where) in options.get('match_options', []) if opt != '--match'],
                                       where=options.get('where'),
                                       ret=options.get('return_'),
                                       order=options.get('order'),
