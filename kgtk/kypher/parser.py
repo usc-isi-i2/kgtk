@@ -656,13 +656,42 @@ class PathPattern(QueryElement):
 
 # Query top level clauses:
 
-class Match(QueryElement):
-    ast_name = 'Match'
+class StrictMatch(QueryElement):
+    ast_name = 'StrictMatch'
 
     def __init__(self, query, pattern, where):
         self._query = query
         self.pattern = intern_ast_list(query, pattern)
         self.where = intern_ast(query, where)
+        self.default_graph = None
+        self.pattern_clauses = None
+
+    def normalize(self):
+        """Compute a list of [<NodePattern ...> <RelationshipPattern --> ...> <NodePattern ...>] clauses
+        where each pattern element has a named or anonymous variable and optional single label.  All
+        property elements have been translated into additional normalized match clauses.  Also propagates
+        graph information which defaults to 'self.default_graph'.
+        """
+        if self.pattern_clauses is None:
+            self.pattern_clauses = []
+            current_graph = self.default_graph
+            for pathpat in self.pattern:
+                for normpath in pathpat.normalize():
+                    normpath = normpath.pattern
+                    current_graph = normpath[0].graph or current_graph
+                    normpath[0].graph = current_graph
+                    self.pattern_clauses.append(normpath)
+        return self
+
+    def get_pattern_clauses(self, default_graph=None):
+        self.default_graph=default_graph
+        return self.normalize().pattern_clauses
+
+    def get_where_clause(self):
+        return self.normalize().where
+
+class OptionalMatch(StrictMatch):
+    ast_name = 'OptionalMatch'
 
 class Where(QueryElement):
     ast_name = 'Where'
@@ -671,6 +700,13 @@ class Where(QueryElement):
         self._query = query
         self.expression = intern_ast(query, expression)
 
+class Match(QueryElement):
+    ast_name = 'Match'
+
+    def __init__(self, query, strict, *optionals):
+        self._query = query
+        self.strict = intern_ast(query, strict)
+        self.optionals = [intern_ast(query, opt) for opt in optionals]
 
 class Skip(QueryElement):
     ast_name = 'Skip'
@@ -806,7 +842,6 @@ class KypherQuery(object):
         self.query = None
         self.variables = {}
         self.simplified = False
-        self.match_clauses = None
         self.parse = Parser(query_string)
         self.query = intern_ast(self, self.parse.Kypher())
 
@@ -822,32 +857,20 @@ class KypherQuery(object):
             self.simplified = True
         return self
 
-    def get_match_pattern(self):
-        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
-        return self.query.match.pattern
-
-    def get_match_clauses(self):
-        """Returns a list of [<NodePattern ...> <RelationshipPattern --> ...> <NodePattern ...>] clauses
-        where each pattern element has a named or anonymous variable and optional single label.  All
-        property elements have been translated into additional normalized match clauses (not yet).
+    def get_match_clause(self):
+        """Return the strict match clause of this query (currently we require exactly one).
         """
-        if self.match_clauses is None:
-            self.simplify()
-            self.match_clauses = []
-            current_graph = None
-            for pathpat in self.get_match_pattern():
-                for normpath in pathpat.normalize():
-                    normpath = normpath.pattern
-                    current_graph = normpath[0].graph or current_graph
-                    normpath[0].graph = current_graph
-                    self.match_clauses.append(normpath)
-        return self.match_clauses
-
-    def get_where_clause(self):
         assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
-        self.simplify()
-        where = self.query.match.where
-        return where
+        match_clause = self.simplify().query.match.strict
+        assert isinstance(match_clause, StrictMatch), 'Missing strict match clause'
+        return match_clause
+
+    def get_optional_match_clauses(self):
+        """Return the optional match clauses of this query (zero or more).
+        """
+        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
+        optional_clauses = self.simplify().query.match.optionals
+        return optional_clauses
 
     def get_return_clause(self):
         assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
