@@ -166,9 +166,9 @@ def dwim_to_lqstring_para(x):
 
 class KgtkQuery(object):
 
-    def __init__(self, files, store, options=None,
-                 query=None, match='()', where=None, ret='*',
-                 order=None, skip=None, limit=None,
+    def __init__(self, files, store, options=None, query=None,
+                 match='()', where=None, optionals=None,
+                 ret='*', order=None, skip=None, limit=None,
                  parameters={}, index='auto', loglevel=0):
         # normalize to strings in case we get path objects:
         self.files = [str(f) for f in listify(files)]
@@ -181,15 +181,24 @@ class KgtkQuery(object):
             # supplying a query through individual clause arguments might be a bit easier,
             # since they can be in any order, can have defaults, are easier to shell-quote, etc.:
             query = ''
+            # for now we allow/require exactly one strict match pattern, even though in Cypher
+            # there could be any number and conceivably optionals could come before strict:
             query += match and ' MATCH ' + match or ''
             query += where and ' WHERE ' + where or ''
+            # optionals is a list of match pattern/where pairs, where single-element lists can be atoms:
+            for omatch in listify(optionals):
+                omatch = listify(omatch)
+                query += ' OPTIONAL MATCH ' + omatch[0]
+                if len(omatch) > 1 and omatch[1] is not None:
+                    query += ' WHERE ' + omatch[1]
             query += ret and ' RETURN ' + ret or ''
             query += order and ' ORDER BY ' + order or ''
             query += skip and ' SKIP ' + skip or ''
             query += limit and ' LIMIT ' + limit or ''
+        self.log(2, 'Kypher:' + query)
         self.query = parser.intern(query)
-        self.match_clauses = self.query.get_match_clauses()
-        self.where_clause = self.query.get_where_clause()
+        self.match_clause = self.query.get_match_clause()
+        self.optional_clauses = self.query.get_optional_match_clauses()
         self.return_clause = self.query.get_return_clause()
         self.order_clause = self.query.get_order_clause()
         self.skip_clause = self.query.get_skip_clause()
@@ -684,6 +693,8 @@ class KgtkQuery(object):
                 # the ID check needs to be generalized:
                 self.store.ensure_graph_index(graph, column, unique=column=='id', explain=explain)
 
+    # TO DO: generalize this to translate OPTIONAL MATCH clauses, everything else is in place
+    
     def translate_to_sql(self):
         graphs = set()        # the set of graph table names with aliases referenced by this query
         litmap = {}           # maps Kypher literals onto parameter placeholders
@@ -693,14 +704,14 @@ class KgtkQuery(object):
         parameters = None     # maps ? parameters in sequence onto actual query parameters
         
         # translate clause top-level info:
-        for i, clause in enumerate(self.match_clauses):
+        for i, clause in enumerate(self.match_clause.get_pattern_clauses()):
             graph = self.get_pattern_clause_graph(clause)
             graph_alias = '%s_c%d' % (graph, i+1) # per-clause graph table alias for self-joins
             graphs.add((graph, graph_alias))
             self.pattern_clause_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
             
         # translate properties:
-        for i, clause in enumerate(self.match_clauses):
+        for i, clause in enumerate(self.match_clause.get_pattern_clauses()):
             graph = self.get_pattern_clause_graph(clause)
             graph_alias = '%s_c%d' % (graph, i+1) # per-clause graph table alias for self-joins
             self.pattern_clause_props_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
@@ -711,14 +722,14 @@ class KgtkQuery(object):
         query = io.StringIO()
         query.write('SELECT %s\nFROM %s' % (select, graph_tables))
         
-        if len(restrictions) > 0 or len(joins) > 0 or self.where_clause is not None:
+        if len(restrictions) > 0 or len(joins) > 0 or self.match_clause.get_where_clause() is not None:
             query.write('\nWHERE TRUE')
         for (g, c), val in sorted(list(restrictions)):
             query.write('\nAND %s.%s=%s' % (g, sql_quote_ident(c), val))
         for (g1, c1), (g2, c2) in sorted(list(joins)):
             query.write('\nAND %s.%s=%s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2)))
 
-        where = self.where_clause_to_sql(self.where_clause, litmap, varmap)
+        where = self.where_clause_to_sql(self.match_clause.get_where_clause(), litmap, varmap)
         where and query.write('\nAND ' + where)
         group_by and query.write('\n' + group_by)
         order = self.order_clause_to_sql(self.order_clause, litmap, varmap)
