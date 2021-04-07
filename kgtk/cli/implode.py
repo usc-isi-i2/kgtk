@@ -66,51 +66,51 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                                choices=KgtkValueFields.OPTIONAL_DEFAULT_FIELD_NAMES,
                                default=None)
 
-    parser.add_argument(      "--overwrite", dest="overwrite_column",
+    parser.add_argument(      "--overwrite", dest="overwrite_column", metavar='True/False',
                               help="Indicate that it is OK to overwrite an existing imploded column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
-    parser.add_argument(      "--validate", dest="validate",
+    parser.add_argument(      "--validate", dest="validate", metavar='True/False',
                               help="Validate imploded values. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
-    parser.add_argument(      "--escape-pipes", dest="escape_pipes",
+    parser.add_argument(      "--escape-pipes", dest="escape_pipes", metavar='True/False',
                               help="When true, pipe characters (|) need to be escaped (\\|) per KGTK file format. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--quantities-include-numbers", dest="quantities_include_numbers",
+    parser.add_argument(      "--quantities-include-numbers", dest="quantities_include_numbers", metavar='True/False',
                               help="When true, numbers are acceptable quantities. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
-    parser.add_argument(      "--general-strings", dest="general_strings",
+    parser.add_argument(      "--general-strings", dest="general_strings", metavar='True/False',
                               help="When true, strings may include language qualified strings. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
-    parser.add_argument(      "--remove-prefixed-columns", dest="remove_prefixed_columns",
+    parser.add_argument(      "--remove-prefixed-columns", dest="remove_prefixed_columns", metavar='True/False',
                               help="When true, remove all columns beginning with the prefix from the output file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--ignore-unselected-types", dest="ignore_unselected_types",
+    parser.add_argument(      "--ignore-unselected-types", dest="ignore_unselected_types", metavar='True/False',
                               help="When true, input records with valid but unselected data types will be passed through to output. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
-    parser.add_argument(      "--retain-unselected-types", dest="retain_unselected_types",
+    parser.add_argument(      "--retain-unselected-types", dest="retain_unselected_types", metavar='True/False',
                               help="When true, input records with valid but unselected data types will be retain existing data on output. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
-    parser.add_argument(      "--build-id", dest="build_id",
+    parser.add_argument(      "--build-id", dest="build_id", metavar='True/False',
                               help="Build id values in an id column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--show-data-types", dest="show_data_types",
+    parser.add_argument(      "--show-data-types", dest="show_data_types", metavar='True/False',
                               help="Print the list of data types and exit. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--quiet", dest="quiet",
+    parser.add_argument(      "--quiet", dest="quiet", metavar='True/False',
                               help="When true, suppress certain complaints unless verbose. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    KgtkIdBuilderOptions.add_arguments(parser)
+    KgtkIdBuilderOptions.add_arguments(parser, expert=_expert)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)

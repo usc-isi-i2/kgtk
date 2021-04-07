@@ -16,5 +16,5 @@ kgtk ${KGTK_FLAGS} \
 / sort2 ${VERBOSE} \
      --gzip-command ${GZIP_CMD} \
      --extra "${SORT_EXTRAS}" \
-     --output-file ${DATADIR}/all.${SORTED_KGTK}
-
+     --output-file ${DATADIR}/all.${SORTED_KGTK} \
+| tee ${LOGDIR}/build-all-edges.log

@@ -1,7 +1,11 @@
-"""
-This runs the Posix sort command to sort KGTK files.
-A backgropund data processing pipeline is initiated that
-runs in parallel with the Python process.
+"""This KGTK command runs the Posix sort command to sort KGTK files.  In normal operation,
+the system sort program is used to sort the data, which is expected to provide
+good performance when properly configured.  The system sort program is run in
+a background data processing pipeline that runs in parallel with the Python
+control process.  The Python control process and the data processing pipeline
+interact in a clever way to allow the Python code to use KgtkReader to process
+the input file's header line without sending the rest of the data through
+Python's expensive I/O path.
 
 1) The data processing pipeline reads stdin or a named file.
    The named file is fed to the data processing pipeline by `cat`,
@@ -10,7 +14,7 @@ runs in parallel with the Python process.
 2) The header line is stripped out of the input stream by a
    shell `read` command.
 
-3) The header line is then coped to the output stream using a shell
+3) The header line is then copied to the output stream using a shell
    'printf' command.
 
 4) A copy of the header line is sent via a pipe to the Python control
@@ -19,17 +23,26 @@ runs in parallel with the Python process.
 5) The data processing pipeline then waits to read sort options
    from a second pipe.
 
-6) The Python control process feeds the header line to KgtkReader and
-   and builds the sort key options.
+6) The Python control process reads the header line from the dirst pipe
 
-6) The sort key options are sent from Python to the data processing pipeline
+7) The Python control process feeds the header line to KgtkReader.
+
+8) The Python control process builds the sort key options using
+   column indexes obtained from KgtkReader.
+
+9) The sort key options are sent from Python to the data processing pipeline
    via the second pipe.
 
-7) The data processing pipeline receives the sort command options via
+10) The data processing pipeline receives the sort command options via
    the shell `read` command, and passes them to the `sort` program.
 
-8) The sort command reads the rest of the input stream,
-   sorts it, and writes the sorted data ro the output stream.
+11) The sort command reads the rest of the input stream,
+    sorts it, and writes the sorted data to the output stream.
+
+An alternate mode of operation is available in which pure Python code is used
+to sort the input data.  This mode is more portable but slower and mor memory
+intensive than using the system sort program to sort the input KGTK file.
+
 """
 from argparse import Namespace, SUPPRESS
 import typing
@@ -65,16 +78,26 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            who='Output file to write to.')
 
     parser.add_argument('-c', '--column', '--columns', action='store', dest='columns', nargs='*',
-                        help="space and/or comma-separated list of column names to sort on. " +
+                        help="space and/or comma-separated list of column names to sort on (the key columns). " +
                         "(defaults to id for node files, " +
                         "(node1, label, node2) for edge files without ID, (id, node1, label, node2) for edge files with ID)")
 
     parser.add_argument(      '--locale', dest='locale', type=str, default='C',
                               help="LC_ALL locale controls the sorting order. (default=%(default)s)")
 
-    parser.add_argument('-r', '--reverse', dest='reverse', metavar="True|False",
-                        help="When True, generate output in reverse sort order. (default=%(default)s)",
+    parser.add_argument('-r', '--reverse', dest='reverse_sort', metavar="True|False",
+                        help="When True, generate output in reverse (descending) sort order.  All key columns are sorted in reverse order. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      '--reverse-columns', action='store', dest='reverse_columns', nargs='*',
+                        help="List specific key columns for reverse (descending) sorting. Overidden by --reverse. (default=none)")
+                       
+    parser.add_argument(      '--numeric', dest='numeric_sort', metavar="True|False",
+                        help="When True, generate output in numeric sort order. All key columns are sorted in numeric order. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      '--numeric-columns', action='store', dest='numeric_columns', nargs='*',
+                        help="List specific key columns for numeric sorting. Overridden by --numeric. (default=none)")
 
     parser.add_argument(      '--pure-python', dest='pure_python', metavar="True|False",
                         help="When True, sort in-memory with Python code. (default=%(default)s)",
@@ -164,7 +187,10 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         columns: typing.Optional[typing.List[str]] = None,
         locale: str = "C",
-        reverse: bool = False,
+        reverse_sort: bool = False,
+        reverse_columns: typing.Optional[typing.List[str]] = None,
+        numeric_sort: bool = False,
+        numeric_columns: typing.Optional[typing.List[str]] = None,
         pure_python: bool = False,
         extra: typing.Optional[str] = None,
 
@@ -207,6 +233,12 @@ def run(input_file: KGTKFiles,
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     def python_sort():
+        if numeric_columns is not None and len(numeric_columns) > 0:
+            raise KGTKException('Error: the pure Python sorter does not currently support numeric column sorts.')
+
+        if reverse_columns is not None and len(reverse_columns) > 0:
+            raise KGTKException('Error: the pure Python sorter does not currently support reverse column sorts.')
+
         if verbose:
             print("Opening the input file: %s" % str(input_path), file=error_file, flush=True)
         kr: KgtkReader = KgtkReader.open(input_path,
@@ -260,15 +292,23 @@ def run(input_file: KGTKFiles,
         if verbose:
             print("sorting keys: %s" % " ".join([str(x) for x in key_idxs]), file=error_file, flush=True)
 
+        if numeric_sort and len(key_idxs) > 1:
+            raise KGTKException('Error: the pure Python sorter does not currently support numeric sorts on multiple columns.')
 
-        lines: typing.MutableMapping[str, typing.List[str]] = dict()
+        lines: typing.MutableMapping[typing.Union[str, float], typing.List[typing.List[str]]] = dict()
 
         progress_startup()
-        key: str
+        key: typing.Union[str, float]
         row: typing.List[str]
         for row in kr:
             key = KgtkFormat.KEY_FIELD_SEPARATOR.join(row[idx] for idx in key_idxs)
-            lines[key] = row
+            if numeric_sort:
+                key = float(key)
+            if key in lines:
+                # There are multiple rows with the same key.  Make this a stable sort.
+                lines[key].append(row)
+            else:
+                lines[key] = [ row ]
         if verbose:
             print("\nRead %d data lines." % len(lines), file=error_file, flush=True)
 
@@ -277,8 +317,11 @@ def run(input_file: KGTKFiles,
                              mode=KgtkWriter.Mode[kr.mode.name],
                              verbose=verbose,
                              very_verbose=very_verbose)
-        for key in sorted(lines.keys()):
-            kw.write(lines[key])
+        
+        for key in sorted(lines.keys(), reverse=reverse_sort):
+            for row in lines[key]:
+                kw.write(row)
+
         kw.close()
         kr.close()
 
@@ -465,17 +508,26 @@ def run(input_file: KGTKFiles,
             print("KGTK header: %s" % " ".join(kr.column_names), file=error_file, flush=True)
 
         sort_options: str = ""
-        if reverse:
+        if reverse_sort:
             sort_options += " --reverse"
+        if numeric_sort:
+            sort_options += " --numeric"
 
         if extra is not None and len(extra) > 0:
             sort_options += " " + extra
 
+        # We will consume entries in reverse_columns and numeric_columns,
+        # then complain if any are left over.
+        if reverse_columns is not None:
+            reverse_columns = reverse_columns[:] # Protect against modifying a shared list.
+        if numeric_columns is not None:
+            numeric_columns = numeric_columns[:] # Protect against modifying a shared list.
+
+        column_name: str
         sort_idx: int
         if columns is not None and len(columns) > 0:
             # Process the list of column names, including splitting
             # comma-separated lists of column names.
-            column_name: str
             for column_name in columns:
                 column_name_2: str
                 for column_name_2 in column_name.split(","):
@@ -492,30 +544,80 @@ def run(input_file: KGTKFiles,
                         if column_name_2 not in kr.column_names:
                             kr.close()
                             cleanup()
-                            raise KGTKException("Unknown column_name %s" % column_name_2)
+                            raise KGTKException("Unknown column_name %s" % repr(column_name_2))
                         sort_idx = kr.column_name_map[column_name_2] + 1
                     sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                    if reverse_columns is not None and column_name_2 in reverse_columns:
+                        sort_options += "r"
+                        reverse_columns.remove(column_name_2)
+                    if numeric_columns is not None and column_name_2 in numeric_columns:
+                        sort_options += "n"
+                        numeric_columns.remove(column_name_2)
         else:
+            # TODO: support the case where the column name in reverse_columns
+            # or numeric_columns is an alias of the name used in the file header.
             if kr.is_node_file:
                 sort_idx = kr.id_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                column_name = kr.column_names[kr.id_column_idx]
+                if reverse_columns is not None and column_name in reverse_columns:
+                    sort_options += "r"
+                    reverse_columns.remove(column_name)
+                if numeric_columns is not None and column_name in numeric_columns:
+                    sort_options += "n"
+                    numeric_columns.remove(column_name)
 
             elif kr.is_edge_file:
                 if kr.id_column_idx >= 0:
                     sort_idx = kr.id_column_idx + 1
                     sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                    column_name = kr.column_names[kr.id_column_idx]
+                    if reverse_columns is not None and column_name in reverse_columns:
+                        sort_options += "r"
+                        reverse_columns.remove(column_name)
+                    if numeric_columns is not None and column_name in numeric_columns:
+                        sort_options += "n"
+                        numeric_columns.remove(column_name)
 
                 sort_idx = kr.node1_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                column_name = kr.column_names[kr.node1_column_idx]
+                if reverse_columns is not None and column_name in reverse_columns:
+                    sort_options += "r"
+                    reverse_columns.remove(column_name)
+                if numeric_columns is not None and column_name in numeric_columns:
+                    sort_options += "n"
+                    numeric_columns.remove(column_name)
 
                 sort_idx = kr.label_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                column_name = kr.column_names[kr.label_column_idx]
+                if reverse_columns is not None and column_name in reverse_columns:
+                    sort_options += "r"
+                    reverse_columns.remove(column_name)
+                if numeric_columns is not None and column_name in numeric_columns:
+                    sort_options += "n"
+                    numeric_columns.remove(column_name)
 
                 sort_idx = kr.node2_column_idx + 1
                 sort_options += " -k %d,%d" % (sort_idx, sort_idx)
+                column_name = kr.column_names[kr.node2_column_idx]
+                if reverse_columns is not None and column_name in reverse_columns:
+                    sort_options += "r"
+                    reverse_columns.remove(column_name)
+                if numeric_columns is not None and column_name in numeric_columns:
+                    numeric_columns.remove(column_name)
+                    sort_options += "n"
+
             else:
                 cleanup()
                 raise KGTKException("Unknown KGTK file mode, please specify the sorting columns.")
+
+        # Check for unconsumed entries in reverse_columns and numeric_columns:
+        if reverse_columns is not None and len(reverse_columns) > 0:
+            raise KGTKException("Unknown reverse column(s) %s" % " ".join([repr(column_name) for column_name in reverse_columns]))
+        if numeric_columns is not None and len(numeric_columns) > 0:
+            raise KGTKException("Unknown numeric column(s) %s" % " ".join([repr(column_name) for column_name in numeric_columns]))
 
         if verbose:
             print("sort options: %s" % sort_options, file=error_file, flush=True)

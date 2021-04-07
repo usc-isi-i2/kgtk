@@ -1,0 +1,9 @@
+node1	label	node2	id
+block1	colorname	red	
+block1	shape	cube	
+block2	colorname	green	
+block2	shape	sphere	
+block3	colorname	blue	
+block3	shape	cone	
+block4	colorname	yellow	
+block4	shape	pyramid	

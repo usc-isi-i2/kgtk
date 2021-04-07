@@ -6,9 +6,9 @@ Join two KGTK edge files or two KGTK node files.
 
 * The output file contains the union of the columns in the two
 input files, adjusted for predefined name aliasing.
-* Specify --left-join to get a left outer join.
-* Specify --right-join to get a right outer join.
-* Specify both to get a full outer join (equivalent to cat).
+* Specify `--left-join` to get a left outer join.
+* Specify `--right-join` to get a right outer join.
+* Specify both to get a full outer join (equivalent to [`kgtk cat`](../cat)).
 * Specify neither to get an inner join.
 * By default, node files are joined on the id column, while edge files are joined on the node1 column. The label and node2 columns may be added to the edge file join  criteria.  Alternatively, the left and right file join columns may be
   listed explicitly.
@@ -30,7 +30,7 @@ input files, adjusted for predefined name aliasing.
  * to perform a logical (set) operation on two sets of edges or nodes.
 
      * intersection (inner join, defined below)
-     * union (outer join, defined below; also, [`kgtk cat`](https:../cat))
+     * union (outer join, defined below; also, [`kgtk cat`](../cat))
 
 ### Left and Right Input Files
 
@@ -54,7 +54,7 @@ Following the terminology used for relational databases:
 | inner join | | The output file contains only left and right edges or nodes that satisfy the matching criteria discussed below.  This is equivalend to a logical intersection. |
 | left join | `--left-join` | The output file contains all of the left edges or nodes, and only the right edges or nodes that satisfy the matching criteria. |
 | right join | `--right-join` | The output file contains all of the right edges or nodes, and only the left edges or nodes that satisfy the matching criteria. |
-| outer join | `--left-join --right-join` | The output file contains all edges or nodes from both input files.  This is equivalend to a logical union, or [`kgtk cat`](https:../cat) |
+| outer join | `--left-join --right-join` | The output file contains all edges or nodes from both input files.  This is equivalend to a logical union, or [`kgtk cat`](../cat) |
 
 ### Duplicate Edges or Nodes
 
@@ -62,7 +62,7 @@ If either input file contains duplicate edges or nodes, or the two input files c
 copies of the edge or node, and these edges or nodes are selected for inclusion in the output file,
 then the output file will contain duplicate edges or nodes.
 
-The command [`kgtk compact`](https:../compact) can be used to remove duplicate
+The command [`kgtk compact`](../compact) can be used to remove duplicate
 edges or nodes from the output file.
 
 ### Joining Normalized Edges
@@ -92,9 +92,9 @@ in the output file will have empty `id` values.
  * Existing `id` column values will not be checked for duplication.
 
 !!! note
-    See [`kgtk add-id`](https:../add_id) if you wish to generate new `id` column values or
+    See [`kgtk add-id`](../add_id) if you wish to generate new `id` column values or
     manipulate existing `id` column values.
-    [`kgtk calc`](https:../calc) may also be useful for modifying `id` column values.
+    [`kgtk calc`](../calc) may also be useful for modifying `id` column values.
 
 ### Joining Edge Files on `node1` Alone
 
@@ -129,7 +129,7 @@ Output file after joining on `node1`:
 The left and right edges will remain distinct in the output file,
 leading to duplicate edges (`block1 isa block`).
 
-[`kgtk compact`](https:../compact) may be used to remove duplicate
+[`kgtk compact`](../compact) may be used to remove duplicate
 edges after the join.  The output would be:
 
 | node1 | label | node2 |
@@ -181,7 +181,7 @@ Output file after joining on `node1`:
 | block1 | isa | block| | |
 | block1 | type | cube |     | large |
 
-[`kgtk compact`](https:../compact) may be used to remove duplicate edges
+[`kgtk compact`](../compact) may be used to remove duplicate edges
 edges and compact the additional columns after the join:
 
 | node1 | label | node2 | color | size |
@@ -258,7 +258,7 @@ Output file after an inner join on (`node1`, `label`, `node2`):
 | block1 | type | cube | red |       |
 | block1 | type | cube |     | large |
 
-[`kgtk compact`](https:../compact) can then be used to
+[`kgtk compact`](../compact) can then be used to
 compact the additional columns after the join:
 
 | node1 | label | node2 | color | size |
@@ -318,7 +318,7 @@ Output file after the outer join:
 | block1 |
 | block3 |
 
-After using [`kgtk compact`](https:../compact) to remove duplicates:
+After using [`kgtk compact`](../compact) to remove duplicates:
 
 | id |
 | --- |
@@ -349,7 +349,7 @@ Output file:
 | block1 | cube | |
 | block1 | | red |
 
-After using [`kgtk compact`](https:../compact) to compact the entries:
+After using [`kgtk compact`](../compact) to compact the entries:
 
 | id | shape | color |
 | --- | --- | --- |
@@ -378,7 +378,7 @@ problems if the join requires more memory than is available.
     from a pipe may not be used for an input file for which a key set is built in memory.
 
 !!! note
-    [`kgtk ifexists`](https:../ifexists) provides an experimental join mode that works with
+    [`kgtk ifexists`](../ifexists) provides an experimental join mode that works with
     presorted input files and uses much less memory.  In the future, `kgtk join` may offer support for
     presorted input files.
 
@@ -403,7 +403,7 @@ compact additional columns in the output from a join operation.
     In the future, `kgtk join --compact` will run `kgtk compact` automatically
     on the output of `kgtk join`.  This will reduce the
     number of command options that may need to be specified.  It may increase
-    performance as well. aIssue #116.
+    performance as well. [Issue #116](https://github.com/usc-isi-i2/kgtk/issues/116).
 
 
 ## Usage

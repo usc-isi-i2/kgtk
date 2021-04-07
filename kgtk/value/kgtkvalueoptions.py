@@ -86,6 +86,8 @@ class KgtkValueOptions:
     clamp_maximum_year: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     ignore_maximum_year: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    validate_fromisoformat: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     MINIMUM_VALID_LAT: float = -90.
     minimum_valid_lat: float = attr.ib(validator=attr.validators.instance_of(float), default=MINIMUM_VALID_LAT)
     clamp_minimum_lat: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -156,7 +158,7 @@ class KgtkValueOptions:
         vgroup = parser.add_argument_group(h(prefix3 + "Data value parsing"),
                                            h("Options controlling the parsing and processing of KGTK data values" + desc))
         vgroup.add_argument(      prefix1 + "additional-language-codes", dest=prefix2 + "additional_language_codes",
-                                  help=h(prefix3 + "Additional language codes. (default=None)."),
+                                  help=h(prefix3 + "Additional language codes. (default=use internal list)."),
                                   nargs="*", default=None)
 
         vgroup.add_argument(      prefix1 + "allow-lax-qnodes", dest=prefix2 + "allow_lax_qnodes",
@@ -221,6 +223,12 @@ class KgtkValueOptions:
 
         vgroup.add_argument(      prefix1 + "ignore-maximum-year", dest=prefix2 + "ignore_maximum_year",
                                   help=h(prefix3 + "Ignore the maximum year constraint. (default=%(default)s)."),
+                                  type=optional_bool, nargs='?', const=True, **d(default=False))
+
+        vgroup.add_argument(      prefix1 + "validate-fromisoformat", dest=prefix2 + "validate_fromisoformat",
+                                  help=h(prefix3 + "Validate that datetim.fromisoformat(...) can parse this date and time. " +
+                                         "This checks that the year/month/day combination is valid.  " +
+                                         "The year must be in the range 1..9999, inclusive. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "allow-lax-coordinates", dest=prefix2 + "allow_lax_coordinates",
@@ -300,6 +308,7 @@ class KgtkValueOptions:
                    maximum_valid_year=d.get(prefix + "maximum_valid_year", cls.MAXIMUM_VALID_YEAR),
                    clamp_maximum_year=d.get(prefix + "clamp_maximum_year", False),
                    ignore_maximum_year=d.get(prefix + "ignore_maximum_year", False),
+                   validate_fromisoformat=d.get(prefix + "validate_fromisoformat", False),
 
                    allow_lax_coordinates=d.get(prefix + "allow_lax_coordinates", False),
                    repair_lax_coordinates=d.get(prefix + "repair_lax_coordinates", False),
@@ -344,6 +353,7 @@ class KgtkValueOptions:
         print("%smaximum-valid-year=%d" % (prefix, self.maximum_valid_year), file=out)
         print("%sclamp-maximum-year=%s" % (prefix, str(self.clamp_maximum_year)), file=out)
         print("%signore-maximum-year=%s" % (prefix, str(self.ignore_maximum_year)), file=out)
+        print("%svalidate-fromisoformat=%s" % (prefix, str(self.validate_fromisoformat)), file=out)
 
         print("%sallow-lax-coordinates=%s" % (prefix, str(self.allow_lax_coordinates)), file=out)
         print("%srepair-lax-coordinates=%s" % (prefix, str(self.repair_lax_coordinates)), file=out)

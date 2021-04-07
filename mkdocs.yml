@@ -30,8 +30,13 @@ nav:
       - 'ifnotexists': 'transform/ifnotexists.md'
       - 'implode': 'transform/implode.md'
       - 'join': 'transform/join.md'
+      - 'lexicalize': 'transform/lexicalize.md'
       - 'lift': 'transform/lift.md'
+      - 'lower': 'transform/normalize.md'
       - 'md': 'transform/md.md'
+      - 'normalize': 'transform/normalize.md'
+      - 'normalize-edges': 'transform/normalize.md'
+      - 'normalize-nodes': 'transform/normalize_nodes.md'
       - 'query': 'transform/query.md'
       - 'remove-columns': 'transform/remove_columns.md'
       - 'rename-columns': 'transform/rename_columns.md'
@@ -45,6 +50,7 @@ nav:
   - 'Curation commands':
       - 'clean-data': 'curate/clean_data.md'
       - 'validate': 'curate/validate.md'
+      - 'validate-properties': 'curate/validate_properties.md'
   - 'Analysis commands':
       - 'connected-components': 'analysis/connected_components.md'
       - 'graph-embeddings': 'analysis/graph_embeddings.md'
@@ -52,6 +58,7 @@ nav:
       - 'paths': 'analysis/paths.md'
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
       - 'text-embeddings': 'analysis/text_embedding.md'
+  - Using pipes: pipes.md
 
 theme:
   name: material

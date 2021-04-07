@@ -4,6 +4,7 @@ Validate KGTK File data types.
 
 from argparse import ArgumentParser, Namespace
 import attr
+import datetime as dt
 import math
 import re
 import sys
@@ -36,8 +37,11 @@ class KgtkValueFields():
     list_len: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # Offer the components of a string or language-qualified string, after validating the item.
-    # String contents without the enclosing quotes
+    # String contents without the enclosing quotes.  Backslash quoted sequences remain unprocessed.
     text: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    # String contents without the enclosing quotes.  Backslash quoted sequences have been procesed..
+    decoded_text: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # 2- or 3-character language code code without suffix.
     language: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
@@ -108,6 +112,7 @@ class KgtkValueFields():
 
     DATA_TYPE_FIELD_NAME: str = "data_type"
     DATE_AND_TIMES_FIELD_NAME: str = "date_and_time"
+    DECODED_TEXT_FIELD_NAME: str = "decoded_text"
     HIGH_TOLERANCE_FIELD_NAME: str = "high_tolerance"
     LANGUAGE_FIELD_NAME: str = "language"
     LANGUAGE_SUFFIX_FIELD_NAME: str = "language_suffix"
@@ -129,6 +134,7 @@ class KgtkValueFields():
         DATA_TYPE_FIELD_NAME,
         VALID_FIELD_NAME,
         TEXT_FIELD_NAME,
+        DECODED_TEXT_FIELD_NAME,
         LANGUAGE_FIELD_NAME,
         LANGUAGE_SUFFIX_FIELD_NAME,
         "numberstr",
@@ -200,6 +206,7 @@ class KgtkValueFields():
         DATA_TYPE_FIELD_NAME: "sym",
         VALID_FIELD_NAME: "bool",
         TEXT_FIELD_NAME: "str",
+        DECODED_TEXT_FIELD_NAME: "str",
         LANGUAGE_FIELD_NAME: "sym",
         LANGUAGE_SUFFIX_FIELD_NAME: "sym",
         "numberstr": "str",
@@ -306,6 +313,8 @@ class KgtkValueFields():
             results[self.VALID_FIELD_NAME] = self.valid
         if self.text is not None:
             results[self.TEXT_FIELD_NAME] = self.text
+        if self.decoded_text is not None:
+            results[self.DECODED_TEXT_FIELD_NAME] = self.decoded_text
         if self.language is not None:
             results[self.LANGUAGE_FIELD_NAME] = self.language
         if self.language_suffix is not None:
@@ -627,6 +636,11 @@ class KgtkValue(KgtkFormat):
     floatnumber_pat: str = r'(?:{pointfloat}|{exponentfloat})'.format(pointfloat=pointfloat_pat,
                                                                       exponentfloat=exponentfloat_pat)
 
+    # Real literals (nothing imaginary).
+    real_pat: str = r'(?:{plus_or_minus}?(?:{integer}|{floatnumber}))'.format(plus_or_minus=plus_or_minus_pat,
+                                                                              integer=integer_pat,
+                                                                              floatnumber=floatnumber_pat)
+
     # Imaginary literals.
     imagnumber_pat: str = r'(?:{floatnumber}|{digitpart})[jJ]'.format(floatnumber=floatnumber_pat,
                                                                       digitpart=digitpart_pat)
@@ -636,6 +650,8 @@ class KgtkValue(KgtkFormat):
                                                                                               integer=integer_pat,
                                                                                               floatnumber=floatnumber_pat,
                                                                                               imagnumber=imagnumber_pat)
+
+    # TODO: We may wish to exclude imaginary numbers in some circumstances.
 
     # Numeric literals with component labeling:
     number_pat: str = r'(?P<number>{numeric})'.format(numeric=numeric_pat)
@@ -1024,7 +1040,8 @@ class KgtkValue(KgtkFormat):
         if self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.STRING,
                                           valid=self.valid,
-                                          text=m.group("text"))
+                                          text=m.group("text"),
+                                          decoded_text=KgtkFormat.unstringify('"' + m.group("text") + '"'))
         return True
 
     def is_structured_literal(self)->bool:
@@ -1073,9 +1090,26 @@ class KgtkValue(KgtkFormat):
         self.data_type = KgtkFormat.DataType.BOOLEAN
         self.valid = True
         if self.parse_fields:
-            self.fields = KgtkValueFields(data_type=self.data_type,                                          valid=self.valid,
+            self.fields = KgtkValueFields(data_type=self.data_type,
+                                          valid=self.valid,
                                           truth=self.value == KgtkFormat.TRUE_SYMBOL)
         return True
+
+    def is_true(self)->bool:
+        """
+        Return True if the value is the boolean truth symbol.
+        """
+        return self.value == KgtkFormat.TRUE_SYMBOL
+
+    def is_false(self)->bool:
+        """
+        Return True if the value is the boolean false symbol.
+        """
+        return self.value == KgtkFormat.FALSE_SYMBOL
+
+    @classmethod
+    def to_boolean(cls, b: bool)->str:
+        return KgtkFormat.TRUE_SYMBOL if b else KgtkFormat.FALSE_SYMBOL
 
     # Support two or three character language codes.  Suports hyphenated codes
     # with a country code or dialect name suffix after the language code.
@@ -1138,6 +1172,7 @@ o        Return True if the value looks like a language-qualified string.
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING,
                                           valid=self.valid,
                                           text=m.group("text"),
+                                          decoded_text=KgtkFormat.unstringify('"' + m.group("text") + '"'),
                                           language=m.group("lang"),
                                           language_suffix=m.group("suffix"))
         return True
@@ -1255,7 +1290,7 @@ o        Return True if the value looks like a language-qualified string.
                     fixup_needed = True
                 else:
                     if self.verbose:
-                        print("KgtkValue.is_location_coordinates: lon less than minimum %f for %s" % (self.options.minimum_valid_lat, repr(self.value)),
+                        print("KgtkValue.is_location_coordinates: lon less than minimum %f for %s" % (self.options.minimum_valid_lon, repr(self.value)),
                               file=self.error_file, flush=True)
                     self.valid = False
                     return False
@@ -1270,7 +1305,7 @@ o        Return True if the value looks like a language-qualified string.
                     fixup_needed = True
                 else:
                     if self.verbose:
-                        print("KgtkValue.is_location_coordinates: lon greater than maximum %f for %s" % (self.options.maximum_valid_lat, repr(self.value)),
+                        print("KgtkValue.is_location_coordinates: lon greater than maximum %f for %s" % (self.options.maximum_valid_lon, repr(self.value)),
                               file=self.error_file, flush=True)
                     self.valid = False
                     return False
@@ -1622,6 +1657,23 @@ o        Return True if the value looks like a language-qualified string.
         if fixup_needed:
             # Repair a month or day zero problem.
             self.update_date_and_times(yearstr, monthstr, daystr, hourstr, minutesstr, secondsstr, zonestr, precisionstr, iso8601extended)
+
+        if self.options.validate_fromisoformat:
+            try:
+                kgtkdatestr: str = self.value[1:] # Strip the leading ^ sigil.
+                isodatestr: str
+                if "/" in kgtkdatestr:
+                    isodatestr, _ = kgtkdatestr.split("/")
+                else:
+                    isodatestr = self.value
+                if isodatestr.endswith("Z"): # Might there be other time zones?
+                    isodatestr = isodatestr[:-1]
+                _ = dt.datetime.fromisoformat(isodatestr)
+            except ValueError:
+                if self.verbose:
+                    print("KgtkValue.is_date_and_times: datetime.fromisoformat(...) cannot parse %s." % repr(self.value),  file=self.error_file, flush=True)
+                self.valid = False
+                return False # might happen
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True

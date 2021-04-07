@@ -4,7 +4,22 @@
 
 [![doi](https://zenodo.org/badge/DOI/10.5281/zenodo.3828068.svg)](https://doi.org/10.5281/zenodo.3828068)  ![travis ci](https://travis-ci.org/usc-isi-i2/kgtk.svg?branch=master)  [![Coverage Status](https://coveralls.io/repos/github/usc-isi-i2/kgtk/badge.svg?branch=master)](https://coveralls.io/github/usc-isi-i2/kgtk?branch=master)
 
-KGTK is a Python toolkit for building applications using knowledge graphs (KG). KGTK is designed for ease of use, scalability and speed. It represents KGs as simple TSV files with four columns to represent the head, relation and tail of a triple, as well as an identifier for each triple. This simple model allows KGTK to operate on property graphs and on RDF graphs. KGTK offers a comprehensive collection of 20+ commands to import, transform, query and analyze KGs, including wrappers for state of the art graph analytics and deep learning libraries. KGTK is optimized for batch processing, making it easy to write KG pipelines that process large KGs such as Wikidata on a laptop to produce datasets for use in downstream applications. KGTK is open-source software released under the MIT license.
+
+The Knowledge Graph Toolkit (KGTK) is a comprehensive framework for the creation and exploitation of large hyper-relational knowledge graphs (KGs), designed for ease of use, scalability, and speed. KGTK represents KGs in tab-separated (TSV) files with four columns: edge-identifier, head, edge-label, and tail. All KGTK commands consume and produce KGs represented in this simple format, so they can be composed into pipelines to perform complex transformations on KGs. KGTK provides:
+
+- a suite of **import** commands to import Wikidata, RDF and popular graph representations into KGTK format;
+- a rich collection of **transformation** commands make it easy to clean, union, filter, and sort KGs;
+- **graph combination** commands support efficient intersection, subtraction, and joining of large KGs;
+- a **query** language using a variant of Cypher, optimized for querying KGs stored on disk supports efficient ad hoc queries;
+- **graph analytics** commands support scalable computation of centrality metrics such as PageRank, degrees, connected components and shortest paths;
+- advanced commands support **lexicalization** of graph nodes, and computation of multiple variants of **text and graph embeddings** over the whole graph;
+- a suite of **export** commands supports the transformation of KGTK KGs into commonly used formats, including the Wikidata JSON format, RDF triples, JSON documents for ElasticSearch indexing and graph-tool;
+- a **development environmen**t using Jupyter notebooks provides seamless integration with Pandas.
+
+KGTK can process Wikidata-sized KGs with billions of edges on a laptop. We have used KGTK in multiple use cases, focusing primarily on construction of subgraphs of Wikidata, analysis of over 300 Wikidata dumps since the inception of the Wikidata project, linking tables to Wikidata, construction of a commonsense KG combining multiple existing sources, creation of Wikidata extensions for food security and the pharmaceutical industry.
+
+KGTK is open source software, well documented, actively used and developed, and released using the MIT license. We invite the community to try KGTK. It is easy to get started with our tutorial notebooks available and executable online.
+
 
 
 ## Getting started
@@ -128,6 +143,14 @@ kgtk instances --transitive --class Q13442814,Q12345678
 cd kgtk/tests
 python -W ignore -m unittest discover
 ```
+
+## KGTK Text Search API
+
+The documentation for the KGTK Text Search API is [here](https://github.com/usc-isi-i2/kgtk-search)
+
+## KGTK Semantic Similarity API
+
+The documentation for the KGTK Semantic Similarity API is [here](https://github.com/usc-isi-i2/wikidata-semantic-similarity)
 
 ## How to cite
 

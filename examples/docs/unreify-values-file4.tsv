@@ -1,0 +1,9 @@
+node1	label	node2
+XJAABmv8vGfJZZasjV6DAXY:g1	rdf:type	ont:ClusterMembership
+XJAABmv8vGfJZZasjV6DAXY:g1	ont:cluster	gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton
+XJAABmv8vGfJZZasjV6DAXY:g1	ont:clusterMember	gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70
+XJAABmv8vGfJZZasjV6DAXY:g1	ont:confidence	XJAABmv8vGfJZZasjV6DAXY:g2
+XJAABmv8vGfJZZasjV6DAXY:g2	rdf:type	ont:Confidence
+XJAABmv8vGfJZZasjV6DAXY:g2	ont:confidenceValue	1.0
+XJAABmv8vGfJZZasjV6DAXY:g2	ont:system	nJAABmv8vGfJZZasjV6DAXY-2:
+XJAABmv8vGfJZZasjV6DAXY:g1	ont:system	nJAABmv8vGfJZZasjV6DAXY-2:

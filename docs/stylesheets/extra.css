@@ -17,9 +17,17 @@
     padding: 0.7em;
 }
 
+.md-header__button.md-logo img {
+    width: 4.6em;
+    height: 4.6em;
+}
+
 .md-header-nav__title {
     font-size: 1.2rem;
-    line-height: 3.5rem;
+}
+
+.md-header__title {
+    font-size: 1rem;
 }
 
 .md-search {

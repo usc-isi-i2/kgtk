@@ -88,8 +88,7 @@ def dwim_to_lqstring_para(x):
 # An expression in Kypher can be ('+' means handled fully, 'o' partially):
 # (from https://neo4j.com/docs/cypher-manual/current/syntax/expressions/)
 #
-# o A decimal (integer or float) literal: 13, -40000, 3.14, 6.022E23.
-#   - HC: 6.022E23 fails in the grammar
+# + A decimal (integer or float) literal: 13, -40000, 3.14, 6.022E23.
 # + A hexadecimal integer literal (starting with 0x): 0x13af, 0xFC3A9, -0x66eff
 #   - HC: get converted into decimal
 # + An octal integer literal (starting with 0): 01372, 02127, -05671.

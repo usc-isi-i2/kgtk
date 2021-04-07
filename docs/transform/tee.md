@@ -13,7 +13,7 @@ The option `--enable=FALSE` may be used to disable writing to the secondary outp
 This may be used in a pipe or script to disable the secondary files when not needed, potentially
 loading to a significant performance improvement.
 
-`kgtk tee` might be used in place of [`kgtk cat`](https:../cat) at the head of a pipe
+`kgtk tee` might be used in place of [`kgtk cat`](../cat) at the head of a pipe
 when the input to the pipe is a single file and the intent is to make a copy of that
 file for debugging or to record the inputs to a particular invocation of the pipeline or
 script.
@@ -21,7 +21,7 @@ script.
 ## Copying Files
 
 `kgtk tee` may also be useful to copy an input KGTK file to two output KGTK
-files, equivalent to running [`kgtk cat`](https:../cat) twice.  However, this is not its
+files, equivalent to running [`kgtk cat`](../cat) twice.  However, this is not its
 primary intended purpose.
 
 ## Usage

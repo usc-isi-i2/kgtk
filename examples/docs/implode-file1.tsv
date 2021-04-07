@@ -1,0 +1,14 @@
+id	node1	label	node2	node2;kgtk:data_type	node2;kgtk:number	node2;kgtk:low_tolerance	node2;kgtk:high_tolerance	node2;kgtk:units_node	node2;kgtk:date_and_time	node2;kgtk:precision	node2;kgtk:calendar	node2;kgtk:truth	node2;kgtk:symbol	node2;kgtk:latitude	node2;kgtk:longitude	node2;kgtk:text	node2;kgtk:language
+oecd;OECD-Latvia g2g9e7f8-en..csv;D6	Q211	P1082		quantity	19782			Q10000000040001									
+oecd;OECD-Latvia g2g9e7f8-en...csv;D6;D4	oecd;OECD-Latvia g2g9e7f8-en..csv;D6	P585		date_and_times					2011-01-01T00:00:00	9	Q1985727						
+oecd;OECD-Latvia g2g9e7f8-en...csv;D6;	oecd;OECD-Latvia g2g9e7f8-en..csv;D6	P248		symbol									Q41550				
+oecd;OECD-Latvia g2g9e7f8-en..csv;D7	Q211	P1082		quantity	19776			Q10000000040001									
+oecd;OECD-Latvia g2g9e7f8-en...csv;D7;D4	oecd;OECD-Latvia g2g9e7f8-en..csv;D7	P585		date_and_times					2011-01-01T00:00:00	9	Q1985727						
+oecd;OECD-Latvia g2g9e7f8-en...csv;D7;	oecd;OECD-Latvia g2g9e7f8-en..csv;D7	P248		symbol									Q41550				
+oecd;OECD-Latvia g2g9e7f8-en..csv;D8	Q211	P1082		quantity	-7.5			Q10000000040002									
+oecd;OECD-Latvia g2g9e7f8-en...csv;D8;D4	oecd;OECD-Latvia g2g9e7f8-en..csv;D8	P585		date_and_times					2011-01-01T00:00:00	9	Q1985727						
+oecd;OECD-Latvia g2g9e7f8-en...csv;D8;	oecd;OECD-Latvia g2g9e7f8-en..csv;D8	P248		symbol									Q41550				
+oecd;OECD-Latvia g2g9e7f8-en..csv;D10	Q211	P1082		quantity	6.4			Q10000000040002									
+oecd;OECD-Latvia g2g9e7f8-en...csv;D10;D4	oecd;OECD-Latvia g2g9e7f8-en..csv;D10	P585		date_and_times					2011-01-01T00:00:00	9	Q1985727						
+oecd;OECD-Latvia g2g9e7f8-en...csv;D10;	oecd;OECD-Latvia g2g9e7f8-en..csv;D10	P248		symbol									Q41550				
+oecd;OECD-Latvia g2g9e7f8-en..csv;D11	Q211	P1082		quantity	-15.9			Q10000000040003									

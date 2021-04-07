@@ -1,0 +1,8 @@
+node1	label	node2
+XJAABmv8vGfJZZasjV6DAXY:g3	ont:confidence	XJAABmv8vGfJZZasjV6DAXY:g4
+XJAABmv8vGfJZZasjV6DAXY:g3	ont:justifiedBy	XJAABmv8vGfJZZasjV6DAXY:g5
+XJAABmv8vGfJZZasjV6DAXY:g3	ont:system	nJAABmv8vGfJZZasjV6DAXY-1:
+XJAABmv8vGfJZZasjV6DAXY:g3	rdf:object	gaia:entities/d1dcefce-badf-4948-bfcf-5d33116fa12c
+XJAABmv8vGfJZZasjV6DAXY:g3	rdf:predicate	nJAABmv8vGfJZZasjV6DAXY-3:Physical.LocatedNear_Place
+XJAABmv8vGfJZZasjV6DAXY:g3	rdf:subject	gaia:relations/d3e1e4df-6c8c-4fd1-8b93-ee49ef238f72
+XJAABmv8vGfJZZasjV6DAXY:g3	rdf:type	rdf:Statement

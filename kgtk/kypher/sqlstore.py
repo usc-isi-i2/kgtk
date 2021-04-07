@@ -5,6 +5,8 @@ SQLStore to support Kypher queries over KGTK graphs.
 import sys
 import os.path
 import sqlite3
+# sqlite3 already loads math, so no extra cost:
+import math
 from   odictliteral import odict
 import time
 import csv
@@ -14,6 +16,7 @@ import pprint
 
 import sh
 
+# this is expensive to import (120ms), so maybe make it lazy:
 from   kgtk.value.kgtkvalue import KgtkValue
 from   kgtk.exceptions import KGTKException
 
@@ -182,12 +185,23 @@ class SqliteStore(SqlStore):
         ]
     ]
 
-    def __init__(self, dbfile, create=False, loglevel=0):
+    def __init__(self, dbfile=None, create=False, loglevel=0, conn=None):
+        """Open or create an SQLStore on the provided database file 'dbfile'
+        or SQLite connection object 'conn'.  If 'dbfile' is provided and does
+        not yet exist, it will only be created if 'create' is True.  Passing
+        in a connection object directly provides more flexibility with creation
+        options.  In that case any 'dbfile' value will be ignored.
+        """
         self.loglevel = loglevel
-        if not os.path.exists(dbfile) and not create:
-            raise KGTKException('sqlite DB file does not exist: %s' % dbfile)
         self.dbfile = dbfile
-        self.conn = None
+        self.conn = conn
+        if not isinstance(self.conn, sqlite3.Connection):
+            if self.conn is not None:
+                raise KGTKException('invalid sqlite connection object: %s' % self.conn)
+            if self.dbfile is None:
+                raise KGTKException('no sqlite DB file or connection object provided')
+            if not os.path.exists(self.dbfile) and not create:
+                raise KGTKException('sqlite DB file does not exist: %s' % self.dbfile)
         self.user_functions = set()
         self.init_meta_tables()
         self.configure()
@@ -1090,6 +1104,40 @@ SqliteStore.register_user_function('kgtk_date_precision', 1, kgtk_date_precision
 
 # Number and quantity literals:
 
+sqlite3_max_integer = +2 ** 63 - 1
+sqlite3_min_integer = -2 ** 63
+
+def to_sqlite3_int(x):
+    """Similar to Python 'int' but map numbers outside the 64-bit range onto their extremes.
+    This is identical to what SQLite's 'cast' function does for numbers outside the range.
+    """
+    x = int(x)
+    if x > sqlite3_max_integer:
+        return sqlite3_max_integer
+    elif x < sqlite3_min_integer:
+        return sqlite3_min_integer
+    else:
+        return x
+
+def to_sqlite3_float(x):
+    """Identical to Python 'float', maps 'x' onto an 8-byte IEEE floating point number.
+    """
+    # TO DO: this might need more work to do the right thing at the boundaries
+    #        and with infinity values, see 'sys.float_info'; seems to work
+    return float(x)
+
+def to_sqlite3_int_or_float(x):
+    """Similar to Python 'int' but map numbers outside the 64-bit range onto floats.
+    """
+    x = int(x)
+    if x > sqlite3_max_integer:
+        return float(x)
+    elif x < sqlite3_min_integer:
+        return float(x)
+    else:
+        return x
+
+
 def kgtk_number(x):
     """Return True if 'x' is a dimensionless KGTK number literal.
     """
@@ -1133,9 +1181,9 @@ def kgtk_quantity_number(x):
         if m:
             numeral = m.group('number')
             if float_numeral_regex.match(numeral):
-                return float(numeral)
+                return to_sqlite3_float(numeral)
             else:
-                return int(numeral)
+                return to_sqlite3_int_or_float(numeral)
             
 def kgtk_quantity_number_int(x):
     """Return the number value of a KGTK quantity literal as an int.
@@ -1145,9 +1193,9 @@ def kgtk_quantity_number_int(x):
         if m:
             numeral = m.group('number')
             if float_numeral_regex.match(numeral):
-                return int(float(numeral))
+                return to_sqlite3_int(float(numeral))
             else:
-                return int(numeral)
+                return to_sqlite3_int(numeral)
             
 def kgtk_quantity_number_float(x):
     """Return the number value component of a KGTK quantity literal as a float.
@@ -1157,10 +1205,10 @@ def kgtk_quantity_number_float(x):
         if m:
             numeral = m.group('number')
             if float_numeral_regex.match(numeral):
-                return float(numeral)
+                return to_sqlite3_float(numeral)
             else:
                 # because the numeral could be in octal or hex:
-                return float(int(numeral))
+                return to_sqlite3_float(int(numeral))
 
 def kgtk_quantity_si_units(x):
     """Return the SI-units component of a KGTK quantity literal.
@@ -1203,7 +1251,7 @@ def kgtk_quantity_low_tolerance(x):
         if m:
             lowtol = m.group('low_tolerance')
             if lowtol:
-                return float(lowtol)
+                return to_sqlite3_float(lowtol)
             
 def kgtk_quantity_high_tolerance(x):
     """Return the high tolerance component of a KGTK quantity literal as a float.
@@ -1213,7 +1261,7 @@ def kgtk_quantity_high_tolerance(x):
         if m:
             hightol = m.group('high_tolerance')
             if hightol:
-                return float(hightol)
+                return to_sqlite3_float(hightol)
 
 SqliteStore.register_user_function('kgtk_number', 1, kgtk_number, deterministic=True)
 SqliteStore.register_user_function('kgtk_quantity', 1, kgtk_quantity, deterministic=True)
@@ -1248,7 +1296,7 @@ def kgtk_geo_coords_lat(x):
     if isinstance(x, str):
         m = KgtkValue.lax_location_coordinates_re.match(x)
         if m:
-            return float(m.group('lat'))
+            return to_sqlite3_float(m.group('lat'))
         
 def kgtk_geo_coords_long(x):
     """Return the longitude component of a KGTK geo coordinates literal as a float.
@@ -1256,11 +1304,24 @@ def kgtk_geo_coords_long(x):
     if isinstance(x, str):
         m = KgtkValue.lax_location_coordinates_re.match(x)
         if m:
-            return float(m.group('lon'))
+            return to_sqlite3_float(m.group('lon'))
 
 SqliteStore.register_user_function('kgtk_geo_coords', 1, kgtk_geo_coords, deterministic=True)
 SqliteStore.register_user_function('kgtk_geo_coords_lat', 1, kgtk_geo_coords_lat, deterministic=True)
 SqliteStore.register_user_function('kgtk_geo_coords_long', 1, kgtk_geo_coords_long, deterministic=True)
+
+
+# Literals:
+
+literal_regex = re.compile(r'''^["'^@!0-9.+-]|^True$|^False$''')
+
+def kgtk_literal(x):
+    """Return True if 'x' is any KGTK literal.  This assumes valid literals
+    and only tests the first character (except for booleans).
+    """
+    return isinstance(x, str) and literal_regex.match(x) is not None
+
+SqliteStore.register_user_function('kgtk_literal', 1, kgtk_literal, deterministic=True)
 
 
 # NULL value utilities:
@@ -1289,3 +1350,338 @@ def kgtk_empty_to_null(x):
 
 SqliteStore.register_user_function('kgtk_null_to_empty', 1, kgtk_null_to_empty, deterministic=True)
 SqliteStore.register_user_function('kgtk_empty_to_null', 1, kgtk_empty_to_null, deterministic=True)
+
+
+# Math:
+
+# Temporary Python implementation of SQLite math built-ins until they become standardly available.
+# Should happen once SQLite3 3.35.0 is used by Python - or soon thereafter.  Once we've determined
+# the cutoff point we can make the function registration dependent on 'sqlite3.version'.
+# User-defined functions override built-ins, which means this should work even after math built-ins
+# come online - we hope.
+
+def math_acos(x):
+    """"Implement the SQLite3 math built-in 'acos' via Python.
+    """
+    try:
+        return math.acos(x)
+    except:
+        pass
+
+def math_acosh(x):
+    """Implement the SQLite3 math built-in 'acosh' via Python.
+    """
+    try:
+        return math.acosh(x)
+    except:
+        pass
+
+def math_asin(x):
+    """Implement the SQLite3 math built-in 'asin' via Python.
+    """
+    try:
+        return math.asin(x)
+    except:
+        pass
+
+def math_asinh(x):
+    """Implement the SQLite3 math built-in 'asinh' via Python.
+    """
+    try:
+        return math.asinh(x)
+    except:
+        pass
+
+def math_atan(x):
+    """Implement the SQLite3 math built-in 'atan' via Python.
+    """
+    try:
+        return math.atan(x)
+    except:
+        pass
+
+def math_atan2(x, y):
+    """Implement the SQLite3 math built-in 'atan2' via Python.
+    """
+    try:
+        return math.atan2(y, x) # flips args
+    except:
+        pass
+
+def math_atanh(x):
+    """Implement the SQLite3 math built-in 'atanh' via Python.
+    """
+    try:
+        return math.atanh(x)
+    except:
+        pass
+
+# alias: ceiling(X)
+def math_ceil(x):
+    """Implement the SQLite3 math built-in 'ceil' via Python.
+    """
+    try:
+        return math.ceil(x)
+    except:
+        pass
+
+def math_cos(x):
+    """Implement the SQLite3 math built-in 'cos' via Python.
+    """
+    try:
+        return math.cos(x)
+    except:
+        pass
+
+def math_cosh(x):
+    """Implement the SQLite3 math built-in 'cosh' via Python.
+    """
+    try:
+        return math.cosh(x)
+    except:
+        pass
+
+def math_degrees(x):
+    """Implement the SQLite3 math built-in 'degrees' via Python.
+    Convert value X from radians into degrees. 
+    """
+    try:
+        return math.degrees(x)
+    except:
+        pass
+
+def math_exp(x):
+    """Implement the SQLite3 math built-in 'exp' via Python.
+    """
+    try:
+        return math.exp(x)
+    except:
+        pass
+
+def math_floor(x):
+    """Implement the SQLite3 math built-in 'floor' via Python.
+    """
+    try:
+        return math.floor(x)
+    except:
+        pass
+
+# NOTE: naming and invocation of logarithm functions is different from
+# standard SQL or Python math for that matter (more like Postgres).
+
+def math_ln(x):
+    """Implement the SQLite3 math built-in 'ln' via Python.
+    """
+    try:
+        return math.log(x)
+    except:
+        pass
+
+# alias: log(X)
+def math_log10(x):
+    """Implement the SQLite3 math built-in 'log10' via Python.
+    """
+    try:
+        return math.log10(x)
+    except:
+        pass
+
+def math_logb(b, x):
+    """Implement the SQLite3 math built-in 'log(b,x)' via Python.
+    NOTE: this uses a different name, since we cannot support optionals
+    (which would require special handling in the query translator).
+    This means the function needs to stay even if we use the real built-ins.
+    """
+    try:
+        return math.log(x, b)
+    except:
+        pass
+
+def math_log2(x):
+    """Implement the SQLite3 math built-in 'log2' via Python.
+    """
+    try:
+        return math.log2(x)
+    except:
+        pass
+
+def math_mod(x, y):
+    """Implement the SQLite3 math built-in 'mod' via Python.
+    """
+    try:
+        return math.fmod(x, y) # preferred over 'x % y' for floats
+    except:
+        pass
+
+def math_pi():
+    """Implement the SQLite3 math built-in 'pi' via Python.
+    """
+    return math.pi
+
+# alias: power(X,Y)
+def math_pow(x, y):
+    """Implement the SQLite3 math built-in 'pow' via Python.
+    """
+    try:
+        return math.pow(x, y)
+    except:
+        pass
+
+def math_radians(x):
+    """Implement the SQLite3 math built-in 'radians' via Python.
+    """
+    try:
+        return math.radians(x)
+    except:
+        pass
+
+def math_sin(x):
+    """Implement the SQLite3 math built-in 'sin' via Python.
+    """
+    try:
+        return math.sin(x)
+    except:
+        pass
+
+def math_sinh(x):
+    """Implement the SQLite3 math built-in 'sinh' via Python.
+    """
+    try:
+        return math.sinh(x)
+    except:
+        pass
+
+def math_sqrt(x):
+    """Implement the SQLite3 math built-in 'sqrt' via Python.
+    """
+    try:
+        return math.sqrt(x)
+    except:
+        pass
+
+def math_tan(x):
+    """Implement the SQLite3 math built-in 'tan' via Python.
+    """
+    try:
+        return math.tan(x)
+    except:
+        pass
+
+def math_tanh(x):
+    """Implement the SQLite3 math built-in 'tanh' via Python.
+    """
+    try:
+        return math.tanh(x)
+    except:
+        pass
+
+def math_trunc(x):
+    """Implement the SQLite3 math built-in 'trunc' via Python.
+    """
+    try:
+        return math.trunc(x)
+    except:
+        pass
+
+SqliteStore.register_user_function('acos', 1, math_acos, deterministic=True)
+SqliteStore.register_user_function('acosh', 1, math_acosh, deterministic=True)
+SqliteStore.register_user_function('asin', 1, math_asin, deterministic=True)
+SqliteStore.register_user_function('asinh', 1, math_asinh, deterministic=True)
+SqliteStore.register_user_function('atan', 1, math_atan, deterministic=True)
+SqliteStore.register_user_function('atan2', 2, math_atan2, deterministic=True)
+SqliteStore.register_user_function('atanh', 1, math_atanh, deterministic=True)
+SqliteStore.register_user_function('ceil', 1, math_ceil, deterministic=True)
+SqliteStore.register_user_function('ceiling', 1, math_ceil, deterministic=True)
+SqliteStore.register_user_function('cos', 1, math_cos, deterministic=True)
+SqliteStore.register_user_function('cosh', 1, math_cosh, deterministic=True)
+SqliteStore.register_user_function('degrees', 1, math_degrees, deterministic=True)
+SqliteStore.register_user_function('exp', 1, math_exp, deterministic=True)
+SqliteStore.register_user_function('floor', 1, math_floor, deterministic=True)
+SqliteStore.register_user_function('ln', 1, math_ln, deterministic=True)
+SqliteStore.register_user_function('log', 1, math_log10, deterministic=True)
+SqliteStore.register_user_function('log10', 1, math_log10, deterministic=True)
+SqliteStore.register_user_function('log2', 1, math_log2, deterministic=True)
+# this one needs to stay if we conditionalize on availability of real math built-ins:
+SqliteStore.register_user_function('logb', 2, math_logb, deterministic=True)
+SqliteStore.register_user_function('mod', 2, math_mod, deterministic=True)
+SqliteStore.register_user_function('pi', 0, math_pi, deterministic=True)
+SqliteStore.register_user_function('pow', 2, math_pow, deterministic=True)
+SqliteStore.register_user_function('power', 2, math_pow, deterministic=True)
+SqliteStore.register_user_function('radians', 1, math_radians, deterministic=True)
+SqliteStore.register_user_function('sin', 1, math_sin, deterministic=True)
+SqliteStore.register_user_function('sinh', 1, math_sinh, deterministic=True)
+SqliteStore.register_user_function('sqrt', 1, math_sqrt, deterministic=True)
+SqliteStore.register_user_function('tan', 1, math_tan, deterministic=True)
+SqliteStore.register_user_function('tanh', 1, math_tanh, deterministic=True)
+SqliteStore.register_user_function('trunc', 1, math_trunc, deterministic=True)
+
+
+### Experimental transitive taxonomy relation indexing:
+
+@lru_cache(maxsize=1000)
+def kgtk_decode_taxonomy_node_intervals(intervals):
+    """Decode a difference-encoded list of 'intervals' into a numpy array with full intervals.
+    """
+    # expensive imports we don't want to run unless needed, lru cache will eliminate repeat overhead:
+    import gzip, binascii, numpy
+    if intervals[0] == 'z':
+        intervals = gzip.decompress(binascii.a2b_base64(intervals[1:])).decode()
+    intervals = intervals.replace(';', ',0,')
+    if intervals.endswith(','):
+        intervals = intervals[0:-1]
+    intervals = list(map(int, intervals.split(',')))
+    # we special-case single intervals and binary search on more than one interval:
+    if len(intervals) > 2:
+        # add sentinel, so we always have a sort insertion point before the end of the array:
+        intervals.append(0)
+    intervals = numpy.array(intervals, dtype=numpy.int32)
+    # decode difference encoding:
+    for i in range(1, len(intervals)):
+        intervals[i] += intervals[i-1]
+    if len(intervals) > 2:
+        # initialize sentinel:
+        intervals[-1] = 2**31 - 1
+    return intervals
+
+# timing on 2.5M calls:
+# - just call and return: Q123: 0.95s, Q5: 1.05s
+# - int(label):           Q123: 1.38s, Q5: 1.45s
+# - decode intervals:     Q123: 1.68s, Q5: 2.12s
+# - single int range:     Q123: 3.10s, Q5: 2.20s
+# - single int >=,<=:     Q123: 2.60s, Q5: 2.20s
+# - range shortcut:       Q123: 2.60s, Q5: 2.20s
+# - searchsorted:         Q123: 2.60s, Q5: 4.90s
+# - result1:              Q123: 2.60s, Q5:11.10s
+# - result2: (wrong)      Q123: 2.60s, Q5: 6.95s
+# - result3:              Q123: 2.60s, Q5:10.80s 
+# - result4: (wrong)      Q123: 2.60s, Q5: 6.30s
+# - result5:              Q123: 2.60s, Q5: 6.60s
+# - bool(result5)         Q123: 2.60s, Q5: 6.70s
+
+def kgtk_is_subnode(label, encoded_intervals):
+    """Return True if 'label' is contained in one of the encoded 'intervals'.
+    'intervals' is a flat list of sorted, closed integer intervals.
+    """
+    # NOTE: it took us a while to optimize this properly; the crucial bit was
+    # to use 'int' to cast array elements before comparing them via >=,<= and ==
+    label = int(label)
+    # cached lookup is fast, trying to use a shorter key string (e.g., edge ID) does not help:
+    intervals = kgtk_decode_taxonomy_node_intervals(encoded_intervals)
+    # check single interval shortcut:
+    if len(intervals) == 2:
+        # "casting" to int first significantly speeds things up (also beats 'range'):
+        return label >= int(intervals[0]) and label <= int(intervals[1])
+    i = intervals.searchsorted(label)
+    # this runs on lists but is 3x slower, not sure why, it says there is a C-implementation:
+    #i = bisect.bisect_left(intervals, label)
+    #result1 = (i & 1) or (i < len(intervals) and intervals[i] == label)
+    #result2 = (i & 1) or (i < len(intervals) and intervals[i] is label)
+    #result3 = (i & 1) or (intervals[i] == label)
+    #result4 = (i & 1) or (intervals[i] is label)
+    # "casting" to int first gives us a much faster equality test:
+    result5 = (i & 1) or (int(intervals[i]) == label)
+    #sys.stderr.write('%s  %s  %s\n' % (label, intervals, result))
+    # TO DO: figure out whether we should add this to all predicates above:
+    return bool(result5)
+
+SqliteStore.register_user_function('kgtk_is_subnode', 2, kgtk_is_subnode, deterministic=True)

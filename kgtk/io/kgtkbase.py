@@ -88,7 +88,7 @@ class KgtkBase(KgtkFormat):
         if column_name.lstrip() != column_name:
             results.append("Column name '%s' starts with leading white space" % column_name)
         if column_name.rstrip() != column_name:
-            results.append("Column name '%s' ends with leading white space" % column_name)
+            results.append("Column name '%s' ends with trailing white space" % column_name)
         if prohibit_whitespace_in_column_names and not (column_name.startswith('"') or column_name.startswith("'")):
             if ''.join(column_name.split()) != column_name.strip():
                 results.append("Column name '%s' contains internal white space" % column_name)
@@ -124,7 +124,7 @@ class KgtkBase(KgtkFormat):
         if len(complaints) == 0:
             return True
         # take the error action, joining the complaints into a single message.
-        msg = ", ".join(complaints)
+        msg = "\n" + "\n".join(complaints)
         cls._yelp(msg, header_line=header_line, who=who, error_action=error_action, error_file=error_file)
         return False
 
@@ -143,7 +143,7 @@ class KgtkBase(KgtkFormat):
         column_name: str
         for column_name in column_names:
             if column_name is None or len(column_name) == 0:
-                cls._yelp("Column %d has an invalid name in the file header" % column_idx,
+                cls._yelp("Column %d has an empty name in the file header" % column_idx,
                           header_line=header_line, who=who, error_action=error_action, error_file=error_file)
 
             # Ensure that columns names are not duplicated:

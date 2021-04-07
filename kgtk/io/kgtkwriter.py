@@ -534,7 +534,7 @@ class KgtkWriter(KgtkBase):
         value: str
         for value in values:
             linebuf.append(" ")
-            linebuf.append("\\|".join(value.split("|")))
+            linebuf.append(value.replace("\\", "\\\\").replace("|", "\\|"))
             linebuf.append(" |")
         return "".join(linebuf)
 

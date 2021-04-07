@@ -1,0 +1,7 @@
+node1	label	node2	id
+block1	red	1.0	
+block1	green	0.0	
+block1	blue	0.0	
+block2	red	0.0	
+block2	green	1.0	
+block2	blue	0.0	

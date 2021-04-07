@@ -24,6 +24,7 @@ class KgtkIfEmpty(KgtkFormat):
                                                                                             iterable_validator=attr.validators.instance_of(list)))
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+    reject_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     all_are: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     notempty: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -95,23 +96,43 @@ class KgtkIfEmpty(KgtkFormat):
             filter_idx_list.append(kr.column_name_map[column_name])
             
 
+        ew: typing.Optional[KgtkWriter] = None
+        rew: typing.Optional[KgtkWriter] = None
         if not self.only_count:
             if self.verbose:
                 print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
-            ew: KgtkWriter = KgtkWriter.open(kr.column_names,
-                                             self.output_file_path,
-                                             mode=kr.mode,
-                                             require_all_columns=False,
-                                             prohibit_extra_columns=True,
-                                             fill_missing_columns=True,
-                                             gzip_in_parallel=False,
-                                             verbose=self.verbose,
-                                             very_verbose=self.very_verbose)        
-
+            ew = KgtkWriter.open(kr.column_names,
+                                 self.output_file_path,
+                                 mode=kr.mode,
+                                 require_all_columns=False,
+                                 prohibit_extra_columns=True,
+                                 fill_missing_columns=True,
+                                 use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                 mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                 gzip_in_parallel=False,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose)        
+            
+            if self.reject_file_path is not None:
+                if self.verbose:
+                    print("Opening the reject file: %s" % self.reject_file_path, file=self.error_file, flush=True)
+                rew = KgtkWriter.open(kr.column_names,
+                                      self.reject_file_path,
+                                      mode=KgtkWriter.Mode[kr.mode.name],
+                                      require_all_columns=False,
+                                      prohibit_extra_columns=True,
+                                      fill_missing_columns=True,
+                                      use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                      mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                      gzip_in_parallel=False,
+                                      verbose=self.verbose,
+                                      very_verbose=self.very_verbose)
+            
         if self.verbose:
             print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
         input_line_count: int = 0
         output_line_count: int = 0;
+        reject_line_count: int = 0;
 
         row: typing.list[str]
         for row in kr:
@@ -120,15 +141,31 @@ class KgtkIfEmpty(KgtkFormat):
                 if not self.only_count:
                     ew.write(row)
                 output_line_count += 1
+            else:
+                if not self.only_count and rew is not None:
+                    rew.write(row)
+                reject_line_count += 1
 
 
         if self.only_count:
-            print("Read %d records, %d records passed the filter." % (input_line_count, output_line_count), file=self.error_file, flush=True)
+            print("Read %d records, %d records passed the filter, %d rejected." % (input_line_count,
+                                                                                   output_line_count,
+                                                                                   reject_line_count),
+                  file=self.error_file, flush=True)
         else:
             if self.verbose:
-                print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
+                if rew is not None:
+                    print("Read %d records, wrote %d records, rejected %d records." % (input_line_count,
+                                                                                       output_line_count,
+                                                                                       reject_line_count),
+                          file=self.error_file, flush=True)
+                else:
+                    print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
+                    
         
             ew.close()
+            if rew is not None:
+                rew.close()
 
 def main():
     """

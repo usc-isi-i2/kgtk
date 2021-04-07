@@ -17,9 +17,9 @@ You provide a list of column names in the order in which they should appear in t
     output file will not be a valid KGTK node or edge file.
 
 !!! info
-    See [`kgtk remove-columns`](https:../remove_columns) if you wish to remove columns.
+    See [`kgtk remove-columns`](../remove_columns) if you wish to remove columns.
 
-    See [`kgtk rename-columns`](https:../rename_columns) if you wish to rename columns.
+    See [`kgtk rename-columns`](../rename_columns) if you wish to rename columns.
 
 ### List of Column Names
 
@@ -58,7 +58,7 @@ from the output file.
     accomplish this.
 
 !!! note
-    `kgtk reorder-columns --trim` may be used as an alternative to [`kgtk remove-columns`](https:../remove_columns).
+    `kgtk reorder-columns --trim` may be used as an alternative to [`kgtk remove-columns`](../remove_columns).
 
 
 ## Usage

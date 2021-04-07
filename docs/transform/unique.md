@@ -1,7 +1,7 @@
 ## Overview
 
 The `kgtk unique` command reads a KGTK file, constructing a second KGTK file
-containing the unique values found in one of the columns of the input file.  Each unique
+containing the unique values found in one or more of the columns of the input file.  Each unique
 value may be accompanied by an occurence count, depending on the format
 selected for the output file.
 
@@ -9,9 +9,10 @@ In the default output format, the output file is a KGTK edge file.
 The `node1` column contains the unique values, the `label` column value is `count`,
 and the `node2` column contains the unique count.
 
-### Naming the Column to Count
+### Naming the Column(s) to Count
 
-The `--column COLUMN_NAME` option specifies the name of the column to
+The `--columns COLUMN_NAME ...` option (which may be abbreviated `--column COLUMN_NAME`)
+specifies the name(s) of the column(s) to
 count unique values.  If not specified, the default is the `node2` column or its alias.
 
 ### Processing Empty Values
@@ -40,30 +41,42 @@ Format                 | Description
 `--format node-counts` | This format creates a KGTK node file with two columns.  The `id` column will contain the (optionally prefixed) unique values, while the second column, named `count`, unless changed by `--label LABEL_VALUE`, will contain the count.
 `--format node-only`   | This creates a KGTK node file with a single column, the `id` column, containing the unique values.  The counts are computed but not written.
 
-### Quick Input Filtering
+### Quick Input Edge Filtering
 
 Using the `--where WHERE_COLUMN_NAME` and `--in WHERE_VALUES...` options, you
-can restrict the count to records where the value in a specified column
+can restrict the count to edges where the value in a specified column
 matches a list of specified values.  More sophisticated filtering can be
-obtained by running [`kgtk filter`](https:../filter) to provide the input to `kgtk unique`.
+obtained by running [`kgtk filter`](../filter) to provide the input to `kgtk unique`.
+
+### Input Value Filtering
+
+Using the `--value-filter VALUE_FILTER_RE" and "--value-match-type" options,
+you can restrict the set of values to ones that match a particular regular
+expression.
 
 ### Processing Large Files
 
 `kgtk unique` normally builds an in-memory dictionary of the unique
 values and counts.  Performance will be poor, and execution may fail, if there
 are a very large number of unique values, causing main memory to be exhausted.
-If you run out of main memory, you should presort the input file with [`kgtk sort`](https:../sort) and use
+If you run out of main memory, you should presort the input file with [`kgtk sort`](../sort) and use
 `kgtk unique --presorted` to avoid  building the in-memory dictionary.
+
+!!! note
+    This optimization is available when only a single input column
+    is being processed for unique values.
 
 ## Usage
 
 ```
 usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                   [--column COLUMN_NAME] [--empty EMPTY_VALUE]
+                   [-c [COLUMN_NAME [COLUMN_NAME ...]]] [--empty EMPTY_VALUE]
                    [--label LABEL_VALUE]
                    [--format {edge,node,node-counts,node-only}]
                    [--prefix PREFIX] [--where WHERE_COLUMN_NAME]
                    [--in WHERE_VALUES [WHERE_VALUES ...]]
+                   [--value-filter VALUE_FILTER_RE]
+                   [--value-match-type {fullmatch,match,search}]
                    [--presorted [True|False]] [-v [optional True|False]]
 
 Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.
@@ -79,7 +92,8 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  --column COLUMN_NAME  The column to count unique values (default=node2 or
+  -c [COLUMN_NAME [COLUMN_NAME ...]], --column [COLUMN_NAME [COLUMN_NAME ...]], --columns [COLUMN_NAME [COLUMN_NAME ...]]
+                        The column(s) to count unique values (default=node2 or
                         its alias).
   --empty EMPTY_VALUE   A value to substitute for empty values (default=).
   --label LABEL_VALUE   The output file label column value (default=count).
@@ -92,6 +106,12 @@ optional arguments:
   --in WHERE_VALUES [WHERE_VALUES ...]
                         The list of values for a record selection test.
                         (default=None).
+  --value-filter VALUE_FILTER_RE
+                        A regular expression filter on the extracted values.
+                        (default=).
+  --value-match-type {fullmatch,match,search}
+                        Which type of regular expression value match:
+                        fullmatch, match, search. (default=match).
   --presorted [True|False]
                         When True, the input file is presorted.
                         (default=False).
@@ -181,3 +201,45 @@ kgtk unique -i examples/docs/unique-file1.tsv --column location \
 | -- | -- | -- |
 | home | count | 1 |
 | work | count | 1 |
+
+### Count the unique values in the `node1`, `label`, `node2`, and `location` columns.
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv \
+            --columns node1 label node2 location
+
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| 12040 | count | 3 |
+| 12345 | count | 1 |
+| 12346 | count | 1 |
+| 12347 | count | 1 |
+| 45601 | count | 2 |
+| eric | count | 1 |
+| home | count | 2 |
+| john | count | 3 |
+| peter | count | 2 |
+| steve | count | 2 |
+| work | count | 3 |
+| zipcode | count | 8 |
+
+### Count the unique all-alpha values in the `node1`, `label`, `node2`, and `location` columns.
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv \
+            --columns node1 label node2 location \
+            --value-filter '[A-Za-z]+'
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| eric | count | 1 |
+| home | count | 2 |
+| john | count | 3 |
+| peter | count | 2 |
+| steve | count | 2 |
+| work | count | 3 |
+| zipcode | count | 8 |
+

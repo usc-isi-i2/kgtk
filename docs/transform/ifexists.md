@@ -5,7 +5,7 @@ passing through only those rows for which one or more specified columns
 match records in a second KGTK file (the filter file, specified by `--filter-on`).
 
 !!! note
-    The [`kgtk ifnotexists`](https:../ifnotexists/) command computes the inverse output of this command.
+    The [`kgtk ifnotexists`](../ifnotexists/) command computes the inverse output of this command.
 
 ### Memory Usage Options
 
@@ -49,10 +49,7 @@ the following defaults will be used, which depend on the KGTK file type
 | node    | edge    | input.id   == filter.node1 |
 
 !!! note
-The number of input file keys must match the number of output file keys, after
-taking into consideration the default keys.  So, if you want to match an edge file's
-node1 value to a nonstandard column in a node file, only the `--filter-keys`
-option needs to be specified.
+    The number of input file keys must match the number of output file keys, after taking into consideration the default keys.  So, if you want to match an edge file's node1 value to a nonstandard column in a node file, only the `--filter-keys` option needs to be specified.
 
 ### Optional Output Files
 
@@ -436,7 +433,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 | s1 | steve | title | supervisor |  |  |
 | j1 | john | title | programmer |  |  |
 
-! note
+!!! note
     This used the key field comparison:
 
     > input.id == filter.id
