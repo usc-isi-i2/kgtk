@@ -26,7 +26,7 @@ jobs:
           pip install git+https://github.com/RDFLib/rdflib.git@master
       - name: Run Tests
         run: |
-          cd kgtk/tests
+          cd tests
           coverage run --source=kgtk -m unittest discover      
       - name: Coveralls Finished
         uses: coverallsapp/github-action@master
