@@ -101,6 +101,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="zero or more named LQ-string parameters to be passed to the query")
     parser.add_argument('--no-header', action='store_true', dest='no_header',
                         help="do not generate a header row with column names")
+    parser.add_argument('--force', action='store_true', dest='force',
+                        help="force problematic queries to run against advice")
     parser.add_argument('--index', metavar='MODE', nargs='?', action='store', dest='index',
                         choices=INDEX_MODES, const=INDEX_MODES[0], default=INDEX_MODES[0], 
                         help="control column index creation according to MODE"
@@ -193,7 +195,8 @@ def run(input_files: KGTKFiles,
                                       skip=options.get('skip'),
                                       limit=options.get('limit'),
                                       parameters=parameters,
-                                      index=options.get('index'))
+                                      index=options.get('index'),
+                                      force=options.get('force'))
             
             explain = options.get('explain')
             if explain is not None:
