@@ -169,12 +169,13 @@ class KgtkQuery(object):
     def __init__(self, files, store, options=None, query=None,
                  match='()', where=None, optionals=None,
                  ret='*', order=None, skip=None, limit=None,
-                 parameters={}, index='auto', loglevel=0):
+                 parameters={}, index='auto', force=False, loglevel=0):
         # normalize to strings in case we get path objects:
         self.files = [str(f) for f in listify(files)]
         self.options = options or {}
         self.store = store
         self.loglevel = loglevel
+        self.force = force
         self.parameters = parameters
         self.index_mode = index.lower()
         if query is None:
@@ -258,14 +259,28 @@ class KgtkQuery(object):
         return value
 
     def get_pattern_clause_graph(self, clause):
+        """Return the graph table for this 'clause', initialize it if necessary.
+        """
         node1 = clause[0]
+        if hasattr(node1, '_graph_table'):
+            return node1._graph_table
         graph = node1.graph
         if graph is not None:
             graph = graph.name
         else:
             graph = self.default_graph
-        return self.store.get_file_graph(self.map_graph_handle_to_file(graph))
+        node1._graph_table = self.store.get_file_graph(self.map_graph_handle_to_file(graph))
+        return node1._graph_table
 
+    def get_pattern_clause_graph_alias(self, clause):
+        """Return the graph table alias for this 'clause', initialize it if necessary.
+        """
+        node1 = clause[0]
+        if hasattr(node1, '_graph_alias'):
+            return node1._graph_alias
+        self.init_match_clauses()
+        return node1._graph_alias
+    
     # in case we have aliases which could be different in every graph, stubs for now:
     def get_node1_column(self, graph):
         return 'node1'
@@ -311,7 +326,8 @@ class KgtkQuery(object):
         """
         sql_vars = varmap.get(query_var)
         if sql_vars is None:
-            varmap[query_var] = set([sql_var])
+            # we use a list here now to preserve the order which matters for optionals:
+            varmap[query_var] = [sql_var]
         else:
             this_graph, this_col = sql_var
             best_var = None
@@ -329,7 +345,7 @@ class KgtkQuery(object):
                     best_var = equiv_var
             # not sure if they could ever be equal, but just in case:
             if sql_var != best_var:
-                varmap[query_var].add(sql_var)
+                sql_var not in sql_vars and sql_vars.append(sql_var)
                 # we never join an alias with anything:
                 if this_graph != self.ALIAS_GRAPH:
                     equiv = [best_var, sql_var]
@@ -434,8 +450,9 @@ class KgtkQuery(object):
                 if graph == self.ALIAS_GRAPH:
                     # variable names a return column alias, rename it apart to avoid name conflicts:
                     return sql_quote_ident(self.alias_column_name(col))
-            # otherwise, pick a representative from the set of equiv-joined column vars:
-            graph, col = list(sql_vars)[0]
+            # otherwise, pick the representative from the set of equiv-joined column vars,
+            # which corresponds to the graph alias and column name used by the first reference:
+            graph, col = sql_vars[0]
             return '%s.%s' % (graph, sql_quote_ident(col))
         
         elif expr_type == parser.List:
@@ -615,28 +632,29 @@ class KgtkQuery(object):
             limit += ' OFFSET ' + self.expression_to_sql(skip_clause.expression, litmap, None)
         return limit
 
-    def compute_auto_indexes(self, graphs, restrictions, joins):
+    def compute_auto_indexes(self):
         """Compute column indexes that are likely needed to run this query efficiently.
         This is just an estimate based on columns involved in joins and restrictions.
         """
-        alias_to_graph = {alias: graph for graph, alias in graphs}
         indexes = set()
-        if len(joins) > 0:
-            for (g1, c1), (g2, c2) in joins:
-                indexes.add((alias_to_graph[g1], c1))
-                indexes.add((alias_to_graph[g2], c2))
-        if len(restrictions) > 0:
-            # even if we have joins, we might need additional indexes on restricted columns:
-            for (g, c), val in restrictions:
-                indexes.add((alias_to_graph[g], c))
+        for match_clause in self.get_match_clauses():
+            joins = self.get_match_clause_joins(match_clause)
+            restrictions = self.get_match_clause_restrictions(match_clause)
+            if len(joins) > 0:
+                for (g1, c1), (g2, c2) in joins:
+                    indexes.add((self.graph_alias_to_graph(g1), c1))
+                    indexes.add((self.graph_alias_to_graph(g2), c2))
+            if len(restrictions) > 0:
+                # even if we have joins, we might need additional indexes on restricted columns:
+                for (g, c), val in restrictions:
+                    indexes.add((self.graph_alias_to_graph(g), c))
         return indexes
 
-    def ensure_relevant_indexes(self, sql, graphs=[], auto_indexes=[], explain=False):
+    def ensure_relevant_indexes(self, sql, graphs=None, explain=False):
         """Ensure that relevant indexes for this 'sql' query are available on the database.
-        Based on the specified index_mode strategy, either use 'auto_indexes', the DB's
+        Based on the specified index_mode strategy, either use 'compute_auto_indexes', the DB's
         'expert' mode, or some fixed variant such as 'quad' 'triple', 'node1+label', etc.
-        which will be applied to all 'graphs'.  Each element in 'auto_indexes' is assumed
-        to be an unaliased (graph, column) pair.
+        which will be applied to all 'graphs' (defaults to graphs referenced in the query).
         """
         # NOTES
         # - what we want is the minimal number of indexes that allow this query to run efficiently,
@@ -653,8 +671,8 @@ class KgtkQuery(object):
         # - we only index core columns for now, but we might have use cases where that is too restrictive
         
         if self.index_mode == 'auto':
-            # build indexes as suggested by joins and restrictions:
-            for graph, column in auto_indexes:
+            # build indexes as suggested by joins and restrictions (assumes unaliased graph/column pairs):
+            for graph, column in self.compute_auto_indexes():
                 # for now unconditionally restrict to core columns:
                 if column.lower() in ('id', 'node1', 'label', 'node2'):
                     # the ID check needs to be generalized:
@@ -688,49 +706,186 @@ class KgtkQuery(object):
             pass
         else:
             raise Exception('Unsupported index mode: %s' % self.index_mode)
+
+        graphs = graphs or set(map(lambda x: x[0], self.get_all_match_clause_graphs()))
         for graph in graphs:
             for column in columns:
                 # the ID check needs to be generalized:
                 self.store.ensure_graph_index(graph, column, unique=column=='id', explain=explain)
 
-    # TO DO: generalize this to translate OPTIONAL MATCH clauses, everything else is in place
-    
+
+    def get_match_clauses(self):
+        """Return all strict and optional match clauses of this query in order.
+        """
+        return (self.match_clause, *self.optional_clauses)
+
+    def init_match_clauses(self):
+        """Initialize graph and table alias info for all match and pattern clauses.
+        """
+        i = 1
+        for match_clause in self.get_match_clauses():
+            for clause in match_clause.get_pattern_clauses():
+                graph = self.get_pattern_clause_graph(clause)
+                graph_alias = '%s_c%d' % (graph, i) # per-clause graph table alias for self-joins
+                clause[0]._graph_alias = graph_alias
+                i += 1
+
+    def graph_alias_to_graph(self, graph_alias):
+        """Map a graph table 'graph_alias' back onto the graph table from which it was derived.
+        This simply keys in on the naming scheme we use above, but we could also store this somewhere.
+        """
+        return graph_alias[0:graph_alias.rfind('_')]
+
+    def get_match_clause_graphs(self, match_clause):
+        """Return the set of graph table names with aliases referenced by this 'match_clause'.
+        """
+        graphs = set()
+        for clause in match_clause.get_pattern_clauses():
+            graph_table = self.get_pattern_clause_graph(clause)
+            graph_alias = self.get_pattern_clause_graph_alias(clause)
+            graphs.add((graph_table, graph_alias))
+        return graphs
+
+    def get_all_match_clause_graphs(self):
+        """Return the set of graph table names with aliases referenced by this query.
+        """
+        graphs = set()
+        for match_clause in self.get_match_clauses():
+            for clause in match_clause.get_pattern_clauses():
+                graph_table = self.get_pattern_clause_graph(clause)
+                graph_alias = self.get_pattern_clause_graph_alias(clause)
+                graphs.add((graph_table, graph_alias))
+        return graphs
+
+    def graph_names_to_sql(self, graphs):
+        """Translate a list of (graph, alias) pairs into an SQL table list with aliases.
+        """
+        return ', '.join([g + ' AS ' + a for g, a in sorted(listify(graphs))])
+
+    def get_match_clause_restrictions(self, match_clause):
+        """Return all restrictions encountered in this 'match_clause' which
+        maps (graph, col) SQL columns onto literal restrictions.
+        """
+        if not hasattr(match_clause, '_restrictions'):
+            match_clause._restrictions = set()
+        return match_clause._restrictions
+
+    def get_match_clause_joins(self, match_clause):
+        """Returns all joins encounterd in this 'match_clause' which
+        maps equivalent SQL column pairs (avoiding dupes and redundant flips).
+        """
+        if not hasattr(match_clause, '_joins'):
+            match_clause._joins = set()
+        return match_clause._joins
+
+    def match_clause_to_sql(self, match_clause, litmap, varmap):
+        """Translate a strict or optional 'match_clause' into a set of source tables,
+        joined tables, internal and external join and where conditions which can then
+        be assembled into appropriate FROM/WHERE/INNER JOIN/LEFT JOIN and any necessary
+        nested joins depending on the particular structure of 'match_clause'.  This is
+        a bit wild and wooly and will likely need further refinement down the road.
+        """
+        clause_sources = sorted(list(self.get_match_clause_graphs(match_clause)))
+        primary_source = clause_sources[0]
+        sources = clause_sources.copy()
+
+        joined = set()
+        internal_condition = []
+        external_condition = []
+        
+        for (g1, c1), (g2, c2) in sorted(list(self.get_match_clause_joins(match_clause))):
+            condition = '%s.%s = %s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2))
+            graph1 = (self.graph_alias_to_graph(g1), g1)
+            graph2 = (self.graph_alias_to_graph(g2), g2)
+            internal = graph1 in clause_sources and graph2 in clause_sources
+            if graph1 != primary_source:
+                if graph1 in clause_sources:
+                    joined.add(graph1)
+                graph1 in sources and sources.remove(graph1)
+            if graph2 != primary_source:
+                if graph2 in clause_sources:
+                    joined.add(graph2)
+                graph2 in sources and sources.remove(graph2)
+            if internal:
+                internal_condition.append(condition)
+            else:
+                external_condition.append(condition)
+
+        for (g, c), val in sorted(list(self.get_match_clause_restrictions(match_clause))):
+            internal_condition.append('%s.%s = %s' % (g, sql_quote_ident(c), val))
+
+        where = self.where_clause_to_sql(match_clause.get_where_clause(), litmap, varmap)
+        if where:
+            internal_condition.append(where)
+        internal_condition = '\n   AND '.join(internal_condition)
+        external_condition = '\n   AND '.join(external_condition)
+        
+        return sources, joined, internal_condition, external_condition
+
+
     def translate_to_sql(self):
-        graphs = set()        # the set of graph table names with aliases referenced by this query
+        """Translate this query into an equivalent SQL expression.
+        """
         litmap = {}           # maps Kypher literals onto parameter placeholders
         varmap = {}           # maps Kypher variables onto representative (graph, col) SQL columns
-        restrictions = set()  # maps (graph, col) SQL columns onto literal restrictions
-        joins = set()         # maps equivalent SQL column pairs (avoiding dupes and redundant flips)
         parameters = None     # maps ? parameters in sequence onto actual query parameters
-        
-        # translate clause top-level info:
-        for i, clause in enumerate(self.match_clause.get_pattern_clauses()):
-            graph = self.get_pattern_clause_graph(clause)
-            graph_alias = '%s_c%d' % (graph, i+1) # per-clause graph table alias for self-joins
-            graphs.add((graph, graph_alias))
-            self.pattern_clause_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
+
+        for match_clause in self.get_match_clauses():
+            # translate clause top-level info:
+            for clause in match_clause.get_pattern_clauses():
+                graph_alias = self.get_pattern_clause_graph_alias(clause)
+                restrictions = self.get_match_clause_restrictions(match_clause)
+                joins = self.get_match_clause_joins(match_clause)
+                self.pattern_clause_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
             
-        # translate properties:
-        for i, clause in enumerate(self.match_clause.get_pattern_clauses()):
-            graph = self.get_pattern_clause_graph(clause)
-            graph_alias = '%s_c%d' % (graph, i+1) # per-clause graph table alias for self-joins
-            self.pattern_clause_props_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
+            # translate properties:
+            for clause in match_clause.get_pattern_clauses():
+                graph_alias = self.get_pattern_clause_graph_alias(clause)
+                restrictions = self.get_match_clause_restrictions(match_clause)
+                joins = self.get_match_clause_joins(match_clause)
+                self.pattern_clause_props_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
 
         # assemble SQL query:
-        select, group_by = self.return_clause_to_sql_selection(self.return_clause, litmap, varmap)
-        graph_tables = ', '.join([g + ' AS ' + a for g, a in sorted(list(graphs))])
         query = io.StringIO()
-        query.write('SELECT %s\nFROM %s' % (select, graph_tables))
         
-        if len(restrictions) > 0 or len(joins) > 0 or self.match_clause.get_where_clause() is not None:
-            query.write('\nWHERE TRUE')
-        for (g, c), val in sorted(list(restrictions)):
-            query.write('\nAND %s.%s=%s' % (g, sql_quote_ident(c), val))
-        for (g1, c1), (g2, c2) in sorted(list(joins)):
-            query.write('\nAND %s.%s=%s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2)))
+        select, group_by = self.return_clause_to_sql_selection(self.return_clause, litmap, varmap)
+        query.write('SELECT %s' % select)
 
-        where = self.where_clause_to_sql(self.match_clause.get_where_clause(), litmap, varmap)
-        where and query.write('\nAND ' + where)
+        # start with the mandatory strict match clause:
+        sources, joined, int_condition, ext_condition = self.match_clause_to_sql(self.match_clause, litmap, varmap)
+        if len(sources) > 1 and not self.force:
+            raise Exception('match clause generates a cross-product which can be very expensive, use --force to override')
+        assert not ext_condition, 'INTERNAL ERROR: unexpected match clause'
+
+        where = None
+        query.write('\nFROM %s' % self.graph_names_to_sql(sources))
+        if joined:
+            query.write('\nINNER JOIN %s' % self.graph_names_to_sql(joined))
+        if int_condition:
+            if joined:
+                query.write('\nON %s' % int_condition)
+            else:
+                # we need to defer WHERE in case there are left joins:
+                where = '\nWHERE %s' % int_condition
+
+        # now add any left joins from optional match clauses:
+        for opt_clause in self.optional_clauses:
+            sources, joined, int_condition, ext_condition = self.match_clause_to_sql(opt_clause, litmap, varmap)
+            if len(sources) > 1 and not self.force:
+                raise Exception('optional clause generates a cross-product which can be very expensive, use --force to override')
+            nested = len(joined) > 0
+            query.write('\nLEFT JOIN %s%s' % (nested and '(' or '', self.graph_names_to_sql(sources)))
+            if nested:
+                query.write('\n    INNER JOIN %s' % self.graph_names_to_sql(joined))
+                query.write('\n    ON %s)' % int_condition.replace('\n', '\n    '))
+                query.write('\nON %s' % ext_condition)
+            else:
+                query.write('\nON %s' % '\n   AND '.join(listify(ext_condition) + listify(int_condition)))
+        
+        # finally add WHERE clause from strict match in case we had one:
+        where and query.write(where)
+
+        # add various other clauses:
         group_by and query.write('\n' + group_by)
         order = self.order_clause_to_sql(self.order_clause, litmap, varmap)
         order and query.write('\n' + order)
@@ -738,25 +893,24 @@ class KgtkQuery(object):
         limit and query.write('\n' + limit)
         query = query.getvalue().replace(' TRUE\nAND', '')
         query, parameters = self.replace_literal_parameters(query, litmap)
-        auto_indexes = self.compute_auto_indexes(graphs, restrictions, joins)
 
         # logging:
         rule = '-' * 45
         self.log(1, 'SQL Translation:\n%s\n  %s\n  PARAS: %s\n%s'
                  % (rule, query.replace('\n', '\n     '), parameters, rule))
 
-        return query, parameters, sorted(list(zip(*graphs))[0]), auto_indexes
+        return query, parameters
 
     def execute(self):
-        query, params, graphs, indexes = self.translate_to_sql()
-        self.ensure_relevant_indexes(query, graphs=graphs, auto_indexes=indexes)
+        query, params = self.translate_to_sql()
+        self.ensure_relevant_indexes(query)
         result = self.store.execute(query, params)
         self.result_header = [self.unalias_column_name(c[0]) for c in result.description]
         return result
 
     def explain(self, mode='plan'):
-        query, params, graphs, indexes = self.translate_to_sql()
-        self.ensure_relevant_indexes(query, graphs=graphs, auto_indexes=indexes, explain=True)
+        query, params = self.translate_to_sql()
+        self.ensure_relevant_indexes(query, explain=True)
         result = self.store.explain(query, mode=mode)
         return result
 
