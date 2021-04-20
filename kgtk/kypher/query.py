@@ -167,7 +167,7 @@ def dwim_to_lqstring_para(x):
 class KgtkQuery(object):
 
     def __init__(self, files, store, options=None, query=None,
-                 match='()', where=None, optionals=None,
+                 match='()', where=None, optionals=None, with_=None,
                  ret='*', order=None, skip=None, limit=None,
                  parameters={}, index='auto', force=False, loglevel=0):
         # normalize to strings in case we get path objects:
@@ -178,32 +178,43 @@ class KgtkQuery(object):
         self.force = force
         self.parameters = parameters
         self.index_mode = index.lower()
+        
         if query is None:
-            # supplying a query through individual clause arguments might be a bit easier,
+            # supplying a query through individual clause arguments is a little bit easier,
             # since they can be in any order, can have defaults, are easier to shell-quote, etc.:
-            query = ''
+            query = io.StringIO()
             # for now we allow/require exactly one strict match pattern, even though in Cypher
             # there could be any number and conceivably optionals could come before strict:
-            query += match and ' MATCH ' + match or ''
-            query += where and ' WHERE ' + where or ''
+            match and query.write(' MATCH ' + match)
+            where and query.write(' WHERE ' + where)
             # optionals is a list of match pattern/where pairs, where single-element lists can be atoms:
             for omatch in listify(optionals):
                 omatch = listify(omatch)
-                query += ' OPTIONAL MATCH ' + omatch[0]
+                query.write(' OPTIONAL MATCH ' + omatch[0])
                 if len(omatch) > 1 and omatch[1] is not None:
-                    query += ' WHERE ' + omatch[1]
-            query += ret and ' RETURN ' + ret or ''
-            query += order and ' ORDER BY ' + order or ''
-            query += skip and ' SKIP ' + skip or ''
-            query += limit and ' LIMIT ' + limit or ''
+                    query.write(' WHERE ' + omatch[1])
+            # with_ is a single (vars, where) tuple, where a single-element atom/list
+            # is interpreted as the variables clause to a 'with <vars>...':
+            if with_ is not None:
+                with_ = listify(with_) + [None]
+                query.write(' WITH ' + with_[0])
+                with_[1] and query.write(' WHERE ' + with_[1])
+            ret and query.write(' RETURN ' + ret)
+            order and query.write(' ORDER BY ' + order)
+            skip and query.write(' SKIP ' + skip)
+            limit and query.write(' LIMIT ' + limit)
+            query = query.getvalue()
         self.log(2, 'Kypher:' + query)
+        
         self.query = parser.intern(query)
         self.match_clause = self.query.get_match_clause()
         self.optional_clauses = self.query.get_optional_match_clauses()
+        self.with_clause = self.query.get_with_clause()
         self.return_clause = self.query.get_return_clause()
         self.order_clause = self.query.get_order_clause()
         self.skip_clause = self.query.get_skip_clause()
         self.limit_clause = self.query.get_limit_clause()
+        
         # do this after we parsed the query, so we get syntax errors right away:
         for file in self.files:
             store.add_graph(file, alias=self.get_input_option(file, 'alias'))
@@ -822,6 +833,21 @@ class KgtkQuery(object):
         
         return sources, joined, internal_condition, external_condition
 
+    def with_clause_to_sql(self, with_clause, litmap, varmap):
+        """Translate a 'WITH ... WHERE ...' clause which currently is primarily a vehicle to
+        communicate a global WHERE clause that applies across all match clauses, so for now
+        we only support 'WITH * ...'.  But we do want to generalize this at some point, since
+        it gives us a way to chain queries and condition on aggregates, for example.  Once we
+        do that, this needs to be generalized to take the translated query it wraps as an arg.
+        """
+        if with_clause is None:
+            return ""
+        select = self.return_clause_to_sql_selection(with_clause, litmap, varmap)
+        if select != ('*', None):
+            raise Exception("unsupported WITH clause, only 'WITH * ...' is currently supported")
+        where = self.where_clause_to_sql(with_clause.where, litmap, varmap)
+        return where
+
 
     def translate_to_sql(self):
         """Translate this query into an equivalent SQL expression.
@@ -857,7 +883,7 @@ class KgtkQuery(object):
             raise Exception('match clause generates a cross-product which can be very expensive, use --force to override')
         assert not ext_condition, 'INTERNAL ERROR: unexpected match clause'
 
-        where = None
+        where = []
         query.write('\nFROM %s' % self.graph_names_to_sql(sources))
         if joined:
             query.write('\nINNER JOIN %s' % self.graph_names_to_sql(joined))
@@ -866,7 +892,7 @@ class KgtkQuery(object):
                 query.write('\nON %s' % int_condition)
             else:
                 # we need to defer WHERE in case there are left joins:
-                where = '\nWHERE %s' % int_condition
+                where.append(int_condition)
 
         # now add any left joins from optional match clauses:
         for opt_clause in self.optional_clauses:
@@ -881,9 +907,13 @@ class KgtkQuery(object):
                 query.write('\nON %s' % ext_condition)
             else:
                 query.write('\nON %s' % '\n   AND '.join(listify(ext_condition) + listify(int_condition)))
+
+        # process any 'WITH * WHERE ...' clause to add to the global WHERE condition if necessary:
+        with_where = self.with_clause_to_sql(self.with_clause, litmap, varmap)
+        with_where and where.append(with_where)
         
-        # finally add WHERE clause from strict match in case we had one:
-        where and query.write(where)
+        # finally add WHERE clause from strict match and/or WITH clause in case there were any:
+        where and query.write('\nWHERE %s' % ('\n   AND '.join(where)))
 
         # add various other clauses:
         group_by and query.write('\n' + group_by)
