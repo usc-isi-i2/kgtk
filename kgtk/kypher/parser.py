@@ -789,14 +789,23 @@ class Return(QueryElement):
         delattr(self, 'body')
         return self
 
+class With(Return):
+    ast_name = 'With'
+
+    def __init__(self, query, distinct, body, where):
+        self._query = query
+        self.distinct = distinct is not None
+        self.body = intern_ast(query, body)
+        self.where = intern_ast(query, where)
+        
 
 class SingleQuery(QueryElement):
     ast_name = 'SingleQuery'
 
     def __init__(self, query, match, with_, return_):
-        """TO DO: COMPLETE"""
         self._query = query
         self.match = intern_ast(query, match)
+        self.with_ = intern_ast(query, with_)
         self.return_ = intern_ast(query, return_)
 
 
@@ -871,6 +880,12 @@ class KypherQuery(object):
         assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
         optional_clauses = self.simplify().query.match.optionals
         return optional_clauses
+
+    def get_with_clause(self):
+        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
+        self.simplify()
+        with_ = self.query.with_
+        return with_
 
     def get_return_clause(self):
         assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
