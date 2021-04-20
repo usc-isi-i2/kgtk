@@ -47,15 +47,17 @@ class InputOptionAction(argparse.Action):
         setattr(namespace, 'input_file_options', input_options)
 
 class MatchOptionAction(argparse.Action):
-    """Special-purpose argparse action that handles --match and --optional match
-    and associates any --where option with the appropriate match preceding it.
+    """Special-purpose argparse action that handles --match, --optional and --with
+    and associates any --where option with the appropriate clause preceding it.
     """
     def __call__(self, parser, namespace, values, option_string=None):
         match_options = getattr(namespace, 'match_options', []) or []
-        if option_string in ('--match', '--opt', '--optional'):
+        if option_string in ('--match', '--opt', '--optional', '--with'):
             match_options.append([option_string, values, None])
-            # for --match/--where use the same destinations as before:
+            # for --match/--where/--with use the top-level option destinations:
             if option_string == '--match':
+                setattr(namespace, self.dest, values)
+            if option_string == '--with':
                 setattr(namespace, self.dest, values)
         elif option_string == '--where':
             if len(match_options) < 1 or match_options[-1][2] is not None:
@@ -63,6 +65,8 @@ class MatchOptionAction(argparse.Action):
             match_options[-1][2] = values
             if match_options[-1][0] == '--match':
                 setattr(namespace, self.dest, values)
+            if match_options[-1][0] == '--with':
+                setattr(namespace, 'with_where', values)
         setattr(namespace, 'match_options', match_options)
 
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
@@ -82,9 +86,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.add_argument('--match', metavar='PATTERN', default='()', action=MatchOptionAction, dest='match',
                         help="MATCH pattern of a Kypher query, defaults to universal node pattern `()'")
     parser.add_argument('--where', metavar='CLAUSE', default=None, action=MatchOptionAction, dest='where',
-                        help="WHERE clause to a preceding --match or --optional clause")
+                        help="WHERE clause to a preceding --match, --opt or --with clause")
     parser.add_argument('--opt', '--optional', metavar='PATTERN', default=None, action=MatchOptionAction,
                         help="OPTIONAL MATCH pattern(s) of a Kypher query (zero or more)")
+    parser.add_argument('--with', metavar='CLAUSE', default='*', action=MatchOptionAction, dest='with',
+                        help="WITH clause of a Kypher query (only 'WITH * ...' is currently supported)")
+    parser.add_argument('--where:', metavar='CLAUSE', default=None, action='store', dest='with_where',
+                        help="final global WHERE clause, shorthand for 'WITH * WHERE ...'")
     parser.add_argument('--return', metavar='CLAUSE', default='*', action='store', dest='return_',
                         help="RETURN clause of a Kypher query (defaults to *)")
     parser.add_argument('--order-by', metavar='CLAUSE', default=None, action='store', dest='order',
@@ -188,8 +196,10 @@ def run(input_files: KGTKFiles,
                                       options=options.get('input_file_options'),
                                       query=options.get('query'),
                                       match=options.get('match'),
-                                      optionals=[(pat, where) for (opt, pat, where) in options.get('match_options', []) if opt != '--match'],
                                       where=options.get('where'),
+                                      optionals=[(pat, where) for (opt, pat, where) in options.get('match_options', [])
+                                                 if opt in ('--opt', '--optional')],
+                                      with_=(options.get('with'), options.get('with_where')),
                                       ret=options.get('return_'),
                                       order=options.get('order'),
                                       skip=options.get('skip'),
