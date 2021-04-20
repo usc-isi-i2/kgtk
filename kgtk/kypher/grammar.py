@@ -93,7 +93,7 @@ KYPHER_GRAMMAR = r"""
     RemoveItem = Variable:v NodeLabels:nl -> ["RemoveItemVar", v, nl]
                 | PropertyExpression:p -> ["RemoveItemPe", p]
 
-    With = W I T H (SP D I S T I N C T)?:d SP ReturnBody:rb (Where)?:w -> ["With", d, rb, w]
+    With = W I T H (SP D I S T I N C T)?:d SP ReturnBody:rb (SP Where)?:w -> ["With", d, rb, w]
 
     Return = R E T U R N (SP D I S T I N C T)?:d SP ReturnBody:rb -> ["Return", d, rb]
 
