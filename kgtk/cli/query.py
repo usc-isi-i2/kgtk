@@ -123,6 +123,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.add_argument('--graph-cache', default=DEFAULT_GRAPH_CACHE_FILE, action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
+    parser.add_argument('--import', metavar='MODULE_LIST', default=None, action='store', dest='import',
+                        help="Python modules needed to define user extensions to built-in functions")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
                         help="output file to write to, if `-' (the default) output goes to stdout."
                         + " Files with extensions .gz, .bz2 or .xz will be appropriately compressed.")
@@ -188,9 +190,13 @@ def run(input_files: KGTKFiles,
                                             string=options.get('string_paras') or [],
                                             lqstring=options.get('lqstring_paras') or [])
 
+        imports = options.get('import')
+
         try:
             graph_cache = options.get('graph_cache_file')
             store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache), loglevel=loglevel)
+
+            imports and exec('import ' + imports, sqlstore.__dict__)
         
             query = kyquery.KgtkQuery(inputs, store, loglevel=loglevel,
                                       options=options.get('input_file_options'),

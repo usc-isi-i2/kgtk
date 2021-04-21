@@ -1361,7 +1361,7 @@ SqliteStore.register_user_function('kgtk_empty_to_null', 1, kgtk_empty_to_null, 
 # come online - we hope.
 
 def math_acos(x):
-    """"Implement the SQLite3 math built-in 'acos' via Python.
+    """Implement the SQLite3 math built-in 'acos' via Python.
     """
     try:
         return math.acos(x)
@@ -1614,6 +1614,97 @@ SqliteStore.register_user_function('sqrt', 1, math_sqrt, deterministic=True)
 SqliteStore.register_user_function('tan', 1, math_tan, deterministic=True)
 SqliteStore.register_user_function('tanh', 1, math_tanh, deterministic=True)
 SqliteStore.register_user_function('trunc', 1, math_trunc, deterministic=True)
+
+
+# Python eval:
+
+_sqlstore_module = sys.modules[__name__]
+_builtins_module = sys.modules['builtins']
+
+def get_pyeval_fn(fnname):
+    pos = fnname.rfind('.')
+    if pos < 0:
+        return getattr(_sqlstore_module, fnname, None) or getattr(_builtins_module, fnname)
+    else:
+        # we lookup the module name relative to this module in case somebody imported an alias:
+        return getattr(getattr(_sqlstore_module, fnname[0:pos]), fnname[pos+1:])
+
+def pyeval(expression):
+    """Python-evaluate 'expression' and return the result (coerce value to string if necessary).
+    """
+    try:
+        val = eval(expression)
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+def pyeval0(fnname):
+    """Python-evaluate 'fnname()' and return the result (coerce value to string if necessary).
+    'fnname' must name a function and may be qualified with a module imported by --import.
+    """
+    try:
+        val = get_pyeval_fn(fnname)()
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+def pyeval1(fnname, x1):
+    """Python-evaluate 'fnname(x1)' and return the result (coerce value to string if necessary).
+    'fnname' must name a function and may be qualified with a module imported by --import.
+    """
+    try:
+        val = get_pyeval_fn(fnname)(x1)
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+def pyeval2(fnname, x1, x2):
+    """Python-evaluate 'fnname(x1,x2)' and return the result (coerce value to string if necessary).
+    'fnname' must name a function and may be qualified with a module imported by --import.
+    """
+    try:
+        val = get_pyeval_fn(fnname)(x1, x2)
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+def pyeval3(fnname, x1, x2, x3):
+    """Python-evaluate 'fnname(x1,x2,x3)' and return the result (coerce value to string if necessary).
+    'fnname' must name a function and may be qualified with a module imported by --import.
+    """
+    try:
+        val = get_pyeval_fn(fnname)(x1, x2, x3)
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+def pyeval4(fnname, x1, x2, x3, x4):
+    """Python-evaluate 'fnname(x1,x2,x3,x4)' and return the result (coerce value to string if necessary).
+    'fnname' must name a function and may be qualified with a module imported by --import.
+    """
+    try:
+        val = get_pyeval_fn(fnname)(x1, x2, x3, x4)
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+def pyeval5(fnname, x1, x2, x3, x4, x5):
+    """Python-evaluate 'fnname(x1,x2,x3,x4,x5)' and return the result (coerce value to string if necessary).
+    'fnname' must name a function and may be qualified with a module imported by --import.
+    """
+    try:
+        val = get_pyeval_fn(fnname)(x1, x2, x3, x4, x5)
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+SqliteStore.register_user_function('pyeval',  1, pyeval,  deterministic=True)
+SqliteStore.register_user_function('pyeval0', 1, pyeval0, deterministic=True)
+SqliteStore.register_user_function('pyeval1', 2, pyeval1, deterministic=True)
+SqliteStore.register_user_function('pyeval2', 3, pyeval2, deterministic=True)
+SqliteStore.register_user_function('pyeval3', 4, pyeval3, deterministic=True)
+SqliteStore.register_user_function('pyeval4', 5, pyeval4, deterministic=True)
+SqliteStore.register_user_function('pyeval5', 6, pyeval5, deterministic=True)
 
 
 ### Experimental transitive taxonomy relation indexing:
