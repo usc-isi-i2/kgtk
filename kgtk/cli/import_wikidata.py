@@ -1845,8 +1845,8 @@ def run(input_file: KGTKFiles,
             if len(nrows) > 0 or \
                len(erows) > 0 or \
                len(qrows) > 0 or \
-               len(invalid_erows) > 0 or \
-               len(invalid_qrows) > 0 or \
+               (invalid_erows is not None and len(invalid_erows) > 0) or \
+               (invalid_qrows is not None and len(invalid_qrows) > 0) or \
                len(description_erows) > 0 or \
                len(sitelink_erows) > 0:
                 if collect_results:
@@ -1945,11 +1945,11 @@ def run(input_file: KGTKFiles,
                             if skip_validation or validate(row, "detailed qual uncollected"):
                                 self.qual_wr.writerow(row)
     
-                    if invalid_edge_file:
+                    if invalid_edge_file and invalid_erows is not None:
                         for row in invalid_erows:
                             self.invalid_edge_wr.writerow(row)
 
-                    if invalid_qual_file:
+                    if invalid_qual_file and invalid_qrows is not None:
                         for row in invalid_qrows:
                             self.invalid_qual_wr.writerow(row)
     
