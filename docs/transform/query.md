@@ -1680,27 +1680,21 @@ can be used to execute arbitrary Python code as part of a Kypher query.  To allo
 execute their own special-purpose code in such circumstances, the `--import` argument can be
 used to import any required library or user modules before the query is exectuted.
 
-| Function                     | Description                                                                                           |
-|------------------------------|-------------------------------------------------------------------------------------------------------|
-| pyeval(expression)           | Python-evaluate `expression` and return the result (coerce value to string if necessary).             |
-| pyeval0(fun)                 | Python-evaluate `fun()` and return the result (coerce value to string if necessary).  `fun` must name a function and may be qualified with a module imported by `--import`.  |
-| pyeval1(fun, x1)             | Python-evaluate `fun(x1)` and return the result. (see `pyeval0` re. coercion and `fun`).              |
-| pyeval2(fun, x1, x2)         | Python-evaluate `fun(x1,x2))` and return the result. (see `pyeval0` re. coercion and `fun`).          |
-| pyeval3(fun, x1, x2, x3)     | Python-evaluate `fun(x1,x2,x3)` and return the result. (see `pyeval0` re. coercion and `fun`).        |
-| pyeval4(fun,x1,x2,x3,x4)     | Python-evaluate `fun(x1,x2,x3,x4)` and return the result. (see `pyeval0` re. coercion and `fun`).     |
-| pyeval5(fun,x1,x2,x3,x4,x5)  | Python-evaluate `fun(x1,x2,x3,x4,x5)` and return the result. (see `pyeval0` re. coercion and `fun`).  |
+| Function               | Description                                                                               |
+|------------------------|-------------------------------------------------------------------------------------------|
+| pyeval(expression...)  | Python-eval `expression` and return the result (coerce value to string if necessary).  Multiple `expression` arguments will be concatenated first.                             |
+| pycall(fun, arg...)    | Python-call `fun(arg...)` and return the result (coerce value to string if necessary).  `fun` must name a function and may be qualified with a module imported by `--import`.  |
 
-Here is an example that uses a number of these facilities.  First we
-are importing the `uuid` and `math` modules (the latter with an
-alias), so we can refer to them in the `pyeval` expressions.  The
-`--import` argument takes anything that would be a legal argument to a
-single Python `import` statement.  Here we used some standard Python
-modules, but any user-defined module(s) could be used as long as they
-are findable in the current `PYTHONPATH`.  `pyeval` parses and
-evaluates an arbitrary Python expression which here we assemble via a
-`printf` function call.  The various `pyevalN` functions are slightly
-more efficient, since they only have to look up the function object
-based on the provided (qualified) name:
+Here is an example that uses both of these facilities.  First we are
+importing the `uuid` and `math` modules (the latter with an alias), so
+we can refer to them in the `pycall` expressions.  The `--import`
+argument takes anything that would be a legal argument to a single
+Python `import` statement.  Here we used some standard Python modules,
+but any user-defined module(s) could be used as long as they are
+findable in the current `PYTHONPATH`.  `pyeval` parses and evaluates
+an arbitrary Python expression which here we assemble via a `printf`
+function call.  `pycall` is slightly more efficient, since it only has
+to look up the function object based on the provided (qualified) name:
 
 ```
 kgtk query -i $GRAPH --import 'uuid, math as m' \
@@ -1708,8 +1702,8 @@ kgtk query -i $GRAPH --import 'uuid, math as m' \
      --where 'kgtk_lqstring(y)' \
      --return 'y as name, \
                pyeval(printf($FMT, y)) as swapname, \
-               pyeval2("m.fmod", length(y), 2) as isodd, \
-               pyeval0("uuid.uuid4") as uuid' \
+               pycall("m.fmod", length(y), 2) as isodd, \
+               pycall("uuid.uuid4") as uuid' \
      --para FMT='"%s".swapcase()'
 ```
 Result:
@@ -1719,10 +1713,29 @@ Result:
 | 'Hans'@de |  'hANS'@DE |  1.0    |  5742f943-9bbe-4c5c-a4ac-98ffda145642 |
 | 'Otto'@de |  'oTTO'@DE |  1.0    |  a3d720e8-c331-4a9a-b5db-ab188ccb3e53 |
 
-The values returned by the various `pyeval` functions must be simple literals
+The values returned by `pyeval` and `pycall` must be simple literals
 such as numbers, strings or booleans.  Anything else would cause a
 database error and is therefore converted to a string first (e.g., the
 `UUID` objects returned by `uuid.uuid4`).
+
+Here is an alternative invocation of `pyeval` that uses multiple arguments
+which will be implicitly string-concatenated before evaluation.  The
+`char(34)` term produces a double quote to avoid shell quoting issues:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r:name]->(y)' \
+     --where 'kgtk_lqstring(y)' \
+     --return 'y as name, \
+               pyeval(char(34), y, char(34), ".swapcase()") as swapname'
+```
+Result:
+
+| name      | swapname  |
+|-----------|-----------|
+| 'Hans'@de | 'hANS'@DE |
+| 'Otto'@de | 'oTTO'@DE |
+
 
 !!! note
     Functions will often be executed in the inner loop of a database query
@@ -1732,7 +1745,9 @@ database error and is therefore converted to a string first (e.g., the
 Users may also implement their own built-ins directly which will
 generally be more efficient than going through the `pyeval`
 mechanisms.  For example, suppose the file `mybuiltins.py` has the
-following content and is visible in the current `PYTHONPATH`:
+following content and is visible in the current `PYTHONPATH` (note
+that `num_params` can also be -1 to allow functions with a variable
+number of arguments):
 
 ```
 from kgtk.kypher.sqlstore import SqliteStore
@@ -1740,7 +1755,7 @@ from kgtk.kypher.sqlstore import SqliteStore
 def swapcase(x):
     return str(x).swapcase()
 
-SqliteStore.register_user_function('swapcase', 1, swapcase, deterministic=True)
+SqliteStore.register_user_function(name='swapcase', num_params=1, func=swapcase)
 ```
 
 Then we can import it in a query and call the defined function just as any
