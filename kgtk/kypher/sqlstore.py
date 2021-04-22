@@ -1629,82 +1629,28 @@ def get_pyeval_fn(fnname):
         # we lookup the module name relative to this module in case somebody imported an alias:
         return getattr(getattr(_sqlstore_module, fnname[0:pos]), fnname[pos+1:])
 
-def pyeval(expression):
-    """Python-evaluate 'expression' and return the result (coerce value to string if necessary).
+def pyeval(*expression):
+    """Python-eval 'expression' and return the result (coerce value to string if necessary).
+    Multiple 'expression' arguments will be concatenated first.
     """
     try:
-        val = eval(expression)
+        val = eval(''.join(expression))
         return isinstance(val, (str, int, float)) and val or str(val)
     except:
         pass
 
-def pyeval0(fnname):
-    """Python-evaluate 'fnname()' and return the result (coerce value to string if necessary).
-    'fnname' must name a function and may be qualified with a module imported by --import.
+def pycall(fun, *arg):
+    """Python-call 'fun(arg...)' and return the result (coerce value to string if necessary).
+    'fun' must name a function and may be qualified with a module imported by --import.
     """
     try:
-        val = get_pyeval_fn(fnname)()
+        val = get_pyeval_fn(fun)(*arg)
         return isinstance(val, (str, int, float)) and val or str(val)
     except:
         pass
-
-def pyeval1(fnname, x1):
-    """Python-evaluate 'fnname(x1)' and return the result (coerce value to string if necessary).
-    'fnname' must name a function and may be qualified with a module imported by --import.
-    """
-    try:
-        val = get_pyeval_fn(fnname)(x1)
-        return isinstance(val, (str, int, float)) and val or str(val)
-    except:
-        pass
-
-def pyeval2(fnname, x1, x2):
-    """Python-evaluate 'fnname(x1,x2)' and return the result (coerce value to string if necessary).
-    'fnname' must name a function and may be qualified with a module imported by --import.
-    """
-    try:
-        val = get_pyeval_fn(fnname)(x1, x2)
-        return isinstance(val, (str, int, float)) and val or str(val)
-    except:
-        pass
-
-def pyeval3(fnname, x1, x2, x3):
-    """Python-evaluate 'fnname(x1,x2,x3)' and return the result (coerce value to string if necessary).
-    'fnname' must name a function and may be qualified with a module imported by --import.
-    """
-    try:
-        val = get_pyeval_fn(fnname)(x1, x2, x3)
-        return isinstance(val, (str, int, float)) and val or str(val)
-    except:
-        pass
-
-def pyeval4(fnname, x1, x2, x3, x4):
-    """Python-evaluate 'fnname(x1,x2,x3,x4)' and return the result (coerce value to string if necessary).
-    'fnname' must name a function and may be qualified with a module imported by --import.
-    """
-    try:
-        val = get_pyeval_fn(fnname)(x1, x2, x3, x4)
-        return isinstance(val, (str, int, float)) and val or str(val)
-    except:
-        pass
-
-def pyeval5(fnname, x1, x2, x3, x4, x5):
-    """Python-evaluate 'fnname(x1,x2,x3,x4,x5)' and return the result (coerce value to string if necessary).
-    'fnname' must name a function and may be qualified with a module imported by --import.
-    """
-    try:
-        val = get_pyeval_fn(fnname)(x1, x2, x3, x4, x5)
-        return isinstance(val, (str, int, float)) and val or str(val)
-    except:
-        pass
-
-SqliteStore.register_user_function('pyeval',  1, pyeval,  deterministic=True)
-SqliteStore.register_user_function('pyeval0', 1, pyeval0, deterministic=True)
-SqliteStore.register_user_function('pyeval1', 2, pyeval1, deterministic=True)
-SqliteStore.register_user_function('pyeval2', 3, pyeval2, deterministic=True)
-SqliteStore.register_user_function('pyeval3', 4, pyeval3, deterministic=True)
-SqliteStore.register_user_function('pyeval4', 5, pyeval4, deterministic=True)
-SqliteStore.register_user_function('pyeval5', 6, pyeval5, deterministic=True)
+    
+SqliteStore.register_user_function('pyeval', -1, pyeval)
+SqliteStore.register_user_function('pycall', -1, pycall)
 
 
 ### Experimental transitive taxonomy relation indexing:

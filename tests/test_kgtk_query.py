@@ -1147,9 +1147,18 @@ class TestKGTKQuery(unittest.TestCase):
         qdf = self.run_test_query(query)
         self.assert_test_query_result(qdf, result)
 
-    def test_kgtk_query_pyeval0(self):
+    def test_kgtk_query_pyeval_multi(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pyeval(char(34), "Otto", char(34), ".swapcase()") as value'
+                """
+        result=["""value""",
+                """oTTO"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_0(self):
         query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --import uuid --limit 1
-                        --return 'pyeval0("uuid.uuid4") as value'
+                        --return 'pycall("uuid.uuid4") as value'
                 """
         import uuid
         qdf = self.run_test_query(query)
@@ -1157,45 +1166,45 @@ class TestKGTKQuery(unittest.TestCase):
         for i, row in qdf.iterrows():
             self.assertEqual(len(row['value']), len(str(uuid.uuid4())))
 
-    def test_kgtk_query_pyeval1(self):
+    def test_kgtk_query_pycall_1(self):
         query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
-                        --return 'pyeval1("list", "Otto") as value'
+                        --return 'pycall("list", "Otto") as value'
                 """
         result=["""value""",
                 """['O', 't', 't', 'o']"""]
         qdf = self.run_test_query(query)
         self.assert_test_query_result(qdf, result)
 
-    def test_kgtk_query_pyeval2(self):
+    def test_kgtk_query_pycall_2(self):
         query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --import math --limit 1
-                        --return 'pyeval2("math.fmod", 42, 17) as value'
+                        --return 'pycall("math.fmod", 42, 17) as value'
                 """
         result=["""value""",
                 """8.0"""]
         qdf = self.run_test_query(query)
         self.assert_test_query_result(qdf, result)
 
-    def test_kgtk_query_pyeval3(self):
+    def test_kgtk_query_pycall_3(self):
         query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
-                        --return 'pyeval3("max", 1, 2, 3) as value'
+                        --return 'pycall("max", 1, 2, 3) as value'
                 """
         result=["""value""",
                 """3"""]
         qdf = self.run_test_query(query)
         self.assert_test_query_result(qdf, result)
 
-    def test_kgtk_query_pyeval4(self):
+    def test_kgtk_query_pycall_4(self):
         query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
-                        --return 'pyeval4("max", 1, 2, 3, 4) as value'
+                        --return 'pycall("max", 1, 2, 3, 4) as value'
                 """
         result=["""value""",
                 """4"""]
         qdf = self.run_test_query(query)
         self.assert_test_query_result(qdf, result)
 
-    def test_kgtk_query_pyeval5(self):
+    def test_kgtk_query_pycall_5(self):
         query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
-                        --return 'pyeval5("max", 1, 2, 3, 4, 5) as value'
+                        --return 'pycall("max", 1, 2, 3, 4, 5) as value'
                 """
         result=["""value""",
                 """5"""]
