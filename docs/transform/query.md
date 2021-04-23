@@ -1013,6 +1013,241 @@ Result:
 |    Renal  |       1  |     11000.0  |
 
 
+### Optional match
+
+TO DO: flesh out commentary in this section
+
+Qualifier data:
+
+```
+QUALS=examples/docs/query-quals.tsv
+
+kgtk query -i $QUALS
+```
+Result:
+
+|    id   |  node1  |  label   |  node2                     |  graph  |
+|---------|---------|----------|----------------------------|---------|
+|    m11  |  w11    |  starts  |  ^1984-12-17T00:03:12Z/11  |  quals  |
+|    m12  |  w12    |  ends    |  ^1987-11-08T04:56:34Z/10  |  quals  |
+|    m13  |  w13    |  starts  |  ^1996-02-23T08:02:56Z/09  |  quals  |
+|    m14  |  w14    |  ends    |  ^2001-04-09T06:16:27Z/08  |  quals  |
+|    m15  |  w15    |  starts  |  ^2008-10-01T12:49:18Z/07  |  quals  |
+
+
+Strict query:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n), q: (r)-[:starts]->(s)' \
+     --return 'c as company, p as employee, n as name, s as start'
+```
+Result:
+
+| company | employee | name      | start                    |
+|---------|----------|-----------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |
+
+
+Optional start date:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n)' \
+     --opt    'q: (r)-[:starts]->(s)' \
+     --return 'c as company, p as employee, n as name, s as start'
+```
+Result:
+
+| company | employee | name      | start                    |
+|---------|----------|-----------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |
+| Kaiser  | Otto     | 'Otto'@de |                          |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |
+| Renal   | Molly    | "Molly"   |                          |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |
+
+
+Multiple independent optionals for start and/or end dates:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n)' \
+     --opt    'q: (r)-[:starts]->(s)' \
+     --opt    'q: (r)-[:ends]->(e)' \
+     --return 'c as company, p as employee, n as name, s as start, e as end'
+```
+Result:
+
+| company | employee | name      | start                    | end                      |
+|---------|----------|-----------|--------------------------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |                          |
+| Kaiser  | Otto     | 'Otto'@de |                          | ^1987-11-08T04:56:34Z/10 |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |                          |
+| Renal   | Molly    | "Molly"   |                          | ^2001-04-09T06:16:27Z/08 |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |                          |
+
+
+Optional join with where (note that optional clauses do not inherit the last graph variable
+from the previous match clause, so we could have omitted the `g` specification):
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r:works]->(c)' \
+     --opt   'g: (p)-[r2]->(l)-[:name]->(ln)' \
+     --where 'r2.label != "name" and kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Optional on optional with independent where clauses, which gives more results:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r:works]->(c)' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+"Where Mania" - same query as before:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Emulating "not exists" via optionals and global `--where:` clause:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match  'w: (p)-[r]->(c)' \
+     --where  'r.label = "works"' \
+     --opt    'g: (p)-[r2]->(l)' \
+     --where  'r2.label != "name"' \
+     --opt    'g: (l)-[:name]->(ln)' \
+     --where  'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --where: 'ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| Kaiser  | Joe      | friend | Otto      |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+`--where:` is a shorthand for `--with * --where...`:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --with  '*' \
+     --where 'ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| Kaiser  | Joe      | friend | Otto      |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Incorrect "not exists", we cannot test for NULL inside the optional clause and
+now that clause always fails, therefore all names are NULL:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de" and ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     |         |
+| Kaiser  | Otto     | loves  | Susi      |         |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Finding symmetric edges:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'g: (x)-[r]->(y)' \
+     --where 'r.label != "name"' \
+     --opt   'g: (y)-[r2]->(x)' \
+     --where 'r.label = r2.label' \
+     --return 'x, r.label, y, r2 is not null as symmetric'
+```
+Result:
+
+| node1 | label  | node2 | symmetric |
+|-------|--------|-------|-----------|
+| Hans  | loves  | Molly | 0         |
+| Otto  | loves  | Susi  | 0         |
+| Joe   | friend | Otto  | 0         |
+| Joe   | loves  | Joe   | 1         |
+
+
 <A NAME="input-output"></A>
 ## Input and output specifications
 
