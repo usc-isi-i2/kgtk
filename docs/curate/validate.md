@@ -491,6 +491,10 @@ Data errors reported: 2
 The first data line was flagged because it contained "00" in the day
 field, which violates the ISO 8601 specification.
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
+
 ### Validate with Verbose Feedback
 
 Sometimes you may wish to get more feedback about what `kgtk validate` is
@@ -531,6 +535,10 @@ Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
+
 ### Validate Only the Header
 
 Validate only the header record, ignoring data records:
@@ -561,13 +569,9 @@ This generates the following message on standard output:
 Error: No header line in file
 ~~~
 
-This also generates the following message on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exiting due to error
-
-!!! note
-    At the present time, the latter error message is not routable
-    to standard output.
 
 ### Supply a Missing Header Line
 
@@ -604,13 +608,9 @@ This generates the following message on standard output:
 Error: No header line to skip
 ~~~
 
-This also generates the following message on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exiting due to error
-
-!!! note
-    At the present time, this latter error message is not routable
-    to standard output.
 
 ### Header Error: Column Name Is Empty
 
@@ -633,13 +633,10 @@ The following error is reported on standard output:
 In input header '	label	node2': Column 0 has an empty name in the file header
 ~~~
 
-The following message appears on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
-!!! note
-    The `Exit requested` message cannot be routed to standard output at the present time.
-    
 ### Header Error: See All Header Errors
 
 Validate an input file with an empty column name.  This will generate an error
@@ -671,6 +668,9 @@ Data lines passed: 0
 
 Processing continues without exiting.
 
+!!! note
+    No error message is sent to stderr and the return status is 0.
+
 
 ### Header Error: Column Name Starts with White Space
 
@@ -701,6 +701,10 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    xxx
+
 ### Header Error: Column Name Ends with White Space
 
 Validate an input file where the intended `node1`, `label`, and `node2`
@@ -730,6 +734,10 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    xxx
+
 ### Header Error: Column Name Contains Internal White Space
 
 Validate an input file where the intended `node1` and `node2`
@@ -754,6 +762,10 @@ The following error is reported on standard output:
 Data lines read: 0
 Data lines passed: 0
 ~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    xxx
 
 ### Header Error: Column Name Contains a Comma (`,`)
 
@@ -784,6 +796,10 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    xxx
+
 ### Header Error: Column Name Contains a Vertical Bar (`|`)
 
 Validate an input file where the intended `node1`, `label`, and `node2`
@@ -805,6 +821,10 @@ Warning: Column name 'node2|' contains a vertical bar (|)
 Data lines read: 0
 Data lines passed: 0
 ~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    xxx
 
 ### Header Error: Column Name Is a Duplicate
 
@@ -828,7 +848,7 @@ The following error is reported on standard output:
 In input header 'node1	label	node1	id': Column 2 (node1) is a duplicate of column 0
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -856,7 +876,7 @@ The following error is reported on standard output:
 In input header 'col1	col2	col3': Missing required column: id | ID
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -884,7 +904,7 @@ The following error is reported on standard output:
 In input header 'col1	col2	col3': Missing required column: node1 | from | subject
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -912,7 +932,7 @@ The following error is reported on standard output:
 In input header 'col1	col2	col3': Missing required column: id | ID
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -963,7 +983,7 @@ The following error is reported on standard output:
 In input header 'node1	label	node2	id	from': Ambiguous required column names node1 and from
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -1683,10 +1703,10 @@ kgtk cat -i examples/docs/validate-strings.tsv
 | node1 | label | node2 |
 | -- | -- | -- |
 | line1 | invalid | "xxx |
-| line2 | valid | "xxx\"yyy" |
+| line2 | valid | "xxx\\"yyy" |
 | line3 | invalid | "xxx"yyy" |
-| line4 | valid | "xxx\\yyy" |
-| line5 | valid | "xxx\tyyy" |
+| line4 | valid | "xxx\\\\yyy" |
+| line5 | valid | "xxx\\tyyy" |
 
 ```bash
 kgtk validate -i examples/docs/validate-strings.tsv
@@ -1721,10 +1741,10 @@ kgtk cat -i examples/docs/validate-lax-strings.tsv
 | node1 | label | node2 |
 | -- | -- | -- |
 | line1 | invalid | "xxx |
-| line2 | valid | "xxx\"yyy" |
+| line2 | valid | "xxx\\"yyy" |
 | line3 | valid | "xxx"yyy" |
-| line4 | valid | "xxx\\yyy" |
-| line5 | valid | "xxx\tyyy" |
+| line4 | valid | "xxx\\\\yyy" |
+| line5 | valid | "xxx\\tyyy" |
 
 
 ```bash
@@ -1782,7 +1802,7 @@ kgtk cat -i examples/docs/validate-language-qualified-strings.tsv
 | node1 | label | node2 |
 | -- | -- | -- |
 | line1 | valid | 'abc'@en |
-| line2 | valid | 'a\'bc'@en |
+| line2 | valid | 'a\\'bc'@en |
 | line3 | invalid | 'a'bc'@en |
 | line4 | invalid | 'abc'@en-gb |
 | line5 | invalid | 'abc'@xxx |
@@ -2312,6 +2332,10 @@ Data lines excluded due to invalid values: 6
 Data errors reported: 6
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
+
 ### Value Check: Change the Minimum Valid Year
 
 Suppose we want to exclude all dates before the year 1000.
@@ -2361,6 +2385,10 @@ Data lines passed: 2
 Data lines excluded due to invalid values: 5
 Data errors reported: 5
 ~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
 
 ### Value Check: Clamp the Minimum Valid Year
 
@@ -2484,6 +2512,10 @@ Data lines excluded due to invalid values: 5
 Data errors reported: 5
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
+
 ### Value Check: Changing the Maximum Valid Year
 
 Let's change the maximum valid year to 9999:
@@ -2524,6 +2556,9 @@ Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
 
 ### Value Check: Changing the Maximum Valid Year #2
 
