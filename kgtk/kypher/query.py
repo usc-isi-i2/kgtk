@@ -335,15 +335,20 @@ class KgtkQuery(object):
         first reference to 'query_var', simply add it to 'varmap'.  Otherwise, find the best
         existing reference to equiv-join it with and record the necessary join in 'joins'.
         """
+        #print('register_clause_variable: ', query_var, sql_var, varmap, joins)
         sql_vars = varmap.get(query_var)
         if sql_vars is None:
             # we use a list here now to preserve the order which matters for optionals:
             varmap[query_var] = [sql_var]
         else:
+            # POLICY: we either find the earliest equivalent variable from the same clause
+            # (as in '(x)-[]->{x)'), or the earliest registered variable from a different
+            # clause, which is what we need to handle cross-clause references from optionals
+            # (assuming strict and optional match clauses are processed appropriately in order):
+            # NOTE: further optimizations might be possible here, e.g., we might want to prefer
+            # a self-join on the same column, since it might reduce the number of auto-indexes:
             this_graph, this_col = sql_var
             best_var = None
-            # TO DO: further optimizations are possible here, for example, we might want to prefer
-            # a self-join on the same column, since it might reduce the number of indexes needed:
             for equiv_var in sql_vars:
                 equiv_graph, equiv_col = equiv_var
                 if best_var is None:
@@ -353,14 +358,16 @@ class KgtkQuery(object):
                     best_var = equiv_var
                     break
                 else:
-                    best_var = equiv_var
+                    # keep current earliest 'best_var':
+                    pass
             # not sure if they could ever be equal, but just in case:
             if sql_var != best_var:
                 sql_var not in sql_vars and sql_vars.append(sql_var)
                 # we never join an alias with anything:
                 if this_graph != self.ALIAS_GRAPH:
                     equiv = [best_var, sql_var]
-                    equiv.sort()
+                    # normalize join order by order in 'sql_vars' so earlier vars come first:
+                    equiv.sort(key=lambda v: sql_vars.index(v))
                     joins.add(tuple(equiv))
         
     def pattern_clause_to_sql(self, clause, graph, litmap, varmap, restrictions, joins):
@@ -727,6 +734,8 @@ class KgtkQuery(object):
 
     def get_match_clauses(self):
         """Return all strict and optional match clauses of this query in order.
+        Returns the (single) strict match clause first which is important for
+        later optional joins to strict clause variables to work correctly.
         """
         return (self.match_clause, *self.optional_clauses)
 
@@ -856,8 +865,11 @@ class KgtkQuery(object):
         varmap = {}           # maps Kypher variables onto representative (graph, col) SQL columns
         parameters = None     # maps ? parameters in sequence onto actual query parameters
 
+        # process strict and optional match clauses in order which is important to get
+        # the proper clause variable registration order; that way optional clauses that
+        # reference variables from earlier optional or strict clauses will join correctly:
         for match_clause in self.get_match_clauses():
-            # translate clause top-level info:
+            # translate clause top-level info such as variables and restrictions:
             for clause in match_clause.get_pattern_clauses():
                 graph_alias = self.get_pattern_clause_graph_alias(clause)
                 restrictions = self.get_match_clause_restrictions(match_clause)
