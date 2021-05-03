@@ -294,8 +294,6 @@ File options:
   --mode {NONE,EDGE,NODE,AUTO}
                         Determine the KGTK file mode
                         (default=KgtkReaderMode.AUTO).
-  --prohibit-whitespace-in-column-names [optional True|False]
-                        Prohibit whitespace in column names. (default=False).
 
 Header parsing:
   Options affecting header parsing.
@@ -312,6 +310,8 @@ Header parsing:
   --unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a column name is unsafe
                         (default=ValidationAction.REPORT).
+  --prohibit-whitespace-in-column-names [optional True|False]
+                        Prohibit whitespace in column names. (default=False).
 
 Pre-validation sampling:
   Options affecting pre-validation data line sampling.
@@ -822,6 +822,9 @@ kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
 The following error is reported on standard output:
 
 ~~~
+In input header 'id	node 1	label	node 2': 
+Column name 'node 1' contains internal white space
+Column name 'node 2' contains internal white space
 
 ====================================================
 Data lines read: 0
@@ -853,15 +856,14 @@ kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
 The following error is reported on standard output:
 
 ~~~
-
-====================================================
-Data lines read: 0
-Data lines passed: 0
+In input header 'id	node 1	label	node 2': 
+Column name 'node 1' contains internal white space
+Column name 'node 2' contains internal white space
 ~~~
 
 The following error message is sent to stderr. The return status is 1.
 
-    xxx
+    Exit requested
 
 ### Header Error: Column Name Contains a Comma (`,`)
 
@@ -892,9 +894,39 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+### Header Error: Column Name Contains a Comma (`,`), Exit Requested
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have a comma (`,`) at the end, exiting with an error if trailing
+whitespace is detected.
+
+```bash
+cat examples/docs/validate-column-names-with-comma.tsv
+```
+~~~
+node1,	label,	node2,	id
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-comma.tsv \
+              --unsafe-column-name-action EXIT
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1,	label,	node2,	id': 
+Warning: Column name 'node1,' contains a comma (,)
+Warning: Column name 'label,' contains a comma (,)
+Warning: Column name 'node2,' contains a comma (,)
+~~~
+
 The following error message is sent to stderr. The return status is 1.
 
-    xxx
+    Exit requested
 
 ### Header Error: Column Name Contains a Vertical Bar (`|`)
 
@@ -918,9 +950,32 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+### Header Error: Column Name Contains a Vertical Bar (`|`): Exit Requested
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have a vertical bar (`|) at the end, exiting with an error if trailing
+whitespace is detected.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-vertical-bar.tsv \
+              --unsafe-column-name-action EXIT
+```
+
+The following warnings is reported on standard output:
+
+~~~
+In input header 'node1|	label|	node2|	id': 
+Warning: Column name 'node1|' contains a vertical bar (|)
+Warning: Column name 'label|' contains a vertical bar (|)
+Warning: Column name 'node2|' contains a vertical bar (|)
+~~~
+
 The following error message is sent to stderr. The return status is 1.
 
-    xxx
+    Exit requested
 
 ### Header Error: Column Name Is a Duplicate
 
