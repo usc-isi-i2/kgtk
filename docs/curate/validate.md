@@ -688,7 +688,7 @@ id	 node1	 label	 node2
 kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv
 ```
 
-The following error is reported on standard output:
+The following message is reported on standard output:
 
 ~~~
 In input header 'id	 node1	 label	 node2': 
@@ -701,9 +701,41 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+
+### Header Error: Column Name Starts with White Space: Exit Requested
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have initial whitespace, exiting with an error if initial
+whitespace is detected.
+
+```bash
+cat examples/docs/validate-column-names-initial-whitespace.tsv
+```
+~~~
+id	 node1	 label	 node2
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv \
+              --unsafe-column-name-action EXIT
+```
+
+The following message is reported on standard output:
+
+~~~
+In input header 'id	 node1	 label	 node2': 
+Column name ' node1' starts with leading white space
+Column name ' label' starts with leading white space
+Column name ' node2' starts with leading white space
+~~~
+
 The following error message is sent to stderr. The return status is 1.
 
-    xxx
+    Exit requested
+
 
 ### Header Error: Column Name Ends with White Space
 
@@ -721,7 +753,7 @@ id	node1 	label 	node2
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
 
-The following error is reported on standard output:
+The following message is reported on standard output:
 
 ~~~
 In input header 'id	node1 	label 	node2 ': 
@@ -734,9 +766,39 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+### Header Error: Column Name Ends with White Space: Exit Requested
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have trailing whitespace, exiting with an error if trailing
+whitespace is detected.
+
+```bash
+cat examples/docs/validate-column-names-trailing-whitespace.tsv
+```
+~~~
+id	node1 	label 	node2 
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv \
+              --unsafe-column-name-action EXIT
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'id	node1 	label 	node2 ': 
+Column name 'node1 ' ends with trailing white space
+Column name 'label ' ends with trailing white space
+Column name 'node2 ' ends with trailing white space
+~~~
+
 The following error message is sent to stderr. The return status is 1.
 
-    xxx
+    Exit requested
 
 ### Header Error: Column Name Contains Internal White Space
 
