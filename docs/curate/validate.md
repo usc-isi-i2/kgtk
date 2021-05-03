@@ -719,6 +719,7 @@ id	 node1	 label	 node2
 ~~~
 
 ```bash
+
 kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv \
               --unsafe-column-name-action EXIT
 ```
@@ -803,7 +804,8 @@ The following error message is sent to stderr. The return status is 1.
 ### Header Error: Column Name Contains Internal White Space
 
 Validate an input file where the intended `node1` and `node2`
-column names have internal whitespace.
+column names have internal whitespace.  By default, this is allowed,
+but it may be prohibited on request.
 
 ```bash
 cat examples/docs/validate-column-names-internal-whitespace.tsv
@@ -813,7 +815,39 @@ id	node 1	label	node 2
 ~~~
 
 ```bash
-kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv
+kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
+              --prohibit-whitespace-in-column-names
+```
+
+The following error is reported on standard output:
+
+~~~
+
+====================================================
+Data lines read: 0
+Data lines passed: 0
+~~~
+
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+### Header Error: Column Name Contains Internal White Space: Exit Requested
+
+Validate an input file where the intended `node1` and `node2`
+column names have internal whitespace, exiting with an error if trailing
+whitespace is detected.
+
+```bash
+cat examples/docs/validate-column-names-internal-whitespace.tsv
+```
+~~~
+id	node 1	label	node 2
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
+              --prohibit-whitespace-in-column-names \
+              --unsafe-column-name-action EXIT
 ```
 
 The following error is reported on standard output:
