@@ -8,6 +8,7 @@ import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
+
 def parser():
     return {
         'help': 'Compute paths between nodes in a KGTK graph.'
@@ -25,7 +26,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
-
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
@@ -47,11 +47,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--path-target", action="store", type=str, dest="target_column_name",
                         help='Name of the source column in the path file. (default: node2 or its alias)')
 
+    parser.add_argument("--shortest-path", dest="shortest_path", metavar="True|False",
+                        help="When true, shortest paths are returned. (default=%(default)s).",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="path", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
+
 
 def run(input_file: KGTKFiles,
         path_file: KGTKFiles,
@@ -62,6 +67,7 @@ def run(input_file: KGTKFiles,
 
         source_column_name: typing.Optional[str],
         target_column_name: typing.Optional[str],
+        shortest_path: bool,
 
         errors_to_stdout: bool,
         errors_to_stderr: bool,
@@ -69,17 +75,15 @@ def run(input_file: KGTKFiles,
         verbose: bool,
         very_verbose: bool,
 
-        **kwargs, # Whatever KgtkFileOptions and KgtkValueOptions want.
+        **kwargs,  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ):
-
     # import modules locally
-    from collections import defaultdict
     from pathlib import Path
     import sys
 
-    from graph_tool import centrality
     from graph_tool.all import find_vertex
     from graph_tool.topology import all_paths
+    from graph_tool.topology import all_shortest_paths
 
     from kgtk.gt.gt_load import load_graph_from_kgtk
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
@@ -102,10 +106,10 @@ def run(input_file: KGTKFiles,
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
         id_col = 'name'
-    
+
         if verbose:
             print("Reading the path file: %s" % str(path_kgtk_file), file=error_file, flush=True)
-        pairs=[]
+        pairs = []
         pkr: KgtkReader = KgtkReader.open(path_kgtk_file,
                                           error_file=error_file,
                                           options=path_reader_options,
@@ -133,7 +137,7 @@ def run(input_file: KGTKFiles,
         if len(pairs) == 0:
             print("No path pairs found, the output will be empty.", file=error_file, flush=True)
         elif verbose:
-            print("%d path pairs found" % len(pairs),  file=error_file, flush=True)
+            print("%d path pairs found" % len(pairs), file=error_file, flush=True)
 
         if verbose:
             print("Reading the input file: %s" % str(input_kgtk_file), file=error_file, flush=True)
@@ -164,7 +168,8 @@ def run(input_file: KGTKFiles,
         predicate: str = kr.column_names[pred_index]
         id_col_name: str = kr.column_names[id_index]
 
-        G = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub_index, obj_index), verbose=verbose, out=error_file)
+        G = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub_index, obj_index), verbose=verbose,
+                                 out=error_file)
 
         output_columns: typing.List[str] = ['node1', 'label', 'node2', 'id']
         kw: KgtkWriter = KgtkWriter.open(output_columns,
@@ -181,27 +186,33 @@ def run(input_file: KGTKFiles,
             for e in G.edges():
                 sid, oid = e
                 lbl = G.ep[predicate][e]
-                kw.write([G.vp[id_col][sid], lbl, G.vp[id_col][oid], '{}-{}-{}'.format(G.vp[id_col][sid], lbl, id_count)])
+                kw.write(
+                    [G.vp[id_col][sid], lbl, G.vp[id_col][oid], '{}-{}-{}'.format(G.vp[id_col][sid], lbl, id_count)])
                 id_count += 1
             if verbose:
                 print("%d edges found." % id_count, file=error_file, flush=True)
 
-        id_count=0
-        path_id=0
+        id_count = 0
+        path_id = 0
         for pair in pairs:
-            source_node, target_node=pair
-            source_ids=find_vertex(G, prop=G.properties[('v', id_col)], match=source_node)
-            target_ids=find_vertex(G, prop=G.properties[('v', id_col)], match=target_node)
-            if len(source_ids)==1 and len(target_ids)==1:
-                source_id=source_ids[0]
-                target_id=target_ids[0]
-                for path in all_paths(G, source_id, target_id, cutoff=max_hops, edges=True):
+            source_node, target_node = pair
+            source_ids = find_vertex(G, prop=G.properties[('v', id_col)], match=source_node)
+            target_ids = find_vertex(G, prop=G.properties[('v', id_col)], match=target_node)
+            if len(source_ids) == 1 and len(target_ids) == 1:
+                source_id = source_ids[0]
+                target_id = target_ids[0]
+                if shortest_path:
+                    _all_paths = all_shortest_paths(G, source_id, target_id, edges=True)
+                else:
+                    _all_paths = all_paths(G, source_id, target_id, cutoff=max_hops, edges=True)
+
+                for path in _all_paths:
                     for edge_num, an_edge in enumerate(path):
-                        edge_id=G.properties[('e', 'id')][an_edge]
-                        node1: str ='p%d' % path_id
+                        edge_id = G.properties[('e', 'id')][an_edge]
+                        node1: str = 'p%d' % path_id
                         kw.write([node1, str(edge_num), edge_id, '{}-{}-{}'.format(node1, edge_num, id_count)])
-                        id_count+=1
-                    path_id+=1
+                        id_count += 1
+                    path_id += 1
 
         if verbose:
             print("%d paths contining %d edges found." % (path_id, id_count), file=error_file, flush=True)
