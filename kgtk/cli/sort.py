@@ -436,7 +436,7 @@ def run(input_file: KGTKFiles,
                 if verbose:
                     print("gunzip input file: %s" % repr(str(input_path)), file=error_file, flush=True)
                 sh_gzip = sh.Command(gzip_command)
-                cat_proc = sh_gzip(input_path, "-dc",
+                cat_proc = sh_gzip("-dc", input_path,
                                    _in=sys.stdin, _piped=True, _err=sys.stderr,
                                    _bg=True, _bg_exc=False, _internal_bufsize=1,
                                    _done=cat_done)
@@ -448,7 +448,7 @@ def run(input_file: KGTKFiles,
                 if verbose:
                     print("bunzip2 input file: %s" % repr(str(input_path)), file=error_file, flush=True)
                 sh_bzip2 = sh.Command(bzip2_command)
-                cat_proc = sh_bzip2(input_path, "-dc",
+                cat_proc = sh_bzip2("-dc", input_path,
                                     _in=sys.stdin, _piped=True, _err=sys.stderr,
                                     _bg=True, _bg_exc=False, _internal_bufsize=1,
                                     _done=cat_done)
@@ -460,7 +460,7 @@ def run(input_file: KGTKFiles,
                 if verbose:
                     print("unxz input file: %s" % repr(str(input_path)), file=error_file, flush=True)
                 sh_xz = sh.Command(xz_command)
-                cat_proc = sh_xz(input_path, "-dc",
+                cat_proc = sh_xz("-dc", input_path,
                                  _in=sys.stdin, _piped=True, _err=sys.stderr,
                                  _bg=True, _bg_exc=False, _internal_bufsize=1,
                                  _done=cat_done)
