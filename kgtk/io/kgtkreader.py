@@ -237,7 +237,7 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "The action to take when a column name is unsafe (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.REPORT))
 
-        fgroup.add_argument(prefix1 + "prohibit-whitespace-in-column-names",
+        hgroup.add_argument(prefix1 + "prohibit-whitespace-in-column-names",
                             dest=prefix2 + "prohibit_whitespace_in_column_names",
                             metavar="optional True|False",
                             help=h(prefix3 + "Prohibit whitespace in column names. (default=%(default)s)."),

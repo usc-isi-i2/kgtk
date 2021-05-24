@@ -562,19 +562,20 @@ class TestKGTKQuery(unittest.TestCase):
                 self.assertEqual(int(row['node2;len']), 9)
 
 
-    ### Testing literal accessors:
+    ### Test helpers:
     
-    def run_literal_access_query(self, query, literals=None, output=None, db=None):
-        """Run KGTK 'query' command on literals test data and return the result as a dataframe.
+    def run_test_query(self, query, input=None, output=None, db=None):
+        """Run KGTK 'query' command on 'input' test data and return the result as a dataframe.
         """
-        literals = literals or self.literals_path
+        input = input or self.file_path
         output = output or f'{self.temp_dir}/out.tsv'
         db = db or self.sqldb
-        query = query.format(LITERALS=literals, OUTPUT=output, DB=db)
+        # we also support the LITERALS key here for compatibility:
+        query = query.format(INPUT=input, LITERALS=input, OUTPUT=output, DB=db)
         cli_entry(*shlex.split(query))
         df = pd.read_csv(output, sep='\t')
         return df
-
+    
     def result_to_dataframe(self, result):
         """Convert one or more 'result' rows into a dataframe.
         """
@@ -588,6 +589,29 @@ class TestKGTKQuery(unittest.TestCase):
         df = pd.read_csv(StringIO(out.getvalue()), sep='\t')
         return df
 
+    def assert_test_query_result(self, query_result, ok_result, rowids=None):
+        """Assert that the dataframes 'query_result' and specified by 'ok_result' are the same.
+        If 'rowids' is not None, only compare the specified rows.  This currently assumes that
+        the rows are in the same order; we could generalize that down the line if necessary.
+        """
+        qdf = query_result
+        rdf = self.result_to_dataframe(ok_result)
+        if rowids is not None:
+            if not isinstance(rowids, list):
+                rowids = [rowids]
+            qdf = qdf.loc[qdf['id'].isin(rowids)]
+            rdf = rdf.loc[rdf['id'].isin(rowids)]
+        self.assertTrue(qdf.equals(rdf))
+
+
+    ### Testing literal accessors:
+        
+    def run_literal_access_query(self, query, literals=None, output=None, db=None):
+        """Run KGTK 'query' command on literals test data and return the result as a dataframe.
+        """
+        literals = literals or self.literals_path
+        return self.run_test_query(query=query, input=literals, output=output, db=db)
+
     def assert_literal_access_query_result(self, query, result, rowids=None,
                                            literals=None, output=None, db=None):
         """Assert that the dataframes produced by 'query' and defined by 'result' are the same.
@@ -595,13 +619,7 @@ class TestKGTKQuery(unittest.TestCase):
         the rows are in the same order; we could generalize that down the line if necessary.
         """
         qdf = self.run_literal_access_query(query)
-        rdf = self.result_to_dataframe(result)
-        if rowids is not None:
-            if not isinstance(rowids, list):
-                rowids = [rowids]
-            qdf = qdf.loc[qdf['id'].isin(rowids)]
-            rdf = rdf.loc[rdf['id'].isin(rowids)]
-        self.assertTrue(qdf.equals(rdf))
+        self.assert_test_query_result(qdf, result, rowids=rowids)
 
     def test_kgtk_query_literal_access_kgtk_string(self):
         query = """kgtk query -i {LITERALS} -o {OUTPUT} --graph-cache {DB}
@@ -1116,3 +1134,80 @@ class TestKGTKQuery(unittest.TestCase):
                 + """\t1.7976931348623157e+308\t1.7976931348623157e+308\t-1.7976931348623157e+308\t"""
                 + """2.2250738585072014e-308\t2.2250738585072014e-308\t-2.2250738585072014e-308"""]
         self.assert_literal_access_query_result(query, result)
+
+
+    ### Testing pyeval:
+
+    def test_kgtk_query_pyeval(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pyeval(printf($FMT, "Otto")) as value' --para FMT="'%s'.swapcase()"
+                """
+        result=["""value""",
+                """oTTO"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pyeval_multi(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pyeval(char(34), "Otto", char(34), ".swapcase()") as value'
+                """
+        result=["""value""",
+                """oTTO"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_0(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --import uuid --limit 1
+                        --return 'pycall("uuid.uuid4") as value'
+                """
+        import uuid
+        qdf = self.run_test_query(query)
+        self.assertTrue(len(qdf) == 1)
+        for i, row in qdf.iterrows():
+            self.assertEqual(len(row['value']), len(str(uuid.uuid4())))
+
+    def test_kgtk_query_pycall_1(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pycall("list", "Otto") as value'
+                """
+        result=["""value""",
+                """['O', 't', 't', 'o']"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_2(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --import math --limit 1
+                        --return 'pycall("math.fmod", 42, 17) as value'
+                """
+        result=["""value""",
+                """8.0"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_3(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pycall("max", 1, 2, 3) as value'
+                """
+        result=["""value""",
+                """3"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_4(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pycall("max", 1, 2, 3, 4) as value'
+                """
+        result=["""value""",
+                """4"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_5(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pycall("max", 1, 2, 3, 4, 5) as value'
+                """
+        result=["""value""",
+                """5"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+

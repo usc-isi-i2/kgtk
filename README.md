@@ -98,7 +98,7 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 3. Download the English model of SpaCY: `python -m spacy download en_core_web_sm`
 
-4. Install `graph-tool`: `conda install -c conda-forge graph-tool`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions).
+4. Install `graph-tool`: `conda install -c conda-forge graph-tool==2.37`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions).
 
 5. Python library rdflib has a known [issue](https://github.com/RDFLib/rdflib/issues/1043), where the ttl serialization of decimal values is incorrect. The library will add a `.0` at the end of decimal values in scientific notation. This will make the ttl invalid and cannot be loaded into a triplestore.
 

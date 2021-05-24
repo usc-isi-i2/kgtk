@@ -1361,7 +1361,7 @@ SqliteStore.register_user_function('kgtk_empty_to_null', 1, kgtk_empty_to_null, 
 # come online - we hope.
 
 def math_acos(x):
-    """"Implement the SQLite3 math built-in 'acos' via Python.
+    """Implement the SQLite3 math built-in 'acos' via Python.
     """
     try:
         return math.acos(x)
@@ -1614,6 +1614,43 @@ SqliteStore.register_user_function('sqrt', 1, math_sqrt, deterministic=True)
 SqliteStore.register_user_function('tan', 1, math_tan, deterministic=True)
 SqliteStore.register_user_function('tanh', 1, math_tanh, deterministic=True)
 SqliteStore.register_user_function('trunc', 1, math_trunc, deterministic=True)
+
+
+# Python eval:
+
+_sqlstore_module = sys.modules[__name__]
+_builtins_module = sys.modules['builtins']
+
+def get_pyeval_fn(fnname):
+    pos = fnname.rfind('.')
+    if pos < 0:
+        return getattr(_sqlstore_module, fnname, None) or getattr(_builtins_module, fnname)
+    else:
+        # we lookup the module name relative to this module in case somebody imported an alias:
+        return getattr(getattr(_sqlstore_module, fnname[0:pos]), fnname[pos+1:])
+
+def pyeval(*expression):
+    """Python-eval 'expression' and return the result (coerce value to string if necessary).
+    Multiple 'expression' arguments will be concatenated first.
+    """
+    try:
+        val = eval(''.join(expression))
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+def pycall(fun, *arg):
+    """Python-call 'fun(arg...)' and return the result (coerce value to string if necessary).
+    'fun' must name a function and may be qualified with a module imported by --import.
+    """
+    try:
+        val = get_pyeval_fn(fun)(*arg)
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+    
+SqliteStore.register_user_function('pyeval', -1, pyeval)
+SqliteStore.register_user_function('pycall', -1, pycall)
 
 
 ### Experimental transitive taxonomy relation indexing:

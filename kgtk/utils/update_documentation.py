@@ -446,10 +446,10 @@ class DocUpdater():
             if table_begin >= 0:
                 command += " / md"
                 if self.verbose:
-                    print("Getting new table lines for:\n%s" % command, file=self.error_file, flush=True)
+                    print("\nGetting new table lines for:\n%s" % command, file=self.error_file, flush=True)
             else:
                 if self.verbose:
-                    print("Not expecting new table lines for:\n%s" % command, file=self.error_file, flush=True)
+                    print("\nNot expecting new table lines for:\n%s" % command, file=self.error_file, flush=True)
 
             result: subprocess.CompletedProcess = subprocess.run(command, capture_output=True, shell=True, text=True)
             new_stdout_lines: typing.List[str] = result.stdout.splitlines(keepends=True)

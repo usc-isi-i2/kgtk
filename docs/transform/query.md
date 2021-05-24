@@ -23,9 +23,10 @@ usage: kgtk query [-h] -i INPUT_FILE [INPUT_FILE ...] [--as NAME]
                   [--limit CLAUSE] [--para NAME=VAL] [--spara NAME=VAL]
                   [--lqpara NAME=VAL] [--no-header] [--index [MODE]]
                   [--explain [MODE]] [--graph-cache GRAPH_CACHE_FILE]
-                  [-o OUTPUT]
+                  [--import MODULE_LIST] [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
+IMPORTANT: input can come from stdin but chaining queries is not yet supported.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -59,6 +60,8 @@ optional arguments:
   --graph-cache GRAPH_CACHE_FILE
                         database cache where graphs will be imported before
                         they are queried (defaults to per-user temporary file)
+  --import MODULE_LIST  Python modules needed to define user extensions to
+                        built-in functions
   -o OUTPUT, --out OUTPUT
                         output file to write to, if `-' (the default) output
                         goes to stdout. Files with extensions .gz, .bz2 or .xz
@@ -1507,7 +1510,7 @@ The two built-in functions `kgtk_null_to_empty` and `kgtk_empty_to_null` can be
 used for that purpose.  For example:
 
 ```
-kgtk query -i graph \
+kgtk query -i $GRAPH \
      --match '(x)-[r:name]->(y)' \
      --where 'kgtk_null_to_empty(kgtk_lqstring_text(y)) != ""'
 ```
@@ -1668,6 +1671,108 @@ example, `x.kgtk_lqstring_text` instead of `kgtk_lqstring_text(x)`.
 | kgtk_geo_coords(x)      | Return True if `x` is a KGTK geo coordinates literal.                        |
 | kgtk_geo_coords_lat(x)  | Return the latitude component of a KGTK geo coordinates literal as a float.  |
 | kgtk_geo_coords_long(x) | Return the longitude component of a KGTK geo coordinates literal as a float. |
+
+
+#### Defining and using custom functions
+
+When the built-in functions provided by SQLite and Kypher are not enough, the functions below
+can be used to execute arbitrary Python code as part of a Kypher query.  To allow users to
+execute their own special-purpose code in such circumstances, the `--import` argument can be
+used to import any required library or user modules before the query is exectuted.
+
+| Function               | Description                                                                               |
+|------------------------|-------------------------------------------------------------------------------------------|
+| pyeval(expression...)  | Python-eval `expression` and return the result (coerce value to string if necessary).  Multiple `expression` arguments will be concatenated first.                             |
+| pycall(fun, arg...)    | Python-call `fun(arg...)` and return the result (coerce value to string if necessary).  `fun` must name a function and may be qualified with a module imported by `--import`.  |
+
+Here is an example that uses both of these facilities.  First we are
+importing the `uuid` and `math` modules (the latter with an alias), so
+we can refer to them in the `pycall` expressions.  The `--import`
+argument takes anything that would be a legal argument to a single
+Python `import` statement.  Here we used some standard Python modules,
+but any user-defined module(s) could be used as long as they are
+findable in the current `PYTHONPATH`.  `pyeval` parses and evaluates
+an arbitrary Python expression which here we assemble via a `printf`
+function call.  `pycall` is slightly more efficient, since it only has
+to look up the function object based on the provided (qualified) name:
+
+```
+kgtk query -i $GRAPH --import 'uuid, math as m' \
+     --match '(x)-[r:name]->(y)' \
+     --where 'kgtk_lqstring(y)' \
+     --return 'y as name, \
+               pyeval(printf($FMT, y)) as swapname, \
+               pycall("m.fmod", length(y), 2) as isodd, \
+               pycall("uuid.uuid4") as uuid' \
+     --para FMT='"%s".swapcase()'
+```
+Result:
+
+|  name     |  swapname  |  isodd  |   uuid                                |
+|-----------|------------|---------|---------------------------------------|
+| 'Hans'@de |  'hANS'@DE |  1.0    |  5742f943-9bbe-4c5c-a4ac-98ffda145642 |
+| 'Otto'@de |  'oTTO'@DE |  1.0    |  a3d720e8-c331-4a9a-b5db-ab188ccb3e53 |
+
+The values returned by `pyeval` and `pycall` must be simple literals
+such as numbers, strings or booleans.  Anything else would cause a
+database error and is therefore converted to a string first (e.g., the
+`UUID` objects returned by `uuid.uuid4`).
+
+Here is an alternative invocation of `pyeval` that uses multiple arguments
+which will be implicitly string-concatenated before evaluation.  The
+`char(34)` term produces a double quote to avoid shell quoting issues:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r:name]->(y)' \
+     --where 'kgtk_lqstring(y)' \
+     --return 'y as name, \
+               pyeval(char(34), y, char(34), ".swapcase()") as swapname'
+```
+Result:
+
+| name      | swapname  |
+|-----------|-----------|
+| 'Hans'@de | 'hANS'@DE |
+| 'Otto'@de | 'oTTO'@DE |
+
+
+!!! note
+    Functions will often be executed in the inner loop of a database query
+    and are therefore expected to be simple and fast.  Long-running functions
+    might lead to very long query times.
+
+Users may also implement their own built-ins directly which will
+generally be more efficient than going through the `pyeval`
+mechanisms.  For example, suppose the file `mybuiltins.py` has the
+following content and is visible in the current `PYTHONPATH` (note
+that `num_params` can also be -1 to allow functions with a variable
+number of arguments):
+
+```
+from kgtk.kypher.sqlstore import SqliteStore
+
+def swapcase(x):
+    return str(x).swapcase()
+
+SqliteStore.register_user_function(name='swapcase', num_params=1, func=swapcase)
+```
+
+Then we can import it in a query and call the defined function just as any
+other Kypher built-in:
+
+```
+kgtk query -i $GRAPH --import 'mybuiltins' \
+     --match '(x)-[r:name]->(y)' \
+     --where 'kgtk_lqstring(y)' \
+     --return 'y as name, swapcase(y) as swapname'
+```
+Result:
+
+|  name     |   swapname   |
+|-----------|--------------|
+| 'Hans'@de |   'hANS'@DE  |
+| 'Otto'@de |   'oTTO'@DE  |
 
 
 <A NAME="differences-to-cypher"></A>
