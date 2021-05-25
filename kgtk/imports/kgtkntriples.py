@@ -1,6 +1,7 @@
 """Import ntriples into KGTK format.
 """
 from argparse import ArgumentParser, Namespace
+import ast
 import attr
 import csv
 from pathlib import Path
@@ -110,7 +111,10 @@ class KgtkNtriples(KgtkFormat):
     # Double quoted strings with backslash escapes.
     STRING_PAT: str = r'"(?:[^\\]|(?:\\.))*"'
 
-    STRUCTURED_VALUE_PAT: str = r'(?:{string}(?:\^\^{uri})?)'.format(string=STRING_PAT, uri=URI_PAT)
+    # Language tags are sequences of alphanumerics separated by dashes.
+    LANGUAGE_TAG_PAT: str = r'(?:[0-9a-zA-Z]+(?:-[0-9a-zA-Z]+)*)'
+
+    STRUCTURED_VALUE_PAT: str = r'(?:{string}(?:(?:@{tag})|(?:\^\^{uri}))?)'.format(string=STRING_PAT, tag=LANGUAGE_TAG_PAT, uri=URI_PAT)
     FIELD_PAT: str = r'(?:{uri}|{blank_node}|{structured_value}|{numeric})'.format(uri=URI_PAT,
                                                                                    blank_node=BLANK_NODE_PAT,
                                                                                    structured_value=STRUCTURED_VALUE_PAT,
@@ -290,6 +294,30 @@ class KgtkNtriples(KgtkFormat):
         # ensure that vertical bars (pipes) are escaped.
         return self.escape_pipe(item), True
  
+    def convert_lq_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
+        # Convert this to a KGTK language qualified string.
+
+        # Split the language qualifier (and optional suffix).
+        # This code was copied from KgtkFormat.
+        #
+        # TODO: There should be only a single copy of this code.
+        quoted_string: str
+        language: str
+        quoted_string, language = item.rsplit("@", 1)
+        language_suffix: str = ""
+        if "-" in language:
+            language, language_suffix = language.split("-", 1)
+            language_suffix = "-" + language_suffix
+
+        # Parse the string, processing quoted characters:
+        #
+        # TODO: check for an error here!
+        s: str = ast.literal_eval(quoted_string)
+
+        # Assemble the final language-qualified string:
+        return KgtkFormat.stringify(s, language, language_suffix), True
+
+ 
     def generate_new_node_symbol(self)->str:
         new_node_symbol: str = self.newnode_prefix
         if self.newnode_use_uuid:
@@ -383,6 +411,8 @@ class KgtkNtriples(KgtkFormat):
             return self.convert_string(item, line_number)
         elif item.startswith('"') and item.endswith(">"):
             return self.convert_structured_literal(item, line_number, ew)
+        elif item.startswith('"'):
+            return self.convert_lq_string(item, line_number)
         elif item[0] in "+-0123456789.":
             return self.convert_numeric(item, line_number, ew)
 
