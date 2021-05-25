@@ -1,4 +1,30 @@
 """Import ntriples into KGTK format.
+
+Issue #390: KGTK Needs More General Language Tags
+
+According to the Wikipedia article on N-Triples, N-triples use RFC 3066
+language tags. According to the Wikipedia article on IETF language tags,
+RFC 3066 has been replaced by RFC 4646 and RFC 5646, with increasingly
+more general structure.
+
+According to the W3C document on RDF 1.1 N-triples, language tags are
+defined by BCP 47, which references RFC 5646. The Wikipedia article appears
+to be obsolete.
+
+To support importing/exporting N-Triples properly, the KGTK specification and
+implementation may need some extensions.
+
+Issue #391: `kgtk import-ntriples` Does Not Support Comments
+
+The W3C document on RDF 1.1 N-Triples[https://www.w3.org/TR/n-triples/] defines optional
+comments that may appear after the full stop (".") at the end of a triple. `kgtk import-ntriples`
+currently would reject triples with comments.
+
+The simplest enhancement is to strip any comments found, with a summary count at the end
+of processing. A more complex option would be to convert N-Triples comments into KGTK comments.
+
+
+
 """
 from argparse import ArgumentParser, Namespace
 import ast
