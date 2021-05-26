@@ -10,6 +10,7 @@
 ./process-edges.sh
 ./process-properties.sh
 
+# Compute various counts and consistency checks.
 ./process-counts.sh
 
 # ./deliver-to-kgtk-drive.sh
