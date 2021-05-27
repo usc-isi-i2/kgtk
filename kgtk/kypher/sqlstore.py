@@ -703,21 +703,22 @@ class SqliteStore(SqlStore):
         # however, sqlite doesn't have an option to then skip the header, so we need to use 'tail';
         # also, eventually we might want to supply more elaborate table defs such as 'without rowid';
         # finally, we have to guard against multi-character line-endings which can't be handled right:
-        with open_to_read(file, 'r') as inp:
+        with open_to_read(file, 'rt') as inp:
             #csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
             header = inp.readline()
-            header = isinstance(header, bytes) and header.decode('utf8') or header
-            if header.endswith('\r\n'):
-                # SQLite import can only handle single-character line endings,
-                # if we import anyway, \r winds up in the values of the last column:
-                raise KGTKException('cannot handle multi-character line endings')
-            eol = header[-1]
+            if inp.newlines != '\n':
+                # SQLite import can only handle single-character line endings, if we import anyway,
+                # \r winds up in the values of the last column; we also can't handle \r by itself
+                # (which should be rare - not used since MacOS X), since that will not work with 'tail'.
+                # We could handle both cases by mapping to \n with 'tr', but that introduces an extra
+                # pipe and command complication - maybe later:
+                raise KGTKException('unsupported line endings')
             header = header[:-1].split('\t')
             schema = self.kgtk_header_to_graph_table_schema(table, header)
             self.execute(self.get_table_definition(schema))
             self.commit()
         
-        separators = '\\t %s' % repr(eol)[1:-1] # \r or \n for EOL
+        separators = '\\t \\n'
         args = ['-cmd', '.mode ascii', '-cmd', '.separator ' + separators,
                 self.dbfile, '.import /dev/stdin %s' % table]
 
