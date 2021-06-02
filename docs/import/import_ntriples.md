@@ -1,5 +1,14 @@
 This command will import one or more ntriple files into KGTK format.
 
+The input file should adhere to the [RDF N-Triples
+specification](https://www.w3.org/TR/n-triples/).
+
+Note: `kgtk import-ntriples` does not currently support comments
+in the input file.
+
+Note: An RDF 1.1 N-Triples file may contain language tags that
+are more general than the language tags currently supported by
+the KGTk File Format Specification v2.
 
 ## Usage
 ```
@@ -277,6 +286,22 @@ prefixes.
 
 The order is <prefix><uuid>-<counter>, such as `noBugQcoEt6xNnqGsHDXfTA-7`.   By default,
 the UUID is omitted, but the examples shown above were generated using the UUID.
+
+### Language-Qualified Strings
+
+ntriples files may contain language tags after literals.  For example:
+```
+<http://www.nima.puc-rio.br/lattes/1944208293448093#P690> <http://purl.org/dc/elements/1.1/title> "A Tunísia, o Egito e nós"@pt .
+<http://www.nima.puc-rio.br/lattes/6322729232079325#P728> <http://purl.org/dc/elements/1.1/title> "Editorial"@en .
+
+```
+
+`kgtk import-ntriples` will convert the literals and language tags into KGTK language-qualified strings.
+
+Note:  The [RDF N-Triples specification](https://www.w3.org/TR/n-triples/) allows more general
+language tags than are currently allowed in the KGTK File Format Specification V2.
+This could result in `kgtk import-ntriples --validate` reporting a failure.
+
 
 ### Structured Literal Imports
 

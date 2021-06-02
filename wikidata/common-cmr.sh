@@ -58,7 +58,7 @@ CLEAN=0
 # Some common flags:
 KGTK_FLAGS="--debug --timing --progress --progress-tty `tty`"
 VERBOSE="--verbose"
-SORT_EXTRAS="--parallel 64 --buffer-size 50% -T ${TMPDIR}"
+SORT_EXTRAS="--parallel 64 --buffer-size 60% -T ${TMPDIR}"
 
 # The Wikidata datatypes:
 WIKIDATATYPES=( \
