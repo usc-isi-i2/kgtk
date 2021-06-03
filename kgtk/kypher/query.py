@@ -41,19 +41,12 @@ pp = pprint.PrettyPrinter(indent=4)
 # + graph naming independent from files, so we don't have to have source data files
 #   available after import for querying, e.g.: ... -i $FILE1 --as g1 -i $FILE2 --as g2 ...
 # - with named graphs, we probably also need some kind of --info command to list content
-# - investigate Cyphers multiple distinct match clauses more thoroughly; apparently, a
+# + investigate Cyphers multiple distinct match clauses more thoroughly; apparently, a
 #   difference is that in a single pattern, each relationship must match a different edge
 #   which is kind of like UVBR in SNePS, but in multiple match patterns that restriction
-#   is only enforced within each match clauses's pattern:
-#   - https://stackoverflow.com/questions/32742751/what-is-the-difference-between-multiple-match-clauses-and-a-comma-in-a-cypher-qu
-#   - https://blog.armbruster-it.de/2020/05/cypher-gotchas-multiple-match-vs-comma-operator/
-#   - https://neo4j.com/docs/cypher-manual/current/introduction/uniqueness/
-#   - https://data-xtractor.com/blog/databases/neo4j-cypher-hacks/
-#   this means if we don't enforce the uniqueness principle, multiple strict match clauses
-#   do not add anything
-# - optional match clauses should allow multiple ones to allow them to fail individually:
-#   - https://curiousraj.com/2015/05/13/neo4j-2-joins-in-cypher/
-#   - https://pablissimo.com/1076/commas-in-cypher-patterns-vs-multiple-matches
+#   is only enforced within each match clauses's pattern.  This means if we don't enforce
+#   the uniqueness principle, multiple strict match clauses do not add anything
+# + optional match clauses need to allow multiple ones so they can fail individually
 # - --create and --remove to instantiate and add/remove edge patterns from result bindings
 # - --with clause to compute derived values to use by --create and --remove
 
