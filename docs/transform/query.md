@@ -19,9 +19,10 @@ output file which will be transparently compressed according to its file extensi
 ```
 usage: kgtk query [-h] -i INPUT_FILE [INPUT_FILE ...] [--as NAME]
                   [--query QUERY] [--match PATTERN] [--where CLAUSE]
+                  [--opt PATTERN] [--with CLAUSE] [--where: CLAUSE]
                   [--return CLAUSE] [--order-by CLAUSE] [--skip CLAUSE]
                   [--limit CLAUSE] [--para NAME=VAL] [--spara NAME=VAL]
-                  [--lqpara NAME=VAL] [--no-header] [--index [MODE]]
+                  [--lqpara NAME=VAL] [--no-header] [--force] [--index [MODE]]
                   [--explain [MODE]] [--graph-cache GRAPH_CACHE_FILE]
                   [--import MODULE_LIST] [-o OUTPUT]
 
@@ -39,7 +40,15 @@ optional arguments:
                         be ignored
   --match PATTERN       MATCH pattern of a Kypher query, defaults to universal
                         node pattern `()'
-  --where CLAUSE        WHERE clause of a Kypher query
+  --where CLAUSE        WHERE clause to a preceding --match, --opt or --with
+                        clause
+  --opt PATTERN, --optional PATTERN
+                        OPTIONAL MATCH pattern(s) of a Kypher query (zero or
+                        more)
+  --with CLAUSE         WITH clause of a Kypher query (only 'WITH * ...' is
+                        currently supported)
+  --where: CLAUSE       final global WHERE clause, shorthand for 'WITH * WHERE
+                        ...'
   --return CLAUSE       RETURN clause of a Kypher query (defaults to *)
   --order-by CLAUSE     ORDER BY clause of a Kypher query
   --skip CLAUSE         SKIP clause of a Kypher query
@@ -51,6 +60,7 @@ optional arguments:
   --lqpara NAME=VAL     zero or more named LQ-string parameters to be passed
                         to the query
   --no-header           do not generate a header row with column names
+  --force               force problematic queries to run against advice
   --index [MODE]        control column index creation according to MODE (auto,
                         expert, quad, triple, node1+label, node1, label,
                         node2, none, default: auto)
@@ -107,7 +117,6 @@ milliseconds to minutes depending on selectivity and result sizes.
 
 ### Features under development:
 
-* optional match
 * `not/exists` pattern handling
 * support for chained queries
 * `--create` and `--remove` to instantiate and add/remove edge patterns
@@ -1013,6 +1022,359 @@ Result:
 |    Renal  |       1  |     11000.0  |
 
 
+### Optional match
+
+Kypher also supports Cypher's optional match patterns which are useful
+to retrieve sparse or incomplete edges and attributes that are common
+in real-world knowledge graphs.  Optional patterns are allowed to fail
+which will generate NULL values for their respective pattern variables
+in such cases instead of making the whole pattern fail.  Optional
+patterns are similar to SQL's left joins.
+
+Each Kypher query must have exactly one strict `--match` clause and
+can have zero or more optional match clauses introduced by `--opt`.
+This is somewhat more restrictive than Cypher which can have any
+number of strict and/or optional patterns in any order, but that
+should generally not matter in practice.  Each strict and optional
+match clause can have its own `--where` clause, so the `query` command
+associates each `--where` clause with the (closest) match clause
+preceding it.  For optional match clauses the order matters, since
+there can be optionals on optionals, which is an important concept to
+keep in mind.  The required strict match clause is always interpreted
+as the first match clause in the query, regardless of where it is
+specified on the command line.  Let us illustrate these concepts with
+some examples.
+
+In some of the examples below we use the following edge qualifier
+data, which adds start and end times to some of the edges in the
+`$WORKS` graph:
+
+```
+QUALS=examples/docs/query-quals.tsv
+
+kgtk query -i $QUALS
+```
+Result:
+
+|    id   |  node1  |  label   |  node2                     |  graph  |
+|---------|---------|----------|----------------------------|---------|
+|    m11  |  w11    |  starts  |  ^1984-12-17T00:03:12Z/11  |  quals  |
+|    m12  |  w12    |  ends    |  ^1987-11-08T04:56:34Z/10  |  quals  |
+|    m13  |  w13    |  starts  |  ^1996-02-23T08:02:56Z/09  |  quals  |
+|    m14  |  w14    |  ends    |  ^2001-04-09T06:16:27Z/08  |  quals  |
+|    m15  |  w15    |  starts  |  ^2008-10-01T12:49:18Z/07  |  quals  |
+
+
+To illustrate the usefulness of optional patters, let us start with a
+strict query first that retrieves company employees, their names and
+start dates:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n), q: (r)-[:starts]->(s)' \
+     --return 'c as company, p as employee, n as name, s as start'
+```
+Result:
+
+| company | employee | name      | start                    |
+|---------|----------|-----------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |
+
+
+The result only lists some of the companies, since not all employment
+edges have an associated start date in the edge qualifiers data.  This
+means the start date edges are incomplete which in turn makes us miss
+some potentially useful employment edges.  If we want to be sure to
+retrieve all employment edges and associate them with start dates
+where available, we can use the following query that makes start date
+qualifier edges optional:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n)' \
+     --opt    'q: (r)-[:starts]->(s)' \
+     --return 'c as company, p as employee, n as name, s as start'
+```
+Result:
+
+| company | employee | name      | start                    |
+|---------|----------|-----------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |
+| Kaiser  | Otto     | 'Otto'@de |                          |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |
+| Renal   | Molly    | "Molly"   |                          |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |
+
+Now we get all employment edges, and missing start dates will simply
+be empty (or NULL).
+
+An optional match pattern is either fully satisfied for a particular
+set of variable bindings established by previous match clauses (the
+variable `r` in the example above), or it is considered to have failed
+for that set of bindings, so optionals do not generate partial
+solutions.  In fact, optional patterns are by themselves run in strict
+match mode against the data, it is only in their connection or
+intersection with matches from previous clauses where the optional (or
+"left join") semantics comes into play.  If for a particular set of
+bindings from previous clauses the edge set retrieved by an optional
+clause does not have a relevant entry, the variables generated by the
+optional clause are considered to be NULL for that case.
+
+In the next example, we use multiple independent optional clauses to
+retrieve both start and/or end dates where they are available.  The
+optional clauses are independent of each other, but both are dependent
+on the `r` variable of the strict match clause.  In general, optional
+clauses should always depend on one or more variables of a previous
+match clause, otherwise they will generate potentially very large
+cross products that are likely unintended:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n)' \
+     --opt    'q: (r)-[:starts]->(s)' \
+     --opt    'q: (r)-[:ends]->(e)' \
+     --return 'c as company, p as employee, n as name, s as start, e as end'
+```
+Result:
+
+| company | employee | name      | start                    | end                      |
+|---------|----------|-----------|--------------------------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |                          |
+| Kaiser  | Otto     | 'Otto'@de |                          | ^1987-11-08T04:56:34Z/10 |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |                          |
+| Renal   | Molly    | "Molly"   |                          | ^2001-04-09T06:16:27Z/08 |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |                          |
+
+
+Optional match patterns have the exact same syntax and expressive
+power as strict match patterns, so they can have multiple clauses,
+reference different graphs, use node and label restrictions, node and
+edge properties, etc.  They do not inherit the last graph used by any
+preceding match clause, so they start again with the default graph.
+
+For example, in the next query we use a more complex optional pattern
+that joins multiple edges and restricts matches with an additional
+`--where` clause.  Note that we could have omitted the `g`
+specification, since optionals do not inherit the current graph of the
+previous match clause.  `kgtk_lqstring_lang` is undefined for values
+that aren't language-qualified strings.  For that reason we wrap it
+with `kgtk_null_to_empty`, otherwise the condition will always be
+false if one of its arguments is NULL (see [<b>Null
+values</b>](#null-values) for more details):
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r:works]->(c)' \
+     --opt   'g: (p)-[r2]->(l)-[:name]->(ln)' \
+     --where 'r2.label != "name" and kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+In the previous query the optional clause was quite restrictive and
+only selected edge pairs where the name edge led to a string not
+qualified with `de`.  For this reason we do not get `Otto` as an
+affiliate.  In the next query we relax this by moving the name edge
+pattern into its own optional with associated `--where` clause, and
+now we do get `Otto` as an affiliate but without a name:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r:works]->(c)' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+For completeness, here is another variant of this query that uses a
+`--where` clause for each individual match clause (aka "Where Mania"),
+but semantically the query is the same as before:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Each optional match clause is run in strict match mode against the
+data, so we cannot test whether any of the variables bound by it are
+in fact NULL.  Remember that these NULL values are not coming from the
+match clause itself, but from its intersection or joining with the
+bindings generated by previous strict or optional matches.  However,
+we can test whether a variable from a prior optional clause is NULL.
+
+For example, in the following query we again retrieve an optional
+employment start date, but with the second optional clause, we
+retrieve a default date for cases where the start date `s` is
+undefined.  Here we simply use the date of the first edge `w11` as the
+default value.  `coalesce` is an SQLite built-in function that returns
+the first non-NULL argument as its value:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match '(p)-[:name]->(n), works: (p)-[r:works]->(c)' \
+     --opt   'quals: (r)-[:starts]->(s)' \
+     --opt   'quals: (:w11)-[:starts]->(d)' \
+     --where 's is NULL' \
+     --return 'r as id, p, n as name, c as company, s as start, coalesce(s, d) as defstart'
+```
+Result:
+
+| id  | node1 | name      | company | start                    | defstart                 |
+|-----|-------|-----------|---------|--------------------------|--------------------------|
+| w11 | Hans  | 'Hans'@de | ACME    | ^1984-12-17T00:03:12Z/11 | ^1984-12-17T00:03:12Z/11 |
+| w12 | Otto  | 'Otto'@de | Kaiser  |                          | ^1984-12-17T00:03:12Z/11 |
+| w13 | Joe   | "Joe"     | Kaiser  | ^1996-02-23T08:02:56Z/09 | ^1996-02-23T08:02:56Z/09 |
+| w14 | Molly | "Molly"   | Renal   |                          | ^1984-12-17T00:03:12Z/11 |
+| w15 | Susi  | "Susi"    | Cakes   | ^2008-10-01T12:49:18Z/07 | ^2008-10-01T12:49:18Z/07 |
+
+
+But what if we want to test whether a value generated by the last
+optional match clause is NULL?  For this purpose Kypher has a special
+global `--where:` clause that scopes over all match clauses after they
+have been joined (the colon is a mnemonic for "final").  For example,
+in the next query we look for all employees and optional affiliates
+that do not have a qualifying names.  This query basically emulates a
+"not exists" on the pattern defined by the last optional clause:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match  'w: (p)-[r]->(c)' \
+     --where  'r.label = "works"' \
+     --opt    'g: (p)-[r2]->(l)' \
+     --where  'r2.label != "name"' \
+     --opt    'g: (l)-[:name]->(ln)' \
+     --where  'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --where: 'ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| Kaiser  | Joe      | friend | Otto      |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Cypher has a `WITH ... WHERE ...` clause for such and other purposes,
+and `--where:` is simply a shorthand for `--with * --where...` in
+Kypher.  For example, the next query uses the `--with` syntax for the
+same result:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --with  '*' \
+     --where 'ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| Kaiser  | Joe      | friend | Otto      |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+For now `--with * ...` is all that is supported by Kypher.  A more
+comprehensive implementation of the `--with` clause is planned as a
+future extension.
+
+
+For comparison, here is an **incorrect** version of this "not exists"
+query pattern.  As described above, we cannot really test for NULL
+inside the optional clause that generates the tested value, and
+therefore now that clause always fails and all retrieved names are
+NULL:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de" and ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     |         |
+| Kaiser  | Otto     | loves  | Susi      |         |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Finally, here is an example query that marks symmetric edges
+in the data if they exist:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'g: (x)-[r]->(y)' \
+     --where 'r.label != "name"' \
+     --opt   'g: (y)-[r2]->(x)' \
+     --where 'r.label = r2.label' \
+     --return 'x, r.label, y, r2 is not null as symmetric'
+```
+Result:
+
+| node1 | label  | node2 | symmetric |
+|-------|--------|-------|-----------|
+| Hans  | loves  | Molly | 0         |
+| Otto  | loves  | Susi  | 0         |
+| Joe   | friend | Otto  | 0         |
+| Joe   | loves  | Joe   | 1         |
+
+
 <A NAME="input-output"></A>
 ## Input and output specifications
 
@@ -1465,6 +1827,7 @@ TO DO: describe backtick quoting for graph variables, column names, etc.
 TO DO
 
 
+<A NAME="null-values"></A>
 ### Null values
 
 The KGTK file format cannot distinguish empty and `NULL` values, so when
@@ -1791,7 +2154,6 @@ Result:
 
 Features that are currently missing but might become available in future versions:
 
-* optional match
 * `exists` subqueries
 * `with` clause variable bindings
 * `union` queries
