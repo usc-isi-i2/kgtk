@@ -136,6 +136,8 @@ def run(input_file: KGTKFiles,
             print("--root %s" % " ".join(root), file=error_file)
         if rootfile is not None:
             print("--rootfile=%s" % rootfile, file=error_file)
+        if rootfilecolumn is not None:
+            print("--rootfilecolumn=%s" % rootfilecolumn, file=error_file)
         if subject_column_name is not None:
             print("--subj=%s" % subject_column_name, file=error_file)
         if object_column_name is not None:

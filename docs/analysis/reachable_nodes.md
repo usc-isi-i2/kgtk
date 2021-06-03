@@ -1,4 +1,59 @@
-This command will find all nodes reachable from given root nodes in a KGTK edge file. That is, given a set of nodes N and a set of properties P, this command computes the set of nodes R that can be reached from N via paths containing any of the properties in P.
+This command will find all nodes reachable from given root nodes in a input file. That is, given a set of nodes N and a set of properties P, this command computes the set of nodes R that can be reached from N via paths containing any of the properties in P.
+
+The input file should be a KGTK Edge file with the following columns or their aliases:
+
+- `node1`: the subject column
+- `label`: the predicate column
+- `node2`: the object column
+
+Optionally, other columns may be used as the subject/predicate/object columns using the following
+command line options:
+
+- `--subj SUBJECT_COLUMN_NAME`: the name of the subject column (default: `node1`).
+- `--pred PREDICATE_COLUMN_NAME`: the name of the predicate column (default: `label`).
+- `--obj OBJECT_COLUMN_NAME`: the name of the object column (default: `node2`).
+
+Note: If your input file doesn't have `node1`, `label`, or `node2` columns (or their aliases) at all, then it is
+not a valid KGTK Edge file.  In this case, you also have to pass the following command line option:
+
+- `--input-mode=NONE`
+
+
+The root file, if specified with `--root-file ROOTFILE`, is used to get the list of starting nodes for the reachability analysis.
+It, too, should be a valid KGTK file.
+
+- If the root file is a KGTK Edge file (containing at least `node1`, `label`, and `node2` columns, or their aliases),
+  then the unique values in the `node1` column (by default) will be used to build the set of root node names.
+- If the root file is a KGTK Node file (containing at least an `id` column or its alias,
+  and not containing a `node1` column or its alias), then the unique values in the `id` column (by default) will be
+  used to build the set of root node names.
+
+If the root file is a valid KGTK Edge or Node file, but you want to use a different column name than the defaults
+shown above, then the `--rootfilecolumn COLUMN_NAME` option may be used to specify the root file column
+name.
+
+If the root file is not a valid KGTK Edge or Node file, but can be parsed by KgtkReader (it is a
+valid tab-separated file), the it is necessary to speficy the following options:
+
+- `--input-mode=NONE`
+- `--rootfilecolumn COLUMN_NAME`
+
+Here is another option:  if the argument to `--rootfilecolumn` is an integer, then it is treated
+as a 0's-origin index into the root file's columns (e.g., the first column is nomber 0, the second column is number 1m
+etc.)
+
+The set of root nodes can also be specified on the command line, using the following command option:
+- `--root ROOT [ROOT ...]`
+
+Each `ROOT` group can be a comma-separated list of root node names.
+
+Note: a comma-separated list should not have spaces before or after the comma(s).
+
+Note: this implies that commas are not allowed in node names.  At the present time, there is
+no option to override this constraint.
+
+Both `--root` and `--rootfile` may be specified, in which case the root node set is the union of
+the nodes from the root file and the nodes from the command line.
 
 The output file is an edge file that contains the following columns:
 
@@ -47,10 +102,26 @@ optional arguments:
 
 ```
 
-### Examples
+## Examples
 
-Find all the classes that given root nodes are a subclass of (transitive closure). Root nodes are obtained from node2 of P31.tsv (instance of) file. Command is run on P279.tsv (subclass of) file. Generates P279*.tsv. 
+### Basic Example
+
+Find all the classes that given root nodes are a subclass of (transitive closure).
+Root nodes are obtained from node2 of P31.tsv (instance of) file, which is a KGTK Edge file.
+Command is run on P279.tsv (subclass of) file, a KGTK Edge file.
+The output is  P279-star.tsv. 
 
 ```
-kgtk -i reachable-nodes P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279*.tsv
+kgtk -i reachable-nodes P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279-star.tsv
 ```
+
+### Nonstandard Root File
+
+Suppose that the root file has only a `node1` column, making it neither a KGTK Edge file nor a KGTK Node file.
+The following command may be used to process it:
+
+```
+kgtk -i reachable-nodes P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279-star.tsv \
+     --root-mode=NONE --rootfilecolumn node1
+```
+
