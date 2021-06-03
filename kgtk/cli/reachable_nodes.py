@@ -1,5 +1,11 @@
 """
 Find reachable nodes given a set of root nodes and properties
+
+TODO: the --subj, --pred, and --obj options should perhaps be renamed to
+      --node1-column-name, --label-column-name, and --node2-column-name, with
+      the old options kept as synonyms.
+
+TODO: the root file name should be parsed with parser.add_input_file(...)
 """
 from argparse import Namespace
 import typing
