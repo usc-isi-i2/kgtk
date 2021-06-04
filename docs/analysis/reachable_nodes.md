@@ -403,6 +403,10 @@ This example shows the output when the root node is partway up
 the `isa` property tree, allowing `madeof` links to be considered in
 the analysis, but when links are considered undirected
 
+Note: At the present time, it is not possible to specify that a subset of the
+properties are to be undirected.  Either all properties are directed, or all are
+undirected.
+
 ```bash
 kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
      --root metal-block --prop isa madeof --undirected
