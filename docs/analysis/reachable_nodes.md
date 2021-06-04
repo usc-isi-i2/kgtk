@@ -76,6 +76,16 @@ The output file is an edge file that contains the following columns:
 - `label`: this column contains only 'reachable'
 - `node2`: this column contains node that is reachable from a root node
 
+### Directionality
+
+`kgtk reachable-nodes` normally traces reachability from node1 to node2 (`node1->node2`).
+
+When `--inverted` is True, all relationships are reversed, and reachability is
+traced from node2 to node1 (`node1<-node2`).
+
+When `--undirected` is True, all relationships are treated as bidirectional.
+Reachablity is traced from node1 to node2 and from node2 to node1 (`node`<->node2`).
+
 ## Usage
 ```
 usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
@@ -85,7 +95,8 @@ usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                             [--obj OBJECT_COLUMN_NAME]
                             [--pred PREDICATE_COLUMN_NAME]
                             [--props [PROPS [PROPS ...]]]
-                            [--undirected [True|False]] [--label LABEL]
+                            [--undirected [True|False]]
+                            [--inverted [True|False]] [--label LABEL]
                             [--selflink [True|False]]
                             [--show-properties [True|False]]
                             [--breadth-first [True|False]]
@@ -125,6 +136,9 @@ optional arguments:
   --undirected [True|False]
                         When True, specify graph as undirected.
                         (default=False)
+  --inverted [True|False]
+                        When True, and when --undirected is False, invert the
+                        source and target nodes in the graph. (default=False)
   --label LABEL         The label for the reachable relationship. (default:
                         reachable)
   --selflink [True|False]
@@ -372,6 +386,20 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | metal-block | reachable | block |
 | metal-block | reachable | thing |
 
+### Stating Partway Up the `isa` Tree with Inverted Links
+
+Invert the direction of the reachability analysis.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa --inverted
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | gold-block |
+| metal-block | reachable | silver-block |
+
 ### Starting Partway Up the `isa` Tree with Undirected Links
 
 This example shows the output when the root node is partway up
@@ -410,7 +438,8 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | metal-block | reachable | thing |
 | metal-block | reachable | metal |
 
-Although `modeof` links were considered, they did not contribute to the output.
+Although `modeof` links were considered, they did not contribute to the output
+because they wer enot reachable.
 
 ### Starting Partway Up the `isa` or `madeof` Trees with Undirected Links
 
@@ -468,10 +497,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Here is the additional graph properties output:
 
-    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f09eb8a5c70, at 0x7f09ea2f5280>
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7fcbaaebbcd0, at 0x7fcba990b2e0>
     Graph properties:
-        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f09eb8a5c70, at 0x7f09ea2f5280>
-        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f09eb8a5c70, at 0x7f09ea2f51f0>
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7fcbaaebbcd0, at 0x7fcba990b2e0>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7fcbaaebbcd0, at 0x7fcba990b250>
 
 ### Expert Example: Breadth-first Search
 

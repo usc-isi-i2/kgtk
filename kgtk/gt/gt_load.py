@@ -7,6 +7,7 @@ from kgtk.io.kgtkreader import KgtkReader
 
 def load_graph_from_kgtk(kr: KgtkReader,
                          directed: bool=False,
+                         inverted: bool=False,
                          eprop_types: typing.Optional[typing.List[str]]=None,
                          hashed: bool=True,
                          hash_type: str="string", # for future support
@@ -25,6 +26,9 @@ def load_graph_from_kgtk(kr: KgtkReader,
 
     directed : ``bool`` (optional, default: ``False``)
         Whether or not the graph is directed.
+
+    inverted : ``bool`` (optional, default: ``False``)
+        Whether or not the links are inverted.
 
     eprop_types : list of ``str`` (optional, default: ``None``)
         List of edge property types to be read from remaining columns (if this
@@ -70,6 +74,14 @@ def load_graph_from_kgtk(kr: KgtkReader,
                 del row[max(ecols)-1]
                 yield [s, t] + row
         r = reorder(r)
+
+    if inverted:
+        def invert(rows):
+            for row in rows:
+                row = list(row)
+                row[0], row[1] = row[1], row[0]
+                yield row
+        r = invert(r)
 
     if not hashed:
         def conv(rows):

@@ -6,6 +6,8 @@ TODO: the --subj, --pred, and --obj options should perhaps be renamed to
       the old options kept as synonyms.
 
 TODO: the root file name should be parsed with parser.add_input_file(...)
+
+TODO: Filter the edges by property on input.
 """
 from argparse import Namespace
 import typing
@@ -49,6 +51,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--undirected', dest="undirected",
                         help="When True, specify graph as undirected. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+    parser.add_argument('--inverted', dest="inverted",
+                        help="When True, and when --undirected is False, invert the source and target nodes in the graph. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
     parser.add_argument('--label', action='store', type=str, dest='label', help='The label for the reachable relationship. (default: %(default)s)',default="reachable")
     parser.add_argument('--selflink',dest='selflink_bool',
                         help='When True, include a link from each output node to itself. (default=%(default)s)',
@@ -79,6 +84,7 @@ def run(input_file: KGTKFiles,
         predicate_column_name: typing.Optional[str],
         props: typing.Optional[typing.List[str]],
         undirected: bool,
+        inverted: bool,
         label: str,
         selflink_bool: bool,
         show_properties: bool,
@@ -153,6 +159,7 @@ def run(input_file: KGTKFiles,
         if props is not None:
             print("--props=%s" % " ".join(props), file=error_file)
         print("--undirected=%s" % str(undirected), file=error_file)
+        print("--inverted=%s" % str(inverted), file=error_file)
         print("--label=%s" % label, file=error_file)
         print("--selflink=%s" % str(selflink_bool), file=error_file)
         print("--breadth-first=%s" % str(breadth_first), file=error_file)
@@ -246,7 +253,7 @@ def run(input_file: KGTKFiles,
         print("special columns: sub=%d pred=%d obj=%d" % (sub, pred, obj),  file=error_file, flush=True)
 
     # G = load_graph_from_csv(filename,not(undirected),skip_first=not(header_bool),hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
-    G = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
+    G = load_graph_from_kgtk(kr, directed=not undirected, inverted=inverted, ecols=(sub, obj), verbose=verbose, out=error_file)
 
     name = G.vp["name"] # Get the vertix name property map (vertex to ndoe1 (subject) name)
 
@@ -267,6 +274,13 @@ def run(input_file: KGTKFiles,
         print("%d root nodes found in the graph." % len(index_list), file=error_file, flush=True)
 
     if len(props) > 0:
+        # Filter the graph, G, to include only edges where the predicate (label)
+        # column contains one of the selected properties.
+
+        # This procedure seems unnecessarily expensive.  Wouldn't it be better
+        # to filter the edges on input?
+
+
         # Since the root file is a KGTK file, the columns will have names.
         # pred_label: str = 'c'+str(find_pred_position(sub, pred, obj))
         pred_label: str = kr.column_names[pred]
