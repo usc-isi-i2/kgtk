@@ -73,7 +73,7 @@ and associated edges replaced with an unreified RDF edge and secondary edges.
 A `ID` column is added to the output file if it is not present in the input file.
 This is used to link secondary edges to the newly reconstituted unreified edge.
 
-At the present time, `kgtk unreify-rf_statements` does not generate ID values for
+At the present time, `kgtk unreify-values` does not generate ID values for
 other edges in the file. This feature may be added in the future.
 
 The edges in the output file are not likely to be in the same order as they appeared

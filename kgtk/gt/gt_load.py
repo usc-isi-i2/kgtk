@@ -7,10 +7,15 @@ from kgtk.io.kgtkreader import KgtkReader
 
 def load_graph_from_kgtk(kr: KgtkReader,
                          directed: bool=False,
+                         inverted: bool=False,
                          eprop_types: typing.Optional[typing.List[str]]=None,
                          hashed: bool=True,
                          hash_type: str="string", # for future support
                          ecols: typing.Optional[typing.Tuple[int, int]]=None,
+                         pcol: typing.Optional[int]=None,
+                         pset: typing.Optional[typing.Set[str]]=None,
+                         ipset: typing.Optional[typing.Set[str]]=None,
+                         upset: typing.Optional[typing.Set[str]]=None,
                          out: typing.TextIO = sys.stderr,
                          verbose: bool = False,
                          ):
@@ -25,6 +30,9 @@ def load_graph_from_kgtk(kr: KgtkReader,
 
     directed : ``bool`` (optional, default: ``False``)
         Whether or not the graph is directed.
+
+    inverted : ``bool`` (optional, default: ``False``)
+        Whether or not the links are inverted.
 
     eprop_types : list of ``str`` (optional, default: ``None``)
         List of edge property types to be read from remaining columns (if this
@@ -47,6 +55,24 @@ def load_graph_from_kgtk(kr: KgtkReader,
     ecols : pair of ``int`` (optional, default: ``(0,1)``)
         Line columns used as source and target for the edges.
 
+    pcol : ``int`` (optional, default: ``None``)
+        Line column ised as predicate filter with pset.
+
+    pset : set of `str` (optional, default: ``None``)
+        When ``pcol`` and ``pset`` are both supplied, the input edges
+        will be filtered to inlude only edges (rows) with predicate
+        (label) values in ``pset``.
+
+    ipset : set of `str` (optional, default: ``None``)
+        When ``pcol``, and ``ipset`` are both supplied, input edges
+        (rows) predicate (label) values in ``pset`` will have their
+        source and target columns swapped.
+
+    upset : set of `str` (optional, default: ``None``)
+        When ``pcol``, and ``ipset`` are both supplied, input edges
+        (rows) predicate (label) values in ``pset`` will be duplicated with their
+        source and target columns swapped.
+
     Returns
     -------
     g : :class:`~graph_tool.Graph`
@@ -55,10 +81,38 @@ def load_graph_from_kgtk(kr: KgtkReader,
         an internal vertex property map with the vertex names.
 
     """
-    r = kr # R may be wrapped for column reordering and/or non-hashed use.
-
     if ecols is None:
         ecols = (kr.node1_column_idx, kr.node2_column_idx)
+
+    r = kr # R may be wrapped for column reordering and/or non-hashed use.
+
+    if pcol is not None and pset is not None and len(pset) > 0:
+        def filter_rows(rows):
+            for row in rows:
+                if row[pcol] in pset:
+                    yield row
+        r = filter_rows(r)
+
+    if pcol is not None and ipset is not None and len(ipset) > 0:
+        def invert_specific_rows(rows):
+            for row in rows:
+                if row[pcol] in ipset:
+                    row = list(row)
+                    row[ecols[0]], row[ecols[1]] = row[ecols[1]], row[ecols[0]]
+                    yield row
+                else:
+                    yield row
+        r = invert_specific_rows(r)
+
+    if pcol is not None and upset is not None and len(upset) > 0:
+        def duplicate_and_invert_specific_rows(rows):
+            for row in rows:
+                yield row
+                if row[pcol] in upset:
+                    row = list(row)
+                    row[ecols[0]], row[ecols[1]] = row[ecols[1]], row[ecols[0]]
+                    yield row
+        r = duplicate_and_invert_specific_rows(r)
 
     if ecols != (0, 1):
         def reorder(rows):
@@ -70,6 +124,14 @@ def load_graph_from_kgtk(kr: KgtkReader,
                 del row[max(ecols)-1]
                 yield [s, t] + row
         r = reorder(r)
+
+    if inverted:
+        def invert(rows):
+            for row in rows:
+                row = list(row)
+                row[0], row[1] = row[1], row[0]
+                yield row
+        r = invert(r)
 
     if not hashed:
         def conv(rows):
