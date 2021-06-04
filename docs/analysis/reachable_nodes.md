@@ -1,10 +1,18 @@
->This command will find all nodes reachable from given root nodes in a input file. That is, given a set of nodes N and a set of properties P, this command computes the set of nodes R that can be reached from N via paths containing any of the properties in P.
+## Summary
+
+This command will find all nodes reachable from given root nodes in a input file.
+Given a set of nodes N and a set of properties P, this command computes the set of nodes R
+that can be reached from N via paths containing any of the properties in P.
+
+### Input File
 
 The input file should be a KGTK Edge file with the following columns or their aliases:
 
-- `node1`: the subject column
-- `label`: the predicate column
-- `node2`: the object column
+- `node1`: the subject column (source node)
+- `label`: the predicate column (property name)
+- `node2`: the object column (target node)
+
+### Column Substitutions
 
 Optionally, other columns may be used as the subject/predicate/object columns using the following
 command line options:
@@ -13,13 +21,16 @@ command line options:
 - `--pred PREDICATE_COLUMN_NAME`: the name of the predicate column (default: `label`).
 - `--obj OBJECT_COLUMN_NAME`: the name of the object column (default: `node2`).
 
-Note: If your input file doesn't have `node1`, `label`, or `node2` columns (or their aliases) at all, then it is
+### Processing an Input File that is Not a KGTK Edge File
+
+If your input file doesn't have `node1`, `label`, or `node2` columns (or their aliases) at all, then it is
 not a valid KGTK Edge file.  In this case, you also have to pass the following command line option:
 
 - `--input-mode=NONE`
 
+### Root Node File
 
-The root file, if specified with `--root-file ROOTFILE`, is used to get the list of starting nodes for the reachability analysis.
+The root node file, if specified with `--root-file ROOTFILE`, is used to get the list of starting nodes for the reachability analysis.
 It, too, should be a valid KGTK file.
 
 - If the root file is a KGTK Edge file (containing at least `node1`, `label`, and `node2` columns, or their aliases),
@@ -38,9 +49,11 @@ valid tab-separated file), the it is necessary to speficy the following options:
 - `--input-mode=NONE`
 - `--rootfilecolumn COLUMN_NAME`
 
-Here is another option:  if the argument to `--rootfilecolumn` is an integer, then it is treated
+If the argument to `--rootfilecolumn` is an integer, then it is treated
 as a 0's-origin index into the root file's columns (e.g., the first column is nomber 0, the second column is number 1m
 etc.)
+
+### Root Nodes on the Command Line
 
 The set of root nodes can also be specified on the command line, using the following command option:
 - `--root ROOT [ROOT ...]`
@@ -49,11 +62,13 @@ Each `ROOT` group can be a comma-separated list of root node names.
 
 Note: a comma-separated list should not have spaces before or after the comma(s).
 
-Note: this implies that commas are not allowed in node names.  At the present time, there is
+Note: this implies that commas are not allowed in node names on the command line.  At the present time, there is
 no option to override this constraint.
 
 Both `--root` and `--rootfile` may be specified, in which case the root node set is the union of
 the nodes from the root file and the nodes from the command line.
+
+### The Output File
 
 The output file is an edge file that contains the following columns:
 
