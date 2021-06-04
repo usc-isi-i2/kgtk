@@ -1,0 +1,17 @@
+node1	label	node2
+block	isa	thing
+wood-block	isa	block
+wood-block	madeof	wood
+metal-block	isa	block
+metal-block	madeof	metal
+oak	isa	wood
+pine	isa	wood
+oak-block	isa	wood-block
+oak-block	madeof	oak
+pine-block	isa	wood-block
+pine-block	madeof	pine
+gold	isa	metal
+gold-block	isa	metal-block
+gold-block	madeof	gold
+silver-block	isa	metal-block
+silver-block	madeof	silver

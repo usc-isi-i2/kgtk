@@ -1,4 +1,4 @@
-This command will find all nodes reachable from given root nodes in a input file. That is, given a set of nodes N and a set of properties P, this command computes the set of nodes R that can be reached from N via paths containing any of the properties in P.
+>This command will find all nodes reachable from given root nodes in a input file. That is, given a set of nodes N and a set of properties P, this command computes the set of nodes R that can be reached from N via paths containing any of the properties in P.
 
 The input file should be a KGTK Edge file with the following columns or their aliases:
 
@@ -63,48 +63,71 @@ The output file is an edge file that contains the following columns:
 
 ## Usage
 ```
-usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--root [ROOT [ROOT ...]]] [--root-file ROOTFILE] [--rootfilecolumn ROOTFILECOLUMN]
-                            [--subj SUBJECT_COLUMN_NAME] [--obj OBJECT_COLUMN_NAME] [--pred PREDICATE_COLUMN_NAME] [--props [PROPS [PROPS ...]]]
-                            [--undirected [True|False]] [--label LABEL] [--selflink [True|False]] [--show-properties [True|False]] [--breadth-first [True|False]]
-                            [-v]
+usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                            [--root [ROOT [ROOT ...]]] [--root-file ROOTFILE]
+                            [--rootfilecolumn ROOTFILECOLUMN]
+                            [--subj SUBJECT_COLUMN_NAME]
+                            [--obj OBJECT_COLUMN_NAME]
+                            [--pred PREDICATE_COLUMN_NAME]
+                            [--props [PROPS [PROPS ...]]]
+                            [--undirected [True|False]] [--label LABEL]
+                            [--selflink [True|False]]
+                            [--show-properties [True|False]]
+                            [--breadth-first [True|False]]
+                            [-v [optional True|False]]
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK file to find connected components in. (May be omitted or '-' for stdin.)
+                        The KGTK file to find connected components in. (May be
+                        omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for stdout.)
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
   --root [ROOT [ROOT ...]]
-                        Set of root nodes to use, space- or comma-separated strings. (default=None)
+                        Set of root nodes to use, space- or comma-separated
+                        strings. (default=None)
   --root-file ROOTFILE, --rootfile ROOTFILE
-                        Option to specify a file containing the set of root nodes
+                        Option to specify a file containing the set of root
+                        nodes
   --rootfilecolumn ROOTFILECOLUMN
-                        Specify the name or number of the root file column with the root nodes. (default=node1 or its alias if edge file, id if node file)
+                        Specify the name or number of the root file column
+                        with the root nodes. (default=node1 or its alias if
+                        edge file, id if node file)
   --subj SUBJECT_COLUMN_NAME
-                        Name of the subject column. (default: node1 or its alias)
+                        Name of the subject column. (default: node1 or its
+                        alias)
   --obj OBJECT_COLUMN_NAME
-                        Name of the object column. (default: label or its alias)
+                        Name of the object column. (default: label or its
+                        alias)
   --pred PREDICATE_COLUMN_NAME
-                        Name of the predicate column. (default: node2 or its alias)
+                        Name of the predicate column. (default: node2 or its
+                        alias)
   --props [PROPS [PROPS ...]]
-                        Properties to consider while finding reachable nodes, space- or comma-separated string. (default: all properties)
+                        Properties to consider while finding reachable nodes,
+                        space- or comma-separated string. (default: all
+                        properties)
   --undirected [True|False]
-                        When True, specify graph as undirected. (default=False)
-  --label LABEL         The label for the reachable relationship. (default: reachable)
+                        When True, specify graph as undirected.
+                        (default=False)
+  --label LABEL         The label for the reachable relationship. (default:
+                        reachable)
   --selflink [True|False]
-                        When True, include a link from each output node to itself. (default=False)
+                        When True, include a link from each output node to
+                        itself. (default=False)
   --show-properties [True|False]
                         When True, show the graph properties. (default=False)
   --breadth-first [True|False]
-                        When True, search the graph breadth first. When false, search depth first. (default=False)
+                        When True, search the graph breadth first. When false,
+                        search depth first. (default=False)
 
-  -v, --verbose         Print additional progress messages (default=False).
-
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 
 ## Examples
 
-### Basic Example
+### P279 Example
 
 Find all the classes that given root nodes are a subclass of (transitive closure).
 Root nodes are obtained from node2 of P31.tsv (instance of) file, which is a KGTK Edge file.
@@ -124,4 +147,155 @@ The following command may be used to process it:
 kgtk -i reachable-nodes P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279-star.tsv \
      --root-mode=NONE --rootfilecolumn node1
 ```
+
+### Basic Blocks
+
+The following file will be used to illustrate some of the capabilities of `kgtk reachable-nodes`.
+
+```bash
+kgtk cat -i examples/docs/reachable-nodes-blocks.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| block | isa | thing |
+| wood-block | isa | block |
+| wood-block | madeof | wood |
+| metal-block | isa | block |
+| metal-block | madeof | metal |
+| oak | isa | wood |
+| pine | isa | wood |
+| oak-block | isa | wood-block |
+| oak-block | madeof | oak |
+| pine-block | isa | wood-block |
+| pine-block | madeof | pine |
+| gold | isa | metal |
+| gold-block | isa | metal-block |
+| gold-block | madeof | gold |
+| silver-block | isa | metal-block |
+| silver-block | madeof | silver |
+
+### Find All Nodes Reachable from gold-block
+
+Find the nodes reachable from gold-block.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+| gold-block | reachable | metal |
+| gold-block | reachable | gold |
+
+### Find All Nodes Reachable from gold-block or silver-block Using Spaces
+
+Find the nodes reachable from gold-block or silver-block, using spaces
+to separate the root nodes on the command line.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block silver-block
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+| gold-block | reachable | metal |
+| gold-block | reachable | gold |
+| silver-block | reachable | metal-block |
+| silver-block | reachable | block |
+| silver-block | reachable | thing |
+| silver-block | reachable | metal |
+| silver-block | reachable | silver |
+
+### Find All Nodes Reachable from gold-block or silver-block Using Commas
+
+Find the nodes reachable from gold-block or silver-block, using commas
+to separate the root nodes on the command line.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block,silver-block
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+| gold-block | reachable | metal |
+| gold-block | reachable | gold |
+| silver-block | reachable | metal-block |
+| silver-block | reachable | block |
+| silver-block | reachable | thing |
+| silver-block | reachable | metal |
+| silver-block | reachable | silver |
+
+### Find All Nodes Reachable from gold-block by the `isa` Property
+
+Find the nodes reachable from gold-block, restricting the analysis to
+the `isa` property.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block --prop isa
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+
+### Find All Nodes Reachable from gold-block by the `madeof` Property
+
+Find the nodes reachable from gold-block, restricting the analysis to
+the `madeof` property.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block --prop madeof
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | gold |
+
+### Find All Nodes Reachable from gold-block by the `isa` Property as `isa-reachable`
+
+The label in the output file can be controlled with the `--label LABEL` option.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block --prop isa --label isa-reachable
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | isa-reachable | metal-block |
+| gold-block | isa-reachable | block |
+| gold-block | isa-reachable | thing |
+
+### Find All Nodes Reachable from gold-block by the `isa` Property with Selflinks
+
+Selflinks are links from the root nodes to themselves.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block --prop isa --selflinks
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | gold-block |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
 
