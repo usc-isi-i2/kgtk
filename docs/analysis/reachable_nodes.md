@@ -83,8 +83,25 @@ The output file is an edge file that contains the following columns:
 When `--inverted` is True, all relationships are reversed, and reachability is
 traced from node2 to node1 (`node1<-node2`).
 
+`--inverted-props INVERTED_PROPS [INVERTED_PROPS ...]` may be used to specify certain properties (values in the
+`label` column or its alias or substitution) that are to be reversed.  Each INVERTED_PROPS group
+can be a comma-separated list of property names.
+
+`--inverted` and `--inverted-props` may not be used together.
+
 When `--undirected` is True, all relationships are treated as bidirectional.
 Reachablity is traced from node1 to node2 and from node2 to node1 (`node`<->node2`).
+
+`--undirected-props UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]` may be used to specify certain properties (values in the
+`label` column or its alias or substitution) that are to be treated as bidirectional.  Each UNDIRECTED_PROPS group
+can be a comma-separated list of property names.
+
+`--undirected` and `--undirected-props` may not be used together.
+
+Note: a comma-separated list should not have spaces before or after the comma(s).
+
+Note: Commas are not allowed in property names in INVERTED_PROPS or UNDIRECTED_PROPS.  At the present time, there is
+no option to override this constraint.
 
 ## Usage
 ```
@@ -95,9 +112,11 @@ usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                             [--obj OBJECT_COLUMN_NAME]
                             [--pred PREDICATE_COLUMN_NAME]
                             [--props [PROPS [PROPS ...]]]
-                            [--undirected [True|False]]
-                            [--inverted [True|False]] [--label LABEL]
-                            [--selflink [True|False]]
+                            [--inverted [True|False] | --inverted-props
+                            [INVERTED_PROPS [INVERTED_PROPS ...]]]
+                            [--undirected [True|False] | --undirected-props
+                            [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]]]
+                            [--label LABEL] [--selflink [True|False]]
                             [--show-properties [True|False]]
                             [--breadth-first [True|False]]
                             [-v [optional True|False]]
@@ -133,12 +152,18 @@ optional arguments:
                         Properties to consider while finding reachable nodes,
                         space- or comma-separated string. (default: all
                         properties)
-  --undirected [True|False]
-                        When True, specify graph as undirected.
-                        (default=False)
   --inverted [True|False]
                         When True, and when --undirected is False, invert the
                         source and target nodes in the graph. (default=False)
+  --inverted-props [INVERTED_PROPS [INVERTED_PROPS ...]]
+                        Properties to invert, space- or comma-separated
+                        string. (default: no properties)
+  --undirected [True|False]
+                        When True, specify graph as undirected.
+                        (default=False)
+  --undirected-props [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]]
+                        Properties to treat as undirected, space- or comma-
+                        separated string. (default: no properties)
   --label LABEL         The label for the reachable relationship. (default:
                         reachable)
   --selflink [True|False]
@@ -386,9 +411,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | metal-block | reachable | block |
 | metal-block | reachable | thing |
 
-### Stating Partway Up the `isa` Tree with Inverted Links
+### Starting Partway Up the `isa` Tree with Inverted Links
 
-Invert the direction of the reachability analysis.
+Invert the direction of the reachability analysis.  All properties
+(`label` column values) are treated as inverted.
 
 ```bash
 kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
@@ -399,6 +425,23 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | -- | -- | -- |
 | metal-block | reachable | gold-block |
 | metal-block | reachable | silver-block |
+
+### Starting Partway Up the `isa` Tree with Specific Inverted Links
+
+Invert the direction of the reachability analysis for a specific property
+(`label` column value).
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa --inverted-prop isa
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | gold-block |
+| metal-block | reachable | silver-block |
+
+Note: `--inverted` and `--inverted-props` may not be requested at the same time.
 
 ### Starting Partway Up the `isa` Tree with Undirected Links
 
@@ -439,7 +482,7 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | metal-block | reachable | metal |
 
 Although `modeof` links were considered, they did not contribute to the output
-because they wer enot reachable.
+because they were not reachable.
 
 ### Starting Partway Up the `isa` or `madeof` Trees with Undirected Links
 
@@ -447,9 +490,6 @@ This example shows the output when the root node is partway up
 the `isa` property tree, allowing `madeof` links to be considered in
 the analysis, but when links are considered undirected
 
-Note: At the present time, it is not possible to specify that a subset of the
-properties are to be undirected.  Either all properties are directed, or all are
-undirected.
 
 ```bash
 kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
@@ -475,6 +515,49 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 With the links considered undirected, the endire graph became reachable
 from `metal-block`.
 
+### Starting Partway Up the `isa` Tree Again
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold | reachable | metal |
+
+### Starting Partway Up the `isa` Tree Again with `madeof` Inverted
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold --inverted-prop madeof
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold | reachable | metal |
+| gold | reachable | metal-block |
+| gold | reachable | block |
+| gold | reachable | thing |
+| gold | reachable | gold-block |
+
+### Starting Partway Up the `isa` Tree Again with `madeof` Undirected
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold --undirected-prop madeof
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold | reachable | metal |
+| gold | reachable | metal-block |
+| gold | reachable | block |
+| gold | reachable | thing |
+| gold | reachable | gold-block |
+
+Note: `--undirected` and `--undirected-props` may not be requested at the same time.
+
 ### Expert Example: Showing Graph Properties
 
 The `--show-properties` option is intended for debugging `kgtk reachable-nodes`.
@@ -497,10 +580,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Here is the additional graph properties output:
 
-    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f90889ced30, at 0x7f908741f370>
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f8f1c853220, at 0x7f8f1c853580>
     Graph properties:
-        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f90889ced30, at 0x7f908741f370>
-        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f90889ced30, at 0x7f908741f2e0>
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f8f1c853220, at 0x7f8f1c853580>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f8f1c853220, at 0x7f8f1c8534f0>
 
 ### Expert Example: Breadth-first Search
 

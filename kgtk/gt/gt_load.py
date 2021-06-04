@@ -14,6 +14,8 @@ def load_graph_from_kgtk(kr: KgtkReader,
                          ecols: typing.Optional[typing.Tuple[int, int]]=None,
                          pcol: typing.Optional[int]=None,
                          pset: typing.Optional[typing.Set[str]]=None,
+                         ipset: typing.Optional[typing.Set[str]]=None,
+                         upset: typing.Optional[typing.Set[str]]=None,
                          out: typing.TextIO = sys.stderr,
                          verbose: bool = False,
                          ):
@@ -61,6 +63,16 @@ def load_graph_from_kgtk(kr: KgtkReader,
         will be filtered to inlude only edges (rows) with predicate
         (label) values in ``pset``.
 
+    ipset : set of `str` (optional, default: ``None``)
+        When ``pcol``, and ``ipset`` are both supplied, input edges
+        (rows) predicate (label) values in ``pset`` will have their
+        source and target columns swapped.
+
+    upset : set of `str` (optional, default: ``None``)
+        When ``pcol``, and ``ipset`` are both supplied, input edges
+        (rows) predicate (label) values in ``pset`` will be duplicated with their
+        source and target columns swapped.
+
     Returns
     -------
     g : :class:`~graph_tool.Graph`
@@ -69,17 +81,38 @@ def load_graph_from_kgtk(kr: KgtkReader,
         an internal vertex property map with the vertex names.
 
     """
+    if ecols is None:
+        ecols = (kr.node1_column_idx, kr.node2_column_idx)
+
     r = kr # R may be wrapped for column reordering and/or non-hashed use.
 
     if pcol is not None and pset is not None and len(pset) > 0:
-        def filter(rows):
+        def filter_rows(rows):
             for row in rows:
                 if row[pcol] in pset:
                     yield row
-        r = filter(r)
+        r = filter_rows(r)
 
-    if ecols is None:
-        ecols = (kr.node1_column_idx, kr.node2_column_idx)
+    if pcol is not None and ipset is not None and len(ipset) > 0:
+        def invert_specific_rows(rows):
+            for row in rows:
+                if row[pcol] in ipset:
+                    row = list(row)
+                    row[ecols[0]], row[ecols[1]] = row[ecols[1]], row[ecols[0]]
+                    yield row
+                else:
+                    yield row
+        r = invert_specific_rows(r)
+
+    if pcol is not None and upset is not None and len(upset) > 0:
+        def duplicate_and_invert_specific_rows(rows):
+            for row in rows:
+                yield row
+                if row[pcol] in upset:
+                    row = list(row)
+                    row[ecols[0]], row[ecols[1]] = row[ecols[1]], row[ecols[0]]
+                    yield row
+        r = duplicate_and_invert_specific_rows(r)
 
     if ecols != (0, 1):
         def reorder(rows):

@@ -7,7 +7,7 @@ TODO: the --subj, --pred, and --obj options should perhaps be renamed to
 
 TODO: the root file name should be parsed with parser.add_input_file(...)
 """
-from argparse import Namespace
+from argparse import Namespace, _MutuallyExclusiveGroup
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -46,12 +46,21 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--pred",action="store" ,type=str, dest="predicate_column_name",help='Name of the predicate column. (default: node2 or its alias)')
     parser.add_argument("--props", action="store", type=str, dest="props", nargs="*",
                         help='Properties to consider while finding reachable nodes, space- or comma-separated string. (default: all properties)',default=None)
-    parser.add_argument('--undirected', dest="undirected",
-                        help="When True, specify graph as undirected. (default=%(default)s)",
-                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
-    parser.add_argument('--inverted', dest="inverted",
-                        help="When True, and when --undirected is False, invert the source and target nodes in the graph. (default=%(default)s)",
-                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    inverted_group: _MutuallyExclusiveGroup = parser.add_mutually_exclusive_group()
+    inverted_group.add_argument('--inverted', dest="inverted",
+                                help="When True, and when --undirected is False, invert the source and target nodes in the graph. (default=%(default)s)",
+                                type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")  
+    inverted_group.add_argument("--inverted-props", action="store", type=str, dest="inverted_props", nargs="*",
+                                help='Properties to invert, space- or comma-separated string. (default: no properties)',default=None)
+
+    undirected_group: _MutuallyExclusiveGroup = parser.add_mutually_exclusive_group()
+    undirected_group.add_argument('--undirected', dest="undirected",
+                                  help="When True, specify graph as undirected. (default=%(default)s)",
+                                  type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+    undirected_group.add_argument("--undirected-props", action="store", type=str, dest="undirected_props", nargs="*",
+                                  help='Properties to treat as undirected, space- or comma-separated string. (default: no properties)',default=None)
+
     parser.add_argument('--label', action='store', type=str, dest='label', help='The label for the reachable relationship. (default: %(default)s)',default="reachable")
     parser.add_argument('--selflink',dest='selflink_bool',
                         help='When True, include a link from each output node to itself. (default=%(default)s)',
@@ -81,6 +90,8 @@ def run(input_file: KGTKFiles,
         object_column_name: typing.Optional[str],
         predicate_column_name: typing.Optional[str],
         props: typing.Optional[typing.List[str]],
+        undirected_props: typing.Optional[typing.List[str]],
+        inverted_props: typing.Optional[typing.List[str]],
         undirected: bool,
         inverted: bool,
         label: str,
@@ -141,6 +152,12 @@ def run(input_file: KGTKFiles,
     if props is None:
         props = [ ] # This simplifies matters.
 
+    if undirected_props is None:
+        undirected_props = [ ] # This simplifies matters.
+
+    if inverted_props is None:
+        inverted_props = [ ] # This simplifies matters.
+
     if show_options:
         if root is not None:
             print("--root %s" % " ".join(root), file=error_file)
@@ -156,6 +173,10 @@ def run(input_file: KGTKFiles,
             print("--pred=%s" % predicate_column_name, file=error_file)
         if props is not None:
             print("--props=%s" % " ".join(props), file=error_file)
+        if undirected_props is not None:
+            print("--undirected-props=%s" % " ".join(undirected_props), file=error_file)
+        if inverted_props is not None:
+            print("--inverted-props=%s" % " ".join(inverted_props), file=error_file)
         print("--undirected=%s" % str(undirected), file=error_file)
         print("--inverted=%s" % str(inverted), file=error_file)
         print("--label=%s" % label, file=error_file)
@@ -263,6 +284,34 @@ def run(input_file: KGTKFiles,
             print("property set=%s" % " ".join(sorted(list(property_set))),  file=error_file, flush=True)
         
 
+    undirected_property_set: typing.Set[str] = set()
+    if len(undirected_props) > 0:
+        # Edges where the predicate (label) column contains one of the selected
+        # properties will be treated as undirected links.
+
+        und_prop_group: str
+        for und_prop_group in undirected_props:
+            und_prop: str
+            for und_prop in und_prop_group.split(','):
+                undirected_property_set.add(und_prop)
+        if verbose:
+            print("undirected property set=%s" % " ".join(sorted(list(undirected_property_set))),  file=error_file, flush=True)
+        
+
+    inverted_property_set: typing.Set[str] = set()
+    if len(inverted_props) > 0:
+        # Edges where the predicate (label) column contains one of the selected
+        # properties will have the source and target columns swapped.
+
+        inv_prop_group: str
+        for inv_prop_group in inverted_props:
+            inv_prop: str
+            for inv_prop in inv_prop_group.split(','):
+                inverted_property_set.add(inv_prop)
+        if verbose:
+            print("inverted property set=%s" % " ".join(sorted(list(inverted_property_set))),  file=error_file, flush=True)
+        
+
     # G = load_graph_from_csv(filename,not(undirected),skip_first=not(header_bool),hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
     G = load_graph_from_kgtk(kr,
                              directed=not undirected,
@@ -270,6 +319,8 @@ def run(input_file: KGTKFiles,
                              ecols=(sub, obj),
                              pcol=pred,
                              pset=property_set,
+                             upset=undirected_property_set,
+                             ipset=inverted_property_set,
                              verbose=verbose,
                              out=error_file)
 
