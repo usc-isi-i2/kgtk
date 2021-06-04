@@ -308,7 +308,92 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 Each root node now has a link to itself in the output.  Only
 the root nodes have selflinks.
 
-### Showing Graph Properties
+### Starting Partway Up the `isa` Tree
+
+This example shows the output when the root node is partway up
+the `isa` property tree.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | block |
+| metal-block | reachable | thing |
+
+### Starting Partway Up the `isa` Tree with Undirected Links
+
+This example shows the output when the root node is partway up
+the `isa` property tree, but links are considered undirected.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa --undirected
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | block |
+| metal-block | reachable | thing |
+| metal-block | reachable | wood-block |
+| metal-block | reachable | oak-block |
+| metal-block | reachable | pine-block |
+| metal-block | reachable | gold-block |
+| metal-block | reachable | silver-block |
+
+
+### Starting Partway Up the `isa` or `madeof` Trees
+
+This example shows the output when the root node is partway up
+the `isa` property tree, allowing `madeof` links to be considered in
+the analysis.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa madeof
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | block |
+| metal-block | reachable | thing |
+| metal-block | reachable | metal |
+
+Although `modeof` links were considered, they did not contribute to the output.
+
+### Starting Partway Up the `isa` or `madeof` Trees with Undirected Links
+
+This example shows the output when the root node is partway up
+the `isa` property tree, allowing `madeof` links to be considered in
+the analysis, but when links are considered undirected
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa madeof --undirected
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | block |
+| metal-block | reachable | thing |
+| metal-block | reachable | wood-block |
+| metal-block | reachable | wood |
+| metal-block | reachable | oak |
+| metal-block | reachable | oak-block |
+| metal-block | reachable | pine |
+| metal-block | reachable | pine-block |
+| metal-block | reachable | metal |
+| metal-block | reachable | gold |
+| metal-block | reachable | gold-block |
+| metal-block | reachable | silver-block |
+| metal-block | reachable | silver |
+
+With the links considered undirected, the endire graph became reachable
+from `metal-block`.
+
+### Expert Example: Showing Graph Properties
 
 The `--show-properties` option is intended for debugging `kgtk reachable-nodes`.
 It dicplays some of the properties of the internal graph object that is
@@ -330,12 +415,12 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Here is the additional graph properties output:
 
-    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7fcf0b4b7c70, at 0x7fcf09f07280>
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f7159600ca0, at 0x7f71580502b0>
     Graph properties:
-        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7fcf0b4b7c70, at 0x7fcf09f07280>
-        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7fcf0b4b7c70, at 0x7fcf09f071f0>
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f7159600ca0, at 0x7f71580502b0>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f7159600ca0, at 0x7f7158050220>
 
-### Breadth-first Search
+### Expert Example: Breadth-first Search
 
 By default, the graph is traversed depth first.  `kgtk reachable-nodes --breadth-first`
 instructs the command to traverse the graph breadth first. The output should be the same,
