@@ -283,13 +283,15 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | gold-block | isa-reachable | block |
 | gold-block | isa-reachable | thing |
 
-### Find All Nodes Reachable from gold-block by the `isa` Property with Selflinks
+### Adding Selflinks to the Output
 
-Selflinks are links from the root nodes to themselves.
+Selflinks are links from the root nodes to themselves.  We will repeat the
+example "Find All Nodes Reachable from gold-block or silver-block Using Spaces",
+but adding selflinks.
 
 ```bash
 kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
-     --root gold-block --prop isa --selflinks
+     --root gold-block silver-block --prop isa --selflink
 ```
 
 | node1 | label | node2 |
@@ -298,4 +300,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | gold-block | reachable | metal-block |
 | gold-block | reachable | block |
 | gold-block | reachable | thing |
+| silver-block | reachable | silver-block |
+| silver-block | reachable | metal-block |
+| silver-block | reachable | block |
+| silver-block | reachable | thing |
 
+Each root node now has a link to itself in the output.  Only
+the root nodes have selflinks.
