@@ -497,10 +497,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Here is the additional graph properties output:
 
-    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7fcbaaebbcd0, at 0x7fcba990b2e0>
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f90889ced30, at 0x7f908741f370>
     Graph properties:
-        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7fcbaaebbcd0, at 0x7fcba990b2e0>
-        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7fcbaaebbcd0, at 0x7fcba990b250>
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f90889ced30, at 0x7f908741f370>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f90889ced30, at 0x7f908741f2e0>
 
 ### Expert Example: Breadth-first Search
 

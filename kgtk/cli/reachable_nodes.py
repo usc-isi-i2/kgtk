@@ -6,8 +6,6 @@ TODO: the --subj, --pred, and --obj options should perhaps be renamed to
       the old options kept as synonyms.
 
 TODO: the root file name should be parsed with parser.add_input_file(...)
-
-TODO: Filter the edges by property on input.
 """
 from argparse import Namespace
 import typing
@@ -175,7 +173,6 @@ def run(input_file: KGTKFiles,
         print("=======", file=error_file, flush=True)
 
     root_set: typing.Set = set()
-    property_list: typing.List = list()
 
     if rootfile is not None:
         if verbose:
@@ -252,8 +249,29 @@ def run(input_file: KGTKFiles,
     if verbose:
         print("special columns: sub=%d pred=%d obj=%d" % (sub, pred, obj),  file=error_file, flush=True)
 
+    property_set: typing.Set[str] = set()
+    if len(props) > 0:
+        # Filter the graph, G, to include only edges where the predicate (label)
+        # column contains one of the selected properties.
+
+        prop_group: str
+        for prop_group in props:
+            prop: str
+            for prop in prop_group.split(','):
+                property_set.add(prop)
+        if verbose:
+            print("property set=%s" % " ".join(sorted(list(property_set))),  file=error_file, flush=True)
+        
+
     # G = load_graph_from_csv(filename,not(undirected),skip_first=not(header_bool),hashed=True,csv_options={'delimiter': '\t'},ecols=(sub,obj))
-    G = load_graph_from_kgtk(kr, directed=not undirected, inverted=inverted, ecols=(sub, obj), verbose=verbose, out=error_file)
+    G = load_graph_from_kgtk(kr,
+                             directed=not undirected,
+                             inverted=inverted,
+                             ecols=(sub, obj),
+                             pcol=pred,
+                             pset=property_set,
+                             verbose=verbose,
+                             out=error_file)
 
     name = G.vp["name"] # Get the vertix name property map (vertex to ndoe1 (subject) name)
 
@@ -272,36 +290,6 @@ def run(input_file: KGTKFiles,
         print("Warning: No root nodes found in the graph, the output file will be empty.", file=error_file, flush=True)
     elif verbose:
         print("%d root nodes found in the graph." % len(index_list), file=error_file, flush=True)
-
-    if len(props) > 0:
-        # Filter the graph, G, to include only edges where the predicate (label)
-        # column contains one of the selected properties.
-
-        # This procedure seems unnecessarily expensive.  Wouldn't it be better
-        # to filter the edges on input?
-
-
-        # Since the root file is a KGTK file, the columns will have names.
-        # pred_label: str = 'c'+str(find_pred_position(sub, pred, obj))
-        pred_label: str = kr.column_names[pred]
-        if verbose:
-            print("pred_label=%s" % repr(pred_label),  file=error_file, flush=True)
-        
-        
-        property_list =  [ ]
-        prop_group: str
-        for prop_group in props:
-            prop: str
-            for prop in prop_group.split(','):
-                property_list.append(prop)
-        if verbose:
-            print("property list=%s" % " ".join(property_list),  file=error_file, flush=True)
-        
-        edge_filter_set = set()
-        for prop in property_list:
-            edge_filter_set.update(get_edges_by_edge_prop(G, pred_label, prop))
-        G.clear_edges()
-        G.add_edge_list(list(edge_filter_set))
 
     output_header: typing.List[str] = ['node1','label','node2']
 

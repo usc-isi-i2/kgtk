@@ -12,6 +12,8 @@ def load_graph_from_kgtk(kr: KgtkReader,
                          hashed: bool=True,
                          hash_type: str="string", # for future support
                          ecols: typing.Optional[typing.Tuple[int, int]]=None,
+                         pcol: typing.Optional[int]=None,
+                         pset: typing.Optional[typing.Set[str]]=None,
                          out: typing.TextIO = sys.stderr,
                          verbose: bool = False,
                          ):
@@ -51,6 +53,14 @@ def load_graph_from_kgtk(kr: KgtkReader,
     ecols : pair of ``int`` (optional, default: ``(0,1)``)
         Line columns used as source and target for the edges.
 
+    pcol : ``int`` (optional, default: ``None``)
+        Line column ised as predicate filter with pset.
+
+    pset : set of `str` (optional, default: ``None``)
+        When ``pcol`` and ``pset`` are both supplied, the input edges
+        will be filtered to inlude only edges (rows) with predicate
+        (label) values in ``pset``.
+
     Returns
     -------
     g : :class:`~graph_tool.Graph`
@@ -60,6 +70,13 @@ def load_graph_from_kgtk(kr: KgtkReader,
 
     """
     r = kr # R may be wrapped for column reordering and/or non-hashed use.
+
+    if pcol is not None and pset is not None and len(pset) > 0:
+        def filter(rows):
+            for row in rows:
+                if row[pcol] in pset:
+                    yield row
+        r = filter(r)
 
     if ecols is None:
         ecols = (kr.node1_column_idx, kr.node2_column_idx)
