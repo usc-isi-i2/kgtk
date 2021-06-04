@@ -31,7 +31,7 @@ not a valid KGTK Edge file.  In this case, you also have to pass the following c
 ### Root Node File
 
 The root node file, if specified with `--root-file ROOTFILE`, is used to get the list of starting nodes for the reachability analysis.
-It, too, should be a valid KGTK file.
+It should be a valid KGTK file.
 
 - If the root file is a KGTK Edge file (containing at least `node1`, `label`, and `node2` columns, or their aliases),
   then the unique values in the `node1` column (by default) will be used to build the set of root node names.
@@ -46,11 +46,11 @@ name.
 If the root file is not a valid KGTK Edge or Node file, but can be parsed by KgtkReader (it is a
 valid tab-separated file), the it is necessary to speficy the following options:
 
-- `--input-mode=NONE`
+- `--root-mode=NONE`
 - `--rootfilecolumn COLUMN_NAME`
 
 If the argument to `--rootfilecolumn` is an integer, then it is treated
-as a 0's-origin index into the root file's columns (e.g., the first column is nomber 0, the second column is number 1m
+as a 0's-origin index into the root file's columns (e.g., the first column is nomber 0, the second column is number 1,
 etc.)
 
 ### Root Nodes on the Command Line
@@ -76,9 +76,58 @@ The output file is an edge file that contains the following columns:
 - `label`: this column contains only 'reachable'
 - `node2`: this column contains node that is reachable from a root node
 
+### Limiting the Properties Traversed
+
+By default, "kgtk reachable-nodes` will perform its analysis using all properties (values in
+the `label` column or its alias or substitution) found in the input file.
+
+It is possible to limit the properties traversed using a file or on the command line.
+
+### Limiting the Properties Traversed from a File
+
+The property file, if specified with `--props-file ROOTFILE`, is used to get the list of property names to traverse for the reachability analysis.
+It should be a valid KGTK file.
+
+- If the property file is a KGTK Edge file (containing at least `node1`, `label`, and `node2` columns, or their aliases),
+  then the unique values in the `node1` column (by default) will be used to build the set of property names.
+- If the property file is a KGTK Node file (containing at least an `id` column or its alias,
+  and not containing a `node1` column or its alias), then the unique values in the `id` column (by default) will be
+  used to build the set of property names.
+
+If the property file is a valid KGTK Edge or Node file, but you want to use a different column name than the defaults
+shown above, then the `--propsfilecolumn COLUMN_NAME` option may be used to specify the name of the column property file
+that contains the property names.
+
+If the property file is not a valid KGTK Edge or Node file, but can be parsed by KgtkReader (it is a
+valid tab-separated file), the it is necessary to speficy the following options:
+
+- `--props-mode=NONE`
+- `--propsfilecolumn COLUMN_NAME`
+
+If the argument to `--propsfilecolumn` is an integer, then it is treated
+as a 0's-origin index into the root file's columns (e.g., the first column is nomber 0, the second column is number 1,
+etc.)
+
+### Limiting the Properties Traversed on the Command Line
+
+To limit the set of properties on the command line, use the fillowing command option:
+- `--props PROPS [ PROPS ...]`
+
+Each `PROPS` group can be a comma-separated list of root node names.
+
+Note: a comma-separated list should not have spaces before or after the comma(s).
+
+Note: this implies that commas are not allowed in property names on the command line.  At the present time, there is
+no option to override this constraint.
+
+Both `--props` and `--props-file` may be specified, in which case the property name set is the union of
+the names from the property file and the names from the command line.
+
 ### Directionality
 
 `kgtk reachable-nodes` normally traces reachability from node1 to node2 (`node1->node2`).
+
+### Inverted Directionality
 
 When `--inverted` is True, all relationships are reversed, and reachability is
 traced from node2 to node1 (`node1<-node2`).
@@ -87,21 +136,78 @@ traced from node2 to node1 (`node1<-node2`).
 `label` column or its alias or substitution) that are to be reversed.  Each INVERTED_PROPS group
 can be a comma-separated list of property names.
 
-`--inverted` and `--inverted-props` may not be used together.
+Note: a comma-separated list should not have spaces before or after the comma(s).
 
-When `--undirected` is True, all relationships are treated as bidirectional.
+Note: Commas are not allowed in property names in INVERTED_PROPS.  At the present time, there is
+no option to override this constraint.
+
+Note: `--inverted` and `--inverted-props` may not be used together.
+
+`--inverted-props-file INVERTED_PROPS_FILE` can be used to read a file containing a list of
+properties to invert.   It should be a valid KGTK file.
+
+- If the inverted properties file is a KGTK Edge file (containing at least `node1`, `label`, and `node2` columns, or their aliases),
+  then the unique values in the `node1` column (by default) will be used to build the set of inverted property names.
+- If the inverted properties file is a KGTK Node file (containing at least an `id` column or its alias,
+  and not containing a `node1` column or its alias), then the unique values in the `id` column (by default) will be
+  used to build the set of inverrted property names.
+
+If the inverted properties file is a valid KGTK Edge or Node file, but you want to use a different column name than the defaults
+shown above, then the `--invertedpropsfilecolumn COLUMN_NAME` option may be used to specify the name of the inverted properties file column
+containing the inverted properties.
+
+If the inverted properties file is not a valid KGTK Edge or Node file, but can be parsed by KgtkReader (it is a
+valid tab-separated file), the it is necessary to speficy the following options:
+
+- `--inverted-props-mode=NONE`
+- `--invertedpropsfilecolumn COLUMN_NAME`
+
+If the argument to `--invertedpropsfilecolumn` is an integer, then it is treated
+as a 0's-origin index into the inverted property file's columns (e.g., the first column is nomber 0, the second column is number 1,
+etc.)
+
+Note: `--inverted` and `--inverted-props-file` may not be used together.
+
+### Undirected Directionality
+
+When `--undirected` is True, all relationships are treated as undirected (bidirectional).
 Reachablity is traced from node1 to node2 and from node2 to node1 (`node`<->node2`).
 
 `--undirected-props UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]` may be used to specify certain properties (values in the
-`label` column or its alias or substitution) that are to be treated as bidirectional.  Each UNDIRECTED_PROPS group
+`label` column or its alias or substitution) that are to be treated as undirected (bidirectional).  Each UNDIRECTED_PROPS group
 can be a comma-separated list of property names.
-
-`--undirected` and `--undirected-props` may not be used together.
 
 Note: a comma-separated list should not have spaces before or after the comma(s).
 
-Note: Commas are not allowed in property names in INVERTED_PROPS or UNDIRECTED_PROPS.  At the present time, there is
+Note: Commas are not allowed in property names in UNDIRECTED_PROPS.  At the present time, there is
 no option to override this constraint.
+
+Note: `--undirected` and `--undirected-props` may not be used together.
+
+`--undirected-props-file UNDIRECTED_PROPS_FILE` can be used to read a file containing a list of
+properties to invert.   It should be a valid KGTK file.
+
+- If the undirected properties file is a KGTK Edge file (containing at least `node1`, `label`, and `node2` columns, or their aliases),
+  then the unique values in the `node1` column (by default) will be used to build the set of undirected property names.
+- If the undirected properties file is a KGTK Node file (containing at least an `id` column or its alias,
+  and not containing a `node1` column or its alias), then the unique values in the `id` column (by default) will be
+  used to build the set of inverrted property names.
+
+If the undirected properties file is a valid KGTK Edge or Node file, but you want to use a different column name than the defaults
+shown above, then the `--undirectedpropsfilecolumn COLUMN_NAME` option may be used to specify the name of the undirected properties file column
+containing the undirected properties.
+
+If the undirected properties file is not a valid KGTK Edge or Node file, but can be parsed by KgtkReader (it is a
+valid tab-separated file), the it is necessary to speficy the following options:
+
+- `--undirected-props-mode=NONE`
+- `--undirectedpropsfilecolumn COLUMN_NAME`
+
+If the argument to `--undirectedpropsfilecolumn` is an integer, then it is treated
+as a 0's-origin index into the undirected property file's columns (e.g., the first column is nomber 0, the second column is number 1,
+etc.)
+
+Note: `--undirected` and `--undirected-props-file` may not be used together.
 
 ## Usage
 ```
@@ -111,11 +217,17 @@ usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                             [--subj SUBJECT_COLUMN_NAME]
                             [--obj OBJECT_COLUMN_NAME]
                             [--pred PREDICATE_COLUMN_NAME]
-                            [--props [PROPS [PROPS ...]]]
-                            [--inverted [True|False] | --inverted-props
-                            [INVERTED_PROPS [INVERTED_PROPS ...]]]
-                            [--undirected [True|False] | --undirected-props
-                            [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]]]
+                            [--prop [PROPS [PROPS ...]]]
+                            [--props-file PROPS_FILE]
+                            [--propsfilecolumn PROPSFILECOLUMN]
+                            [--inverted [True|False]]
+                            [--inverted-prop [INVERTED_PROPS [INVERTED_PROPS ...]]]
+                            [--inverted-props-file INVERTED_PROPS_FILE]
+                            [--invertedpropsfilecolumn INVERTEDPROPSFILECOLUMN]
+                            [--undirected [True|False]]
+                            [--undirected-prop [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]]]
+                            [--undirected-props-file UNDIRECTED_PROPS_FILE]
+                            [--undirectedpropsfilecolumn UNDIRECTEDPROPSFILECOLUMN]
                             [--label LABEL] [--selflink [True|False]]
                             [--show-properties [True|False]]
                             [--breadth-first [True|False]]
@@ -148,22 +260,43 @@ optional arguments:
   --pred PREDICATE_COLUMN_NAME
                         Name of the predicate column. (default: node2 or its
                         alias)
-  --props [PROPS [PROPS ...]]
+  --prop [PROPS [PROPS ...]], --props [PROPS [PROPS ...]]
                         Properties to consider while finding reachable nodes,
                         space- or comma-separated string. (default: all
                         properties)
+  --props-file PROPS_FILE
+                        Option to specify a file containing the set of
+                        properties
+  --propsfilecolumn PROPSFILECOLUMN
+                        Specify the name or number of the props file column
+                        with the property names. (default=node1 or its alias
+                        if edge file, id if node file)
   --inverted [True|False]
                         When True, and when --undirected is False, invert the
                         source and target nodes in the graph. (default=False)
-  --inverted-props [INVERTED_PROPS [INVERTED_PROPS ...]]
+  --inverted-prop [INVERTED_PROPS [INVERTED_PROPS ...]], --inverted-props [INVERTED_PROPS [INVERTED_PROPS ...]]
                         Properties to invert, space- or comma-separated
                         string. (default: no properties)
+  --inverted-props-file INVERTED_PROPS_FILE
+                        Option to specify a file containing the set of
+                        inverted properties
+  --invertedpropsfilecolumn INVERTEDPROPSFILECOLUMN
+                        Specify the name or number of the inverted props file
+                        column with the property names. (default=node1 or its
+                        alias if edge file, id if node file)
   --undirected [True|False]
                         When True, specify graph as undirected.
                         (default=False)
-  --undirected-props [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]]
+  --undirected-prop [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]], --undirected-props [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]]
                         Properties to treat as undirected, space- or comma-
                         separated string. (default: no properties)
+  --undirected-props-file UNDIRECTED_PROPS_FILE
+                        Option to specify a file containing the set of
+                        undirected properties
+  --undirectedpropsfilecolumn UNDIRECTEDPROPSFILECOLUMN
+                        Specify the name or number of the undirected props
+                        file column with the property names. (default=node1 or
+                        its alias if edge file, id if node file)
   --label LABEL         The label for the reachable relationship. (default:
                         reachable)
   --selflink [True|False]
@@ -342,6 +475,23 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | gold-block | reachable | block |
 | gold-block | reachable | thing |
 
+### Find All Nodes Reachable from gold-block by the `isa` Property from a File
+
+Find the nodes reachable from gold-block, restricting the analysis to
+the `isa` property.  Get the name of the property from a file.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block \
+     --props-file examples/docs/reachable-nodes-isa-prop.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+
 ### Find All Nodes Reachable from gold-block by the `madeof` Property
 
 Find the nodes reachable from gold-block, restricting the analysis to
@@ -443,6 +593,24 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Note: `--inverted` and `--inverted-props` may not be requested at the same time.
 
+### Starting Partway Up the `isa` Tree with Specific Inverted Links from a File
+
+Invert the direction of the reachability analysis for a specific property
+(`label` column value).
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa \
+     --inverted-props-file examples/docs/reachable-nodes-isa-prop.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | gold-block |
+| metal-block | reachable | silver-block |
+
+Note: `--inverted` and `--inverted-props-file` may not be requested at the same time.
+
 ### Starting Partway Up the `isa` Tree with Undirected Links
 
 This example shows the output when the root node is partway up
@@ -463,6 +631,51 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | metal-block | reachable | gold-block |
 | metal-block | reachable | silver-block |
 
+
+### Starting Partway Up the `isa` Tree with Specific Undirected Links
+
+Invert the direction of the reachability analysis for a specific property
+(`label` column value).
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa --undirected-prop isa
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | block |
+| metal-block | reachable | thing |
+| metal-block | reachable | wood-block |
+| metal-block | reachable | oak-block |
+| metal-block | reachable | pine-block |
+| metal-block | reachable | gold-block |
+| metal-block | reachable | silver-block |
+
+Note: `--undirected` and `--undirected-props` may not be requested at the same time.
+
+### Starting Partway Up the `isa` Tree with Specific Undirected Links from a File
+
+Invert the direction of the reachability analysis for a specific property
+(`label` column value).
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root metal-block --prop isa \
+     --undirected-props-file examples/docs/reachable-nodes-isa-prop.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| metal-block | reachable | block |
+| metal-block | reachable | thing |
+| metal-block | reachable | wood-block |
+| metal-block | reachable | oak-block |
+| metal-block | reachable | pine-block |
+| metal-block | reachable | gold-block |
+| metal-block | reachable | silver-block |
+
+Note: `--undirected` and `--undirected-props-file` may not be requested at the same time.
 
 ### Starting Partway Up the `isa` or `madeof` Trees
 
@@ -580,10 +793,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Here is the additional graph properties output:
 
-    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f8f1c853220, at 0x7f8f1c853580>
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7fe263d7d640, at 0x7fe263d7d9a0>
     Graph properties:
-        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f8f1c853220, at 0x7f8f1c853580>
-        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f8f1c853220, at 0x7f8f1c8534f0>
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7fe263d7d640, at 0x7fe263d7d9a0>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7fe263d7d640, at 0x7fe263d7d910>
 
 ### Expert Example: Breadth-first Search
 
