@@ -307,3 +307,51 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Each root node now has a link to itself in the output.  Only
 the root nodes have selflinks.
+
+### Showing Graph Properties
+
+The `--show-properties` option is intended for debugging `kgtk reachable-nodes`.
+It dicplays some of the properties of the internal graph object that is
+constructed to solve the reachability analysis.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block silver-block --prop isa --show-properties
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+| silver-block | reachable | metal-block |
+| silver-block | reachable | block |
+| silver-block | reachable | thing |
+
+Here is the additional graph properties output:
+
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7fcf0b4b7c70, at 0x7fcf09f07280>
+    Graph properties:
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7fcf0b4b7c70, at 0x7fcf09f07280>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7fcf0b4b7c70, at 0x7fcf09f071f0>
+
+### Breadth-first Search
+
+By default, the graph is traversed depth first.  `kgtk reachable-nodes --breadth-first`
+instructs the command to traverse the graph breadth first. The output should be the same,
+but the performace of the two approaches may differ in some cases.
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+     --root gold-block silver-block --prop isa --breadth-first
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+| silver-block | reachable | metal-block |
+| silver-block | reachable | block |
+| silver-block | reachable | thing |
+
