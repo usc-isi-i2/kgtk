@@ -238,6 +238,40 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | silver-block | reachable | metal |
 | silver-block | reachable | silver |
 
+### Find All Nodes Reachable from gold-block or silver-block Using a Root File
+
+Find the nodes reachable from gold-block or silver-block, using a
+root file instead of listing the root nodes on the command line.
+
+In this example, the root file is a KGTK Node file.
+
+```bash
+kgtk cat -i examples/docs/reachable-nodes-metal-blocks.tsv
+```
+| id |
+| -- |
+| gold-block |
+| silver-block |
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
+    --rootfile examples/docs/reachable-nodes-metal-blocks.tsv
+
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+| gold-block | reachable | metal |
+| gold-block | reachable | gold |
+| silver-block | reachable | metal-block |
+| silver-block | reachable | block |
+| silver-block | reachable | thing |
+| silver-block | reachable | metal |
+| silver-block | reachable | silver |
+
 ### Find All Nodes Reachable from gold-block by the `isa` Property
 
 Find the nodes reachable from gold-block, restricting the analysis to
@@ -415,10 +449,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Here is the additional graph properties output:
 
-    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f7159600ca0, at 0x7f71580502b0>
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f09eb8a5c70, at 0x7f09ea2f5280>
     Graph properties:
-        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f7159600ca0, at 0x7f71580502b0>
-        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f7159600ca0, at 0x7f7158050220>
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f09eb8a5c70, at 0x7f09ea2f5280>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f09eb8a5c70, at 0x7f09ea2f51f0>
 
 ### Expert Example: Breadth-first Search
 
