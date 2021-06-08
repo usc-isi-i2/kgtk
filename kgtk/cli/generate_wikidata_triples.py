@@ -16,7 +16,7 @@ def parser():
     }
 
 
-def add_arguments_extended(parser: KGTKArgumentParser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
