@@ -90,7 +90,6 @@ def add_arguments(parser: KGTKArgumentParser):
         "-gt",
         "--generate-truthy",
         type=optional_bool,
-        const=True,
         metavar="True|False",
         default=True,
         help="the default is to not generate truthy triples. Specify this option to generate truthy triples.",
@@ -99,7 +98,6 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument(
         "-w",
         "--warning",
-        const=True,
         type=optional_bool,
         default=False,
         metavar="True|False",
@@ -111,7 +109,6 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument(
         "-gz",
         "--use-gz",
-        const=True,
         type=optional_bool,
         metavar="True|False",
         default=False,
@@ -121,7 +118,6 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument(
         "-sid",
         "--use-id",
-        const=True,
         type=optional_bool,
         metavar="True|False",
         default=False,
