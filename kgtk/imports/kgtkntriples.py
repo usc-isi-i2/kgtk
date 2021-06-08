@@ -1,5 +1,15 @@
 """Import ntriples into KGTK format.
 
+The W3C document on RDF 1.1 N-Triples is https://www.w3.org/TR/n-triples/.
+
+The W3C document defines optional
+comments that may appear after the full stop (".") at the end of a triple. COmments
+begin with "#" (after optional white space) and continue ot the end of line or end of file.
+
+At present, `kgtk import-ntriples` strips any comments found, with a summary count at the end
+of processing. A more complex option would be to convert N-Triples comments into KGTK comments.
+
+
 Issue #390: KGTK Needs More General Language Tags
 
 According to the Wikipedia article on N-Triples, N-triples use RFC 3066
@@ -13,16 +23,6 @@ to be obsolete.
 
 To support importing/exporting N-Triples properly, the KGTK specification and
 implementation may need some extensions.
-
-Issue #391: `kgtk import-ntriples` Does Not Support Comments
-
-The W3C document on RDF 1.1 N-Triples[https://www.w3.org/TR/n-triples/] defines optional
-comments that may appear after the full stop (".") at the end of a triple. `kgtk import-ntriples`
-currently would reject triples with comments.
-
-The simplest enhancement is to strip any comments found, with a summary count at the end
-of processing. A more complex option would be to convert N-Triples comments into KGTK comments.
-
 
 
 """
@@ -146,7 +146,8 @@ class KgtkNtriples(KgtkFormat):
                                                                                    structured_value=STRUCTURED_VALUE_PAT,
                                                                                    numeric=numeric_pat,
     )
-    ROW_PAT: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=FIELD_PAT)
+    COMMENT_PAT: str = r'(?:#.*)?'
+    ROW_PAT: str = r'\s*(?P<node1>{field})\s+(?P<label>{field})\s+(?P<node2>{field})\s+\.\s*(?P<comment>{comment})'.format(field=FIELD_PAT, comment=COMMENT_PAT)
     ROW_RE: typing.Pattern = re.compile(r'^' + ROW_PAT + r'$')
 
     SLASH_HASH_PAT: str = r'/|#'
@@ -566,13 +567,13 @@ class KgtkNtriples(KgtkFormat):
         self.write_namespaces_to_output(ew)
         self.write_updated_namespace_file()
 
-    def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool]:
+    def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool, bool]:
         m: typing.Optional[typing.Match] = self.ROW_RE.match(line)
         if m is None:
             if self.verbose:
                 print("Line %d: not parsed.\n%s" % (line_number, line), file=self.error_file, flush=True)
-            return [ ], False
-        return [m.group("node1"), m.group("label"), m.group("node2")], True
+            return [ ], False, False
+        return [m.group("node1"), m.group("label"), m.group("node2")], True, len(m.group("comment")) > 0
 
 
     def process(self):
@@ -610,6 +611,7 @@ class KgtkNtriples(KgtkFormat):
 
         total_input_line_count: int = 0
         reject_line_count: int = 0
+        comment_count: int = 0
         
         namespace_line_count: int = self.get_initial_namespaces()
             
@@ -640,7 +642,8 @@ class KgtkNtriples(KgtkFormat):
 
                 row: typing.List[str]
                 valid: bool
-                row, valid = self.parse(line, input_line_count)
+                has_comment: bool
+                row, valid, has_comment = self.parse(line, input_line_count)
                 if not valid:
                     if rw is not None:
                         rw.write(line)
@@ -666,6 +669,9 @@ class KgtkNtriples(KgtkFormat):
                         rw.write(line)
                     reject_line_count += 1
 
+                if has_comment:
+                    comment_count += 1
+
             if input_file_path != "-":
                 infile.close()
 
@@ -677,6 +683,7 @@ class KgtkNtriples(KgtkFormat):
             print("Processed %d records." % (total_input_line_count), file=self.error_file, flush=True)
             print("Rejected %d records." % (reject_line_count), file=self.error_file, flush=True)
             print("Wrote %d records." % (self.output_line_count), file=self.error_file, flush=True)
+            print("Ignored %d comments." % (comment_count), file=self.error_file, flush=True)
         
         if ew is not None:
             ew.close()

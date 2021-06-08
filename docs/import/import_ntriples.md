@@ -393,6 +393,18 @@ ID column.
                         unique is supplied without an argument, it is True.
 ```
 
+### N-Triples Comments and White Space
+
+Non-canonical RDF N-Triples files may contain optional comments at the end of each data line.
+`kgtk import-ntriples` will strip any comments it encounters.  It also strips any non-canonical
+white space (multiple adjacent white space characters).
+
+
+Example comment:
+```
+_:g38 <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#LDCTimeComponent> .# comment
+```
+
 ### KGTK File Format Validity
 
 `kgtk import-ntriples` will, by default, add backslashes before any pipe characters (|)

@@ -87,12 +87,12 @@ Our installation will be in a **conda environment**. If you don't have conda ins
 
 1. Set up your own conda environment:
 ```
-conda create -n kgtk-env python=3.7
+conda create -n kgtk-env python=3.8
 conda activate kgtk-env
 ```
  **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
 
- **Note:** `kgtk import-wikidata` requires Python 3.8 or later to support high-performance parallel processing.
+ **Note:** `kgtk import-wikidata` requires Python 3.8 or later to support high-performance parallel processing.  Other than this, KGTK should run in Python 3.7, as was recommended by earlier versions of this document, but Python 3.7 is no longer considered fully supported.
 
 2. Install (the dev branch at this point): `pip install kgtk`
 
