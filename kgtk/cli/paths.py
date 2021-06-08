@@ -128,12 +128,18 @@ def run(input_file: KGTKFiles,
             pkr.close()
             raise KGTKException("Exiting due to missing columns.")
 
+        paths_read: int = 0
         path_row: typing.List[str]
         for path_row in pkr:
+            paths_read += 1
+            if len(path_row) != pkr.column_count:
+                raise KGTKException("Exiting because line %d in the path file is the wrong length: %d columns expected, %d were read." % (paths_read, pkr.column_count, len(path_row)))                    
             src: str = path_row[path_source_idx]
             tgt: str = path_row[path_target_idx]
             pairs.append((src, tgt))
         pkr.close()
+        if verbose:
+            print("%d path rows read" % paths_read, file=error_file, flush=True)
         if len(pairs) == 0:
             print("No path pairs found, the output will be empty.", file=error_file, flush=True)
         elif verbose:
