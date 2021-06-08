@@ -133,7 +133,10 @@ def run(input_file: KGTKFiles,
         for path_row in pkr:
             paths_read += 1
             if len(path_row) != pkr.column_count:
-                raise KGTKException("Exiting because line %d in the path file is the wrong length: %d columns expected, %d were read." % (paths_read, pkr.column_count, len(path_row)))                    
+                raise KGTKException("Exiting because line %d in the path file (%s) is the wrong length: %d columns expected, %d were read." % (paths_read,
+                                                                                                                                               str(path_kgtk_file),
+                                                                                                                                               pkr.column_count,
+                                                                                                                                               len(path_row)))
             src: str = path_row[path_source_idx]
             tgt: str = path_row[path_target_idx]
             pairs.append((src, tgt))
