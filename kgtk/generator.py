@@ -174,7 +174,8 @@ class TripleGenerator(Generator):
         self.set_properties(self.prop_file)
         if str(dest_fp).endswith('.gz'):
             self.fp = gzip.open(dest_fp, 'wt')
-        self.fp = open(dest_fp, 'w')
+        else:
+            self.fp = open(dest_fp, 'w')
         self.truthy = truthy
         self.reset_etk_doc()
         self.serialize_prefix()
