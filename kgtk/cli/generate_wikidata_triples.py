@@ -110,17 +110,7 @@ def add_arguments(parser: KGTKArgumentParser):
              "rather than stopping. logging",
         dest="warning",
     )
-    parser.add_argument(
-        "-gz",
-        "--use-gz",
-        type=optional_bool,
-        metavar="True|False",
-        nargs='?',
-        const=True,
-        default=False,
-        help="if set to yes, read from compressed gz file",
-        dest="use_gz",
-    )
+
     parser.add_argument(
         "-sid",
         "--use-id",
