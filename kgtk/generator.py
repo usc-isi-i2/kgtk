@@ -663,7 +663,7 @@ class JsonGenerator(Generator):
 
         self.finalize()
 
-    def entry_point(self, line_number, row):
+    def entry_point(self, line_number: int, row: typing.List[str]):
         self.read_num_of_lines += 1
 
         node1 = row[self.node1_idx]
