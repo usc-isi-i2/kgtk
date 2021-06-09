@@ -164,7 +164,6 @@ def add_arguments(parser):
         dest="error_action",
     )
 
-
 def run(
     labels: str,
     aliases: str,
@@ -221,7 +220,7 @@ def run(
     if prop_declaration:
         if input_file:
             for line_num, edge in enumerate(fp):
-                generator.read_prop_declaration(line_num+1,edge)
+                generator.read_prop_declaration(edge)
             fp.seek(0)
             for line_num, edge in enumerate(fp):
                 generator.entry_point(line_num+1,edge)
@@ -249,7 +248,7 @@ def run(
                         else:
                             file_lines += 1
                             # print("creating property declarations at line {} {}".format(line_num, edge))
-                            generator.read_prop_declaration(line_num+1,edge)
+                            generator.read_prop_declaration(edge)
         generator.finalize()
     else:
         for line_num, edge in enumerate(fp):
