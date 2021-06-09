@@ -2,6 +2,7 @@ import re
 import json
 import gzip
 import rfc3986
+import typing
 from typing import List
 from etk.etk import ETK
 from etk.etk_module import ETKModule
@@ -102,7 +103,7 @@ class Generator:
             alias_set.split(",")), set(description_set.split(","))
 
     @staticmethod
-    def process_text_string(string: str) -> [str, str]:
+    def process_text_string(string: str) -> List[str]:
         '''
         Language detection is removed from triple generation. The user is responsible for detect the language
         '''
@@ -143,7 +144,7 @@ class Generator:
             return False
 
     @staticmethod
-    def clean_number_string(num: str) -> str:
+    def clean_number_string(num: str) -> typing.Optional[str]:
         from numpy import format_float_positional
         if num == None:
             return None
@@ -269,8 +270,10 @@ class TripleGenerator(Generator):
                             "DataType {} of node {} is not supported. "
                             "{}'s DataType has been defaulted to StringValue.\n".format(node2, node1, node1)
                         )
-                    if self.error_action == 'raise':
-                        raise KGTKException("DataType {} of node {} is not supported.\n".format(node2, node1))
+                    elif self.error_action == 'raise':
+                        raise KGTKException("DataType {} of node {} is not supported.".format(node2, node1))
+                    else:
+                        raise KGTKException("Unknown error_action {} processing unsupported data type {} of node {}.".format(self.error_action, node2, node1))
 
     def _node_2_entity(self, node: str):
         '''
@@ -357,8 +360,10 @@ class TripleGenerator(Generator):
                     self.warn_log.write("IMPORTANT: Duplicated property definition of {} found!."
                                         "Using data type: {} for property {}".format(node1, self.prop_types[node1],
                                                                                      node1))
-                if self.error_action == 'raise':
+                elif self.error_action == 'raise':
                     raise KGTKException("Duplicated property definition of {} found!".format(node1))
+                else:
+                    raise KGTKException("Unknown error_action {} processing duplicated property definition of {}.".format(self.error_action, node1))
         else:
             self.prop_types[node1] = node2
 
@@ -421,9 +426,11 @@ class TripleGenerator(Generator):
                     return False
 
         elif edge_type == GlobeCoordinate:
-            latitude, longitude = node2[1:].split("/")
-            latitude = float(latitude)
-            longitude = float(longitude)
+            latitude_str: str
+            longitude_str: str
+            latitude_str, longitude_str = node2[1:].split("/")
+            latitude: float = float(latitude_str)
+            longitude: float = float(longitude_str)
             object = GlobeCoordinate(
                 latitude, longitude, 0.0001, globe=Item("Q2"))  # earth
 
@@ -442,11 +449,13 @@ class TripleGenerator(Generator):
                         "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
                             node2, line_number)
                     )
-                if self.error_action == 'raise':
+                elif self.error_action == 'raise':
                     raise KGTKException(
                         "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
                             node2, line_number)
                     )
+                else:
+                    raise KGTKException("Unknown error_action {} processing illegal quntity in node2 [{}] at line [{}].".format(self.error_action, node2, line_number))
 
             amount, lower_bound, upper_bound, unit = res
 
@@ -548,11 +557,14 @@ class TripleGenerator(Generator):
                 if self.error_action == 'log':
                     self.warn_log.write("IMPORTANT: property [{}]'s type is unknown at line [{}].\n".format(
                         prop, line_number))
-                if self.error_action == 'raise':
+                elif self.error_action == 'raise':
                     raise KGTKException(
                         "property [{}]'s type is unknown at line [{}].\n".format(
                             prop, line_number)
                     )
+                else:
+                    raise KGTKException("Unknown error_action {} processing property [{}] with unknown type at line [{}].".format(self.error_action, prop, line_number))
+
         if (not success):
             if not is_qualifier_edge:
                 self.warn_log.write(
@@ -740,18 +752,22 @@ class JsonGenerator(Generator):
                             line_number, e_id))
 
                     self.corrupted_statement_id = e_id
-                if self.error_action == 'raise':
+                elif self.error_action == 'raise':
                     raise KGTKException("CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
                         line_number, e_id))
+                else:
+                    raise KGTKException("Unknown error_action {} processing CORRUPTED_STATEMENT edge at line [{}] with edge id [{}].".format(self.error_action, line_number, e_id))
             else:
                 if self.error_action == 'log':
                     self.warn_log.write(
                         "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
                             line_number, e_id))
-                if self.error_action == 'raise':
+                elif self.error_action == 'raise':
                     raise KGTKException(
                         "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
                             line_number, e_id))
+                else:
+                    raise KGTKException("Unknown error_action {} processing CORRUPTED_QUALIFIER edge at line [{}] with edge id [{}].".format(self.error_action, line_number, e_id))
         else:
             # success
             if not is_qualifier_edge:
@@ -803,9 +819,11 @@ class JsonGenerator(Generator):
             if self.error_action == 'log':
                 self.warn_log.write(
                     "node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number))
-            if self.error_action == 'raise':
+            elif self.error_action == 'raise':
                 raise KGTKException(
                     "node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number))
+            else:
+                raise KGTKException("Unknown error_action {} processing node [{}] at line [{}] is neither an entity nor a property.\n".format(self.error_action, node, line_number))
         return True
 
     def update_misc_json_dict(self, node1: str, prop: str, node2: str, line_number: int, rank: str, field: str):
@@ -871,9 +889,12 @@ class JsonGenerator(Generator):
                 if self.error_action == 'log':
                     self.warn_log.write("property tyepe {} of property {} at line {} is not defined."
                                         .format(self.prop_types[prop], prop, line_number))
-                if self.error_action == 'raise':
+                elif self.error_action == 'raise':
                     raise KGTKException("property tyepe {} of property {} at line {} is not defined."
                                         .format(self.prop_types[prop], prop, line_number))
+                else:
+                    raise KGTKException("Unknown error_action {} processing property tyepe {} of property {} at line {} is not defined."
+                                        .format(self.error_action, self.prop_types[prop], prop, line_number))
 
             if not object:
                 if self.warning:
@@ -944,6 +965,8 @@ class JsonGenerator(Generator):
         return temp_item_dict
 
     def update_misc_json_dict_time(self, node1: str, prop: str, node2: str, rank: str, is_qualifier_edge: bool):
+        time_string: str
+        precision: int
         if self.yyyy_mm_dd_pattern.match(node2):
             time_string = node2 + "-00-00T00:00:00Z"
             precision = 11
@@ -952,12 +975,13 @@ class JsonGenerator(Generator):
             precision = 9
         else:
             try:
-                time_string, precision = node2.split("/")
+                precision_str: str
+                time_string, precision_str = node2.split("/")
                 if time_string.startswith("^"):
                     time_string = time_string[1:]
                 if time_string.startswith("+"):
                     time_string = time_string[1:]
-                precision = int(precision)
+                precision = int(precision_str)
             except:
                 return None
         if not is_qualifier_edge:
@@ -1008,9 +1032,11 @@ class JsonGenerator(Generator):
 
     def update_misc_json_dict_coordinate(self, node1: str, prop: str, node2: str, rank: str, is_qualifier_edge: bool):
         try:
-            latitude, longitude = node2[1:].split("/")
-            latitude = float(latitude)
-            longitude = float(longitude)
+            latitude_str: str
+            longitude_str: str
+            latitude_str, longitude_str = node2[1:].split("/")
+            latitude: float = float(latitude_str)
+            longitude: float = float(longitude_str)
         except:
             return None
         if not is_qualifier_edge:
