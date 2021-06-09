@@ -172,7 +172,7 @@ class TripleGenerator(Generator):
         self.set_prefix(prefix_path)
         self.prop_declaration = prop_declaration
         self.set_properties(self.prop_file)
-        if dest_fp.endswith('.gz'):
+        if str(dest_fp).endswith('.gz'):
             self.fp = gzip.open(dest_fp, 'wt')
         self.fp = open(dest_fp, 'w')
         self.truthy = truthy
@@ -238,7 +238,7 @@ class TripleGenerator(Generator):
 
     def set_properties(self, prop_file: str):
         self.prop_types = dict()
-        if prop_file == "NONE":
+        if not prop_file:
             return
 
         if prop_file.endswith(".gz"):
