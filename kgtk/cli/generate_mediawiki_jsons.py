@@ -153,6 +153,16 @@ def add_arguments(parser):
         help="Whether the input file contains a rank column. Please refer to the `import_wikidata` command for the header information. Default to False, then all the ranks will be `normal`, therefore `NormalRank`.",
         dest="has_rank",
     )
+    parser.add_argument(
+        "--error-action",
+        action="store",
+        type=str,
+        required = False,
+        default="log",
+        choices=['log', 'raise'],
+        help="When errors occur, either log them (`log`) or raise an exception (`raise`). Default='%(default)s'.",
+        dest="error_action",
+    )
 
 
 def run(
@@ -168,6 +178,7 @@ def run(
     warning: bool,
     input_file: str,
     has_rank:bool,
+    error_action: str,
 ):
     # import modules locally
     from kgtk.generator import JsonGenerator
@@ -185,7 +196,8 @@ def run(
         log_path = log_path,
         warning = warning,
         prop_declaration = prop_declaration,
-        has_rank = has_rank
+        has_rank = has_rank,
+        error_action = error_action,
     )
     # loop first round
     if use_gz:
