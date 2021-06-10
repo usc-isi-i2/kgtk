@@ -39,7 +39,7 @@ class Generator:
         alias_set = kwargs.pop("alias_set")
         n = int(kwargs.pop("n"))
         warning = kwargs.pop("warning")
-        log_path = kwargs.pop("log_path")
+        self.log_path = kwargs.pop("log_path")
         self.prop_file: typing.Optional[Path] = kwargs.pop("prop_file")
         self.read_num_of_lines = 0
         # set sets
@@ -57,7 +57,7 @@ class Generator:
             if self.log_path == '-':
                 self.warn_log = sys.stderr
             else:
-                self.warn_log = open(log_path, "w")
+                self.warn_log = open(self.log_path, "w")
         else:
             self.warn_log = sys.stderr
         self.to_append_statement_id = None
