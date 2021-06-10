@@ -101,7 +101,7 @@ class Generator:
         raise NotImplemented
 
     def finalize(self):
-        if self.warning:
+        if self.warning and self.log_path != "-":
             self.warn_log.close()
         self.serialize()
 
@@ -272,7 +272,9 @@ class TripleGenerator(Generator):
                     self.prop_types[node1] = self.datatype_mapping[node2.strip()]
                 except:
                     self.prop_types[node1] = StringValue
-                    if self.error_action == 'log':
+                    if self.error_action == 'ignore':
+                        pass
+                    elif self.error_action == 'log':
                         self.warn_log.write(
                             "DataType {} of node {} is not supported. "
                             "{}'s DataType has been defaulted to StringValue.\n".format(node2, node1, node1)
@@ -363,7 +365,9 @@ class TripleGenerator(Generator):
         # update the known prop_types
         if node1 in self.prop_types:
             if not self.prop_declaration:
-                if self.error_action == 'log':
+                if self.error_action == 'ignore':
+                    pass
+                elif self.error_action == 'log':
                     self.warn_log.write("IMPORTANT: Duplicated property definition of {} found!."
                                         "Using data type: {} for property {}".format(node1, self.prop_types[node1],
                                                                                      node1))
@@ -445,13 +449,16 @@ class TripleGenerator(Generator):
             try:
                 res = self.quantity_pattern.match(node2)
                 if res == None:
-                    self.warn_log.write("Node2 [{}] at line [{}] is not a legal quantity. Skipping it.\n".format(
-                        node2, line_number))
+                    if self.warning:
+                        self.warn_log.write("Node2 [{}] at line [{}] is not a legal quantity. Skipping it.\n".format(
+                            node2, line_number))
                     return False
                 res = res.groups()
 
             except:
-                if self.error_action == 'log':
+                if self.error_action == 'ignore':
+                    pass
+                elif self.error_action == 'log':
                     self.warn_log.write(
                         "Node2 [{}] at line [{}] is not a legal quantity.\n".format(
                             node2, line_number)
@@ -541,10 +548,11 @@ class TripleGenerator(Generator):
                 # qualifier edge or property declaration edge
                 is_qualifier_edge = True
                 if node1 == self.corrupted_statement_id:
-                    self.warn_log.write(
-                        "QUALIFIER edge at line [{}] associated of corrupted statement edge of id [{}] dropped.\n".format(
-                            line_number, self.corrupted_statement_id
-                        )
+                    if self.warning:
+                        self.warn_log.write(
+                            "QUALIFIER edge at line [{}] associated of corrupted statement edge of id [{}] dropped.\n".format(
+                                line_number, self.corrupted_statement_id
+                            )
                     )
                     return
         if prop in self.label_set:
@@ -561,7 +569,9 @@ class TripleGenerator(Generator):
                 success = self.generate_normal_triple(
                     node1, prop, node2, is_qualifier_edge, e_id, line_number)
             else:
-                if self.error_action == 'log':
+                if self.error_action == 'ignore':
+                    pass
+                elif self.error_action == 'log':
                     self.warn_log.write("IMPORTANT: property [{}]'s type is unknown at line [{}].\n".format(
                         prop, line_number))
                 elif self.error_action == 'raise':
@@ -574,14 +584,16 @@ class TripleGenerator(Generator):
 
         if (not success):
             if not is_qualifier_edge:
-                self.warn_log.write(
-                    "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
-                        line_number, e_id))
+                if self.warning:
+                    self.warn_log.write(
+                        "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
                 self.corrupted_statement_id = e_id
             else:
-                self.warn_log.write(
-                    "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
-                        line_number, e_id))
+                if self.warning:
+                    self.warn_log.write(
+                        "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
 
         else:
             self.read_num_of_lines += 1
@@ -704,9 +716,10 @@ class JsonGenerator(Generator):
             elif self.ignore_property_declarations_in_file:
                 pass
             else:
-                self.warn_log.write(
-                    "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
-                        line_number, e_id))
+                if self.warning:
+                    self.warn_log.write(
+                        "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
+                            line_number, e_id))
             return
 
         # add qualifier logic
@@ -725,9 +738,10 @@ class JsonGenerator(Generator):
             else:
                 is_qualifier_edge = True
                 if node1 == self.corrupted_statement_id:
-                    self.warn_log.write(
-                        "QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n".format(
-                            line_number, self.corrupted_statement_id)
+                    if self.warning:
+                        self.warn_log.write(
+                            "QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n".format(
+                                line_number, self.corrupted_statement_id)
                     )
 
         # update info_json_dict
@@ -770,7 +784,9 @@ class JsonGenerator(Generator):
 
         if (not success):
             if not is_qualifier_edge:
-                if self.error_action == 'log':
+                if self.error_action == 'ignore':
+                    pass
+                elif self.error_action == 'log':
                     self.warn_log.write(
                         "CORRUPTED_STATEMENT edge at line: [{}] with edge id [{}].\n".format(
                             line_number, e_id))
@@ -782,7 +798,9 @@ class JsonGenerator(Generator):
                 else:
                     raise KGTKException("Unknown error_action {} processing CORRUPTED_STATEMENT edge at line [{}] with edge id [{}].".format(self.error_action, line_number, e_id))
             else:
-                if self.error_action == 'log':
+                if self.error_action == 'ignore':
+                    pass
+                elif self.error_action == 'log':
                     self.warn_log.write(
                         "CORRUPTED_QUALIFIER edge at line: [{}] with edge id [{}].\n".format(
                             line_number, e_id))
@@ -840,7 +858,9 @@ class JsonGenerator(Generator):
                     "id": node}
             )
         else:
-            if self.error_action == 'log':
+            if self.error_action == 'ignore':
+                pass
+            elif self.error_action == 'log':
                 self.warn_log.write(
                     "node [{}] at line [{}] is neither an entity nor a property.\n".format(node, line_number))
             elif self.error_action == 'raise':
@@ -882,8 +902,9 @@ class JsonGenerator(Generator):
 
         if prop not in self.prop_types:
             if prop in self.wiki_import_prop_types:
-                self.warn_log.write(
-                    "Property {} created by wikidata json dump at line {} is skipped.\n".format(prop, line_number))
+                if self.warning:
+                    self.warn_log.write(
+                        "Property {} created by wikidata json dump at line {} is skipped.\n".format(prop, line_number))
                 return True
             else:
                 raise KGTKException("property {} at line {} is not defined.".format(prop, line_number))
@@ -910,7 +931,9 @@ class JsonGenerator(Generator):
             elif self.prop_types[prop] == "url":
                 object = self.update_misc_json_dict_url(node1, prop, node2, rank, is_qualifier_edge)
             else:
-                if self.error_action == 'log':
+                if self.error_action == 'ignore':
+                    pass
+                elif self.error_action == 'log':
                     self.warn_log.write("property tyepe {} of property {} at line {} is not defined."
                                         .format(self.prop_types[prop], prop, line_number))
                 elif self.error_action == 'raise':

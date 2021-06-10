@@ -164,8 +164,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         type=str,
         required = False,
         default="log",
-        choices=['log', 'raise'],
-        help="When errors occur, either log them (`log`) or raise an exception (`raise`). Default='%(default)s'.",
+        choices=['ignore', 'log', 'raise'],
+        help="When errors occur, either ignore them ('ignore'), log them (`log`), or raise an exception (`raise`). Default='%(default)s'.",
         dest="error_action",
     )
     parser.add_argument(
