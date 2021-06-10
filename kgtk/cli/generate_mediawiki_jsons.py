@@ -105,7 +105,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         type=str2bool,
         required = False,
         default=False,
-        help="whether to read properties in the kgtk file. If set to yes, make sure the property declaration happens before its usage.  default=%(default)s",
+        help="whether to read properties from the input kgtk file. If set to yes, make sure the property declaration happens before its usage.  default=%(default)s",
         dest="prop_declaration",
     )
     parser.add_argument(

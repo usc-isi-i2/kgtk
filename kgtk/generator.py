@@ -54,7 +54,10 @@ class Generator:
             r"([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:.*))?")
         self.warning = warning
         if self.warning:
-            self.warn_log = open(log_path, "w")
+            if self.log_path == '-':
+                self.warn_log = sys.stderr
+            else:
+                self.warn_log = open(log_path, "w")
         else:
             self.warn_log = sys.stderr
         self.to_append_statement_id = None
@@ -714,7 +717,7 @@ class JsonGenerator(Generator):
             if node1 != self.to_append_statement_id and node1 != self.corrupted_statement_id:
                 is_qualifier_edge = False
                 # partial serialization
-                if self.read_num_of_lines >= self.n:
+                if self.n > 0 and self.read_num_of_lines >= self.n:
                     if self.previous_qnode != node1:
                         self.serialize()
                     # update previous qnode to avoid breaking continuous same-qnode statements into two jsonl files
@@ -1337,19 +1340,30 @@ class JsonGenerator(Generator):
         # self.label_json_dict = {}
         # self.info_json_dict = {}
 
+    def serialize_to_fp(self, fp)->int:
+        output_lines: int = 0
+        for key, value in self.misc_json_dict.items():
+            json.dump({key: value}, fp)
+            fp.write("\n")
+            output_lines += 1
+        return output_lines
+
     def serialize(self):
         '''
         serialize the dictionaries.
         '''
-        output_file: str = "{}{}.jsonl".format(self.output_prefix, self.file_num)
-        if self.verbose:
-            print("Opening the output file %s" % repr(output_file), file=sys.stderr, flush=True)
         output_lines: int = 0
-        with open(output_file, "w") as fp:
-            for key, value in self.misc_json_dict.items():
-                json.dump({key: value}, fp)
-                fp.write("\n")
-                output_lines += 1
+        if self.output_prefix == "-":
+            if self.verbose:
+                print("Serializing to standard output", file=sys.stderr, flush=True)
+            output_lines = self.serialize_to_fp(sys.stdout)
+        else:
+            output_file: str = "{}{}.jsonl".format(self.output_prefix, self.file_num)
+            if self.verbose:
+                print("Opening the output file %s" % repr(output_file), file=sys.stderr, flush=True)
+            with open(output_file, "w") as fp:
+                output_lines = self.serialize_to_fp(fp)
+
         if self.verbose:
             print("Closing the output file, %d lines written." % output_lines, file=sys.stderr, flush=True)
         self.file_num += 1
