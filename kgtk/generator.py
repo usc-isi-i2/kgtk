@@ -1,7 +1,9 @@
 import re
 import json
 import gzip
+from pathlib import Path
 import rfc3986
+import sys
 import typing
 from typing import List
 from etk.etk import ETK
@@ -38,7 +40,7 @@ class Generator:
         n = int(kwargs.pop("n"))
         warning = kwargs.pop("warning")
         log_path = kwargs.pop("log_path")
-        self.prop_file = kwargs.pop("prop_file")
+        self.prop_file: typing.Optional[Path] = kwargs.pop("prop_file")
         self.read_num_of_lines = 0
         # set sets
         self.set_sets(label_set, description_set, alias_set)
@@ -53,6 +55,8 @@ class Generator:
         self.warning = warning
         if self.warning:
             self.warn_log = open(log_path, "w")
+        else:
+            self.warn_log = sys.stderr
         self.to_append_statement_id = None
         self.corrupted_statement_id = None
         self.to_append_statement = None  # for Json generator
@@ -238,12 +242,12 @@ class TripleGenerator(Generator):
         if prop == "data_type" or prop == "datatype":
             self.prop_types[node1] = self.datatype_mapping[node2.strip()]
 
-    def set_properties(self, prop_file: str):
+    def set_properties(self, prop_file: typing.Optional[Path]):
         self.prop_types = dict()
-        if not prop_file:
+        if prop_file is None:
             return
 
-        if prop_file.endswith(".gz"):
+        if str(prop_file).endswith(".gz"):
             fp = gzip.open(prop_file, 'rt')
         else:
             fp = open(prop_file, "r")
@@ -591,10 +595,14 @@ class TripleGenerator(Generator):
 class JsonGenerator(Generator):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.prop_declaration = kwargs.pop("prop_declaration")
-        self.output_prefix = kwargs.pop("output_prefix")
-        self.has_rank = kwargs.pop("has_rank")
-        self.error_action = kwargs.pop('error_action')
+        self.prop_declaration: bool = kwargs.pop("prop_declaration")
+        self.output_prefix: str = kwargs.pop("output_prefix")
+        self.has_rank: bool = kwargs.pop("has_rank")
+        self.error_action: str = kwargs.pop('error_action')
+        self.property_declaration_label: str = kwargs.pop("property_declaration_label")
+        self.ignore_property_declarations_in_file: bool = kwargs.pop("ignore_property_declarations_in_file")
+        self.filter_prop_file: bool = kwargs.pop("filter_prop_file")
+        self.verbose: bool = kwargs.pop("verbose")
         self.file_num = 0
         # this data_type mapping is to comply with the SQID UI parsing requirements
         self.datatype_mapping = {
@@ -640,26 +648,37 @@ class JsonGenerator(Generator):
 
     def initialize(self, input_file):
         self.input_file = input_file
+
+        if self.verbose:
+            print("Opening the input file %s" % repr(str(self.input_file)), file=sys.stderr, flush=True)
         self.kr: KgtkReader = KgtkReader.open(self.input_file)
+
         self.node1_idx = self.kr.get_node1_column_index()
+        if self.node1_idx < 0:
+            raise KGTKException("The input file [{}] does not have a node1 column or its alias.".format(str(self.input_file)))
         self.node2_idx = self.kr.get_node2_column_index()
+        if self.node2_idx < 0:
+            raise KGTKException("The input file [{}] does not have a node2 column or its alias.".format(str(self.input_file)))
         self.label_idx = self.kr.get_label_column_index()
+        if self.label_idx < 0:
+            raise KGTKException("The input file [{}] does not have a label column or its alias.".format(str(self.input_file)))
         self.id_idx = self.kr.get_id_column_index()
+        if self.id_idx < 0:
+            raise KGTKException("The input file [{}] does not have an id column or its alias.".format(str(self.input_file)))
+
         if hasattr(self, 'has_rank') and self.has_rank == True:
             rank_index = self.kr.get_node1_column_index('rank')
             self.rank_idx = rank_index
 
     def process(self):
-        input_row_count: int = 2
+        line_num: int
+        row: typing.List[str]
+        for line_num, row in enumerate(self.kr):
+            self.entry_point(line_num + 1, row)
 
-        if self.prop_declaration:
-            for row in self.kr:
-                self.read_prop_declaration(row)
+        if self.verbose:
+            print("Closing the input file, %d lines read." % (line_num + 1), file=sys.stderr, flush=True)
         self.kr.close()
-        self.kr: KgtkReader = KgtkReader.open(self.input_file)
-        for row in self.kr:
-            self.entry_point(input_row_count, row)
-            input_row_count += 1
 
         self.finalize()
 
@@ -676,17 +695,19 @@ class JsonGenerator(Generator):
             rank = "normal"  # TODO default rank
 
         # property declaration
-        if prop == "data_type":
-            if self.prop_declaration:
-                self.prop_types[node1] = self.datatype_mapping[node2.strip()]
-                return
+        if prop == self.property_declaration_label:
+            if self.ignore_property_declarations_in_file:
+                pass
+            elif self.prop_declaration:
+                self.set_property(node1, node2, line_number)
             else:
                 self.warn_log.write(
                     "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(
                         line_number, e_id))
+            return
 
         # add qualifier logic
-        if line_number == 2:
+        if line_number == 1:
             self.previous_qnode = node1
             is_qualifier_edge = False
         else:
@@ -1264,27 +1285,52 @@ class JsonGenerator(Generator):
             }
         return temp_url_dict
 
-    def read_prop_declaration(self, row: List[str]):
-        node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
-        if prop == "data_type" or prop == "datatype":
+    def set_property(self, node1: str, node2:str, line_num: int):
+        try:
             self.prop_types[node1] = self.datatype_mapping[node2.strip()]
+        except:
+            raise KGTKException("Line {}: DataType [{}] of node [{}] is not supported.\n".format(line_num, node2, node1))
 
-    def set_properties(self, prop_file: str):
-        self.prop_types = {}
-        if prop_file == "NONE":
+    def read_prop_declaration(self, row: List[str], line_num: int):
+        node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
+        if prop == self.property_declaration_label:
+            self.set_property(node1, node2, line_num)
+
+    def set_properties(self, prop_file: typing.Optional[Path]):
+        self.prop_types: typing.MutableMapping[str, str] = {}
+        if prop_file is None:
             return
-        with open(prop_file, "r") as fp:
-            props = fp.readlines()
-        for line in props[1:]:
-            node1, _, node2, = line.split("\t")
-            try:
-                self.prop_types[node1] = self.datatype_mapping[node2.strip()]
-            except:
-                raise KGTKException(
-                    "DataType {} of node {} is not supported.\n".format(
-                        node2, node1
-                    )
-                )
+
+        if self.verbose:
+            print("Reading the properties file %s" % repr(str(prop_file)), file=sys.stderr, flush=True)
+        pkr: KgtkReader = KgtkReader.open(prop_file)
+        node1_idx: int = pkr.node1_column_idx
+        if node1_idx < 0:
+            raise KGTKException("The properties file [{}] must have a node1 column (or its alias)".format(str(prop_file)))
+        node2_idx: int = pkr.node2_column_idx
+        if node2_idx < 0:
+            raise KGTKException("The properties file [{}] must have a node2 column (or its alias)".format(str(prop_file)))
+        label_idx: int = pkr.label_column_idx
+        if self.filter_prop_file and label_idx < 0:
+            raise KGTKException("The properties file [{}] must have a label column (or its alias)".format(str(prop_file)))
+
+        prop_count: int = 0
+        line_num: int
+        row: typing.List[str]
+        if self.filter_prop_file:
+            for line_num, row in enumerate(pkr):
+                prop: str = row[label_idx]
+                if prop == self.property_declaration_label:
+                    self.set_property(row[node1_idx], row[node2_idx], line_num + 1)
+                    prop_count += 1
+        else:
+            for line_num, row in enumerate(pkr):
+                self.set_property(row[node1_idx], row[node2_idx], line_num + 1)
+                prop_count += 1
+
+        pkr.close()
+        if self.verbose:
+            print("Done reading the properties file, %d properties read." % prop_count, file=sys.stderr, flush=True)
 
     def set_json_dict(self):
         self.misc_json_dict = {}
@@ -1295,10 +1341,17 @@ class JsonGenerator(Generator):
         '''
         serialize the dictionaries.
         '''
-        with open("{}{}.jsonl".format(self.output_prefix, self.file_num), "w") as fp:
+        output_file: str = "{}{}.jsonl".format(self.output_prefix, self.file_num)
+        if self.verbose:
+            print("Opening the output file %s" % repr(output_file), file=sys.stderr, flush=True)
+        output_lines: int = 0
+        with open(output_file, "w") as fp:
             for key, value in self.misc_json_dict.items():
                 json.dump({key: value}, fp)
                 fp.write("\n")
+                output_lines += 1
+        if self.verbose:
+            print("Closing the output file, %d lines written." % output_lines, file=sys.stderr, flush=True)
         self.file_num += 1
         self.reset()
 

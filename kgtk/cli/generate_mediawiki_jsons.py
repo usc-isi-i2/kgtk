@@ -5,6 +5,10 @@ This command line tool will create three json files. Each will mimic the return 
 
 """
 
+from argparse import Namespace, SUPPRESS
+import typing
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
+
 def str2bool(v):
     import argparse
     if isinstance(v, bool):
@@ -26,13 +30,44 @@ def parser():
         "description": "Generating json files that mimic mediawiki *wbgetentities* api call response. This tool assumes statements and qualifiers related to one entity will be bundled close as the `generate-wikidata-triples` function assumes. If this requirement is not met, please set `n` to a number LARGER than the total number of entities in the kgtk file",
     }
 
-def add_arguments(parser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
         parser (argparse.ArgumentParser)
         prop_file: str
     """
+    from kgtk.utils.argparsehelpers import optional_bool
+
+    # parser.add_argument(
+    #    "-i",
+    #    "--input-file",
+    #    action="store",
+    #    type=str,
+    #    required = False,
+    #    default="",
+    #    help="set the path of the input kgtk file if not from standard input",
+    #    dest="input_file",
+    #)
+    parser.add_input_file()
+
+    # parser.add_argument(
+    #    "-pf",
+    #    "--property-file",
+    #     action="store",
+    #     type=str,
+    #     required = False,
+    #     default="NONE",
+    #     help="path to the file which contains the property datatype mapping in kgtk format.",
+    #     dest="prop_file",
+    # )
+    parser.add_input_file(who="the file which contains the property datatype mapping in kgtk format",
+                          options=["-pf", "--property-file"],
+                          dest="prop_file",
+                          metavar="PROPERTY_FILE",
+                          optional=True,
+    )
+
     parser.add_argument(
         "-lp",
         "--label-property",
@@ -64,16 +99,6 @@ def add_arguments(parser):
         dest="descriptions",
     )
     parser.add_argument(
-        "-pf",
-        "--property-file",
-        action="store",
-        type=str,
-        required = False,
-        default="NONE",
-        help="path to the file which contains the property datatype mapping in kgtk format.",
-        dest="prop_file",
-    )
-    parser.add_argument(
         "-pd",
         "--property-declaration-in-file",
         action="store",
@@ -82,16 +107,6 @@ def add_arguments(parser):
         default=False,
         help="wehther read properties in the kgtk file. If set to yes, make sure the property declaration happens before its usage",
         dest="prop_declaration",
-    )
-    parser.add_argument(
-        "-gz",
-        "--use-gz",
-        action="store",
-        type=str2bool,
-        required = False,
-        default="no",
-        help="if set to yes, read from compressed gz file",
-        dest="use_gz",
     )
     parser.add_argument(
         "-pr",
@@ -134,16 +149,6 @@ def add_arguments(parser):
         dest="warning",
     )
     parser.add_argument(
-        "-i",
-        "--input-file",
-        action="store",
-        type=str,
-        required = False,
-        default="",
-        help="set the path of the input kgtk file if not from standard input",
-        dest="input_file",
-    )
-    parser.add_argument(
         "-r",
         "--rank",
         action="store",
@@ -163,33 +168,76 @@ def add_arguments(parser):
         help="When errors occur, either log them (`log`) or raise an exception (`raise`). Default='%(default)s'.",
         dest="error_action",
     )
+    parser.add_argument(
+        "-pl",
+        "--property-declaration-label",
+        action="store",
+        type=str,
+        required=False,
+        default="data_type",
+        help="The edge label in a property file that indicates a property declaration. default='%(default)s'",
+        dest="property_declaration_label",
+    )
+
+    parser.add_argument(
+        "-fp",
+        "--filter-prop-file",
+        dest="filter_prop_file",
+        help="If true and a property file has been specified, filter the prop file, processing only edges with the property declaration label.",
+        type=optional_bool, nargs='?', const=True, default=False, metavar="True/False",
+    )
+
+    parser.add_argument(
+        "-ip",
+        "--ignore-property-declarations-in-file",
+        dest="ignore_property_declarations_in_file",
+        help="If true, ignore input edges with the property declaration label.",
+        type=optional_bool, nargs='?', const=True, default=False, metavar="True/False",
+    )
+
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        help="If true, provide additional feedback.",
+        type=optional_bool, nargs='?', const=True, default=False, metavar="True/False",
+    )
 
 def run(
+    input_file: KGTKFiles,
+    prop_file: KGTKFiles,
+
     labels: str,
     aliases: str,
     descriptions: str,
-    prop_file: str,
     prop_declaration:bool,
-    use_gz: bool,
     output_prefix: str,
     n: int,
     log_path: str,
     warning: bool,
-    input_file: str,
     has_rank:bool,
     error_action: str,
+    property_declaration_label: str,
+    ignore_property_declarations_in_file: bool,
+    filter_prop_file: bool,
+    verbose: bool,
 ):
     # import modules locally
+    from pathlib import Path
     from kgtk.generator import JsonGenerator
     import sys
     import gzip
     from kgtk.exceptions import KGTKException
     
+    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+    prop_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_input_file(prop_file, who="KGTK prop file")
+
     generator = JsonGenerator(
+        input_file = input_kgtk_file,
+        prop_file=prop_kgtk_file,
         label_set=labels,
         alias_set=aliases,
         description_set=descriptions,
-        prop_file=prop_file,
         output_prefix = output_prefix,
         n = n,
         log_path = log_path,
@@ -197,66 +245,9 @@ def run(
         prop_declaration = prop_declaration,
         has_rank = has_rank,
         error_action = error_action,
+        property_declaration_label=property_declaration_label,
+        ignore_property_declarations_in_file = ignore_property_declarations_in_file,
+        filter_prop_file = filter_prop_file,
+        verbose = verbose,
     )
-    # loop first round
-    if use_gz:
-        if input_file:
-            try:
-                fp = open(input_file,"rb")
-            except:
-                raise KGTKException("Fail to read from compressed file {}. Exiting.".format(input_file))
-        else:
-            fp = gzip.open(sys.stdin.buffer, 'rt')
-    else:
-        if input_file:
-            try:
-                fp = open(input_file,"r")
-            except:
-                raise KGTKException("Fail to read from file {}. Exiting.".format(input_file))
-        else:
-            fp = sys.stdin
-        # not line by line
-
-    if prop_declaration:
-        if input_file:
-            for line_num, edge in enumerate(fp):
-                generator.read_prop_declaration(edge)
-            fp.seek(0)
-            for line_num, edge in enumerate(fp):
-                generator.entry_point(line_num+1,edge)
-        else:
-            file_lines = 0
-            begining_edge = None
-            start_generation = False
-            for line_num, edge in enumerate(fp):
-                if line_num == 0:
-                    begining_edge = edge
-                    generator.entry_point(line_num+1,edge)
-                    file_lines += 1
-                    # print("initial edge at line {}".format(line_num))
-                else:
-                    if start_generation:
-                        # start triple generation because reached the starting position of the second `cat`
-                        line_number = line_num - file_lines
-                        # print("creating jsons at line {} {} with total number of lines: {}".format(line_number+1, edge, file_lines))
-                        generator.entry_point(line_number+1,edge) # file generator
-                        # print("# {}".format(generator.read_num_of_lines))
-                    else:
-                        if edge == begining_edge:
-                            # print("set generation start at line {} {}".format(line_num, edge))
-                            start_generation = True
-                        else:
-                            file_lines += 1
-                            # print("creating property declarations at line {} {}".format(line_num, edge))
-                            generator.read_prop_declaration(edge)
-        generator.finalize()
-    else:
-        for line_num, edge in enumerate(fp):
-            if edge.startswith("#") or len(edge.strip("\n")) == 0:
-                continue
-            else:
-                generator.entry_point(line_num+1,edge)
-    
-        generator.finalize()
-    if input_file:
-        fp.close()
+    generator.process()
