@@ -183,23 +183,23 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         "-fp",
         "--filter-prop-file",
         dest="filter_prop_file",
-        help="If true and a property file has been specified, filter the prop file, processing only edges with the property declaration label.",
-        type=optional_bool, nargs='?', const=True, default=False, metavar="True/False",
+        help="If true and a property file has been specified, filter the prop file, processing only edges with the property declaration label. (default=%(default)s)",
+        type=optional_bool, nargs='?', const=True, default=True, metavar="True/False",
     )
 
     parser.add_argument(
         "-ip",
         "--ignore-property-declarations-in-file",
         dest="ignore_property_declarations_in_file",
-        help="If true, ignore input edges with the property declaration label.",
-        type=optional_bool, nargs='?', const=True, default=False, metavar="True/False",
+        help="If true, ignore input edges with the property declaration label. (default=%(default)s)",
+        type=optional_bool, nargs='?', const=True, default=True, metavar="True/False",
     )
 
     parser.add_argument(
         "-v",
         "--verbose",
         dest="verbose",
-        help="If true, provide additional feedback.",
+        help="If true, provide additional feedback. (default=%(default)s)",
         type=optional_bool, nargs='?', const=True, default=False, metavar="True/False",
     )
 
