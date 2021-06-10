@@ -599,10 +599,10 @@ class JsonGenerator(Generator):
         self.output_prefix: str = kwargs.pop("output_prefix")
         self.has_rank: bool = kwargs.pop("has_rank")
         self.error_action: str = kwargs.pop('error_action')
-        self.property_declaration_label: str = kwargs.pop("property_declaration_label")
-        self.ignore_property_declarations_in_file: bool = kwargs.pop("ignore_property_declarations_in_file")
-        self.filter_prop_file: bool = kwargs.pop("filter_prop_file")
-        self.verbose: bool = kwargs.pop("verbose")
+        self.property_declaration_label: str = kwargs.pop("property_declaration_label") if "property_declaration_label" in kwargs else "data_tyoe"
+        self.ignore_property_declarations_in_file: bool = kwargs.pop("ignore_property_declarations_in_file") if "ignore_property_declarations_in_file" in kwargs else True
+        self.filter_prop_file: bool = kwargs.pop("filter_prop_file") if "filter_prop_file" in kwargs else True
+        self.verbose: bool = kwargs.pop("verbose") if "verbose" in kwargs else False
         self.file_num = 0
         # this data_type mapping is to comply with the SQID UI parsing requirements
         self.datatype_mapping = {
@@ -696,10 +696,10 @@ class JsonGenerator(Generator):
 
         # property declaration
         if prop == self.property_declaration_label:
-            if self.ignore_property_declarations_in_file:
-                pass
-            elif self.prop_declaration:
+            if self.prop_declaration:
                 self.set_property(node1, node2, line_number)
+            elif self.ignore_property_declarations_in_file:
+                pass
             else:
                 self.warn_log.write(
                     "CORRUPTED_STATEMENT property declaration edge at line: [{}] with edge id [{}].\n".format(

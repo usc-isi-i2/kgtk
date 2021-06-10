@@ -8,13 +8,15 @@ class TestJSONGeneration(unittest.TestCase):
     def test_dates_generation(self):
         dates_tsv_file = Path('data/dates.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        generator = JsonGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliase',
+        generator = JsonGenerator(prop_file=Path(wikidata_property_file), label_set='label', alias_set='aliase',
                                   description_set='description', warning=True, n=100,
                                   log_path="data/date_warning.log",
                                   has_rank=False,
                                   prop_declaration=False,
                                   output_prefix="data/dates_tmp",
-                                  input_file=dates_tsv_file, error_action='log')
+                                  input_file=Path(dates_tsv_file),
+                                  property_declaration_label="property_type",
+                                  error_action='log')
         generator.process()
 
         f1 = open('data/dates0.jsonl')
@@ -32,13 +34,14 @@ class TestJSONGeneration(unittest.TestCase):
     def test_property_json_generation(self):
         property_tsv_file = Path('data/P10.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        generator = JsonGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
+        generator = JsonGenerator(prop_file=Path(wikidata_property_file), label_set='label', alias_set='aliases',
                                   description_set='descriptions', warning=True, n=1000,
                                   log_path="data/P10_warning.log",
                                   has_rank=False,
                                   prop_declaration=False,
                                   output_prefix="data/P10_tmp",
-                                  input_file=property_tsv_file, error_action='log')
+                                  property_declaration_label="property_type",
+                                  input_file=Path(property_tsv_file), error_action='log')
         generator.process()
 
         f1 = open('data/P100.jsonl')
@@ -55,13 +58,14 @@ class TestJSONGeneration(unittest.TestCase):
     def test_qnode_json_generation(self):
         qnode_tsv_file = Path('data/Q57160439.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        generator = JsonGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='aliases',
+        generator = JsonGenerator(prop_file=Path(wikidata_property_file), label_set='label', alias_set='aliases',
                                   description_set='descriptions', warning=True, n=1000,
                                   log_path="data/Q57160439_warning.log",
                                   prop_declaration=False,
                                   has_rank=False,
                                   output_prefix="data/Q57160439_tmp",
-                                  input_file=qnode_tsv_file, error_action='log')
+                                  property_declaration_label="property_type",
+                                  input_file=Path(qnode_tsv_file), error_action='log')
         generator.process()
 
         f1 = open('data/Q571604390.jsonl')
@@ -78,13 +82,14 @@ class TestJSONGeneration(unittest.TestCase):
     def test_ranked_kgtk_generation(self):
         ranked_tsv_file = Path('data/ranked_example.tsv')
         wikidata_property_file = 'data/wikidata_properties.tsv'
-        generator = JsonGenerator(prop_file=wikidata_property_file, label_set='label', alias_set='alias',
+        generator = JsonGenerator(prop_file=Path(wikidata_property_file), label_set='label', alias_set='alias',
                                   description_set='description', warning=True, n=1000,
                                   log_path="data/ranked_warning.log",
                                   prop_declaration=False,
                                   has_rank=False,
                                   output_prefix="data/ranked_tmp",
-                                  input_file=ranked_tsv_file,
+                                  property_declaration_label="property_type",
+                                  input_file=Path(ranked_tsv_file),
                                   error_action='log')
         generator.process()
 
