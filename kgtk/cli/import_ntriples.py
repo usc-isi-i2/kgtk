@@ -155,6 +155,7 @@ def run(input_file: KGTKFiles,
         print("--output-only-used-namespaces %s" % str(output_only_used_namespaces), file=error_file, flush=True)
 
         print("--allow-lax-uri %s" % str(allow_lax_uri), file=error_file, flush=True)
+        print("--allow-unknown-datatype-iris %s" % str(allow_unknown_datatype_iris), file=error_file, flush=True)
         
         print("--local-namespace-prefix %s" % local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % str(local_namespace_use_uuid), file=error_file, flush=True)

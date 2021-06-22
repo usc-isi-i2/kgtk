@@ -837,7 +837,7 @@ def main():
         print("--namespace-id-zfill %s" % str(args.namespace_id_zfill), file=error_file, flush=True)
         print("--output-only-used-namespaces %s" % str(args.output_only_used_namespaces), file=error_file, flush=True)
         print("--allow-lax-uri %s" % str(args.allow_lax_uri), file=error_file, flush=True)
-        print("--allow-unknown-datatype-iris %s" % str(args.allow_unknpwn_datatype_iris), file=error_file, flush=True)
+        print("--allow-unknown-datatype-iris %s" % str(args.allow_unknown_datatype_iris), file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % str(args.local_namespace_use_uuid), file=error_file, flush=True)
         print("--prefix-expansion-label %s" % args.prefix_expansion_label, file=error_file, flush=True)
