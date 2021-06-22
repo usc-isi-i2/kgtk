@@ -66,6 +66,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_ESCAPE_PIPES: bool = True
     DEFAULT_VALIDATE: bool = False
     DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS: bool = False
+    DEFAULT_ALLOW_TURTLE_QUOTES: bool = False
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -136,12 +137,18 @@ class KgtkNtriples(KgtkFormat):
     BLANK_NODE_PAT: str = r'(?:_:[0-9a-zA-Z_]+)'
 
     # Double quoted strings with backslash escapes.
-    STRING_PAT: str = r'"(?:[^\\]|(?:\\.))*"'
+    STRING_PAT: str = r'(?:"(?:[^\\]|(?:\\.))*")'
+
+    # Single quoted strings with backslash escapes are allowed in RDF Turtle format.
+    TURTLE_STRING_PAT: str = r"(?:'(?:[^\\]|(?:\\.))*')"
 
     # Language tags are sequences of alphanumerics separated by dashes.
     LANGUAGE_TAG_PAT: str = r'(?:[0-9a-zA-Z]+(?:-[0-9a-zA-Z]+)*)'
 
-    STRUCTURED_VALUE_PAT: str = r'(?:{string}(?:(?:@{tag})|(?:\^\^{uri}))?)'.format(string=STRING_PAT, tag=LANGUAGE_TAG_PAT, uri=URI_PAT)
+    STRUCTURED_VALUE_PAT: str = r'(?:(?:{string}|{turtle_string})(?:(?:@{tag})|(?:\^\^{uri}))?)'.format(string=STRING_PAT,
+                                                                                                        turtle_string=TURTLE_STRING_PAT,
+                                                                                                        tag=LANGUAGE_TAG_PAT,
+                                                                                                        uri=URI_PAT)
     FIELD_PAT: str = r'(?:{uri}|{blank_node}|{structured_value}|{numeric})'.format(uri=URI_PAT,
                                                                                    blank_node=BLANK_NODE_PAT,
                                                                                    structured_value=STRUCTURED_VALUE_PAT,
@@ -172,6 +179,8 @@ class KgtkNtriples(KgtkFormat):
     allow_lax_uri: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LAX_URI)
 
     allow_unknown_datatype_iris: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS)
+
+    allow_turtle_quotes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_TURTLE_QUOTES)
 
     local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LOCAL_NAMESPACE_PREFIX)
     local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
@@ -318,11 +327,9 @@ class KgtkNtriples(KgtkFormat):
 
     def convert_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         # Convert this to a KGTK string.
-        #
-        # Our parser guarantees that double quoted strings use proper
-        # escapes... except for vertical bars (pipes).  We have extra work to do to
-        # ensure that vertical bars (pipes) are escaped.
-        return self.escape_pipe(item), True
+
+        s: str = ast.literal_eval(item)
+        return KgtkFormat.stringify(s), True
  
     def convert_lq_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         # Convert this to a KGTK language qualified string.
@@ -446,6 +453,13 @@ class KgtkNtriples(KgtkFormat):
             return self.convert_structured_literal(item, line_number, ew)
         elif item.startswith('"'):
             return self.convert_lq_string(item, line_number)
+        elif self.allow_turtle_quotes:
+            if item.startswith("'") and item.endswith("'"):
+                return self.convert_string(item, line_number)
+            elif item.startswith("'") and item.endswith(">"):
+                return self.convert_structured_literal(item, line_number, ew)
+            elif item.startswith("'"):
+                return self.convert_lq_string(item, line_number)
         elif item[0] in "+-0123456789.":
             return self.convert_numeric(item, line_number, ew)
 
@@ -729,6 +743,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="Allow unknown datatype IRIs, creating  a qualified record. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS)
 
+        parser.add_argument(      "--allow-turtle-quotes", dest="allow_turtle_quotes",
+                                  help="Allow literlas to use single quotes (to support Turtle format). (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_TURTLE_QUOTES)
+
         parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
                                   help="The namespace prefix for blank nodes. (default=%(default)s).",
                                   default=cls.DEFAULT_LOCAL_NAMESPACE_PREFIX)
@@ -838,6 +856,7 @@ def main():
         print("--output-only-used-namespaces %s" % str(args.output_only_used_namespaces), file=error_file, flush=True)
         print("--allow-lax-uri %s" % str(args.allow_lax_uri), file=error_file, flush=True)
         print("--allow-unknown-datatype-iris %s" % str(args.allow_unknown_datatype_iris), file=error_file, flush=True)
+        print("--allow-turtle-quotes %s" % str(args.allow_turtle_quotes), file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % str(args.local_namespace_use_uuid), file=error_file, flush=True)
         print("--prefix-expansion-label %s" % args.prefix_expansion_label, file=error_file, flush=True)
@@ -874,6 +893,7 @@ def main():
         newnode_zfill=args.newnode_zfill,
         allow_lax_uri=args.allow_lax_uri,
         allow_unknown_datatype_iris=args.allow_unknown_datatype_iris,
+        allow_turtle_quotes=args.allow_tyrtle_quotes,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
         prefix_expansion_label=args.prefix_expansion_label,

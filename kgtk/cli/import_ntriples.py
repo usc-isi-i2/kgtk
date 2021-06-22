@@ -80,7 +80,8 @@ def run(input_file: KGTKFiles,
         output_only_used_namespaces: bool,
 
         allow_lax_uri: bool,
-        allow_unknown_datatype_iris,
+        allow_unknown_datatype_iris: bool,
+        allow_turtle_quotes: bool,
 
         local_namespace_prefix: str,
         local_namespace_use_uuid: bool,
@@ -156,6 +157,7 @@ def run(input_file: KGTKFiles,
 
         print("--allow-lax-uri %s" % str(allow_lax_uri), file=error_file, flush=True)
         print("--allow-unknown-datatype-iris %s" % str(allow_unknown_datatype_iris), file=error_file, flush=True)
+        print("--allow-turtle-quotes %s" % str(allow_turtle_quotes), file=error_file, flush=True)
         
         print("--local-namespace-prefix %s" % local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % str(local_namespace_use_uuid), file=error_file, flush=True)
@@ -200,6 +202,7 @@ def run(input_file: KGTKFiles,
             newnode_zfill=newnode_zfill,
             allow_lax_uri=allow_lax_uri,
             allow_unknown_datatype_iris=allow_unknown_datatype_iris,
+            allow_turtle_quotes=allow_turtle_quotes,
             local_namespace_prefix=local_namespace_prefix,
             local_namespace_use_uuid=local_namespace_use_uuid,
             prefix_expansion_label=prefix_expansion_label,
