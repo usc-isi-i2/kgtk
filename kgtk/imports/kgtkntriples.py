@@ -65,6 +65,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_BUILD_ID: bool = False
     DEFAULT_ESCAPE_PIPES: bool = True
     DEFAULT_VALIDATE: bool = False
+    DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS: bool = False
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -169,6 +170,8 @@ class KgtkNtriples(KgtkFormat):
     reader_options: KgtkReaderOptions = attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
 
     allow_lax_uri: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LAX_URI)
+
+    allow_unknown_datatype_iris: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS)
 
     local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LOCAL_NAMESPACE_PREFIX)
     local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
@@ -409,17 +412,20 @@ class KgtkNtriples(KgtkFormat):
         # TODO: the "date" schema
         # Problem:  it allows timezone offsets after dates without times!
 
-        converted_uri: str
-        valid: bool
-        converted_uri, valid = self.convert_uri(uri, line_number)
-        if not valid:
+        if self.allow_unknown_datatype_iris:
+            converted_uri: str
+            valid: bool
+            converted_uri, valid = self.convert_uri(uri, line_number)
+            if not valid:
+                return item, False
+
+            new_node_symbol: str = self.generate_new_node_symbol()
+            self.write_row(ew, new_node_symbol, self.structured_value_label, string)
+            self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri)
+            
+            return new_node_symbol, True
+        else:
             return item, False
-
-        new_node_symbol: str = self.generate_new_node_symbol()
-        self.write_row(ew, new_node_symbol, self.structured_value_label, string)
-        self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri)
-
-        return new_node_symbol, True
 
     def convert_numeric(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         return item, True
@@ -719,6 +725,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LAX_URI)
 
+        parser.add_argument(      "--allow-unknown-datatype-iris", dest="allow_unknown_datatype_iris",
+                                  help="Allow unknown datatype IRIs, creating  a qualified record. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS)
+
         parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
                                   help="The namespace prefix for blank nodes. (default=%(default)s).",
                                   default=cls.DEFAULT_LOCAL_NAMESPACE_PREFIX)
@@ -827,6 +837,7 @@ def main():
         print("--namespace-id-zfill %s" % str(args.namespace_id_zfill), file=error_file, flush=True)
         print("--output-only-used-namespaces %s" % str(args.output_only_used_namespaces), file=error_file, flush=True)
         print("--allow-lax-uri %s" % str(args.allow_lax_uri), file=error_file, flush=True)
+        print("--allow-unknown-datatype-iris %s" % str(args.allow_unknpwn_datatype_iris), file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % str(args.local_namespace_use_uuid), file=error_file, flush=True)
         print("--prefix-expansion-label %s" % args.prefix_expansion_label, file=error_file, flush=True)
@@ -862,6 +873,7 @@ def main():
         newnode_counter=args.newnode_counter,
         newnode_zfill=args.newnode_zfill,
         allow_lax_uri=args.allow_lax_uri,
+        allow_unknown_datatype_iris=args.allow_unknown_datatype_iris,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
         prefix_expansion_label=args.prefix_expansion_label,
