@@ -498,3 +498,35 @@ kgtk import-ntriples \
      --namespace-id-use-uuid True \
      --newnode-use-uuid True
 ```
+
+### Import Strings
+
+This example demonstrates importing three types of strings:
+ * strings with an explicit datatype
+ * strings with a language tag
+ * strings with neither an explicit datatype nor a language tag
+
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-strings.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#string> . # literal with XMLSchema string datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show" . # same aagain
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"@en . # literal with a language tag
+~~~
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-strings.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | 'That Seventies Show'@en |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
