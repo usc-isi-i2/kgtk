@@ -548,7 +548,7 @@ def main():
     parser: ArgumentParser = ArgumentParser()
     parser.add_argument("--md-files", dest="md_files", help="The .md files to be updated.", type=Path, nargs='+')
 
-    parser.add_argument("--kgtk-command", dest="kgtk_command", help="The kgtk command (default %(default)s.", type=str, default="kgtk")
+    parser.add_argument("--kgtk-command", dest="kgtk_command", help="The kgtk command (default %(default)s).", type=str, default="kgtk")
 
     parser.add_argument("--process-usage", dest="process_usage", metavar="optional True|False",
                         help="Process the ## Usage section (default=%(default)s).",
