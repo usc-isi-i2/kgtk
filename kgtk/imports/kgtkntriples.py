@@ -63,10 +63,10 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_LOCAL_NAMESPACE_USE_UUID: bool = True
     DEFAULT_ALLOW_LAX_URI: bool = True
     DEFAULT_BUILD_ID: bool = False
-    DEFAULT_ESCAPE_PIPES: bool = True
     DEFAULT_VALIDATE: bool = False
     DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS: bool = False
     DEFAULT_ALLOW_TURTLE_QUOTES: bool = False
+    DEFAULT_ALLOW_LANG_STRING_DATATYPE: bool = False
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -182,6 +182,8 @@ class KgtkNtriples(KgtkFormat):
 
     allow_turtle_quotes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_TURTLE_QUOTES)
 
+    allow_lang_string_datatype: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LANG_STRING_DATATYPE)
+
     local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LOCAL_NAMESPACE_PREFIX)
     local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
 
@@ -219,8 +221,6 @@ class KgtkNtriples(KgtkFormat):
     namespace_prefixes: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     used_namespaces: typing.Set[str] = attr.ib(factory=set)
-
-    escape_pipes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ESCAPE_PIPES)
 
     output_line_count: int = attr.ib(default=0)
 
@@ -318,13 +318,6 @@ class KgtkNtriples(KgtkFormat):
                 # Return the namespace-prefixed URI:
                 return namespace_id + ":" + suffix, True
 
-    def escape_pipe(self, item: str)->str:
-        # ensure that vertical bars (pipes) are escaped.
-        if self.escape_pipes:
-            return item.replace('|', '\\|')
-        else:
-            return item
-
     def convert_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         # Convert this to a KGTK string.
 
@@ -374,6 +367,40 @@ class KgtkNtriples(KgtkFormat):
             return item, False
         
 
+    NUMERIC_XSD_DATATYPES: typing.Set[str] = {
+        '<http://www.w3.org/2001/XMLSchema#decimal>',
+        '<http://www.w3.org/2001/XMLSchema#integer>',
+        '<http://www.w3.org/2001/XMLSchema#int>',
+        '<http://www.w3.org/2001/XMLSchema#short>',
+        '<http://www.w3.org/2001/XMLSchema#byte>',
+        '<http://www.w3.org/2001/XMLSchema#nonNegativeInteger>',
+        '<http://www.w3.org/2001/XMLSchema#positiveInteger>',
+        '<http://www.w3.org/2001/XMLSchema#unsignedLong>',
+        '<http://www.w3.org/2001/XMLSchema#unsignedInt>',
+        '<http://www.w3.org/2001/XMLSchema#unsignedShort>',
+        '<http://www.w3.org/2001/XMLSchema#unsignedByte>',
+        '<http://www.w3.org/2001/XMLSchema#nonPositiveInteger>',
+        '<http://www.w3.org/2001/XMLSchema#negativeInteger>',
+        '<http://www.w3.org/2001/XMLSchema#double>',
+        '<http://www.w3.org/2001/XMLSchema#float>',
+    }
+
+    STRING_XSD_DATATYPES: typing.Set[str] = {
+        '<http://www.w3.org/2001/XMLSchema#string>',
+        '<http://www.w3.org/2001/XMLSchema#normalizedString>',
+        '<http://www.w3.org/2001/XMLSchema#token>',
+        '<http://www.w3.org/2001/XMLSchema#language>',
+        '<http://www.w3.org/2001/XMLSchema#Name>',
+        '<http://www.w3.org/2001/XMLSchema#NCName>',
+        '<http://www.w3.org/2001/XMLSchema#ENTITY>',
+        '<http://www.w3.org/2001/XMLSchema#ID>',
+        '<http://www.w3.org/2001/XMLSchema#IDREF>',
+        '<http://www.w3.org/2001/XMLSchema#NMTOKEN>',
+    }
+
+    LANG_STRING_DATATYPE_IRI: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
+                                                 
+
     def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         # This is the subset of strictured literals that fits the
         # pattern "STRING"^^<URI>.
@@ -390,19 +417,10 @@ class KgtkNtriples(KgtkFormat):
         string: str = item[:uparrows]
         uri: str = item[uparrows+2:]
 
-        if uri == '<http://www.w3.org/2001/XMLSchema#string>':
+        if uri in self.STRING_XSD_DATATYPES:
             # Convert this to a KGTK string.
-            return self.escape_pipe(string), True
-        elif uri == '<http://www.w3.org/2001/XMLSchema#int>':
-            # Convert this to a KGTK number:
-            return string[1:-1], True
-        elif uri == '<http://www.w3.org/2001/XMLSchema#double>':
-            # Convert this to a KGTK number:
-            return string[1:-1], True
-        elif uri == '<http://www.w3.org/2001/XMLSchema#float>':
-            # Convert this to a KGTK number:
-            return string[1:-1], True
-        elif uri == '<http://www.w3.org/2001/XMLSchema#decimal>':
+            return self.convert_string(string, line_number)
+        elif uri in self.NUMERIC_XSD_DATATYPES:
             # Convert this to a KGTK number:
             return string[1:-1], True
         elif uri == '<http://www.w3.org/2001/XMLSchema#boolean>':
@@ -419,6 +437,15 @@ class KgtkNtriples(KgtkFormat):
         # TODO: the "date" schema
         # Problem:  it allows timezone offsets after dates without times!
 
+        # Exposed langString datatypes are forbidden by the RDF 1.1 N-Triples
+        # specification (and by the RDF 1.1 Turtle specification), but they
+        # may occur in the wild anyway.  If we are so inclined, transform the
+        # literal to an ordinary KGTK string.
+        if self.allow_lang_string_datatype:
+            if uri == self.LANG_STRING_DATATYPE_IRI:
+                # Convert this to a KGTK string.
+                return self.convert_string(string, line_number)
+
         if self.allow_unknown_datatype_iris:
             converted_uri: str
             valid: bool
@@ -431,8 +458,9 @@ class KgtkNtriples(KgtkFormat):
             self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri)
             
             return new_node_symbol, True
-        else:
-            return item, False
+        
+        # Give up on this unrecognized structured literal.
+        return item, False
 
     def convert_numeric(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         return item, True
@@ -744,8 +772,12 @@ class KgtkNtriples(KgtkFormat):
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS)
 
         parser.add_argument(      "--allow-turtle-quotes", dest="allow_turtle_quotes",
-                                  help="Allow literlas to use single quotes (to support Turtle format). (default=%(default)s).",
+                                  help="Allow literals to use single quotes (to support Turtle format). (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_TURTLE_QUOTES)
+
+        parser.add_argument(      "--allow-lang-string-datatype", dest="allow_lang_string_datatype",
+                                  help="Allow literals to include exposed langString datatype IRIs (which is forbidden by the spec, but occurs anyway). (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LANG_STRING_DATATYPE)
 
         parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
                                   help="The namespace prefix for blank nodes. (default=%(default)s).",
@@ -788,10 +820,6 @@ class KgtkNtriples(KgtkFormat):
         parser.add_argument(      "--build-id", dest="build_id",
                                   help="Build id values in an id column. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_ID)
-
-        parser.add_argument(      "--escape-pipes", dest="escape_pipes",
-                                  help="When true, input pipe characters (|) need to be escaped (\\|) per KGTK file format. (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ESCAPE_PIPES)
 
         parser.add_argument(      "--validate", dest="validate",
                                   help="When true, validate that the result fields are good KGTK file format. (default=%(default)s).",
@@ -857,6 +885,7 @@ def main():
         print("--allow-lax-uri %s" % str(args.allow_lax_uri), file=error_file, flush=True)
         print("--allow-unknown-datatype-iris %s" % str(args.allow_unknown_datatype_iris), file=error_file, flush=True)
         print("--allow-turtle-quotes %s" % str(args.allow_turtle_quotes), file=error_file, flush=True)
+        print("--allow-lang_string_datatype %s" % str(args.allow_lang_string_datatype), file=error_file, flush=True)
         print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % str(args.local_namespace_use_uuid), file=error_file, flush=True)
         print("--prefix-expansion-label %s" % args.prefix_expansion_label, file=error_file, flush=True)
@@ -867,7 +896,6 @@ def main():
         print("--newnode-counter %s" % str(args.newnode_counter), file=error_file, flush=True)
         print("--newnode-zfill %s" % str(args.newnode_zfill), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
-        print("--escape-pipes=%s" % str(args.escape_pipes), file=error_file, flush=True)
         print("--validate=%s" % str(args.validate), file=error_file, flush=True)
         if args.override_uuid is not None:
             print("--override_uuid=%s" % str(args.override_uuid), file=error_file, flush=True)            
@@ -893,14 +921,14 @@ def main():
         newnode_zfill=args.newnode_zfill,
         allow_lax_uri=args.allow_lax_uri,
         allow_unknown_datatype_iris=args.allow_unknown_datatype_iris,
-        allow_turtle_quotes=args.allow_tyrtle_quotes,
+        allow_turtle_quotes=args.allow_turtle_quotes,
+        allow_lang_string_datatype=args.allow_lang_string_datatype,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
         prefix_expansion_label=args.prefix_expansion_label,
         structured_value_label=args.structured_value_label,
         structured_uri_label=args.structured_uri_label,
         build_id=args.build_id,
-        escape_pipes=args.escape_pipes,
         idbuilder_options=idbuilder_options,
         validate=args.validate,
         override_uuid=args.override_uuid,
