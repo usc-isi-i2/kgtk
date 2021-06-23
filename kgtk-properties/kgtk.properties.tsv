@@ -12,6 +12,7 @@ P279star	description	"Instance or subclass relationship (P279*)"@en	P279star-des
 P279star	P31	Q18616576	P279star-P31-Q18616576
 P279star	P31	Q28326461	P279star-P31-Q28326461
 P279star	P31	Q18647519	P279star-P31-Q18647519
+P279star	data_type	wikibase-item	P279star-data_type-wikibase-item
 isa_star	P31	Q18647521	isa_star-P31-Q18647521
 isa_star	label	"is star"@en	isa_star-label
 isa_star	alias	"isa star"@en	isa_star-alias
