@@ -27,6 +27,7 @@ usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                             [--allow-unknown-datatype-iris [ALLOW_UNKNOWN_DATATYPE_IRIS]]
                             [--allow-turtle-quotes [ALLOW_TURTLE_QUOTES]]
                             [--allow-lang-string-datatype [ALLOW_LANG_STRING_DATATYPE]]
+                            [--lang-string-tag LANG_STRING_TAG]
                             [--local-namespace-prefix LOCAL_NAMESPACE_PREFIX]
                             [--local-namespace-use-uuid [LOCAL_NAMESPACE_USE_UUID]]
                             [--prefix-expansion-label PREFIX_EXPANSION_LABEL]
@@ -98,6 +99,10 @@ optional arguments:
                         Allow literals to include exposed langString datatype
                         IRIs (which is forbidden by the spec, but occurs
                         anyway). (default=False).
+  --lang-string-tag LANG_STRING_TAG
+                        The tag to use with exposed langString instances. ``
+                        or `-` mean to use a string, otherwise use a lanuage-
+                        qualified string. (default=-).
   --local-namespace-prefix LOCAL_NAMESPACE_PREFIX
                         The namespace prefix for blank nodes. (default=X).
   --local-namespace-use-uuid [LOCAL_NAMESPACE_USE_UUID]
@@ -695,7 +700,7 @@ may not include a datatype IRI (`^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#l
 
 However, DBpedia data dumps contains instances of the langString IRI, in spite of the
 RDF 1.1 Turtle and N-Triples specifications.  To support this, the `--allow-lang-string-datatype`
-option supports importing literals with langString IRIs as KGTK strings.
+option supports importing literals with langString IRIs as KGTK strings or KGTK language-qualified strings.
 
 
 Here is the input N-Triples file:
@@ -726,6 +731,56 @@ Importing this file with `--allow-lang-string-datatype`:
 kgtk import-ntriples \
      -i ./examples/docs/import-ntriples-langstrings.nt \
      --allow-lang-string-datatype
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing with `--allow-lang-string-datatype` and `--lang-string-tag TAG`
+
+To import a value with a langString IRI as a KGTK language-qualified string,
+use the `--lang-string-tag TAG` option, where `TAG` is the language-qualified tag
+(language and suffix).  Specifying an empty `TAG`, or a `TAG` of `-`, results in
+the default behavior of importing the value as a KGTK string.
+
+To import as English:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     --allow-lang-string-datatype --lang-string-tag en
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | 'That Seventies Show'@en |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+To import as Mexican Spanish:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     --allow-lang-string-datatype --lang-string-tag es-MX
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | 'That Seventies Show'@es-MX |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+To import as a KGTK string (the default behavior when `--lang-string-tag TAG`
+is not specified):
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     --allow-lang-string-datatype --lang-string-tag -
 ```
 
 | node1 | label | node2 |

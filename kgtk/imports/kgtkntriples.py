@@ -68,6 +68,8 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_ALLOW_TURTLE_QUOTES: bool = False
     DEFAULT_ALLOW_LANG_STRING_DATATYPE: bool = False
     DEFAULT_SUMMARY: bool = False
+    LANG_STRING_TAG_NONE: str = "-"
+    DEFAULT_LANG_STRING_TAG: str = LANG_STRING_TAG_NONE
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -184,6 +186,7 @@ class KgtkNtriples(KgtkFormat):
     allow_turtle_quotes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_TURTLE_QUOTES)
 
     allow_lang_string_datatype: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LANG_STRING_DATATYPE)
+    lang_string_tag: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LANG_STRING_TAG)
 
     local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LOCAL_NAMESPACE_PREFIX)
     local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
@@ -452,8 +455,12 @@ class KgtkNtriples(KgtkFormat):
         # literal to an ordinary KGTK string.
         if uri == self.LANG_STRING_DATATYPE_IRI:
             if self.allow_lang_string_datatype:
-                # Convert this to a KGTK string.
-                return self.convert_string(string, line_number)
+                if len(self.lang_string_tag) == 0 or self.lang_string_tag == self.LANG_STRING_TAG_NONE:
+                    # Convert this to a KGTK string.
+                    return self.convert_string(string, line_number)
+                else:
+                    # Convert this to a KGTK language-qualified string.
+                    return self.convert_lq_string(string + "@" + self.lang_string_tag, line_number)
             else:
                 self.rejected_lang_string_count += 1
                 return item, False
@@ -795,6 +802,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="Allow literals to include exposed langString datatype IRIs (which is forbidden by the spec, but occurs anyway). (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LANG_STRING_DATATYPE)
 
+        parser.add_argument(      "--lang-string-tag", dest="lang_string_tag",
+                                  help="The tag to use with exposed langString instances. `` or `-` mean to use a string, otherwise use a lanuage-qualified string. (default=%(default)s).",
+                                  default=cls.DEFAULT_LANG_STRING_TAG)
+    
         parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
                                   help="The namespace prefix for blank nodes. (default=%(default)s).",
                                   default=cls.DEFAULT_LOCAL_NAMESPACE_PREFIX)
@@ -888,38 +899,39 @@ def main():
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
-        print("--input-files %s" % " ".join([str(path) for  path in input_file_paths]), file=error_file, flush=True)
-        print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
+        print("--input-files %s" % " ".join([repr(str(path)) for path in input_file_paths]), file=error_file, flush=True)
+        print("--output-file=%s" % repr(str(args.output_file_path)), file=error_file, flush=True)
         # TODO: show ifempty-specific options.
         if args.reject_file_path is not None:
-            print("--reject-file=%s" % str(args.reject_file_path), file=error_file, flush=True)
+            print("--reject-file=%s" % repr(str(args.reject_file_path)), file=error_file, flush=True)
         if args.namespace_file_path is not None:
-            print("--namespace-file=%s" % str(args.namespace_file_path), file=error_file, flush=True)
+            print("--namespace-file=%s" % repr(str(args.namespace_file_path)), file=error_file, flush=True)
         if args.updated_namespace_file_path is not None:
-            print("--updated-namespace-file=%s" % str(args.updated_namespace_file_path), file=error_file, flush=True)
-        print("--namespace-id-prefix %s" % args.namespace_id_prefix, file=error_file, flush=True)
-        print("--namespace-id-use-uuid %s" % str(args.namespace_id_use_uuid), file=error_file, flush=True)
-        print("--namespace-id-counter %s" % str(args.namespace_id_counter), file=error_file, flush=True)
-        print("--namespace-id-zfill %s" % str(args.namespace_id_zfill), file=error_file, flush=True)
-        print("--output-only-used-namespaces %s" % str(args.output_only_used_namespaces), file=error_file, flush=True)
-        print("--allow-lax-uri %s" % str(args.allow_lax_uri), file=error_file, flush=True)
-        print("--allow-unknown-datatype-iris %s" % str(args.allow_unknown_datatype_iris), file=error_file, flush=True)
-        print("--allow-turtle-quotes %s" % str(args.allow_turtle_quotes), file=error_file, flush=True)
-        print("--allow-lang_string_datatype %s" % str(args.allow_lang_string_datatype), file=error_file, flush=True)
-        print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
-        print("--local-namespace-use-uuid %s" % str(args.local_namespace_use_uuid), file=error_file, flush=True)
-        print("--prefix-expansion-label %s" % args.prefix_expansion_label, file=error_file, flush=True)
-        print("--structured-value-label %s" % args.structured_value_label, file=error_file, flush=True)
-        print("--structured-uri-label %s" % args.structured_uri_label, file=error_file, flush=True)
-        print("--newnode-prefix %s" % args.newnode_prefix, file=error_file, flush=True)
-        print("--newnode-use-uuid %s" % str(args.newnode_use_uuid), file=error_file, flush=True)
-        print("--newnode-counter %s" % str(args.newnode_counter), file=error_file, flush=True)
-        print("--newnode-zfill %s" % str(args.newnode_zfill), file=error_file, flush=True)
-        print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
-        print("--validate=%s" % str(args.validate), file=error_file, flush=True)
-        print("--summary=%s" % str(args.summary), file=error_file, flush=True)
+            print("--updated-namespace-file=%s" % repr(str(args.updated_namespace_file_path)), file=error_file, flush=True)
+        print("--namespace-id-prefix %s" % repr(args.namespace_id_prefix), file=error_file, flush=True)
+        print("--namespace-id-use-uuid %s" % repr(args.namespace_id_use_uuid), file=error_file, flush=True)
+        print("--namespace-id-counter %s" % repr(args.namespace_id_counter), file=error_file, flush=True)
+        print("--namespace-id-zfill %s" % repr(args.namespace_id_zfill), file=error_file, flush=True)
+        print("--output-only-used-namespaces %s" % repr(args.output_only_used_namespaces), file=error_file, flush=True)
+        print("--allow-lax-uri %s" % repr(args.allow_lax_uri), file=error_file, flush=True)
+        print("--allow-unknown-datatype-iris %s" % repr(args.allow_unknown_datatype_iris), file=error_file, flush=True)
+        print("--allow-turtle-quotes %s" % repr(args.allow_turtle_quotes), file=error_file, flush=True)
+        print("--allow-lang-string-datatype %s" % repr(args.allow_lang_string_datatype), file=error_file, flush=True)
+        print("--lang-string-tag %s" % repr(args.lang_string_tag), file=error_file, flush=True)
+        print("--local-namespace-prefix %s" % repr(args.local_namespace_prefix), file=error_file, flush=True)
+        print("--local-namespace-use-uuid %s" % repr(args.local_namespace_use_uuid), file=error_file, flush=True)
+        print("--prefix-expansion-label %s" % repr(args.prefix_expansion_label), file=error_file, flush=True)
+        print("--structured-value-label %s" % repr(args.structured_value_label), file=error_file, flush=True)
+        print("--structured-uri-label %s" % repr(args.structured_uri_label), file=error_file, flush=True)
+        print("--newnode-prefix %s" % repr(args.newnode_prefix), file=error_file, flush=True)
+        print("--newnode-use-uuid %s" % repr(args.newnode_use_uuid), file=error_file, flush=True)
+        print("--newnode-counter %s" % repr(args.newnode_counter), file=error_file, flush=True)
+        print("--newnode-zfill %s" % repr(args.newnode_zfill), file=error_file, flush=True)
+        print("--build-id=%s" % repr(args.build_id), file=error_file, flush=True)
+        print("--validate=%s" % repr(args.validate), file=error_file, flush=True)
+        print("--summary=%s" % repr(args.summary), file=error_file, flush=True)
         if args.override_uuid is not None:
-            print("--override_uuid=%s" % str(args.override_uuid), file=error_file, flush=True)            
+            print("--override_uuid=%s" % repr(args.override_uuid), file=error_file, flush=True)            
 
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -944,6 +956,7 @@ def main():
         allow_unknown_datatype_iris=args.allow_unknown_datatype_iris,
         allow_turtle_quotes=args.allow_turtle_quotes,
         allow_lang_string_datatype=args.allow_lang_string_datatype,
+        lang_string_tag=args.lang_string_tag,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
         prefix_expansion_label=args.prefix_expansion_label,
