@@ -612,7 +612,7 @@ kgtk import-ntriples \
 
 ### Importing Booleans
 
-The boolean datatype has four values in an N-triples file:
+The XML Schema boolean datatype has four possible values in an N-triples file:
  * true (or 1)
  * false (or 0)
  
@@ -642,5 +642,34 @@ kgtk import-ntriples \
 | n1:218 | n2:label | False |
 | n1:218 | n2:label | False |
 | n1:218 | n2:label | True |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing Dates and Times
+
+There are many XML Schema datatypes related to date/time representation.
+Only the `dateTime` datatype is imported and converted to a KGTK date and
+time at present.
+
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-dates.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "2021-01-21T23:04:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+~~~
+
+Import this file:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
 | n1 | prefix_expansion | "http://example.org/vocab/show/" |
 | n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
