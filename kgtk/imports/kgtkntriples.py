@@ -367,6 +367,9 @@ class KgtkNtriples(KgtkFormat):
             return item, False
         
 
+    # https://www.w3.org/2011/rdf-wg/wiki/XSD_Datatypes
+    # https://www.w3.org/TR/xmlschema-2/
+
     NUMERIC_XSD_DATATYPES: typing.Set[str] = {
         '<http://www.w3.org/2001/XMLSchema#decimal>',
         '<http://www.w3.org/2001/XMLSchema#integer>',
@@ -423,6 +426,7 @@ class KgtkNtriples(KgtkFormat):
         elif uri in self.NUMERIC_XSD_DATATYPES:
             # Convert this to a KGTK number:
             return string[1:-1], True
+
         elif uri == '<http://www.w3.org/2001/XMLSchema#boolean>':
             # Convert this to a KGTK boolean:
             return self.convert_boolean(item, string[1:-1], line_number)

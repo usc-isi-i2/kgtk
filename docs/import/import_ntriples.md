@@ -1,4 +1,6 @@
-[>41;367;0c>This command will import one or more ntriple files into KGTK format.
+## Overview
+
+This command will import one or more ntriple files into KGTK format.
 
 The input file should adhere to the [RDF N-Triples
 specification](https://www.w3.org/TR/n-triples/).
@@ -24,6 +26,7 @@ usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                             [--allow-lax-uri [ALLOW_LAX_URI]]
                             [--allow-unknown-datatype-iris [ALLOW_UNKNOWN_DATATYPE_IRIS]]
                             [--allow-turtle-quotes [ALLOW_TURTLE_QUOTES]]
+                            [--allow-lang-string-datatype [ALLOW_LANG_STRING_DATATYPE]]
                             [--local-namespace-prefix LOCAL_NAMESPACE_PREFIX]
                             [--local-namespace-use-uuid [LOCAL_NAMESPACE_USE_UUID]]
                             [--prefix-expansion-label PREFIX_EXPANSION_LABEL]
@@ -33,9 +36,7 @@ usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                             [--newnode-use-uuid [NEWNODE_USE_UUID]]
                             [--newnode-counter NEWNODE_COUNTER]
                             [--newnode-zfill NEWNODE_ZFILL]
-                            [--build-id [BUILD_ID]]
-                            [--escape-pipes [ESCAPE_PIPES]]
-                            [--validate [VALIDATE]]
+                            [--build-id [BUILD_ID]] [--validate [VALIDATE]]
                             [--override-uuid OVERRIDE_UUID]
                             [--overwrite-id [optional true|false]]
                             [--verify-id-unique [optional true|false]]
@@ -90,8 +91,12 @@ optional arguments:
                         Allow unknown datatype IRIs, creating a qualified
                         record. (default=False).
   --allow-turtle-quotes [ALLOW_TURTLE_QUOTES]
-                        Allow literlas to use single quotes (to support Turtle
+                        Allow literals to use single quotes (to support Turtle
                         format). (default=False).
+  --allow-lang-string-datatype [ALLOW_LANG_STRING_DATATYPE]
+                        Allow literals to include exposed langString datatype
+                        IRIs (which is forbidden by the spec, but occurs
+                        anyway). (default=False).
   --local-namespace-prefix LOCAL_NAMESPACE_PREFIX
                         The namespace prefix for blank nodes. (default=X).
   --local-namespace-use-uuid [LOCAL_NAMESPACE_USE_UUID]
@@ -123,9 +128,6 @@ optional arguments:
                         for ntriple structured literals. (default=0).
   --build-id [BUILD_ID]
                         Build id values in an id column. (default=False).
-  --escape-pipes [ESCAPE_PIPES]
-                        When true, input pipe characters (|) need to be
-                        escaped (\|) per KGTK file format. (default=True).
   --validate [VALIDATE]
                         When true, validate that the result fields are good
                         KGTK file format. (default=False).
@@ -499,12 +501,13 @@ kgtk import-ntriples \
      --newnode-use-uuid True
 ```
 
-### Import Strings
+### Importing Strings
 
 This example demonstrates importing three types of strings:
  * strings with an explicit datatype
  * strings with a language tag
  * strings with neither an explicit datatype nor a language tag
+ * strings with various XMLSchema datatypes that cam be mapped to a KGTK string.
 
 Here is the input N-Triples file:
 
@@ -514,9 +517,20 @@ cat examples/docs/import-ntriples-strings.nt
 
 ~~~
 <http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#string> . # literal with XMLSchema string datatype
-<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show" . # same aagain
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show" . # same again
 <http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"@en . # literal with a language tag
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#normalizedString> . # literal with XMLSchema normalizedString datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#token> . # literal with XMLSchema token datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#language> . # literal with XMLSchema language datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#Name> . # literal with XMLSchema Name datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#NCName> . # literal with XMLSchema NCName datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#ENTITY> . # literal with XMLSchema ENTITY datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#ID> . # literal with XMLSchema ID datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#IDREF> . # literal with XMLSchema IDREF datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#NMTOKEN> . # literal with XMLSchema NMTOKEN datatype
 ~~~
+
+Import this file:
 
 ```
 kgtk import-ntriples \
@@ -528,5 +542,105 @@ kgtk import-ntriples \
 | n1:218 | n2:label | "That Seventies Show" |
 | n1:218 | n2:label | "That Seventies Show" |
 | n1:218 | n2:label | 'That Seventies Show'@en |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing Numbers
+
+There are various XMLSchema datatypes that may be imported to KGTK numbers.
+
+
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-numbers.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123.456"^^<http://www.w3.org/2001/XMLSchema#decimal> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#int> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#short> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#byte> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#positiveInteger> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#unsignedLong> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#unsignedInt> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#unsignedShort> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#unsignedByte> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "-123"^^<http://www.w3.org/2001/XMLSchema#nonPositiveInteger> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "-123"^^<http://www.w3.org/2001/XMLSchema#negativeInteger> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123.456e20"^^<http://www.w3.org/2001/XMLSchema#double> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123.456e20"^^<http://www.w3.org/2001/XMLSchema#float> .
+~~~
+
+Import this file:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-numbers.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | 123.456 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | -123 |
+| n1:218 | n2:label | -123 |
+| n1:218 | n2:label | 123.456e20 |
+| n1:218 | n2:label | 123.456e20 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing Booleans
+
+The boolean datatype has four values in an N-triples file:
+ * true (or 1)
+ * false (or 0)
+ 
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-booleans.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "true"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "false"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "0"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "1"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+~~~
+
+Import this file:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-booleans.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | True |
+| n1:218 | n2:label | False |
+| n1:218 | n2:label | False |
+| n1:218 | n2:label | True |
 | n1 | prefix_expansion | "http://example.org/vocab/show/" |
 | n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |

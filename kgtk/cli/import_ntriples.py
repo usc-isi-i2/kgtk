@@ -98,8 +98,6 @@ def run(input_file: KGTKFiles,
 
         build_id: bool,
 
-        escape_pipes: bool,
-
         validate: bool,
 
         override_uuid: typing.Optional[str],
@@ -175,8 +173,6 @@ def run(input_file: KGTKFiles,
         
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
 
-        print("--escape-pipes=%s" % str(escape_pipes), file=error_file, flush=True)
-        
         print("--validate=%s" % str(validate), file=error_file, flush=True)
         
         print("--override-uuid=%s" % str(override_uuid), file=error_file, flush=True)
@@ -212,7 +208,6 @@ def run(input_file: KGTKFiles,
             structured_value_label=structured_value_label,
             structured_uri_label=structured_uri_label,
             build_id=build_id,
-            escape_pipes=escape_pipes,
             validate=validate,
             override_uuid=override_uuid,
             idbuilder_options=idbuilder_options,
