@@ -82,6 +82,7 @@ def run(input_file: KGTKFiles,
         allow_lax_uri: bool,
         allow_unknown_datatype_iris: bool,
         allow_turtle_quotes: bool,
+        allow_lang_string_datatype: bool,
 
         local_namespace_prefix: str,
         local_namespace_use_uuid: bool,
@@ -97,9 +98,8 @@ def run(input_file: KGTKFiles,
 
         build_id: bool,
 
-        escape_pipes: bool,
-
         validate: bool,
+        summary: bool,
 
         override_uuid: typing.Optional[str],
 
@@ -158,6 +158,7 @@ def run(input_file: KGTKFiles,
         print("--allow-lax-uri %s" % str(allow_lax_uri), file=error_file, flush=True)
         print("--allow-unknown-datatype-iris %s" % str(allow_unknown_datatype_iris), file=error_file, flush=True)
         print("--allow-turtle-quotes %s" % str(allow_turtle_quotes), file=error_file, flush=True)
+        print("--allow-lang-string-datatype %s" % str(allow_lang_string_datatype), file=error_file, flush=True)
         
         print("--local-namespace-prefix %s" % local_namespace_prefix, file=error_file, flush=True)
         print("--local-namespace-use-uuid %s" % str(local_namespace_use_uuid), file=error_file, flush=True)
@@ -173,9 +174,8 @@ def run(input_file: KGTKFiles,
         
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
 
-        print("--escape-pipes=%s" % str(escape_pipes), file=error_file, flush=True)
-        
         print("--validate=%s" % str(validate), file=error_file, flush=True)
+        print("--summary=%s" % str(summary), file=error_file, flush=True)
         
         print("--override-uuid=%s" % str(override_uuid), file=error_file, flush=True)
         
@@ -203,14 +203,15 @@ def run(input_file: KGTKFiles,
             allow_lax_uri=allow_lax_uri,
             allow_unknown_datatype_iris=allow_unknown_datatype_iris,
             allow_turtle_quotes=allow_turtle_quotes,
+            allow_lang_string_datatype=allow_lang_string_datatype,
             local_namespace_prefix=local_namespace_prefix,
             local_namespace_use_uuid=local_namespace_use_uuid,
             prefix_expansion_label=prefix_expansion_label,
             structured_value_label=structured_value_label,
             structured_uri_label=structured_uri_label,
             build_id=build_id,
-            escape_pipes=escape_pipes,
             validate=validate,
+            summary=summary,
             override_uuid=override_uuid,
             idbuilder_options=idbuilder_options,
             reader_options=reader_options,
