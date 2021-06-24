@@ -226,6 +226,7 @@ class KgtkNtriples(KgtkFormat):
 
     output_line_count: int = attr.ib(default=0)
     unknown_datatype_iri_count: int = attr.ib(default=0)
+    rejected_lang_string_count: int = attr.ib(default=0)
 
     def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str):
         output_row: typing.List[str] = [ node1, label, node2]
@@ -449,10 +450,13 @@ class KgtkNtriples(KgtkFormat):
         # specification (and by the RDF 1.1 Turtle specification), but they
         # may occur in the wild anyway.  If we are so inclined, transform the
         # literal to an ordinary KGTK string.
-        if self.allow_lang_string_datatype:
-            if uri == self.LANG_STRING_DATATYPE_IRI:
+        if uri == self.LANG_STRING_DATATYPE_IRI:
+            if self.allow_lang_string_datatype:
                 # Convert this to a KGTK string.
                 return self.convert_string(string, line_number)
+            else:
+                self.rejected_lang_string_count += 1
+                return item, False
 
         if self.allow_unknown_datatype_iris:
             converted_uri: str
@@ -528,7 +532,7 @@ class KgtkNtriples(KgtkFormat):
                     print("Input line %d: imported value '%s' (from '%s') is invalid." % (line_number, result, item),
                           file=self.error_file, flush=True)
                 return result, False
-        return result, True
+        return result, is_ok
             
 
     def get_default_namespaces(self)->int:
@@ -742,6 +746,7 @@ class KgtkNtriples(KgtkFormat):
             print("Rejected %d records." % (reject_line_count), file=self.error_file, flush=True)
             print("Wrote %d records." % (self.output_line_count), file=self.error_file, flush=True)
             print("Ignored %d comments." % (comment_count), file=self.error_file, flush=True)
+            print("Rejected %d records with langString IRIs." % (self.rejected_lang_string_count), file=self.error_file, flush=True)
             print("Imported %d records with unknown datatype IRIs." % (self.unknown_datatype_iri_count), file=self.error_file, flush=True)
 
         if ew is not None:

@@ -90,7 +90,7 @@ optional arguments:
                         https://. (default=True).
   --allow-unknown-datatype-iris [ALLOW_UNKNOWN_DATATYPE_IRIS]
                         Allow unknown datatype IRIs, creating a qualified
-                        record. (default=False).
+                        record. (default=True).
   --allow-turtle-quotes [ALLOW_TURTLE_QUOTES]
                         Allow literals to use single quotes (to support Turtle
                         format). (default=False).
@@ -194,6 +194,15 @@ _:g14 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#pr
    are file-local IDs.
  * Many fields contain URI identifiers, which often contain long, unchanging
    prefixes and shorted unique sections at the end.
+
+Also, comments, beginning with `#`, may appear after the final period,
+optionally preceeded by whitespace.  A comment extends from the `#` to
+the end of the line.  Comments are used for documentation, such as in
+this document, and are stripped on input.
+
+```
+_:g14 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#privateData> _:g16 . # This is a comment.
+```
 
 #### Output File
 
@@ -678,7 +687,7 @@ kgtk import-ntriples \
 | n1 | prefix_expansion | "http://example.org/vocab/show/" |
 | n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
-### Importing langString
+### Importing with `--allow-lang-string-datatype`
 
 The RDF langString datatype corresponds to KGKT's language-qualified strings datatype.
 RDF N-Triples langString literals must include a language tag (prefixed by `@`), and
@@ -699,7 +708,19 @@ cat examples/docs/import-ntriples-langstrings.nt
 <http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString> .
 ~~~
 
-Import this file:
+Importing this file without `--allow-lang-string-datatype`:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+Importing this file with `--allow-lang-string-datatype`:
 
 ```
 kgtk import-ntriples \
@@ -712,3 +733,68 @@ kgtk import-ntriples \
 | n1:218 | n2:label | "That Seventies Show" |
 | n1 | prefix_expansion | "http://example.org/vocab/show/" |
 | n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing with `--summary`
+
+The `--summary` option provides feedback on how many recods were processed,
+such as the number of records read, how many were
+rejected, and how many were output.
+
+```
+kgtk import-ntriples --summary \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     -o ntriples-langstrings.tsv
+```
+
+The following summary is produced:
+
+    Processed 1 known namespaces.
+    Processed 1 records.
+    Rejected 1 records.
+    Wrote 2 records.
+    Ignored 0 comments.
+    Rejected 1 records with langString IRIs.
+    Imported 0 records with unknown datatype IRIs.
+
+Adding `--allow-lang-string-datatype`:
+
+```
+kgtk import-ntriples --summary \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     -o ntriples-langstrings.tsv \
+     --allow-lang-string-datatype
+```
+
+    Processed 1 known namespaces.
+    Processed 1 records.
+    Rejected 0 records.
+    Wrote 3 records.
+    Ignored 0 comments.
+    Rejected 0 records with langString IRIs.
+    Imported 0 records with unknown datatype IRIs.
+
+### Importing with `--verbose`
+
+The `--verbose` option provides feedback on how many recods which
+were rejected.  It also procudes the `--summary` feedback.
+
+```
+kgtk import-ntriples --verbose \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     -o ntriples-langstrings.tsv
+```
+
+The following summary is produced:
+
+    Opening output file ntriples-langstrings.tsv
+    File_path.suffix: .tsv
+    KgtkWriter: writing file ntriples-langstrings.tsv
+    header: node1	label	node2
+    Opening the input file: examples/docs/import-ntriples-langstrings.nt
+    Processed 1 known namespaces.
+    Processed 1 records.
+    Rejected 1 records.
+    Wrote 2 records.
+    Ignored 0 comments.
+    Rejected 1 records with langString IRIs.
+    Imported 0 records with unknown datatype IRIs.
