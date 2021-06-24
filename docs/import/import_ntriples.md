@@ -37,6 +37,7 @@ usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                             [--newnode-counter NEWNODE_COUNTER]
                             [--newnode-zfill NEWNODE_ZFILL]
                             [--build-id [BUILD_ID]] [--validate [VALIDATE]]
+                            [--summary [SUMMARY]]
                             [--override-uuid OVERRIDE_UUID]
                             [--overwrite-id [optional true|false]]
                             [--verify-id-unique [optional true|false]]
@@ -131,6 +132,9 @@ optional arguments:
   --validate [VALIDATE]
                         When true, validate that the result fields are good
                         KGTK file format. (default=False).
+  --summary [SUMMARY]   When true, print summary statistics when done
+                        processing (also implied by --verbose).
+                        (default=False).
   --override-uuid OVERRIDE_UUID
                         When specified, override UUID generation for
                         debugging. (default=None).
@@ -671,5 +675,40 @@ kgtk import-ntriples \
 | node1 | label | node2 |
 | -- | -- | -- |
 | n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing langString
+
+The RDF langString datatype corresponds to KGKT's language-qualified strings datatype.
+RDF N-Triples langString literals must include a language tag (prefixed by `@`), and
+may not include a datatype IRI (`^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString>`).
+
+However, DBpedia data dumps contains instances of the langString IRI, in spite of the
+RDF 1.1 Turtle and N-Triples specifications.  To support this, the `--allow-lang-string-datatype`
+option supports importing literals with langString IRIs as KGTK strings.
+
+
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-langstrings.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString> .
+~~~
+
+Import this file:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     --allow-lang-string-datatype
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | "That Seventies Show" |
 | n1 | prefix_expansion | "http://example.org/vocab/show/" |
 | n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |

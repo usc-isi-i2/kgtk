@@ -64,9 +64,10 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_ALLOW_LAX_URI: bool = True
     DEFAULT_BUILD_ID: bool = False
     DEFAULT_VALIDATE: bool = False
-    DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS: bool = False
+    DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS: bool = True
     DEFAULT_ALLOW_TURTLE_QUOTES: bool = False
     DEFAULT_ALLOW_LANG_STRING_DATATYPE: bool = False
+    DEFAULT_SUMMARY: bool = False
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -208,6 +209,7 @@ class KgtkNtriples(KgtkFormat):
     idbuilder: typing.Optional[KgtkIdBuilder] = attr.ib(default=None)
 
     validate: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_VALIDATE)
+    summary: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_SUMMARY)
     value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
     override_uuid: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
@@ -223,6 +225,7 @@ class KgtkNtriples(KgtkFormat):
     used_namespaces: typing.Set[str] = attr.ib(factory=set)
 
     output_line_count: int = attr.ib(default=0)
+    unknown_datatype_iri_count: int = attr.ib(default=0)
 
     def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str):
         output_row: typing.List[str] = [ node1, label, node2]
@@ -401,7 +404,7 @@ class KgtkNtriples(KgtkFormat):
         '<http://www.w3.org/2001/XMLSchema#NMTOKEN>',
     }
 
-    LANG_STRING_DATATYPE_IRI: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
+    LANG_STRING_DATATYPE_IRI: str = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString>"
                                                  
 
     def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
@@ -423,6 +426,7 @@ class KgtkNtriples(KgtkFormat):
         if uri in self.STRING_XSD_DATATYPES:
             # Convert this to a KGTK string.
             return self.convert_string(string, line_number)
+
         elif uri in self.NUMERIC_XSD_DATATYPES:
             # Convert this to a KGTK number:
             return string[1:-1], True
@@ -460,6 +464,8 @@ class KgtkNtriples(KgtkFormat):
             new_node_symbol: str = self.generate_new_node_symbol()
             self.write_row(ew, new_node_symbol, self.structured_value_label, string)
             self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri)
+
+            self.unknown_datatype_iri_count += 1
             
             return new_node_symbol, True
         
@@ -730,13 +736,14 @@ class KgtkNtriples(KgtkFormat):
 
                 self.save_namespaces(ew)
 
-        if self.verbose:
+        if self.verbose or self.summary:
             print("Processed %d known namespaces." % (namespace_line_count), file=self.error_file, flush=True)
             print("Processed %d records." % (total_input_line_count), file=self.error_file, flush=True)
             print("Rejected %d records." % (reject_line_count), file=self.error_file, flush=True)
             print("Wrote %d records." % (self.output_line_count), file=self.error_file, flush=True)
             print("Ignored %d comments." % (comment_count), file=self.error_file, flush=True)
-        
+            print("Imported %d records with unknown datatype IRIs." % (self.unknown_datatype_iri_count), file=self.error_file, flush=True)
+
         if ew is not None:
             ew.close()
             
@@ -829,6 +836,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="When true, validate that the result fields are good KGTK file format. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VALIDATE)
 
+        parser.add_argument(      "--summary", dest="summary",
+                                  help="When true, print summary statistics when done processing (also implied by --verbose). (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VALIDATE)
+
         parser.add_argument(      "--override-uuid", dest="override_uuid",
                                   help="When specified, override UUID generation for debugging. (default=%(default)s).",
                                   default=None)
@@ -901,6 +912,7 @@ def main():
         print("--newnode-zfill %s" % str(args.newnode_zfill), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
         print("--validate=%s" % str(args.validate), file=error_file, flush=True)
+        print("--summary=%s" % str(args.summary), file=error_file, flush=True)
         if args.override_uuid is not None:
             print("--override_uuid=%s" % str(args.override_uuid), file=error_file, flush=True)            
 
@@ -935,6 +947,7 @@ def main():
         build_id=args.build_id,
         idbuilder_options=idbuilder_options,
         validate=args.validate,
+        summary=args.summary,
         override_uuid=args.override_uuid,
         reader_options=reader_options,
         value_options=value_options,
