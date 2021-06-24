@@ -194,8 +194,8 @@ class KgtkQuery(object):
                 with_[1] and query.write(' WHERE ' + with_[1])
             ret and query.write(' RETURN ' + ret)
             order and query.write(' ORDER BY ' + order)
-            skip and query.write(' SKIP ' + skip)
-            limit and query.write(' LIMIT ' + limit)
+            skip and query.write(' SKIP ' + str(skip))
+            limit and query.write(' LIMIT ' + str(limit))
             query = query.getvalue()
         self.log(2, 'Kypher:' + query)
         
