@@ -1,3 +1,5 @@
+## Overview
+
 This command will import one or more ntriple files into KGTK format.
 
 The input file should adhere to the [RDF N-Triples
@@ -12,15 +14,21 @@ the KGTk File Format Specification v2.
 
 ## Usage
 ```
-usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
-                            [--reject-file REJECT_FILE] [--namespace-file NAMESPACE_FILE]
+usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]]
+                            [-o OUTPUT_FILE] [--reject-file REJECT_FILE]
+                            [--namespace-file NAMESPACE_FILE]
                             [--updated-namespace-file NAMESPACE_FILE]
                             [--namespace-id-prefix NAMESPACE_ID_PREFIX]
                             [--namespace-id-use-uuid [NAMESPACE_ID_USE_UUID]]
                             [--namespace-id-counter NAMESPACE_ID_COUNTER]
                             [--namespace-id-zfill NAMESPACE_ID_ZFILL]
                             [--output-only-used-namespaces [OUTPUT_ONLY_USED_NAMESPACES]]
+                            [--build-new-namespaces [BUILD_NEW_NAMESPACES]]
                             [--allow-lax-uri [ALLOW_LAX_URI]]
+                            [--allow-unknown-datatype-iris [ALLOW_UNKNOWN_DATATYPE_IRIS]]
+                            [--allow-turtle-quotes [ALLOW_TURTLE_QUOTES]]
+                            [--allow-lang-string-datatype [ALLOW_LANG_STRING_DATATYPE]]
+                            [--lang-string-tag LANG_STRING_TAG]
                             [--local-namespace-prefix LOCAL_NAMESPACE_PREFIX]
                             [--local-namespace-use-uuid [LOCAL_NAMESPACE_USE_UUID]]
                             [--prefix-expansion-label PREFIX_EXPANSION_LABEL]
@@ -29,11 +37,17 @@ usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FIL
                             [--newnode-prefix NEWNODE_PREFIX]
                             [--newnode-use-uuid [NEWNODE_USE_UUID]]
                             [--newnode-counter NEWNODE_COUNTER]
-                            [--newnode-zfill NEWNODE_ZFILL] [--build-id [BUILD_ID]]
-                            [--escape-pipes [ESCAPE_PIPES]] [--validate [VALIDATE]]
+                            [--newnode-zfill NEWNODE_ZFILL]
+                            [--build-id [BUILD_ID]] [--validate [VALIDATE]]
+                            [--summary [SUMMARY]]
                             [--override-uuid OVERRIDE_UUID]
                             [--overwrite-id [optional true|false]]
-                            [--verify-id-unique [optional true|false]] [-v]
+                            [--verify-id-unique [optional true|false]]
+                            [--value-hash-width VALUE_HASH_WIDTH]
+                            [--claim-id-hash-width CLAIM_ID_HASH_WIDTH]
+                            [--claim-id-column-name CLAIM_ID_COLUMN_NAME]
+                            [--id-separator ID_SEPARATOR]
+                            [-v [optional True|False]]
 
 Import an ntriples file, writing a KGTK file.
 
@@ -43,82 +57,119 @@ kgtk --expert import-ntriples --help
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE [INPUT_FILE ...], --input-file INPUT_FILE [INPUT_FILE ...]
-                        The ntriples file(s) to import. (May be omitted or '-' for stdin.)
+                        The ntriples file(s) to import. (May be omitted or '-'
+                        for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for stdout.)
-  --reject-file REJECT_FILE
-                        The ntriples output file for records that are rejected. (Optional,
-                        use '-' for stdout.)
-  --namespace-file NAMESPACE_FILE
-                        The KGTK input file with known namespaces. (Optional, use '-' for
-                        stdin.)
-  --updated-namespace-file NAMESPACE_FILE
-                        The KGTK output file with updated namespaces. (Optional, use '-' for
+                        The KGTK output file. (May be omitted or '-' for
                         stdout.)
+  --reject-file REJECT_FILE
+                        The ntriples output file for records that are
+                        rejected. (Optional, use '-' for stdout.)
+  --namespace-file NAMESPACE_FILE
+                        The KGTK input file with known namespaces. (Optional,
+                        use '-' for stdin.)
+  --updated-namespace-file NAMESPACE_FILE
+                        The KGTK output file with updated namespaces.
+                        (Optional, use '-' for stdout.)
   --namespace-id-prefix NAMESPACE_ID_PREFIX
-                        The prefix used to generate new namespaces. (default=n).
+                        The prefix used to generate new namespaces.
+                        (default=n).
   --namespace-id-use-uuid [NAMESPACE_ID_USE_UUID]
-                        Use the local namespace UUID when generating namespaces. When there
-                        are multiple input files, each input file gets its own UUID.
-                        (default=False).
+                        Use the local namespace UUID when generating
+                        namespaces. When there are multiple input files, each
+                        input file gets its own UUID. (default=False).
   --namespace-id-counter NAMESPACE_ID_COUNTER
-                        The counter used to generate new namespaces. (default=1).
+                        The counter used to generate new namespaces.
+                        (default=1).
   --namespace-id-zfill NAMESPACE_ID_ZFILL
-                        The width of the counter used to generate new namespaces.
-                        (default=0).
+                        The width of the counter used to generate new
+                        namespaces. (default=0).
   --output-only-used-namespaces [OUTPUT_ONLY_USED_NAMESPACES]
-                        Write only used namespaces to the output file. (default=True).
-  --allow-lax-uri [ALLOW_LAX_URI]
-                        Allow URIs that don't begin with a http:// or https://.
+                        Write only used namespaces to the output file.
                         (default=True).
+  --build-new-namespaces [BUILD_NEW_NAMESPACES]
+                        When True, create new namespaces. When False, use only
+                        existing namespaces. (default=True).
+  --allow-lax-uri [ALLOW_LAX_URI]
+                        Allow URIs that don't begin with a http:// or
+                        https://. (default=True).
+  --allow-unknown-datatype-iris [ALLOW_UNKNOWN_DATATYPE_IRIS]
+                        Allow unknown datatype IRIs, creating a qualified
+                        record. (default=True).
+  --allow-turtle-quotes [ALLOW_TURTLE_QUOTES]
+                        Allow literals to use single quotes (to support Turtle
+                        format). (default=False).
+  --allow-lang-string-datatype [ALLOW_LANG_STRING_DATATYPE]
+                        Allow literals to include exposed langString datatype
+                        IRIs (which is forbidden by the spec, but occurs
+                        anyway). (default=False).
+  --lang-string-tag LANG_STRING_TAG
+                        The tag to use with exposed langString instances. ``
+                        or `-` mean to use a string, otherwise use a lanuage-
+                        qualified string. (default=-).
   --local-namespace-prefix LOCAL_NAMESPACE_PREFIX
                         The namespace prefix for blank nodes. (default=X).
   --local-namespace-use-uuid [LOCAL_NAMESPACE_USE_UUID]
-                        Generate a UUID for the local namespace. When there are multiple
-                        input files, each input file gets its own UUID. (default=True).
+                        Generate a UUID for the local namespace. When there
+                        are multiple input files, each input file gets its own
+                        UUID. (default=True).
   --prefix-expansion-label PREFIX_EXPANSION_LABEL
                         The label for prefix expansions in the namespace file.
                         (default=prefix_expansion).
   --structured-value-label STRUCTURED_VALUE_LABEL
-                        The label for value records for ntriple structured literals.
-                        (default=kgtk:structured_value).
+                        The label for value records for ntriple structured
+                        literals. (default=kgtk:structured_value).
   --structured-uri-label STRUCTURED_URI_LABEL
-                        The label for URI records for ntriple structured literals.
-                        (default=kgtk:structured_uri).
+                        The label for URI records for ntriple structured
+                        literals. (default=kgtk:structured_uri).
   --newnode-prefix NEWNODE_PREFIX
-                        The prefix used to generate new nodes for ntriple structured
-                        literals. (default=kgtk:node).
+                        The prefix used to generate new nodes for ntriple
+                        structured literals. (default=kgtk:node).
   --newnode-use-uuid [NEWNODE_USE_UUID]
-                        Use the local namespace UUID when generating new nodes for ntriple
-                        structured literals. When there are multiple input files, each input
-                        file gets its own UUID. (default=False).
+                        Use the local namespace UUID when generating new nodes
+                        for ntriple structured literals. When there are
+                        multiple input files, each input file gets its own
+                        UUID. (default=False).
   --newnode-counter NEWNODE_COUNTER
-                        The counter used to generate new nodes for ntriple structured
-                        literals. (default=1).
+                        The counter used to generate new nodes for ntriple
+                        structured literals. (default=1).
   --newnode-zfill NEWNODE_ZFILL
-                        The width of the counter used to generate new nodes for ntriple
-                        structured literals. (default=0).
+                        The width of the counter used to generate new nodes
+                        for ntriple structured literals. (default=0).
   --build-id [BUILD_ID]
                         Build id values in an id column. (default=False).
-  --escape-pipes [ESCAPE_PIPES]
-                        When true, input pipe characters (|) need to be escaped (\|) per
-                        KGTK file format. (default=True).
   --validate [VALIDATE]
-                        When true, validate that the result fields are good KGTK file
-                        format. (default=False).
+                        When true, validate that the result fields are good
+                        KGTK file format. (default=False).
+  --summary [SUMMARY]   When true, print summary statistics when done
+                        processing (also implied by --verbose).
+                        (default=False).
   --override-uuid OVERRIDE_UUID
-                        When specified, override UUID generation for debugging.
-                        (default=None).
+                        When specified, override UUID generation for
+                        debugging. (default=None).
   --overwrite-id [optional true|false]
-                        When true, replace existing ID values. When false, copy existing ID
-                        values. When --overwrite-id is omitted, it defaults to False. When
-                        --overwrite-id is supplied without an argument, it is True.
+                        When true, replace existing ID values. When false,
+                        copy existing ID values. When --overwrite-id is
+                        omitted, it defaults to False. When --overwrite-id is
+                        supplied without an argument, it is True.
   --verify-id-unique [optional true|false]
-                        When true, verify ID uniqueness using an in-memory set of IDs. When
-                        --verify-id-unique is omitted, it defaults to False. When --verify-
-                        id-unique is supplied without an argument, it is True.
+                        When true, verify ID uniqueness using an in-memory set
+                        of IDs. When --verify-id-unique is omitted, it
+                        defaults to False. When --verify-id-unique is supplied
+                        without an argument, it is True.
+  --value-hash-width VALUE_HASH_WIDTH
+                        How many characters should be used in a value hash?
+                        (default=6)
+  --claim-id-hash-width CLAIM_ID_HASH_WIDTH
+                        How many characters should be used to hash the claim
+                        ID? 0 means do not hash the claim ID. (default=8)
+  --claim-id-column-name CLAIM_ID_COLUMN_NAME
+                        The name of the claim_id column. (default=claim_id)
+  --id-separator ID_SEPARATOR
+                        The separator user between ID subfields. (default=-)
 
-  -v, --verbose         Print additional progress messages (default=False).
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 ### Files
 There four categories of files:
@@ -152,6 +203,15 @@ _:g14 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#pr
    are file-local IDs.
  * Many fields contain URI identifiers, which often contain long, unchanging
    prefixes and shorted unique sections at the end.
+
+Also, comments, beginning with `#`, may appear after the final period,
+optionally preceeded by whitespace.  A comment extends from the `#` to
+the end of the line.  Comments are used for documentation, such as in
+this document, and are stripped on input.
+
+```
+_:g14 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#privateData> _:g16 . # This is a comment.
+```
 
 #### Output File
 
@@ -202,12 +262,16 @@ xml-schema-type prefix_expansion        "http://www.w3.org/2001/XMLSchema#"
  * The ntriples entries hav been converted into KGTK File Format.
  * Certain ntriples data types, such as numbers and some date/time formats, have been converted into KGTK data types.
  * The file-local IDs have had the "_ in replaced with a file-local UUID.
-   * The UUID itself has been prefixed, here isht "X", so it will be a
+   * The UUID itself has been prefixed, here with "X", so it will be a
      KGTK symbol, not a KGTK number.
  * The long URIs have been converted into a prefix and suffix.
    * The prefixes are listed in "prefix_expansion" records at the en of the file.
    * Certain well-known URI families have preassigned, short prefixes
    * Other URI families have UUIDs, prefixed by "n", as the prefix
+   * When `--build-new-namespaces=False`, only the prefixes read from
+     the namespace file will be used, and nonmatching URLs will not have
+     new prefixes assigned.  If the namespace file is not specified, or
+     is empty, no new prefixes will be generated.
 
 #### Reject File
 
@@ -282,10 +346,17 @@ prefixes.
                         The counter used to generate new namespaces. (default=1).
   --namespace-id-zfill NAMESPACE_ID_ZFILL
                         The width of the counter used to generate new namespaces. (default=0).
+  --build-new-namespaces [BUILD_NEW_NAMESPACES]
+                        When True, create new namespaces. When False, use only
+                        existing namespaces. (default=True).
 ```
 
 The order is <prefix><uuid>-<counter>, such as `noBugQcoEt6xNnqGsHDXfTA-7`.   By default,
 the UUID is omitted, but the examples shown above were generated using the UUID.
+
+When `--build-new-namespaces=FALSE`, new namespaces will not be generated.  If
+the namespace file (`--namespace-file NAMESPACE_FILE`) is not specified or
+is empty, URI prefixes will not be generated.
 
 ### Language-Qualified Strings
 
@@ -305,7 +376,7 @@ This could result in `kgtk import-ntriples --validate` reporting a failure.
 
 ### Structured Literal Imports
 
-ntriples files carry many data types as structured literals.  There are two portions
+RDF 1.1 N-Triples files carry many data types as structured literals.  There are two portions
 to each structured literal:  a value string, and a URI that identifies the data type.
 
 `kgtk import-ntriples` can import the following ntriples data types to KGTK data types,
@@ -313,13 +384,39 @@ resulting in a single KGTK edge in the output file:
 
 | ntriples URI | KGTK Data Type |
 | ------------ | -------------- |
-| <http://www.w3.org/2001/XMLSchema#string> | string |
-| <http://www.w3.org/2001/XMLSchema#int> | number |
-| <http://www.w3.org/2001/XMLSchema#double> | number |
-| <http://www.w3.org/2001/XMLSchema#float> | number |
-| <http://www.w3.org/2001/XMLSchema#decimal> | number |
 | <http://www.w3.org/2001/XMLSchema#boolean> | boolean |
+| <http://www.w3.org/2001/XMLSchema#byte> | number |
 | <http://www.w3.org/2001/XMLSchema#dateTime> | date-and-times |
+| <http://www.w3.org/2001/XMLSchema#decimal> | number |
+| <http://www.w3.org/2001/XMLSchema#double> | number |
+| <http://www.w3.org/2001/XMLSchema#ENTITY> | string |
+| <http://www.w3.org/2001/XMLSchema#float> | number |
+| <http://www.w3.org/2001/XMLSchema#ID> | string |
+| <http://www.w3.org/2001/XMLSchema#IDREF> | string |
+| <http://www.w3.org/2001/XMLSchema#int> | number |
+| <http://www.w3.org/2001/XMLSchema#integer> | number |
+| <http://www.w3.org/2001/XMLSchema#language> | string |
+| <http://www.w3.org/2001/XMLSchema#Name> | string |
+| <http://www.w3.org/2001/XMLSchema#NCName> | string |
+| <http://www.w3.org/2001/XMLSchema#negativeInteger> | number |
+| <http://www.w3.org/2001/XMLSchema#NMTOKEN> | string |
+| <http://www.w3.org/2001/XMLSchema#nonNegativeInteger> | number |
+| <http://www.w3.org/2001/XMLSchema#nonPositiveInteger> | number |
+| <http://www.w3.org/2001/XMLSchema#normalizedString> | string |
+| <http://www.w3.org/2001/XMLSchema#positiveInteger> | number |
+| <http://www.w3.org/2001/XMLSchema#short> | number |
+| <http://www.w3.org/2001/XMLSchema#string> | string |
+| <http://www.w3.org/2001/XMLSchema#token> | string |
+| <http://www.w3.org/2001/XMLSchema#unsignedByte> | number |
+| <http://www.w3.org/2001/XMLSchema#unsignedInt> | number |
+| <http://www.w3.org/2001/XMLSchema#unsignedLong> | number |
+| <http://www.w3.org/2001/XMLSchema#unsignedShort> | number |
+
+The special RDF datatype `<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString>` should
+never explicitly appear in a RDF 1.1 N-Triples file.  However, we have observed files in the
+wild that do use this datatype.  Using the `--allow-lang-string-datatype` and
+`--lang-string-tag LANG_STRING_TAG` options, this datatype can be imported to
+either the KGTK string or language-qualified string datatypes.
 
 Other ntriples structured literals are processed by:
  * creating a new, unique node ID,
@@ -436,23 +533,451 @@ unexpected import conversion failures.
    * You may wish to use full UUID options and updated namespace files
      for the conversion.
 
-### Examples
+### Importing from Turtle Format
+
+`kgtk import-ntriples` is designed to import edges from RDF 1.1 N-Triples files.
+Another RDF representation is RDF 1.1 Turtle format.  Turtle format is more general
+than N-Triples format, and `kgtk import-ntriples` does not support most of the
+increased complexity of Turtle format.
+
+One feature of Turtle format is the option to use either single quotes
+(`'`) instead of double quotes (`"`) to quote literal values.
+N-Triples format allows only double quotes (`"`). Turtle files that
+differ from N-Triples files only by using single quotes may be
+imported using the `--allow-turtle-quotes` option.
+
+To convert Turtle files to N-triple files, the following should work
+if the [graphy]( https://graphy.link) program is available:
+```
+cat dbpedia.ttl | graphy read -c ttl / tree / write -c ntriples > dbpedia.nt
+```
+
+## Examples
+
+### Import with Default Settings
 
 Import the entire given ntriple file into kgtk format, using default settings.
 
 ```
-kgtk import-ntriples -i dbpedia_wikipedia_links.nt -o DbpediaWikipediaLinks.tsv
+kgtk import-ntriples \
+     -i ./examples/sample_data/aida/HC00001DO.ttl.nt\
+     -o HC00001DO.tsv
 ```
+
+### Import using UUIDs Extensively
 
 Import the HC00001DO file, using UUIDs extensively:
 
 ```
 kgtk import-ntriples \
-     -i ../../HC00001DO.nt \
+     -i ./examples/sample_data/aida/HC00001DO.ttl.nt \
      -o HC00001DO.tsv \
      --reject-file HC00001DO-rejects.nt \
      --namespace-file kgtk/join/test/initial-ntriple-namespaces.tsv \
      --updated-namespace-file HC00001DO-namespaces.tsv \
      --namespace-id-use-uuid True \
-     --newnode-use-uuid True \
+     --newnode-use-uuid True
 ```
+
+### Importing Strings
+
+This example demonstrates importing three types of strings:
+ * strings with an explicit datatype
+ * strings with a language tag
+ * strings with neither an explicit datatype nor a language tag
+ * strings with various XMLSchema datatypes that cam be mapped to a KGTK string.
+
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-strings.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#string> . # literal with XMLSchema string datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show" . # same again
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"@en . # literal with a language tag
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#normalizedString> . # literal with XMLSchema normalizedString datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#token> . # literal with XMLSchema token datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#language> . # literal with XMLSchema language datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#Name> . # literal with XMLSchema Name datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#NCName> . # literal with XMLSchema NCName datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#ENTITY> . # literal with XMLSchema ENTITY datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#ID> . # literal with XMLSchema ID datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#IDREF> . # literal with XMLSchema IDREF datatype
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#NMTOKEN> . # literal with XMLSchema NMTOKEN datatype
+~~~
+
+Import this file:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-strings.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | 'That Seventies Show'@en |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing Numbers
+
+There are various XMLSchema datatypes that may be imported to KGTK numbers.
+
+
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-numbers.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123.456"^^<http://www.w3.org/2001/XMLSchema#decimal> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#int> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#short> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#byte> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#positiveInteger> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#unsignedLong> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#unsignedInt> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#unsignedShort> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123"^^<http://www.w3.org/2001/XMLSchema#unsignedByte> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "-123"^^<http://www.w3.org/2001/XMLSchema#nonPositiveInteger> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "-123"^^<http://www.w3.org/2001/XMLSchema#negativeInteger> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123.456e20"^^<http://www.w3.org/2001/XMLSchema#double> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "123.456e20"^^<http://www.w3.org/2001/XMLSchema#float> .
+~~~
+
+Import this file:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-numbers.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | 123.456 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | -123 |
+| n1:218 | n2:label | -123 |
+| n1:218 | n2:label | 123.456e20 |
+| n1:218 | n2:label | 123.456e20 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing Booleans
+
+The XML Schema boolean datatype has four possible values in an N-triples file:
+ * true (or 1)
+ * false (or 0)
+ 
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-booleans.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "true"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "false"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "0"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "1"^^<http://www.w3.org/2001/XMLSchema#boolean> .
+~~~
+
+Import this file:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-booleans.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | True |
+| n1:218 | n2:label | False |
+| n1:218 | n2:label | False |
+| n1:218 | n2:label | True |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing Dates and Times
+
+There are many XML Schema datatypes related to date/time representation.
+Only the `dateTime` datatype is imported and converted to a KGTK date and
+time at present.
+
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-dates.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "2021-01-21T23:04:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+~~~
+
+Import this file:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing with `--allow-lang-string-datatype`
+
+The RDF langString datatype corresponds to KGKT's language-qualified strings datatype.
+RDF N-Triples langString literals must include a language tag (prefixed by `@`), and
+may not include a datatype IRI (`^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString>`).
+
+However, DBpedia data dumps contains instances of the langString IRI, in spite of the
+RDF 1.1 Turtle and N-Triples specifications.  To support this, the `--allow-lang-string-datatype`
+option supports importing literals with langString IRIs as KGTK strings or KGTK language-qualified strings.
+
+
+Here is the input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-langstrings.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString> .
+~~~
+
+Importing this file without `--allow-lang-string-datatype`:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+Importing this file with `--allow-lang-string-datatype`:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     --allow-lang-string-datatype
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing with `--allow-lang-string-datatype` and `--lang-string-tag TAG`
+
+To import a value with a langString IRI as a KGTK language-qualified string,
+use the `--lang-string-tag TAG` option, where `TAG` is the language-qualified tag
+(language and suffix).  Specifying an empty `TAG`, or a `TAG` of `-`, results in
+the default behavior of importing the value as a KGTK string.
+
+To import as English:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     --allow-lang-string-datatype --lang-string-tag en
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | 'That Seventies Show'@en |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+To import as Mexican Spanish:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     --allow-lang-string-datatype --lang-string-tag es-MX
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | 'That Seventies Show'@es-MX |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+To import as a KGTK string (the default behavior when `--lang-string-tag TAG`
+is not specified):
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     --allow-lang-string-datatype --lang-string-tag -
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing Without Generating New Namespace Prefixes
+
+When `--build-new-namespaces=False`, only the prefixes read from
+the namespace file will be used, and nonmatching URLs will not have
+new prefixes assigned.  If the namespace file is not specified, or
+s empty, no new prefixes will be generated.
+
+Reusing the date/times input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-dates.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "2021-01-21T23:04:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+~~~
+
+Import this file, generating new namespace prefixes (the default setting):
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+Import this file, without generating new namespace prefixes:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt \
+     --build-new-namespaces=False
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| http://example.org/vocab/show/218 | http://www.w3.org/2000/01/rdf-schema#label | ^2021-01-21T23:04:00 |
+
+Here is a namespace file with oneentry for the `rdf-schema` namespace:
+
+```
+kgtk cat -i ./examples/docs/import-ntriples-rdf-schema-namespace.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| rdf-schema | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+Importing the input file with the rdf-schema defined, but without
+generating any additional namespace prefixes:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt \
+     --namespace-file ./examples/docs/import-ntriples-rdf-schema-namespace.tsv \
+     --build-new-namespaces=False
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| http://example.org/vocab/show/218 | rdf-schema:label | ^2021-01-21T23:04:00 |
+| rdf-schema | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+
+### Importing with `--summary`
+
+The `--summary` option provides feedback on how many recods were processed,
+such as the number of records read, how many were
+rejected, and how many were output.
+
+```
+kgtk import-ntriples --summary \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     -o ntriples-langstrings.tsv
+```
+
+The following summary is produced:
+
+    Processed 1 known namespaces.
+    Processed 1 records.
+    Rejected 1 records.
+    Wrote 2 records.
+    Ignored 0 comments.
+    Rejected 1 records with langString IRIs.
+    Imported 0 records with unknown datatype IRIs.
+
+Adding `--allow-lang-string-datatype`:
+
+```
+kgtk import-ntriples --summary \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     -o ntriples-langstrings.tsv \
+     --allow-lang-string-datatype
+```
+
+    Processed 1 known namespaces.
+    Processed 1 records.
+    Rejected 0 records.
+    Wrote 3 records.
+    Ignored 0 comments.
+    Rejected 0 records with langString IRIs.
+    Imported 0 records with unknown datatype IRIs.
+
+### Importing with `--verbose`
+
+The `--verbose` option provides feedback on how many recods which
+were rejected.  It also procudes the `--summary` feedback.
+
+```
+kgtk import-ntriples --verbose \
+     -i ./examples/docs/import-ntriples-langstrings.nt \
+     -o ntriples-langstrings.tsv
+```
+
+The following summary is produced:
+
+    Opening output file ntriples-langstrings.tsv
+    File_path.suffix: .tsv
+    KgtkWriter: writing file ntriples-langstrings.tsv
+    header: node1	label	node2
+    Opening the input file: examples/docs/import-ntriples-langstrings.nt
+    Processed 1 known namespaces.
+    Processed 1 records.
+    Rejected 1 records.
+    Wrote 2 records.
+    Ignored 0 comments.
+    Rejected 1 records with langString IRIs.
+    Imported 0 records with unknown datatype IRIs.

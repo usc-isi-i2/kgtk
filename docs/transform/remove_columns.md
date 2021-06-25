@@ -22,8 +22,7 @@
 ### List of Column Names
 
 When you use this command, you supply the `--columns` option with
-a list of column names in the
-order you wish them to appear in the output file.
+a list of column names to be removed from the output file.
 
 Column names may be passed to the `--columns` option as an unquoted, space-separated
 list, as with other KGTK commands.
