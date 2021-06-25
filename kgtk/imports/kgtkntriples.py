@@ -71,6 +71,8 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_SUMMARY: bool = False
     LANG_STRING_TAG_NONE: str = "-"
     DEFAULT_LANG_STRING_TAG: str = LANG_STRING_TAG_NONE
+    DEFAULT_BUILD_DATATYPE_COLUMN: bool = False
+    DEFAULT_DATATYPE_COLUMN_NAME: str = "datatype"
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -218,6 +220,9 @@ class KgtkNtriples(KgtkFormat):
     value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
     override_uuid: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    build_datatype_column: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_DATATYPE_COLUMN)
+    datatype_column_name: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_DATATYPE_COLUMN_NAME)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -858,6 +863,14 @@ class KgtkNtriples(KgtkFormat):
                                   help="Build id values in an id column. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_ID)
 
+        parser.add_argument(      "--build-datatype-column", dest="build_datatype_column",
+                                  help="When True, and --datatype-column-name DATATYPE_COLUMN_NAME is not empty, build a column with RDF datatypes. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_NEW_NAMESPACES)
+
+        parser.add_argument(      "--datatype-column-name", dest="datatype_column_name",
+                                  help="The name of the column with RDF datatypes. (default=%(default)s).",
+                                  default=cls.DEFAULT_DATATYPE_COLUMN_NAME)
+    
         parser.add_argument(      "--validate", dest="validate",
                                   help="When true, validate that the result fields are good KGTK file format. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VALIDATE)
@@ -939,6 +952,8 @@ def main():
         print("--newnode-counter %s" % repr(args.newnode_counter), file=error_file, flush=True)
         print("--newnode-zfill %s" % repr(args.newnode_zfill), file=error_file, flush=True)
         print("--build-id=%s" % repr(args.build_id), file=error_file, flush=True)
+        print("--build-datatype-column %s" % repr(args.build_datatype_column), file=error_file, flush=True)
+        print("--datatype-column-name %s" % repr(args.datatype_column_name), file=error_file, flush=True)
         print("--validate=%s" % repr(args.validate), file=error_file, flush=True)
         print("--summary=%s" % repr(args.summary), file=error_file, flush=True)
         if args.override_uuid is not None:
@@ -976,6 +991,8 @@ def main():
         structured_uri_label=args.structured_uri_label,
         build_id=args.build_id,
         idbuilder_options=idbuilder_options,
+        build_datatype_column=args.build_datatype_column,
+        datatype_column_name=args.datatype_column_name,
         validate=args.validate,
         summary=args.summary,
         override_uuid=args.override_uuid,
