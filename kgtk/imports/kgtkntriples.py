@@ -55,6 +55,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_NAMESPACE_ID_ZFILL: int = 0
     DEFAULT_NAMESPACE_ID_USE_UUID: bool = False
     DEFAULT_OUTPUT_ONLY_USED_NAMESPACES: bool = True
+    DEFAULT_BUILD_NEW_NAMESPACES: bool = True
     DEFAULT_NEWNODE_PREFIX: str = "kgtk:node"
     DEFAULT_NEWNODE_COUNTER: int = 1
     DEFAULT_NEWNODE_ZFILL: int = 0
@@ -195,7 +196,8 @@ class KgtkNtriples(KgtkFormat):
     namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_COUNTER)
     namespace_id_zfill: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_ZFILL)
     namespace_id_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_NAMESPACE_ID_USE_UUID)
-    output_only_used_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
+    output_only_used_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_OUTPUT_ONLY_USED_NAMESPACES)
+    build_new_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_NEW_NAMESPACES)
 
     prefix_expansion_label: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX_EXPANSION)
 
@@ -296,6 +298,10 @@ class KgtkNtriples(KgtkFormat):
 
                 # Return the namespace-prefixed URI:
                 return namespace_id + ":" + suffix, True
+
+        if not self.build_new_namespaces:
+            # Do not attempt to build a new namespace.
+            return body, True
 
         # Take the longest possible section, which is now first in the list:
         if len(matches) > 0:
@@ -786,6 +792,10 @@ class KgtkNtriples(KgtkFormat):
                                   help="Write only used namespaces to the output file. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_OUTPUT_ONLY_USED_NAMESPACES)
 
+        parser.add_argument(      "--build-new-namespaces", dest="build_new_namespaces",
+                                  help="When True, create new namespaces.  When False, use only existing namespaces. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_NEW_NAMESPACES)
+
         parser.add_argument(      "--allow-lax-uri", dest="allow_lax_uri",
                                   help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LAX_URI)
@@ -913,6 +923,7 @@ def main():
         print("--namespace-id-counter %s" % repr(args.namespace_id_counter), file=error_file, flush=True)
         print("--namespace-id-zfill %s" % repr(args.namespace_id_zfill), file=error_file, flush=True)
         print("--output-only-used-namespaces %s" % repr(args.output_only_used_namespaces), file=error_file, flush=True)
+        print("--build-new-namespaces %s" % repr(args.build_new_namespaces), file=error_file, flush=True)
         print("--allow-lax-uri %s" % repr(args.allow_lax_uri), file=error_file, flush=True)
         print("--allow-unknown-datatype-iris %s" % repr(args.allow_unknown_datatype_iris), file=error_file, flush=True)
         print("--allow-turtle-quotes %s" % repr(args.allow_turtle_quotes), file=error_file, flush=True)
@@ -948,6 +959,7 @@ def main():
         namespace_id_counter=args.namespace_id_counter,
         namespace_id_zfill=args.namespace_id_zfill,
         output_only_used_namespaces=args.output_only_used_namespaces,
+        build_new_namespaces=args.build_new_namespaces,
         newnode_prefix=args.newnode_prefix,
         newnode_use_uuid=args.newnode_use_uuid,
         newnode_counter=args.newnode_counter,
