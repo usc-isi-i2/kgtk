@@ -492,6 +492,25 @@ unexpected import conversion failures.
    * You may wish to use full UUID options and updated namespace files
      for the conversion.
 
+### Importing from Turtle Format
+
+`kgtk import-ntriples` is designed to import edges from RDF 1.1 N-Triples files.
+Another RDF representation is RDF 1.1 Turtle format.  Turtle format is more general
+than N-Triples format, and `kgtk import-ntriples` does not support most of the
+increased complexity of Turtle format.
+
+One feature of Turtle format is the option to use either single quotes
+(`'`) instead of double quotes (`"`) to quote literal values.
+N-Triples format allows only double quotes (`"`). Turtle files that
+differ from N-Triples files only by using single quotes may be
+imported using the `--allow-turtle-quotes` option.
+
+To convert Turtle files to N-triple files, the following should work
+if the [graphy]( https://graphy.link) program is available:
+```
+cat dbpedia.ttl | graphy read -c ttl / tree / write -c ntriples > dbpedia.nt
+```
+
 ## Examples
 
 ### Import with Default Settings
