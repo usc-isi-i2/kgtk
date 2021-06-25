@@ -23,6 +23,7 @@ usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                             [--namespace-id-counter NAMESPACE_ID_COUNTER]
                             [--namespace-id-zfill NAMESPACE_ID_ZFILL]
                             [--output-only-used-namespaces [OUTPUT_ONLY_USED_NAMESPACES]]
+                            [--build-new-namespaces [BUILD_NEW_NAMESPACES]]
                             [--allow-lax-uri [ALLOW_LAX_URI]]
                             [--allow-unknown-datatype-iris [ALLOW_UNKNOWN_DATATYPE_IRIS]]
                             [--allow-turtle-quotes [ALLOW_TURTLE_QUOTES]]
@@ -86,6 +87,9 @@ optional arguments:
   --output-only-used-namespaces [OUTPUT_ONLY_USED_NAMESPACES]
                         Write only used namespaces to the output file.
                         (default=True).
+  --build-new-namespaces [BUILD_NEW_NAMESPACES]
+                        When True, create new namespaces. When False, use only
+                        existing namespaces. (default=True).
   --allow-lax-uri [ALLOW_LAX_URI]
                         Allow URIs that don't begin with a http:// or
                         https://. (default=True).
@@ -258,12 +262,16 @@ xml-schema-type prefix_expansion        "http://www.w3.org/2001/XMLSchema#"
  * The ntriples entries hav been converted into KGTK File Format.
  * Certain ntriples data types, such as numbers and some date/time formats, have been converted into KGTK data types.
  * The file-local IDs have had the "_ in replaced with a file-local UUID.
-   * The UUID itself has been prefixed, here isht "X", so it will be a
+   * The UUID itself has been prefixed, here with "X", so it will be a
      KGTK symbol, not a KGTK number.
  * The long URIs have been converted into a prefix and suffix.
    * The prefixes are listed in "prefix_expansion" records at the en of the file.
    * Certain well-known URI families have preassigned, short prefixes
    * Other URI families have UUIDs, prefixed by "n", as the prefix
+   * When `--build-new-namespaces=False`, only the prefixes read from
+     the namespace file will be used, and nonmatching URLs will not have
+     new prefixes assigned.  If the namespace file is not specified, or
+     is empty, no new prefixes will be generated.
 
 #### Reject File
 
@@ -338,10 +346,17 @@ prefixes.
                         The counter used to generate new namespaces. (default=1).
   --namespace-id-zfill NAMESPACE_ID_ZFILL
                         The width of the counter used to generate new namespaces. (default=0).
+  --build-new-namespaces [BUILD_NEW_NAMESPACES]
+                        When True, create new namespaces. When False, use only
+                        existing namespaces. (default=True).
 ```
 
 The order is <prefix><uuid>-<counter>, such as `noBugQcoEt6xNnqGsHDXfTA-7`.   By default,
 the UUID is omitted, but the examples shown above were generated using the UUID.
+
+When `--build-new-namespaces=FALSE`, new namespaces will not be generated.  If
+the namespace file (`--namespace-file NAMESPACE_FILE`) is not specified or
+is empty, URI prefixes will not be generated.
 
 ### Language-Qualified Strings
 
@@ -807,6 +822,74 @@ kgtk import-ntriples \
 | n1:218 | n2:label | "That Seventies Show" |
 | n1 | prefix_expansion | "http://example.org/vocab/show/" |
 | n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+### Importing Without Generating New Namespace Prefixes
+
+When `--build-new-namespaces=False`, only the prefixes read from
+the namespace file will be used, and nonmatching URLs will not have
+new prefixes assigned.  If the namespace file is not specified, or
+s empty, no new prefixes will be generated.
+
+Reusing the date/times input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-dates.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "2021-01-21T23:04:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+~~~
+
+Import this file, generating new namespace prefixes (the default setting):
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+Import this file, without generating new namespace prefixes:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt \
+     --build-new-namespaces=False
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| http://example.org/vocab/show/218 | http://www.w3.org/2000/01/rdf-schema#label | ^2021-01-21T23:04:00 |
+
+Here is a namespace file with oneentry for the `rdf-schema` namespace:
+
+```
+kgtk cat -i ./examples/docs/import-ntriples-rdf-schema-namespace.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| rdf-schema | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+Importing the input file with the rdf-schema defined, but without
+generating any additional namespace prefixes:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt \
+     --namespace-file ./examples/docs/import-ntriples-rdf-schema-namespace.tsv \
+     --build-new-namespaces=False
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| http://example.org/vocab/show/218 | rdf-schema:label | ^2021-01-21T23:04:00 |
+| rdf-schema | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
 
 ### Importing with `--summary`
 

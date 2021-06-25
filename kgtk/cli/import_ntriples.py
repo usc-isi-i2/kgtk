@@ -78,6 +78,7 @@ def run(input_file: KGTKFiles,
         namespace_id_counter: int,
         namespace_id_zfill: int,
         output_only_used_namespaces: bool,
+        build_new_namespaces: bool,
 
         allow_lax_uri: bool,
         allow_unknown_datatype_iris: bool,
@@ -155,6 +156,7 @@ def run(input_file: KGTKFiles,
         print("--namespace-id-counter %s" % repr(namespace_id_counter), file=error_file, flush=True)
         print("--namespace-id-zfill %s" % repr(namespace_id_zfill), file=error_file, flush=True)
         print("--output-only-used-namespaces %s" % repr(output_only_used_namespaces), file=error_file, flush=True)
+        print("--build-new-namespaces %s" % repr(build_new_namespaces), file=error_file, flush=True)
 
         print("--allow-lax-uri %s" % repr(allow_lax_uri), file=error_file, flush=True)
         print("--allow-unknown-datatype-iris %s" % repr(allow_unknown_datatype_iris), file=error_file, flush=True)
@@ -198,6 +200,7 @@ def run(input_file: KGTKFiles,
             namespace_id_counter=namespace_id_counter,
             namespace_id_zfill=namespace_id_zfill,
             output_only_used_namespaces=output_only_used_namespaces,
+            build_new_namespaces=build_new_namespaces,
             newnode_prefix=newnode_prefix,
             newnode_use_uuid=newnode_use_uuid,
             newnode_counter=newnode_counter,
