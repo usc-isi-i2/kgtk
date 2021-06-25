@@ -615,7 +615,6 @@ cat examples/docs/import-ntriples-strings.nt
 <http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#ID> . # literal with XMLSchema ID datatype
 <http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#IDREF> . # literal with XMLSchema IDREF datatype
 <http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "That Seventies Show"^^<http://www.w3.org/2001/XMLSchema#NMTOKEN> . # literal with XMLSchema NMTOKEN datatype
->>>>>>> origin/issue/404/import-ntriples-invalid-datatype-iris
 ~~~
 
 Import this file:
@@ -627,22 +626,20 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | 'That Seventies Show'@en |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n2:218 | n3:label | "That Seventies Show" |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | 'That Seventies Show'@en |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 ### Importing Numbers
 
@@ -682,25 +679,23 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | 123.456 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | 123 |
-| n2:218 | n3:label | -123 |
-| n2:218 | n3:label | -123 |
-| n2:218 | n3:label | 123.456e20 |
-| n2:218 | n3:label | 123.456e20 |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | 123.456 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | 123 |
+| n1:218 | n2:label | -123 |
+| n1:218 | n2:label | -123 |
+| n1:218 | n2:label | 123.456e20 |
+| n1:218 | n2:label | 123.456e20 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 ### Importing Booleans
 
@@ -730,14 +725,12 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | True |
-| n2:218 | n3:label | False |
-| n2:218 | n3:label | False |
-| n2:218 | n3:label | True |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | True |
+| n1:218 | n2:label | False |
+| n1:218 | n2:label | False |
+| n1:218 | n2:label | True |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 ### Importing Dates and Times
 
@@ -764,11 +757,9 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | ^2021-01-21T23:04:00 |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 ### Importing with `--allow-lang-string-datatype`
 
@@ -800,10 +791,8 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 Importing this file with `--allow-lang-string-datatype`:
 
@@ -815,11 +804,9 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | "That Seventies Show" |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 ### Importing with `--allow-lang-string-datatype` and `--lang-string-tag TAG`
 
@@ -838,11 +825,9 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | 'That Seventies Show'@en |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | 'That Seventies Show'@en |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 To import as Mexican Spanish:
 
@@ -854,11 +839,9 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | 'That Seventies Show'@es-MX |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | 'That Seventies Show'@es-MX |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 To import as a KGTK string (the default behavior when `--lang-string-tag TAG`
 is not specified):
@@ -871,11 +854,9 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | "That Seventies Show" |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | "That Seventies Show" |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 ### Importing Without Generating New Namespace Prefixes
 
@@ -903,11 +884,9 @@ kgtk import-ntriples \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| n2:218 | n3:label | ^2021-01-21T23:04:00 |
-| n1 | prefix_expansion | "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |
-| n2 | prefix_expansion | "http://example.org/vocab/show/" |
-| n3 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 Import this file, without generating new namespace prefixes:
 
@@ -920,7 +899,6 @@ kgtk import-ntriples \
 | node1 | label | node2 |
 | -- | -- | -- |
 | http://example.org/vocab/show/218 | http://www.w3.org/2000/01/rdf-schema#label | ^2021-01-21T23:04:00 |
-| xml-schema-type | prefix_expansion | "http://www.w3.org/2001/XMLSchema#" |
 
 Here is a namespace file with oneentry for the `rdf-schema` namespace:
 
@@ -965,7 +943,7 @@ The following summary is produced:
     Processed 1 known namespaces.
     Processed 1 records.
     Rejected 1 records.
-    Wrote 4 records.
+    Wrote 2 records.
     Ignored 0 comments.
     Rejected 1 records with langString IRIs.
     Imported 0 records with unknown datatype IRIs.
@@ -982,7 +960,7 @@ kgtk import-ntriples --summary \
     Processed 1 known namespaces.
     Processed 1 records.
     Rejected 0 records.
-    Wrote 5 records.
+    Wrote 3 records.
     Ignored 0 comments.
     Rejected 0 records with langString IRIs.
     Imported 0 records with unknown datatype IRIs.
@@ -1008,7 +986,7 @@ The following summary is produced:
     Processed 1 known namespaces.
     Processed 1 records.
     Rejected 1 records.
-    Wrote 4 records.
+    Wrote 2 records.
     Ignored 0 comments.
     Rejected 1 records with langString IRIs.
     Imported 0 records with unknown datatype IRIs.

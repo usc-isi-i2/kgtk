@@ -234,7 +234,7 @@ class KgtkNtriples(KgtkFormat):
     namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     used_namespaces: typing.Set[str] = attr.ib(factory=set)
 
-    # These gets set in process(...):
+    # These get set as needed:
     converted_string_datatype_uri: str = attr.ib(default="")
     converted_lang_string_datatype_uri: str = attr.ib(default="")
     converted_number_datatype_uri: str = attr.ib(default="")
@@ -433,6 +433,29 @@ class KgtkNtriples(KgtkFormat):
     STRING_DATATYPE_IRI: str = '<http://www.w3.org/2001/XMLSchema#string>'
     NUMBER_DATATYPE_IRI: str = '<http://www.w3.org/2001/XMLSchema#number>'
                                                  
+    def get_converted_string_datatype_uri(self)->str:
+        if len(self.converted_string_datatype_uri) == 0 and self.build_datatype_column:
+            # Convert the string datatype IRI and cache it:
+            converted_string_datatype_uri_is_valid: bool
+            self.converted_string_datatype_uri, converted_string_datatype_uri_is_valid = self.convert_uri(self.STRING_DATATYPE_IRI, 0)
+            # TODO: fail if converted_string_datatype_uri_is_valid is False
+        return self.converted_string_datatype_uri
+
+    def get_converted_lang_string_datatype_uri(self)->str:
+        if len(self.converted_lang_string_datatype_uri) == 0 and self.build_datatype_column:
+            # Convert the langString datatype IRI and cache it:
+            converted_lang_string_datatype_uri_is_valid: bool
+            self.converted_lang_string_datatype_uri, converted_lang_string_datatype_uri_is_valid = self.convert_uri(self.LANG_STRING_DATATYPE_IRI, 0)
+            # TODO: fail if converted_lang_string_datatype_uri_is_valid is False
+        return self.converted_lang_string_datatype_uri
+
+    def get_converted_number_datatype_uri(self)->str:
+        if len(self.converted_number_datatype_uri) == 0 and self.build_datatype_column:
+            # Convert the number datatype IRI and cache it:
+            converted_number_datatype_uri_is_valid: bool
+            self.converted_number_datatype_uri, converted_number_datatype_uri_is_valid = self.convert_uri(self.NUMBER_DATATYPE_IRI, 0)
+            # TODO: fail if converted_number_datatype_uri_is_valid is False
+        return self.converted_number_datatype_uri
 
     def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
         # This is the subset of strictured literals that fits the
@@ -450,22 +473,31 @@ class KgtkNtriples(KgtkFormat):
         string: str = item[:uparrows]
         uri: str = item[uparrows+2:]
 
-        converted_uri: str
-        valid_uri: bool
-        converted_uri, valid_uri = self.convert_uri(uri, line_number)
-        if not valid_uri:
-            return item, False, ""
+        converted_uri: str = ""
+        valid_uri: bool = True
 
         if uri in self.STRING_XSD_DATATYPES:
             # Convert this to a KGTK string.
+            if self.build_datatype_column:
+                converted_uri, valid_uri = self.convert_uri(uri, line_number)
+                if not valid_uri:
+                    return item, False, ""
             return self.convert_string(string, line_number) + (converted_uri,)
 
         elif uri in self.NUMERIC_XSD_DATATYPES:
             # Convert this to a KGTK number:
-            return string[1:-1], True, uri
+            if self.build_datatype_column:
+                converted_uri, valid_uri = self.convert_uri(uri, line_number)
+                if not valid_uri:
+                    return item, False, ""
+            return string[1:-1], True, converted_uri
 
         elif uri == '<http://www.w3.org/2001/XMLSchema#boolean>':
             # Convert this to a KGTK boolean:
+            if self.build_datatype_column:
+                converted_uri, valid_uri = self.convert_uri(uri, line_number)
+                if not valid_uri:
+                    return item, False, ""
             return self.convert_boolean(item, string[1:-1], line_number) + (converted_uri,)
 
         elif uri == '<http://www.w3.org/2001/XMLSchema#dateTime>':
@@ -473,6 +505,10 @@ class KgtkNtriples(KgtkFormat):
             #
             # Note: the W3C XML Schema standard allows the now obsolete
             # end-of-day time "24:00:00".
+            if self.build_datatype_column:
+                converted_uri, valid_uri = self.convert_uri(uri, line_number)
+                if not valid_uri:
+                    return item, False, ""
             return '^' + string[1:-1], True, converted_uri
 
         # TODO: the "date" schema
@@ -486,16 +522,20 @@ class KgtkNtriples(KgtkFormat):
             if self.allow_lang_string_datatype:
                 if len(self.lang_string_tag) == 0 or self.lang_string_tag == self.LANG_STRING_TAG_NONE:
                     # Convert this to a KGTK string.
-                    return self.convert_string(string, line_number) + (self.converted_string_datatype_uri,)
+                    return self.convert_string(string, line_number) + (self.get_converted_string_datatype_uri(),)
                 else:
                     # Convert this to a KGTK language-qualified string.
-                    return self.convert_lq_string(string + "@" + self.lang_string_tag, line_number) + (converted_uri,)
+                    return self.convert_lq_string(string + "@" + self.lang_string_tag, line_number) + (self.get_converted_lang_string_datatype_uri(),)
             else:
                 self.rejected_lang_string_count += 1
                 return item, False, ""
 
         if self.allow_unknown_datatype_iris:
             self.unknown_datatype_iri_count += 1
+
+            converted_uri, valid_uri = self.convert_uri(uri, line_number)
+            if not valid_uri:
+                return item, False, ""
 
             if self.build_datatype_column:
                 return string, True, converted_uri
@@ -522,20 +562,20 @@ class KgtkNtriples(KgtkFormat):
         elif item.startswith("<") and item.endswith(">"):
             return self.convert_uri(item, line_number) + ("",)
         elif item.startswith('"') and item.endswith('"'):
-            return self.convert_string(item, line_number) + (self.converted_string_datatype_uri,)
+            return self.convert_string(item, line_number) + (self.get_converted_string_datatype_uri(),)
         elif item.startswith('"') and item.endswith(">"):
             return self.convert_structured_literal(item, line_number, ew)
         elif item.startswith('"'):
-            return self.convert_lq_string(item, line_number) + (self.converted_lang_string_datatype_uri,)
+            return self.convert_lq_string(item, line_number) + (self.get_converted_lang_string_datatype_uri(),)
         elif self.allow_turtle_quotes:
             if item.startswith("'") and item.endswith("'"):
-                return self.convert_string(item, line_number) + (self.converted_string_datatype_uri,)
+                return self.convert_string(item, line_number) + (self.get_converted_string_datatype_uri(),)
             elif item.startswith("'") and item.endswith(">"):
                 return self.convert_structured_literal(item, line_number, ew)
             elif item.startswith("'"):
-                return self.convert_lq_string(item, line_number) + (self.converted_lang_string_datatype_uri,)
+                return self.convert_lq_string(item, line_number) + (self.get_converted_lang_string_datatype_uri(),)
         elif item[0] in "+-0123456789.":
-            return self.convert_numeric(item, line_number, ew) + (self.converted_number_datatype_uri,)
+            return self.convert_numeric(item, line_number, ew) + (self.get_converted_number_datatype_uri(),)
 
         if self.verbose:
             print("Line %d: unrecognized item '%s'" %(line_number, item), file=self.error_file, flush=True)
@@ -709,21 +749,6 @@ class KgtkNtriples(KgtkFormat):
         comment_count: int = 0
         
         namespace_line_count: int = self.get_initial_namespaces()
-
-        # Convert the string datatype IRI and cache it:
-        converted_string_datatype_uri_is_valid: bool
-        self.converted_string_datatype_uri, converted_string_datatype_uri_is_valid = self.convert_uri(self.STRING_DATATYPE_IRI, 0)
-        # TODO: fail if converted_string_datatype_uri_is_valid is False
-
-        # Convert the langString datatype IRI and cache it:
-        converted_lang_string_datatype_uri_is_valid: bool
-        self.converted_lang_string_datatype_uri, converted_lang_string_datatype_uri_is_valid = self.convert_uri(self.LANG_STRING_DATATYPE_IRI, 0)
-        # TODO: fail if converted_lang_string_datatype_uri_is_valid is False
-
-        # Convert the number datatype IRI and cache it:
-        converted_number_datatype_uri_is_valid: bool
-        self.converted_number_datatype_uri, converted_number_datatype_uri_is_valid = self.convert_uri(self.NUMBER_DATATYPE_IRI, 0)
-        # TODO: fail if converted_number_datatype_uri_is_valid is False
 
         input_file_path: str
         for input_file_path in self.input_file_paths:
