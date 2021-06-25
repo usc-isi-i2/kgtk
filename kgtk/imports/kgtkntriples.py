@@ -234,12 +234,22 @@ class KgtkNtriples(KgtkFormat):
     namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     used_namespaces: typing.Set[str] = attr.ib(factory=set)
 
+    # These gets set in process(...):
+    converted_string_datatype_uri: str = attr.ib(default="")
+    converted_lang_string_datatype_uri: str = attr.ib(default="")
+    converted_number_datatype_uri: str = attr.ib(default="")
+
     output_line_count: int = attr.ib(default=0)
     unknown_datatype_iri_count: int = attr.ib(default=0)
     rejected_lang_string_count: int = attr.ib(default=0)
 
-    def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str):
-        output_row: typing.List[str] = [ node1, label, node2]
+    def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str, datatype: str):
+        output_row: typing.List[str]
+        if self.build_datatype_column:
+            output_row = [ node1, label, node2, datatype]
+        else:
+            output_row = [ node1, label, node2]
+
         if self.idbuilder is None:
             ew.write(output_row)
         else:
@@ -420,9 +430,11 @@ class KgtkNtriples(KgtkFormat):
     }
 
     LANG_STRING_DATATYPE_IRI: str = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString>"
+    STRING_DATATYPE_IRI: str = '<http://www.w3.org/2001/XMLSchema#string>'
+    NUMBER_DATATYPE_IRI: str = '<http://www.w3.org/2001/XMLSchema#number>'
                                                  
 
-    def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
+    def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
         # This is the subset of strictured literals that fits the
         # pattern "STRING"^^<URI>.
 
@@ -433,29 +445,35 @@ class KgtkNtriples(KgtkFormat):
             # This shouldn't happen!
             if self.verbose:
                 print("Line %d: no uparrows in '%s'." % (line_number, item), file=self.error_file, flush=True)
-            return item, False
+            return item, False, ""
 
         string: str = item[:uparrows]
         uri: str = item[uparrows+2:]
 
+        converted_uri: str
+        valid_uri: bool
+        converted_uri, valid_uri = self.convert_uri(uri, line_number)
+        if not valid_uri:
+            return item, False, ""
+
         if uri in self.STRING_XSD_DATATYPES:
             # Convert this to a KGTK string.
-            return self.convert_string(string, line_number)
+            return self.convert_string(string, line_number) + (converted_uri,)
 
         elif uri in self.NUMERIC_XSD_DATATYPES:
             # Convert this to a KGTK number:
-            return string[1:-1], True
+            return string[1:-1], True, uri
 
         elif uri == '<http://www.w3.org/2001/XMLSchema#boolean>':
             # Convert this to a KGTK boolean:
-            return self.convert_boolean(item, string[1:-1], line_number)
+            return self.convert_boolean(item, string[1:-1], line_number) + (converted_uri,)
 
         elif uri == '<http://www.w3.org/2001/XMLSchema#dateTime>':
             # Convert this to a KGTK date-and-time:
             #
             # Note: the W3C XML Schema standard allows the now obsolete
             # end-of-day time "24:00:00".
-            return '^' + string[1:-1], True
+            return '^' + string[1:-1], True, converted_uri
 
         # TODO: the "date" schema
         # Problem:  it allows timezone offsets after dates without times!
@@ -468,70 +486,67 @@ class KgtkNtriples(KgtkFormat):
             if self.allow_lang_string_datatype:
                 if len(self.lang_string_tag) == 0 or self.lang_string_tag == self.LANG_STRING_TAG_NONE:
                     # Convert this to a KGTK string.
-                    return self.convert_string(string, line_number)
+                    return self.convert_string(string, line_number) + (self.converted_string_datatype_uri,)
                 else:
                     # Convert this to a KGTK language-qualified string.
-                    return self.convert_lq_string(string + "@" + self.lang_string_tag, line_number)
+                    return self.convert_lq_string(string + "@" + self.lang_string_tag, line_number) + (converted_uri,)
             else:
                 self.rejected_lang_string_count += 1
-                return item, False
+                return item, False, ""
 
         if self.allow_unknown_datatype_iris:
-            converted_uri: str
-            valid: bool
-            converted_uri, valid = self.convert_uri(uri, line_number)
-            if not valid:
-                return item, False
-
-            new_node_symbol: str = self.generate_new_node_symbol()
-            self.write_row(ew, new_node_symbol, self.structured_value_label, string)
-            self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri)
-
             self.unknown_datatype_iri_count += 1
-            
-            return new_node_symbol, True
+
+            if self.build_datatype_column:
+                return string, True, converted_uri
+            else:
+                new_node_symbol: str = self.generate_new_node_symbol()
+                self.write_row(ew, new_node_symbol, self.structured_value_label, string, "")
+                self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri, "")
+                return new_node_symbol, True, ""
         
         # Give up on this unrecognized structured literal.
-        return item, False
+        return item, False, ""
 
     def convert_numeric(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         return item, True
 
-    def convert(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
+    def convert(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
         """
         Convert an ntriples item to KGTK format.
 
         TODO: update output_line_count for row written here.
         """
         if item.startswith("_:"):
-            return self.convert_blank_node(item)
+            return self.convert_blank_node(item) + ("",)
         elif item.startswith("<") and item.endswith(">"):
-            return self.convert_uri(item, line_number)
+            return self.convert_uri(item, line_number) + ("",)
         elif item.startswith('"') and item.endswith('"'):
-            return self.convert_string(item, line_number)
+            return self.convert_string(item, line_number) + (self.converted_string_datatype_uri,)
         elif item.startswith('"') and item.endswith(">"):
             return self.convert_structured_literal(item, line_number, ew)
         elif item.startswith('"'):
-            return self.convert_lq_string(item, line_number)
+            return self.convert_lq_string(item, line_number) + (self.converted_lang_string_datatype_uri,)
         elif self.allow_turtle_quotes:
             if item.startswith("'") and item.endswith("'"):
-                return self.convert_string(item, line_number)
+                return self.convert_string(item, line_number) + (self.converted_string_datatype_uri,)
             elif item.startswith("'") and item.endswith(">"):
                 return self.convert_structured_literal(item, line_number, ew)
             elif item.startswith("'"):
-                return self.convert_lq_string(item, line_number)
+                return self.convert_lq_string(item, line_number) + (self.converted_lang_string_datatype_uri,)
         elif item[0] in "+-0123456789.":
-            return self.convert_numeric(item, line_number, ew)
+            return self.convert_numeric(item, line_number, ew) + (self.converted_number_datatype_uri,)
 
         if self.verbose:
             print("Line %d: unrecognized item '%s'" %(line_number, item), file=self.error_file, flush=True)
 
-        return item, False
+        return item, False, ""
     
-    def convert_and_validate(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
+    def convert_and_validate(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
         result: str
         is_ok: bool
-        result, is_ok = self.convert(item, line_number, ew)
+        datatype: str
+        result, is_ok, datatype = self.convert(item, line_number, ew)
 
         # Just a little bit of paranoia here regarding tabs and ends-of-lines:
         #
@@ -549,8 +564,8 @@ class KgtkNtriples(KgtkFormat):
                 if self.verbose:
                     print("Input line %d: imported value '%s' (from '%s') is invalid." % (line_number, result, item),
                           file=self.error_file, flush=True)
-                return result, False
-        return result, is_ok
+                return result, False, ""
+        return result, is_ok, datatype
             
 
     def get_default_namespaces(self)->int:
@@ -616,9 +631,9 @@ class KgtkNtriples(KgtkFormat):
         for namespace_id in sorted(self.namespace_ids.keys()):
             if self.output_only_used_namespaces:
                 if namespace_id in self.used_namespaces:
-                    self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"')
+                    self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"', "")
             else:
-                self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"')
+                self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"', "")
 
     def write_updated_namespace_file(self):
         # Is there an updated namespaces file?
@@ -657,12 +672,12 @@ class KgtkNtriples(KgtkFormat):
 
 
     def process(self):
-        output_column_names: typing.List[str]
+        output_column_names: typing.List[str] = self.COLUMN_NAMES.copy()
+        if self.build_datatype_column:
+            output_column_names.append(self.datatype_column_name)
         if self.build_id and self.idbuilder_options is not None:
-            self.idbuilder = KgtkIdBuilder.from_column_names(self.COLUMN_NAMES, self.idbuilder_options)
+            self.idbuilder = KgtkIdBuilder.from_column_names(output_column_names, self.idbuilder_options)
             output_column_names = self.idbuilder.column_names
-        else:
-            output_column_names = self.COLUMN_NAMES
 
         if self.verbose:
             print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
@@ -694,7 +709,22 @@ class KgtkNtriples(KgtkFormat):
         comment_count: int = 0
         
         namespace_line_count: int = self.get_initial_namespaces()
-            
+
+        # Convert the string datatype IRI and cache it:
+        converted_string_datatype_uri_is_valid: bool
+        self.converted_string_datatype_uri, converted_string_datatype_uri_is_valid = self.convert_uri(self.STRING_DATATYPE_IRI, 0)
+        # TODO: fail if converted_string_datatype_uri_is_valid is False
+
+        # Convert the langString datatype IRI and cache it:
+        converted_lang_string_datatype_uri_is_valid: bool
+        self.converted_lang_string_datatype_uri, converted_lang_string_datatype_uri_is_valid = self.convert_uri(self.LANG_STRING_DATATYPE_IRI, 0)
+        # TODO: fail if converted_lang_string_datatype_uri_is_valid is False
+
+        # Convert the number datatype IRI and cache it:
+        converted_number_datatype_uri_is_valid: bool
+        self.converted_number_datatype_uri, converted_number_datatype_uri_is_valid = self.convert_uri(self.NUMBER_DATATYPE_IRI, 0)
+        # TODO: fail if converted_number_datatype_uri_is_valid is False
+
         input_file_path: str
         for input_file_path in self.input_file_paths:
             input_line_count: int = 0
@@ -732,18 +762,19 @@ class KgtkNtriples(KgtkFormat):
 
                 node1: str
                 ok_1: bool
-                node1, ok_1 = self.convert_and_validate(row[0], input_line_count, ew)
+                node1, ok_1, _ = self.convert_and_validate(row[0], input_line_count, ew)
 
                 label: str
                 ok_2: bool
-                label, ok_2 = self.convert_and_validate(row[1], input_line_count, ew)
+                label, ok_2, _ = self.convert_and_validate(row[1], input_line_count, ew)
 
                 node2: str
                 ok_3: bool
-                node2, ok_3 = self.convert_and_validate(row[2], input_line_count, ew)
+                datatype: str
+                node2, ok_3, datatype = self.convert_and_validate(row[2], input_line_count, ew)
 
                 if ok_1 and ok_2 and ok_3:
-                    self.write_row(ew, node1, label, node2)
+                    self.write_row(ew, node1, label, node2, datatype)
                 else:
                     if rw is not None:
                         rw.write(line)
@@ -865,7 +896,7 @@ class KgtkNtriples(KgtkFormat):
 
         parser.add_argument(      "--build-datatype-column", dest="build_datatype_column",
                                   help="When True, and --datatype-column-name DATATYPE_COLUMN_NAME is not empty, build a column with RDF datatypes. (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_NEW_NAMESPACES)
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_DATATYPE_COLUMN)
 
         parser.add_argument(      "--datatype-column-name", dest="datatype_column_name",
                                   help="The name of the column with RDF datatypes. (default=%(default)s).",
