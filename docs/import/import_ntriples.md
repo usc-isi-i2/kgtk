@@ -328,7 +328,7 @@ as shown in the preceeding examples.
 
 ##### Lax URIs
 
-The URI standard requires that URIs staart with a schema, such as
+The URI standard requires that URIs start with a schema, such as
 "http:" or "https:". import-ntriples facilitates processing ntriples records that
 do not strictly adhere to the standard, such as having just "www.isi.edu".
 This enhancement is controlled with `--allow-lax-uri`, which defaults
@@ -427,12 +427,20 @@ wild that do use this datatype.  Using the `--allow-lang-string-datatype` and
 `--lang-string-tag LANG_STRING_TAG` options, this datatype can be imported to
 either the KGTK string or language-qualified string datatypes.
 
-Other ntriples structured literals are processed by:
- * creating a new, unique node ID,
- * substituting the new node ID for the structured literal in the edge being imported,
- * writing an addional edge in the KGTK output file with the value portion of the structured literal,
- * and writing an addional edge in the KGTK output file with the data type URI portion of the structured literal.
-   * The outgoing URI is subject to URI prefix replacement, as described above.
+Other ntriples structured literals are processed by one of two methods:
+
+ * When `--build-datatype-column=True`:
+   * The value portion of the structured literal will be written as a string in
+     the `node2` column of the edge in the KGTK output file.
+   * A fourth column (by default, `datatype`) in the output edge will be filled with the datatype URI portion of the structured literal.
+     * The outgoing URI is subject to URI prefix replacement, as described above.
+
+ * Otherwise, the following steps will take place.
+     * A new, unique node ID will be created.
+     * The new new node ID will be substituted for the structured literal in the edge being imported,
+     * An additional edge in the KGTK output file will be written with the value portion of the structured literal,
+     * An additional edge in the KGTK output file will be written with the datatype URI portion of the structured literal.
+       * The outgoing URI is subject to URI prefix replacement, as described above.
 
 For example, if the following record appeared in the input file:
 ```
@@ -443,7 +451,7 @@ _:g38 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#ti
 _:g38 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#year> "2014"^^<http://www.w3.org/2001/XMLSchema#gYear> .
 ```
 
-Then the output might look like this:
+Then the output might look like this when `--build-datatype-colum=False`:
 ```
 JAABmv8vGfJZZasjV6DAXY:g38     rdf:type        ont:LDCTimeComponent
 kgtk:nodeJAABmv8vGfJZZasjV6DAXY-1       kgtk:structured_value   "---19"
@@ -456,6 +464,15 @@ XJAABmv8vGfJZZasjV6DAXY:g38     ont:timeType    "ON"
 kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3       kgtk:structured_value   "2014"
 kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3       kgtk:structured_uri     xml-schema-type:gYear
 XJAABmv8vGfJZZasjV6DAXY:g38     ont:year        kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3
+```
+
+Then the output might look like this when `--build-datatype-colum=True`:
+```
+JAABmv8vGfJZZasjV6DAXY:g38     rdf:type        ont:LDCTimeComponent	
+XJAABmv8vGfJZZasjV6DAXY:g38     ont:day "---19"	xml-schema-type:gDay
+XJAABmv8vGfJZZasjV6DAXY:g38     ont:month       "--04"	xml-schema-type:gMonth
+XJAABmv8vGfJZZasjV6DAXY:g38     ont:timeType    "ON"	xml-schema-type:string
+XJAABmv8vGfJZZasjV6DAXY:g38     ont:year        "2014"	xml-schema-type:gYear
 ```
 
 This process is controlled by the following command line options:
@@ -479,6 +496,13 @@ This process is controlled by the following command line options:
   --newnode-zfill NEWNODE_ZFILL
                         The width of the counter used to generate new nodes for ntriple
                         structured literals. (default=0).
+  --build-datatype-column [BUILD_DATATYPE_COLUMN]
+                        When True, and --datatype-column-name
+                        DATATYPE_COLUMN_NAME is not empty, build a column with
+                        RDF datatypes. (default=False).
+  --datatype-column-name DATATYPE_COLUMN_NAME
+                        The name of the column with RDF datatypes.
+                        (default=datatype).
 ```
 
 ### ID Management
