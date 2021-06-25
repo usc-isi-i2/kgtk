@@ -376,7 +376,7 @@ This could result in `kgtk import-ntriples --validate` reporting a failure.
 
 ### Structured Literal Imports
 
-ntriples files carry many data types as structured literals.  There are two portions
+RDF 1.1 N-Triples files carry many data types as structured literals.  There are two portions
 to each structured literal:  a value string, and a URI that identifies the data type.
 
 `kgtk import-ntriples` can import the following ntriples data types to KGTK data types,
@@ -384,13 +384,39 @@ resulting in a single KGTK edge in the output file:
 
 | ntriples URI | KGTK Data Type |
 | ------------ | -------------- |
-| <http://www.w3.org/2001/XMLSchema#string> | string |
-| <http://www.w3.org/2001/XMLSchema#int> | number |
-| <http://www.w3.org/2001/XMLSchema#double> | number |
-| <http://www.w3.org/2001/XMLSchema#float> | number |
-| <http://www.w3.org/2001/XMLSchema#decimal> | number |
 | <http://www.w3.org/2001/XMLSchema#boolean> | boolean |
+| <http://www.w3.org/2001/XMLSchema#byte> | number |
 | <http://www.w3.org/2001/XMLSchema#dateTime> | date-and-times |
+| <http://www.w3.org/2001/XMLSchema#decimal> | number |
+| <http://www.w3.org/2001/XMLSchema#double> | number |
+| <http://www.w3.org/2001/XMLSchema#ENTITY> | string |
+| <http://www.w3.org/2001/XMLSchema#float> | number |
+| <http://www.w3.org/2001/XMLSchema#ID> | string |
+| <http://www.w3.org/2001/XMLSchema#IDREF> | string |
+| <http://www.w3.org/2001/XMLSchema#int> | number |
+| <http://www.w3.org/2001/XMLSchema#integer> | number |
+| <http://www.w3.org/2001/XMLSchema#language> | string |
+| <http://www.w3.org/2001/XMLSchema#Name> | string |
+| <http://www.w3.org/2001/XMLSchema#NCName> | string |
+| <http://www.w3.org/2001/XMLSchema#negativeInteger> | number |
+| <http://www.w3.org/2001/XMLSchema#NMTOKEN> | string |
+| <http://www.w3.org/2001/XMLSchema#nonNegativeInteger> | number |
+| <http://www.w3.org/2001/XMLSchema#nonPositiveInteger> | number |
+| <http://www.w3.org/2001/XMLSchema#normalizedString> | string |
+| <http://www.w3.org/2001/XMLSchema#positiveInteger> | number |
+| <http://www.w3.org/2001/XMLSchema#short> | number |
+| <http://www.w3.org/2001/XMLSchema#string> | string |
+| <http://www.w3.org/2001/XMLSchema#token> | string |
+| <http://www.w3.org/2001/XMLSchema#unsignedByte> | number |
+| <http://www.w3.org/2001/XMLSchema#unsignedInt> | number |
+| <http://www.w3.org/2001/XMLSchema#unsignedLong> | number |
+| <http://www.w3.org/2001/XMLSchema#unsignedShort> | number |
+
+The special RDF datatype `<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString>` should
+never explicitly appear in a RDF 1.1 N-Triples file.  However, we have observed files in the
+wild that do use this datatype.  Using the `--allow-lang-string-datatype` and
+`--lang-string-tag LANG_STRING_TAG` options, this datatype can be imported to
+either the KGTK string or language-qualified string datatypes.
 
 Other ntriples structured literals are processed by:
  * creating a new, unique node ID,
