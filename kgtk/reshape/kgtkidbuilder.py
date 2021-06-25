@@ -238,7 +238,7 @@ class KgtkIdBuilder(KgtkFormat):
         node1_column_idx, label_column_idx, node2_column_idx, id_column_idx = \
             KgtkReader.get_special_columns(column_name_map, "", "idbuilder")
 
-        return cls.new1(column_names, column_name_map, node1_column_idx, label_column_idx, node2_column_idx, id_column_idx, options)
+        return cls.new1(column_names.copy(), column_name_map, node1_column_idx, label_column_idx, node2_column_idx, id_column_idx, options)
 
     @classmethod
     def new1(cls,
