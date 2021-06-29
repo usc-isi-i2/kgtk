@@ -170,6 +170,7 @@ class KgtkQuery(object):
         self.loglevel = loglevel
         self.force = force
         self.parameters = parameters
+        self.defer_params = False
         self.index_mode = index.lower()
         
         if query is None:
@@ -259,7 +260,13 @@ class KgtkQuery(object):
     def get_parameter_value(self, name):
         value = self.parameters.get(name)
         if value is None:
-            raise Exception("undefined query parameter: '%s'" % name)
+            if self.defer_params:
+                # value will be provided later, just use the parameter name as its value for now;
+                # we use a single-element tuple to mark it as a place holder:
+                value = (name,)
+                self.parameters[name] = value
+            else:
+                raise Exception("undefined query parameter: '%s'" % name)
         return value
 
     def get_pattern_clause_graph(self, clause):

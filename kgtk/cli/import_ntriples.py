@@ -100,6 +100,9 @@ def run(input_file: KGTKFiles,
 
         build_id: bool,
 
+        build_datatype_column: bool,
+        datatype_column_name: str,
+
         validate: bool,
         summary: bool,
 
@@ -178,6 +181,9 @@ def run(input_file: KGTKFiles,
         
         print("--build-id=%s" % repr(build_id), file=error_file, flush=True)
 
+        print("--build-datatype-column %s" % repr(build_datatype_column), file=error_file, flush=True)
+        print("--datatype-column-name %s" % repr(datatype_column_name), file=error_file, flush=True)
+
         print("--validate=%s" % repr(validate), file=error_file, flush=True)
         print("--summary=%s" % repr(summary), file=error_file, flush=True)
         
@@ -216,6 +222,8 @@ def run(input_file: KGTKFiles,
             structured_value_label=structured_value_label,
             structured_uri_label=structured_uri_label,
             build_id=build_id,
+            build_datatype_column=build_datatype_column,
+            datatype_column_name=datatype_column_name,
             validate=validate,
             summary=summary,
             override_uuid=override_uuid,
