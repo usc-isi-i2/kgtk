@@ -80,6 +80,7 @@ class ElasticsearchManager(object):
         property_count = None
         class_count = None
         context = None
+        is_human = False
 
         _pagerank = 0.0
 
@@ -136,7 +137,8 @@ class ElasticsearchManager(object):
                                                                  ascii_labels=ascii_labels,
                                                                  property_count=property_count,
                                                                  class_count=class_count,
-                                                                 context=context
+                                                                 context=context,
+                                                                 is_human=is_human
                                                                  )
                             # initialize for next node
                             _labels = dict()
@@ -161,6 +163,7 @@ class ElasticsearchManager(object):
                             property_count = None
                             class_count = None
                             context = None
+                            is_human = False
 
                         qnode_statement_count += 1
                         if vals[label_id] in labels:
@@ -260,6 +263,8 @@ class ElasticsearchManager(object):
                             class_count = vals[node2_id]
                         elif vals[label_id] == 'context':
                             context = vals[node2_id]
+                        elif vals[label_id] == 'P31' and vals[node2_id] == 'Q5':
+                            is_human = True
 
             # do one more write for last node
             ElasticsearchManager._write_one_node(_labels=_labels,
@@ -283,7 +288,8 @@ class ElasticsearchManager(object):
                                                  ascii_labels=ascii_labels,
                                                  property_count=property_count,
                                                  class_count=class_count,
-                                                 context=context
+                                                 context=context,
+                                                 is_human=is_human
                                                  )
         except:
             print(traceback.print_exc())
@@ -321,6 +327,7 @@ class ElasticsearchManager(object):
         property_count = kwargs['property_count']
         class_count = kwargs['class_count']
         context = kwargs['context']
+        is_human = kwargs['is_human']
 
         _labels = {}
         _aliases = {}
@@ -329,12 +336,19 @@ class ElasticsearchManager(object):
         _wikipedia_anchor_text = {}
         _abbreviated_name = {}
         _redirect_text = {}
+        en_labels_aliases = set()
 
         for k in labels:
             _labels[k] = list(labels[k])
+            if is_human:
+                if k == 'en':
+                    en_labels_aliases.update(_labels[k])
 
         for k in aliases:
             _aliases[k] = list(aliases[k])
+            if is_human:
+                if k == 'en':
+                    en_labels_aliases.update(_aliases[k])
 
         for k in descriptions:
             _descriptions[k] = list(descriptions[k])
@@ -345,11 +359,15 @@ class ElasticsearchManager(object):
         for k in wikipedia_anchor_text:
             _wikipedia_anchor_text[k] = list(wikipedia_anchor_text[k])
 
-        for k in abbreviated_name:
-            _abbreviated_name[k] = list(abbreviated_name[k])
+        # for k in abbreviated_name:
+        #     _abbreviated_name[k] = list(abbreviated_name[k])
 
         for k in redirect_text:
             _redirect_text[k] = list(redirect_text[k])
+
+        abbreviated_names = []
+        for name in en_labels_aliases:
+            abbreviated_names.extend(ElasticsearchManager.generate_abbreviations(name))
 
         if len(_labels) > 0 or len(_aliases) > 0 or len(_descriptions) > 0:
 
@@ -361,7 +379,6 @@ class ElasticsearchManager(object):
                  'statements': qnode_statement_count,
                  'wikitable_anchor_text': _wikitable_anchor_text,
                  'wikipedia_anchor_text': _wikipedia_anchor_text,
-                 'abbreviated_name': _abbreviated_name,
                  'redirect_text': _redirect_text,
                  'qnode_alias': prev_node
                  }
@@ -390,6 +407,8 @@ class ElasticsearchManager(object):
                 _['property_count'] = property_count
             if context:
                 _['context'] = context
+            if len(abbreviated_names) > 0:
+                _['abbreviated_name'] = {'en': abbreviated_names}
             output_file.write(json.dumps(_))
 
             output_file.write('\n')
@@ -837,3 +856,43 @@ class ElasticsearchManager(object):
                         "search_analyzer": "edge_ngram_search_analyzer"
                     }
         return _mapping
+
+    @staticmethod
+    def generate_abbreviations(name: str) -> List[str]:
+        '''
+        Helper function to generate the abbreviation.
+        Input: name_split: List of the words in a name
+        Output: Abbreviated Name
+        '''
+        name_split = name.split()
+        abbreviated_names = set()
+
+        abbr_label = ''
+        for word in name_split[:-1]:
+            abbr_label += word[0].upper() + '.' + ' '
+        abbr_label += name_split[-1]
+
+        abbreviated_names.add(abbr_label)
+
+        if len(name_split) >= 2:
+            abbr_label_end = name_split[-1] + ',' + ' '
+            for word in name_split[:-1]:
+                abbr_label_end += word[0].upper() + '.' + ' '
+
+            abbreviated_names.add(abbr_label_end)
+
+        for i in range(len(name_split) - 1):
+            abbreviated_names.add(ElasticsearchManager._generate_abbr(name_split, i))
+
+        return list(abbreviated_names)
+
+    @staticmethod
+    def _generate_abbr(name_split: List[str], word_index: int) -> str:
+        abbr_label = ''
+        for i in range(len(name_split) - 1):
+            if i != word_index:
+                abbr_label += name_split[i] + ' '
+            else:
+                abbr_label += name_split[i][0].upper() + '.' + ' '
+        abbr_label += name_split[-1]
+        return abbr_label
