@@ -365,9 +365,9 @@ class ElasticsearchManager(object):
         for k in redirect_text:
             _redirect_text[k] = list(redirect_text[k])
 
-        abbreviated_names = []
+        abbreviated_names = set()
         for name in en_labels_aliases:
-            abbreviated_names.extend(ElasticsearchManager.generate_abbreviations(name))
+            abbreviated_names.update(ElasticsearchManager.generate_abbreviations(name))
 
         if len(_labels) > 0 or len(_aliases) > 0 or len(_descriptions) > 0:
 
@@ -408,7 +408,7 @@ class ElasticsearchManager(object):
             if context:
                 _['context'] = context
             if len(abbreviated_names) > 0:
-                _['abbreviated_name'] = {'en': abbreviated_names}
+                _['abbreviated_name'] = {'en': list(abbreviated_names)}
             output_file.write(json.dumps(_))
 
             output_file.write('\n')
