@@ -662,8 +662,37 @@ class KgtkValue(KgtkFormat):
     # SI units taken from:
     # http://www.csun.edu/~vceed002/ref/measurement/units/units.pdf
     #
-    # Note: if Q were in this list, it would conflict with Wikidata nodes (below).
-    si_unit_pat: str = r'(?:m|kg|s|C|K|mol|cd|F|M|A|N|ohms|V|J|Hz|lx|H|Wb|V|W|Pa)'
+    # Base units:
+    # m         meter [metre] (distance)
+    # kg        kilogram (mass)
+    # s         second (time)
+    # C         coulomb (electric charge) (Note: derived, electrical current is the base)
+    # K         Kelvin (temperature)
+    # mol       mole (amount of a substance)
+    # cd        candela (luminous inensity)
+
+    # Derived units:
+    # F         farad (capacitance) = C2.s2/kg.m2
+    # M         molar (concentration) = mol/m3/1000 (Note: SI coherent unit is mol/m3)
+    # A         ampere (electric current) = C/s
+    # N         newton (force) = kg.m/s2
+    # ohms      ohms [should be greek omega] (electric resistance) = kg.m2/C2.s
+    # V         volt (electomotive force, electric potential difference) = kg.m2/C.s2
+    # J         joule (energy, heat, work) = kg.m2/s2
+    # Hz        hertz (frequency) = s-1
+    # lx        lux (illumination) = cd/m2
+    # H         henry (inductance) = kg.m2/C2
+    # Wb        weber (magnetic flux) = kg.m2/C.s
+    # W         watt (power) = kg.m2/s3
+    # Pa        pascal (pressure) = kg/m.s2
+    #
+    # NOTE: if Q were in this list, it would conflict with Wikidata nodes (below).
+
+    # The SI units are combined with period (".") for multiplication,
+    # slash ("/") for division, and numbers for powers (m2 == m ^ 2,
+    # s-1 == 1 / s).  Multiplication is higher priority than division,
+    # so kg.m2/C.s is (kg * m^2) / (C * s).
+    si_unit_pat: str = r'(?:m|kg|s|C|K|mol|cd|F|M|A|N|ohms|V|J|Hz|lx|H|Wb|W|Pa)'
     si_power_pat: str = r'(?:-1|2|3)' # Might need more.
     si_combiner_pat: str = r'[./]'
     si_pat: str = r'(?P<si_units>{si_unit}{si_power}?(?:{si_combiner}{si_unit}{si_power}?)*)'.format(si_unit=si_unit_pat,

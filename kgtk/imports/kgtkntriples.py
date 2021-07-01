@@ -514,10 +514,13 @@ class KgtkNtriples(KgtkFormat):
         # TODO: the "date" schema
         # Problem:  it allows timezone offsets after dates without times!
 
-        # Exposed langString datatypes are forbidden by the RDF 1.1 N-Triples
-        # specification (and by the RDF 1.1 Turtle specification), but they
-        # may occur in the wild anyway.  If we are so inclined, transform the
-        # literal to an ordinary KGTK string.
+        # Exposed langString datatypes are forbidden by RDF when not
+        # accompanied with a language tag.  The RDF 1.1 N-Triples)
+        # specification (and the RDF 1.1 Turtle specification) allow a
+        # a literal to have a datatype IRI or a language tag, but not
+        # both. Nonetheless, langString IRIs have been observed in the
+        # wild.  If we are so inclined, transform the literal to a
+        # KGTK string or language-qualified string.
         if uri == self.LANG_STRING_DATATYPE_IRI:
             if self.allow_lang_string_datatype:
                 if len(self.lang_string_tag) == 0 or self.lang_string_tag == self.LANG_STRING_TAG_NONE:
