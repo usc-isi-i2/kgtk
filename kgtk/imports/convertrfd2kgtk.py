@@ -54,46 +54,46 @@ class ConvertRdf2Kgtk(KgtkFormat):
     # https://www.w3.org/2011/rdf-wg/wiki/XSD_Datatypes
     # https://www.w3.org/TR/xmlschema-2/
 
-    XSD_DATATYPE_IRI_PREFIX: str = '<http://www.w3.org/2001/XMLSchema#'
-
-    STRING_DATATYPE_IRI: str = XSD_DATATYPE_IRI_PREFIX + 'string>'
-    NUMBER_DATATYPE_IRI: str = XSD_DATATYPE_IRI_PREFIX + 'number>'
-    BOOLEAN_DATATYPE_IRI: str = XSD_DATATYPE_IRI_PREFIX + 'boolean>'
-    DATETIME_DATATYPE_IRI: str = XSD_DATATYPE_IRI_PREFIX + 'dateTime>'
+    XSD_DATATYPE_IRI_PREFIX: str = 'http://www.w3.org/2001/XMLSchema#'
+ 
+    STRING_DATATYPE_IRI: str = XSD_DATATYPE_IRI_PREFIX + 'string'
+    NUMBER_DATATYPE_IRI: str = XSD_DATATYPE_IRI_PREFIX + 'number'
+    BOOLEAN_DATATYPE_IRI: str = XSD_DATATYPE_IRI_PREFIX + 'boolean'
+    DATETIME_DATATYPE_IRI: str = XSD_DATATYPE_IRI_PREFIX + 'dateTime'
 
     NUMERIC_XSD_DATATYPES: typing.List[str] = [
-        XSD_DATATYPE_IRI_PREFIX + 'decimal>',
-        XSD_DATATYPE_IRI_PREFIX + 'integer>',
-        XSD_DATATYPE_IRI_PREFIX + 'int>',
-        XSD_DATATYPE_IRI_PREFIX + 'short>',
-        XSD_DATATYPE_IRI_PREFIX + 'byte>',
-        XSD_DATATYPE_IRI_PREFIX + 'nonNegativeInteger>',
-        XSD_DATATYPE_IRI_PREFIX + 'positiveInteger>',
-        XSD_DATATYPE_IRI_PREFIX + 'unsignedLong>',
-        XSD_DATATYPE_IRI_PREFIX + 'unsignedInt>',
-        XSD_DATATYPE_IRI_PREFIX + 'unsignedShort>',
-        XSD_DATATYPE_IRI_PREFIX + 'unsignedByte>',
-        XSD_DATATYPE_IRI_PREFIX + 'nonPositiveInteger>',
-        XSD_DATATYPE_IRI_PREFIX + 'negativeInteger>',
-        XSD_DATATYPE_IRI_PREFIX + 'double>',
-        XSD_DATATYPE_IRI_PREFIX + 'float>',
+        XSD_DATATYPE_IRI_PREFIX + 'decimal',
+        XSD_DATATYPE_IRI_PREFIX + 'integer',
+        XSD_DATATYPE_IRI_PREFIX + 'int',
+        XSD_DATATYPE_IRI_PREFIX + 'short',
+        XSD_DATATYPE_IRI_PREFIX + 'byte',
+        XSD_DATATYPE_IRI_PREFIX + 'nonNegativeInteger',
+        XSD_DATATYPE_IRI_PREFIX + 'positiveInteger',
+        XSD_DATATYPE_IRI_PREFIX + 'unsignedLong',
+        XSD_DATATYPE_IRI_PREFIX + 'unsignedInt',
+        XSD_DATATYPE_IRI_PREFIX + 'unsignedShort',
+        XSD_DATATYPE_IRI_PREFIX + 'unsignedByte',
+        XSD_DATATYPE_IRI_PREFIX + 'nonPositiveInteger',
+        XSD_DATATYPE_IRI_PREFIX + 'negativeInteger',
+        XSD_DATATYPE_IRI_PREFIX + 'double',
+        XSD_DATATYPE_IRI_PREFIX + 'float',
     ]
 
     STRING_XSD_DATATYPES: typing.List[str] = [
-        XSD_DATATYPE_IRI_PREFIX + 'string>',
-        XSD_DATATYPE_IRI_PREFIX + 'normalizedString>',
-        XSD_DATATYPE_IRI_PREFIX + 'token>',
-        XSD_DATATYPE_IRI_PREFIX + 'language>',
-        XSD_DATATYPE_IRI_PREFIX + 'Name>',
-        XSD_DATATYPE_IRI_PREFIX + 'NCName>',
-        XSD_DATATYPE_IRI_PREFIX + 'ENTITY>',
-        XSD_DATATYPE_IRI_PREFIX + 'ID>',
-        XSD_DATATYPE_IRI_PREFIX + 'IDREF>',
-        XSD_DATATYPE_IRI_PREFIX + 'NMTOKEN>',
+        XSD_DATATYPE_IRI_PREFIX + 'string',
+        XSD_DATATYPE_IRI_PREFIX + 'normalizedString',
+        XSD_DATATYPE_IRI_PREFIX + 'token',
+        XSD_DATATYPE_IRI_PREFIX + 'language',
+        XSD_DATATYPE_IRI_PREFIX + 'Name',
+        XSD_DATATYPE_IRI_PREFIX + 'NCName',
+        XSD_DATATYPE_IRI_PREFIX + 'ENTITY',
+        XSD_DATATYPE_IRI_PREFIX + 'ID',
+        XSD_DATATYPE_IRI_PREFIX + 'IDREF',
+        XSD_DATATYPE_IRI_PREFIX + 'NMTOKEN',
     ]
 
-    RDF_DATATYPE_IRI_PREFIX: str = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    LANG_STRING_DATATYPE_IRI: str = RDF_DATATYPE_IRI_PREFIX + "langString>"
+    RDF_DATATYPE_IRI_PREFIX: str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    LANG_STRING_DATATYPE_IRI: str = RDF_DATATYPE_IRI_PREFIX + "langString"
 
     datatype_map: typing.MutableMapping[str, MapEntry] = attr.ib(factory=dict)
 
@@ -103,8 +103,6 @@ class ConvertRdf2Kgtk(KgtkFormat):
 
     allow_lang_string_datatype: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LANG_STRING_DATATYPE)
     lang_string_tag: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LANG_STRING_TAG)
-
-    verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     unknown_datatype_iri_count: int = attr.ib(default=0)
     rejected_lang_string_count: int = attr.ib(default=0)
@@ -220,6 +218,15 @@ class ConvertRdf2Kgtk(KgtkFormat):
         converted_uri: str = ""
         valid_uri: bool = True
 
+        if not uri.startswith("<"):
+            return Result(is_valid=False, message="The datatype iri does not start with '<': %s" % repr(item))
+        
+        if not uri.endswith("<"):
+            return Result(is_valid=False, message="The datatype iri does not end with '>': %s" % repr(item))
+
+        uri = uri[1:-1]
+        if len(uri) ==0:
+            return Result(is_valid=False, message="The datatype iri is empty: %s" % repr(item))
         
         if uri in self.datatype_map:
             entry: MapEntry = self.datatype_map[uri]
@@ -405,7 +412,6 @@ class ConvertRdf2Kgtk(KgtkFormat):
         # Power
 
         # ElectricCurrent
-
         # Voltage
 
         # Pressure

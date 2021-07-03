@@ -37,6 +37,7 @@ import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
+from kgtk.imports.convertrfd2kgtk import ConvertRdf2Kgtk, Result
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
@@ -240,8 +241,6 @@ class KgtkNtriples(KgtkFormat):
     converted_number_datatype_uri: str = attr.ib(default="")
 
     output_line_count: int = attr.ib(default=0)
-    unknown_datatype_iri_count: int = attr.ib(default=0)
-    rejected_lang_string_count: int = attr.ib(default=0)
 
     def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str, datatype: str):
         output_row: typing.List[str]
@@ -256,12 +255,12 @@ class KgtkNtriples(KgtkFormat):
             ew.write(self.idbuilder.build(output_row, self.output_line_count))
         self.output_line_count += 1
 
-    def convert_blank_node(self, item: str)->typing.Tuple[str, bool]:
+    def convert_blank_node(self, item: str)->str:
         body: str = item[1:] # Strip the leading underscore, keep the colon.
         if self.local_namespace_use_uuid:
-            return self.local_namespace_prefix + self.local_namespace_uuid + body, True
+            return self.local_namespace_prefix + self.local_namespace_uuid + body
         else:
-            return self.local_namespace_prefix + body, True
+            return self.local_namespace_prefix + body
 
     def convert_uri(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         body: str = item[1:-1] # Strip off the enclosing brackets.
@@ -346,36 +345,6 @@ class KgtkNtriples(KgtkFormat):
                 # Return the namespace-prefixed URI:
                 return namespace_id + ":" + suffix, True
 
-    def convert_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
-        # Convert this to a KGTK string.
-
-        s: str = ast.literal_eval(item)
-        return KgtkFormat.stringify(s), True
- 
-    def convert_lq_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
-        # Convert this to a KGTK language qualified string.
-
-        # Split the language qualifier (and optional suffix).
-        # This code was copied from KgtkFormat.
-        #
-        # TODO: There should be only a single copy of this code.
-        quoted_string: str
-        language: str
-        quoted_string, language = item.rsplit("@", 1)
-        language_suffix: str = ""
-        if "-" in language:
-            language, language_suffix = language.split("-", 1)
-            language_suffix = "-" + language_suffix
-
-        # Parse the string, processing quoted characters:
-        #
-        # TODO: check for an error here!
-        s: str = ast.literal_eval(quoted_string)
-
-        # Assemble the final language-qualified string:
-        return KgtkFormat.stringify(s, language, language_suffix), True
-
- 
     def generate_new_node_symbol(self)->str:
         new_node_symbol: str = self.newnode_prefix
         if self.newnode_use_uuid:
@@ -384,231 +353,47 @@ class KgtkNtriples(KgtkFormat):
         self.newnode_counter += 1
         return new_node_symbol
     
-    def convert_boolean(self, item: str, value: str, line_number: int)->typing.Tuple[str, bool]:
-        if value == 'true' or value == '1':
-            return KgtkFormat.TRUE_SYMBOL, True
-        elif value == 'false' or value == '0':
-            return KgtkFormat.FALSE_SYMBOL, True
-        else:
-            if self.verbose:
-                print("Line %d: invalid boolean item '%s'>" % (line_number, item), file=self.error_file, flush=True)
-            return item, False
+    
+    def convert_and_validate(self, item: str, line_number: int, converter: ConvertRdf2Kgtk, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
+        is_ok: bool
         
-
-    # https://www.w3.org/2011/rdf-wg/wiki/XSD_Datatypes
-    # https://www.w3.org/TR/xmlschema-2/
-
-    NUMERIC_XSD_DATATYPES: typing.Set[str] = {
-        '<http://www.w3.org/2001/XMLSchema#decimal>',
-        '<http://www.w3.org/2001/XMLSchema#integer>',
-        '<http://www.w3.org/2001/XMLSchema#int>',
-        '<http://www.w3.org/2001/XMLSchema#short>',
-        '<http://www.w3.org/2001/XMLSchema#byte>',
-        '<http://www.w3.org/2001/XMLSchema#nonNegativeInteger>',
-        '<http://www.w3.org/2001/XMLSchema#positiveInteger>',
-        '<http://www.w3.org/2001/XMLSchema#unsignedLong>',
-        '<http://www.w3.org/2001/XMLSchema#unsignedInt>',
-        '<http://www.w3.org/2001/XMLSchema#unsignedShort>',
-        '<http://www.w3.org/2001/XMLSchema#unsignedByte>',
-        '<http://www.w3.org/2001/XMLSchema#nonPositiveInteger>',
-        '<http://www.w3.org/2001/XMLSchema#negativeInteger>',
-        '<http://www.w3.org/2001/XMLSchema#double>',
-        '<http://www.w3.org/2001/XMLSchema#float>',
-    }
-
-    STRING_XSD_DATATYPES: typing.Set[str] = {
-        '<http://www.w3.org/2001/XMLSchema#string>',
-        '<http://www.w3.org/2001/XMLSchema#normalizedString>',
-        '<http://www.w3.org/2001/XMLSchema#token>',
-        '<http://www.w3.org/2001/XMLSchema#language>',
-        '<http://www.w3.org/2001/XMLSchema#Name>',
-        '<http://www.w3.org/2001/XMLSchema#NCName>',
-        '<http://www.w3.org/2001/XMLSchema#ENTITY>',
-        '<http://www.w3.org/2001/XMLSchema#ID>',
-        '<http://www.w3.org/2001/XMLSchema#IDREF>',
-        '<http://www.w3.org/2001/XMLSchema#NMTOKEN>',
-    }
-
-    LANG_STRING_DATATYPE_IRI: str = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString>"
-    STRING_DATATYPE_IRI: str = '<http://www.w3.org/2001/XMLSchema#string>'
-    NUMBER_DATATYPE_IRI: str = '<http://www.w3.org/2001/XMLSchema#number>'
-                                                 
-    def get_converted_string_datatype_uri(self)->str:
-        if len(self.converted_string_datatype_uri) == 0 and self.build_datatype_column:
-            # Convert the string datatype IRI and cache it:
-            converted_string_datatype_uri_is_valid: bool
-            self.converted_string_datatype_uri, converted_string_datatype_uri_is_valid = self.convert_uri(self.STRING_DATATYPE_IRI, 0)
-            # TODO: fail if converted_string_datatype_uri_is_valid is False
-        return self.converted_string_datatype_uri
-
-    def get_converted_lang_string_datatype_uri(self)->str:
-        if len(self.converted_lang_string_datatype_uri) == 0 and self.build_datatype_column:
-            # Convert the langString datatype IRI and cache it:
-            converted_lang_string_datatype_uri_is_valid: bool
-            self.converted_lang_string_datatype_uri, converted_lang_string_datatype_uri_is_valid = self.convert_uri(self.LANG_STRING_DATATYPE_IRI, 0)
-            # TODO: fail if converted_lang_string_datatype_uri_is_valid is False
-        return self.converted_lang_string_datatype_uri
-
-    def get_converted_number_datatype_uri(self)->str:
-        if len(self.converted_number_datatype_uri) == 0 and self.build_datatype_column:
-            # Convert the number datatype IRI and cache it:
-            converted_number_datatype_uri_is_valid: bool
-            self.converted_number_datatype_uri, converted_number_datatype_uri_is_valid = self.convert_uri(self.NUMBER_DATATYPE_IRI, 0)
-            # TODO: fail if converted_number_datatype_uri_is_valid is False
-        return self.converted_number_datatype_uri
-
-    def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
-        # This is the subset of strictured literals that fits the
-        # pattern "STRING"^^<URI>.
-
-        # Start by splitting on '^^'. We are certain it exists, and that the rightmost
-        # instance is the one we want.
-        uparrows: int = item.rfind("^^")
-        if uparrows < 0:
-            # This shouldn't happen!
+        result: Result = converter.convert(item)
+        if not result.is_valid:
             if self.verbose:
-                print("Line %d: no uparrows in '%s'." % (line_number, item), file=self.error_file, flush=True)
+                print("Input line %d: item %s is invalid: %s" % (line_number, repr(item), result.message))
             return item, False, ""
 
-        string: str = item[:uparrows]
-        uri: str = item[uparrows+2:]
+        value: str = result.value
+        rdf_datatype_uri: str = result.rdf_datatype_uri
 
-        converted_uri: str = ""
-        valid_uri: bool = True
+        if result.is_blank_node:
+            value = self.convert_blank_node(value)
 
-        if uri in self.STRING_XSD_DATATYPES:
-            # Convert this to a KGTK string.
-            if self.build_datatype_column:
-                converted_uri, valid_uri = self.convert_uri(uri, line_number)
-                if not valid_uri:
-                    return item, False, ""
-            return self.convert_string(string, line_number) + (converted_uri,)
+        if result.is_uri:
+            value, is_ok = self.convert_uri(item, line_number)
+            if not is_ok:
+                return value, False, rdf_datatype_uri
 
-        elif uri in self.NUMERIC_XSD_DATATYPES:
-            # Convert this to a KGTK number:
-            if self.build_datatype_column:
-                converted_uri, valid_uri = self.convert_uri(uri, line_number)
-                if not valid_uri:
-                    return item, False, ""
-            return string[1:-1], True, converted_uri
+        if len(rdf_datatype_uri) > 0:
+            rdf_datatype_uri, is_ok = self.convert_uri(rdf_datatype_uri, line_number)
+            if not is_ok:
+                return value, False, rdf_datatype_uri
 
-        elif uri == '<http://www.w3.org/2001/XMLSchema#boolean>':
-            # Convert this to a KGTK boolean:
-            if self.build_datatype_column:
-                converted_uri, valid_uri = self.convert_uri(uri, line_number)
-                if not valid_uri:
-                    return item, False, ""
-            return self.convert_boolean(item, string[1:-1], line_number) + (converted_uri,)
-
-        elif uri == '<http://www.w3.org/2001/XMLSchema#dateTime>':
-            # Convert this to a KGTK date-and-time:
-            #
-            # Note: the W3C XML Schema standard allows the now obsolete
-            # end-of-day time "24:00:00".
-            if self.build_datatype_column:
-                converted_uri, valid_uri = self.convert_uri(uri, line_number)
-                if not valid_uri:
-                    return item, False, ""
-            return '^' + string[1:-1], True, converted_uri
-
-        # TODO: the "date" schema
-        # Problem:  it allows timezone offsets after dates without times!
-
-        # Exposed langString datatypes are forbidden by RDF when not
-        # accompanied with a language tag.  The RDF 1.1 N-Triples)
-        # specification (and the RDF 1.1 Turtle specification) allow a
-        # a literal to have a datatype IRI or a language tag, but not
-        # both. Nonetheless, langString IRIs have been observed in the
-        # wild.  If we are so inclined, transform the literal to a
-        # KGTK string or language-qualified string.
-        if uri == self.LANG_STRING_DATATYPE_IRI:
-            if self.allow_lang_string_datatype:
-                if len(self.lang_string_tag) == 0 or self.lang_string_tag == self.LANG_STRING_TAG_NONE:
-                    # Convert this to a KGTK string.
-                    return self.convert_string(string, line_number) + (self.get_converted_string_datatype_uri(),)
-                else:
-                    # Convert this to a KGTK language-qualified string.
-                    return self.convert_lq_string(string + "@" + self.lang_string_tag, line_number) + (self.get_converted_lang_string_datatype_uri(),)
-            else:
-                self.rejected_lang_string_count += 1
-                return item, False, ""
-
-        if self.allow_unknown_datatype_iris:
-            self.unknown_datatype_iri_count += 1
-
-            converted_uri, valid_uri = self.convert_uri(uri, line_number)
-            if not valid_uri:
-                return item, False, ""
-
-            if self.build_datatype_column:
-                return string, True, converted_uri
-            else:
-                new_node_symbol: str = self.generate_new_node_symbol()
-                self.write_row(ew, new_node_symbol, self.structured_value_label, string, "")
-                self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri, "")
-                return new_node_symbol, True, ""
-        
-        # Give up on this unrecognized structured literal.
-        return item, False, ""
-
-    def convert_numeric(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
-        return item, True
-
-    def convert(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
-        """
-        Convert an ntriples item to KGTK format.
-
-        TODO: update output_line_count for row written here.
-        """
-        if item.startswith("_:"):
-            return self.convert_blank_node(item) + ("",)
-        elif item.startswith("<") and item.endswith(">"):
-            return self.convert_uri(item, line_number) + ("",)
-        elif item.startswith('"') and item.endswith('"'):
-            return self.convert_string(item, line_number) + (self.get_converted_string_datatype_uri(),)
-        elif item.startswith('"') and item.endswith(">"):
-            return self.convert_structured_literal(item, line_number, ew)
-        elif item.startswith('"'):
-            return self.convert_lq_string(item, line_number) + (self.get_converted_lang_string_datatype_uri(),)
-        elif self.allow_turtle_quotes:
-            if item.startswith("'") and item.endswith("'"):
-                return self.convert_string(item, line_number) + (self.get_converted_string_datatype_uri(),)
-            elif item.startswith("'") and item.endswith(">"):
-                return self.convert_structured_literal(item, line_number, ew)
-            elif item.startswith("'"):
-                return self.convert_lq_string(item, line_number) + (self.get_converted_lang_string_datatype_uri(),)
-        elif item[0] in "+-0123456789.":
-            return self.convert_numeric(item, line_number, ew) + (self.get_converted_number_datatype_uri(),)
-
-        if self.verbose:
-            print("Line %d: unrecognized item '%s'" %(line_number, item), file=self.error_file, flush=True)
-
-        return item, False, ""
-    
-    def convert_and_validate(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
-        result: str
-        is_ok: bool
-        datatype: str
-        result, is_ok, datatype = self.convert(item, line_number, ew)
-
-        # Just a little bit of paranoia here regarding tabs and ends-of-lines:
-        #
-        # TODO: perform these checks (and repairs!) in KgtkValue.
-        if "\t" in result:
-            result = result.replace("\t", "\\t")
-        if "\n" in result:
-            result = result.replace("\n", "\\n")
-        if "\r" in result:
-            result = result.replace("\r", "\\r")
-
-        if is_ok and self.validate:
-            kv: KgtkValue = KgtkValue(result, options=self.value_options)
+        if self.validate:
+            kv: KgtkValue = KgtkValue(value, options=self.value_options)
             if not kv.validate():
                 if self.verbose:
-                    print("Input line %d: imported value '%s' (from '%s') is invalid." % (line_number, result, item),
+                    print("Input line %d: imported value '%s' (from '%s') is invalid." % (line_number, value, item),
                           file=self.error_file, flush=True)
-                return result, False, ""
-        return result, is_ok, datatype
+                return value, False, ""
+
+        if result.is_unknown and not self.build_datatype_column:
+            new_node_symbol: str = self.generate_new_node_symbol()
+            self.write_row(ew, new_node_symbol, self.structured_value_label, value, "")
+            self.write_row(ew, new_node_symbol, self.structured_uri_label, rdf_datatype_uri, "")
+            return new_node_symbol, True, rdf_datatype_uri
+        else:
+            return value, True, rdf_datatype_uri
             
 
     def get_default_namespaces(self)->int:
@@ -715,6 +500,11 @@ class KgtkNtriples(KgtkFormat):
 
 
     def process(self):
+        converter: ConvertRdf2Kgtk = ConvertRdf2Kgtk(allow_unknown_datatype_iris = self.allow_unknown_datatype_iris,
+                                                     allow_turtle_quotes = self.allow_turtle_quotes,
+                                                     allow_lang_string_datatype = self.allow_lang_string_datatype,
+                                                     lang_string_tag = self.lang_string_tag)
+
         output_column_names: typing.List[str] = self.COLUMN_NAMES.copy()
         if self.build_datatype_column:
             output_column_names.append(self.datatype_column_name)
@@ -790,16 +580,16 @@ class KgtkNtriples(KgtkFormat):
 
                 node1: str
                 ok_1: bool
-                node1, ok_1, _ = self.convert_and_validate(row[0], input_line_count, ew)
+                node1, ok_1, _ = self.convert_and_validate(row[0], input_line_count, converter, ew)
 
                 label: str
                 ok_2: bool
-                label, ok_2, _ = self.convert_and_validate(row[1], input_line_count, ew)
+                label, ok_2, _ = self.convert_and_validate(row[1], input_line_count, converter, ew)
 
                 node2: str
                 ok_3: bool
                 datatype: str
-                node2, ok_3, datatype = self.convert_and_validate(row[2], input_line_count, ew)
+                node2, ok_3, datatype = self.convert_and_validate(row[2], input_line_count, converter, ew)
 
                 if ok_1 and ok_2 and ok_3:
                     self.write_row(ew, node1, label, node2, datatype)
@@ -823,8 +613,8 @@ class KgtkNtriples(KgtkFormat):
             print("Rejected %d records." % (reject_line_count), file=self.error_file, flush=True)
             print("Wrote %d records." % (self.output_line_count), file=self.error_file, flush=True)
             print("Ignored %d comments." % (comment_count), file=self.error_file, flush=True)
-            print("Rejected %d records with langString IRIs." % (self.rejected_lang_string_count), file=self.error_file, flush=True)
-            print("Imported %d records with unknown datatype IRIs." % (self.unknown_datatype_iri_count), file=self.error_file, flush=True)
+            print("Rejected %d records with langString IRIs." % (converter.rejected_lang_string_count), file=self.error_file, flush=True)
+            print("Imported %d records with unknown datatype IRIs." % (converter.unknown_datatype_iri_count), file=self.error_file, flush=True)
 
         if ew is not None:
             ew.close()
