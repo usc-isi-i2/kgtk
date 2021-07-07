@@ -16,7 +16,7 @@ Filters are composed of three patterns separated by semicolons:
 | node2-pattern | This pattern applies to the `node2` column (or its alias), unless a different column is selected with the `--node2 OBJ_COL` option. |
 
 Each of the patterns in a filter can consist of a list of symbols (words) separated using commas,
-or a regular expression (when `--regex` is specified).
+a number (when `--numeric` is specified), or a regular expression (when `--regex` is specified).
 
 A complete filter requires two semicolons (`;;`) with one or more nonempty patterns.  By default,
 all nonempty patterns in a filter must match an input edge for the input edge to match the
@@ -32,6 +32,33 @@ reject file, and non-matching edges to be written to the output file.
 !!! note
     If comma (`,`) is part of what you want to match, you may use
     `--word-separator SEPARATOR` to supply a separator other then comma.
+
+### Numeric Patterns
+
+`--numeric` (short for `--numeric True` or `--numeric=True`) indicates that
+the patterns in a filter are numbers instead of comma-separated lists of
+symbols.  Note that comma-separated lists of numbers are not supported at
+present. When using numeric patterns, `--match-type MATCH_TYPE` determines the
+type of numeric comparison that takes place.
+
+| Match Type | Description |
+| ---------- | ----------- |
+| eq  | The edge field's value must be equal to the pattern value. |
+| ne  | The edge field's value must not be equal to the pattern value. |
+| gt  | The edge field's value must be greater than the pattern value. |
+| ge  | The edge field's value must be greater than or equal to the pattern value. |
+| lt  | The edge field's value must be less than the pattern value. |
+| le  | The edge field's value must be less than or equal to the pattern value. |
+
+If the edge field has an empty value, the default action is to fail the comparison.
+However, when `--pass-empty-value` (short for `--pass-empty-value True` or `--pass-empty-value=True`)
+is specified, empty values in the edge field will pass the comparison.
+
+!!! note
+    At the present time, if an edge filed is non-empty but not a valid
+    numeric value, `kgtk filter` will report an error and exit.  In the future,
+    there may be options to control the action taken when a non-numeric
+    edge field value is encountered during processing.
 
 ### Regular Expression Patterns
 
@@ -63,9 +90,13 @@ total number of alternatives is large.
 ### Caveats
 
 !!! note
-    At the present time, the `--first-match-only`, `--invert`, `--match-type`, `--node2`, `--or`, `--label`, `--regex`, and `--node1`
-    options apply to all filters and patterns in the `kgtk filter` invocation. In particular, there is no support for mixing
-    non-regex patterns with regex patterns, other than converting the non-regex pattern to a regex pattern by hand.
+    At the present time, the `--first-match-only`, `--invert`,
+    `--match-type`, `--node2`, `--or`, `--label`, `--numeric`, `--regex`,
+    `--node1`, `--label`, and `--node2` options apply to all filters and
+    patterns in the `kgtk filter` invocation. In particular, there is no
+    support for mixing non-regex patterns with regex patterns, other than
+    converting the non-regex pattern to a regex pattern by hand.  Similarly,
+    numeric patterns cannot be mixed with non-numeric patterns.
 
 ## Usage
 
@@ -74,9 +105,10 @@ usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]]
                    [--reject-file REJECT_FILE] -p PATTERNS [PATTERNS ...]
                    [--node1 SUBJ_COL] [--label PRED_COL] [--node2 OBJ_COL]
                    [--or [True|False]] [--invert [True|False]]
-                   [--regex [True|False]]
-                   [--match-type {fullmatch,match,search}]
+                   [--regex [True|False]] [--numeric [True|False]]
+                   [--match-type {fullmatch,match,search,eq,ne,gt,ge,lt,le}]
                    [--first-match-only [True|False]]
+                   [--pass-empty-value [True|False]]
                    [--pattern-separator PATTERN_SEPARATOR]
                    [--word-separator WORD_SEPARATOR]
                    [--show-version [True/False]] [-v [optional True|False]]
@@ -111,13 +143,21 @@ optional arguments:
                         (default=False).
   --regex [True|False]  When True, treat the filter clauses as regular
                         expressions. (default=False).
-  --match-type {fullmatch,match,search}
+  --numeric [True|False]
+                        When True, treat the filter clauses as numeric
+                        expressions. (default=False).
+  --match-type {fullmatch,match,search,eq,ne,gt,ge,lt,le}
                         Which type of regular expression match: fullmatch,
-                        match, search. (default=match).
+                        match, search, eq, ne, gt, ge, lt, le.
+                        (default=match).
   --first-match-only [True|False]
                         If true, write only to the file with the first
                         matching pattern. If false, write to all files with
                         matching patterns. (default=False).
+  --pass-empty-value [True|False]
+                        If true, empty data values will pass a numeric
+                        pattern. If false, write to all files with matching
+                        patterns. (default=False).
   --pattern-separator PATTERN_SEPARATOR
                         The separator between the pattern components.
                         (default=;.
@@ -406,7 +446,7 @@ edges with `node2` object `action` to another file, and ignore other edges.
 ```bash
 kgtk filter -i examples/docs/movies_reduced.tsv \
             -p "; genre ;" -o genre.tsv \
-            -p "; ; action" -o action.tsv \
+            -p "; ; action" -o action.tsv
 ```
 (No standard output)
 
@@ -427,6 +467,7 @@ kgtk cat -i action.tsv
 
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
+| t3 | terminator | genre | action |
 
 !!! note
     The edge terminator/genre/action appears in both the genre and action output files.
