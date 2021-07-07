@@ -561,6 +561,106 @@ kgtk cat -i action.tsv
 | -- | -- | -- | -- |
 
 
+### Selecting Edges with Numeric Comparisons
+
+Consider the following input file:
+
+```bash
+kgtk cat -i examples/docs/movies_durations.tsv
+```
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t16 | terminator | duration | 108 |
+| s18 | terminator2_jd | duration | 137 |
+| x1 | terminator_dark_fate_trailer | duration | 3 |
+
+Select movies that are 108 minutes long:
+
+```
+kgtk filter -i examples/docs/movies_durations.tsv \
+            --numeric --match-type eq \
+            -p ";;108"
+```
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t16 | terminator | duration | 108 |
+
+
+Select movies that are not 108 minutes long:
+
+```
+kgtk filter -i examples/docs/movies_durations.tsv \
+            --numeric --match-type ne \
+            -p ";;108"
+```
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| s18 | terminator2_jd | duration | 137 |
+| x1 | terminator_dark_fate_trailer | duration | 3 |
+
+
+Select movies that are greater than 108 minutes long:
+
+```
+kgtk filter -i examples/docs/movies_durations.tsv \
+            --numeric --match-type gt \
+            -p ";;108"
+```
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| s18 | terminator2_jd | duration | 137 |
+
+
+Select movies that are greater than or equal to 108 minutes long:
+
+```
+kgtk filter -i examples/docs/movies_durations.tsv \
+            --numeric --match-type ge \
+            -p ";;108"
+```
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t16 | terminator | duration | 108 |
+| s18 | terminator2_jd | duration | 137 |
+
+
+Select movies that are less than 108 minutes long:
+
+```
+kgtk filter -i examples/docs/movies_durations.tsv \
+            --numeric --match-type lt \
+            -p ";;108"
+```
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| x1 | terminator_dark_fate_trailer | duration | 3 |
+
+
+Select movies that are less than or equal to 108 minutes long:
+
+```
+kgtk filter -i examples/docs/movies_durations.tsv \
+            --numeric --match-type le \
+            -p ";;108"
+```
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t16 | terminator | duration | 108 |
+| x1 | terminator_dark_fate_trailer | duration | 3 |
+
+
 ### Selecting Edges where the Subject Starts with `t1`
 
 Select all edges with a subject value that starts with the letters `t1` (with
