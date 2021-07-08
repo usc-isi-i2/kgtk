@@ -28,6 +28,8 @@ class KgtkCompact(KgtkFormat):
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
+    list_output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+
     key_column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                          iterable_validator=attr.validators.instance_of(list)))
     compact_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -41,6 +43,10 @@ class KgtkCompact(KgtkFormat):
     verify_sort: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     lists_in_input: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    report_lists: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    exclude_lists: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    output_only_lists: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
 
@@ -53,11 +59,13 @@ class KgtkCompact(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # We unfroze this object to keep these rwitable fields around across
+    # We unfroze this object to keep these rewritable fields around across
     # invocations of process_row.
     #
     # TODO: Introduce a row processing object?
     output_line_count: int = 0
+    list_output_line_count: int = 0
+    excluded_row_count: int = 0
     current_key: typing.Optional[str] = None
     current_row: typing.Optional[typing.List[str]] = None
     current_row_lists: typing.Optional[typing.List[typing.Optional[typing.List[str]]]] = None
@@ -76,25 +84,28 @@ class KgtkCompact(KgtkFormat):
             key += row[idx]
         return key
 
-    def compact_row(self):
+    def compact_row(self)->bool:
+        """Compact the current row. Return True if ther eis at least one list in the result, otherwise return False."""
         if self.current_row_lists is None:
-            return
+            return False
 
-        # Preallocate the list, this might be more efficient than appending to it..
-        self.current_row = [None] * len(self.current_row_lists)
+        # Preallocate the row, this might be more efficient than appending to it..
+        self.current_row = [""] * len(self.current_row_lists)
         idx: int
         item_list: typing.Optional[typing.List[str]]
+        saw_list: bool = False
         for idx, item_list in enumerate(self.current_row_lists):
-            if item_list is None:
-                self.current_row[idx] = ""
-            else:
+            if item_list is not None:
                 # We don't need to use KgtkValue.join_unique_list(item_list)
                 # because self.merge_row(...) and self.expand_row(...) ensure that
                 # there are no duplicates.
                 #
                 # TODO: run timing studies to determine which approach is more efficient.
                 self.current_row[idx] = KgtkValue.join_sorted_list(item_list)
+                if len(item_list) > 1:
+                    saw_list = True
         self.current_row_lists = None
+        return saw_list
 
     def expand_row(self, row: typing.List[str], force: bool = False):
         if not self.lists_in_input and not force:
@@ -133,7 +144,7 @@ class KgtkCompact(KgtkFormat):
         if self.current_row_lists is None:
             if self.current_row is None:
                 # TODO: raise a better error
-                raise ValueError("Inconsistent state 31 in merge_row.")
+                raise ValueError("Inconsistent state #1 in merge_row.")
             else:
                 # We deferred expanding the previous row, but we must do so
                 # now:
@@ -176,6 +187,7 @@ class KgtkCompact(KgtkFormat):
                     line_number: int,
                     idb: typing.Optional[KgtkIdBuilder],
                     ew: KgtkWriter,
+                    lew: typing.Optional[KgtkWriter],
                     flush: bool = False):
         if self.very_verbose:
             print("Input key %s" % repr(input_key), file=self.error_file, flush=True)
@@ -191,15 +203,39 @@ class KgtkCompact(KgtkFormat):
                     else:
                         print("current_key %s != input_key %s" % (repr(self.current_key), repr(input_key)), file=self.error_file, flush=True)
                 # self.current_key != input_key means that the key is changing.
-                self.compact_row()
+                saw_list: bool = self.compact_row()
                 if self.current_row is not None:
-                    if self.very_verbose:
-                        print("writing %s" % repr(self.field_separator.join(self.current_row)), file=self.error_file, flush=True)
-                    if idb is None:
-                        ew.write(self.current_row)
+                    current_row_with_id: typing.Optional[typing.List[str]] = None
+                    if saw_list:
+                        if self.report_lists:
+                            print("%s" % repr(self.COLUMN_SEPARATOR.join(self.current_row)), file=self.error_file, flush=True)
+                        if lew is not None:
+                            if idb is None:
+                                lew.write(self.current_row)
+                            else:
+                                if current_row_with_id is None:
+                                    current_row_with_id = idb.build(self.current_row, line_number)
+                                lew.write(current_row_with_id)
+                            self.list_output_line_count += 1
+
+                    if saw_list and self.exclude_lists:
+                        if self.very_verbose:
+                            print("excluding %s" % repr(self.field_separator.join(self.current_row)), file=self.error_file, flush=True)
+                        self.excluded_row_count += 1
+                    elif not saw_list and self.output_only_lists:
+                        if self.very_verbose:
+                            print("excluding %s" % repr(self.field_separator.join(self.current_row)), file=self.error_file, flush=True)
+                        self.excluded_row_count += 1
                     else:
-                        ew.write(idb.build(self.current_row, line_number))
-                    self.output_line_count += 1
+                        if self.very_verbose:
+                            print("writing %s" % repr(self.field_separator.join(self.current_row)), file=self.error_file, flush=True)
+                        if idb is None:
+                            ew.write(self.current_row)
+                        else:
+                            if current_row_with_id is None:
+                                current_row_with_id = idb.build(self.current_row, line_number)
+                            ew.write(current_row_with_id)
+                        self.output_line_count += 1
                 self.current_key = None
                 self.current_row = None
 
@@ -306,6 +342,22 @@ class KgtkCompact(KgtkFormat):
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
+
+        # Open the optional list output file.
+        lew: typing.Optional[KgtkWriter] = None
+        if self.list_output_file_path is not None:
+            lew = KgtkWriter.open(output_column_names,
+                                  self.list_output_file_path,
+                                  mode=kr.mode,
+                                  require_all_columns=False,
+                                  prohibit_extra_columns=True,
+                                  fill_missing_columns=True,
+                                  use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                  mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                  gzip_in_parallel=False,
+                                  verbose=self.verbose,
+                                  very_verbose=self.very_verbose)        
+
         input_line_count: int = 0
         row: typing.List[str] = [ ]
         input_key: str
@@ -349,7 +401,7 @@ class KgtkCompact(KgtkFormat):
                             else:
                                 pass # No change in input_key
                             
-                self.process_row(input_key, row, input_line_count, idb, ew)
+                self.process_row(input_key, row, input_line_count, idb, ew, lew)
             
         else:
             if self.verbose:
@@ -372,20 +424,29 @@ class KgtkCompact(KgtkFormat):
             
             for input_key in sorted(input_map.keys()):
                 for row in input_map[input_key]:
-                    self.process_row(input_key, row, input_line_count, idb, ew)
+                    self.process_row(input_key, row, input_line_count, idb, ew, lew)
 
         # Flush the final row, if any.  We pass the last row read for
         # feedback, such as an ID uniqueness violation.
-        self.process_row("", row, input_line_count, idb, ew, flush=True)
+        self.process_row("", row, input_line_count, idb, ew, lew, flush=True)
         
         if self.verbose:
-            print("Read %d records, wrote %d records." % (input_line_count, self.output_line_count), file=self.error_file, flush=True)
+            print("Read %d records, excluded %d records, wrote %d records." % (input_line_count,
+                                                                               self.excluded_row_count,
+                                                                               self.output_line_count),
+                  file=self.error_file, flush=True)
+            if lewh is not None:
+                print("Wrote %d list ouput records." % (self.list_output_line_count), file=self.error_file, flush=True)
         
         ew.close()
+        if lew is not None:
+            lew.close()
 
 def main():
     """
     Test the KGTK compact processor.
+
+    TODO: Support the list output file.
     """
     parser: ArgumentParser = ArgumentParser()
 
@@ -419,6 +480,18 @@ def main():
                               help="Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--report-lists", dest="report_lists",
+                              help="When True, report records with lists to the error output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--exclude-lists", dest="exclude_lists",
+                              help="When True, exclude records with lists from the output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--output-only-lists", dest="output_only_lists",
+                              help="When True, output only records containing lists. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
     parser.add_argument(      "--build-id", dest="build_id",
@@ -449,6 +522,9 @@ def main():
         print("--presorted=%s" % str(args.sorted_input), file=error_file, flush=True)
         print("--verify-sort=%s" % str(args.verify_sort), file=error_file, flush=True)
         print("--lists-in-input=%s" % str(args.lists_in_input), file=error_file, flush=True)
+        print("--report-lists=%s" % str(args.report_lists), file=error_file, flush=True)
+        print("--exclude-lists=%s" % str(args.exclude_lists), file=error_file, flush=True)
+        print("--output-only-lists=%s" % str(args.output_only_lists), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -462,6 +538,9 @@ def main():
         sorted_input=args.sorted_input,
         verify_sort=args.verify_sort,
         lists_in_input=args.lists_in_input,
+        report_lists=args.report_lists,
+        exclude_lists=args.exclude_lists,
+        output_only_lists=args.output_only_lists,
         output_file_path=args.output_file_path,
         build_id=args.build_id,
         idbuilder_options=idbuilder_options,
