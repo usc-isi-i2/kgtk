@@ -60,7 +60,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--numeric", dest="numeric", metavar="True|False",
-                              help="When True, treat the filter clauses as numeric expressions. (default=%(default)s).",
+                              help="When True, treat the filter clauses as numeric values for comparison. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--fancy", dest="fancy", metavar="True|False",
+                              help="When True, treat the filter clauses as strings, numbers, or regular expressions. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--match-type", dest="match_type", 
@@ -101,6 +105,7 @@ def run(input_file: KGTKFiles,
         invert: bool,
         regex: bool,
         numeric: bool,
+        fancy: bool,
         match_type: str,
         first_match_only: bool,
         pass_empty_value: bool,
@@ -160,6 +165,7 @@ def run(input_file: KGTKFiles,
         print("--invert=%s" % str(invert), file=error_file)
         print("--regex=%s" % str(regex), file=error_file)
         print("--numeric=%s" % str(numeric), file=error_file)
+        print("--fancy=%s" % str(fancy), file=error_file)
         print("--match-type=%s" % repr(match_type), file=error_file)
         print("--first-match-only=%s" % str(first_match_only), file=error_file)
         print("--pass_empty_value=%s" % str(pass_empty_value), file=error_file)
@@ -169,14 +175,24 @@ def run(input_file: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+
     if regex and numeric:
         raise KGTKException("Select either --regex or --numeric, not both")
+
+    if regex and fancy:
+        raise KGTKException("Select either --regex or --fancy, not both")
+
+    if numeric and fancy:
+        raise KGTKException("Select either --numeric or --fancy, not both")
 
     if regex and match_type not in REGEX_MATCH_TYPES:
         raise KGTKException("Match type %s in not a regex match type." % repr(match_type))
 
     if numeric and match_type not in NUMERIC_MATCH_TYPES:
         raise KGTKException("Match type %s in not a numeric match type." % repr(match_type))
+
+    if fancy and match_type not in REGEX_MATCH_TYPES:
+        raise KGTKException("Match type %s in not a regex match type for fancy mode." % repr(match_type))
 
     def prepare_filter(pattern: str)->typing.Set[str]:
         filt: typing.Set[str] = set()
@@ -651,7 +667,10 @@ def run(input_file: KGTKFiles,
 
         # TODO: catch a conversion failure and provide better feedback
         # and other options.
-        numeric_value: float = float(value)
+        try:
+            numeric_value: float = float(value)
+        except ValueError:
+            return False
 
         if match_type == "eq":
             return numeric_value == threshold
@@ -874,6 +893,170 @@ def run(input_file: KGTKFiles,
             print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count), file=error_file, flush=True)
             print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count), file=error_file, flush=True)
 
+    def fancy_filter_test(value: str, fancy_filter: typing.Set[str])->bool:
+        
+        fancy_pattern: str
+        for fancy_pattern in fancy_filter:
+            # TODO: Optimize so the patterns aren't converted to float every time they're used.
+
+            if fancy_pattern.startswith(":"):
+                if value == fancy_pattern[1:]:
+                    return True
+
+            elif fancy_pattern.startswith("="):
+                if len(value) == 0 and pass_empty_value:
+                    return True
+                try:
+                    if float(value) == float(fancy_pattern[1:]):
+                        return True
+                except ValueError:
+                    pass
+
+            elif fancy_pattern.startswith("!="):
+                if len(value) == 0 and pass_empty_value:
+                    return True
+                try:
+                    if float(value) != float(fancy_pattern[2:]):
+                        return True
+                except ValueError:
+                    pass
+
+            elif fancy_pattern.startswith(">="):
+                if len(value) == 0 and pass_empty_value:
+                    return True
+                try:
+                    if float(value) >= float(fancy_pattern[2:]):
+                        return True
+                except ValueError:
+                    pass
+
+            elif fancy_pattern.startswith(">"):
+                if len(value) == 0 and pass_empty_value:
+                    return True
+                try:
+                    if float(value) > float(fancy_pattern[1:]):
+                        return True
+                except ValueError:
+                    pass
+
+            elif fancy_pattern.startswith("<="):
+                if len(value) == 0 and pass_empty_value:
+                    return True
+                try:
+                    if float(value) <= float(fancy_pattern[2:]):
+                        return True
+                except ValueError:
+                    pass
+
+            elif fancy_pattern.startswith("<"):
+                if len(value) == 0 and pass_empty_value:
+                    return True
+                try:
+                    if float(value) < float(fancy_pattern[1:]):
+                        return True
+                except ValueError:
+                    pass
+
+            elif fancy_pattern.startswith("~"):
+                # TODO: optimize thie code so the regular expressions are not
+                # compiled each time they're used.
+                if match_type == "fullmatch":
+                    if re.compile(fancy_pattern[1:]).fullmatch(value):
+                        return True
+                elif match_type == "match":
+                    if re.compile(fancy_pattern[1:]).match(value):
+                        return True
+                elif match_type == "seach":
+                    if re.compile(fancy_pattern[1:]).search(value):
+                        return True
+                else:
+                    raise KGTKException("Match type %s is not valid for fancy filters." % repr(match_type))
+
+            else:
+                raise KGTKException("Unknown prefix in fancy pattern %s" % repr(fancy_pattern))
+            
+
+        return False
+
+    def multiple_general_fancy_filter(kr: KgtkReader,
+                                      kws: typing.List[KgtkWriter],
+                                      rw: typing.Optional[KgtkWriter],
+                                      subj_idx: int,
+                                      subj_filters: typing.List[typing.Set[str]],
+                                      pred_idx: int,
+                                      pred_filters: typing.List[typing.Set[str]],
+                                      obj_idx: int,
+                                      obj_filters: typing.List[typing.Set[str]]):
+        if verbose:
+            print("Applying a multiple general fancy filter", file=error_file, flush=True)
+
+        input_line_count: int = 0
+        reject_line_count: int = 0
+        output_line_count: int = 0
+        subj_filter_keep_count: int = 0
+        pred_filter_keep_count: int = 0
+        obj_filter_keep_count: int = 0
+        subj_filter_reject_count: int = 0
+        pred_filter_reject_count: int = 0
+        obj_filter_reject_count: int = 0
+
+        row: typing.List[str]
+        for row in kr:
+            input_line_count += 1
+
+            written: bool = False
+
+            idx: int = 0
+            for kw in kws:
+                subj_filter: typing.Set[str] = subj_filters[idx]
+                pred_filter: typing.Set[str] = pred_filters[idx]
+                obj_filter: typing.Set[str] = obj_filters[idx]
+                idx += 1
+
+                keep: bool = False
+                reject: bool = False 
+                if len(subj_filter) > 0:
+                    if fancy_filter_test(row[subj_idx], subj_filter):
+                        keep = True
+                        subj_filter_keep_count += 1
+                    else:
+                        reject = True
+                        subj_filter_reject_count += 1
+
+                if len(pred_filter) > 0:
+                    if fancy_filter_test(row[pred_idx], pred_filter):
+                        keep = True
+                        pred_filter_keep_count += 1
+                    else:
+                        reject = True
+                        pred_filter_reject_count += 1
+
+                if len(obj_filter) > 0:
+                    if fancy_filter_test(row[obj_idx], obj_filter):
+                        keep = True
+                        obj_filter_keep_count += 1
+                    else:
+                        reject = True
+                        obj_filter_reject_count += 1
+
+                if (keep if or_pattern else not reject) ^ invert:
+                    kw.write(row)
+                    if not written:
+                        output_line_count += 1 # Count this only once.
+                        written = True
+                        if first_match_only:
+                            break
+                    
+            if not written:
+                if rw is not None:
+                    rw.write(row)
+                reject_line_count += 1
+
+        if verbose:
+            print("Read %d rows, rejected %d rows, wrote %d rows." % (input_line_count, reject_line_count, output_line_count), file=error_file, flush=True)
+            print("Keep counts: subject=%d, predicate=%d, object=%d." % (subj_filter_keep_count, pred_filter_keep_count, obj_filter_keep_count), file=error_file, flush=True)
+            print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count), file=error_file, flush=True)
+
     def process_plain()->int:
 
         subj_filters: typing.List[typing.Set[str]] = [ ]
@@ -977,7 +1160,11 @@ def run(input_file: KGTKFiles,
                                  very_verbose=very_verbose)
 
         try:
-            if numeric:
+            if fancy:
+                # TODO: add additional optimized cases.
+                multiple_general_fancy_filter(kr, kws, rw, subj_idx, subj_filters, pred_idx, pred_filters, obj_idx, obj_filters)
+
+            elif numeric:
                 # TODO: add additional optimized cases.
                 
                 if nfilters == 1:

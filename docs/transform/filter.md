@@ -72,6 +72,30 @@ regular expression match that takes place.
 | match      | The regular expression must match the beginning of the field.  It is not necessary for it to match the entire field.  <br />It is not necessary to start the regular expression with `^`. <br />This is the default match type.|
 | search     | The regular expression must match somewhere in the field. |
 
+### Fancy Patterns
+
+`--fancy` (short for `--fancy True` or `--fancy=True`) indicates that a filter may contain symbols, numbers, or
+regular expressions in a comma-separated list.  Prefix strings are used to determine how a particular
+filter element is interpreted.
+
+| Prefix | Interpretation |
+| ------ | -------------- |
+| :      | string test: does the edge value match the symbol after the prefix? |
+| =      | numeric test: is the edge value equal to the comparison value after the prefix? |
+| !=     | numeric test: is the edge value not equal to the comparison value after the prefix? |
+| >      | numeric test: is the edge value greater than the comparison value after the prefix? |
+| >=     | numeric test: is the edge value greater than or equal to the comparison value after the prefix? |
+| <      | numeric test: is the edge value less than the comparison value after the prefix? |
+| <=     | numeric test: is the edge value less than or equal to the comparison value after the prefix? |
+| ~      | regular expression test: does the edge value satisfy the pattern after the prefix? |
+
+The regular expression test uses the match type determined by `--match-type MATCH_TYPE`, as
+described in the Regular Expression patterns section, above.
+
+!!! note
+    At the present time, fancy patterns will execute much slower than ordinary patterns
+    due to insufficient optimization.
+
 ### Multiple Filters
 
 `kgtk filter` reads a single input file. It will write one or more output files and/or a reject file.
@@ -106,6 +130,7 @@ usage: kgtk filter [-h] [-i INPUT_FILE] [-o OUTPUT_FILE [OUTPUT_FILE ...]]
                    [--node1 SUBJ_COL] [--label PRED_COL] [--node2 OBJ_COL]
                    [--or [True|False]] [--invert [True|False]]
                    [--regex [True|False]] [--numeric [True|False]]
+                   [--fancy [True|False]]
                    [--match-type {fullmatch,match,search,eq,ne,gt,ge,lt,le}]
                    [--first-match-only [True|False]]
                    [--pass-empty-value [True|False]]
@@ -144,8 +169,10 @@ optional arguments:
   --regex [True|False]  When True, treat the filter clauses as regular
                         expressions. (default=False).
   --numeric [True|False]
-                        When True, treat the filter clauses as numeric
-                        expressions. (default=False).
+                        When True, treat the filter clauses as numeric values
+                        for comparison. (default=False).
+  --fancy [True|False]  When True, treat the filter clauses as strings,
+                        numbers, or regular expressions. (default=False).
   --match-type {fullmatch,match,search,eq,ne,gt,ge,lt,le}
                         Which type of regular expression match: fullmatch,
                         match, search, eq, ne, gt, ge, lt, le.
@@ -696,3 +723,34 @@ Result:
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
 | t16 | terminator | duration | 108 |
+
+### Fancy Patterns: Selecting Edges with a String and a Numeric comparison
+
+Identify all movies with a duration of at least 90 minutes:
+
+```
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --fancy \
+            -p ';:duration;>=90'
+```
+
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t16 | terminator | duration | 108 |
+
+Identify all movies with a duration greater than two hours (120 minutes):
+
+```
+kgtk filter -i examples/docs/movies_reduced.tsv \
+            --fancy \
+            -p ';:duration;>120'
+```
+
+Result:
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+
+
