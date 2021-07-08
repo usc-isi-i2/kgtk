@@ -155,6 +155,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "If false, do not overwrite non-default values in the columns to write. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--output-only-modified-rows", dest="output_only_modified_rows",
+                              help="If true, output only modified edges to the primary output stream. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -190,6 +194,8 @@ def run(input_file: KGTKFiles,
 
         clear_before_lift: bool = False,
         overwrite: bool = False,
+
+        output_only_modified_rows: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -260,6 +266,7 @@ def run(input_file: KGTKFiles,
         print("--label-file-is-presorted=%s" % repr(labels_are_presorted))
         print("--clear-before-lift=%s" % repr(clear_before_lift))
         print("--overwrite=%s" % repr(overwrite))
+        print("--output-only-modified-rows=%s" % repr(output_only_modified_rows))
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -296,6 +303,8 @@ def run(input_file: KGTKFiles,
 
             clear_before_lift=clear_before_lift,
             overwrite=overwrite,
+
+            output_only_modified_rows=output_only_modified_rows,
 
             reader_options=reader_options,
             value_options=value_options,

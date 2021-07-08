@@ -76,6 +76,8 @@ class KgtkLift(KgtkFormat):
     clear_before_lift: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     overwrite: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    output_only_modified_rows: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     # TODO: add rewind logic here and KgtkReader
 
     # TODO: find working validators
@@ -374,6 +376,8 @@ class KgtkLift(KgtkFormat):
                 
         do_write: bool = True
         do_lift: bool = True
+        did_lift: bool = False
+        modified: bool = False
         if label_select_column_idx >= 0:
             print("label_select_column_idx %d" % label_select_column_idx)
             if row[label_select_column_idx]  == self.label_select_column_value:
@@ -387,22 +391,31 @@ class KgtkLift(KgtkFormat):
                 do_lift = False
         if do_lift:
             # Lift the specified columns in this row.
-            did_lift: bool = False
             lifted_column_idx: int
             for idx, lifted_column_idx in enumerate(lifted_column_idxs):
+                lifted_output_column_idx: int = lifted_output_column_idxs[idx]
                 if self.clear_before_lift:
-                    output_row[lifted_output_column_idxs[idx]] = self.default_value
+                    output_row[lifted_output_column_idx] = self.default_value
                 if self.overwrite or output_row[lifted_output_column_idxs[idx]] == self.default_value:
                     label_key: str = row[lifted_column_idx]
                     if label_key in labels:
                         label_value: str = labels[label_key]
-                        output_row[lifted_output_column_idxs[idx]] = label_value
+                        if label_value != output_row[lifted_output_column_idx]:
+                            modified = True
+                        output_row[lifted_output_column_idx] = label_value
                         did_lift = True # What if we want to note if we lifted all columns?
+
             if did_lift and output_select_column_idx >= 0 and self.output_select_column_value is not None:
+                if output_row[output_select_column_idx] != self.output_select_column_value:
+                    modified = True
                 output_row[output_select_column_idx] = self.output_select_column_value
 
         if do_write:
-            ew.write(output_row)
+            if self.output_only_modified_rows:
+                if modified:
+                    ew.write(output_row)
+            else:
+                ew.write(output_row)
         return do_write
 
     def build_output_column_names(self, ikr: KgtkReader, lifted_column_idxs: typing.List[int])->typing.Tuple[typing.List[str], typing.List[int]]:
@@ -604,7 +617,7 @@ class KgtkLift(KgtkFormat):
 
         new_columns: int = len(ew.column_names) - len(ikr.column_names)
         if new_columns not in (0, 1):
-            raise ValueError("Expecing zero or one new columns, got %d" % new_columns)
+            raise ValueError("Expecting zero or one new columns, got %d" % new_columns)
 
         lift_column_idx: int = lift_column_idxs[0] # For convenience
         lifted_output_column_idx: int = lifted_output_column_idxs[0] # For convenience
@@ -688,16 +701,26 @@ class KgtkLift(KgtkFormat):
                         break
 
             output_row = row.copy()
+            modified: bool = False
             if new_columns > 0:
                 output_row.append(self.default_value)
             if self.clear_before_lift:
                 output_row[lifted_output_column_idx] = self.default_value
             if self.overwrite or output_row[lifted_output_column_idx] != self.default_value:
                 if lifted_label_value != self.default_value:
+                    if output_row[lifted_output_column_idx] != lifted_label_value:
+                        modified = True
                     output_row[lifted_output_column_idx] = lifted_label_value
                     if self.output_select_column_value is not None and input_select_column_idx >= 0:
+                        if output_row[input_select_column_idx] != self.output_select_column_value:
+                            modified = True
                         output_row[input_select_column_idx] = self.output_select_column_value
-            ew.write(output_row)
+
+            if self.output_only_modified_rows:
+                if modified:
+                    ew.write(output_row)
+            else:
+                ew.write(output_row)
 
         if more_labels:
             lkr.close()
@@ -746,7 +769,7 @@ class KgtkLift(KgtkFormat):
            self.input_is_presorted and \
            self.labels_are_presorted and \
            lkr is not None:
-           self.process_as_merge(ikr, lkr)
+            self.process_as_merge(ikr, lkr)
         else:
             self.process_in_memory(ikr, lkr)
 
@@ -854,6 +877,9 @@ def main():
                               "If false, do not overwrite non-default values in the columns to write. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--output-only-modified-rows", dest="output_only_modified_rows",
+                              help="If true, output only modified edges to the primary output stream. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=True)
 
     KgtkReader.add_debug_arguments(parser)
     # TODO: seperate reader options for the label file.
@@ -909,6 +935,8 @@ def main():
         print("--label-file-is-presorted=%s" % repr(args.labels_are_presorted))
         print("--clear-before-lift=%s" % repr(args.clear_before_lift))
         print("--overwrite=%s" % repr(args.overwrite))
+        print("--output-only-modified-rows=%s" % repr(args.output_only_modified_rows))
+        
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
 
