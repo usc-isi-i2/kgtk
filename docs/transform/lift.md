@@ -18,6 +18,7 @@ of the files, enables operation with reduced memory requirements.
 ```
 usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--label-file INPUT_FILE]
+                 [--unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE]
                  [--columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]]
                  [--default-value DEFAULT_VALUE]
                  [--suppress-empty-columns [True/False]]
@@ -46,6 +47,10 @@ optional arguments:
   --label-file INPUT_FILE
                         A KGTK file with label records (Optional, use '-' for
                         stdin.)
+  --unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE
+                        A KGTK output file that will contain only unmodified
+                        rows. This file will have the same columns as the
+                        input file. (Optional, use '-' for stdout.)
   --columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]
                         The columns into which to store the lifted values. The
                         default is [node1;label, label;label, node2;label] or
@@ -476,7 +481,47 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 | Q1 | P2 | Q6 | True | "Fred Rogers" |
 | Q2 | P2 | Q6 | False | "Fred Rogers" |
 
+### Unmodified Row Output File
 
+Suppose we want to isolate the unmodified rows for
+further processing.  We can send them to the unmodified row
+output file.
+
+We will send ounly the modified rows to the primary output
+stream.
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2 \
+	  --output-only-modified-rows \
+	  --unmodified-row-output-file lift-unmodified-rows.tsv
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+Here are the unmodified rows:
+
+```bash
+kgtk cat -i lift-unmodified-rows.tsv
+```
+
+| node1 | label | node2 | confident |
+| -- | -- | -- | -- |
+| Q1 | P1 | Q5 | True |
+| Q2 | P1 | Q5 | False |
+
+!!! note
+    The unmodified row output file has the same columns as the
+    primary input file.  In this example, it dpoes not have the
+    `node2;full-name` column that was added to the primary
+    output file.
 
 ### Expert Example: Input Filtering
 

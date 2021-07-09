@@ -77,6 +77,7 @@ class KgtkLift(KgtkFormat):
     overwrite: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     output_only_modified_rows: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    unmodified_row_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     # TODO: add rewind logic here and KgtkReader
 
@@ -368,6 +369,7 @@ class KgtkLift(KgtkFormat):
                          labels: typing.Mapping[str, str],
                          lifted_column_idxs: typing.List[int],
                          lifted_output_column_idxs: typing.List[int],
+                         urkw: typing.Optional[KgtkWriter],
         )->bool:
         output_row: typing.List[str] = row.copy()
         if new_columns > 0:
@@ -416,6 +418,13 @@ class KgtkLift(KgtkFormat):
                     ew.write(output_row)
             else:
                 ew.write(output_row)
+
+        if urkw is not None:
+            # The unmodified row output file gets all unmodified input rows,
+            # including input rows that are labels or are not selected for lift.
+            if not modified:
+                urkw.write(row)
+
         return do_write
 
     def build_output_column_names(self, ikr: KgtkReader, lifted_column_idxs: typing.List[int])->typing.Tuple[typing.List[str], typing.List[int]]:
@@ -490,7 +499,9 @@ class KgtkLift(KgtkFormat):
 
         return labels_needed
 
-    def process_in_memory(self, ikr: KgtkReader, lkr: typing.Optional[KgtkReader]):
+    def process_in_memory(self, ikr: KgtkReader,
+                          lkr: typing.Optional[KgtkReader],
+                          urkw: typing.Optional[KgtkWriter]):
         """
         Process the lift using in-memory buffering.  The labels will added to a
         dict in memory, and depending upon the options selected, the input
@@ -577,7 +588,8 @@ class KgtkLift(KgtkFormat):
                                          label_select_column_idx,
                                          labels,
                                          lifted_column_idxs,
-                                         lifted_output_column_idxs):
+                                         lifted_output_column_idxs,
+                                         urkw):
                     output_line_count += 1
         else:
             # Use the stored input records:
@@ -590,7 +602,8 @@ class KgtkLift(KgtkFormat):
                                          label_select_column_idx,
                                          labels,
                                          lifted_column_idxs,
-                                         lifted_output_column_idxs):
+                                         lifted_output_column_idxs,
+                                         urkw):
                     output_line_count += 1
 
         if self.verbose:
@@ -600,7 +613,9 @@ class KgtkLift(KgtkFormat):
         
         ew.close()
     
-    def process_as_merge(self, ikr: KgtkReader, lkr: KgtkReader):
+    def process_as_merge(self, ikr: KgtkReader,
+                         lkr: KgtkReader,
+                         urkw: typing.Optional[KgtkWriter]):
         """
         Process the lift as a merge between two sorted files.
 
@@ -722,6 +737,10 @@ class KgtkLift(KgtkFormat):
             else:
                 ew.write(output_row)
 
+            if urkw is not None:
+                if not modified:
+                    urkw.write(row)
+
         if more_labels:
             lkr.close()
 
@@ -764,18 +783,38 @@ class KgtkLift(KgtkFormat):
                                    very_verbose=self.very_verbose,
             )
 
+        urkw: typing.Optional[KgtkWriter] = None
+        if self.unmodified_row_file_path is not None:
+            urkw = KgtkWriter.open(ikr.column_names,
+                                   self.unmodified_row_file_path,
+                                   mode=KgtkWriter.Mode[ikr.mode.name],
+                                   require_all_columns=False,
+                                   prohibit_extra_columns=True,
+                                   fill_missing_columns=True,
+                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   gzip_in_parallel=False,
+                                   verbose=self.verbose,
+                                   very_verbose=self.very_verbose)        
+            
+
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) == 1 and \
            not self.suppress_empty_columns and \
            self.input_is_presorted and \
            self.labels_are_presorted and \
            lkr is not None:
-            self.process_as_merge(ikr, lkr)
+            self.process_as_merge(ikr, lkr, urkw)
         else:
-            self.process_in_memory(ikr, lkr)
+            self.process_in_memory(ikr, lkr, urkw)
+
+        if urkw is not None:
+            urkw.close()
 
 def main():
     """
     Test the KGTK lift processor.
+
+    TODO: the unmodified row file path.
     """
     parser: ArgumentParser = ArgumentParser()
 
