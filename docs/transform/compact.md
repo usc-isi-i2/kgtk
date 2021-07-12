@@ -110,14 +110,32 @@ not allowed to contain multi-value edges (`|` lists) according to the
 
     `kgtk compact --mode=NONE --columns node1 label`
 
+### Reporting or Filtering Output Rows with Lists
+
+`kgtk compact --report-lists` causes output rows containing one or more
+lists to be reported to the error file.
+
+`kgtk compact --exclude-lists` causes output rows containing one or more
+lists to be excluded from the output file.
+
+`kgtk compact --output-only-lists` will write only output rows containing one or more
+lists to the output file.
+
+!!! note
+    `--exclude-lists` and `--output-only-lists` may not be used together.
+
 ## Usage
 
 ```
 usage: kgtk compact [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                    [--list-output-file LIST_OUTPUT_FILE]
                     [--columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]]
                     [--compact-id [True|False]] [--deduplicate [True|False]]
                     [--lists-in-input [LISTS_IN_INPUT]]
                     [--presorted [True|False]] [--verify-sort [True|False]]
+                    [--report-lists [REPORT_LISTS]]
+                    [--exclude-lists [EXCLUDE_LISTS]]
+                    [--output-only-lists [OUTPUT_ONLY_LISTS]]
                     [--build-id [True|False]]
                     [--overwrite-id [optional true|false]]
                     [--verify-id-unique [optional true|false]]
@@ -141,6 +159,9 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
+  --list-output-file LIST_OUTPUT_FILE
+                        A KGTK output file that will contain only the rows
+                        containing lists. (Optional, use '-' for stdout.)
   --columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]
                         The key columns to identify records for compaction.
                         (default=id for node files, (node1, label, node2, id)
@@ -166,6 +187,15 @@ optional arguments:
                         If the input has been presorted, verify its
                         consistency (disable if only pregrouped).
                         (default=True).
+  --report-lists [REPORT_LISTS]
+                        When True, report records with lists to the error
+                        output. (default=False).
+  --exclude-lists [EXCLUDE_LISTS]
+                        When True, exclude records with lists from the output.
+                        (default=False).
+  --output-only-lists [OUTPUT_ONLY_LISTS]
+                        When True, only records containing lists will be
+                        written to the primary output file. (default=False).
   --build-id [True|False]
                         Build id values in an id column. (default=False).
   --overwrite-id [optional true|false]
@@ -503,6 +533,120 @@ The output will be the following table in KGTK format:
 
 The output is sorted and duplicate lines have been removed, without creating any new
 [multi-valued edges (`|` lists)](../../specification#multi-valued-edges).
+
+### Reporting Rows with Lists
+ 
+```bash
+kgtk compact -i examples/docs/compact-file3.tsv --report-lists
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | 1 | home | 10 |
+| john | zipcode | 12346 | 2 |  |  |
+| peter | zipcode | 12040 | 3 | home |  |
+| peter | zipcode | 12040 | 4 | cabin\|work | 5\|6 |
+| steve | zipcode | 45601 | 5 |  | 3\|4\|5 |
+| steve | zipcode | 45601 | 6 | cabin\|home\|work | 1\|2 |
+
+The following records will be reported to standard error:
+
+    'peter\tzipcode\t12040\t4\tcabin|work\t5|6'
+    'steve\tzipcode\t45601\t5\t\t3|4|5'
+    'steve\tzipcode\t45601\t6\tcabin|home|work\t1|2'
+
+### Excluding Rows with Lists from the Primary Output File
+ 
+```bash
+kgtk compact -i examples/docs/compact-file3.tsv --exclude-lists
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | 1 | home | 10 |
+| john | zipcode | 12346 | 2 |  |  |
+| peter | zipcode | 12040 | 3 | home |  |
+
+### Sending Only Rows with Lists to the Primary Output File
+ 
+```bash
+kgtk compact -i examples/docs/compact-file3.tsv --output-only-lists
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| peter | zipcode | 12040 | 4 | cabin\|work | 5\|6 |
+| steve | zipcode | 45601 | 5 |  | 3\|4\|5 |
+| steve | zipcode | 45601 | 6 | cabin\|home\|work | 1\|2 |
+
+### Sending Rows with Lists to the List Output File
+ 
+```bash
+kgtk compact -i examples/docs/compact-file3.tsv \
+             --list-output-file compact-list-output.tsv
+```
+
+The standard output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | 1 | home | 10 |
+| john | zipcode | 12346 | 2 |  |  |
+| peter | zipcode | 12040 | 3 | home |  |
+| peter | zipcode | 12040 | 4 | cabin\|work | 5\|6 |
+| steve | zipcode | 45601 | 5 |  | 3\|4\|5 |
+| steve | zipcode | 45601 | 6 | cabin\|home\|work | 1\|2 |
+
+The list output file will contain the following table in KGTK format:
+
+```bash
+kgtk cat -i compact-list-output.tsv
+```
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| peter | zipcode | 12040 | 4 | cabin\|work | 5\|6 |
+| steve | zipcode | 45601 | 5 |  | 3\|4\|5 |
+| steve | zipcode | 45601 | 6 | cabin\|home\|work | 1\|2 |
+
+### Sending Only Rows without Lists to the Primary Output File, and Rows with Lists to the List Output File
+ 
+```bash
+kgtk compact -i examples/docs/compact-file3.tsv \
+     --output-file compact-output.tsv \
+     --exclude-lists \
+     --list-output-file compact-list-output.tsv
+```
+
+The primary output file will contain the following table in KGTK format:
+
+```bash
+kgtk cat -i compact-output.tsv
+```
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | 1 | home | 10 |
+| john | zipcode | 12346 | 2 |  |  |
+| peter | zipcode | 12040 | 3 | home |  |
+
+The list output file will contain the following table in KGTK format:
+
+```bash
+kgtk cat -i compact-list-output.tsv
+```
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| peter | zipcode | 12040 | 4 | cabin\|work | 5\|6 |
+| steve | zipcode | 45601 | 5 |  | 3\|4\|5 |
+| steve | zipcode | 45601 | 6 | cabin\|home\|work | 1\|2 |
 
 ### Building New, Unique IDs for the Compacted Edges.
 

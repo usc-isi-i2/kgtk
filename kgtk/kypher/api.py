@@ -3,6 +3,8 @@ from functools import lru_cache
 import sqlite3
 import threading
 import time
+import re
+import io
 
 import kgtk.kypher.query as kyquery
 import kgtk.cli.query as cliquery
@@ -79,23 +81,23 @@ class KypherQuery(object):
         if self.kgtk_query is not None:
             raise KGTKException('query has already been defined')
 
-        optionals = []
-        opt and optionals.append((opt, owhere))
-        opt2 and optionals.append((opt2, owhere2))
-        # kwargs is an ordered dict, so the actual suffixes do not matter:
-        for key, value in kwargs.items():
-            if key.startwith('opt'):
-                optionals.append([value, None])
-            elif key.startwith('owhere'):
-                optionals[-1][1] = value
-            else:
-                raise KGTKException('Unexpected keyword argument: %s' % key)
-
         inputs = kyquery.listify(inputs) or self.api.get_all_inputs()
         for inp in inputs:
             if self.api.get_input_info(inp) is None:
                 self.api.add_input(inp)
         
+        optionals = []
+        opt and optionals.append((self._subst_graph_handles(opt, inputs), owhere))
+        opt2 and optionals.append((self._subst_graph_handles(opt2, inputs), owhere2))
+        # kwargs is an ordered dict, so the actual suffixes do not matter:
+        for key, value in kwargs.items():
+            if key.startwith('opt'):
+                optionals.append([self._subst_graph_handles(value, inputs), None])
+            elif key.startwith('owhere'):
+                optionals[-1][1] = value
+            else:
+                raise KGTKException('Unexpected keyword argument: %s' % key)
+
         store = self.api.get_sql_store()
         if loglevel is None:
             loglevel = self.api.loglevel
@@ -113,7 +115,7 @@ class KypherQuery(object):
             inputs, store,
             loglevel=loglevel, index=index,
             query=query,
-            match=match, where=where,
+            match=self._subst_graph_handles(match, inputs), where=where,
             optionals=optionals,
             with_=(with_, wwhere),
             ret=ret, order=order,
@@ -132,6 +134,33 @@ class KypherQuery(object):
             self.api.cached_queries[name] = self
         self.timestamp = self.api.timestamp
         return self
+
+    PSEUDO_GRAPH_HANDLE_REGEX = re.compile('`?\$(?P<handle>[^$`:\s]+)`?:')
+
+    def _subst_graph_handles(self, match_pattern, inputs):
+        """Substitute any pseudo graph handles in 'match_pattern' that are relevant to one
+        of 'inputs' with their canonical input file or alias (backtick quoted if necessary).
+        Any backtick quotes around a handle will be dropped automatically first.
+        """
+        cursor = 0
+        out = io.StringIO()
+        for match in self.PSEUDO_GRAPH_HANDLE_REGEX.finditer(match_pattern):
+            handle = match.group('handle')
+            info = self.api.get_input_info(handle)
+            if info is not None and info['handle']:
+                # we found a match for a pseudo-handle, check whether it is relevant:
+                for inp in inputs:
+                    if self.api.get_input_info(inp) == info:
+                        # handle is for one of the listed 'inputs':
+                        out.write(match_pattern[cursor:match.start()])
+                        cursor = match.end()
+                        out.write('`%s`:' % self.api.get_input(handle))
+                        break
+        if cursor == 0:
+            return match_pattern
+        else:
+            out.write(match_pattern[cursor:])
+            return out.getvalue()
 
     def clear(self):
         """Clear all currently cached information for this query.
@@ -371,15 +400,26 @@ class KypherApi(object):
         """
         return self.inputs.get(name)
 
-    def add_input(self, file, alias=None, name=None, load=False):
+    def add_input(self, file, alias=None, name=None, handle=False, load=False):
         """Add input 'file' as one of the input files known by this API instance.
+
         If 'alias' is not None, use it as the name of input inside the graph cache
-        (equivalent to the --as option of the 'query' command).  If 'name' is given,
-        use it as an additional API-local name to refer to the input.  If 'load' is
-        true, load the input file immediately, unless it is already in the graph cache.
-        Using this function is only needed if an input alias and/or API name is desired,
-        or if data loading should be forced.  Otherwise, inputs can be specified directly
-        to 'get_query' (which see).  NOTE: if an alias is provided it implies 'load=True'.
+        (equivalent to the --as option of the 'query' command).  
+
+        If 'name' is given, use it as an additional API-local name to refer to the input.
+
+        If 'handle' is True, allow 'alias' or 'name' to be used as a pseudo-graph handle
+        in match patterns using the Kypher parameter syntax.  These handles are 'pseudo'
+        only, since they get replaced with their full respective input file name *before*
+        any Kypher parsing is done.  For example, if we have the name 'mygraph' defined
+        for an input, it can be used as '$mygraph: (x)-[]->(y), ...' in a strict or
+        optional match pattern.  The syntax of handle names is less restrictive than for
+        real Kypher variables and can contain any character except whitespace and '$`:'.
+        
+        If 'load' is true, load the input file immediately, unless it is already in the
+        graph cache.  Using this function is only needed if an input alias and/or API name
+        is desired, or if data loading should be forced.  Otherwise, inputs can be specified 
+        directly to 'get_query' (which see).  NOTE: providing an alias implies 'load=True'.
         """
         info = self.get_input_info(file) or self.get_input_info(alias) or self.get_input_info(name)
         info = info or {}
@@ -391,6 +431,7 @@ class KypherApi(object):
         if name is not None:
             info['name'] = name
             self.inputs[name] = info
+        info['handle'] = handle
         if load or info.get('alias') is not None:
             # we have to preload if we use a DB alias, otherwise a rerun of a cached query will fail:
             store = self.get_sql_store()
@@ -419,6 +460,9 @@ class KypherApi(object):
         return list(inputs)
 
     def lookup_query(self, name):
+        """Return a cached query with 'name' if it exists, otherwise return None.
+        This is useful as a cheap check before a fully parameterized call to 'get_query'.
+        """
         return self.cached_queries.get(name)
 
     def _get_query(self, query, error=True):
@@ -566,19 +610,22 @@ class KypherApi(object):
 
 # we define some inputs with API-local names for easy reference, but the
 # filenames will be used as the actual input names inside the graph cache:
->>> api.add_input('examples/docs/query-graph.tsv', name='graph')
->>> api.add_input('examples/docs/query-works.tsv', name='works')
+>>> api.add_input('examples/docs/query-graph.tsv', name='graph', handle=True)
+>>> api.add_input('examples/docs/query-works.tsv', name='works', handle=True)
 >>> api.add_input('examples/docs/query-quals.tsv', name='quals')
 
 # This defines a query object which we will refer to by its name later.
 # Since log level is 1, it displays the SQL translation it produces.
 # This call only prepares the query, it does not actually run it.
-# We use the Kypher paramter $ORG to later query for different orgs.
+# We use the Kypher parameter $ORG to later query for different orgs.
 # Parameters cannot be used in the match clause, so we use it in 'where':
 >>> api.get_query(name='work-info',
-                  # we qualify each clause with a graph handle, since all inputs are supplied to the query by default:
-                  match='`%s`: (p)-[r:works]->(c), `%s`: (p)-[:name]->(n)' % (api.get_input('works'), api.get_input('graph')),
+                  # we qualify each clause with a graph handle, since all inputs are supplied to the query by default;
+                  # we use pseudo graph handles here which is easiest (using handle=True in add_input above):
+                  match='$works: (p)-[r:works]->(c), $graph: (p)-[:name]->(n)',
                   where='c=$ORG',
+                  # here we splice in the graph handle directly, just for illustration of the separate mechanism;
+                  # note how we use backtick quoting to escape special characters in file names:
                   opt=  '`%s`: (r)-[:starts]->(s)' % api.get_input('quals'),
                   ret=  'c as company, p as employee, n as name, s as start',
                   loglevel=1)
@@ -619,7 +666,7 @@ class KypherApi(object):
 # the cached result set is used without any query execution at all.
 # This time we use the 'execute' method on the query object directly:
 >>> api.get_query(name='work-info',
-                  match='`%s`: (p)-[r:works]->(c), `%s`: (p)-[:name]->(n)' % (api.get_input('works'), api.get_input('graph')),
+                  match='$works: (p)-[r:works]->(c), $graph: (p)-[:name]->(n)',
                   where='c=$ORG',
                   opt=  '`%s`: (r)-[:starts]->(s)' % api.get_input('quals'),
                   ret=  'c as company, p as employee, n as name, s as start',
@@ -632,7 +679,7 @@ company employee       name                     start
 # if we clear caches first, the query gets translated from scratch:
 >>> api.clear_caches()
 >>> api.get_query(name='work-info',
-                  match='`%s`: (p)-[r:works]->(c), `%s`: (p)-[:name]->(n)' % (api.get_input('works'), api.get_input('graph')),
+                  match='$works: (p)-[r:works]->(c), $graph: (p)-[:name]->(n)',
                   where='c=$ORG',
                   opt=  '`%s`: (r)-[:starts]->(s)' % api.get_input('quals'),
                   ret=  'c as company, p as employee, n as name, s as start',
@@ -692,7 +739,7 @@ company employee       name                     start
 >>> query = api.get_query(inputs='claims',
                           name='get_node_edges',
                           maxcache=100,
-                          match='`%s`: (n)-[r]->(n2)' % 'claims',
+                          match='(n)-[r]->(n2)',
                           where='n=$NODE',
                           ret='r as id, n as node1, r.label as label, n2 as node2')
 ... ... ... ... ... 
