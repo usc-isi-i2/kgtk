@@ -18,6 +18,7 @@ of the files, enables operation with reduced memory requirements.
 ```
 usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--label-file INPUT_FILE]
+                 [--unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE]
                  [--columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]]
                  [--default-value DEFAULT_VALUE]
                  [--suppress-empty-columns [True/False]]
@@ -26,7 +27,9 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--input-file-is-presorted [True/False]]
                  [--label-file-is-presorted [True/False]]
                  [--clear-before-lift [CLEAR_BEFORE_LIFT]]
-                 [--overwrite [OVERWRITE]] [-v [optional True|False]]
+                 [--overwrite [OVERWRITE]]
+                 [--output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]]
+                 [-v [optional True|False]]
 
 Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
 
@@ -44,6 +47,10 @@ optional arguments:
   --label-file INPUT_FILE
                         A KGTK file with label records (Optional, use '-' for
                         stdin.)
+  --unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE
+                        A KGTK output file that will contain only unmodified
+                        rows. This file will have the same columns as the
+                        input file. (Optional, use '-' for stdout.)
   --columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]
                         The columns into which to store the lifted values. The
                         default is [node1;label, label;label, node2;label] or
@@ -73,6 +80,9 @@ optional arguments:
                         If true, overwrite non-default values in the columns
                         to write. If false, do not overwrite non-default
                         values in the columns to write. (default=True).
+  --output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]
+                        If true, output only modified edges to the primary
+                        output stream. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -433,6 +443,86 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
     The `;full-name` needs to be quoted on the command line, since `;` is
     a shell metacharacter.
 
+### Outputting Only Modified Rows
+
+Let's output only modified rows.  We will start by outputting
+all rows:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | True |  |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P1 | Q5 | False |  |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+Next, we will output only the modified rows:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2 \
+	  --output-only-modified-rows
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+### Unmodified Row Output File
+
+Suppose we want to isolate the unmodified rows for
+further processing.  We can send them to the unmodified row
+output file.
+
+We will send ounly the modified rows to the primary output
+stream.
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2 \
+	  --output-only-modified-rows \
+	  --unmodified-row-output-file lift-unmodified-rows.tsv
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+Here are the unmodified rows:
+
+```bash
+kgtk cat -i lift-unmodified-rows.tsv
+```
+
+| node1 | label | node2 | confident |
+| -- | -- | -- | -- |
+| Q1 | P1 | Q5 | True |
+| Q2 | P1 | Q5 | False |
+
+!!! note
+    The unmodified row output file has the same columns as the
+    primary input file.  In this example, it dpoes not have the
+    `node2;full-name` column that was added to the primary
+    output file.
+
 ### Expert Example: Input Filtering
 
 Let's list the full names only when we are confident in the relationship.
@@ -482,6 +572,33 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
     `--lift-suffix ""' uses shell quotes to specify an empty value.
     `--lift-suffix=` is another way to specify the empty lift suffix,
     and does not require shell quoting.
+
+!!! note
+    This procedure, repeated for the `node1`, `label`, and `node2`
+    columns, can be used to transform relationships from one
+    knowledge base system to another.
+
+### Expert Example: Lifting into `node2`, Outputting Only Modified Rows
+
+Let's lift full names into the node2 column, replacing the
+existing values there.  We can do this by specifying
+`--columns-to-lift node2` and giving an empty `--lift-suffix`.
+We will output only modified rows.
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --columns-to-lift node2 \
+          --lift-suffix= \
+	  --output-only-modified-rows
+```
+
+| node1 | label | node2 | confident |
+| -- | -- | -- | -- |
+| Q1 | P2 | "Fred Rogers" | True |
+| Q2 | P2 | "Fred Rogers" | False |
 
 ### Expert Example: Update Lifted Relationships
 
