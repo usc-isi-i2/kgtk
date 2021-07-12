@@ -79,6 +79,8 @@ class KgtkLift(KgtkFormat):
     output_only_modified_rows: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     unmodified_row_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
+    matched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
+
     # TODO: add rewind logic here and KgtkReader
 
     # TODO: find working validators
@@ -209,6 +211,7 @@ class KgtkLift(KgtkFormat):
                     path: Path,
                     save_input: bool = True,
                     labels_needed: typing.Optional[typing.Set[str]] = None,
+                    label_rows: typing.Optional[typing.MutableMapping[str, typing.List[typing.List[str]]]] = None,
     )->typing.Tuple[typing.Mapping[str, str], typing.List[typing.List[str]]]:
         input_rows: typing.List[typing.List[str]] = [ ]
         labels: typing.MutableMapping[str, str] = { }
@@ -235,7 +238,7 @@ class KgtkLift(KgtkFormat):
         for row in kr:
             if label_select_column_idx < 0 or row[label_select_column_idx] == self.label_select_column_value:
                 # This is a label definition row.
-                label_key = row[label_match_column_idx]
+                label_key: str = row[label_match_column_idx]
                 label_value: str = row[label_value_column_idx]
                 if label_value != self.default_value:
                     if label_key in labels:
@@ -246,18 +249,24 @@ class KgtkLift(KgtkFormat):
                             labels[label_key] = KgtkValue.merge_values(labels[label_key], label_value)
                         else:
                             labels[label_key] = KgtkFormat.LIST_SEPARATOR.join((labels[label_key], label_value))
+                        if label_rows is not None:
+                            label_rows[label_key].append(row.copy())
                     else:
                         # This is the first instance of this label definition.
                         if labels_needed is not None:
                             if label_key in labels_needed:
                                 labels[label_key] = label_value
+                                if label_rows is not None:
+                                    label_rows[label_key] = [ row.copy() ]
                         else:
                             labels[label_key] = label_value
+                            if label_rows is not None:
+                                label_rows[label_key] = [ row.copy() ]
                 if save_input and not self.remove_label_records:
-                    input_rows.append(row)
+                    input_rows.append(row.copy())
             else:
                 if save_input:
-                    input_rows.append(row)
+                    input_rows.append(row.copy())
         return labels, input_rows
                 
     def load_input_keeping_label_records(self,
@@ -370,6 +379,9 @@ class KgtkLift(KgtkFormat):
                          lifted_column_idxs: typing.List[int],
                          lifted_output_column_idxs: typing.List[int],
                          urkw: typing.Optional[KgtkWriter],
+                         mlkw: typing.Optional[KgtkWriter],
+                         label_rows: typing.Optional[typing.Mapping[str, typing.List[typing.List[str]]]],
+                         matched_labels: typing.Set[str],
         )->bool:
         output_row: typing.List[str] = row.copy()
         if new_columns > 0:
@@ -406,6 +418,13 @@ class KgtkLift(KgtkFormat):
                             modified = True
                         output_row[lifted_output_column_idx] = label_value
                         did_lift = True # What if we want to note if we lifted all columns?
+
+                        if mlkw is not None and label_rows is not None:
+                            if label_key not in matched_labels:
+                                matched_labels.add(label_key)
+                                label_row: typing.List[str]
+                                for label_row in label_rows[label_key]:
+                                    mlkw.write(label_row)
 
             if did_lift and output_select_column_idx >= 0 and self.output_select_column_value is not None:
                 if output_row[output_select_column_idx] != self.output_select_column_value:
@@ -501,7 +520,9 @@ class KgtkLift(KgtkFormat):
 
     def process_in_memory(self, ikr: KgtkReader,
                           lkr: typing.Optional[KgtkReader],
-                          urkw: typing.Optional[KgtkWriter]):
+                          urkw: typing.Optional[KgtkWriter],
+                          mlkw: typing.Optional[KgtkWriter],
+                          ):
         """
         Process the lift using in-memory buffering.  The labels will added to a
         dict in memory, and depending upon the options selected, the input
@@ -514,6 +535,13 @@ class KgtkLift(KgtkFormat):
 
         labels: typing.Mapping[str, str] = { }
         input_rows: typing.Optional[typing.List[typing.List[str]]] = None
+
+        label_rows: typing.Optional[typing.MutableMapping[str, typing.List[typing.List[str]]]]
+
+        if mlkw is None:
+            label_rows = None
+        else:
+            label_rows = { }
         
         input_select_column_idx: int
         if self.input_select_column_value is not None or self.output_select_column_value is not None:
@@ -537,14 +565,14 @@ class KgtkLift(KgtkFormat):
             if self.verbose:
                 print("Loading labels from the label file.", file=self.error_file, flush=True)
             # We don't need to worry about input rows in the label file.
-            labels, _ = self.load_labels(lkr, self.label_file_path, save_input=False, labels_needed=labels_needed)
+            labels, _ = self.load_labels(lkr, self.label_file_path, save_input=False, labels_needed=labels_needed, label_rows=label_rows)
         else:
             if self.verbose:
                 print("Loading labels and reading data from the input file.", file=self.error_file, flush=True)
             # Read the input file, extracting the labels. The label
             # records may or may not be saved in the input rows, depending
             # upon whether we plan to pass them through to the output.
-            labels, input_rows = self.load_labels(ikr, self.input_file_path)
+            labels, input_rows = self.load_labels(ikr, self.input_file_path, label_rows=label_rows)
 
             if not self.remove_label_records:
                 # Save the label column index in the input rows:
@@ -574,6 +602,7 @@ class KgtkLift(KgtkFormat):
         if self.verbose:
             print("Writing output records", file=self.error_file, flush=True)
 
+        matched_labels: typing.Set[str] = set()
         new_columns: int = len(ew.column_names) - len(ikr.column_names)
         input_line_count: int = 0
         output_line_count: int = 0
@@ -589,7 +618,11 @@ class KgtkLift(KgtkFormat):
                                          labels,
                                          lifted_column_idxs,
                                          lifted_output_column_idxs,
-                                         urkw):
+                                         urkw,
+                                         mlkw,
+                                         label_rows,
+                                         matched_labels,
+                                         ):
                     output_line_count += 1
         else:
             # Use the stored input records:
@@ -603,7 +636,11 @@ class KgtkLift(KgtkFormat):
                                          labels,
                                          lifted_column_idxs,
                                          lifted_output_column_idxs,
-                                         urkw):
+                                         urkw,
+                                         mlkw,
+                                         label_rows,
+                                         matched_labels,
+                                         ):
                     output_line_count += 1
 
         if self.verbose:
@@ -615,7 +652,9 @@ class KgtkLift(KgtkFormat):
     
     def process_as_merge(self, ikr: KgtkReader,
                          lkr: KgtkReader,
-                         urkw: typing.Optional[KgtkWriter]):
+                         urkw: typing.Optional[KgtkWriter],
+                         mlkw: typing.Optional[KgtkWriter],
+                         ):
         """
         Process the lift as a merge between two sorted files.
 
@@ -673,12 +712,13 @@ class KgtkLift(KgtkFormat):
             if self.input_select_column_value is not None and input_select_column_idx >= 0:
                 # Skip input rows that do not meet the selection criterion.
                 if row[input_select_column_idx] != self.input_select_column_value:
-                    if new_columns > 0:
-                        output_row = row.copy()
-                        output_row.append(self.default_value)
-                    else:
-                        output_row = row
-                    ew.write(output_row)
+                    if not self.output_only_modified_rows:
+                        if new_columns > 0:
+                            output_row = row.copy()
+                            output_row.append(self.default_value)
+                        else:
+                            output_row = row
+                        ew.write(output_row)
                     continue
 
             value_to_lift: str = row[lift_column_idx]
@@ -701,6 +741,10 @@ class KgtkLift(KgtkFormat):
                     if label_select_column_idx < 0 or current_label_row[label_select_column_idx] == self.label_select_column_value:
                         label_value: str = current_label_row[label_value_column_idx]
                         if len(label_value) > 0:
+                            # TODO: is this code positioned correctly?
+                            if mlkw is not None:
+                                mlkw.write(current_label_row)
+                                
                             if lifted_label_value != self.default_value:
                                 if self.suppress_duplicate_labels:
                                     lifted_label_value = KgtkValue.merge_values(lifted_label_value, label_value)
@@ -797,18 +841,43 @@ class KgtkLift(KgtkFormat):
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
             
+        mlkw: typing.Optional[KgtkWriter] = None
+        if self.matched_label_file_path is not None:
+            label_column_names: typing.List[str]
+            label_file_mode_name: str
+            if lkr is not None:
+                label_column_names = lkr.column_names
+                label_file_mode_name = lkr.mode.name
+            else:
+                label_column_names = ikr.column_names
+                label_file_mode_name = ikr.mode.name
+            mlkw = KgtkWriter.open(label_column_names,
+                                   self.matched_label_file_path,
+                                   mode=KgtkWriter.Mode[label_file_mode_name],
+                                   require_all_columns=False,
+                                   prohibit_extra_columns=True,
+                                   fill_missing_columns=True,
+                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   gzip_in_parallel=False,
+                                   verbose=self.verbose,
+                                   very_verbose=self.very_verbose)        
+            
 
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) == 1 and \
            not self.suppress_empty_columns and \
            self.input_is_presorted and \
            self.labels_are_presorted and \
            lkr is not None:
-            self.process_as_merge(ikr, lkr, urkw)
+            self.process_as_merge(ikr, lkr, urkw, mlkw)
         else:
-            self.process_in_memory(ikr, lkr, urkw)
+            self.process_in_memory(ikr, lkr, urkw, mlkw)
 
         if urkw is not None:
             urkw.close()
+
+        if mlkw is not None:
+            mlkw.close()
 
 def main():
     """

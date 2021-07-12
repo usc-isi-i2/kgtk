@@ -50,15 +50,24 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
+
     parser.add_input_file(who="A KGTK file with label records",
                           dest="label_file",
                           options=["--label-file"],
                           optional=True)
+
     parser.add_output_file(who="A KGTK output file that will contain only unmodified rows." +
                            " This file will have the same columns as the input file.",
                            dest="unmodified_row_file",
                            options=["--unmodified-row-output-file"],
                            metavar="UNMODIFIED_ROW_OUTPUT_FILE",
+                           optional=True)
+
+    parser.add_output_file(who="A KGTK output file that will contain matched label edges." +
+                           " This file will have the same columns as the source of the labels, either the input file or the label file.",
+                           dest="matched_label_file",
+                           options=["--matched-label-output-file"],
+                           metavar="MATCHED_LABEL_OUTPUT_FILE",
                            optional=True)
 
     parser.add_argument(      "--input-select-column", "--input-label-column", dest="input_select_column_name",
@@ -173,6 +182,7 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         label_file: KGTKFiles,
         unmodified_row_file: KGTKFiles,
+        matched_label_file: KGTKFiles,
 
         input_select_column_name: typing.Optional[str],
         input_select_column_value: typing.Optional[str],
@@ -225,6 +235,7 @@ def run(input_file: KGTKFiles,
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
     label_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_input_file(label_file, who="KGTK label file")
     unmodified_row_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(unmodified_row_file, who="KGTK unmodified row output file")
+    matched_label_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(matched_label_file, who="KGTK matched label output file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -241,6 +252,8 @@ def run(input_file: KGTKFiles,
             print("--label-file=%s" % label_kgtk_file, file=error_file, flush=True)
         if unmodified_row_kgtk_file is not None:
             print("--unmodified-row-output-file=%s" % unmodified_row_kgtk_file, file=error_file, flush=True)
+        if matched_label_kgtk_file is not None:
+            print("--matched-label-output-file=%s" % matched_label_kgtk_file, file=error_file, flush=True)
 
         if input_select_column_name is not None:
             print("--input-select-column=%s" % input_select_column_name, file=error_file, flush=True)
@@ -286,6 +299,7 @@ def run(input_file: KGTKFiles,
             label_file_path=label_kgtk_file,
             output_file_path=output_kgtk_file,
             unmodified_row_file_path=unmodified_row_kgtk_file,
+            matched_label_file_path=matched_label_kgtk_file,
 
             input_select_column_name=input_select_column_name,
             input_select_column_value=input_select_column_value,
