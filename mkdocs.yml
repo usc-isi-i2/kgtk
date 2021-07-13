@@ -41,6 +41,7 @@ nav:
       - 'remove-columns': 'transform/remove_columns.md'
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'
+      - 'replace-nodes': 'transform/replace_nodes.md'
       - 'sort': 'transform/sort.md'
       - 'tee': 'transform/tee.md'
       - 'unique': 'transform/unique.md'

@@ -79,6 +79,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The name of the mapping property for mapping the label column.  (default=%(default)s)"),
                               default="same_as_property")
 
+    parser.add_argument(      "--allow-exact-duplicates", dest="allow_exact_duplicates",
+                              help=h("Allow duplicate mapping entries with the same node2 values.  (default=%(default)s)"),
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--split-output-mode", dest="split_output_mode",
                               help="If true, send only modified edges to the output file. (default=%(default)s).",
                               metavar="True/False",
@@ -101,6 +106,7 @@ def run(input_file: KGTKFiles,
 
         same_as_item_label: str,
         same_as_property_label: str,
+        allow_exact_duplicates: bool,
 
         split_output_mode: bool,
 
@@ -151,6 +157,7 @@ def run(input_file: KGTKFiles,
 
         print("--same-as-item-label=%s" % repr(same_as_item_label), file=error_file, flush=True)
         print("--same-as-property-label=%s" % repr(same_as_property_label), file=error_file, flush=True)
+        print("--allow-exact-duplicates=%s" % repr(allow_exact_duplicates), file=error_file, flush=True)
 
         print("--split-output-mode=%s" % repr(split_output_mode), file=error_file, flush=True)
 
@@ -230,26 +237,28 @@ def run(input_file: KGTKFiles,
                 continue
         
             if mapping_label == same_as_item_label:
-                if mapping_node1 in item_line_map:
-                    print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
-                                                                                                  repr(mapping_node1),
-                                                                                                  mapping_line_number,
-                                                                                                  item_line_map[mapping_node1]),
-                          file=error_file, flush=True)
-                    mapping_errors += 1
+                if mapping_node1 in item_map:
+                    if mapping_node2 != item_map[mapping_node1] or not allow_exact_duplicates:
+                        print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
+                                                                                                      repr(mapping_node1),
+                                                                                                      mapping_line_number,
+                                                                                                      item_line_map[mapping_node1]),
+                              file=error_file, flush=True)
+                        mapping_errors += 1
                     continue
 
                 item_map[mapping_node1] = mapping_node2
                 item_line_map[mapping_node1] = mapping_line_number
                 mapping_rows[mapping_line_number] = mrow.copy()
             elif mapping_label == same_as_property_label:
-                if mapping_node1 in property_line_map:
-                    print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
-                                                                                                  repr(mapping_node1),
-                                                                                                  mapping_line_number,
-                                                                                                  property_line_map[mapping_node1]),
-                          file=error_file, flush=True)
-                    mapping_errors += 1
+                if mapping_node1 in property_map or not allow_exact_duplicates:
+                    if mapping_node2 != property_map[mapping_node1]:
+                        print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
+                                                                                                      repr(mapping_node1),
+                                                                                                      mapping_line_number,
+                                                                                                      property_line_map[mapping_node1]),
+                              file=error_file, flush=True)
+                        mapping_errors += 1
                     continue
                 property_map[mapping_node1] = mapping_node2
                 property_line_map[mapping_node1] = mapping_line_number
