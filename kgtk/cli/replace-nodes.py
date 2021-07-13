@@ -9,10 +9,8 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
-        'help': 'Lift labels from a KGTK file.',
-        'description': 'Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. ' +
-        'If found, lift the label values into additional columns in the current record. ' +
-        'Label records are reoved from the output. ' +
+        'help': 'Replace item and relationship identifiers in a KGTK file.',
+        'description': 'Replace item and relationship values to move a network from one symbol set to another. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert lift --help'
     }
 
