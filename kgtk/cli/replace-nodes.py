@@ -62,10 +62,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The name of the confidence column.  (default=%(default)s)"),
                               default="confidence")
 
-    parser.add_argument(      "--default-confidence-value", dest="default_confidence_value",
+    parser.add_argument(      "--default-confidence-value", dest="default_confidence_str",
                               help=h("The default confidence value when the confidence column is missing " +
-                                     "or a mapping edge does not have a confidence value. (default=%(default)f)"),
-                              type=float, default=1.0)
+                                     "or a mapping edge does not have a confidence value. (default=None)"))
     
     parser.add_argument(      "--threshold", dest="confidence_threshold",
                               help="The minimum acceptable confidence value. Mapping records with a lower" +
@@ -97,7 +96,7 @@ def run(input_file: KGTKFiles,
         activated_mapping_file: KGTKFiles,
 
         confidence_column_name: str,
-        default_confidence_value: float,
+        default_confidence_str: typing.Optional[str],
         confidence_threshold: float,
 
         same_as_item_label: str,
@@ -146,7 +145,8 @@ def run(input_file: KGTKFiles,
             print("--activated-mapping-edges-file=%s" % repr(str(activated_mapping_kgtk_file)), file=error_file, flush=True)
 
         print("--confidence-column=%s" % repr(confidence_column_name), file=error_file, flush=True)
-        print("--default-confidence-value=%f" % default_confidence_value, file=error_file, flush=True)
+        if default_confidence_str is not None:
+            print("--default-confidence-value=%s" % default_confidence_str, file=error_file, flush=True)
         print("--threshold=%f" % confidence_threshold, file=error_file, flush=True)
 
         print("--same-as-item-label=%s" % repr(same_as_item_label), file=error_file, flush=True)
@@ -157,6 +157,13 @@ def run(input_file: KGTKFiles,
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    default_confidence_value: typing.Optional[float] = None
+    if default_confidence_str is not None:
+        try:
+            default_confidence_value = float(default_confidence_str)
+        except:
+            raise KGTKException("--default-confidence-value=%s is invalid" % repr(default_confidence_str))
 
     try:
 
@@ -208,7 +215,7 @@ def run(input_file: KGTKFiles,
             mapping_node1: str = mrow[mapping_node1_idx]
             mapping_label: str = mrow[mapping_label_idx]
             mapping_node2: str = mrow[mapping_node2_idx]
-            mapping_confidence: float = default_confidence_value
+            mapping_confidence: typing.Optional[float] = default_confidence_value
             if confidence_column_idx >= 0:
                 confidence_value_str: str = mrow[confidence_column_idx]
                 if len(confidence_value_str) > 0:
@@ -219,7 +226,7 @@ def run(input_file: KGTKFiles,
                               file=error_file, flush=True)
                         mapping_errors += 1
                         continue
-            if mapping_confidence < confidence_threshold:
+            if mapping_confidence is not None and mapping_confidence < confidence_threshold:
                 continue
         
             if mapping_label == same_as_item_label:
