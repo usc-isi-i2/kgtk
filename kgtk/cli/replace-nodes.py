@@ -90,7 +90,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--split-output-mode", dest="split_output_mode",
                               help="If true, send only modified edges to the output file. (default=%(default)s).",
                               metavar="True/False",
-                              type=optional_bool, nargs='?', const=True, default=True)
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.

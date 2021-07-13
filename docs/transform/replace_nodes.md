@@ -263,3 +263,13 @@ kgtk cat --input-file examples/docs/replace-nodes-mapping1.tsv
 | box4 | same_as_item | Q004 |  |
 | isa | same_as_property | P1 | 1.0 |
 
+### Apply the Mapping
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping1.tsv
+     
+```
+
+| node1 | label | node2 | confidence |
