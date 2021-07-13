@@ -159,8 +159,98 @@ def run(input_file: KGTKFiles,
         print("=======", file=error_file, flush=True)
 
     try:
-        
 
+        ikr:  KgtkReader = KgtkReader.open(input_kgtk_file,
+                                           options=reader_options,
+                                           value_options = value_options,
+                                           error_file=error_file,
+                                           verbose=verbose,
+                                           very_verbose=very_verbose,
+        )
+        trouble: bool = False
+        input_node1_idx: int = ikr.node1_column_idx
+        input_label_idx: int = ikr.label_column_idx
+        input_node2_idx: int = ikr.node2_column_idx
+        if input_node1_idx < 0:
+            trouble = True
+            print("Error: Cannot find the input file node1 column.", file=error_file, flush=True)
+        if input_label_idx < 0:
+            trouble = True
+            print("Error: Cannot find the input file label column.", file=error_file, flush=True)
+        if input_node2_idx < 0:
+            trouble = True
+            print("Error: Cannot find the input file node2 column.", file=error_file, flush=True)
+        if trouble:
+            # Clean up:                                                                                                                                               
+            ikr.close()
+            raise KGTKException("Missing columns in the input file.")
+
+        mkr:  KgtkReader = KgtkReader.open(mapping_kgtk_file,
+                                           options=reader_options,
+                                           value_options = value_options,
+                                           error_file=error_file,
+                                           verbose=verbose,
+                                           very_verbose=very_verbose,
+        )
+        trouble = False
+        mapping_node1_idx: int = mkr.node1_column_idx
+        mapping_label_idx: int = mkr.label_column_idx
+        mapping_node2_idx: int = mkr.node2_column_idx
+        if mapping_node1_idx < 0:
+            trouble = True
+            print("Error: Cannot find the mapping file node1 column.", file=error_file, flush=True)
+        if mapping_label_idx < 0:
+            trouble = True
+            print("Error: Cannot find the mapping file label column.", file=error_file, flush=True)
+        if mapping_node2_idx < 0:
+            trouble = True
+            print("Error: Cannot find the mapping file node2 column.", file=error_file, flush=True)
+        if trouble:
+            # Clean up:                                                                                                                                               
+            ikr.close()
+            mkr.close()
+            raise KGTKException("Missing columns in the mapping file.")
+        confidence_column_idx: int = mkr.column_name_map.get(confidence_column_name, -1)
+        
+        okw: KgtkWriter = KgtkWriter.open(ikr.column_names,
+                                          output_kgtk_file,
+                                          mode=KgtkWriter.Mode[ikr.mode.name],
+                                          use_mgzip=reader_options.use_mgzip, # Hack!
+                                          mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                          error_file=error_file,
+                                          verbose=verbose,
+                                          very_verbose=very_verbose)
+
+        uekw: typing.Optional[KgtkWriter] = None
+        if unmodified_edges_kgtk_file is not None:
+            uekw = KgtkWriter.open(ikr.column_names,
+                                   unmodified_edges_kgtk_file,
+                                   mode=KgtkWriter.Mode[ikr.mode.name],
+                                   use_mgzip=reader_options.use_mgzip, # Hack!
+                                   mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                   error_file=error_file,
+                                   verbose=verbose,
+                                   very_verbose=very_verbose)
+
+        amkw: typing.Optional[KgtkWriter] = None
+        if activated_mapping_kgtk_file is not None:
+            amkw = KgtkWriter.open(mkr.column_names,
+                                   activated_mapping_kgtk_file,
+                                   mode=KgtkWriter.Mode[mkr.mode.name],
+                                   use_mgzip=reader_options.use_mgzip, # Hack!
+                                   mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                   error_file=error_file,
+                                   verbose=verbose,
+                                   very_verbose=very_verbose)
+
+        # Done!
+        ikr.close()
+        mkr.close()
+        okw.close()
+        if uekw is not None:
+            uekw.close()
+        if amkw is not None:
+            amkw.close()
         return 0
 
     except SystemExit as e:
