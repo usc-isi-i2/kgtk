@@ -208,11 +208,13 @@ def run(input_file: KGTKFiles,
             mapping_label: str = mrow[mapping_label_idx]
             mapping_node2: str = mrow[mapping_node2_idx]
             mapping_confidence: float = default_confidence_value
-            if confidence_column_idx >= 0 and len(mrow[confidence_column_idx]) > 0:
-                try:
-                    mapping_confidence = float(mrow[confidence_column_idx])
-                except ValueError:
-                    raise KGTKException("In line %d of the mapping file: cannot parse confidence value %s" % (mapping_line_number, mrow[confidence_column_idx]))
+            if confidence_column_idx >= 0:
+                confidence_value_str: str = mrow[confidence_column_idx]
+                if len(confidence_value_str) > 0:
+                    try:
+                        mapping_confidence = float(confidence_value_str)
+                    except ValueError:
+                        raise KGTKException("In line %d of the mapping file: cannot parse confidence value %s" % (mapping_line_number, mrow[confidence_column_idx]))
             if mapping_confidence < confidence_threshold:
                 continue
         
