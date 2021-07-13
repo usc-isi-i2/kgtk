@@ -226,7 +226,7 @@ optional arguments:
                         (default=1.000000)
   --split-output-mode [True/False]
                         If true, send only modified edges to the output file.
-                        (default=True).
+                        (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -263,7 +263,7 @@ kgtk cat --input-file examples/docs/replace-nodes-mapping1.tsv
 | box4 | same_as_item | Q004 |  |
 | isa | same_as_property | P1 | 1.0 |
 
-### Apply the Mapping
+### Apply the Mapping with Full Output
 
 ```bash
 kgtk replace-nodes \
@@ -272,4 +272,87 @@ kgtk replace-nodes \
      
 ```
 
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | P1 | box |
+| Q002 | P1 | box |
+| box3 | hasa | box |
+| Q001 | color | red |
+| Q002 | color | blue |
+
+### Apply the Mapping with Split Output
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping1.tsv \
+     --split-output-mode
+     
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | P1 | box |
+| Q002 | P1 | box |
+| Q001 | color | red |
+| Q002 | color | blue |
+
+### Apply the Mapping with an Unmodified Edges Output File
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping1.tsv \
+     --unmodified-edges-file replace-nodes-unmodified.tsv
+     
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | P1 | box |
+| Q002 | P1 | box |
+| box3 | hasa | box |
+| Q001 | color | red |
+| Q002 | color | blue |
+
+
+Here is the unmodified edges output file:
+
+```bask
+kgtk cat -i replace-nodes-unmodified.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| box3 | hasa | box |
+
+### Apply the Mapping with an Activated mapping Edges Output File
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping1.tsv \
+     --activated-mapping-edges-file replace-nodes-activated.tsv
+     
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | P1 | box |
+| Q002 | P1 | box |
+| box3 | hasa | box |
+| Q001 | color | red |
+| Q002 | color | blue |
+
+
+Here is the activated mapping edges output file:
+
+```bask
+kgtk cat -i replace-nodes-activated.tsv
+```
+
 | node1 | label | node2 | confidence |
+| -- | -- | -- | -- |
+| box1 | same_as_item | Q001 | 1.0 |
+| box2 | same_as_item | Q002 |  |
+| isa | same_as_property | P1 | 1.0 |
