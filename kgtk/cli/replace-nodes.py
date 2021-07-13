@@ -78,7 +78,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               default="same_as_property")
 
     parser.add_argument(      "--allow-exact-duplicates", dest="allow_exact_duplicates",
-                              help=h("Allow duplicate mapping entries with the same node2 values.  (default=%(default)s)"),
+                              help=h("When True, allow duplicate mapping entries with the same node2 values.  (default=%(default)s)"),
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--allow-idempotent-actions", dest="allow_idempotent_actions",
+                              help=h("When True, allow mapping entries having node1 == node2. Otherwise, filter them out.  (default=%(default)s)"),
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
@@ -105,6 +110,7 @@ def run(input_file: KGTKFiles,
         same_as_item_label: str,
         same_as_property_label: str,
         allow_exact_duplicates: bool,
+        allow_idempotent_actions: bool,
 
         split_output_mode: bool,
 
@@ -156,6 +162,7 @@ def run(input_file: KGTKFiles,
         print("--same-as-item-label=%s" % repr(same_as_item_label), file=error_file, flush=True)
         print("--same-as-property-label=%s" % repr(same_as_property_label), file=error_file, flush=True)
         print("--allow-exact-duplicates=%s" % repr(allow_exact_duplicates), file=error_file, flush=True)
+        print("--allow-idempotent-actions=%s" % repr(allow_idempotent_actions), file=error_file, flush=True)
 
         print("--split-output-mode=%s" % repr(split_output_mode), file=error_file, flush=True)
 
@@ -212,6 +219,8 @@ def run(input_file: KGTKFiles,
         # Read the mapping file.
         if verbose:
             print("Processing the mapping file.", file=error_file, flush=True)
+        mapping_confidence_exclusions: int = 0
+        mapping_idempotent_exclusions: int = 0
         mapping_errors: int = 0
         mapping_line_number: int = 0
         mrow: typing.List[str]
@@ -232,6 +241,11 @@ def run(input_file: KGTKFiles,
                         mapping_errors += 1
                         continue
             if mapping_confidence is not None and mapping_confidence < confidence_threshold:
+                mapping_confidence_exclusions += 1
+                continue
+
+            if mapping_node1 == mapping_node2 and not allow_idempotent_actions:
+                mapping_idempotent_exclusions += 1
                 continue
         
             if mapping_label == same_as_item_label:
@@ -248,9 +262,10 @@ def run(input_file: KGTKFiles,
                 item_map[mapping_node1] = mapping_node2
                 item_line_map[mapping_node1] = mapping_line_number
                 mapping_rows[mapping_line_number] = mrow.copy()
+
             elif mapping_label == same_as_property_label:
-                if mapping_node1 in property_map or not allow_exact_duplicates:
-                    if mapping_node2 != property_map[mapping_node1]:
+                if mapping_node1 in property_map:
+                    if mapping_node2 != property_map[mapping_node1] or not allow_exact_duplicates:
                         print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
                                                                                                       repr(mapping_node1),
                                                                                                       mapping_line_number,
@@ -261,6 +276,7 @@ def run(input_file: KGTKFiles,
                 property_map[mapping_node1] = mapping_node2
                 property_line_map[mapping_node1] = mapping_line_number
                 mapping_rows[mapping_line_number] = mrow.copy()
+
             else:
                 print("Unknown mapping action %s at line %d of mapping file %s" % (mapping_label,
                                                                                    mapping_line_number,
@@ -278,6 +294,14 @@ def run(input_file: KGTKFiles,
 
         if len(item_map) == 0 and len(property_map) == 0:
             raise KGTKException("Nothing read from the mapping file %s" % repr(str(mapping_kgtk_file)))
+
+        if verbose:
+            print("%d mapping lines, %d excluded for confidence, %d excluded for idempotency." % (mapping_line_number,
+                                                                                                  mapping_confidence_exclusions,
+                                                                                                  mapping_idempotent_exclusions),
+                  file=error_file, flush=True)
+            print("%d item mapping rules." % len(item_map), file=error_file, flush=True)
+            print("%d property mapping rules." % len(property_map), file=error_file, flush=True)
 
         if verbose:
             print("Opening the input file %s." % repr(str(input_kgtk_file)), file=error_file, flush=True)

@@ -125,6 +125,19 @@ in the confidence column, then the default confidence value is used.
     At the present time, uniqueness constraints (see above) are applied after
     confidence filtering. This ordering may change in the future.
 
+#### Idempotent Mapping Rules
+
+A mapping rule that maps a `node1` value in an input edge to itself is called an
+`idempotent mapping rule`.  Idempotent mapping rules are discarded when the
+mapping file is read unless the expert option `--allow-idempotent-actions` has
+been specified.
+
+When idempotent mapping rules are allowed, input edges that satisfy an idempotent
+mapping rule will be considered `modified` (see below), even though the values in the edge
+are unchanged, and the mapping edge will be considered `activated` (see below).
+There may be some circumstances in which this is the desired behavior, and
+other circumstances in which the default behavior is preferred.
+
 ### Memory Usage
 
 The mapping file edges are saved in memory.
@@ -160,7 +173,12 @@ to the primary output file.
 When an unmodified edges output file has not been specified and split output mode is in effect, unmodified edges will
 not be sent to an output file.
 
-### The Activated mapping Edges Output File
+!!! note
+    When `--allow-idempotent-actions` has been specified, an input edge that
+    satisfies an idenpotent mapping rule will be treated as a modified edge,
+    even when the output edge has the same values as it did on input.
+
+### The Activated Mapping Edges Output File
 
 When `--activated-mapping-edges-file ACTIVATED_MAPPING_EDGES_FILE` is specified,
 then the activated mapping edges output file will contain a copy of the mapping
@@ -180,7 +198,7 @@ usage: kgtk replace-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                           [--split-output-mode [True/False]]
                           [-v [optional True|False]]
 
-Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
+Replace item and relationship values to move a network from one symbol set to another. 
 
 Additional options are shown in expert help.
 kgtk --expert lift --help
