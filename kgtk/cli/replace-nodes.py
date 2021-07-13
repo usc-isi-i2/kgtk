@@ -200,6 +200,7 @@ def run(input_file: KGTKFiles,
         # Read the mapping file.
         if verbose:
             print("Processing the mapping file.", file=error_file, flush=True)
+        mapping_errors: int = 0
         mapping_line_number: int = 0
         mrow: typing.List[str]
         for mrow in mkr:
@@ -214,39 +215,52 @@ def run(input_file: KGTKFiles,
                     try:
                         mapping_confidence = float(confidence_value_str)
                     except ValueError:
-                        raise KGTKException("In line %d of the mapping file: cannot parse confidence value %s" % (mapping_line_number, mrow[confidence_column_idx]))
+                        print("In line %d of the mapping file: cannot parse confidence value %s" % (mapping_line_number, repr(mrow[confidence_column_idx])),
+                              file=error_file, flush=True)
+                        mapping_errors += 1
+                        continue
             if mapping_confidence < confidence_threshold:
                 continue
         
             if mapping_label == same_as_item_label:
                 if mapping_node1 in item_line_map:
-                    mkr.close()
-                    raise KGTKException("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
-                                                                                                                repr(mapping_node1),
-                                                                                                                mapping_line_number,
-                                                                                                                item_line_map[mapping_node1]))
+                    print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
+                                                                                                  repr(mapping_node1),
+                                                                                                  mapping_line_number,
+                                                                                                  item_line_map[mapping_node1]),
+                          file=error_file, flush=True)
+                    mapping_errors += 1
+                    continue
+
                 item_map[mapping_node1] = mapping_node2
                 item_line_map[mapping_node1] = mapping_line_number
                 mapping_rows[mapping_line_number] = mrow.copy()
             elif mapping_label == same_as_property_label:
                 if mapping_node1 in property_line_map:
-                    mkr.close()
-                    raise KGTKException("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
-                                                                                                                repr(mapping_node1),
-                                                                                                                mapping_line_number,
-                                                                                                                property_line_map[mapping_node1]))
+                    print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
+                                                                                                  repr(mapping_node1),
+                                                                                                  mapping_line_number,
+                                                                                                  property_line_map[mapping_node1]),
+                          file=error_file, flush=True)
+                    mapping_errors += 1
+                    continue
                 property_map[mapping_node1] = mapping_node2
                 property_line_map[mapping_node1] = mapping_line_number
                 mapping_rows[mapping_line_number] = mrow.copy()
             else:
-                mkr.close()
-                raise KGTKException("Unknown mapping action %s at line %d of mapping file %s" % (mapping_label,
-                                                                                                 mapping_line_number,
-                                                                                                 repr(str(mapping_kgtk_file))))
+                print("Unknown mapping action %s at line %d of mapping file %s" % (mapping_label,
+                                                                                   mapping_line_number,
+                                                                                   repr(str(mapping_kgtk_file))),
+                      file=error_file, flush=True)
+                mapping_errors += 1
+                continue
                 
 
         # Close the mapping file.
         mkr.close()
+
+        if mapping_errors > 0:
+            raise KGTKException("%d errors detected in the mapping file %s" % (mapping_errors, repr(str(mapping_kgtk_file))))
 
         if len(item_map) == 0 and len(property_map) == 0:
             raise KGTKException("Nothing read from the mapping file %s" % repr(str(mapping_kgtk_file)))
