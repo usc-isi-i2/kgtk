@@ -277,7 +277,7 @@ def run(input_file: KGTKFiles,
         if label_value_column_name is not None:
             print("--label-value-column=%s" % label_value_column_name, file=error_file, flush=True)
 
-        print("--default_value=%s" % repr(remove_label_records))
+        print("--default-value=%s" % repr(default_value))
         print("--remove-label-records=%s" % repr(remove_label_records))
         print("--sort-lifted-labels=%s" % repr(sort_lifted_labels))
         print("--suppress-duplicate-labels=%s" % repr(suppress_duplicate_labels))
