@@ -160,31 +160,8 @@ def run(input_file: KGTKFiles,
 
     try:
 
-        ikr:  KgtkReader = KgtkReader.open(input_kgtk_file,
-                                           options=reader_options,
-                                           value_options = value_options,
-                                           error_file=error_file,
-                                           verbose=verbose,
-                                           very_verbose=very_verbose,
-        )
-        trouble: bool = False
-        input_node1_idx: int = ikr.node1_column_idx
-        input_label_idx: int = ikr.label_column_idx
-        input_node2_idx: int = ikr.node2_column_idx
-        if input_node1_idx < 0:
-            trouble = True
-            print("Error: Cannot find the input file node1 column.", file=error_file, flush=True)
-        if input_label_idx < 0:
-            trouble = True
-            print("Error: Cannot find the input file label column.", file=error_file, flush=True)
-        if input_node2_idx < 0:
-            trouble = True
-            print("Error: Cannot find the input file node2 column.", file=error_file, flush=True)
-        if trouble:
-            # Clean up:                                                                                                                                               
-            ikr.close()
-            raise KGTKException("Missing columns in the input file.")
-
+        if verbose:
+            print("Opening the mapping file %s." % repr(str(mapping_kgtk_file)), file=error_file, flush=True)
         mkr:  KgtkReader = KgtkReader.open(mapping_kgtk_file,
                                            options=reader_options,
                                            value_options = value_options,
@@ -207,11 +184,98 @@ def run(input_file: KGTKFiles,
             print("Error: Cannot find the mapping file node2 column.", file=error_file, flush=True)
         if trouble:
             # Clean up:                                                                                                                                               
-            ikr.close()
             mkr.close()
             raise KGTKException("Missing columns in the mapping file.")
         confidence_column_idx: int = mkr.column_name_map.get(confidence_column_name, -1)
         
+        # Mapping structures:
+        item_map: typing.MutableMapping[str, str] = dict()
+        item_line_map: typing.MutableMapping[str, int] = dict()
+        property_map: typing.MutableMapping[str, str] = dict()
+        property_line_map: typing.MutableMapping[str, int] = dict()
+
+        mapping_rows: typing.MutableMapping[int, typing.List[str]] = dict()
+        activated_mapping_rows: typing.MutableMapping[int, typing.List[str]] = dict()
+
+        # Read the mapping file.
+        if verbose:
+            print("Processing the mapping file.", file=error_file, flush=True)
+        mapping_line_number: int = 0
+        mrow: typing.List[str]
+        for mrow in mkr:
+            mapping_line_number += 1
+            mapping_node1: str = mrow[mapping_node1_idx]
+            mapping_label: str = mrow[mapping_label_idx]
+            mapping_node2: str = mrow[mapping_node2_idx]
+            mapping_confidence: float = default_confidence_value
+            if confidence_column_idx >= 0 and len(mrow[confidence_column_idx]) > 0:
+                try:
+                    mapping_confidence = float(mrow[confidence_column_idx])
+                except ValueError:
+                    raise KGTKException("In line %d of the mapping file: cannot parse confidence value %s" % (mapping_line_number, mrow[confidence_column_idx]))
+            if mapping_confidence < confidence_threshold:
+                continue
+        
+            if mapping_label == same_as_item_label:
+                if mapping_node1 in item_line_map:
+                    mkr.close()
+                    raise KGTKException("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
+                                                                                                                repr(mapping_node1),
+                                                                                                                mapping_line_number,
+                                                                                                                item_line_map[mapping_node1]))
+                item_map[mapping_node1] = mapping_node2
+                item_line_map[mapping_node1] = mapping_line_number
+                mapping_rows[mapping_line_number] = mrow.copy()
+            elif mapping_label == same_as_property_label:
+                if mapping_node1 in property_line_map:
+                    mkr.close()
+                    raise KGTKException("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
+                                                                                                                repr(mapping_node1),
+                                                                                                                mapping_line_number,
+                                                                                                                property_line_map[mapping_node1]))
+                property_map[mapping_node1] = mapping_node2
+                property_line_map[mapping_node1] = mapping_line_number
+                mapping_rows[mapping_line_number] = mrow.copy()
+            else:
+                mkr.close()
+                raise KGTKException("Unknown mapping action %s at line %d of mapping file %s" % (mapping_label,
+                                                                                                 mapping_line_number,
+                                                                                                 repr(str(mapping_kgtk_file))))
+                
+
+        # Close the mapping file.
+        mkr.close()
+
+        if len(item_map) == 0 and len(property_map) == 0:
+            raise KGTKException("Nothing read from the mapping file %s" % repr(str(mapping_kgtk_file)))
+
+        if verbose:
+            print("Opening the input file %s." % repr(str(input_kgtk_file)), file=error_file, flush=True)
+        ikr:  KgtkReader = KgtkReader.open(input_kgtk_file,
+                                           options=reader_options,
+                                           value_options = value_options,
+                                           error_file=error_file,
+                                           verbose=verbose,
+                                           very_verbose=very_verbose,
+        )
+        trouble = False
+        input_node1_idx: int = ikr.node1_column_idx
+        input_label_idx: int = ikr.label_column_idx
+        input_node2_idx: int = ikr.node2_column_idx
+        if input_node1_idx < 0:
+            trouble = True
+            print("Error: Cannot find the input file node1 column.", file=error_file, flush=True)
+        if input_label_idx < 0:
+            trouble = True
+            print("Error: Cannot find the input file label column.", file=error_file, flush=True)
+        if input_node2_idx < 0:
+            trouble = True
+            print("Error: Cannot find the input file node2 column.", file=error_file, flush=True)
+        if trouble:
+            # Clean up:                                                                                                                                               
+            ikr.close()
+            raise KGTKException("Missing columns in the input file.")
+
         okw: KgtkWriter = KgtkWriter.open(ikr.column_names,
                                           output_kgtk_file,
                                           mode=KgtkWriter.Mode[ikr.mode.name],
@@ -223,6 +287,8 @@ def run(input_file: KGTKFiles,
 
         uekw: typing.Optional[KgtkWriter] = None
         if unmodified_edges_kgtk_file is not None:
+            if verbose:
+                print("Opening the unmodified edges file %s." % repr(str(unmodified_edges_kgtk_file)), file=error_file, flush=True)
             uekw = KgtkWriter.open(ikr.column_names,
                                    unmodified_edges_kgtk_file,
                                    mode=KgtkWriter.Mode[ikr.mode.name],
@@ -234,6 +300,8 @@ def run(input_file: KGTKFiles,
 
         amkw: typing.Optional[KgtkWriter] = None
         if activated_mapping_kgtk_file is not None:
+            if verbose:
+                print("Opening the activated mapping edges file %s." % repr(str(activated_mapping_kgtk_file)), file=error_file, flush=True)
             amkw = KgtkWriter.open(mkr.column_names,
                                    activated_mapping_kgtk_file,
                                    mode=KgtkWriter.Mode[mkr.mode.name],
@@ -243,14 +311,75 @@ def run(input_file: KGTKFiles,
                                    verbose=verbose,
                                    very_verbose=very_verbose)
 
+        # Process each row of the input file.
+        if verbose:
+            print("Processing the input file.", file=error_file, flush=True)
+        input_count: int = 0
+        modified_edge_count: int = 0
+        unmodified_edge_count: int = 0
+        row: typing.List[str]
+        for row in ikr:
+            input_count +=1
+            mapped: bool = False
+            newrow: typing.List[str] = row.copy()
+
+            input_node1: str = row[input_node1_idx]
+            if input_node1 in item_map:
+                newrow[input_node1_idx] = item_map[input_node1]
+                mapped = True
+                if amkw is not None:
+                    mapping_line_number = item_line_map[input_node1]
+                    if mapping_line_number not in activated_mapping_rows:
+                        activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
+                        
+            input_node2: str = row[input_node2_idx]
+            if input_node2 in item_map:
+                newrow[input_node2_idx] = item_map[input_node2]
+                mapped = True
+                if amkw is not None:
+                    mapping_line_number = item_line_map[input_node2]
+                    if mapping_line_number not in activated_mapping_rows:
+                        activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
+
+            input_label: str = row[input_label_idx]
+            if input_label in property_map:
+                newrow[input_label_idx] = property_map[input_label]
+                mapped = True
+                if amkw is not None:
+                    mapping_line_number = property_line_map[input_label]
+                    if mapping_line_number not in activated_mapping_rows:
+                        activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
+
+            if mapped:
+                modified_edge_count += 1
+                okw.write(newrow)
+            else:
+                unmodified_edge_count += 1
+                if uekw is not None:
+                    uekw.write(row)
+                if not split_output_mode:
+                    okw.write(row)
+                        
         # Done!
         ikr.close()
-        mkr.close()
         okw.close()
+
+        if verbose:
+            print("%d edges read. %d modified, %d unmodified." % (input_count, modified_edge_count, unmodified_edge_count), file=error_file, flush=True)
+
         if uekw is not None:
             uekw.close()
+
         if amkw is not None:
+            activated_count: int = 0
+            for mapping_line_number in sorted(activated_mapping_rows.keys()):
+                amkw.write(activated_mapping_rows[mapping_line_number])
+                activated_count += 1
             amkw.close()
+
+            if verbose:
+                print("%d activated mapping edges" % activated_count, file=error_file, flush=True)
+
         return 0
 
     except SystemExit as e:
