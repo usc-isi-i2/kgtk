@@ -953,7 +953,7 @@ class KgtkQuery(object):
     def explain(self, mode='plan'):
         query, params = self.translate_to_sql()
         self.ensure_relevant_indexes(query, explain=True)
-        result = self.store.explain(query, mode=mode)
+        result = self.store.explain(query, parameters=params, mode=mode)
         return result
 
 
