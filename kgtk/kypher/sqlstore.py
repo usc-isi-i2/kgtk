@@ -361,6 +361,28 @@ class SqliteStore(SqlStore):
         colspec = ', '.join([sql_quote_ident(col._name_) + ' ' + col.type for col in table_schema.columns.values()])
         return 'CREATE TABLE %s (%s)' % (table_schema._name_, colspec)
 
+    def get_without_rowid_table_definition(self, table_schema):
+        """Generate an SQLite 'WITHOUT ROWID' table definition for 'table_schema'.
+        Such tables need a primary key and then behave like a covering index instead
+        of needing a second index to go from a key to integer row IDs.  For most KGTK
+        tables, however, this is less space efficient than regular row ID tables, since
+        each index then points to the generally bigger KGTK edge IDs. But this might
+        be a good scheme to use for simple attribute tables such as 'labels', etc.
+        that only index on 'node1' and nothing else.
+        """
+        # TO DO: generalize this to allow a specification of a primary key such as
+        #        'node1' or '(node1, id)' instead of hardcoding 'id' as we currently do
+        colspec = []
+        without_rowid = ''
+        for col in table_schema.columns.values():
+            column = sql_quote_ident(col._name_) + ' ' + col.type
+            if col._name_ == 'id':
+                column += ' PRIMARY KEY'
+                # only optimize if we have an 'id' column we can use as the primary key:
+                without_rowid = ' WITHOUT ROWID'
+            colspec.append(column)
+        return 'CREATE TABLE %s (%s)%s' % (table_schema._name_, ', '.join(colspec), without_rowid)
+
     def get_index_name(self, table_schema, column):
         """Return a global name for the index for 'column' on 'table_schema'.
         """
