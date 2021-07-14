@@ -82,7 +82,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--allow-idempotent-actions", dest="allow_idempotent_actions",
+    parser.add_argument(      "--allow-idempotent-mapping", dest="allow_idempotent_mapping",
                               help=h("When True, allow mapping entries having node1 == node2. Otherwise, filter them out.  (default=%(default)s)"),
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -91,6 +91,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="If true, send only modified edges to the output file. (default=%(default)s).",
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--modified-pattern", dest="modified_pattern",
+                              help=h("A pattern that defines a significant edge modificationxs.  (default=%(default)s)"),
+                              default="node1|label|node2")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.
@@ -110,9 +114,10 @@ def run(input_file: KGTKFiles,
         same_as_item_label: str,
         same_as_property_label: str,
         allow_exact_duplicates: bool,
-        allow_idempotent_actions: bool,
+        allow_idempotent_mapping: bool,
 
         split_output_mode: bool,
+        modified_pattern: str,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -162,9 +167,10 @@ def run(input_file: KGTKFiles,
         print("--same-as-item-label=%s" % repr(same_as_item_label), file=error_file, flush=True)
         print("--same-as-property-label=%s" % repr(same_as_property_label), file=error_file, flush=True)
         print("--allow-exact-duplicates=%s" % repr(allow_exact_duplicates), file=error_file, flush=True)
-        print("--allow-idempotent-actions=%s" % repr(allow_idempotent_actions), file=error_file, flush=True)
+        print("--allow-idempotent-actions=%s" % repr(allow_idempotent_mapping), file=error_file, flush=True)
 
         print("--split-output-mode=%s" % repr(split_output_mode), file=error_file, flush=True)
+        print("--modified-pattern=%s" % repr(modified_pattern), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -244,7 +250,7 @@ def run(input_file: KGTKFiles,
                 mapping_confidence_exclusions += 1
                 continue
 
-            if mapping_node1 == mapping_node2 and not allow_idempotent_actions:
+            if mapping_node1 == mapping_node2 and not allow_idempotent_mapping:
                 mapping_idempotent_exclusions += 1
                 continue
         
@@ -374,37 +380,65 @@ def run(input_file: KGTKFiles,
         row: typing.List[str]
         for row in ikr:
             input_count +=1
-            mapped: bool = False
             newrow: typing.List[str] = row.copy()
 
             input_node1: str = row[input_node1_idx]
+            modified_node1: bool = False
             if input_node1 in item_map:
                 newrow[input_node1_idx] = item_map[input_node1]
-                mapped = True
+                modified_node1 = True
                 if amkw is not None:
                     mapping_line_number = item_line_map[input_node1]
                     if mapping_line_number not in activated_mapping_rows:
                         activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
                         
             input_node2: str = row[input_node2_idx]
+            modified_node2: bool = False
             if input_node2 in item_map:
                 newrow[input_node2_idx] = item_map[input_node2]
-                mapped = True
+                modified_node2 = True
                 if amkw is not None:
                     mapping_line_number = item_line_map[input_node2]
                     if mapping_line_number not in activated_mapping_rows:
                         activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
 
             input_label: str = row[input_label_idx]
+            modified_label: bool = False
             if input_label in property_map:
                 newrow[input_label_idx] = property_map[input_label]
-                mapped = True
+                modified_label = True
                 if amkw is not None:
                     mapping_line_number = property_line_map[input_label]
                     if mapping_line_number not in activated_mapping_rows:
                         activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
 
-            if mapped:
+            modified: bool
+            if modified_pattern == "node1|label|node2":
+                modified = modified_node1 or modified_label or modified_node2
+            elif modified_pattern == "node1|label":
+                modified = modified_node1 or modified_label
+            elif modified_pattern == "node1|node2":
+                modified = modified_node1 or modified_node2
+            elif modified_pattern == "label|node2":
+                modified = modified_label or modified_node2
+            elif modified_pattern == "node1":
+                modified = modified_node1
+            elif modified_pattern == "label":
+                modified = modified_label
+            elif modified_pattern == "node2":
+                modified = modified_node2
+            elif modified_pattern == "node1&label&node2":
+                modified = modified_node1 and modified_label and modified_node2
+            elif modified_pattern == "node1&label":
+                modified = modified_node1 and modified_label
+            elif modified_pattern == "node1&node2":
+                modified = modified_node1 and modified_node2
+            elif modified_pattern == "label&node2":
+                modified = modified_label and modified_node2
+            else:
+                raise KGTKException("Unrecognized modification test pattern %s" % repr(modified_pattern))                
+
+            if modified:
                 modified_edge_count += 1
                 okw.write(newrow)
             else:
