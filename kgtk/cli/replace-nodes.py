@@ -11,7 +11,7 @@ def parser():
     return {
         'help': 'Replace item and relationship identifiers in a KGTK file.',
         'description': 'Replace item and relationship values to move a network from one symbol set to another. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert lift --help'
+        '\n\nAdditional options are shown in expert help.\nkgtk --expert replace-nodes --help'
     }
 
 
