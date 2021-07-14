@@ -157,6 +157,34 @@ contains all edges from the input file, including unmodified edges (this is call
     If `--unmodified-edges-file UNMODIFIED_EDGES_FILE` is specified, then the
     unmodified edges will be sent to the unmodified edges output file.
 
+### Significant Modifications
+
+By default, a "modified edge" means an edge with a change in any
+of the fields that are subject to replacement.  By default, this means
+a change to any of the `node`, `label`, `node2` fields.
+
+However, there are circumstances in which you are interested in other
+modification patterns. The expert option `--modified-pattern MODIFIED_PATTERN` provides control over
+which fields must be modified for an edge to be considered to have been modified.
+
+| MODIFIED_PATTERN | Description |
+| ---------------- | ----------- |
+| `node1`          | Only the `node1` field matters. |
+| `label`          | Only the `label` field matters. |
+| `node2 `         | Only the `node2` field matters. |
+| `node1\|label`    | A modification to the `node1` or `label` fields. |
+| `node1\|node2`    | A modification to the `node1` or `node2` fields. |
+| `label\|node2`    | A modification to the `label` or `node2` fields. |
+| `node1\|label\|node2` | A modification to the `node1`, `label`, or `node2` fields. This is the default. |
+| `node1&label`    | The `node1` and `label` fields are both modified. |
+| `node1&node2`    | The `node1` and `node2` fields are both modified. |
+| `label&node2`    | The `label` and `node2` fields are both modified. |
+| `node1&label&node2` | The `node1`, `label`, and `node2` fields are all modified. |
+
+For example, you may be performing a `same_as_item`
+modification, and expect both `node1` and `node2` to be modified in every
+record.  You can achieve this with `--modified-pattern node1&node2`
+
 ### The Unmodified Edges Output File
 
 When `--unmodified-edges-file UNMODIFIED_EDGES_FILE` is speficied, an
@@ -501,3 +529,52 @@ kgtk cat -i replace-nodes-unmodified.tsv
 | box2 | color | blue |
 
 We've isolated the edges with the "unknown" `color` property.
+
+### Expert Example: Expecting Modifications to Both `node1` and `node2`
+
+Let's assume that we are mapping only items, and we expect every item to be mapped.
+
+Here is the mapping file:
+
+```bash
+kgtk cat -i examples/docs/replace-nodes-mapping4.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| box | same_as_item | Q000 |
+| box1 | same_as_item | Q001 |
+| box2 | same_as_item | Q002 |
+| box4 | same_as_item | Q004 |
+| red | same_as_item | Q006 |
+| blue | same_as_item | Q007 |
+
+Applying this mapping file:
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping4.tsv \
+     --unmodified-edges-file replace-nodes-unmodified.tsv \
+     --split-output-mode \
+     --modified-pattern 'node1&node2'
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | isa | Q000 |
+| Q002 | isa | Q000 |
+| Q001 | color | Q006 |
+| Q002 | color | Q007 |
+
+Here are the unmodified edges:
+
+```bash
+kgtk cat -i replace-nodes-unmodified.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| box3 | hasa | box |
+
+The `box3` item was not defined in the mapping file.
