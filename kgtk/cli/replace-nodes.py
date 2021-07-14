@@ -82,7 +82,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      "--allow-idempotent-actions", dest="allow_idempotent_actions",
+    parser.add_argument(      "--allow-idempotent-mapping", dest="allow_idempotent_mapping",
                               help=h("When True, allow mapping entries having node1 == node2. Otherwise, filter them out.  (default=%(default)s)"),
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -110,7 +110,7 @@ def run(input_file: KGTKFiles,
         same_as_item_label: str,
         same_as_property_label: str,
         allow_exact_duplicates: bool,
-        allow_idempotent_actions: bool,
+        allow_idempotent_mapping: bool,
 
         split_output_mode: bool,
 
@@ -162,7 +162,7 @@ def run(input_file: KGTKFiles,
         print("--same-as-item-label=%s" % repr(same_as_item_label), file=error_file, flush=True)
         print("--same-as-property-label=%s" % repr(same_as_property_label), file=error_file, flush=True)
         print("--allow-exact-duplicates=%s" % repr(allow_exact_duplicates), file=error_file, flush=True)
-        print("--allow-idempotent-actions=%s" % repr(allow_idempotent_actions), file=error_file, flush=True)
+        print("--allow-idempotent-actions=%s" % repr(allow_idempotent_mapping), file=error_file, flush=True)
 
         print("--split-output-mode=%s" % repr(split_output_mode), file=error_file, flush=True)
 
@@ -244,7 +244,7 @@ def run(input_file: KGTKFiles,
                 mapping_confidence_exclusions += 1
                 continue
 
-            if mapping_node1 == mapping_node2 and not allow_idempotent_actions:
+            if mapping_node1 == mapping_node2 and not allow_idempotent_mapping:
                 mapping_idempotent_exclusions += 1
                 continue
         
