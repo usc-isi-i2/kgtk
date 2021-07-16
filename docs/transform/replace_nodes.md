@@ -17,7 +17,7 @@ columns, or their aliases.  The `id` column is optional.
 
 The mapping file may optionally have a `confidence` column
 (the name of which is controlled by the expert option
-`--confidence-column COLUMN_NAME`.
+`--confidence-column COLUMN_NAME`).
 
 Here are some mapping file examples:
 
@@ -127,6 +127,10 @@ in the confidence column, then the default confidence value is used.
     At the present time, uniqueness constraints (see above) are applied after
     confidence filtering. This ordering may change in the future.
 
+!!! note
+    When the expert option `--require-confidence` is specified, the `confidence` column
+    is required and must contain non-empty values. 
+
 #### Idempotent Mapping Rules
 
 A mapping rule that maps a `node1` value in an input edge to itself is called an
@@ -232,7 +236,7 @@ usage: kgtk replace-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
 Replace item and relationship values to move a network from one symbol set to another. 
 
 Additional options are shown in expert help.
-kgtk --expert lift --help
+kgtk --expert replace-nodes --help
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -578,3 +582,62 @@ kgtk cat -i replace-nodes-unmodified.tsv
 | box3 | hasa | box |
 
 The `box3` item was not defined in the mapping file.
+
+### Expert Example: Requiring Confidence Values
+
+Using the `--require-confidence` option, we can require
+non-empty confidence values.
+
+Consider the following mapping file, which does not contain
+a `confidence` column:
+
+```bash
+kgtk cat -i examples/docs/replace-nodes-mapping2.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| isa | same_as_property | P1 |
+
+Applying this to our input file, and requiring confidence:
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping2.tsv \
+     --unmodified-edges-file replace-nodes-unmodified.tsv \
+     --require-confidence
+```
+
+We get the following error message:
+
+    The mapping file does not have a confidence column, and confidence is required.
+
+Conside the following mappping file, which contains a `confidence`
+column, but for which some confidence values ae missing:
+
+```bash
+kgtk cat --input-file examples/docs/replace-nodes-mapping1.tsv
+```
+
+| node1 | label | node2 | confidence |
+| -- | -- | -- | -- |
+| box1 | same_as_item | Q001 | 1.0 |
+| box2 | same_as_item | Q002 |  |
+| box4 | same_as_item | Q004 |  |
+| isa | same_as_property | P1 | 1.0 |
+
+Applying this to our input file, and requiring confidence:
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping1.tsv \
+     --require-confidence
+     
+```
+We get the following error messages:
+
+    In line 2 of the mapping file: the required confidence value is missing
+    In line 3 of the mapping file: the required confidence value is missing
+    2 errors detected in the mapping file 'examples/docs/replace-nodes-mapping1.tsv'
