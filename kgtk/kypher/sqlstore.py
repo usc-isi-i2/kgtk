@@ -33,16 +33,14 @@ pp = pprint.PrettyPrinter(indent=4)
 # + absolute file names are an issue when distributing the store
 # - support some minimal sanity checking such as empty files, etc.
 # - handle column name dealiasing and normalization
-# - explanation runs outside the sqlite connection and thus does not see
+# o explanation runs outside the sqlite connection and thus does not see
 #   user functions such as kgtk_stringify and friends which causes errors;
-#   see if we can fix this somehow
+#   fixed for --explain
 # - support declaring and dropping of (temporary) graphs that are only used
 #   once or a few times
 # - allow in-memory graphs, or better, support memory-mapped IO via
 #   PRAGMA mmap_size=NNN bytes, which would be transparent and usable on demand
-# - support other DB maintenance ops such as drop, list, info, etc.
-# - see how we could better support fine-grained querying via prepared statements
-#   and persistent connections that avoid the KGTK startup overhead, or scripts
+# o support other DB maintenance ops such as drop, list, info, etc.
 # - check for version of sqlite3, since older versions do not support ascii mode
 # - protect graph data import from failure or aborts through transactions
 # - handle table/index creation locking when we might have parallel invocations,
@@ -117,6 +115,16 @@ def get_cat_command(file, _piped=False):
     else:
         return sh.cat.bake(file, _piped=_piped)
 
+def format_memory_size(bytes):
+    """Return a humanly readable formatting of 'bytes' using powers of 1024.
+    """
+    units = ('Bytes', 'KB', 'MB', 'GB', 'TB')
+    if bytes < 1024:
+        return '%d %s' % (bytes, units[0])
+    else:
+        scale = min(math.floor(math.log(bytes, 1024)), len(units)-1)
+        return "%.2f %s" % (bytes / math.pow(1024, scale), units[scale])
+
 
 ### SQL Store
 
@@ -163,16 +171,28 @@ class SqliteStore(SqlStore):
             'sql':      sdict['_name_': 'sql',      'type': 'TEXT'],
         ]
     ]
-    
+
+    # Files contain KGTK data defining graphs, and graphs are SQL tables representing that data.
+    # They are represented as separate object types, but for now the association is 1-1 where each
+    # file points to the graph it defines and each graph is named by its associated file.
+    # However, in the future we might redefine this association, e.g., multiple files could define
+    # a graph, in which case graphs should have their own external names.  This is the main reason
+    # these object types are represented in separate tables, even though we could use just a single one.
+    # Over time we will need to store additional information in these tables.  The current implementation
+    # allows for transparent addition of new columns without invalidating existing graph cache DBs.
+    # No other changes such as renaming or deleting columns are supported (see 'InfoTable.handle_schema_update()').
+
     FILE_TABLE = sdict[
         '_name_': 'fileinfo',
         'columns': sdict[
             'file':    sdict['_name_': 'file',    'type': 'TEXT', 'key': True, 'doc': 'real path of the file containing the data'],
             'size':    sdict['_name_': 'size',    'type': 'INTEGER'],
             'modtime': sdict['_name_': 'modtime', 'type': 'FLOAT'],
-            'md5sum':  sdict['_name_': 'md5sum',  'type': 'TEXT'],
+            'md5sum':  sdict['_name_': 'md5sum',  'type': 'TEXT', 'default': None], # just for illustration of defaults
             'graph':   sdict['_name_': 'graph',   'type': 'TEXT', 'doc': 'the graph defined by the data of this file'],
-        ]
+            'comment': sdict['_name_': 'comment', 'type': 'TEXT', 'doc': 'comment describing the data of this file'],
+        ],
+        'without_rowid': False, # just for illustration
     ]
 
     GRAPH_TABLE = sdict[
@@ -183,7 +203,8 @@ class SqliteStore(SqlStore):
             'header':  sdict['_name_': 'header',  'type': 'TEXT'],
             'size':    sdict['_name_': 'size',    'type': 'INTEGER', 'doc': 'total size in bytes used by this graph including indexes'],
             'acctime': sdict['_name_': 'acctime', 'type': 'FLOAT', 'doc': 'last time this graph was accessed'],
-        ]
+        ],
+        'without_rowid': False,
     ]
 
     def __init__(self, dbfile=None, create=False, loglevel=0, conn=None):
@@ -191,7 +212,8 @@ class SqliteStore(SqlStore):
         or SQLite connection object 'conn'.  If 'dbfile' is provided and does
         not yet exist, it will only be created if 'create' is True.  Passing
         in a connection object directly provides more flexibility with creation
-        options.  In that case any 'dbfile' value will be ignored.
+        options.  In that case any 'dbfile' value will be ignored and instead
+        looked up directly from 'conn'.
         """
         self.loglevel = loglevel
         self.dbfile = dbfile
@@ -203,6 +225,8 @@ class SqliteStore(SqlStore):
                 raise KGTKException('no sqlite DB file or connection object provided')
             if not os.path.exists(self.dbfile) and not create:
                 raise KGTKException('sqlite DB file does not exist: %s' % self.dbfile)
+        else:
+            self.dbfile = self.pragma('database_list')[0][2]
         self.user_functions = set()
         self.init_meta_tables()
         self.configure()
@@ -214,10 +238,25 @@ class SqliteStore(SqlStore):
             sys.stderr.flush()
 
     def init_meta_tables(self):
-        if not self.has_table(self.FILE_TABLE._name_):
-            self.execute(self.get_table_definition(self.FILE_TABLE))
-        if not self.has_table(self.GRAPH_TABLE._name_):
-            self.execute(self.get_table_definition(self.GRAPH_TABLE))
+        self.fileinfo = InfoTable(self, self.FILE_TABLE)
+        self.graphinfo = InfoTable(self, self.GRAPH_TABLE)
+        self.fileinfo.init_table()
+        self.graphinfo.init_table()
+
+    def describe_meta_tables(self, out=sys.stderr):
+        """Describe the current content of the internal bookkeeping tables to 'out'.
+        """
+        out.write('Graph Cache:\n')
+        out.write('DB file: %s\n' % self.dbfile)
+        out.write('  size:  %s' % format_memory_size(self.get_db_size()))
+        out.write('   \tfree:  %s' % format_memory_size(self.get_db_free_size()))
+        out.write('   \tmodified:  %s\n' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(self.dbfile))))
+        out.write('\n')
+        out.write('KGTK File Information:\n')
+        self.describe_file_info_table(out=out)
+        out.write('\n')
+        out.write('Graph Table Information:\n')
+        self.describe_graph_info_table(out=out)
 
     # TO DO: consider reducing this or making it configurable, since its effect on runtime
     #        seems to be small (5-10%) compared to the memory it additionally consumes:
@@ -266,7 +305,7 @@ class SqliteStore(SqlStore):
         res = list(self.execute('PRAGMA ' + expression))
         if len(res) == 0:
             return None
-        elif len(res) == 1:
+        elif len(res) == 1 and len(res[0]) == 1:
             return res[0][0]
         else:
             return res
@@ -316,6 +355,11 @@ class SqliteStore(SqlStore):
         """
         return (self.pragma('page_count') - self.pragma('freelist_count')) * self.pragma('page_size')
 
+    def get_db_free_size(self):
+        """Return the size of all currently allocated but free data pages in bytes.
+        """
+        return self.pragma('freelist_count') * self.pragma('page_size')
+
     def has_table(self, table_name):
         """Return True if a table with name 'table_name' exists in the store.
         """
@@ -349,6 +393,7 @@ class SqliteStore(SqlStore):
     def get_key_column(self, table_schema, error=True):
         """Return the name of the first column in 'schema' designated as a 'key',
         or raise an error if no key column has been designated (unless 'error' is False).
+        This should only be used for single-key tables such as info tables.
         """
         for col in table_schema.columns.values():
             if col.get('key') == True:
@@ -358,30 +403,32 @@ class SqliteStore(SqlStore):
         return None
 
     def get_table_definition(self, table_schema):
-        colspec = ', '.join([sql_quote_ident(col._name_) + ' ' + col.type for col in table_schema.columns.values()])
-        return 'CREATE TABLE %s (%s)' % (table_schema._name_, colspec)
-
-    def get_without_rowid_table_definition(self, table_schema):
-        """Generate an SQLite 'WITHOUT ROWID' table definition for 'table_schema'.
-        Such tables need a primary key and then behave like a covering index instead
-        of needing a second index to go from a key to integer row IDs.  For most KGTK
-        tables, however, this is less space efficient than regular row ID tables, since
-        each index then points to the generally bigger KGTK edge IDs. But this might
-        be a good scheme to use for simple attribute tables such as 'labels', etc.
-        that only index on 'node1' and nothing else.
+        """Generate an SQLite table definition for 'table_schema'.  Requires each column
+        to have at least a 'type' property.  Optional 'default' properties will be translated
+        into appropriate 'DEFAULT <value>' column constraints.  One or more columns with a
+        'key' property will be translated into a 'PRIMARY KEY (col...)' constraint.  If there
+        is more than one column with a key, they will be sorted by their values to order them.
+        A 'without_rowid' property on the table will produce a 'WITHOUT ROWID' table (which
+        requires a primary key to be legal!).  For some simple attribute tables such as 'labels',
+        etc. that only index on 'node1' those might be more space efficient than regular tables.
         """
-        # TO DO: generalize this to allow a specification of a primary key such as
-        #        'node1' or '(node1, id)' instead of hardcoding 'id' as we currently do
-        colspec = []
-        without_rowid = ''
+        colspecs = []
+        keys = []
         for col in table_schema.columns.values():
-            column = sql_quote_ident(col._name_) + ' ' + col.type
-            if col._name_ == 'id':
-                column += ' PRIMARY KEY'
-                # only optimize if we have an 'id' column we can use as the primary key:
-                without_rowid = ' WITHOUT ROWID'
-            colspec.append(column)
-        return 'CREATE TABLE %s (%s)%s' % (table_schema._name_, ', '.join(colspec), without_rowid)
+            spec = sql_quote_ident(col._name_) + ' ' + col.type
+            dflt = col.get('default')
+            if dflt is not None:
+                dflt = isinstance(dflt, (int, float)) and '{:+g}'.format(dflt) or '"%s"' % dflt
+                spec += ' DEFAULT ' + dflt
+            key = col.get('key')
+            key is not None and keys.append((col._name_, key))
+            colspecs.append(spec)
+        if len(keys) > 0:
+            keys.sort(key=lambda x: x[1])
+            keys = 'PRIMARY KEY (%s)' % ', '.join(map(lambda x: x[0], keys))
+            colspecs.append(keys)
+        without_rowid = table_schema.get('without_rowid') and ' WITHOUT ROWID' or ''
+        return 'CREATE TABLE %s (%s)%s' % (table_schema._name_, ', '.join(colspecs), without_rowid)
 
     def get_index_name(self, table_schema, column):
         """Return a global name for the index for 'column' on 'table_schema'.
@@ -420,54 +467,6 @@ class SqliteStore(SqlStore):
         return ', '.join([sql_quote_ident(col._name_) for col in table_schema.columns.values()])
 
 
-    ### Generic record access:
-    
-    def get_record_info(self, schema, key):
-        """Return a dict info structure for the row identified by 'key' in table 'schema',
-        or None if this key does not exist in the table.  All column keys will be set
-        although some values may be None.
-        """
-        table = schema._name_
-        cols = schema.columns
-        keycol = self.get_key_column(schema)
-        query = 'SELECT %s FROM %s WHERE %s=?' % (self.get_full_column_list(schema), table, cols[keycol]._name_)
-        for row in self.execute(query, (key,)):
-            result = sdict()
-            for col, val in zip(cols.keys(), row):
-                result[col] = val
-            return result
-        return None
-
-    def set_record_info(self, schema, info):
-        table = schema._name_
-        cols = schema.columns
-        keycol = self.get_key_column(schema)
-        key = info[keycol]
-        columns = [cols[name] for name in info.keys()]
-        collist = self.get_column_list(*columns)
-        if self.get_record_info(schema, key) is None:
-            vallist = ','.join(['?'] * len(columns))
-            stmt = 'INSERT INTO %s (%s) VALUES (%s)' % (table, collist, vallist)
-            self.execute(stmt, list(info.values()))
-        else:
-            collist = collist.replace(', ', '=?, ')
-            stmt = 'UPDATE %s SET %s=? WHERE %s=?' % (table, collist, keycol)
-            values = list(info.values())
-            values.append(key)
-            self.execute(stmt, values)
-        self.commit()
-
-    def drop_record_info(self, schema, key):
-        """Delete any rows identified by 'key' in table 'schema'.
-        """
-        table = schema._name_
-        cols = schema.columns
-        keycol = self.get_key_column(schema)
-        stmt = 'DELETE FROM %s WHERE %s=?' % (table, cols[keycol]._name_)
-        self.execute(stmt, (key,))
-        self.commit()
-        
-
     ### File information and access:
 
     # Each fileinfo record is identified by a name key which defaults to the full
@@ -489,27 +488,50 @@ class SqliteStore(SqlStore):
         the result although some values may be None.  If 'exact', use 'file' as is and
         do not try to normalize it to an absolute path.
         """
-        info = self.get_record_info(self.FILE_TABLE, file)
+        info = self.fileinfo.get_info(file)
         if info is None and alias is not None:
-            info = self.get_record_info(self.FILE_TABLE, alias)
+            info = self.fileinfo.get_info(alias)
         if info is None and not exact:
             file = self.normalize_file_path(file)
-            info = self.get_record_info(self.FILE_TABLE, file)
+            info = self.fileinfo.get_info(file)
         return info
 
-    def set_file_info(self, file, size=None, modtime=None, graph=None):
-        info = sdict()
-        info.file = file
-        info.size = size
-        info.modtime = modtime
-        info.graph = graph
-        self.set_record_info(self.FILE_TABLE, info)
+    def get_normalized_file(self, file, alias=None, exact=False):
+        """Return the stored normalized name of 'file' (or 'alias') or None
+        if this file does not exist in the file table.
+        """
+        info = self.get_file_info(file, alias=alias, exact=exact)
+        return info and info.file or None
+        
+    def set_file_info(self, _file, **kwargs):
+        # TRICKY: we use '_file' so we can also use and update 'file' in 'kwargs'
+        self.fileinfo.set_info(_file, kwargs)
 
+    def update_file_info(self, _file, **kwargs):
+        self.fileinfo.update_info(_file, kwargs)
+        
     def drop_file_info(self, file):
         """Delete the file info record for 'file'.
         IMPORTANT: this does not delete any graph data associated with 'file'.
         """
-        self.drop_record_info(self.FILE_TABLE, file)
+        self.fileinfo.drop_info(file)
+        
+    def describe_file_info(self, file, out=sys.stderr):
+        """Describe a single 'file' (or its info) to 'out'.
+        """
+        info = isinstance(file, dict) and file or self.get_file_info(file)
+        out.write('%s:\n' % info.file)
+        out.write('  size:  %s' % (info.size and format_memory_size(info.size) or '???   '))
+        out.write('   \tmodified:  %s' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info.modtime)))
+        out.write('   \tgraph:  %s\n' % info.graph)
+        if info.comment:
+            out.write('  comment:  %s\n' % info.comment)
+
+    def describe_file_info_table(self, out=sys.stderr):
+        """Describe all files in the FILE_TABLE to 'out'.
+        """
+        for info in self.fileinfo.get_all_infos():
+            self.describe_file_info(info, out=out)
 
     def set_file_alias(self, file, alias):
         """Set the file column of the file info identified by 'file' (or 'alias') to 'alias'.
@@ -524,9 +546,14 @@ class SqliteStore(SqlStore):
             # this can happen if we imported 'file' without an alias, then another file
             # with 'alias', and then we try to associate 'alias' to 'file':
             raise KGTKException('alias %s is already in use for different file' % alias)
-        # we don't have an update yet, instead we delete first and then create the new record:
-        self.drop_file_info(finfo.file)
-        self.set_file_info(alias, size=finfo.size, modtime=finfo.modtime, graph=finfo.graph)
+        # update current file name to 'alias':
+        self.update_file_info(finfo.file, file=alias)
+
+    def set_file_comment(self, file, comment):
+        """Set the comment property for 'file'.
+        """
+        # We might need some text normalization here:
+        self.update_file_info(file, comment=comment)
 
     def get_file_graph(self, file):
         """Return the graph table name created from the data of 'file'.
@@ -545,7 +572,7 @@ class SqliteStore(SqlStore):
         keycol = self.get_key_column(schema)
         query = 'SELECT %s FROM %s WHERE %s=?' % (cols.file._name_, table, cols.graph._name_)
         return [file for (file,) in self.execute(query, (table_name,))]
-        
+
 
     ### Graph information and access:
 
@@ -557,21 +584,34 @@ class SqliteStore(SqlStore):
         or None if this graph does not exist in the graph table.  All column keys will be set
         although some values may be None.
         """
-        return self.get_record_info(self.GRAPH_TABLE, table_name)
+        return self.graphinfo.get_info(table_name)
 
-    def set_graph_info(self, table_name, header=None, size=None, acctime=None):
-        info = sdict()
-        info.name = table_name
-        info.header = header
-        info.size = size
-        info.acctime = acctime
-        self.set_record_info(self.GRAPH_TABLE, info)
+    def set_graph_info(self, table_name, **kwargs):
+        self.graphinfo.set_info(table_name, kwargs)
     
+    def update_graph_info(self, table_name, **kwargs):
+        self.graphinfo.update_info(table_name, kwargs)
+        
     def drop_graph_info(self, table_name):
         """Delete the graph info record for 'table_name'.
         IMPORTANT: this does not delete any graph data stored in 'table_name'.
         """
-        self.drop_record_info(self.GRAPH_TABLE, table_name)
+        self.graphinfo.drop_info(table_name)
+
+    def describe_graph_info(self, graph, out=sys.stderr):
+        """Describe a single 'graph' (or its info) to 'out'.
+        """
+        info = isinstance(graph, dict) and graph or self.get_graph_info(graph)
+        out.write('%s:\n' % info.name)
+        out.write('  size:  %s' % format_memory_size(info.size))
+        out.write('   \tcreated:  %s\n' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info.acctime)))
+        out.write('  header:  %s\n' % info.header)
+
+    def describe_graph_info_table(self, out=sys.stderr):
+        """Describe all graphs in the GRAPH_TABLE to 'out'.
+        """
+        for info in self.graphinfo.get_all_infos():
+            self.describe_graph_info(info, out=out)
 
     def get_graph_table_schema(self, table_name):
         """Get a graph table schema definition for graph 'table_name'.
@@ -600,7 +640,7 @@ class SqliteStore(SqlStore):
             ginfo = self.get_graph_info(table_name)
             ginfo.size += idxsize
             if not explain:
-                self.set_record_info(self.GRAPH_TABLE, ginfo)
+                self.update_graph_info(table_name, size=ginfo.size)
 
     def number_of_graphs(self):
         """Return the number of graphs currently stored in 'self'.
@@ -847,6 +887,138 @@ class SqliteStore(SqlStore):
                 columns = split_regex.split(columns)
                 indexes.append((name, table, columns))
         return indexes
+
+
+class InfoTable(object):
+    """API for access to file and graph info tables.
+    """
+
+    def __init__(self, store, schema):
+        """Create an info table object for 'schema' stored in 'store'.
+        """
+        self.store = store
+        self.schema = schema
+        self.verified_schema = False
+
+    def init_table(self):
+        """If the info table doesn't exist yet, define it from its schema.
+        """
+        if not self.store.has_table(self.schema._name_):
+            self.store.execute(self.store.get_table_definition(self.schema))
+            self.verified_schema = True
+
+    def get_info(self, key):
+        """Return a dict info structure for the row identified by 'key' in this info table,
+        or None if 'key' does not exist.  All column keys will be set, but some values may be None.
+        """
+        if not self.verified_schema:
+            self.handle_schema_update()
+        table = self.schema._name_
+        cols = self.schema.columns
+        keycol = self.store.get_key_column(self.schema)
+        query = 'SELECT %s FROM %s WHERE %s=?' % (self.store.get_full_column_list(self.schema), table, cols[keycol]._name_)
+        for row in self.store.execute(query, (key,)):
+            result = sdict()
+            for col, val in zip(cols.keys(), row):
+                result[col] = val
+            return result
+        return None
+
+    def set_info(self, key, info):
+        """Insert or update this info table for 'key' based on the values in 'info'.
+        If a record based on 'key' already exists, update it, otherwise insert a new one.
+        If a new record is inserted, any missing column values in 'info' will be set to None.
+        If 'info' contains a value for the key column, that value will override 'key' which
+        allows for an existing key value to be updated to a new one.
+        """
+        if self.get_info(key) is not None:
+            self.update_info(key, info)
+        else:
+            # this is not really needed, since 'get_info' already checks:
+            #if not self.verified_schema:
+            #    self.handle_schema_update()
+            table = self.schema._name_
+            cols = self.schema.columns
+            keycol = self.store.get_key_column(self.schema)
+            key = info.get(keycol) or key
+            info[keycol] = key
+            columns = [cols[name] for name in info.keys()]
+            collist = self.store.get_column_list(*columns)
+            vallist = ','.join(['?'] * len(columns))
+            stmt = 'INSERT INTO %s (%s) VALUES (%s)' % (table, collist, vallist)
+            self.store.execute(stmt, list(info.values()))
+            self.store.commit()
+
+    def update_info(self, key, info):
+        """Update an existing record in this info table for 'key' and the values in 'info'.
+        Any column values undefined in 'info' will remain unaffected.
+        If 'info' contains a value for the key column, that value will override 'key' which
+        allows for an existing key value to be updated to a new one.
+        This is a no-op if no record with 'key' exists in table 'schema'.
+        """
+        if not self.verified_schema:
+            self.handle_schema_update()
+        table = self.schema._name_
+        cols = self.schema.columns
+        keycol = self.store.get_key_column(self.schema)
+        columns = [cols[name] for name in info.keys()]
+        collist = self.store.get_column_list(*columns)
+        collist = collist.replace(', ', '=?, ')
+        stmt = 'UPDATE %s SET %s=? WHERE %s=?' % (table, collist, keycol)
+        values = list(info.values())
+        values.append(key)
+        self.store.execute(stmt, values)
+        self.store.commit()
+        
+    def drop_info(self, key):
+        """Delete any rows identified by 'key' in this info table.
+        """
+        if not self.verified_schema:
+            self.handle_schema_update()
+        table = self.schema._name_
+        cols = self.schema.columns
+        keycol = self.store.get_key_column(self.schema)
+        stmt = 'DELETE FROM %s WHERE %s=?' % (table, cols[keycol]._name_)
+        self.store.execute(stmt, (key,))
+        self.store.commit()
+
+    def get_all_keys(self):
+        table = self.schema._name_
+        cols = self.schema.columns
+        keycol = self.store.get_key_column(self.schema)
+        return [key for (key,) in self.store.execute('SELECT %s FROM %s' % (keycol, table))]
+
+    def get_all_infos(self):
+        # TO DO: this generates one query per key, generalize if this becomes a performance issue
+        return [self.get_info(key) for key in self.get_all_keys()]
+    
+    def handle_schema_update(self):
+        """Check whether the schema of the info table on disk is compatible with this schema.
+        If not, try to upgrade it by adding any new missing columns.  If the schema on disk is
+        from a newer version of KGTK, raise an error.  This assumes that updates to info table
+        schemas always only add new columns.  No other schema changes are supported.
+        """
+        if self.verified_schema:
+            return
+        table = self.schema._name_
+        cols = self.schema.columns
+        current_col_names = self.store.get_table_header(table)
+        if len(current_col_names) == len(cols):
+            self.verified_schema = True
+            return
+        if len(current_col_names) > len(cols):
+            raise KGTKException('incompatible graph cache schema, please upgrade KGTK or delete the cache')
+            
+        try:
+            col_names = [col._name_ for col in cols.values()]
+            for cname in col_names:
+                if cname not in current_col_names:
+                    newcol = cols[cname]
+                    stmt = 'ALTER TABLE %s ADD COLUMN %s %s' % (table, cname, newcol.type)
+                    self.store.execute(stmt)
+            self.verified_schema = True
+        except Exception as e:
+            raise KGTKException('sorry, error during schema upgrade, please remove graph cache and retry ( %s )' % repr(e))
 
 
 """
