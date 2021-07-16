@@ -163,8 +163,6 @@ class KgtkQuery(object):
                  match='()', where=None, optionals=None, with_=None,
                  ret='*', order=None, skip=None, limit=None,
                  parameters={}, index='auto', force=False, loglevel=0):
-        # normalize to strings in case we get path objects:
-        self.files = [str(f) for f in listify(files)]
         self.options = options or {}
         self.store = store
         self.loglevel = loglevel
@@ -208,12 +206,19 @@ class KgtkQuery(object):
         self.order_clause = self.query.get_order_clause()
         self.skip_clause = self.query.get_skip_clause()
         self.limit_clause = self.query.get_limit_clause()
-        
-        # do this after we parsed the query, so we get syntax errors right away:
-        for file in self.files:
-            store.add_graph(file, alias=self.get_input_option(file, 'alias'))
-        # since we potentially renamed some files via aliases, recompute the list:
-        self.files = [self.get_input_option(file, 'alias', file) for file in self.files]
+
+        # process/import files after we parsed the query, so we get syntax errors right away:
+        self.files = []
+        for file in listify(files):
+            file = str(file) # in case we get a path object
+            alias = self.get_input_option(file, 'alias')
+            comment = self.get_input_option(file, 'comment')
+            store.add_graph(file, alias=alias)
+            # if we had an alias, use it for handle matching, otherwise use unnormalized file:
+            self.files.append(alias or file)
+            norm_file = store.get_normalized_file(file, alias=alias)
+            comment is not None and store.set_file_comment(norm_file, comment)
+            
         self.default_graph = self.files[0]
         self.graph_handle_map = {}
         self.result_header = None
