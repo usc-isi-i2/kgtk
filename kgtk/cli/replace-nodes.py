@@ -60,6 +60,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The name of the confidence column.  (default=%(default)s)"),
                               default="confidence")
 
+    parser.add_argument(      "--require-confidence", dest="require_confidence",
+                              help=h("If true, require a confidence column with non-empty values. (default=%(default)s)."),
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--default-confidence-value", dest="default_confidence_str",
                               help=h("The default confidence value when the confidence column is missing " +
                                      "or a mapping edge does not have a confidence value. (default=None)"))
@@ -108,6 +113,7 @@ def run(input_file: KGTKFiles,
         activated_mapping_file: KGTKFiles,
 
         confidence_column_name: str,
+        require_confidence: bool,
         default_confidence_str: typing.Optional[str],
         confidence_threshold: float,
 
@@ -160,6 +166,7 @@ def run(input_file: KGTKFiles,
             print("--activated-mapping-edges-file=%s" % repr(str(activated_mapping_kgtk_file)), file=error_file, flush=True)
 
         print("--confidence-column=%s" % repr(confidence_column_name), file=error_file, flush=True)
+        print("--require-confidence=%s" % repr(require_confidence), file=error_file, flush=True)
         if default_confidence_str is not None:
             print("--default-confidence-value=%s" % default_confidence_str, file=error_file, flush=True)
         print("--threshold=%f" % confidence_threshold, file=error_file, flush=True)
@@ -212,6 +219,9 @@ def run(input_file: KGTKFiles,
             mkr.close()
             raise KGTKException("Missing columns in the mapping file.")
         confidence_column_idx: int = mkr.column_name_map.get(confidence_column_name, -1)
+        if require_confidence and confidence_column_idx < 0:
+            mkr.close()
+            raise KGTKException("The mapping file does not have a confidence column, and confidence is required.")
         
         # Mapping structures:
         item_map: typing.MutableMapping[str, str] = dict()
@@ -238,7 +248,13 @@ def run(input_file: KGTKFiles,
             mapping_confidence: typing.Optional[float] = default_confidence_value
             if confidence_column_idx >= 0:
                 confidence_value_str: str = mrow[confidence_column_idx]
-                if len(confidence_value_str) > 0:
+                if len(confidence_value_str) == 0:
+                    if require_confidence:
+                        print("In line %d of the mapping file: the required confidence value is missing" % (mapping_line_number),
+                              file=error_file, flush=True)
+                        mapping_errors += 1
+                        continue
+                else:
                     try:
                         mapping_confidence = float(confidence_value_str)
                     except ValueError:
