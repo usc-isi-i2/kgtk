@@ -431,6 +431,53 @@ kgtk cat -i replace-nodes-activated.tsv
 | box2 | same_as_item | Q002 |  |
 | isa | same_as_property | P1 | 1.0 |
 
+### Multiple Input Files
+
+`kgtk replace-nodes` takes a single primary input file.
+If you want to process the concatenation of several input files,
+use `kgtk cat` to combine them first.
+
+Here is a second input file:
+
+```bash
+kgtk cat -i examples/docs/replace-nodes-input2.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| box11 | isa | box |
+| box12 | isa | box |
+| box13 | isa | box |
+| box11 | color | green |
+| box12 | color | yellow |
+| box13 | color | cyan |
+
+Combining our two input files and processing them
+together:
+
+```bash
+kgtk cat -i examples/docs/replace-nodes-input.tsv \
+            examples/docs/replace-nodes-input2.tsv \
+   / replace-nodes \
+     --mapping-file examples/docs/replace-nodes-mapping1.tsv
+     
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | P1 | box |
+| Q002 | P1 | box |
+| box3 | hasa | box |
+| Q001 | color | red |
+| Q002 | color | blue |
+| box11 | P1 | box |
+| box12 | P1 | box |
+| box13 | P1 | box |
+| box11 | color | green |
+| box12 | color | yellow |
+| box13 | color | cyan |
+
+
 ### Expert Example: The Case for Idempotent Mapping
 
 Suppose that you want to map property `isa` in the input file

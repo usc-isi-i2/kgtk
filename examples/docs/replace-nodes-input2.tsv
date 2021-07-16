@@ -1,0 +1,7 @@
+node1	label	node2
+box11	isa	box
+box12	isa	box
+box13	isa	box
+box11	color	green
+box12	color	yellow
+box13	color	cyan
