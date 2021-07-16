@@ -73,10 +73,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.accept_shared_argument('_debug')
     parser.accept_shared_argument('_expert')
 
-    parser.add_input_file(options=["-i", "--input-files"], dest='input_files', allow_list=True, default_stdin=False, allow_stdin=True,
-                        who="One or more input files to query (maybe compressed).")
+    parser.add_input_file(options=["-i", "--input-files"], dest='input_files',
+                          # default_stdin is what makes it not required which is what we need for --show-cache:
+                          allow_list=True, default_stdin=True, allow_stdin=True,
+                          who="One or more input files to query, maybe compressed")
     parser.add_argument('--as', metavar='NAME', default={}, action=InputOptionAction, dest='alias',
                         help="alias name to be used for preceding input")
+    parser.add_argument('--comment', default=None, action=InputOptionAction, dest='comment',
+                        help="comment string to store for the preceding input (displayed by --show-cache)")
     # future extension:
     #parser.add_argument('--in-memory', default=False, type=bool, nargs=0, action=InputOptionAction, dest='in_memory',
     #                    help="load the preceding input into a temporary in-memory table only")
@@ -123,6 +127,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.add_argument('--graph-cache', default=DEFAULT_GRAPH_CACHE_FILE, action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
+    parser.add_argument('--show-cache', action='store_true', dest='show_cache',
+                        help="describe the current content of the graph cache and exit"
+                        + " (does not actually run a query or import data)")
     parser.add_argument('--import', metavar='MODULE_LIST', default=None, action='store', dest='import',
                         help="Python modules needed to define user extensions to built-in functions")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
@@ -179,6 +186,7 @@ def run(input_files: KGTKFiles,
         inputs = [str(f) for f in KGTKArgumentParser.get_input_file_list(input_files)]
         if len(inputs) == 0:
             raise KGTKException('At least one input needs to be supplied')
+        options['input_files'] = inputs
 
         output = options.get('output')
         if output == '-':
@@ -192,9 +200,14 @@ def run(input_files: KGTKFiles,
 
         imports = options.get('import')
 
+        store = None
         try:
             graph_cache = options.get('graph_cache_file')
             store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache), loglevel=loglevel)
+
+            if options.get('show_cache', False):
+                store.describe_meta_tables(out=sys.stdout)
+                return
 
             imports and exec('import ' + imports, sqlstore.__dict__)
         
@@ -235,7 +248,8 @@ def run(input_files: KGTKFiles,
                 
             output.flush()
         finally:
-            store.close()
+            if store is not None:
+                store.close()
             if output is not None and output is not sys.stdout:
                 output.close()
         
