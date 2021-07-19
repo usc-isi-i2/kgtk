@@ -378,7 +378,7 @@ class TripleGenerator(Generator):
         else:
             self.prop_types[node1] = node2
 
-        prop = WDProperty(node1, self.datatype_mapping[node2])
+        prop = WDProperty(node1, self.datatype_mapping.get(node2, StringValue))
         self.doc.kg.add_subject(prop)
         return True
 
