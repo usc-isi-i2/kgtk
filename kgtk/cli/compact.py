@@ -53,7 +53,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
-    parser.add_output_file(who="A KGTK output file that will contain only the rows containing lists.",
+    parser.add_output_file(who="A KGTK output file that will contain only the rows containing lists." +
+                           " This file will have the same columns as the primary output file.",
                            dest="list_output_file",
                            options=["--list-output-file"],
                            metavar="LIST_OUTPUT_FILE",

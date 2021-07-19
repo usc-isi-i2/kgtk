@@ -28,8 +28,6 @@ class KgtkCompact(KgtkFormat):
 
     output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
-    list_output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
-
     key_column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                          iterable_validator=attr.validators.instance_of(list)))
     compact_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -46,6 +44,7 @@ class KgtkCompact(KgtkFormat):
     report_lists: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     exclude_lists: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     output_only_lists: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    list_output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)

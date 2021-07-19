@@ -17,13 +17,14 @@ output file which will be transparently compressed according to its file extensi
 
 ## Usage
 ```
-usage: kgtk query [-h] -i INPUT_FILE [INPUT_FILE ...] [--as NAME]
-                  [--query QUERY] [--match PATTERN] [--where CLAUSE]
-                  [--opt PATTERN] [--with CLAUSE] [--where: CLAUSE]
-                  [--return CLAUSE] [--order-by CLAUSE] [--skip CLAUSE]
-                  [--limit CLAUSE] [--para NAME=VAL] [--spara NAME=VAL]
-                  [--lqpara NAME=VAL] [--no-header] [--force] [--index [MODE]]
-                  [--explain [MODE]] [--graph-cache GRAPH_CACHE_FILE]
+usage: kgtk query [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--as NAME]
+                  [--comment COMMENT] [--query QUERY] [--match PATTERN]
+                  [--where CLAUSE] [--opt PATTERN] [--with CLAUSE]
+                  [--where: CLAUSE] [--return CLAUSE] [--order-by CLAUSE]
+                  [--skip CLAUSE] [--limit CLAUSE] [--para NAME=VAL]
+                  [--spara NAME=VAL] [--lqpara NAME=VAL] [--no-header]
+                  [--force] [--index [MODE]] [--explain [MODE]]
+                  [--graph-cache GRAPH_CACHE_FILE] [--show-cache]
                   [--import MODULE_LIST] [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
@@ -32,9 +33,11 @@ IMPORTANT: input can come from stdin but chaining queries is not yet supported.
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE [INPUT_FILE ...], --input-files INPUT_FILE [INPUT_FILE ...]
-                        One or more input files to query (maybe compressed).
-                        (Required, use '-' for stdin.)
+                        One or more input files to query, maybe compressed
+                        (May be omitted or '-' for stdin.)
   --as NAME             alias name to be used for preceding input
+  --comment COMMENT     comment string to store in the cache for the preceding
+                        input (displayed by --show-cache)
   --query QUERY         complete Kypher query combining all clauses, if
                         supplied, all other specialized clause arguments will
                         be ignored
@@ -70,6 +73,8 @@ optional arguments:
   --graph-cache GRAPH_CACHE_FILE
                         database cache where graphs will be imported before
                         they are queried (defaults to per-user temporary file)
+  --show-cache          describe the current content of the graph cache and
+                        exit (does not actually run a query or import data)
   --import MODULE_LIST  Python modules needed to define user extensions to
                         built-in functions
   -o OUTPUT, --out OUTPUT
@@ -99,8 +104,6 @@ and therefore Kypher does not use a property graph data model assumed
 by Cypher.  Kypher only implements a subset of the Cypher commands
 (for example, no update commands) and has some minor differences in
 syntax, for example, to support naming and querying over multiple graphs.
-Kypher also does not allow certain path-range patterns which would be
-expensive to support.
 
 To implement Kypher queries, we translate them into SQL and execute
 them on a very lightweight file-based SQL database such as SQLite.
@@ -1721,6 +1724,45 @@ shipped to others for quick and easy reuse.  In that case it is
 advised to first replace any absolute input file names with logical
 names using the `--as` option.
 
+The `--show-cache` option can be used to describe the current location
+and content of the cache along with any comments specified for inputs
+with the `--comment` option.  For example:
+
+```
+kgtk query --show-cache
+```
+
+Result:
+```
+Graph Cache:
+DB file: /tmp/kgtk-graph-cache-XXX.sqlite3.db
+  size:  64.00 KB   	free:  0 Bytes   	modified:  2021-07-16 16:06:45
+
+KGTK File Information:
+graph:
+  size:  211 Bytes   	modified:  2021-02-08 13:46:39   	graph:  graph_2
+quals:
+  size:  253 Bytes   	modified:  2021-02-08 13:46:39   	graph:  graph_3
+works:
+  size:  377 Bytes   	modified:  2021-02-08 13:46:39   	graph:  graph_1
+  comment:  Company data
+
+Graph Table Information:
+graph_1:
+  size:  16.00 KB   	created:  2021-07-16 16:02:33
+  header:  ['id', 'node1', 'label', 'node2', 'node1;salary', 'graph']
+graph_2:
+  size:  12.00 KB   	created:  2021-07-16 16:02:33
+  header:  ['id', 'node1', 'label', 'node2']
+graph_3:
+  size:  16.00 KB   	created:  2021-07-16 16:02:33
+  header:  ['id', 'node1', 'label', 'node2', 'graph']
+```
+
+This command will ignore all other query-related options and not
+actually import any data or run a query.  The only other useful option
+is `--graph-cache` to point to a specific graph cache to be described.
+
 
 ## Kypher language features
 
@@ -2145,7 +2187,6 @@ Result:
 * supports querying across multiple graphs
 * no graph update commands
 * single match clause only
-* no (transitive) path range patterns which would be expensive to implement in SQL
 * no relationship isomorphism
 * no dynamic properties such as `x[fn(y)]`
 * lists can only contain literals
@@ -2154,6 +2195,7 @@ Result:
 
 Features that are currently missing but might become available in future versions:
 
+* transitive path range patterns
 * `exists` subqueries
 * `with` clause variable bindings
 * `union` queries

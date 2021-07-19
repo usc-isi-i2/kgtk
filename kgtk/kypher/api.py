@@ -21,6 +21,13 @@ def _import_pandas():
     _have_pandas = True
 
 
+# NOTES:
+# - sqlite3 module already caches parsed SQL queries (100 by default),
+#   so there is no need for prepared statements
+# - executemany cannot be used to handle sets of input parameters,
+#   it only works for modification commands, not selects
+
+
 DEFAULT_GRAPH_CACHE_FILE = cliquery.DEFAULT_GRAPH_CACHE_FILE
 DEFAULT_INDEX_MODE = 'auto'
 DEFAULT_LOG_LEVEL = 0
