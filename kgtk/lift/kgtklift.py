@@ -80,6 +80,7 @@ class KgtkLift(KgtkFormat):
     unmodified_row_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     matched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
+    unmatched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     # TODO: add rewind logic here and KgtkReader
 
@@ -382,7 +383,7 @@ class KgtkLift(KgtkFormat):
                          mlkw: typing.Optional[KgtkWriter],
                          label_rows: typing.Optional[typing.Mapping[str, typing.List[typing.List[str]]]],
                          matched_labels: typing.Set[str],
-        )->bool:
+        )->typing.Tuple[bool, bool, bool]:
         output_row: typing.List[str] = row.copy()
         if new_columns > 0:
             output_row.extend([self.default_value] * new_columns)
@@ -392,6 +393,7 @@ class KgtkLift(KgtkFormat):
         do_lift: bool = True
         did_lift: bool = False
         modified: bool = False
+        skipped: bool = False
         if label_select_column_idx >= 0:
             print("label_select_column_idx %d" % label_select_column_idx)
             if row[label_select_column_idx]  == self.label_select_column_value:
@@ -403,6 +405,7 @@ class KgtkLift(KgtkFormat):
             if self.input_select_column_value is not None and row[input_select_column_idx] != self.input_select_column_value:
                 # Not selected for lifting into.
                 do_lift = False
+                skipped = True
         if do_lift:
             # Lift the specified columns in this row.
             lifted_column_idx: int
@@ -419,9 +422,9 @@ class KgtkLift(KgtkFormat):
                         output_row[lifted_output_column_idx] = label_value
                         did_lift = True # What if we want to note if we lifted all columns?
 
-                        if mlkw is not None and label_rows is not None:
-                            if label_key not in matched_labels:
-                                matched_labels.add(label_key)
+                        if label_key not in matched_labels:
+                            matched_labels.add(label_key)
+                            if label_rows is not None and mlkw is not None:
                                 label_row: typing.List[str]
                                 for label_row in label_rows[label_key]:
                                     mlkw.write(label_row)
@@ -444,7 +447,7 @@ class KgtkLift(KgtkFormat):
             if not modified:
                 urkw.write(row)
 
-        return do_write
+        return do_write, modified, skipped
 
     def build_output_column_names(self, ikr: KgtkReader, lifted_column_idxs: typing.List[int])->typing.Tuple[typing.List[str], typing.List[int]]:
         # Build the output column names.
@@ -522,6 +525,7 @@ class KgtkLift(KgtkFormat):
                           lkr: typing.Optional[KgtkReader],
                           urkw: typing.Optional[KgtkWriter],
                           mlkw: typing.Optional[KgtkWriter],
+                          ulkw: typing.Optional[KgtkWriter],
                           ):
         """
         Process the lift using in-memory buffering.  The labels will added to a
@@ -538,7 +542,7 @@ class KgtkLift(KgtkFormat):
 
         label_rows: typing.Optional[typing.MutableMapping[str, typing.List[typing.List[str]]]]
 
-        if mlkw is None:
+        if mlkw is None and ulkw is None:
             label_rows = None
         else:
             label_rows = { }
@@ -605,48 +609,71 @@ class KgtkLift(KgtkFormat):
         matched_labels: typing.Set[str] = set()
         new_columns: int = len(ew.column_names) - len(ikr.column_names)
         input_line_count: int = 0
+        input_skipped_count: int = 0
         output_line_count: int = 0
+        output_modified_count: int = 0
         if input_rows is None:
+            do_write: bool
+            modified: bool
+            skipped: bool
             # Read the input file and process it in one pass:
             for row in ikr:
                 input_line_count += 1
-                if self.write_output_row(ew,
-                                         row,
-                                         new_columns,
-                                         input_select_column_idx,
-                                         label_select_column_idx,
-                                         labels,
-                                         lifted_column_idxs,
-                                         lifted_output_column_idxs,
-                                         urkw,
-                                         mlkw,
-                                         label_rows,
-                                         matched_labels,
-                                         ):
+                do_write, modified, skipped = self.write_output_row(ew,
+                                                                    row,
+                                                                    new_columns,
+                                                                    input_select_column_idx,
+                                                                    label_select_column_idx,
+                                                                    labels,
+                                                                    lifted_column_idxs,
+                                                                    lifted_output_column_idxs,
+                                                                    urkw,
+                                                                    mlkw,
+                                                                    label_rows,
+                                                                    matched_labels,
+                                                                    )
+                if do_write:
                     output_line_count += 1
+                    if modified:
+                        output_modified_count += 1
+                if skipped:
+                    input_skipped_count += 1
         else:
             # Use the stored input records:
             for row in input_rows:
                 input_line_count += 1
-                if self.write_output_row(ew,
-                                         row,
-                                         new_columns,
-                                         input_select_column_idx,
-                                         label_select_column_idx,
-                                         labels,
-                                         lifted_column_idxs,
-                                         lifted_output_column_idxs,
-                                         urkw,
-                                         mlkw,
-                                         label_rows,
-                                         matched_labels,
-                                         ):
+                do_write, modified, skipped = self.write_output_row(ew,
+                                                                    row,
+                                                                    new_columns,
+                                                                    input_select_column_idx,
+                                                                    label_select_column_idx,
+                                                                    labels,
+                                                                    lifted_column_idxs,
+                                                                    lifted_output_column_idxs,
+                                                                    urkw,
+                                                                    mlkw,
+                                                                    label_rows,
+                                                                    matched_labels,
+                                                                    )
+                if do_write:
                     output_line_count += 1
+                    if modified:
+                        output_modified_count += 1
+                if skipped:
+                    input_skipped_count += 1
+
+        if ulkw is not None and label_rows is not None:
+            label_key: str
+            for label_key in sorted(label_rows.keys()):
+                if label_key not in matched_labels:
+                    label_row: typing.List[str]
+                    for label_row in label_rows[label_key]:
+                        ulkw.write(label_row)
 
         if self.verbose:
-            print("Read %d non-label input records." % (input_line_count), file=self.error_file, flush=True)
-            print("%d labels were found." % (label_count), file=self.error_file, flush=True)
-            print("Wrote %d records." % (output_line_count), file=self.error_file, flush=True)
+            print("Read %d non-label input records, %d skipped." % (input_line_count, input_skipped_count), file=self.error_file, flush=True)
+            print("%d labels were found, %d matched." % (label_count, len(matched_labels)), file=self.error_file, flush=True)
+            print("Wrote %d output records, %d modified." % (output_line_count, output_modified_count), file=self.error_file, flush=True)
         
         ew.close()
     
@@ -654,6 +681,7 @@ class KgtkLift(KgtkFormat):
                          lkr: KgtkReader,
                          urkw: typing.Optional[KgtkWriter],
                          mlkw: typing.Optional[KgtkWriter],
+                         ulkw: typing.Optional[KgtkWriter],
                          ):
         """
         Process the lift as a merge between two sorted files.
@@ -685,15 +713,21 @@ class KgtkLift(KgtkFormat):
         if self.input_select_column_value is not None or self.output_select_column_value is not None:
             input_select_column_idx = self.lookup_input_select_column_idx(ikr)
             
+        input_line_count: int = 0
+        input_skipped_count: int = 0
+        label_line_count: int = 0
+        label_match_count: int = 0
+        output_line_count: int = 0
+        output_modified_count: int = 0
+
         current_label_row: typing.Optional[typing.List[str]] = None
         more_labels: bool = True
         # Read the first label record.
         try:
             current_label_row = lkr.nextrow()
+            label_line_count += 1
         except StopIteration:
             more_labels = False
-
-        input_line_count: int = 0
 
         # We carry last_value_to_lift and lifted_label_value over
         # iterations in case the input file has multiple records with
@@ -712,6 +746,7 @@ class KgtkLift(KgtkFormat):
             if self.input_select_column_value is not None and input_select_column_idx >= 0:
                 # Skip input rows that do not meet the selection criterion.
                 if row[input_select_column_idx] != self.input_select_column_value:
+                    input_skipped_count += 1
                     if not self.output_only_modified_rows:
                         if new_columns > 0:
                             output_row = row.copy()
@@ -729,8 +764,11 @@ class KgtkLift(KgtkFormat):
                 # Read label records until we come to the first record that
                 # has a node1 value equal to or greater than the value we we want to lift.
                 while more_labels and current_label_row is not None and current_label_row[label_match_column_idx] < value_to_lift:
+                    if ulkw is not None:
+                        ulkw.write(current_label_row)
                     try:
                         current_label_row = lkr.nextrow()
+                        label_line_count += 1
                     except StopIteration:
                         more_labels = False
                         break
@@ -744,6 +782,7 @@ class KgtkLift(KgtkFormat):
                             # TODO: is this code positioned correctly?
                             if mlkw is not None:
                                 mlkw.write(current_label_row)
+                            label_match_count += 1
                                 
                             if lifted_label_value != self.default_value:
                                 if self.suppress_duplicate_labels:
@@ -755,6 +794,7 @@ class KgtkLift(KgtkFormat):
 
                     try:
                         current_label_row = lkr.nextrow()
+                        label_line_count += 1
                     except StopIteration:
                         more_labels = False
                         break
@@ -778,18 +818,33 @@ class KgtkLift(KgtkFormat):
             if self.output_only_modified_rows:
                 if modified:
                     ew.write(output_row)
+                    output_line_count += 1
+                    output_modified_count += 1
             else:
                 ew.write(output_row)
+                output_line_count += 1
+                if modified:
+                    output_modified_count += 1
 
             if urkw is not None:
                 if not modified:
                     urkw.write(row)
 
-        if more_labels:
-            lkr.close()
+        while more_labels:
+            if current_label_row is not None and ulkw is not None:
+                ulkw.write(current_label_row)
+            try:
+                current_label_row = lkr.nextrow()
+                label_line_count += 1
+            except StopIteration:
+                more_labels = False
+                break
+        lkr.close()
 
         if self.verbose:
-            print("Read %d input records." % (input_line_count), file=self.error_file, flush=True)
+            print("Read %d input records, %d skipped." % (input_line_count, input_skipped_count), file=self.error_file, flush=True)
+            print("Read %d label records, %d matched." % (label_line_count, label_match_count), file=self.error_file, flush=True)
+            print("Wrote %d output records, %d modified." % (output_line_count, output_modified_count), file=self.error_file, flush=True)
              
         ew.close()
 
@@ -841,6 +896,9 @@ class KgtkLift(KgtkFormat):
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
             
+        label_column_names: typing.List[str]
+        label_file_mode_name: str
+
         mlkw: typing.Optional[KgtkWriter] = None
         if self.matched_label_file_path is not None:
             label_column_names: typing.List[str]
@@ -864,20 +922,46 @@ class KgtkLift(KgtkFormat):
                                    very_verbose=self.very_verbose)        
             
 
+        ulkw: typing.Optional[KgtkWriter] = None
+        if self.unmatched_label_file_path is not None:
+            label_column_names: typing.List[str]
+            label_file_mode_name: str
+            if lkr is not None:
+                label_column_names = lkr.column_names
+                label_file_mode_name = lkr.mode.name
+            else:
+                label_column_names = ikr.column_names
+                label_file_mode_name = ikr.mode.name
+            ulkw = KgtkWriter.open(label_column_names,
+                                   self.unmatched_label_file_path,
+                                   mode=KgtkWriter.Mode[label_file_mode_name],
+                                   require_all_columns=False,
+                                   prohibit_extra_columns=True,
+                                   fill_missing_columns=True,
+                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   gzip_in_parallel=False,
+                                   verbose=self.verbose,
+                                   very_verbose=self.very_verbose)        
+            
+
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) == 1 and \
            not self.suppress_empty_columns and \
            self.input_is_presorted and \
            self.labels_are_presorted and \
            lkr is not None:
-            self.process_as_merge(ikr, lkr, urkw, mlkw)
+            self.process_as_merge(ikr, lkr, urkw, mlkw, ulkw)
         else:
-            self.process_in_memory(ikr, lkr, urkw, mlkw)
+            self.process_in_memory(ikr, lkr, urkw, mlkw, ulkw)
 
         if urkw is not None:
             urkw.close()
 
         if mlkw is not None:
             mlkw.close()
+
+        if ulkw is not None:
+            ulkw.close()
 
 def main():
     """

@@ -20,6 +20,7 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--label-file INPUT_FILE]
                  [--unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE]
                  [--matched-label-output-file MATCHED_LABEL_OUTPUT_FILE]
+                 [--unmatched-label-output-file UNMATCHED_LABEL_OUTPUT_FILE]
                  [--columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]]
                  [--default-value DEFAULT_VALUE]
                  [--suppress-empty-columns [True/False]]
@@ -54,6 +55,11 @@ optional arguments:
                         input file. (Optional, use '-' for stdout.)
   --matched-label-output-file MATCHED_LABEL_OUTPUT_FILE
                         A KGTK output file that will contain matched label
+                        edges. This file will have the same columns as the
+                        source of the labels, either the input file or the
+                        label file. (Optional, use '-' for stdout.)
+  --unmatched-label-output-file UNMATCHED_LABEL_OUTPUT_FILE
+                        A KGTK output file that will contain unmatched label
                         edges. This file will have the same columns as the
                         source of the labels, either the input file or the
                         label file. (Optional, use '-' for stdout.)
@@ -552,7 +558,7 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 | Q1 | P2 | Q6 | True | "Fred Rogers" |
 | Q2 | P2 | Q6 | False | "Fred Rogers" |
 
-Here are the matched-labels:
+Here are the matched labels:
 
 ```bash
 kgtk cat -i lift-matched-labels.tsv
@@ -577,6 +583,45 @@ kgtk cat -i lift-matched-labels.tsv
     column with a count of the number of matches.  This option may be
     added in the future.
 
+### Unmatched Label Output File
+
+Suppose we are interested in finding which label file edges were not matched with
+input file edges during the lift.  The `--unmatched-label-output-file
+OUTPUT_FILE` option provides a simple way to get this list.
+
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2 \
+	  --output-only-modified-rows \
+	  --unmatched-label-output-file lift-unmatched-labels.tsv
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+Here are the unmatched labels:
+
+```bash
+kgtk cat -i lift-unmatched-labels.tsv
+```
+
+| node1 | label | node2 | full-name |
+| -- | -- | -- | -- |
+| Q1 | name | "Elmo" | "Elmo Fudd" |
+| Q2 | name | "Alice" | "Alice Cooper" |
+
+!!! note
+    The unmatched label output file has the same columns as the
+    label file when a label file has been specified.  Otherwise,
+    the unmatched label file has the same columns as the primary
+    input file.
 
 ### Expert Example: Input Filtering
 

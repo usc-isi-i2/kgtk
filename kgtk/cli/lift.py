@@ -70,6 +70,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            metavar="MATCHED_LABEL_OUTPUT_FILE",
                            optional=True)
 
+    parser.add_output_file(who="A KGTK output file that will contain unmatched label edges." +
+                           " This file will have the same columns as the source of the labels, either the input file or the label file.",
+                           dest="unmatched_label_file",
+                           options=["--unmatched-label-output-file"],
+                           metavar="UNMATCHED_LABEL_OUTPUT_FILE",
+                           optional=True)
+
     parser.add_argument(      "--input-select-column", "--input-label-column", dest="input_select_column_name",
                               help=h("If input record selection is enabled by --input-select-value, " +
                               "the name of a column that determines which records received lifted values. " +
@@ -183,6 +190,7 @@ def run(input_file: KGTKFiles,
         label_file: KGTKFiles,
         unmodified_row_file: KGTKFiles,
         matched_label_file: KGTKFiles,
+        unmatched_label_file: KGTKFiles,
 
         input_select_column_name: typing.Optional[str],
         input_select_column_value: typing.Optional[str],
@@ -236,6 +244,7 @@ def run(input_file: KGTKFiles,
     label_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_input_file(label_file, who="KGTK label file")
     unmodified_row_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(unmodified_row_file, who="KGTK unmodified row output file")
     matched_label_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(matched_label_file, who="KGTK matched label output file")
+    unmatched_label_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(unmatched_label_file, who="KGTK unmatched label output file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -254,6 +263,8 @@ def run(input_file: KGTKFiles,
             print("--unmodified-row-output-file=%s" % unmodified_row_kgtk_file, file=error_file, flush=True)
         if matched_label_kgtk_file is not None:
             print("--matched-label-output-file=%s" % matched_label_kgtk_file, file=error_file, flush=True)
+        if unmatched_label_kgtk_file is not None:
+            print("--unmatched-label-output-file=%s" % unmatched_label_kgtk_file, file=error_file, flush=True)
 
         if input_select_column_name is not None:
             print("--input-select-column=%s" % input_select_column_name, file=error_file, flush=True)
@@ -300,6 +311,7 @@ def run(input_file: KGTKFiles,
             output_file_path=output_kgtk_file,
             unmodified_row_file_path=unmodified_row_kgtk_file,
             matched_label_file_path=matched_label_kgtk_file,
+            unmatched_label_file_path=unmatched_label_kgtk_file,
 
             input_select_column_name=input_select_column_name,
             input_select_column_value=input_select_column_value,
