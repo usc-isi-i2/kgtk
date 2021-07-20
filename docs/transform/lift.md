@@ -564,7 +564,9 @@ kgtk cat -i lift-matched-labels.tsv
 
 !!! note
     The matched label output file has the same columns as the
-    label file.
+    label file when a label file has been specified.  Otherwise,
+    the matched label file has the same columns as the primary
+    input file.
 
 !!! note
     Logically, there should be an `--unmatched-labels-output-file OUTPUT_FILE`
