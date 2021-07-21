@@ -64,16 +64,28 @@ nav:
 theme:
   name: material
   logo: images/kgtk_logo_200x200.png
+  features:
+    - search.highlight
+    - search.share
+    - search.suggest
+
 extra_css:
   - stylesheets/extra.css
+
 repo_url: https://github.com/usc-isi-i2/kgtk
 
 plugins:
   - mknotebooks
+  - search:
+      prebuild_index: true
 
 markdown_extensions:
   - admonition
   - codehilite:
       guess_lang: false
+  - pymdownx.mark:
+      smart_mark: true
+  - pymdownx.highlight
+  - pymdownx.superfences
   - toc:
       permalink: true
