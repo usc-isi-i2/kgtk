@@ -2,7 +2,7 @@ tox
 coverage
 coveralls
 mkdocs
-mkdocs-material
+mkdocs-material>=7.2.0
 mknotebooks
 ipykernel
 
