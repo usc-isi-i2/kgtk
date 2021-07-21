@@ -40,7 +40,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="Is the graph undirected or not? (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
-    parser.add_argument('--max_hops', action="store", type=int, dest="max_hops", help="Maximum number of hops allowed.")
+    parser.add_argument('--max-hops', '--max_hops', action="store", type=int, dest="max_hops", help="Maximum number of hops allowed.")
 
     parser.add_argument("--path-source", action="store", type=str, dest="source_column_name",
                         help='Name of the source column in the path file. (default: node1 or its alias)')
