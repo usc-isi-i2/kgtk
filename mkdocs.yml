@@ -83,6 +83,8 @@ markdown_extensions:
   - admonition
   - codehilite:
       guess_lang: false
+  - pymdownx.mark:
+      smart_mark: true
   - pymdownx.highlight
   - pymdownx.superfences
   - toc:
