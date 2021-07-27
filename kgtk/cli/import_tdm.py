@@ -144,168 +144,188 @@ def run(input_files: KGTKFiles,
         file_number: int = 0
         input_file_path: Path
         for input_file_path in input_file_paths:
+            file_number += 1
+            if verbose:
+                print("File %d: processing %s" % (file_number, repr(str(input_file_path))), file=error_file, flush=True)
+
             with open(input_file_path, "r") as ifp:
                 tdm: dict = json.load(ifp)
-                file_number += 1
 
-                # Find the source ISO code and name.
-                source_iso_codes: typing.List[str] = list()
-                source_names: typing.List[str] = list()
-                if "PHEADER1" not in tdm:
-                    print("PHEADER1 not found", file=error_file, flush=True)
-                    error_count += 1
-                    continue
+            # Find the source ISO code and name.
+            source_iso_codes: typing.List[str] = list()
+            source_names: typing.List[str] = list()
+            if "PHEADER1" not in tdm:
+                print("PHEADER1 not found", file=error_file, flush=True)
+                error_count += 1
+                continue
 
-                pheader1: dict = tdm["PHEADER1"]
-                if "SOURCES" not in pheader1:
-                    print("SOURCES not found in PHEADER1", file=error_file, flush=True)
-                    error_count += 1
-                    continue
+            pheader1: dict = tdm["PHEADER1"]
+            if "SOURCES" not in pheader1:
+                print("SOURCES not found in PHEADER1", file=error_file, flush=True)
+                error_count += 1
+                continue
 
-                sources: typing.List[dict] = pheader1["SOURCES"]
-                source: dict
-                for source in sources:
-                    if "DSN" in source:
-                        dsn: str = source["DSN"]
-                        if dsn not in source_iso_codes:
-                            source_iso_codes.append(dsn)
-                    if "REPORTER" in source:
-                        reporter: str = source["REPORTER"]
-                        if reporter not in source_names:
-                            source_names.append(reporter)
-                if len(source_iso_codes) == 0:
-                    print("No source ISO code found.", file=error_file, flush=True)
-                    error_count += 1
-                    continue
+            sources: typing.List[dict] = pheader1["SOURCES"]
+            source: dict
+            for source in sources:
+                if "DSN" in source:
+                    dsn: str = source["DSN"]
+                    if dsn not in source_iso_codes:
+                        source_iso_codes.append(dsn)
+                if "REPORTER" in source:
+                    reporter: str = source["REPORTER"]
+                    if reporter not in source_names:
+                        source_names.append(reporter)
+            if len(source_iso_codes) == 0:
+                print("No source ISO code found.", file=error_file, flush=True)
+                error_count += 1
+                continue
 
-                if len(source_iso_codes) > 1:
-                    print("Conflicting source ISO codes: %s" % repr(source_iso_codes), file=error_file, flush=True)
-                    error_count += 1
-                    continue
+            if len(source_iso_codes) > 1:
+                print("Conflicting source ISO codes: %s" % repr(source_iso_codes), file=error_file, flush=True)
+                error_count += 1
+                continue
 
-                source_iso_code: str = source_iso_codes[0]
-                if len(source_iso_code) != 2:
-                    # The source ISO code must be two characters wide.
-                    print("Incorrect length for ISO code: %s" % repr(source_iso_code), file=error_file, flush=True)
-                    error_count += 1
-                    continue
+            source_iso_code: str = source_iso_codes[0]
+            if len(source_iso_code) != 2:
+                # The source ISO code must be two characters wide.
+                print("Incorrect length for ISO code: %s" % repr(source_iso_code), file=error_file, flush=True)
+                error_count += 1
+                continue
 
-                if len(source_names) == 0:
-                    print("No source name found.", file=error_file, flush=True)
-                    error_count += 1
-                    continue
+            if len(source_names) == 0:
+                print("No source name found.", file=error_file, flush=True)
+                error_count += 1
+                continue
 
-                if len(source_names) > 1:
-                    print("Conflicting source names: %s" % repr(source_names), file=error_file, flush=True)
-                    error_count += 1
-                    continue
+            if len(source_names) > 1:
+                print("Conflicting source names: %s" % repr(source_names), file=error_file, flush=True)
+                error_count += 1
+                continue
 
-                source_name = source_names[0]
+            source_name = source_names[0]
                 
-                # Find the commodity code and name.
-                if "COMMODITY" not in pheader1:
-                    print("COMMODITY not found in PHEADER1", file=error_file, flush=True)
-                    error_count += 1
-                    continue
-                hs_code: str = pheader1["COMMODITY"]
+            # Find the commodity code and name.
+            if "COMMODITY" not in pheader1:
+                print("COMMODITY not found in PHEADER1", file=error_file, flush=True)
+                error_count += 1
+                continue
+            hs_code: str = pheader1["COMMODITY"]
 
-                if "COMMODITY_DESCRIPT" not in pheader1:
-                    print("COMMODITY_DESCRIPT not found in PHEADER1", file=error_file, flush=True)
-                    error_count += 1
-                    continue
-                hs_name: str = pheader1["COMMODITY_DESCRIPT"]
+            if "COMMODITY_DESCRIPT" not in pheader1:
+                print("COMMODITY_DESCRIPT not found in PHEADER1", file=error_file, flush=True)
+                error_count += 1
+                continue
+            hs_name: str = pheader1["COMMODITY_DESCRIPT"]
                     
+            # Build the base KGTK record:
+            node1: str = "QTDM_iso_country_" + source_iso_code
+            label_map[node1] = KgtkFormat.stringify(source_name, language="en")
 
-                # Build the base KGTK record:
-                node1: str = "QTDM_iso_country_" + source_iso_code
-                label_map[node1] = KgtkFormat.stringify(source_name, language="en")
+            label: str = "PTDM_goods_imported"
 
-                label: str = "PTDM_goods_imported"
-
-                node2: str = "QTDM_HS_" + hs_code
-                harmonized_system_code_map[node2] = KgtkFormat.stringify(hs_code)
-                label_map[node2] = KgtkFormat.stringify(hs_name, language="en")
+            node2: str = "QTDM_HS_" + hs_code
+            harmonized_system_code_map[node2] = KgtkFormat.stringify(hs_code)
+            label_map[node2] = KgtkFormat.stringify(hs_name, language="en")
                 
-                # Determine the time span for each column of the results.
-                # This is rather ugly.  First, verify that the results are
-                # an annual time series as expected.
-                if "PHEADER2" not in tdm:
-                    print("PHEADER2 not found.", file=error_file, flush=True)
+            # Determine the time span for each column of the results.
+            # This is rather ugly.  First, verify that the results are
+            # an annual time series as expected.
+            if "PHEADER2" not in tdm:
+                print("PHEADER2 not found.", file=error_file, flush=True)
+                error_count += 1
+                continue
+
+            pheader2 = tdm["PHEADER2"]
+            initial_pheader2: str = "<span table-translate='Annual'>Annual</span> <span><span table-translate='Series'>Series</span></span>: <span table-translate='MONTH01'>January</span>, "
+            if not pheader2.startswith(initial_pheader2):
+                print("PHEADER2 is not an annual series starting in January: %s" % repr(pheader2), file=error_file, flush=True)
+                error_count += 1
+                continue
+
+            # Next, extract the year for the first column.  We will use this value as
+            # we parse the columnar data.
+            first_year_str: str = pheader2[len(initial_pheader2):len(initial_pheader2)+4]
+            # print("FIRST_YEAR: %s" % first_year, file=error_file, flush=True)
+            first_year: int = int(first_year_str)
+
+            # Locate the data records:
+            if "DATA" not in tdm:
+                print("DATA not found", file=error_file, flush=True)
+                error_count += 1
+                continue
+            data_list: typing.List[dict] = tdm["DATA"]
+
+            partner_country_count: int = 0
+            cells_imported_count: int = 0
+
+            # Process each data entry.
+            data_entry: dict
+            for data_entry in data_list:
+                # Look for the trading partner country:
+                if "COL2" not in data_entry:
+                    print("COL2 not found in DATA entry.", file=error_file, flush=True)
                     error_count += 1
                     continue
-                pheader2 = tdm["PHEADER2"]
-                initial_pheader2: str = "<span table-translate='Annual'>Annual</span> <span><span table-translate='Series'>Series</span></span>: <span table-translate='MONTH01'>January</span>, "
-                if not pheader2.startswith(initial_pheader2):
-                    print("PHEADER2 is not an annual series starting in January: %s" % repr(pheader2), file=error_file, flush=True)
+                partner_country_name: str = data_entry["COL2"]
+
+                # Skip the "_World" entry:
+                if partner_country_name == "_World":
+                    continue
+
+                partner_country_count += 1
+
+                # Create a Q node for the trading partner country:
+                p17_value: str = "QTDM_country_" + partner_country_name.replace(" ", "_")
+                label_map[p17_value] = KgtkFormat.stringify(partner_country_name, language="en")
+
+                # Verify that the unit of measure is US Dollars:
+                if "UOM" not in data_entry:
+                    print("UOM not found in DATA entry", file=error_file, flush=True)
                     error_count += 1
                     continue
 
-                # Next, extract the year for the first column.  We will use this value as
-                # we parse the columnar data.
-                first_year_str: str = pheader2[len(initial_pheader2):len(initial_pheader2)+4]
-                # print("FIRST_YEAR: %s" % first_year, file=error_file, flush=True)
-                first_year: int = int(first_year_str)
-
-                # Locate the data records:
-                if "DATA" not in tdm:
-                    print("DATA not found", file=error_file, flush=True)
+                if data_entry["UOM"] != "USD":
+                    print("UOM %s is not USD" % data_entry["UOM"], file=error_file, flush=True)
                     error_count += 1
                     continue
-                data_list: typing.List[dict] = tdm["DATA"]
 
-                # Process each data entry.
-                data_entry: dict
-                for data_entry in data_list:
-                    # Look for the trading partner country:
-                    if "COL2" not in data_entry:
-                        print("COL2 not found in DATA entry.", file=error_file, flush=True)
-                        error_count += 1
+                vstr: str
+                offset: int
+                for vstr, offset in vcols.items():
+                    if vstr not in data_entry:
                         continue
-                    partner_country_name: str = data_entry["COL2"]
+                    amountstr: str = data_entry[vstr]
+                    ptdmmonetary_value: str = amountstr + wikidata_Q4917 # Build a KGTK quantity.
+                    p585_value: str = KgtkFormat.year(first_year + offset) # Build a KGTK date and times string.
 
-                    # Skip the "_World" entry:
-                    if partner_country_name == "_World":
-                        continue
+                    newrow: typing.List[str] = [ "", node1, label, node2, p17_value, p585_value, ptdmmonetary_value, wikidata_Q97355106 ]
+                    kw.write(idb.build(newrow, file_number))
+                    cells_imported_count += 1
 
-                    # Create a Q node for the trading partner country:
-                    p17_value: str = "QTDM_country_" + partner_country_name.replace(" ", "_")
-                    label_map[p17_value] = KgtkFormat.stringify(partner_country_name, language="en")
+            if verbose:
+                print("%d trading partners processed, %d cells imported." % (partner_country_count, cells_imported_count), file=error_file, flush=True)
 
-                    # Verify that the unit of measure is US Dollars:
-                    if "UOM" not in data_entry:
-                        print("UOM not found in DATA entry", file=error_file, flush=True)
-                        error_count += 1
-                        continue
-
-                    if data_entry["UOM"] != "USD":
-                        print("UOM %s is not USD" % data_entry["UOM"], file=error_file, flush=True)
-                        error_count += 1
-                        continue
-
-                    vstr: str
-                    offset: int
-                    for vstr, offset in vcols.items():
-                        if vstr not in data_entry:
-                            continue
-                        amountstr: str = data_entry[vstr]
-                        ptdmmonetary_value: str = amountstr + wikidata_Q4917 # Build a KGTK quantity.
-                        p585_value: str = KgtkFormat.year(first_year + offset) # Build a KGTK date and times string.
-
-                        newrow: typing.List[str] = [ "", node1, label, node2, p17_value, p585_value, ptdmmonetary_value, wikidata_Q97355106 ]
-                        kw.write(idb.build(newrow, file_number))
-
-
+        # Dump the harmonized system codes we encountered:
+        if verbose:
+            print("%d harmonized system codes processed" % len(harmonized_system_code_map), file=error_file, flush=True)
         p5471_key: str
         for hsc_key in sorted(harmonized_system_code_map.keys()):
             hsc_row: typing.List[str] = [ "", hsc_key, wikidata_P5471, harmonized_system_code_map[hsc_key], "", "", "", "" ]
             kw.write(idb.build(hsc_row, file_number))
 
+        # Dump the labels we encountered:
+        if verbose:
+            print("%d labels processed" % len(label_map), file=error_file, flush=True)
         label_key: str
         for label_key in sorted(label_map.keys()):
             label_row: typing.List[str] = [ "", label_key, "label", label_map[label_key],  "", "", "", "" ]
             kw.write(idb.build(label_row, file_number))
 
         kw.close()
+
+        if error_count > 0:
+            print("%d errors encountered" % error_count, file=error_file, flush=True)
 
         return 0
 
