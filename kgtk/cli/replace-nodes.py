@@ -98,7 +98,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--modified-pattern", dest="modified_pattern",
-                              help=h("A pattern that defines a significant edge modificationxs.  (default=%(default)s)"),
+                              help=h("A pattern that defines a significant edge modifications.  (default=%(default)s)"),
                               default="node1|label|node2")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
