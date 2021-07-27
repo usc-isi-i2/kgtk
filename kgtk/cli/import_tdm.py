@@ -22,8 +22,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+    from kgtk.io.kgtkreader import KgtkReader
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -39,9 +39,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(who="The TDM JSON file to import.", positional=True)
     parser.add_output_file(who="The KGTK file to write.")
 
+    KgtkIdBuilderOptions.add_arguments(parser, expert=True, default_style=KgtkIdBuilderOptions.EMPTY_STYLE) # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
-    KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
@@ -61,10 +60,9 @@ def run(input_file: KGTKFiles,
     import typing
     
     from kgtk.exceptions import KGTKException
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.join.kgtkcat import KgtkCat
-    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 
     input_file_path: Path = KGTKArgumentParser.get_input_file(input_file)
     output_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
@@ -72,24 +70,41 @@ def run(input_file: KGTKFiles,
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
-    # TODO: check that at most one input file is stdin?
+    # Build the option structures:
+    idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_dict(kwargs)
 
-    # Build the option structures.
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, mode=KgtkReaderMode.NONE)
-    value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_file_path), file=error_file, flush=True)
         print("--output-file=%s" % str(output_file_path), file=error_file, flush=True)
-        reader_options.show(out=error_file)
-        value_options.show(out=error_file)
+        idbuilder_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
     try:
         
         with open(input_file_path, "r") as ifp:
             tdm: dict = json.load(ifp)
+
+        # Define our output columns:
+        oc: typing.List[str] = ["id", "node1", "label", "node2"]
+
+        # Create the ID builder:
+        idb: KgtkIdBuilder = KgtkIdBuilder.from_column_names(oc, idbuilder_options)
+
+        kw: KgtkWriter = KgtkWriter.open(idb.column_names,
+                                         output_kgtk_file,
+                                         mode=KgtkWriter.Mode.EDGE,
+                                         require_all_columns=True,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=False,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose)
+
+
+        
+
+        kw.close()
 
         return 0
 
