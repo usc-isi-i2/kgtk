@@ -65,7 +65,11 @@ class KgtkIdBuilderOptions(KgtkFormat):
     id_separator: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_ID_SEPARATOR)
 
     @classmethod
-    def add_arguments(cls, parser: ArgumentParser, expert: bool = False, overwrite: typing.Optional[bool] = None):
+    def add_arguments(cls,
+                      parser: ArgumentParser,
+                      expert: bool = False,
+                      overwrite: typing.Optional[bool] = None,
+                      default_style: str = DEFAULT_STYLE):
 
         # This helper function makes it easy to suppress options from
         # The help message.  The options are still there, and initialize
@@ -104,7 +108,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
                                   "When --verify-id-unique is supplied without an argument, it is %(const)s. ",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VERIFY_ID_UNIQUE)
 
-        parser.add_argument(      "--id-style", dest="id_style", default=cls.DEFAULT_STYLE, choices=cls.STYLES,
+        parser.add_argument(      "--id-style", dest="id_style", default=default_style, choices=cls.STYLES,
                                   help=h("The ID generation style. (default=%(default)s)."))
 
         parser.add_argument(      "--id-prefix", dest="id_prefix", default=cls.DEFAULT_PREFIX,
@@ -143,7 +147,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
             new_id_column_name=d.get("new_id_column_name"),
             overwrite_id=d.get("overwrite_id", False),
             verify_id_unique=d.get("verify_id_unique", False),
-            id_style=d.get("id_style", cls.PREFIXED_STYLE),
+            id_style=d.get("id_style", cls.DEFAULT_STYLE),
             id_prefix=d.get("id_prefix", cls.DEFAULT_PREFIX),
             initial_id=d.get("initial_id", cls.DEFAULT_INITIAL_ID),
             id_prefix_num_width=d.get("id_prefix_num_width", cls.DEFAULT_PREFIX_NUM_WIDTH),
