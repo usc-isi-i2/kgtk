@@ -1,7 +1,7 @@
 """
-Convert one ore more TDM JSON files to a KGTK file.
+Convert one or more TDM JSON files to a KGTK file.
 
-The TDM (Trade Data Monitor) data i a JSON file downloaded from
+The TDM (Trade Data Monitor) data come in a JSON file downloaded from
 a query for a specific country and its major trading partners.
 The query must specify an annual time series (where each year starts
 in January).
