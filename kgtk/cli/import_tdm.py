@@ -87,11 +87,26 @@ def run(input_files: KGTKFiles,
 
     try:
         
+        # Define the amount columns and their offsets from the base:
+        vcols: typing.Mapping[str, int] = {
+            "V1": 0,
+            "V2": 1,
+            "V3": 2,
+            "V4": 3,
+            "V5": 4,
+            "V6": 5,
+            "V7": 6,
+            "V8": 7,
+            "V9": 8,
+            }
+
         # Define our output columns:
         oc: typing.List[str] = ["id", "node1", "label", "node2", "P17", "P585", "PTDMmonetary_value", "P248"]
 
-        p5471_map: typing.ModifiableMapping[str, str] = dict()
-        label_map: typing.ModifiableMapping[str, str] = dict()
+        p5471_map: typing.MutableMapping[str, str] = dict()
+        label_map: typing.MutableMapping[str, str] = dict()
+
+        p248_value: str = "Q97355106" # This identifies the data source as TDM.
 
         # Create the ID builder:
         idb: KgtkIdBuilder = KgtkIdBuilder.from_column_names(oc, idbuilder_options)
@@ -99,19 +114,20 @@ def run(input_files: KGTKFiles,
         kw: KgtkWriter = KgtkWriter.open(idb.column_names,
                                          output_file_path,
                                          mode=KgtkWriter.Mode.EDGE,
-                                         require_all_columns=False,
+                                         require_all_columns=True,
                                          prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
+                                         fill_missing_columns=False,
                                          verbose=verbose,
                                          very_verbose=very_verbose)
 
         error_count: int = 0
 
+        file_number: int = 0
         input_file_path: Path
         for input_file_path in input_file_paths:
             with open(input_file_path, "r") as ifp:
                 tdm: dict = json.load(ifp)
-
+                file_number += 1
 
                 # Find the source ISO code and name.
                 source_iso_codes: typing.List[str] = list()
@@ -182,6 +198,7 @@ def run(input_files: KGTKFiles,
                 label: str = "PTDM_goods_imported"
 
                 node2: str = "QTDM_HS_" + hs_code
+                p5471_map[node2] = KgtkFormat.stringify(hs_code)
                 label_map[node2] = KgtkFormat.stringify(hs_name, language="en")
                 
                 # Determine the time span for each column of the results.
@@ -197,25 +214,71 @@ def run(input_files: KGTKFiles,
                     print("PHEADER2 is not an annual series starting in January: %s" % repr(pheader2), file=error_file, flush=True)
                     error_count += 1
                     continue
-                first_year: str = pheader2[len(initial_pheader2):len(initial_pheader2)+4]
-                print("FIRST_YEAR: %s" % first_year, file=error_file, flush=True)
+
+                # Next, extract the year for the first column.  We will use this value as
+                # we parse the columnar data.
+                first_year_str: str = pheader2[len(initial_pheader2):len(initial_pheader2)+4]
+                # print("FIRST_YEAR: %s" % first_year, file=error_file, flush=True)
+                first_year: int = int(first_year_str)
+
+                # Locate the data records:
+                if "DATA" not in tdm:
+                    print("DATA not found", file=error_file, flush=True)
+                    error_count += 1
+                    continue
+                data_list: typing.List[dict] = tdm["DATA"]
+
+                # Process each data entry.
+                data_entry: dict
+                for data_entry in data_list:
+                    # Look for the trading partner country:
+                    if "COL2" not in data_entry:
+                        print("COL2 not found in DATA entry.", file=error_file, flush=True)
+                        error_count += 1
+                        continue
+                    partner_country_name: str = data_entry["COL2"]
+
+                    # Skip the "_World" entry:
+                    if partner_country_name == "_World":
+                        continue
+
+                    # Create a Q node for the trading partner country:
+                    p17_value: str = "QTDM_country_" + partner_country_name.replace(" ", "_")
+                    label_map[p17_value] = KgtkFormat.stringify(partner_country_name, language="en")
+
+                    # Verify that the unit of measure is US Dollars:
+                    if "UOM" not in data_entry:
+                        print("UOM not found in DATA entry", file=error_file, flush=True)
+                        error_count += 1
+                        continue
+
+                    if data_entry["UOM"] != "USD":
+                        print("UOM %s is not USD" % data_entry["UOM"], file=error_file, flush=True)
+                        error_count += 1
+                        continue
+
+                    vstr: str
+                    offset: int
+                    for vstr, offset in vcols.items():
+                        if vstr not in data_entry:
+                            continue
+                        amountstr: str = data_entry[vstr]
+                        ptdmmonetary_value: str = amountstr + "Q4917"
+                        p585_value: str = KgtkFormat.year(first_year + offset)
+
+                        newrow: typing.List[str] = [ "", node1, label, node2, p17_value, p585_value, ptdmmonetary_value, p248_value ]
+                        kw.write(idb.build(newrow, file_number))
 
 
         p5471_key: str
         for p5471_key in sorted(p5471_map.keys()):
-            kw.writemap({
-                "node1": p5471_key,
-                "label": "P5471",
-                "node2": p5471_map[p5471_key]
-                })
+            p5471_row: typing.List[str] = [ "", p5471_key, "P5471", p5471_map[p5471_key], "", "", "", "" ]
+            kw.write(idb.build(p5471_row, file_number))
 
         label_key: str
         for label_key in sorted(label_map.keys()):
-            kw.writemap({
-                "node1": label_key,
-                "label": "label",
-                "node2": label_map[label_key]
-                })
+            label_row: typing.List[str] = [ "", label_key, "label", label_map[label_key],  "", "", "", "" ]
+            kw.write(idb.build(label_row, file_number))
 
         kw.close()
 

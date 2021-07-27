@@ -135,3 +135,66 @@ class KgtkFormat:
         s = s.replace('\\|', '|')
         return (ast.literal_eval(s), language, language_suffix)
     
+    @classmethod
+    def year(cls, year: typing.Union[int, str])->str:
+        """Convert a year (passed as an integer or string) to a KGTK value for the year as a period.
+        """
+        yearstr: str
+        if isinstance(year, int):
+            yearstr = str(year)
+        else:
+            yearstr = year
+        return cls.DATE_AND_TIMES_SIGIL + yearstr + "-01-01T00:00:00/9"
+
+    @classmethod
+    def year_month(cls,
+                   year: typing.Union[int, str],
+                   month: typing.Union[int, str])->str:
+        """Convert a year and month (passed as integers or strings) to a KGTK value for the period.
+        """
+        yearstr: str
+        if isinstance(year, int):
+            yearstr = str(year)
+        else:
+            yearstr = year
+
+        monthstr: str
+        if isinstance(month, int):
+            monthstr = str(month)
+        else:
+            monthstr = month
+        if len(monthstr) == 1:
+            monthstr = "0" + monthstr
+        return cls.DATE_AND_TIMES_SIGIL + yearstr + "-" + monthstr + "-01T00:00:00/10"
+
+    @classmethod
+    def year_month_day(cls,
+                       year: typing.Union[int, str],
+                       month: typing.Union[int, str],
+                       day: typing.Union[int, str],
+                       )->str:
+        """Convert a year, month, and day (passed as integers or strings) to a KGTK value for the period.
+        """
+        yearstr: str
+        if isinstance(year, int):
+            yearstr = str(year)
+        else:
+            yearstr = year
+
+        monthstr: str
+        if isinstance(month, int):
+            monthstr = str(month)
+        else:
+            monthstr = month
+        if len(monthstr) == 1:
+            monthstr = "0" + monthstr
+
+        daystr: str
+        if isinstance(day, int):
+            daystr = str(day)
+        else:
+            daystr = day
+        if len(daystr) == 1:
+            daystr = "0" + daystr
+
+        return cls.DATE_AND_TIMES_SIGIL + yearstr + "-" + monthstr + "-" + daystr + "T00:00:00/11"
