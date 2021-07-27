@@ -1,5 +1,10 @@
 """
-Convert a TDM JSON file and convert it to a KGTK file.
+Convert one ore more TDM JSON files to a KGTK file.
+
+The TDM (Trade Data Monitor) data i a JSON file downloaded from
+a query for a specific country and its major trading partners.
+The query must specify an annual time series (where each year starts
+in January).
 
 TODO: Need KgtkWriterOptions
 """
@@ -68,6 +73,28 @@ def run(input_files: KGTKFiles,
     from kgtk.join.kgtkcat import KgtkCat
     from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 
+    # Wikidata codes (we should have a file from which to import these):
+    wikidata_P17: str = "P17" # Country
+    wikidata_P248: str = "P248" # Stated in
+    wikidata_P585: str = "P585" # Point in time
+    wikidata_P5471: str = "P5471" # Harmonized System Code
+    wikidata_Q4917: str = "Q4917" # United States dollar amount
+    wikidata_Q97355106: str = "Q97355106" # Trade Data Monitor
+
+    # Define the amount columns in the input JSON file and their offsets from
+    # the base year.
+    vcols: typing.Mapping[str, int] = {
+        "V1": 0,
+        "V2": 1,
+        "V3": 2,
+        "V4": 3,
+        "V5": 4,
+        "V6": 5,
+        "V7": 6,
+        "V8": 7,
+        "V9": 8,
+    }
+
     input_file_paths: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_files)
     output_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
 
@@ -87,26 +114,18 @@ def run(input_files: KGTKFiles,
 
     try:
         
-        # Define the amount columns and their offsets from the base:
-        vcols: typing.Mapping[str, int] = {
-            "V1": 0,
-            "V2": 1,
-            "V3": 2,
-            "V4": 3,
-            "V5": 4,
-            "V6": 5,
-            "V7": 6,
-            "V8": 7,
-            "V9": 8,
-            }
-
         # Define our output columns:
-        oc: typing.List[str] = ["id", "node1", "label", "node2", "P17", "P585", "PTDMmonetary_value", "P248"]
+        oc: typing.List[str] = ["id",
+                                "node1",
+                                "label",
+                                "node2",
+                                wikidata_P17,
+                                wikidata_P585,
+                                "PTDMmonetary_value",
+                                wikidata_P248]
 
-        p5471_map: typing.MutableMapping[str, str] = dict()
+        harmonized_system_code_map: typing.MutableMapping[str, str] = dict()
         label_map: typing.MutableMapping[str, str] = dict()
-
-        p248_value: str = "Q97355106" # This identifies the data source as TDM.
 
         # Create the ID builder:
         idb: KgtkIdBuilder = KgtkIdBuilder.from_column_names(oc, idbuilder_options)
@@ -165,6 +184,9 @@ def run(input_files: KGTKFiles,
                     continue
 
                 source_iso_code: str = source_iso_codes[0]
+                if len(source_iso_code) != 2:
+                    print("Incorrect length for ISO code: %s" % repr(source_iso_code), file=error_file, flush=True)
+
                 if len(source_names) == 0:
                     print("No source name found.", file=error_file, flush=True)
                     error_count += 1
@@ -198,7 +220,7 @@ def run(input_files: KGTKFiles,
                 label: str = "PTDM_goods_imported"
 
                 node2: str = "QTDM_HS_" + hs_code
-                p5471_map[node2] = KgtkFormat.stringify(hs_code)
+                harmonized_system_code_map[node2] = KgtkFormat.stringify(hs_code)
                 label_map[node2] = KgtkFormat.stringify(hs_name, language="en")
                 
                 # Determine the time span for each column of the results.
@@ -263,17 +285,17 @@ def run(input_files: KGTKFiles,
                         if vstr not in data_entry:
                             continue
                         amountstr: str = data_entry[vstr]
-                        ptdmmonetary_value: str = amountstr + "Q4917"
-                        p585_value: str = KgtkFormat.year(first_year + offset)
+                        ptdmmonetary_value: str = amountstr + wikidata_Q4917 # Build a KGTK quantity.
+                        p585_value: str = KgtkFormat.year(first_year + offset) # Build a KGTK date and times string.
 
-                        newrow: typing.List[str] = [ "", node1, label, node2, p17_value, p585_value, ptdmmonetary_value, p248_value ]
+                        newrow: typing.List[str] = [ "", node1, label, node2, p17_value, p585_value, ptdmmonetary_value, wikidata_Q97355106 ]
                         kw.write(idb.build(newrow, file_number))
 
 
         p5471_key: str
-        for p5471_key in sorted(p5471_map.keys()):
-            p5471_row: typing.List[str] = [ "", p5471_key, "P5471", p5471_map[p5471_key], "", "", "", "" ]
-            kw.write(idb.build(p5471_row, file_number))
+        for hsc_key in sorted(harmonized_system_code_map.keys()):
+            hsc_row: typing.List[str] = [ "", hsc_key, wikidata_P5471, harmonized_system_code_map[hsc_key], "", "", "", "" ]
+            kw.write(idb.build(hsc_row, file_number))
 
         label_key: str
         for label_key in sorted(label_map.keys()):
