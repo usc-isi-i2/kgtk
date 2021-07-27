@@ -185,7 +185,10 @@ def run(input_files: KGTKFiles,
 
                 source_iso_code: str = source_iso_codes[0]
                 if len(source_iso_code) != 2:
+                    # The source ISO code must be two characters wide.
                     print("Incorrect length for ISO code: %s" % repr(source_iso_code), file=error_file, flush=True)
+                    error_count += 1
+                    continue
 
                 if len(source_names) == 0:
                     print("No source name found.", file=error_file, flush=True)
