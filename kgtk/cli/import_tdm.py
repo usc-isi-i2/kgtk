@@ -95,6 +95,11 @@ def run(input_files: KGTKFiles,
         "V9": 8,
     }
 
+    # The PHEADER2 string in the input JSON file must begin with the following
+    # string, which identified the JSON file as an annual series with years
+    # that start in January.
+    initial_pheader2: str = "<span table-translate='Annual'>Annual</span> <span><span table-translate='Series'>Series</span></span>: <span table-translate='MONTH01'>January</span>, "
+
     input_file_paths: typing.List[Path] = KGTKArgumentParser.get_input_file_list(input_files)
     output_file_path: Path = KGTKArgumentParser.get_output_file(output_file)
 
@@ -237,7 +242,6 @@ def run(input_files: KGTKFiles,
                 continue
 
             pheader2 = tdm["PHEADER2"]
-            initial_pheader2: str = "<span table-translate='Annual'>Annual</span> <span><span table-translate='Series'>Series</span></span>: <span table-translate='MONTH01'>January</span>, "
             if not pheader2.startswith(initial_pheader2):
                 print("PHEADER2 is not an annual series starting in January: %s" % repr(pheader2), file=error_file, flush=True)
                 error_count += 1
