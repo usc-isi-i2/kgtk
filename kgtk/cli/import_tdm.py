@@ -6,6 +6,10 @@ a query for a specific country and its major trading partners.
 The query must specify an annual time series (where each year starts
 in January).
 
+The input file is supposed to come from a URL similar to the following:
+
+https://www1.tdmlogin.com/tdm/api/profile.aspmethod=getRecordSet&hs=01&rpt=BR&rpt_options=N&lang=EN&fmt=annual&flow=I&listby=Partner&period=202012&periodplus=&ptn=&ptn_cgoptions=&currency=USD&qv=V&selqty=QTY1&userid=5335&cgroup=&qconv=0&product=&directto=0&diff=1&orderColumn=V6&orderDirection=DESC&drill=0&isRightClick=false
+
 TODO: Need KgtkWriterOptions
 """
 
