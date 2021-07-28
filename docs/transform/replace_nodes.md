@@ -688,3 +688,165 @@ We get the following error messages:
     In line 2 of the mapping file: the required confidence value is missing
     In line 3 of the mapping file: the required confidence value is missing
     2 errors detected in the mapping file 'examples/docs/replace-nodes-mapping1.tsv'
+
+### Expert Example: Replacing Other Columns
+
+`kgtk replace-nodes` can be used to replace values in columns other than
+`node1`, `label`, and `node2` (or their aliases), using the following options:
+
+`--node1-column COLUMN_NAME`
+`--label-column COLUMN_NAME`
+`--node2-column COLUMN_NAME`
+
+Using a `same_as_item` mapping rule, you can update values in two columns at once.  Using a
+`same_as_property` mapping rule, you can update values in a single column.
+
+Consider the following input file, which is not a KGTK edge or node file:
+
+```bash
+kgtk cat --mode=NONE -i examples/docs/replace-nodes-input3.tsv
+```
+| item | rel | shape |
+| -- | -- | -- |
+| box1 | isa | box |
+| box2 | isa | box |
+| box3 | isa | box |
+
+Apply mapping rules to that file as follows:
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input3.tsv \
+     --input-mode NONE \
+     --node1-column item \
+     --label-column rel \
+     --node2-column shape \
+     --mapping-file examples/docs/replace-nodes-mapping1.tsv
+     
+```
+
+| item | rel | shape |
+| -- | -- | -- |
+| Q001 | P1 | box |
+| Q002 | P1 | box |
+| box3 | P1 | box |
+
+### Expert Example: Mapping Rules in Other Columns
+
+`kgtk replace-nodes` can extract mapping rules from columns other than
+`node1`, `label`, and `node2` (or their aliases), using the following options:
+
+`--mapping-node1-column COLUMN_NAME`
+`--mapping-label-column COLUMN_NAME`
+`--mapping-node2-column COLUMN_NAME`
+
+Consider the following mapping file, which is not a KGTK edge or node file:
+
+```bash
+kgtk cat --mode=NONE -i examples/docs/replace-nodes-mapping5.tsv
+```
+| item | transform | replacement |
+| -- | -- | -- |
+| box1 | same_as_item | Q001 |
+| box2 | same_as_item | Q002 |
+| box4 | same_as_item | Q004 |
+| isa | same_as_property | P1 |
+
+Apply this mapping rule file as follows:
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping5.tsv \
+     --mapping-mode NONE \
+     --mapping-node1-column item \
+     --mapping-label-column transform \
+     --mapping-node2-column replacement     
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | P1 | box |
+| Q002 | P1 | box |
+| box3 | hasa | box |
+| Q001 | color | red |
+| Q002 | color | blue |
+
+### Expert Example: Simplified same-as-item Mapping Rules
+
+Suppose you have a file with two columns for item replacement:
+the original item symbol and the replacement item symbol.
+
+The expert option `--mapping-rule-mode same-as-item`
+causes `kgt-replace-nodes` to ignore the `label` column
+in the mapping file and assume that all `node1`->`node2`
+maps are item maps.  Property maps will not be performed.
+
+```bash
+kgtk cat --mode=NONE -i examples/docs/replace-nodes-mapping6.tsv
+```
+
+| item | replacement |
+| -- | -- |
+| box | Q000 |
+| box1 | Q001 |
+| box2 | Q002 |
+| box4 | Q004 |
+
+Apply this mapping rule file as follows:
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping6.tsv \
+     --mapping-mode NONE \
+     --mapping-rule-mode same-as-item \
+     --mapping-node1-column item \
+     --mapping-node2-column replacement     
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | isa | Q000 |
+| Q002 | isa | Q000 |
+| box3 | hasa | Q000 |
+| Q001 | color | red |
+| Q002 | color | blue |
+
+### Expert Example: Simplified same-as-property Mapping Rules
+
+Suppose you have a file with two columns for property replacement:
+the original property symbol and the replacement property symbol.
+
+The expert option `--mapping-rule-mode same-as-property`
+causes `kgt-replace-nodes` to ignore the `label` column
+in the mapping file and assume that all `node1`->`node2`
+maps are property maps.  Item maps will not be performed.
+
+```bash
+kgtk cat --mode=NONE -i examples/docs/replace-nodes-mapping7.tsv
+```
+
+| property | replacement |
+| -- | -- |
+| isa | P1 |
+
+Apply this mapping rule file as follows:
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping7.tsv \
+     --mapping-mode NONE \
+     --mapping-rule-mode same-as-property \
+     --mapping-node1-column property \
+     --mapping-node2-column replacement     
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| box1 | P1 | box |
+| box2 | P1 | box |
+| box3 | hasa | box |
+| box1 | color | red |
+| box2 | color | blue |

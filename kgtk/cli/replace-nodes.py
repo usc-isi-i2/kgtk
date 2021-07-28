@@ -101,9 +101,33 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("A pattern that defines a significant edge modifications.  (default=%(default)s)"),
                               default="node1|label|node2")
 
+    parser.add_argument(      "--node1-column", dest="node1_column_name",
+                              help=h("The name of the node1 column in the input file.  (default=node1 or its alias)"))
+
+    parser.add_argument(      "--label-column", dest="label_column_name",
+                              help=h("The name of the label column in the input file.  (default=label or its alias)"))
+
+    parser.add_argument(      "--node2-column", dest="node2_column_name",
+                              help=h("The name of the node2 column in the input file.  (default=node2 or its alias)"))
+
+    parser.add_argument(      "--mapping-rule-mode", dest="mapping_rule_mode",
+                              choices=["normal", "same-as-item", "same-as-property"],
+                              help=h("Force a mapping rule mode.  (default=%(default)s"),
+                              default="normal")
+
+    parser.add_argument(      "--mapping-node1-column", dest="mapping_node1_column_name",
+                              help=h("The name of the node1 column in the mapping file.  (default=node1 or its alias)"))
+
+    parser.add_argument(      "--mapping-label-column", dest="mapping_label_column_name",
+                              help=h("The name of the label column in the mapping file.  (default=label or its alias)"))
+
+    parser.add_argument(      "--mapping-node2-column", dest="mapping_node2_column_name",
+                              help=h("The name of the node2 column in the mapping file.  (default=node2 or its alias)"))
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="mapping", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
@@ -124,6 +148,14 @@ def run(input_file: KGTKFiles,
 
         split_output_mode: bool,
         modified_pattern: str,
+
+        node1_column_name: typing.Optional[str],
+        label_column_name: typing.Optional[str],
+        node2_column_name: typing.Optional[str],
+        mapping_rule_mode: str,
+        mapping_node1_column_name: typing.Optional[str],
+        mapping_label_column_name: typing.Optional[str],
+        mapping_node2_column_name: typing.Optional[str],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -152,7 +184,8 @@ def run(input_file: KGTKFiles,
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="input", fallback=True)
+    mapping_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="mapping", fallback=True)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     # Show the final option structures for debugging and documentation.
@@ -179,7 +212,22 @@ def run(input_file: KGTKFiles,
         print("--split-output-mode=%s" % repr(split_output_mode), file=error_file, flush=True)
         print("--modified-pattern=%s" % repr(modified_pattern), file=error_file, flush=True)
 
-        reader_options.show(out=error_file)
+        if node1_column_name is not None:
+            print("--node1-column-=%s" % repr(node1_column_name), file=error_file, flush=True)
+        if label_column_name is not None:
+            print("--label-column-=%s" % repr(label_column_name), file=error_file, flush=True)
+        if node2_column_name is not None:
+            print("--node2-column-=%s" % repr(node2_column_name), file=error_file, flush=True)
+        print("--mapping-rule-mode=%s" % repr(mapping_rule_mode), file=error_file, flush=True)
+        if mapping_node1_column_name is not None:
+            print("--mapping-node1-column-=%s" % repr(mapping_node1_column_name), file=error_file, flush=True)
+        if mapping_label_column_name is not None:
+            print("--mapping-label-column-=%s" % repr(mapping_label_column_name), file=error_file, flush=True)
+        if mapping_node2_column_name is not None:
+            print("--mapping-node2-column-=%s" % repr(mapping_node2_column_name), file=error_file, flush=True)
+
+        input_reader_options.show(out=error_file, who="input")
+        mapping_reader_options.show(out=error_file, who="mapping")
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
@@ -195,20 +243,20 @@ def run(input_file: KGTKFiles,
         if verbose:
             print("Opening the mapping file %s." % repr(str(mapping_kgtk_file)), file=error_file, flush=True)
         mkr:  KgtkReader = KgtkReader.open(mapping_kgtk_file,
-                                           options=reader_options,
+                                           options=mapping_reader_options,
                                            value_options = value_options,
                                            error_file=error_file,
                                            verbose=verbose,
                                            very_verbose=very_verbose,
         )
         trouble = False
-        mapping_node1_idx: int = mkr.node1_column_idx
-        mapping_label_idx: int = mkr.label_column_idx
-        mapping_node2_idx: int = mkr.node2_column_idx
+        mapping_node1_idx: int = mkr.get_node1_column_index(mapping_node1_column_name)
+        mapping_label_idx: int = mkr.get_label_column_index(mapping_label_column_name)
+        mapping_node2_idx: int = mkr.get_node2_column_index(mapping_node2_column_name)
         if mapping_node1_idx < 0:
             trouble = True
             print("Error: Cannot find the mapping file node1 column.", file=error_file, flush=True)
-        if mapping_label_idx < 0:
+        if mapping_label_idx < 0 and mapping_rule_mode == "normal":
             trouble = True
             print("Error: Cannot find the mapping file label column.", file=error_file, flush=True)
         if mapping_node2_idx < 0:
@@ -243,7 +291,7 @@ def run(input_file: KGTKFiles,
         for mrow in mkr:
             mapping_line_number += 1
             mapping_node1: str = mrow[mapping_node1_idx]
-            mapping_label: str = mrow[mapping_label_idx]
+            mapping_label: str = mrow[mapping_label_idx] if mapping_rule_mode == "normal" else ""
             mapping_node2: str = mrow[mapping_node2_idx]
             mapping_confidence: typing.Optional[float] = default_confidence_value
             if confidence_column_idx >= 0:
@@ -270,7 +318,7 @@ def run(input_file: KGTKFiles,
                 mapping_idempotent_exclusions += 1
                 continue
         
-            if mapping_label == same_as_item_label:
+            if mapping_rule_mode == "same-as-item" or mapping_label == same_as_item_label:
                 if mapping_node1 in item_map:
                     if mapping_node2 != item_map[mapping_node1] or not allow_exact_duplicates:
                         print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
@@ -285,7 +333,7 @@ def run(input_file: KGTKFiles,
                 item_line_map[mapping_node1] = mapping_line_number
                 mapping_rows[mapping_line_number] = mrow.copy()
 
-            elif mapping_label == same_as_property_label:
+            elif mapping_rule_mode == "same-as-property" or mapping_label == same_as_property_label:
                 if mapping_node1 in property_map:
                     if mapping_node2 != property_map[mapping_node1] or not allow_exact_duplicates:
                         print("Duplicate %s for %s at mapping file line %d, originally in line %d" % (mapping_label,
@@ -328,23 +376,23 @@ def run(input_file: KGTKFiles,
         if verbose:
             print("Opening the input file %s." % repr(str(input_kgtk_file)), file=error_file, flush=True)
         ikr:  KgtkReader = KgtkReader.open(input_kgtk_file,
-                                           options=reader_options,
+                                           options=input_reader_options,
                                            value_options = value_options,
                                            error_file=error_file,
                                            verbose=verbose,
                                            very_verbose=very_verbose,
         )
         trouble = False
-        input_node1_idx: int = ikr.node1_column_idx
-        input_label_idx: int = ikr.label_column_idx
-        input_node2_idx: int = ikr.node2_column_idx
-        if input_node1_idx < 0:
+        input_node1_idx: int = ikr.get_node1_column_index(node1_column_name)
+        input_label_idx: int = ikr.get_label_column_index(label_column_name)
+        input_node2_idx: int = ikr.get_node2_column_index(node2_column_name)
+        if input_node1_idx < 0 and mapping_rule_mode in ["normal", "same-as-item"]:
             trouble = True
             print("Error: Cannot find the input file node1 column.", file=error_file, flush=True)
-        if input_label_idx < 0:
+        if input_label_idx < 0 and mapping_rule_mode in ["normal", "same-as-property"]:
             trouble = True
             print("Error: Cannot find the input file label column.", file=error_file, flush=True)
-        if input_node2_idx < 0:
+        if input_node2_idx < 0 and mapping_rule_mode in ["normal", "same-as-item"]:
             trouble = True
             print("Error: Cannot find the input file node2 column.", file=error_file, flush=True)
         if trouble:
@@ -355,8 +403,8 @@ def run(input_file: KGTKFiles,
         okw: KgtkWriter = KgtkWriter.open(ikr.column_names,
                                           output_kgtk_file,
                                           mode=KgtkWriter.Mode[ikr.mode.name],
-                                          use_mgzip=reader_options.use_mgzip, # Hack!
-                                          mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                          use_mgzip=input_reader_options.use_mgzip, # Hack!
+                                          mgzip_threads=input_reader_options.mgzip_threads, # Hack!
                                           error_file=error_file,
                                           verbose=verbose,
                                           very_verbose=very_verbose)
@@ -368,8 +416,8 @@ def run(input_file: KGTKFiles,
             uekw = KgtkWriter.open(ikr.column_names,
                                    unmodified_edges_kgtk_file,
                                    mode=KgtkWriter.Mode[ikr.mode.name],
-                                   use_mgzip=reader_options.use_mgzip, # Hack!
-                                   mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                   use_mgzip=input_reader_options.use_mgzip, # Hack!
+                                   mgzip_threads=input_reader_options.mgzip_threads, # Hack!
                                    error_file=error_file,
                                    verbose=verbose,
                                    very_verbose=very_verbose)
@@ -381,8 +429,8 @@ def run(input_file: KGTKFiles,
             amkw = KgtkWriter.open(mkr.column_names,
                                    activated_mapping_kgtk_file,
                                    mode=KgtkWriter.Mode[mkr.mode.name],
-                                   use_mgzip=reader_options.use_mgzip, # Hack!
-                                   mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                   use_mgzip=input_reader_options.use_mgzip, # Hack!
+                                   mgzip_threads=input_reader_options.mgzip_threads, # Hack!
                                    error_file=error_file,
                                    verbose=verbose,
                                    very_verbose=very_verbose)
@@ -398,35 +446,38 @@ def run(input_file: KGTKFiles,
             input_count +=1
             newrow: typing.List[str] = row.copy()
 
-            input_node1: str = row[input_node1_idx]
             modified_node1: bool = False
-            if input_node1 in item_map:
-                newrow[input_node1_idx] = item_map[input_node1]
-                modified_node1 = True
-                if amkw is not None:
-                    mapping_line_number = item_line_map[input_node1]
-                    if mapping_line_number not in activated_mapping_rows:
-                        activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
-                        
-            input_node2: str = row[input_node2_idx]
             modified_node2: bool = False
-            if input_node2 in item_map:
-                newrow[input_node2_idx] = item_map[input_node2]
-                modified_node2 = True
-                if amkw is not None:
-                    mapping_line_number = item_line_map[input_node2]
-                    if mapping_line_number not in activated_mapping_rows:
-                        activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
-
-            input_label: str = row[input_label_idx]
             modified_label: bool = False
-            if input_label in property_map:
-                newrow[input_label_idx] = property_map[input_label]
-                modified_label = True
-                if amkw is not None:
-                    mapping_line_number = property_line_map[input_label]
-                    if mapping_line_number not in activated_mapping_rows:
-                        activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
+
+            if mapping_rule_mode in ["normal", "same-as-item"]:
+                input_node1: str = row[input_node1_idx]
+                if input_node1 in item_map:
+                    newrow[input_node1_idx] = item_map[input_node1]
+                    modified_node1 = True
+                    if amkw is not None:
+                        mapping_line_number = item_line_map[input_node1]
+                        if mapping_line_number not in activated_mapping_rows:
+                            activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
+                        
+                input_node2: str = row[input_node2_idx]
+                if input_node2 in item_map:
+                    newrow[input_node2_idx] = item_map[input_node2]
+                    modified_node2 = True
+                    if amkw is not None:
+                        mapping_line_number = item_line_map[input_node2]
+                        if mapping_line_number not in activated_mapping_rows:
+                            activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
+
+            if mapping_rule_mode in ["normal", "same-as-property"]:
+                input_label: str = row[input_label_idx]
+                if input_label in property_map:
+                    newrow[input_label_idx] = property_map[input_label]
+                    modified_label = True
+                    if amkw is not None:
+                        mapping_line_number = property_line_map[input_label]
+                        if mapping_line_number not in activated_mapping_rows:
+                            activated_mapping_rows[mapping_line_number] = mapping_rows[mapping_line_number]
 
             modified: bool
             if modified_pattern == "node1|label|node2":
