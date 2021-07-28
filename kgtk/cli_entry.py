@@ -17,8 +17,16 @@ import sh # type: ignore
 
 
 # module name should NOT start with '__' (double underscore)
-handlers = [x.name for x in pkgutil.iter_modules(cli.__path__)
+handlers = [(x.name, "kgtk.cli") for x in pkgutil.iter_modules(cli.__path__)
                    if not x.name.startswith('__')]
+
+try:
+    from kgtk_extensions import cli as cliext
+    ext_handlers = [(x.name, "kgtk_extensions.cli") for x in pkgutil.iter_modules(cliext.__path__)
+                    if not x.name.startswith('__')]
+    handlers = sorted(handlers + ext_handlers)
+except ImportError:
+    pass
 
 # import signal
 # signal.signal(signal.SIGPIPE, signal.SIG_DFL)
@@ -297,10 +305,11 @@ def cli_entry(*args):
     subparser_lookup = {}
     sub_parsers.required = True
     for h in handlers:
-        mod = importlib.import_module('.{}'.format(h), 'kgtk.cli')
+        hname, hpath = h
+        mod = importlib.import_module('.{}'.format(hname), hpath)
         subp = mod.parser()
         # only create sub-parser with sub-command name and defer full build
-        cmd: str = h.replace("_", "-")
+        cmd: str = hname.replace("_", "-")
         sub_parser = sub_parsers.add_parser(cmd, **subp)
         subparser_lookup[cmd] = (mod, sub_parser)
         if 'aliases' in subp:
