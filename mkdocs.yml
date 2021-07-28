@@ -10,7 +10,6 @@ nav:
       - 'import-concept-pairs': 'import/import_concept_pairs.md'
       - 'import-framenet': 'import/import_framenet.md'
       - 'import-ntriples': 'import/import_ntriples.md'
-      - 'import-tdm': 'import/import_tdm.md'
       - 'import-visualgenome': 'import/import_visualgenome.md'
       - 'import-wikidata': 'import/import_wikidata.md'
       - 'import-wordnet': 'import/import_wordnet.md'
