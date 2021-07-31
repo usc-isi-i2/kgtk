@@ -10,13 +10,15 @@ RUN apt-get update && apt-get install -y \
   libxrandr-dev \
   libxinerama-dev \
   pv \
-  gcc 
+  gcc
 
-RUN pip install thinc==7.4.0
+RUN apt-get install --reinstall build-essential -y
 
-RUN git clone https://github.com/usc-isi-i2/kgtk/ 
+RUN pip install huggingface-hub==0.0.12
 
-RUN cd /kgtk && python setup.py install 
+RUN git clone https://github.com/usc-isi-i2/kgtk/
+
+RUN cd /kgtk && python setup.py install
 
 RUN conda update -n base -c defaults conda
 
@@ -34,7 +36,7 @@ RUN adduser --disabled-password \
     --gecos "Default user" \
     --uid ${NB_UID} \
     ${NB_USER}
-    
+
 COPY . ${HOME}
 USER root
 RUN chown -R ${NB_UID} ${HOME}

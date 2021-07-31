@@ -15,7 +15,13 @@ If you have Docker installed, we have prepared a Docker image with KGTK:
 docker pull uscisii2/kgtk
 ```
 
-To run KGTK in the command line type:
+Or build it yourself:
+```
+cd kgtk/docker/
+docker build -t kgtk-local .
+```
+
+To run KGTK in the command line type (note that if you built the image yourself, you should replace `uscisii2/kgtk:latest` by `kgtk-local` in the following commands):
 
 ```bash
 docker run -it --rm  --user root -e NB_GID=100 -e GEN_CERT=yes -e GRANT_SUDO=yes uscisii2/kgtk:latest /bin/bash
