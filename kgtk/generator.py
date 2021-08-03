@@ -220,8 +220,8 @@ class TripleGenerator(Generator):
         if self.prop_declaration:
             for row in self.kr:
                 self.read_prop_declaration(row)
-        self.kr.close()
-        self.kr: KgtkReader = KgtkReader.open(self.input_file)
+            self.kr.close()
+            self.kr: KgtkReader = KgtkReader.open(self.input_file)
         for row in self.kr:
             self.entry_point(input_row_count, row)
             input_row_count += 1
@@ -511,6 +511,8 @@ class TripleGenerator(Generator):
         if is_qualifier_edge:
             # edge: e8 p9 ^2013-01-01T00:00:00Z/11
             # create qualifier edge on previous STATEMENT and return the updated STATEMENT
+            if self.to_append_statement is None:
+                raise KGTKException("Qualifier edge with no preceeding statement at line %d: (%s, %s, %s)" % (line_number, repr(node1), repr(property), repr(node2)))
             self.to_append_statement.add_qualifier(property, object)
             self.doc.kg.add_subject(self.to_append_statement)
         else:
@@ -535,6 +537,7 @@ class TripleGenerator(Generator):
 
         success = True
         node1, node2, prop, e_id = row[self.node1_idx], row[self.node2_idx], row[self.label_idx], row[self.id_idx]
+        # print("line %d: node1 %s, label %s, node2 %s, id %s" % (line_number, repr(node1), repr(prop), repr(node2), repr(e_id)), file=sys.stderr, flush=True) # ***
         if line_number == 2:
             # by default a statement edge
             is_qualifier_edge = False
