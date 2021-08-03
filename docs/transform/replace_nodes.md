@@ -222,6 +222,15 @@ edges that were applied to at least one input edge.
 The activated mapping edges output file will have the same columns and record
 order as the mapping file.
 
+### The Rejected Mapping Edges Output File
+
+When `--rejected-mapping-edges-file REJECTED_MAPPING_EDGES_FILE` is specified,
+then the rejected mapping edges output file will contain a copy of the mapping
+edges that were rejected due to a confidence value that did not meet the threshold value.
+
+The rejected mapping edges output file will have the same columns and record
+order as the mapping file.
+
 ## Usage
 
 ```
@@ -229,6 +238,7 @@ usage: kgtk replace-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                           [--mapping-file INPUT_FILE]
                           [--unmodified-edges-file UNMODIFIED_EDGES_FILE]
                           [--activated-mapping-edges-file ACTIVATED_MAPPING_EDGES_FILE]
+                          [--rejected-mapping-edges-file REJECTED_MAPPING_EDGES_FILE]
                           [--threshold CONFIDENCE_THRESHOLD]
                           [--split-output-mode [True/False]]
                           [-v [optional True|False]]
@@ -254,6 +264,9 @@ optional arguments:
                         (Optional, use '-' for stdout.)
   --activated-mapping-edges-file ACTIVATED_MAPPING_EDGES_FILE
                         A KGTK output file that will contain activated mapping
+                        edges. (Optional, use '-' for stdout.)
+  --rejected-mapping-edges-file REJECTED_MAPPING_EDGES_FILE
+                        A KGTK output file that will contain rejected mapping
                         edges. (Optional, use '-' for stdout.)
   --threshold CONFIDENCE_THRESHOLD
                         The minimum acceptable confidence value. Mapping
@@ -421,7 +434,7 @@ kgtk replace-nodes \
 
 Here is the activated mapping edges output file:
 
-```bask
+```bash
 kgtk cat -i replace-nodes-activated.tsv
 ```
 
@@ -430,6 +443,50 @@ kgtk cat -i replace-nodes-activated.tsv
 | box1 | same_as_item | Q001 | 1.0 |
 | box2 | same_as_item | Q002 |  |
 | isa | same_as_property | P1 | 1.0 |
+
+### Apply the Mapping with a Rejected Mapping Edges Output File
+
+Here is a mapping file with confidence values:
+
+```bash
+kgtk cat -i examples/docs/replace-nodes-mapping8.tsv
+```
+
+| node1 | label | node2 | confidence |
+| -- | -- | -- | -- |
+| box1 | same_as_item | Q001 | 1.0 |
+| box2 | same_as_item | Q002 | .9 |
+| box4 | same_as_item | Q004 | .8 |
+| isa | same_as_property | P1 | 1.0 |
+
+```bash
+kgtk replace-nodes \
+     --input-file examples/docs/replace-nodes-input.tsv \
+     --mapping-file examples/docs/replace-nodes-mapping8.tsv \
+     --threshold .95 \
+     --rejected-mapping-edges-file replace-nodes-rejected.tsv
+     
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q001 | P1 | box |
+| box2 | P1 | box |
+| box3 | hasa | box |
+| Q001 | color | red |
+| box2 | color | blue |
+
+
+Here is the rejected mapping edges output file:
+
+```bash
+kgtk cat -i replace-nodes-rejected.tsv
+```
+
+| node1 | label | node2 | confidence |
+| -- | -- | -- | -- |
+| box2 | same_as_item | Q002 | .9 |
+| box4 | same_as_item | Q004 | .8 |
 
 ### Multiple Input Files
 
