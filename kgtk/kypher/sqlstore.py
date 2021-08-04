@@ -907,6 +907,12 @@ class InfoTable(object):
             self.store.execute(self.store.get_table_definition(self.schema))
             self.verified_schema = True
 
+    def clear_caches(self):
+        InfoTable.get_info.cache_clear()
+        InfoTable.get_all_keys.cache_clear()
+        InfoTable.get_all_infos.cache_clear()
+
+    @lru_cache(maxsize=None)
     def get_info(self, key):
         """Return a dict info structure for the row identified by 'key' in this info table,
         or None if 'key' does not exist.  All column keys will be set, but some values may be None.
@@ -948,6 +954,7 @@ class InfoTable(object):
             stmt = 'INSERT INTO %s (%s) VALUES (%s)' % (table, collist, vallist)
             self.store.execute(stmt, list(info.values()))
             self.store.commit()
+            self.clear_caches()
 
     def update_info(self, key, info):
         """Update an existing record in this info table for 'key' and the values in 'info'.
@@ -969,6 +976,7 @@ class InfoTable(object):
         values.append(key)
         self.store.execute(stmt, values)
         self.store.commit()
+        self.clear_caches()
         
     def drop_info(self, key):
         """Delete any rows identified by 'key' in this info table.
@@ -981,13 +989,16 @@ class InfoTable(object):
         stmt = 'DELETE FROM %s WHERE %s=?' % (table, cols[keycol]._name_)
         self.store.execute(stmt, (key,))
         self.store.commit()
+        self.clear_caches()
 
+    @lru_cache(maxsize=None)
     def get_all_keys(self):
         table = self.schema._name_
         cols = self.schema.columns
         keycol = self.store.get_key_column(self.schema)
         return [key for (key,) in self.store.execute('SELECT %s FROM %s' % (keycol, table))]
 
+    @lru_cache(maxsize=None)
     def get_all_infos(self):
         # TO DO: this generates one query per key, generalize if this becomes a performance issue
         return [self.get_info(key) for key in self.get_all_keys()]
