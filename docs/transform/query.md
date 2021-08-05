@@ -1458,7 +1458,7 @@ simple greedy match process:
     * it has a numeric suffix (e.g., `g42`) and its non-numeric prefix
       is contained as a substring in the base name of the input file
 4. if no match can be found for a particular handle, an error will be raised
-5. once a handle is matched is matching input is removed from the pool of
+5. once a handle is matched its matching input is removed from the pool of
    available inputs and the next handle (if any) is matched against the
    remaining ones
 

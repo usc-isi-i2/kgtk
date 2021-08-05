@@ -67,7 +67,7 @@ class KypherQuery(object):
         self._define(**kwargs)
 
     def _define(self,
-                inputs=None,
+                inputs=None, doc=None,
                 name=None, maxcache=None,
                 query=None,
                 match='()', where=None,
@@ -89,18 +89,23 @@ class KypherQuery(object):
             raise KGTKException('query has already been defined')
 
         inputs = kyquery.listify(inputs) or self.api.get_all_inputs()
+        norm_inputs = []
         for inp in inputs:
             if self.api.get_input_info(inp) is None:
                 self.api.add_input(inp)
+            norm_inputs.append(self.api.get_input(inp))
+        inputs = norm_inputs
+
+        self.docstring = doc
         
         optionals = []
         opt and optionals.append((self._subst_graph_handles(opt, inputs), owhere))
         opt2 and optionals.append((self._subst_graph_handles(opt2, inputs), owhere2))
         # kwargs is an ordered dict, so the actual suffixes do not matter:
         for key, value in kwargs.items():
-            if key.startwith('opt'):
+            if key.startswith('opt'):
                 optionals.append([self._subst_graph_handles(value, inputs), None])
-            elif key.startwith('owhere'):
+            elif key.startswith('owhere'):
                 optionals[-1][1] = value
             else:
                 raise KGTKException('Unexpected keyword argument: %s' % key)
@@ -191,8 +196,15 @@ class KypherQuery(object):
         """Return a copy of the list 'params' modified by any 'substitutions'.
         Placeholder parameters in 'params' are marked as single-element tuples, e.g., ('NODE').
         """
+        subst_params = []
+        # we can't do this easily with a list comprehension, since False or 0 are valid substitutions:
+        for x in params:
+            if isinstance(x, tuple):
+                subst_params.append(substitutions.get(x[0], x[0]))
+            else:
+                subst_params.append(x)
         # we return the result as a tuple which can be hashed for memoization:
-        return tuple([isinstance(x, tuple) and substitutions.get(x[0], x[0]) or x for x in params])
+        return tuple(subst_params)
 
     def _exec(self, parameters, fmt):
         """Internal query execution wrapper that can easily be memoized.
@@ -200,21 +212,33 @@ class KypherQuery(object):
         # TO DO: abstract some of this better in KgtkQuery API
         kgtk_query = self.kgtk_query
         result = kgtk_query.store.execute(self.sql, parameters)
-        kgtk_query.result_header = [kgtk_query.unalias_column_name(c[0]) for c in result.description]
-        if fmt in ('df', 'dataframe'):
+        if kgtk_query.result_header is None:
+            kgtk_query.result_header = [kgtk_query.unalias_column_name(c[0]) for c in result.description]
+        if fmt is None:
+            # convert to list so we can reuse if we memoize:
+            return tuple(result)
+        # allow types and their names:
+        fmt = hasattr(fmt, '__name__') and fmt.__name__ or str(fmt)
+        if fmt == 'iter':
+            return result
+        elif fmt == 'tuple':
+            return tuple(result)
+        elif fmt == 'list':
+            return list(result)
+        elif fmt in ('df', 'dataframe', 'DataFrame'):
             if not _have_pandas:
                 _import_pandas()
             return pd.DataFrame(result, columns=kgtk_query.result_header)
+        # TO DO: consider supporting namedtuple and/or sqlite3.Row as row_factory types
+        #        (for sqlite3.Row we have the issue that aliases become keys())
         else:
-            # convert to list so we can reuse if we memoize:
-            return list(result)
+            raise KGTKException('unsupported query result format: %s' % fmt)
 
     def execute(self, fmt=None, **params):
         """Execute this query with the given 'params' and return the result in format 'fmt'. 
-        By default the result is a list of tuples.  If format is 'df' a Pandas dataframe
-        will be returned instead (requires pandas module to be available).  'params' should
-        be a list of key/value pairs for the unbound Kypher parameters in the query.  For
-        example, the Kypher parameter '$NODE' can be bound with 'NODE=<some value>'.
+        By default the result is a list of tuples (see 'KypherApi.execute_query' for other options).
+        'params' should be a list of key/value pairs for the unbound Kypher parameters in the query.
+        For example, the Kypher parameter '$NODE' can be bound with 'NODE=<some value>'.
         """
         self.refresh()
         parameters = self._subst_params(self.parameters, params)
@@ -381,6 +405,8 @@ class KypherApi(object):
         """
         if self.sql_store is None:
             conn = sqlite3.connect(self.graph_cache, check_same_thread=False)
+            # don't do this for now, since we get the aliases as keys() which would require further mapping:
+            #conn.row_factory = sqlite3.Row
             self.sql_store = sqlstore.SqliteStore(dbfile=self.graph_cache, conn=conn, loglevel=self.loglevel)
         return self.sql_store
 
@@ -486,7 +512,7 @@ class KypherApi(object):
             return None
 
     def get_query(self,
-                  inputs=None,
+                  inputs=None, doc=None,
                   name=None, maxcache=None,
                   query=None,
                   match='()', where=None,
@@ -510,6 +536,8 @@ class KypherApi(object):
         All inputs will automatically be added via 'add-input' (which is a no-op if they already exist).
         If 'inputs' is None, the list of all currently defined inputs will be supplied in random order.
         In that case, all match clauses need to explicitly specify the graph they apply to.
+
+        'doc' can be used to attach a documentation string to the query.
 
         If 'name' is given, the constructed query object will be cached in the API object under that name.
         Methods such as 'execute_query' can then be called with a query name or object.  Even if no name is
@@ -581,7 +609,7 @@ class KypherApi(object):
         if kypher_query is not None:
             return kypher_query
         kypher_query = KypherQuery(
-            self, inputs=inputs, name=name, maxcache=maxcache,
+            self, inputs=inputs, doc=doc, name=name, maxcache=maxcache,
             query=query, match=match, where=where, opt=opt, owhere=owhere, opt2=opt2, owhere2=owhere2,
             with_=with_, wwhere=wwhere, ret=ret, order=order, skip=skip, limit=limit, parameters=parameters,
             force=force, index=index, loglevel=loglevel,
@@ -590,12 +618,16 @@ class KypherApi(object):
 
     def execute_query(self, query, fmt=None, **params):
         """Execute 'query' with the given 'params' and return the result in format 'fmt'
-        ('query' may be a name or object).  By default the result is a list of tuples.
-        If format is 'df' a Pandas dataframe will be returned instead (requires the pandas
-        module to be available).  'params' should be a list of key/value pairs for the
-        unbound Kypher parameters in 'query' (those not specified in the 'parameters'
-        argument to 'get_query').  For example, the Kypher parameter '$NODE' can be bound
-        with 'NODE=<some value>'.
+        ('query' may be a name or object).  By default the result is a tuple of tuples.
+        Supported formats are 'iter' (the sqlite result iterator), 'tuple' (a tuple list
+        of result tuples), 'list' (a list of tuples), or 'df' (a Pandas dataframe which 
+        requires the pandas module to be available - 'dataframe' or 'DataFrame' are also
+        supported as format names).  Type objects can also be used if available instead
+        of their names.  IMPORTANT: If 'iter' is chosen, the result cannot effectively be
+        cached, since the iterator will be exhausted after first traversal.
+        'params' should be a list of key/value pairs for the unbound Kypher parameters in
+        'query' (those not specified in the 'parameters' argument to 'get_query').
+        For example, the Kypher parameter '$NODE' can be bound with 'NODE=<some value>'.
         """
         return self._get_query(query).execute(fmt=fmt, **params)
 
