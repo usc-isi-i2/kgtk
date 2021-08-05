@@ -55,7 +55,10 @@ class KgtkLift(KgtkFormat):
 
     label_select_disable: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     label_select_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
-    label_select_column_value: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LABEL_SELECT_COLUMN_VALUE)
+    label_select_column_values: typing.Optional[typing.List[str]] = \
+        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                 iterable_validator=attr.validators.instance_of(list))),
+                default=None)
 
     label_match_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     label_value_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
@@ -93,29 +96,96 @@ class KgtkLift(KgtkFormat):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    def build_lift_column_idxs(self, kr: KgtkReader)->typing.List[int]:
+    def get_property_to_lift(self, idx: int, propname: typing.Optional[str] = None):
+        if self.label_select_column_values is None or len(self.label_select_column_values) == 0:
+            # If we weren't supplied with the name of the property in the label record,
+            # use wither the value supplied in the call o the default value.
+            if propname is not None:
+                return propname
+            else:
+                return self.DEFAULT_LABEL_SELECT_COLUMN_VALUE
+
+        elif len(self.label_select_column_values) == 1:
+            # If we were given just one property value, use it for
+            # all of the input columns being lifted:
+            return self.label_select_column_values[0]
+
+        elif idx < len(self.label_select_column_values):
+            # Otherwise, use the property value correspoinding to the data column:
+            return self.label_select_column_values[idx]
+
+        else:
+            raise ValueError("Internal inconsistency in property list: idx=%d len=%d." % (idx, len(self.label_select_column_values)))
+
+    def build_lift_column_idxs(self, kr: KgtkReader)->typing.Tuple[typing.List[int], typing.List[str]]:
+        # Build the indexes of the columns to lift in the input file.  Also
+        # build a list of the property label that will be used to select the
+        # value that will be put in the lifted output column.
         lift_column_idxs: typing.List[int] = [ ]
+        properties_to_lift: typing.List[str]
+
+        # First, were we wupplied with a list of input columns to lift?
+        # If so, 
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) > 0:
             # Process a custom list of columns to be lifted.
             lift_column_name: str
-            for lift_column_name in self.input_lifting_column_names:
+            idx: int
+            for idx, lift_column_name in enumerate(self.input_lifting_column_names):
                 if lift_column_name not in kr.column_name_map:
                     raise ValueError("Unknown lift column %s." % lift_column_name)
                 lift_column_idxs.append(kr.column_name_map[lift_column_name])
+                properties_to_lift.append(self.get_property_to_lift(idx))
+
+        elif self.output_lifted_column_names is not None and len(self.output_lifted_column_names) > 0:
+            # Deduce the input column name and the property value from the
+            # structure of the name of the output column.
+            #
+            # node1;label       Get the `label` property for the `node1` column's value.
+            # node1;P45         Get the `P45` property for the `node1` column's value.
+            # P55               Get the `P55` property for the edge, identified by the `id` column's value.
+            output_column_name: str
+            idx2: int
+            for idx2, output_column_name in enumerate(self.output_lifted_column_names):
+                input_column_name: str
+                propname: str
+                if ";" in output_column_name:
+                    input_column_name, propname = output_column_name.split(";")
+                else:
+                    input_column_name = kr.get_id_column_actual_name()
+                    propname = output_column_name
+                if input_column_name not in kr.column_name_map:
+                    raise ValueError("Unknown input column %s." % lift_column_name)
+                lift_column_idxs.append(kr.column_name_map[input_column_name])
+                properties_to_lift.append(self.get_property_to_lift(idx2, propname=propname))
+
         else:
-            # Use the edge file key columns if they exist.
+            # If neither the input nor output columns were specified, default to the
+            # (`node1`, `label`, `node2`) input columns and the specified properties
+            # (which default to `label` if not specified).
             if kr.node1_column_idx >= 0:
                 lift_column_idxs.append(kr.node1_column_idx)
+                properties_to_lift.append(self.get_property_to_lift(0))
             if kr.label_column_idx >= 0:
                 lift_column_idxs.append(kr.label_column_idx)
+                properties_to_lift.append(self.get_property_to_lift(1))
             if kr.node2_column_idx >= 0:
                 lift_column_idxs.append(kr.node2_column_idx)
+                properties_to_lift.append(self.get_property_to_lift(2))
 
         # Verify that we found some columns to lift:
         if len(lift_column_idxs) == 0:
             raise ValueError("No lift columns found.")
 
-        return lift_column_idxs
+        if self.verbose:
+            idx3: int
+            lift_column_idx: int
+            for idx3, lift_column_idx in enumerate(lift_column_idxs):
+                print("Lifting column %d (%s) with property %s." % (lift_column_idx,
+                                                                    kr.column_names[lift_column_idx],
+                                                                    properties_to_lift[idx3]),
+                      file=self.error_file, flush=True)
+
+        return lift_column_idxs, properties_to_lift
 
     def lookup_input_select_column_idx(self, kr: KgtkReader)->int:
         input_select_column_idx: int
@@ -210,17 +280,23 @@ class KgtkLift(KgtkFormat):
     def load_labels(self,
                     kr: KgtkReader,
                     path: Path,
+                    lift_column_properties: typing.List[str],
                     save_input: bool = True,
-                    labels_needed: typing.Optional[typing.Set[str]] = None,
-                    label_rows: typing.Optional[typing.MutableMapping[str, typing.List[typing.List[str]]]] = None,
-    )->typing.Tuple[typing.Mapping[str, str], typing.List[typing.List[str]]]:
+                    labels_needed: typing.Optional[typing.Mapping[str, typing.Set[str]]] = None,
+                    label_rows: typing.Optional[typing.MutableMapping[str, typing.MutableMapping[str, typing.List[typing.List[str]]]]] = None,
+    )->typing.Tuple[typing.Mapping[str, typing.Mapping[str, str]], typing.List[typing.List[str]]]:
         input_rows: typing.List[typing.List[str]] = [ ]
-        labels: typing.MutableMapping[str, str] = { }
+        labels: typing.MutableMapping[str, typing.MutableMapping[str, str]] = { }
 
         label_match_column_idx: int
         label_select_column_idx: int
         label_value_column_idx: int
         label_match_column_idx, label_select_column_idx, label_value_column_idx = self.lookup_label_table_idxs(kr)
+
+        label_select_column_value_set: typing.Set[str] = set(lift_column_properties)
+
+        if label_select_column_idx < 0 and len(label_select_column_value_set) > 1:
+            raise ValueError("No label select column and multiple label select column values")
 
         if self.verbose:
             print("Loading labels from %s" % path, file=self.error_file, flush=True)
@@ -232,37 +308,59 @@ class KgtkLift(KgtkFormat):
             else:
                 print("label_select_column_idx=%d (%s)." % (label_select_column_idx, kr.column_names[label_select_column_idx]), file=self.error_file, flush=True)
             print("label_value_column_idx=%d (%s)." % (label_value_column_idx, kr.column_names[label_value_column_idx]), file=self.error_file, flush=True)
-            print("label_select_column_value='%s'." % self.label_select_column_value, file=self.error_file, flush=True)
+            print("label_select_column_values='%s'." % " ".join(lift_column_properties), file=self.error_file, flush=True)
+
 
         key: str
         row: typing.List[str]
         for row in kr:
-            if label_select_column_idx < 0 or row[label_select_column_idx] == self.label_select_column_value:
+            selected: bool
+            label_select_column_value: str
+            if label_select_column_idx < 0:
+                label_select_column_value = lift_column_properties[0]
+                selected = True
+            else:
+                label_select_column_value = row[label_select_column_idx]
+                selected = label_select_column_value in label_select_column_value_set
+            if selected:
                 # This is a label definition row.
                 label_key: str = row[label_match_column_idx]
                 label_value: str = row[label_value_column_idx]
                 if label_value != self.default_value:
-                    if label_key in labels:
+                    selected_labels: typing.MutableMapping[str, str]
+                    if label_select_column_value in labels:
+                        selected_labels = labels[label_select_column_value]
+                    else:
+                        selected_labels = dict()
+                        labels[label_select_column_value] = selected_labels
+                        
+                    if label_key in selected_labels:
                         # This label already exists in the table.
                         if self.suppress_duplicate_labels:
                             # Build a list eliminating duplicate elements.
                             # print("Merge '%s' and '%s'" % (key_value, labels[key]), file=self.error_file, flush=True)
-                            labels[label_key] = KgtkValue.merge_values(labels[label_key], label_value)
+                            selected_labels[label_key] = KgtkValue.merge_values(selected_labels[label_key], label_value)
                         else:
-                            labels[label_key] = KgtkFormat.LIST_SEPARATOR.join((labels[label_key], label_value))
+                            selected_labels[label_key] = KgtkFormat.LIST_SEPARATOR.join((selected_labels[label_key], label_value))
                         if label_rows is not None:
-                            label_rows[label_key].append(row.copy())
+                            if label_select_column_value not in label_rows:
+                                label_rows[label_select_column_value] = dict()
+                            label_rows[label_select_column_value][label_key].append(row.copy())
                     else:
                         # This is the first instance of this label definition.
                         if labels_needed is not None:
-                            if label_key in labels_needed:
-                                labels[label_key] = label_value
+                            if label_select_column_value in labels_needed and label_key in labels_needed[label_select_column_value]:
+                                selected_labels[label_key] = label_value
                                 if label_rows is not None:
-                                    label_rows[label_key] = [ row.copy() ]
+                                    if label_select_column_value not in label_rows:
+                                        label_rows[label_select_column_value] = dict()
+                                    label_rows[label_select_column_value][label_key] = [ row.copy() ]
                         else:
-                            labels[label_key] = label_value
+                            selected_labels[label_key] = label_value
                             if label_rows is not None:
-                                label_rows[label_key] = [ row.copy() ]
+                                if label_select_column_value not in label_rows:
+                                    label_rows[label_select_column_value] = dict()
+                                label_rows[label_select_column_value][label_key] = [ row.copy() ]
                 if save_input and not self.remove_label_records:
                     input_rows.append(row.copy())
             else:
@@ -286,6 +384,7 @@ class KgtkLift(KgtkFormat):
     def load_input_removing_label_records(self,
                                           kr: KgtkReader,
                                           path: Path,
+                                          properties_to_lift: typing.List[str]
     )-> typing.List[typing.List[str]]:
         label_select_column_idx: int = self.lookup_label_select_column_idx(kr)
         if label_select_column_idx < 0:
@@ -294,10 +393,12 @@ class KgtkLift(KgtkFormat):
         if self.verbose:
             print("Loading input rows without labels from %s" % path, file=self.error_file, flush=True)
 
+        properties_to_remove: typing.Set[str] = set(properties_to_lift)
+
         input_rows: typing.List[typing.List[str]] = [ ]
         row: typing.List[str]
         for row in kr:
-            if row[label_select_column_idx] != self.label_select_column_value:
+            if row[label_select_column_idx] not in properties_to_remove:
                 input_rows.append(row)
 
         return input_rows
@@ -305,33 +406,39 @@ class KgtkLift(KgtkFormat):
     def load_input(self,
                    kr: KgtkReader,
                    path: Path,
+                   properties_to_lift: typing.List[str],
     )-> typing.List[typing.List[str]]:
         if self.remove_label_records:
-            return self.load_input_removing_label_records(kr, path)
+            return self.load_input_removing_label_records(kr, path, properties_to_lift)
         else:
             return self.load_input_keeping_label_records(kr, path)
 
     def build_lifted_column_idxs(self,
                                  kr: KgtkReader,
                                  lift_column_idxs: typing.List[int],
+                                 properties_to_lift: typing.List[str],
                                  input_rows: typing.List[typing.List[str]],
-                                 labels: typing.Mapping[str, str],
+                                 labels: typing.Mapping[str, typing.Mapping[str, str]],
                                  label_select_column_idx: int,
                                  input_select_column_idx: int,
-    )->typing.List[int]:
+    )->typing.Tuple[typing.List[int], typing.List[str]]:
         """
         Build the lifted column indexes, suppressing those columns
         for which there are are no label values.  This requires a
         pass through the input data.
+
+        Return the lifted column indexes and the corresponding properties.
         """
         if self.verbose:
             print("Checking for empty columns", file=self.error_file, flush=True)
         lift_column_idxs_empties: typing.List[int] = lift_column_idxs.copy()
+        properties_to_lift_empties: typing.List[str] = properties_to_lift.copy()
         lift_column_idx: int
+        properties_to_lift_set: typing.Set[str] = set(properties_to_lift)
         # Scan the input file, checking for empty output columns.
         for row in input_rows:
             if label_select_column_idx >= 0:
-                if row[label_select_column_idx] == self.label_select_column_value:
+                if row[label_select_column_idx] in properties_to_lift_set:
                     # Skip label records if they have been saved.
                     continue
 
@@ -347,9 +454,11 @@ class KgtkLift(KgtkFormat):
                 # expense of potentially double testing some items.
                 restart = False
                 for idx, lift_column_idx in enumerate(lift_column_idxs_empties):
+                    property_to_lift: str = properties_to_lift_empties[idx]
                     item: str = row[lift_column_idx]
-                    if item in labels:
+                    if property_to_lift in labels and item in labels[property_to_lift]:
                         lift_column_idxs_empties.pop(idx)
+                        properties_to_lift_empties.pop(idx)
                         restart = True
                         break
             if len(lift_column_idxs_empties) == 0:
@@ -364,11 +473,14 @@ class KgtkLift(KgtkFormat):
                     input_lifting_column_names_empties.append(kr.column_names[idx])
                 print("Unlifted columns: %s" % " ".join(input_lifting_column_names_empties), file=self.error_file, flush=True)
 
-        lifted_column_idxs: typing.List[int] = [ ]
-        for lift_column_idx in lift_column_idxs:
+        lifted_column_idxs: typing.List[int] = list()
+        lifted_column_properties: typing.List[str] = list()
+        idx2: int
+        for idx2, lift_column_idx in enumerate(lift_column_idxs):
             if lift_column_idx not in lift_column_idxs_empties:
-                lifted_column_idxs.append(lift_column_idx)            
-        return lifted_column_idxs
+                lifted_column_idxs.append(lift_column_idx)
+                lifted_column_properties.append(properties_to_lift[idx2])
+        return lifted_column_idxs, lifted_column_properties
 
     def write_output_row(self,
                          ew: KgtkWriter,
@@ -376,13 +488,15 @@ class KgtkLift(KgtkFormat):
                          new_columns: int,
                          input_select_column_idx: int,
                          label_select_column_idx: int,
-                         labels: typing.Mapping[str, str],
+                         properties_to_lift: typing.List[str],
+                         labels: typing.Mapping[str, typing.Mapping[str, str]],
                          lifted_column_idxs: typing.List[int],
+                         lifted_column_properties: typing.List[str],
                          lifted_output_column_idxs: typing.List[int],
                          urkw: typing.Optional[KgtkWriter],
                          mlkw: typing.Optional[KgtkWriter],
-                         label_rows: typing.Optional[typing.Mapping[str, typing.List[typing.List[str]]]],
-                         matched_labels: typing.Set[str],
+                         label_rows: typing.Optional[typing.Mapping[str, typing.Mapping[str, typing.List[typing.List[str]]]]],
+                         matched_labels: typing.MutableMapping[str, typing.Set[str]],
         )->typing.Tuple[bool, bool, bool]:
         output_row: typing.List[str] = row.copy()
         if new_columns > 0:
@@ -396,7 +510,7 @@ class KgtkLift(KgtkFormat):
         skipped: bool = False
         if label_select_column_idx >= 0:
             print("label_select_column_idx %d" % label_select_column_idx)
-            if row[label_select_column_idx]  == self.label_select_column_value:
+            if row[label_select_column_idx]  in properties_to_lift:
                 # Don't lift label columns, if we have stored labels in the input records.
                 do_lift = False
                 if self.remove_label_records:
@@ -410,24 +524,28 @@ class KgtkLift(KgtkFormat):
             # Lift the specified columns in this row.
             lifted_column_idx: int
             for idx, lifted_column_idx in enumerate(lifted_column_idxs):
+                lifted_column_property: str = lifted_column_properties[idx]
                 lifted_output_column_idx: int = lifted_output_column_idxs[idx]
                 if self.clear_before_lift:
                     output_row[lifted_output_column_idx] = self.default_value
                 if self.overwrite or output_row[lifted_output_column_idxs[idx]] == self.default_value:
                     label_key: str = row[lifted_column_idx]
-                    if label_key in labels:
-                        label_value: str = labels[label_key]
+                    if lifted_column_property in labels and label_key in labels[lifted_column_property]:
+                        label_value: str = labels[lifted_column_property][label_key]
                         if label_value != output_row[lifted_output_column_idx]:
                             modified = True
                         output_row[lifted_output_column_idx] = label_value
                         did_lift = True # What if we want to note if we lifted all columns?
 
-                        if label_key not in matched_labels:
-                            matched_labels.add(label_key)
+                        if lifted_column_property not in matched_labels:
+                            matched_labels[lifted_column_property] = set()
+                        if label_key not in matched_labels[lifted_column_property]:
+                            matched_labels[lifted_column_property].add(label_key)
                             if label_rows is not None and mlkw is not None:
                                 label_row: typing.List[str]
-                                for label_row in label_rows[label_key]:
-                                    mlkw.write(label_row)
+                                if lifted_column_property in label_rows and label_key in label_rows[lifted_column_property]:
+                                    for label_row in label_rows[lifted_column_property][label_key]:
+                                        mlkw.write(label_row)
 
             if did_lift and output_select_column_idx >= 0 and self.output_select_column_value is not None:
                 if output_row[output_select_column_idx] != self.output_select_column_value:
@@ -450,7 +568,8 @@ class KgtkLift(KgtkFormat):
         return do_write, modified, skipped
 
     def build_output_column_names(self, ikr: KgtkReader, lifted_column_idxs: typing.List[int])->typing.Tuple[typing.List[str], typing.List[int]]:
-        # Build the output column names.
+        # Build the output column names, returning a list of names and
+        # a parallel list of indexes.
         output_column_names: typing.List[str] = ikr.column_names.copy()
         lifted_output_column_idxs: typing.List[int] = [ ]
         lifted_idx: int
@@ -475,13 +594,8 @@ class KgtkLift(KgtkFormat):
 
     def open_output_writer(self,
                            ikr: KgtkReader,
-                           lifted_column_idxs: typing.List[int]
-    )->typing.Tuple[KgtkWriter, typing.List[int]]:
-        # Build the output column names.
-        output_column_names: typing.List[str]
-        lifted_output_column_idxs: typing.List[int]
-        output_column_names, lifted_output_column_idxs = self.build_output_column_names(ikr, lifted_column_idxs)
-
+                           output_column_names: typing.List[str]
+    )->KgtkWriter:
         if self.verbose:
             print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
         ew: KgtkWriter = KgtkWriter.open(output_column_names,
@@ -496,14 +610,15 @@ class KgtkLift(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
 
-        return ew, lifted_output_column_idxs
+        return ew
 
     def build_labels_needed(self,
                             input_rows: typing.List[typing.List[str]],
                             input_select_column_idx: int,
                             lift_column_idxs: typing.List[int],
-    )->typing.Set[str]:
-        labels_needed: typing.Set[str] = set()
+                            lift_column_properties: typing.List[str],
+    )->typing.Mapping[str, typing.Set[str]]:
+        labels_needed: typing.MutableMapping[str, typing.Set[str]] = dict()
 
         row: typing.List[str]
         for row in input_rows:
@@ -511,17 +626,49 @@ class KgtkLift(KgtkFormat):
                 if self.input_select_column_value is not None and row[input_select_column_idx] != self.input_select_column_value:
                     # Not selected for lifting into.
                     continue
+            idx: int
             lift_column_idx: int
-            for lift_column_idx in lift_column_idxs:
+            for idx, lift_column_idx in enumerate(lift_column_idxs):
+                lift_column_property: str = lift_column_properties[idx]
                 label_key: str = row[lift_column_idx]
-                labels_needed.add(label_key)
+                if lift_column_property not in labels_needed:
+                    labels_needed[lift_column_property] = set()
+                labels_needed[lift_column_property].add(label_key)
 
         if self.verbose:
             print("Labels needed: %d" % len(labels_needed), file=self.error_file, flush=True)
 
         return labels_needed
 
-    def process_in_memory(self, ikr: KgtkReader,
+    def validate_plan(self,
+                      ikr: KgtkReader,
+                      lift_column_idxs: typing.List[int],
+                      lift_column_properties: typing.List[str],
+                      lifted_output_column_idxs: typing.List[int],
+                      output_column_names: typing.List[str]):
+        if len(lift_column_idxs) != len(lift_column_properties):
+            raise ValueError("validation faulure: %d lift column idxs, %d properties" % (len(lift_column_idxs),\
+                                                                                         len(lift_column_properties)))
+        if len(lift_column_idxs) != len(lifted_output_column_idxs):
+            raise ValueError("validation faulure: %d lift column idxs, %d lifted output column idxs" % (len(lift_column_idxs),
+                                                                                                        len(lifted_output_column_idxs)))
+        if self.verbose:
+            print("Lift plan", file=self.error_file, flush=True)
+            idx: int
+            lift_column_idx: int
+            for idx, lift_column_idx in enumerate(lift_column_idxs):
+                lifted_output_column_idx: int = lifted_output_column_idxs[idx]
+                print("Column %d (%s) -> %s -> column %d (%s)" % (lift_column_idx,
+                                                                  ikr.column_names[lift_column_idx],
+                                                                  lift_column_properties[idx],
+                                                                  lifted_output_column_idx,
+                                                                  output_column_names[lifted_output_column_idx]),
+                      file=self.error_file, flush=True)
+            print("=====", file=self.error_file, flush=True)
+                                                                                
+
+    def process_in_memory(self,
+                          ikr: KgtkReader,
                           lkr: typing.Optional[KgtkReader],
                           urkw: typing.Optional[KgtkWriter],
                           mlkw: typing.Optional[KgtkWriter],
@@ -535,17 +682,19 @@ class KgtkLift(KgtkFormat):
         """
         if self.verbose:
             print("Lifting with in-memory buffering.", file=self.error_file, flush=True)
-        lift_column_idxs: typing.List[int] = self.build_lift_column_idxs(ikr)
+        lift_column_idxs: typing.List[int]
+        lift_column_properties: typing.List[str]
+        lift_column_idxs, lift_column_properties = self.build_lift_column_idxs(ikr)
 
-        labels: typing.Mapping[str, str] = { }
+        labels: typing.Mapping[str, typing.Mapping[str, str]] = { }
         input_rows: typing.Optional[typing.List[typing.List[str]]] = None
 
-        label_rows: typing.Optional[typing.MutableMapping[str, typing.List[typing.List[str]]]]
+        label_rows: typing.Optional[typing.MutableMapping[str, typing.MutableMapping[str, typing.List[typing.List[str]]]]]
 
         if mlkw is None and ulkw is None:
             label_rows = None
         else:
-            label_rows = { }
+            label_rows = dict()
         
         input_select_column_idx: int
         if self.input_select_column_value is not None or self.output_select_column_value is not None:
@@ -559,24 +708,32 @@ class KgtkLift(KgtkFormat):
 
         # Extract the labels, and maybe store the input rows.
         if lkr is not None and self.label_file_path is not None:
-            labels_needed: typing.Optional[typing.Set[str]] = None
+            labels_needed: typing.Optional[typing.Mapping[str, typing.Set[str]]] = None
             if self.prefilter_labels:
                 if self.verbose:
                     print("Reading input data to prefilter the labels.", file=self.error_file, flush=True)
-                input_rows = self.load_input(ikr, self.input_file_path)
-                labels_needed = self.build_labels_needed(input_rows, input_select_column_idx, lift_column_idxs)
+                input_rows = self.load_input(ikr, self.input_file_path, lift_column_properties)
+                labels_needed = self.build_labels_needed(input_rows, input_select_column_idx, lift_column_idxs, lift_column_properties)
             # Read the label file.
             if self.verbose:
                 print("Loading labels from the label file.", file=self.error_file, flush=True)
             # We don't need to worry about input rows in the label file.
-            labels, _ = self.load_labels(lkr, self.label_file_path, save_input=False, labels_needed=labels_needed, label_rows=label_rows)
+            labels, _ = self.load_labels(lkr,
+                                         self.label_file_path,
+                                         save_input=False,
+                                         labels_needed=labels_needed,
+                                         label_rows=label_rows,
+                                         lift_column_properties=lift_column_properties)
         else:
             if self.verbose:
                 print("Loading labels and reading data from the input file.", file=self.error_file, flush=True)
             # Read the input file, extracting the labels. The label
             # records may or may not be saved in the input rows, depending
             # upon whether we plan to pass them through to the output.
-            labels, input_rows = self.load_labels(ikr, self.input_file_path, label_rows=label_rows)
+            labels, input_rows = self.load_labels(ikr,
+                                                  self.input_file_path,
+                                                  label_rows=label_rows,
+                                                  lift_column_properties=lift_column_properties)
 
             if not self.remove_label_records:
                 # Save the label column index in the input rows:
@@ -587,26 +744,39 @@ class KgtkLift(KgtkFormat):
             raise ValueError("No labels were found.")
 
         lifted_column_idxs: typing.List[int]
+        lifted_column_propertyes: typing.List[str]
         if self.suppress_empty_columns:
             if input_rows is None:
                 # We need to read the input records now in order to determine
                 # which lifted columns must be suppressed.
                 if self.verbose:
                     print("Reading input data to suppress empty columns.", file=self.error_file, flush=True)
-                input_rows = self.load_input(ikr, self.input_file_path)
-            lifted_column_idxs = self.build_lifted_column_idxs(ikr, lift_column_idxs, input_rows, labels, label_select_column_idx, input_select_column_idx)
+                input_rows = self.load_input(ikr, self.input_file_path, lift_column_properties)
+            lifted_column_idxs, lifted_column_properties = self.build_lifted_column_idxs(ikr,
+                                                                                         lift_column_idxs,
+                                                                                         lift_column_properties,
+                                                                                         input_rows,
+                                                                                         labels,
+                                                                                         label_select_column_idx,
+                                                                                         input_select_column_idx)
         else:
             # Lift all the candidate columns.
             lifted_column_idxs = lift_column_idxs.copy()
+            lifted_column_properties = lift_column_properties.copy()
 
-        ew: KgtkWriter
+        # Build the output column names.
+        output_column_names: typing.List[str]
         lifted_output_column_idxs: typing.List[int]
-        ew, lifted_output_column_idxs = self.open_output_writer(ikr, lifted_column_idxs)
+        output_column_names, lifted_output_column_idxs = self.build_output_column_names(ikr, lifted_column_idxs)
+
+        self.validate_plan(ikr, lifted_column_idxs, lifted_column_properties, lifted_output_column_idxs, output_column_names)
+
+        ew: KgtkWriter = self.open_output_writer(ikr, output_column_names)
 
         if self.verbose:
             print("Writing output records", file=self.error_file, flush=True)
 
-        matched_labels: typing.Set[str] = set()
+        matched_labels: typing.MutableMapping[str, typing.Set[str]] = dict()
         new_columns: int = len(ew.column_names) - len(ikr.column_names)
         input_line_count: int = 0
         input_skipped_count: int = 0
@@ -624,8 +794,10 @@ class KgtkLift(KgtkFormat):
                                                                     new_columns,
                                                                     input_select_column_idx,
                                                                     label_select_column_idx,
+                                                                    lift_column_properties,
                                                                     labels,
                                                                     lifted_column_idxs,
+                                                                    lifted_column_properties,
                                                                     lifted_output_column_idxs,
                                                                     urkw,
                                                                     mlkw,
@@ -647,8 +819,10 @@ class KgtkLift(KgtkFormat):
                                                                     new_columns,
                                                                     input_select_column_idx,
                                                                     label_select_column_idx,
+                                                                    lift_column_properties,
                                                                     labels,
                                                                     lifted_column_idxs,
+                                                                    lifted_column_properties,
                                                                     lifted_output_column_idxs,
                                                                     urkw,
                                                                     mlkw,
@@ -663,12 +837,15 @@ class KgtkLift(KgtkFormat):
                     input_skipped_count += 1
 
         if ulkw is not None and label_rows is not None:
-            label_key: str
-            for label_key in sorted(label_rows.keys()):
-                if label_key not in matched_labels:
-                    label_row: typing.List[str]
-                    for label_row in label_rows[label_key]:
-                        ulkw.write(label_row)
+            label_select_value: str
+            for label_select_value in sorted(label_rows.keys()):
+                selected_label_rows: typing.Mapping[str, typing.List[typing.List[str]]] = label_rows[label_select_value]
+                label_key: str
+                for label_key in sorted(selected_label_rows.keys()):
+                    if label_select_value not in matched_labels or label_key not in matched_labels[label_select_value]:
+                        label_row: typing.List[str]
+                        for label_row in selected_label_rows[label_key]:
+                            ulkw.write(label_row)
 
         if self.verbose:
             print("Read %d non-label input records, %d skipped." % (input_line_count, input_skipped_count), file=self.error_file, flush=True)
@@ -689,13 +866,20 @@ class KgtkLift(KgtkFormat):
         """
         if self.verbose:
             print("Merging sorted input and label files.", file=self.error_file, flush=True)
-        lift_column_idxs: typing.List[int] = self.build_lift_column_idxs(ikr)
+        lift_column_idxs: typing.List[int]
+        lift_column_properties: typing.List[str]
+        lift_column_idxs, lift_column_properties = self.build_lift_column_idxs(ikr)
         if len(lift_column_idxs) != 1:
             raise ValueError("Expecting exactly one lift_column_idxs, got %d" % len(lift_column_idxs))
 
-        ew: KgtkWriter
+        # Build the output column names.
+        output_column_names: typing.List[str]
         lifted_output_column_idxs: typing.List[int]
-        ew, lifted_output_column_idxs = self.open_output_writer(ikr, lift_column_idxs)
+        output_column_names, lifted_output_column_idxs = self.build_output_column_names(ikr, lift_column_idxs)
+
+        self.validate_plan(ikr, lift_column_idxs, lift_column_properties, lifted_output_column_idxs, output_column_names)
+
+        ew: KgtkWriter = self.open_output_writer(ikr, output_column_names)
 
         new_columns: int = len(ew.column_names) - len(ikr.column_names)
         if new_columns not in (0, 1):
@@ -708,6 +892,8 @@ class KgtkLift(KgtkFormat):
         label_select_column_idx: int
         label_value_column_idx: int
         label_match_column_idx, label_select_column_idx, label_value_column_idx = self.lookup_label_table_idxs(lkr)
+
+        label_select_column_value: str = lift_column_properties[0] # for convenience
 
         input_select_column_idx: int = -1
         if self.input_select_column_value is not None or self.output_select_column_value is not None:
@@ -776,7 +962,7 @@ class KgtkLift(KgtkFormat):
                 # While the label records have node1 values equal to the value we are trying to lift,
                 # look for label values from the label file.
                 while more_labels and current_label_row is not None and current_label_row[label_match_column_idx] == value_to_lift:
-                    if label_select_column_idx < 0 or current_label_row[label_select_column_idx] == self.label_select_column_value:
+                    if label_select_column_idx < 0 or current_label_row[label_select_column_idx] == label_select_column_value:
                         label_value: str = current_label_row[label_value_column_idx]
                         if len(label_value) > 0:
                             # TODO: is this code positioned correctly?
@@ -850,6 +1036,24 @@ class KgtkLift(KgtkFormat):
 
     
     def process(self):
+        # Perform some consistency checks:
+        if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) > 0:
+            if self.output_lifted_column_names is not None and len(self.output_lifted_column_names) > 0:
+                if len(self.input_lifting_column_names) != len(self.output_lifted_column_names):
+                    raise ValueError("Inconsistent inputs: %d columns to lift and %d columns to write" % (len(self.input_lifting_column_names),
+                                                                                                          len(self.output_lifted_column_names)))
+
+            if self.label_select_column_values is not None and len(self.label_select_column_values) > 1:
+                if len(self.input_lifting_column_names) != len(self.label_select_column_values):
+                    raise ValueError("Inconsistent inputs: %d colums to lift and %d label select values" % (len(self.input_lifting_column_names),
+                                                                                                            len(self.label_select_column_values)))
+        if self.output_lifted_column_names is not None and len(self.output_lifted_column_names) > 0:
+            if self.label_select_column_values is not None and len(self.label_select_column_values) > 1:
+                if len(self.output_lifted_column_names) != len(self.label_select_column_values):
+                    raise ValueError("Inconsistent inputs: %d colums to write and %d label select values" % (len(self.output_lifted_column_names),
+                                                                                                             len(self.label_select_column_values)))
+            
+
         # Open the input file.
         if self.verbose:
             if self.input_file_path is not None:
@@ -946,6 +1150,7 @@ class KgtkLift(KgtkFormat):
             
 
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) == 1 and \
+           (self.label_select_column_values is None or len(self.label_select_column_values) in (0, 1)) and \
            not self.suppress_empty_columns and \
            self.input_is_presorted and \
            self.labels_are_presorted and \
@@ -1014,9 +1219,10 @@ def main():
                               help="The name of the column that contains a special value that identifies label records. " +
                               "The default is 'label' or its alias.", default=None)
 
-    parser.add_argument("-p", "--label-select-value", "--label-value", "--property", dest="label_select_column_value",
-                              help="The special value in the label select column that identifies a label record. " +
-                              "(default=%(default)s).", default=KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE)
+    parser.add_argument("-p", "--label-select-values", "--label-values", "--property", "--properties",
+                        dest="label_select_column_values",
+                        help="The special value in the label select column that identifies a label record. " +
+                        "(default=%s)." % KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE, nargs="*")
     
     parser.add_argument(      "--label-match-column", "--node1-name", dest="label_match_column_name",
                               help="The name of the column in the label records that contains the value " +
@@ -1108,8 +1314,8 @@ def main():
 
         if args.label_select_column_name is not None:
             print("--label-select-column=%s" % args.label_select_column_name, file=error_file, flush=True)
-        if args.label_select_column_value is not None:
-            print("--label-select-value=%s" % args.label_select_column_value, file=error_file, flush=True)
+        if args.label_select_column_values is not None and len(args.label_select_column_values) > 0:
+            print("--label-select-values=%s" % " ".join(args.label_select_column_values), file=error_file, flush=True)
         if args.label_match_column_name is not None:
             print("--label-match-column=%s" % args.label_match_column_name, file=error_file, flush=True)
         if args.label_value_column_name is not None:
@@ -1146,7 +1352,7 @@ def main():
         output_lifted_column_names=args.output_lifted_column_names,
 
         label_select_column_name=args.label_select_column_name,
-        label_select_column_value=args.label_select_column_value,
+        label_select_column_values=args.label_select_column_values,
         label_match_column_name=args.label_match_column_name,
         label_value_column_name=args.label_value_column_name,
 

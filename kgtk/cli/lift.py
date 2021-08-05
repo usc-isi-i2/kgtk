@@ -109,13 +109,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "The default is not to update the select(label) column."), default=None)
     
 
+    parser.add_argument(      "--label-select-disable", dest="label_select_disable",
+                              help=h("If true, process all label rows regardless of the select column value. (default=%(default)s)."),
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--label-select-column", "--label-name", dest="label_select_column_name",
                               help=h("The name of the column that contains a special value that identifies label records. " +
                               "The default is 'label' or its alias."), default=None)
 
-    parser.add_argument("-p", "--label-select-value", "--label-value", "--property", dest="label_select_column_value",
-                              help=h("The special value in the label select column that identifies a label record. " +
-                              "(default=%(default)s)."), default=KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE)
+    parser.add_argument("-p", "--label-select-values", "--label-values", "--property", "--properties", dest="label_select_column_values",
+                              help=h("The special value(s) in the label select column that identifies a label record. " +
+                                     "(default=%s)." % KgtkLift.DEFAULT_LABEL_SELECT_COLUMN_VALUE), nargs="*")
     
     parser.add_argument(      "--label-match-column", "--node1-name", dest="label_match_column_name",
                               help=h("The name of the column in the label records that contains the value " +
@@ -200,8 +205,9 @@ def run(input_file: KGTKFiles,
         output_lifted_column_suffix: str,
         output_select_column_value: str,
 
+        label_select_disable: bool,
         label_select_column_name: typing.Optional[str],
-        label_select_column_value: str,
+        label_select_column_values: typing.List[str],
         label_match_column_name: typing.Optional[str],
         label_value_column_name: typing.Optional[str],
 
@@ -279,10 +285,11 @@ def run(input_file: KGTKFiles,
         if output_select_column_value is not None:
             print("--update-select-value=%s" % output_select_column_value, file=error_file, flush=True)
 
-
+        print("--label-select-disable=%s" % repr(label_select_disable), file=error_file, flush=True)
         if label_select_column_name is not None:
             print("--label-select-column=%s" % label_select_column_name, file=error_file, flush=True)
-        print("--label-select-value=%s" % label_select_column_value, file=error_file, flush=True)
+        if label_select_column_values is not None and len(label_select_column_values) > 0:
+            print("--label-select-values=%s" % " ".join(label_select_column_values), file=error_file, flush=True)
         if label_match_column_name is not None:
             print("--label-match-column=%s" % label_match_column_name, file=error_file, flush=True)
         if label_value_column_name is not None:
@@ -321,8 +328,9 @@ def run(input_file: KGTKFiles,
             output_select_column_value=output_select_column_value,
             output_lifted_column_names=output_lifted_column_names,
 
+            label_select_disable=label_select_disable,
             label_select_column_name=label_select_column_name,
-            label_select_column_value=label_select_column_value,
+            label_select_column_values=label_select_column_values,
             label_match_column_name=label_match_column_name,
             label_value_column_name=label_value_column_name,
 
