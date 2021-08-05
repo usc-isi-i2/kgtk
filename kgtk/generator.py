@@ -330,6 +330,15 @@ class TripleGenerator(Generator):
             else:
                 line = "@prefix " + k + ": <" + v + "> .\n"
             self.fp.write(line)
+
+        # Add the following additional prefixes.  Other prefixes (from the prefixes known to
+        # rdflib) might be generated.
+        #
+        # TODO: we need a principled solution to the problem of emitting all
+        # required prefixes (and preferably, only required prefixes).
+        self.fp.write("@prefix " + "rdfs" + ": <" + "http://www.w3.org/2000/01/rdf-schema#" + "> .\n")
+        self.fp.write("@prefix " + "xsd" + ": <" + "http://www.w3.org/2001/XMLSchema#" + "> .\n")
+
         self.fp.write("\n")
         self.fp.flush()
         self.reset()
