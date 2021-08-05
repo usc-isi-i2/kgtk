@@ -303,10 +303,10 @@ class TripleGenerator(Generator):
         self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
         self.doc = self.etk.create_document({}, doc_id=doc_id)
         for k, v in wiki_namespaces.items():
-            if k in self.prefix_dict:
-                self.doc.kg.bind(k, self.prefix_dict[k])
-            else:
+            if k not in self.prefix_dict:
                 self.doc.kg.bind(k, v)
+        for k, v in self.prefix_dict.items():
+            self.doc.kg.bind(k, v)
 
     def serialize(self):
         """
@@ -325,19 +325,21 @@ class TripleGenerator(Generator):
         Relevent issue: https://github.com/RDFLib/rdflib/issues/965
         """
         for k, v in wiki_namespaces.items():
-            if k in self.prefix_dict:
-                line = "@prefix " + k + ": <" + self.prefix_dict[k] + "> .\n"
-            else:
-                line = "@prefix " + k + ": <" + v + "> .\n"
-            self.fp.write(line)
+            if k not in self.prefix_dict:
+                self.fp.write("@prefix " + k + ": <" + v + "> .\n")
 
         # Add the following additional prefixes.  Other prefixes (from the prefixes known to
         # rdflib) might be generated.
         #
         # TODO: we need a principled solution to the problem of emitting all
         # required prefixes (and preferably, only required prefixes).
-        self.fp.write("@prefix " + "rdfs" + ": <" + "http://www.w3.org/2000/01/rdf-schema#" + "> .\n")
-        self.fp.write("@prefix " + "xsd" + ": <" + "http://www.w3.org/2001/XMLSchema#" + "> .\n")
+        if "rdfs" not in self.prefix_dict:
+            self.fp.write("@prefix " + "rdfs" + ": <" + "http://www.w3.org/2000/01/rdf-schema#" + "> .\n")
+        if "xsd" not in self.prefix_dict:
+            self.fp.write("@prefix " + "xsd" + ": <" + "http://www.w3.org/2001/XMLSchema#" + "> .\n")
+
+        for k, v in self.prefix_dict.items():
+            self.fp.write("@prefix " + k + ": <" + self.prefix_dict[k] + "> .\n")
 
         self.fp.write("\n")
         self.fp.flush()
