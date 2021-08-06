@@ -132,8 +132,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "to be lifted into the input record that is receiving lifted values. " +
                               "The default is 'node2' or its alias."), default=None)
 
-    parser.add_argument(      "--remove-label-records", dest="remove_label_records",
-                              help=h("If true, remove label records from the output. (default=%(default)s)."),
+    parser.add_argument(      "--lift-label-edges", dest="lift_label_edges",
+                              help=h("If true, lift input edges that contain labels. (default=%(default)s)."),
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--remove-label-edges", "--remove-label-records", dest="remove_label_records",
+                              help=h("If true, do not copy label records from input to output. (default=%(default)s)."),
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=True)
 
@@ -181,7 +185,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "If false, do not overwrite non-default values in the columns to write. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
 
-    parser.add_argument(      "--output-only-modified-rows", dest="output_only_modified_rows",
+    parser.add_argument(      "--output-only-modified-edges", "--output-only-modified-rows", dest="output_only_modified_rows",
                               help="If true, output only modified edges to the primary output stream. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
@@ -213,6 +217,7 @@ def run(input_file: KGTKFiles,
 
         default_value: str,
 
+        lift_label_edges: bool = False,
         remove_label_records: bool = False,
         sort_lifted_labels: bool = True,
         suppress_duplicate_labels: bool = True,
@@ -296,7 +301,8 @@ def run(input_file: KGTKFiles,
             print("--label-value-column=%s" % label_value_column_name, file=error_file, flush=True)
 
         print("--default-value=%s" % repr(default_value), file=error_file, flush=True)
-        print("--remove-label-records=%s" % repr(remove_label_records), file=error_file, flush=True)
+        print("--lift-label-edges=%s" % repr(lift_label_edges), file=error_file, flush=True)
+        print("--remove-label-edges=%s" % repr(remove_label_records), file=error_file, flush=True)
         print("--sort-lifted-labels=%s" % repr(sort_lifted_labels), file=error_file, flush=True)
         print("--suppress-duplicate-labels=%s" % repr(suppress_duplicate_labels), file=error_file, flush=True)
         print("--suppress-empty-columns=%s" % repr(suppress_empty_columns), file=error_file, flush=True)
@@ -306,7 +312,7 @@ def run(input_file: KGTKFiles,
         print("--label-file-is-presorted=%s" % repr(labels_are_presorted), file=error_file, flush=True)
         print("--clear-before-lift=%s" % repr(clear_before_lift), file=error_file, flush=True)
         print("--overwrite=%s" % repr(overwrite), file=error_file, flush=True)
-        print("--output-only-modified-rows=%s" % repr(output_only_modified_rows), file=error_file, flush=True)
+        print("--output-only-modified-edges=%s" % repr(output_only_modified_rows), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -336,6 +342,7 @@ def run(input_file: KGTKFiles,
 
             default_value=default_value,
 
+            lift_label_edges=lift_label_edges,
             remove_label_records=remove_label_records,
             sort_lifted_labels=sort_lifted_labels,
             suppress_duplicate_labels=suppress_duplicate_labels,

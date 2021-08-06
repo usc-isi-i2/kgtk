@@ -945,7 +945,8 @@ the buyer and seller.
 ```bash
 kgtk lift --input-file examples/docs/lift-file12.tsv \
           --columns-to-write 'node1;label' 'label;label' 'node2;label' 'node1;P2' 'node2;P2' \
-	  --remove-label-records False \
+	  --lift-label-edges True \
+	  --remove-label-edges False \
    / lift --columns-to-write 'node1;P2;label' 'node2;P2;label'
 ```
 

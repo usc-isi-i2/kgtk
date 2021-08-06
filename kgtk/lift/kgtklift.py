@@ -63,6 +63,7 @@ class KgtkLift(KgtkFormat):
     label_match_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     label_value_column_name: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
+    lift_label_edges: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     remove_label_records: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     suppress_duplicate_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     sort_lifted_labels: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -121,13 +122,29 @@ class KgtkLift(KgtkFormat):
         # Build the indexes of the columns to lift in the input file.  Also
         # build a list of the property label that will be used to select the
         # value that will be put in the lifted output column.
+        #
+        # TODO: We should build output_column_names in parallel.
+        #
+        # Results:
+        # list of indexes of input columns to lift.
+        # list of corresponding property names
+        #
+        # Note: an input column may appear in lift_column_idxs multiple times
+        # with different property names.
+        #
+        # Note: a property name may appear multiple times in the list
+        # of properties to lift.
         lift_column_idxs: typing.List[int] = list()
         properties_to_lift: typing.List[str] = list()
 
-        # First, were we wupplied with a list of input columns to lift?
+        # First, were we supplied with a list of input columns to lift?
         # If so, 
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) > 0:
             # Process a custom list of columns to be lifted.
+            #
+            # Note: This code does not allow output columns to be used as input columns.
+            if self.verbose:
+                print("Building lift column indexes from the input lifting column names.", file=self.error_file, flush=True)
             lift_column_name: str
             idx: int
             for idx, lift_column_name in enumerate(self.input_lifting_column_names):
@@ -143,9 +160,15 @@ class KgtkLift(KgtkFormat):
             # node1;label       Get the `label` property for the `node1` column's value.
             # node1;P45         Get the `P45` property for the `node1` column's value.
             # P55               Get the `P55` property for the edge, identified by the `id` column's value.
+            if self.verbose:
+                print("Building lift column indexes from the output lifted column names.", file=self.error_file, flush=True)
+            # output_column_names: typing.List[str] = kr.column_names.copy()
             output_column_name: str
             idx2: int
             for idx2, output_column_name in enumerate(self.output_lifted_column_names):
+                # if output_column_name not in output_column_names:
+                #     output_column_names.append(output_column_name)
+
                 input_column_name: str
                 propname: str
                 if ";" in output_column_name:
@@ -154,14 +177,28 @@ class KgtkLift(KgtkFormat):
                     input_column_name = kr.get_id_column_actual_name()
                     propname = output_column_name
                 if input_column_name not in kr.column_name_map:
-                    raise ValueError("Unknown input column %s." % lift_column_name)
+                    raise ValueError("Unknown input column %s in output column %s." % (input_column_name, output_column_name))
+                    # The following code attempts to use output columns as input columns,
+                    # but it doesn't work when output columns are deleted due to no contents.
+                    #
+                    # if input_column_name not in self.output_lifted_column_names:
+                    #     raise ValueError("Unknown input column %s." % input_column_name)
+                    # idx3: int = self.output_lifted_column_names.index(input_column_name)
+                    # print("%d: %d" % (idx2, idx3), file=self.error_file, flush=True) # ***
+                    # if idx2 < idx3:
+                    #     raise ValueError("Output columns must be defined before thay can be input columns %s (%d < %d)." % (input_column_name,
+                    #                                                                                                         idx2,
+                    #                                                                                                         idx3))
                 lift_column_idxs.append(kr.column_name_map[input_column_name])
+                # lift_column_idxs.append(output_column_names.index(input_column_name))
                 properties_to_lift.append(self.get_property_to_lift(idx2, propname=propname))
 
         else:
             # If neither the input nor output columns were specified, default to the
             # (`node1`, `label`, `node2`) input columns and the specified properties
             # (which default to `label` if not specified).
+            if self.verbose:
+                print("Building lift column indexes from the default column names.", file=self.error_file, flush=True)
             if kr.node1_column_idx >= 0:
                 lift_column_idxs.append(kr.node1_column_idx)
                 properties_to_lift.append(self.get_property_to_lift(0))
@@ -177,12 +214,12 @@ class KgtkLift(KgtkFormat):
             raise ValueError("No lift columns found.")
 
         if self.verbose:
-            idx3: int
+            idx4: int
             lift_column_idx: int
-            for idx3, lift_column_idx in enumerate(lift_column_idxs):
+            for idx4, lift_column_idx in enumerate(lift_column_idxs):
                 print("Lifting column %d (%s) with property %s." % (lift_column_idx,
                                                                     kr.column_names[lift_column_idx],
-                                                                    properties_to_lift[idx3]),
+                                                                    properties_to_lift[idx4]),
                       file=self.error_file, flush=True)
 
         return lift_column_idxs, properties_to_lift
@@ -520,10 +557,9 @@ class KgtkLift(KgtkFormat):
         if label_select_column_idx >= 0:
             # print("label_select_column_idx %d" % label_select_column_idx)
             if row[label_select_column_idx]  in properties_to_lift:
-                # Don't lift label columns, if we have stored labels in the input records.
-                do_lift = False
-                if self.remove_label_records:
-                    do_write = False
+                # Maybe don't lift label columns, if we have stored labels in the input records.
+                do_lift = self.lift_label_edges
+                do_write = not self.remove_label_records
         if input_select_column_idx >= 0:
             if self.input_select_column_value is not None and row[input_select_column_idx] != self.input_select_column_value:
                 # Not selected for lifting into.
@@ -1243,6 +1279,10 @@ def main():
                               "to be lifted into the input record that is receiving lifted values. " +
                               "The default is 'node2' or its alias.", default=None)
 
+    parser.add_argument(      "--lift-label-edges", dest="lift_label_edges",
+                              help="If true, lift input edges containing labels . (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--remove-label-records", dest="remove_label_records",
                               help="If true, remove label records from the output. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True)
@@ -1332,6 +1372,7 @@ def main():
 
 
         print("--default-value=%s" % repr(args.default_value))
+        print("--lift-label-edges=%s" % repr(args.lift_label_edges))
         print("--remove-label-records=%s" % repr(args.remove_label_records))
         print("--sort-lifted-labels-labels=%s" % repr(args.sort_lifted_labels))
         print("--suppress-duplicate-labels=%s" % repr(args.suppress_duplicate_labels))
@@ -1367,6 +1408,7 @@ def main():
 
         default_value=args.default_value,
         
+        lift_label_edges=args.lift_label_edges,
         remove_label_records=args.remove_label_records,
         sort_lifted_labels=args.sort_lifted_labels,
         suppress_duplicate_labels=args.suppress_duplicate_labels,
