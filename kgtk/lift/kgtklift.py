@@ -121,8 +121,8 @@ class KgtkLift(KgtkFormat):
         # Build the indexes of the columns to lift in the input file.  Also
         # build a list of the property label that will be used to select the
         # value that will be put in the lifted output column.
-        lift_column_idxs: typing.List[int] = [ ]
-        properties_to_lift: typing.List[str]
+        lift_column_idxs: typing.List[int] = list()
+        properties_to_lift: typing.List[str] = list()
 
         # First, were we wupplied with a list of input columns to lift?
         # If so, 
