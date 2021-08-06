@@ -149,7 +149,7 @@ class KgtkLift(KgtkFormat):
                 input_column_name: str
                 propname: str
                 if ";" in output_column_name:
-                    input_column_name, propname = output_column_name.split(";")
+                    input_column_name, propname = output_column_name.rsplit(";", 1)
                 else:
                     input_column_name = kr.get_id_column_actual_name()
                     propname = output_column_name
