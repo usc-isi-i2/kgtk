@@ -1,0 +1,22 @@
+node1	label	node2	id
+Q1	appeared-in	'Dangerous Dan McFoo'	E1
+E1	starting	1939	
+Q2	appeared-in	'Alice Cooper (band)'	E2
+E2	starting	1969	
+E2	starting	1975	
+Q3	appeared-in	'Mister Rogers' Neighborhood'	E3
+E3	starting	1968	
+E3	ending	2001	
+Q4	appeared-in	'Sesame Street'	E4
+E4	starting	1980	
+Q1	first-name	"Elmer"	
+Q1	last-name	"Fudd"	
+Q1	species	"toon"	
+Q2	first-name	"Alice"	
+Q2	last-name	"Cooper"	
+Q2	species	"human"	
+Q3	first-name	"Fred"	
+Q3	last-name	"Rogers"	
+Q3	species	"human"	
+Q4	first-name	"Elmo"	
+Q4	species	"muppet"	

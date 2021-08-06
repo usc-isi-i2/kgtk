@@ -90,8 +90,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     
 
     parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
-                              help=h("The columns for which matching labels are to be lifted. " +
-                              "The default is [node1, label, node2] or their aliases."), nargs='*')
+                              help="The columns for which matching labels are to be lifted. " +
+                              "The default is [node1, label, node2] or their aliases.", nargs='*')
 
     parser.add_argument(      "--columns-to-write", dest="output_lifted_column_names",
                               help="The columns into which to store the lifted values. " +

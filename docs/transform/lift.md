@@ -21,6 +21,7 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE]
                  [--matched-label-output-file MATCHED_LABEL_OUTPUT_FILE]
                  [--unmatched-label-output-file UNMATCHED_LABEL_OUTPUT_FILE]
+                 [--columns-to-lift [INPUT_LIFTING_COLUMN_NAMES [INPUT_LIFTING_COLUMN_NAMES ...]]]
                  [--columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]]
                  [--default-value DEFAULT_VALUE]
                  [--suppress-empty-columns [True/False]]
@@ -63,6 +64,10 @@ optional arguments:
                         edges. This file will have the same columns as the
                         source of the labels, either the input file or the
                         label file. (Optional, use '-' for stdout.)
+  --columns-to-lift [INPUT_LIFTING_COLUMN_NAMES [INPUT_LIFTING_COLUMN_NAMES ...]]
+                        The columns for which matching labels are to be
+                        lifted. The default is [node1, label, node2] or their
+                        aliases.
   --columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]
                         The columns into which to store the lifted values. The
                         default is [node1;label, label;label, node2;label] or
@@ -194,6 +199,27 @@ The output will be the following table in KGTK format:
 | Q1 | P1 | Q5 | "Elmo" |
 | Q1 | P2 | Q6 | "Elmo" |
 | Q6 | P1 | Q5 | "Fred" |
+
+### Asking for What We Want
+
+Ask for what we want (`node1;label`) and let the
+program figure it out.
+
+```bash
+kgtk lift --input-file examples/docs/lift-file4.tsv \
+          --columns-to-write 'node1;label'
+```
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;label |
+| -- | -- | -- | -- |
+| Q1 | P1 | Q5 | "Elmo" |
+| Q1 | P2 | Q6 | "Elmo" |
+| Q6 | P1 | Q5 | "Fred" |
+
+!!! note
+    The `node1;label` argument needs to be quoted on the command line, since `;` is
+    a shell metacharacter.
 
 ### Seperate Input Files
 
@@ -408,7 +434,7 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 | Q2 | P2 | Q6 | False | "Alice" |  | "Fred" |
 
 !!! note
-    The `;node` argument needs to be quoted on the command line, since `;` is
+    The `;name` argument needs to be quoted on the command line, since `;` is
     a shell metacharacter.
 
 ### Lift from a Specific Column
@@ -453,6 +479,112 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 
 !!! note
     The `;full-name` needs to be quoted on the command line, since `;` is
+    a shell metacharacter.
+
+### Example: Lifting Multiple Item Properties Concurrently
+
+Consider the following file:
+
+```bash
+kgtk cat -i examples/docs/lift-file11.tsv
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| Q1 | appeared-in | 'Dangerous Dan McFoo' | E1 |
+| E1 | starting | 1939 |  |
+| Q2 | appeared-in | 'Alice Cooper (band)' | E2 |
+| E2 | starting | 1969 |  |
+| E2 | starting | 1975 |  |
+| Q3 | appeared-in | 'Mister Rogers' Neighborhood' | E3 |
+| E3 | starting | 1968 |  |
+| E3 | ending | 2001 |  |
+| Q4 | appeared-in | 'Sesame Street' | E4 |
+| E4 | starting | 1980 |  |
+| Q1 | first-name | "Elmer" |  |
+| Q1 | last-name | "Fudd" |  |
+| Q1 | species | "toon" |  |
+| Q2 | first-name | "Alice" |  |
+| Q2 | last-name | "Cooper" |  |
+| Q2 | species | "human" |  |
+| Q3 | first-name | "Fred" |  |
+| Q3 | last-name | "Rogers" |  |
+| Q3 | species | "human" |  |
+| Q4 | first-name | "Elmo" |  |
+| Q4 | species | "muppet" |  |
+
+We can lift multiple item properties concurrently by specifying the
+columns to write:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file11.tsv \
+          --columns-to-write 'node1;first-name' 'node1;last-name' 'node1;species'
+```
+
+| node1 | label | node2 | id | node1;first-name | node1;last-name | node1;species |
+| -- | -- | -- | -- | -- | -- | -- |
+| Q1 | appeared-in | 'Dangerous Dan McFoo' | E1 | "Elmer" | "Fudd" | "toon" |
+| E1 | starting | 1939 |  |  |  |  |
+| Q2 | appeared-in | 'Alice Cooper (band)' | E2 | "Alice" | "Cooper" | "human" |
+| E2 | starting | 1969 |  |  |  |  |
+| E2 | starting | 1975 |  |  |  |  |
+| Q3 | appeared-in | 'Mister Rogers' Neighborhood' | E3 | "Fred" | "Rogers" | "human" |
+| E3 | starting | 1968 |  |  |  |  |
+| E3 | ending | 2001 |  |  |  |  |
+| Q4 | appeared-in | 'Sesame Street' | E4 | "Elmo" |  | "muppet" |
+| E4 | starting | 1980 |  |  |  |  |
+
+!!! note
+    The `node1;first-name`, etc. arguments need to be quoted on the command line since `;` is
+    a shell metacharacter.
+
+### Example: Lifting Multiple Edge Properties Concurrently
+
+We can lift multiple edge properties concurrently by specifying the
+columns to write:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file11.tsv \
+          --columns-to-write starting ending
+```
+
+| node1 | label | node2 | id | starting | ending |
+| -- | -- | -- | -- | -- | -- |
+| Q1 | appeared-in | 'Dangerous Dan McFoo' | E1 | 1939 |  |
+| Q2 | appeared-in | 'Alice Cooper (band)' | E2 | 1969\|1975 |  |
+| Q3 | appeared-in | 'Mister Rogers' Neighborhood' | E3 | 1968 | 2001 |
+| Q4 | appeared-in | 'Sesame Street' | E4 | 1980 |  |
+| Q1 | first-name | "Elmer" |  |  |  |
+| Q1 | last-name | "Fudd" |  |  |  |
+| Q1 | species | "toon" |  |  |  |
+| Q2 | first-name | "Alice" |  |  |  |
+| Q2 | last-name | "Cooper" |  |  |  |
+| Q2 | species | "human" |  |  |  |
+| Q3 | first-name | "Fred" |  |  |  |
+| Q3 | last-name | "Rogers" |  |  |  |
+| Q3 | species | "human" |  |  |  |
+| Q4 | first-name | "Elmo" |  |  |  |
+| Q4 | species | "muppet" |  |  |  |
+
+### Example: Lifting Multiple Item and Edge Properties Concurrently
+
+We can lift multiple item and edge properties concurrently by specifying the
+columns to write.  This is the inverse of `kgtk normalize`:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file11.tsv \
+          --columns-to-write 'node1;first-name' 'node1;last-name' 'node1;species' starting ending
+```
+
+| node1 | label | node2 | id | node1;first-name | node1;last-name | node1;species | starting | ending |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| Q1 | appeared-in | 'Dangerous Dan McFoo' | E1 | "Elmer" | "Fudd" | "toon" | 1939 |  |
+| Q2 | appeared-in | 'Alice Cooper (band)' | E2 | "Alice" | "Cooper" | "human" | 1969\|1975 |  |
+| Q3 | appeared-in | 'Mister Rogers' Neighborhood' | E3 | "Fred" | "Rogers" | "human" | 1968 | 2001 |
+| Q4 | appeared-in | 'Sesame Street' | E4 | "Elmo" |  | "muppet" | 1980 |  |
+
+!!! note
+    The `node1;first-name`, etc. arguments need to be quoted on the command line since `;` is
     a shell metacharacter.
 
 ### Outputting Only Modified Rows
