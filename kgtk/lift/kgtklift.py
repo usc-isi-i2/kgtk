@@ -366,6 +366,15 @@ class KgtkLift(KgtkFormat):
             else:
                 if save_input:
                     input_rows.append(row.copy())
+
+        if self.verbose:
+            print("\nLabel Summary\n===== =======", file=self.error_file, flush=True)
+            propname: str
+            for propname in sorted(labels.keys()):
+                print("property %s: %d values" % (repr(propname), len(labels[propname])),
+                       file=self.error_file, flush=True)            
+            print("=====", file=self.error_file, flush=True)
+                    
         return labels, input_rows
                 
     def load_input_keeping_label_records(self,
@@ -653,7 +662,7 @@ class KgtkLift(KgtkFormat):
             raise ValueError("validation faulure: %d lift column idxs, %d lifted output column idxs" % (len(lift_column_idxs),
                                                                                                         len(lifted_output_column_idxs)))
         if self.verbose:
-            print("Lift plan", file=self.error_file, flush=True)
+            print("\nLift plan\n==== ====", file=self.error_file, flush=True)
             idx: int
             lift_column_idx: int
             for idx, lift_column_idx in enumerate(lift_column_idxs):
