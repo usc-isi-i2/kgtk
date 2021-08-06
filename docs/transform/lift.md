@@ -927,3 +927,26 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 | Q1 | P2 | Q6 | True |  | "friend" |  |
 | Q2 | P1 | Q5 | False |  | "instance of" |  |
 | Q2 | P2 | Q6 | False |  | "friend" |  |
+
+### Example: Lifting Chained Properties
+
+Consider the following file, focusing on the business transactions
+in the first edge.
+
+```bash
+kgtk cat -i examples/docs/lift-file12.tsv
+```
+
+|
+
+Suppose we'd like to annotate the main edge with the business category of
+the buyer and seller.
+
+```bash
+kgtk lift --input-file examples/docs/lift-file12.tsv \
+          --columns-to-write 'node1;label' 'label;label' 'node2;label' 'node1;P2' 'node2;P2' \
+	  --remove-label-records False \
+   / lift --columns-to-write 'node1;P2;label' 'node2;P2;label'
+```
+
+| node1 | label | node2 | id | starting | ending |

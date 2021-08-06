@@ -1,0 +1,10 @@
+node1	label	node2
+Q31	P1	Q32
+Q31	label	"Big Buyer"@en
+Q32	label	"Big Seller"@en
+P1	label	"buys from"@en
+Q31	P2	Q41
+Q32	P2	Q42
+P2	label	"business category"
+Q41	label	"retail"
+Q42	label	"wholesale"

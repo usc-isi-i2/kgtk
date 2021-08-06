@@ -518,7 +518,7 @@ class KgtkLift(KgtkFormat):
         modified: bool = False
         skipped: bool = False
         if label_select_column_idx >= 0:
-            print("label_select_column_idx %d" % label_select_column_idx)
+            # print("label_select_column_idx %d" % label_select_column_idx)
             if row[label_select_column_idx]  in properties_to_lift:
                 # Don't lift label columns, if we have stored labels in the input records.
                 do_lift = False
