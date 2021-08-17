@@ -1007,8 +1007,22 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             else:
                 row = line.split(self.options.column_separator)
 
-            # Optionally Add the implied label value:
+            # Optionally add the implied label value, after allowing for
+            # filling and truncation options.
+            #
+            # TODO: make this more efficient.
             if self.options.implied_label is not None:
+                if repair_and_validate_lines:
+                    # Optionally fill missing trailing columns with empty row:
+                    if self.options.fill_short_lines and len(row) < self.column_count - 1:
+                        while len(row) < self.column_count - 1:
+                            row.append("")
+                        self.data_lines_filled += 1
+                    
+                    # Optionally remove extra trailing columns:
+                    if self.options.truncate_long_lines and len(row) > self.column_count - 1:
+                        row = row[:self.column_count-1]
+                        self.data_lines_truncated += 1
                 row.append(self.options.implied_label)
 
             if repair_and_validate_lines:
