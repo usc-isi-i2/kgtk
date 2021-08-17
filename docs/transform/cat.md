@@ -305,7 +305,8 @@ kgtk cat -i examples/docs/movies_reduced.tsv.gz examples/docs/tutorial_people_fu
 
 ### Expert Topic: Processing Files Not in KGTK Format
 
-Suppose that `not-kgtk.tsv` contains the following data **not** in KGTK format:
+Suppose that `not-kgtk.tsv` contains the following data **not** in KGTK format
+(`--mode=NONE` has been added to allow the file to be processed by `kgtk cat`):
 
 ```bash
 kgtk cat -i examples/docs/not-kgtk.tsv --mode=NONE
@@ -318,21 +319,23 @@ kgtk cat -i examples/docs/not-kgtk.tsv --mode=NONE
 | h23 | robert_patrick | birth_date | ^1958-11-05T00:00:00Z/11 |
 | h24 | robert_patrick | country | "United States of America" |
 
-Trying to run the command:
+Trying to run the command without `--mode=NONE`:
 
-    ```
-    kgtk cat -i file1.tsv.gz file3.tsv 
-    ```
+```bash
+kgtk cat -i examples/docs/not-kgtk.tsv
+```
 
 will result in an error message:
 
-    ```
-    In input 2 header 'a	b	c	d': Missing required column: id | ID
+    In input 1 header 'a	b	c	d': Missing required column: id | ID
     Exit requested
-    ```
 
 We can force the `kgtk cat` command to process the file by using the `--mode NONE` option,
 as shown above.
+
+!!! note
+    `--mode NONE` is implemented by KgtkReader.  It can be used by many KGTK commands.
+    
 
 ### Expert Topic: Adding Column Names
 
@@ -401,7 +404,6 @@ The result will be the following file in KGTK format:
 
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
-| a | b | c | d |
 | h21 | robert_patrick | label | "Robert Patrick" |
 | h22 | robert_patrick | instance_of | human |
 | h23 | robert_patrick | birth_date | ^1958-11-05T00:00:00Z/11 |
@@ -648,3 +650,49 @@ The result will be the following table in KGTK format:
 !!! note
     See [`kgtk normalize-nodes`](../normalize_nodes) for an example of
     converting a CSV file without an `id` column to a KGTK edge file.
+
+### Expert Topic: Implying a Label Column
+
+It is not uncommon to encounter two-column files (TSV or CSV) which represent an
+edge with an implied `label` column value (`predicate`).  The `--implied-label VALUE`
+option may be used to convert the input data into a three-column format.
+
+Consider the following file, which lists some cities in the State of Massachusettes
+and the year that they were founded.  Since this is neither a KGTK edge file
+nor a KGTK node file, we need to specify `--mode=NONE` to bypass certain
+validity checks:
+
+```bash
+kgtk cat --mode=NONE -i examples/docs/cat-two-columns.tsv
+```
+
+| node1 | node2 |
+| -- | -- |
+| Boston | 1630 |
+| Concord | 1635 |
+| Scituate | 1636 |
+| Springfield | 1636 |
+| Cambridge | 1638 |
+| Lexington | 1642 |
+| Worcester | 1673 |
+
+We can convert this file into a KGTK edge file on input by
+specifying an implied `label` column and value:
+
+```bash
+kgtk cat --implied-label=founded -i examples/docs/cat-two-columns.tsv
+```
+
+| node1 | node2 | label |
+| -- | -- | -- |
+| Boston | 1630 | founded |
+| Concord | 1635 | founded |
+| Scituate | 1636 | founded |
+| Springfield | 1636 | founded |
+| Cambridge | 1638 | founded |
+| Lexington | 1642 | founded |
+| Worcester | 1673 | founded |
+
+!!! note
+    The `--implied-label=VALUE` option is implemented by KgtkReader, and
+    can be used with most KGTK subcommands.
