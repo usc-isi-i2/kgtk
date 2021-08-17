@@ -69,6 +69,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The separator between the base column and the label value. (default=%(default)s)."),
                               default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR)
 
+    parser.add_argument(      "--ignore-empty-node1", dest="ignore_empty_node1",
+                              help=h("When True, ignore attempts to lower into a new record with an empty node1 value. (default=%(default)s)"),
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--ignore-empty-node2", dest="ignore_empty_node2",
+                              help=h("When True, ignore attempts to lower into a new record with an empty node2 value. (default=%(default)s)"),
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     if _command == LOWER_COMMAND:
         parser.add_argument(      "--lower", dest="lower",
                                   help=h("When True, lower columns that match a lift pattern. (default=%(default)s)"),
@@ -112,6 +120,8 @@ def run(input_file: KGTKFiles,
         columns_to_lower: typing.Optional[typing.List[str]] = None,
         label_values: typing.Optional[typing.List[str]] = None,
         lift_separator: str = KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR,
+        ignore_empty_node1: bool = True,
+        ignore_empty_node2: bool = True,
         lower: bool = False,
         normalize: bool = False,
         deduplicate_new_edges: bool = True,
@@ -153,6 +163,8 @@ def run(input_file: KGTKFiles,
             print("--label-values %s" % " ".join(label_values), file=error_file)
         print("--lift-separator=%s" % lift_separator, file=error_file)
         print("--lower=%s" % lower, file=error_file)
+        print("--ignore-empty-node1=%s" % ignore_empty_node1, file=error_file)
+        print("--ignore-empty-node2=%s" % ignore_empty_node2, file=error_file)
         print("--normalize=%s" % normalize, file=error_file)
         print("--deduplicate-labels=%s" % deduplicate_new_edges, file=error_file)
 
@@ -386,18 +398,36 @@ def run(input_file: KGTKFiles,
                 node1_value: str
                 node1_value = row[node1_idx]
                 if len(node1_value) == 0:
-                    continue # TODO: raise an exception
+                    if ignore_empty_node1:
+                        continue # TODO: raise an exception
+                    else:
+                        raise KGTKException("Empty node1 value when lowering %d to %d: %s in input line %d" % (column_idx,
+                                                                                                               node1_idx,
+                                                                                                               new_label_value,
+                                                                                                               input_line_count))
 
                 item: str = row[column_idx]
                 if len(item) == 0:
-                    continue # Ignore empty node2 values.
+                    if ignore_empty_node2:
+                        continue # Ignore empty node2 values.
+                    else:
+                        raise KGTKException("Empty node2 value when lowering %d to %d: %s in input line %d" % (column_idx,
+                                                                                                               node1_idx,
+                                                                                                               new_label_value,
+                                                                                                               input_line_count))
 
                 # Ths item might be a KGTK list.  Let's split it, because
                 # lists aren't allow in the node2 values we'll generate.
                 node2_value: str
                 for node2_value in KgtkValue.split_list(item):
                     if len(node2_value) == 0:
-                        continue # Ignore empty node2 values.
+                        if ignore_empty_node2:
+                            continue # Ignore empty node2 values in a list.
+                        else:
+                            raise KGTKException("Empty node2 value in a list when lowering %d to %d: %s in input line %d" % (column_idx,
+                                                                                                                             node1_idx,
+                                                                                                                             new_label_value,
+                                                                                                                             input_line_count))
 
                     if deduplicate_new_edges:
                         label_key = node1_value + KgtkFormat.KEY_FIELD_SEPARATOR + new_label_value + KgtkFormat.KEY_FIELD_SEPARATOR + node2_value
