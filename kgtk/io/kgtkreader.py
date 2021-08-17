@@ -122,6 +122,7 @@ class KgtkReaderOptions():
     gzip_queue_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GZIP_QUEUE_SIZE_DEFAULT)
 
     prohibit_whitespace_in_column_names: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    implied_label: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     @classmethod
     def add_arguments(cls,
@@ -206,6 +207,11 @@ class KgtkReaderOptions():
                             dest=prefix2 + "gzip_queue_size",
                             help=h(prefix3 + "Queue size for parallel gzip. (default=%(default)s)."),
                             type=int, **d(default=cls.GZIP_QUEUE_SIZE_DEFAULT))
+
+        fgroup.add_argument(prefix1 + "implied-label",
+                            dest=prefix2 + "implied_label",
+                            help=h(prefix3 + "When specified, imply a label colum with the specified value (default=%(default)s)."),
+                            type=str, **d(default=None))
 
         if mode_options:
             fgroup.add_argument(prefix1 + "mode",
@@ -375,6 +381,7 @@ class KgtkReaderOptions():
             mgzip_threads=lookup("mgzip_threads", cls.MGZIP_THREAD_COUNT_DEFAULT),
             gzip_in_parallel=lookup("gzip_in_parallel", False),
             gzip_queue_size=lookup("gzip_queue_size", KgtkReaderOptions.GZIP_QUEUE_SIZE_DEFAULT),
+            implied_label=lookup("implied_label", None),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
             initial_skip_count=lookup("initial_skip_count", 0),
             invalid_value_action=lookup("invalid_value_action", ValidationAction.REPORT),
@@ -441,7 +448,8 @@ class KgtkReaderOptions():
         print("%sgzip-in-parallel=%s" % (prefix, str(self.gzip_in_parallel)), file=out)
         print("%sgzip-queue-size=%s" % (prefix, str(self.gzip_queue_size)), file=out)
         print("%sprohibit-whitespace-in-column-names=%s" % (prefix, str(self.prohibit_whitespace_in_column_names)), file=out)
-              
+        if self.implied_label is not None:
+            print("%simplied-label=%s" % (prefix, str(self.implied_label)), file=out)
 
 DEFAULT_KGTK_READER_OPTIONS: KgtkReaderOptions = KgtkReaderOptions()
 
@@ -545,6 +553,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         header: str
         column_names: typing.List[str]
         (header, column_names) = cls._build_column_names(source, options, error_file=error_file, verbose=verbose)
+
+        # If there's an implied label, add the column to the end.  If a label column
+        # already exists, ten later we'll detect a duplicate column name.
+        if options.implied_label is not None:
+            column_names.append(cls.LABEL)
+                  
         # Check for unsafe column names.
         cls.check_column_names(column_names,
                                header_line=header,
@@ -992,6 +1006,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 row = self.csvsplit(line)
             else:
                 row = line.split(self.options.column_separator)
+
+            # Optionally Add the implied label value:
+            if self.options.implied_label is not None:
+                row.append(self.options.implied_label)
 
             if repair_and_validate_lines:
                 # Optionally fill missing trailing columns with empty row:
