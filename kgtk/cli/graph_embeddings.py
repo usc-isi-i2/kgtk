@@ -4,7 +4,7 @@ Generate graph embedding based on Pytorch BigGraph library
 """
 
 from argparse import Namespace
-from kgtk.cli_argparse import KGTKArgumentParser
+from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
@@ -145,10 +145,9 @@ def add_arguments(parser: KGTKArgumentParser):
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     ### IO 
-    parser.add_argument(      "-i", "--input-file", dest="input_file_path",
-                              help="The KGTK input file. (default=%(default)s)", type=Path, default="-")
-    parser.add_argument(      "-o", "--output-file", dest="output_file_path",
-                              help="The KGTK output file. (default=%(default)s).", type=Path, default="-")
+    parser.add_input_file()
+    parser.add_output_file()
+
     parser.add_argument(     '-l',"--log", dest="log_file_path",
                               help="Setting the log path [Default: None]",
                               type=Path,default=None, metavar="")
@@ -328,7 +327,10 @@ def generate_w2v_output(entities_output,output_kgtk_file,kwargs):
             fout.write(embedding)
     fout.close()
 
-def run(verbose: bool = False,
+def run(input_file: KGTKFiles,
+        output_file: KGTKFiles,
+
+        verbose: bool = False,
         very_verbose: bool = False,
         **kwargs):
     """
@@ -352,6 +354,9 @@ def run(verbose: bool = False,
     # from torchbiggraph.converters.export_to_tsv import make_tsv
 
     try:
+        input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
+        output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+        
         # store the data into log file, then the console will not output anything
         if kwargs['log_file_path'] != None: 
             log_file_path = kwargs['log_file_path']
@@ -362,7 +367,6 @@ def run(verbose: bool = False,
                     filemode='w')
             print(f'In Processing, Please go to {kwargs["log_file_path"]} to check details')
 
-        input_kgtk_file: Path = kwargs['input_file_path']
         tmp_folder = kwargs['temporary_directory']
         tmp_tsv_path:Path = tmp_folder / f'tmp_{input_kgtk_file.name}'
         # tmp_tsv_path:Path = input_kgtk_file.parent/f'tmp_{input_kgtk_file.name}'
@@ -371,7 +375,6 @@ def run(verbose: bool = False,
         if not os.path.exists(tmp_folder):
             os.makedirs(tmp_folder)
 
-        output_kgtk_file = kwargs['output_file_path']
         try:   #if output_kgtk_file is not empty, delete it
             output_kgtk_file.unlink() 
         except: pass # didn't find, then let it go
