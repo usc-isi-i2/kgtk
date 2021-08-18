@@ -401,12 +401,15 @@ class KgtkIdBuilder(KgtkFormat):
                 self.id_set.add(id_value)
         
 
-    def build(self, row: typing.List[str], line_number: int)->typing.List[str]:
+    def build(self,
+              row: typing.List[str],
+              line_number: int,
+              already_added: typing.Optional[bool]=False)->typing.List[str]:
         """
         Build a new ID value if needed.
         """
         row = row.copy() # as a precaution
-        if self.add_new_id_column:
+        if self.add_new_id_column and not already_added:
             row.append("")
         elif self.old_id_column_idx >= 0:
             if row[self.old_id_column_idx] != "" and not self.options.overwrite_id:

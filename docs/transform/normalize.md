@@ -138,9 +138,15 @@ edges for each nonempty element of the list.
 usage: kgtk normalize [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                       [--new-edges-file NEW_EDGES_FILE]
                       [--columns COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...]]
-                      [--lower [True|False]] [--normalize [True|False]]
+                      [--add-id [True|False]] [--lower [True|False]]
+                      [--normalize [True|False]]
                       [--deduplicate-new-edges [True|False]]
-                      [-v [optional True|False]]
+                      [--overwrite-id [optional true|false]]
+                      [--verify-id-unique [optional true|false]]
+                      [--value-hash-width VALUE_HASH_WIDTH]
+                      [--claim-id-hash-width CLAIM_ID_HASH_WIDTH]
+                      [--claim-id-column-name CLAIM_ID_COLUMN_NAME]
+                      [--id-separator ID_SEPARATOR] [-v [optional True|False]]
 
 Normalize a KGTK edge file by removing columns that match a "lift" pattern and converting remaining additional columns to new edges.
 
@@ -159,6 +165,9 @@ optional arguments:
   --columns COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...], --columns-to-lower COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...], --columns-to-remove COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...]
                         Columns to lower and remove as a space-separated list.
                         (default=all columns other than key columns)
+  --add-id [True|False]
+                        When True, add an id column to the output (if not
+                        already present). (default=False)
   --lower [True|False]  When True, lower columns that match a lift pattern.
                         (default=True)
   --normalize [True|False]
@@ -167,6 +176,26 @@ optional arguments:
   --deduplicate-new-edges [True|False]
                         When True, deduplicate new edges. Not suitable for
                         large files. (default=True).
+  --overwrite-id [optional true|false]
+                        When true, replace existing ID values. When false,
+                        copy existing ID values. When --overwrite-id is
+                        omitted, it defaults to False. When --overwrite-id is
+                        supplied without an argument, it is True.
+  --verify-id-unique [optional true|false]
+                        When true, verify ID uniqueness using an in-memory set
+                        of IDs. When --verify-id-unique is omitted, it
+                        defaults to False. When --verify-id-unique is supplied
+                        without an argument, it is True.
+  --value-hash-width VALUE_HASH_WIDTH
+                        How many characters should be used in a value hash?
+                        (default=6)
+  --claim-id-hash-width CLAIM_ID_HASH_WIDTH
+                        How many characters should be used to hash the claim
+                        ID? 0 means do not hash the claim ID. (default=8)
+  --claim-id-column-name CLAIM_ID_COLUMN_NAME
+                        The name of the claim_id column. (default=claim_id)
+  --id-separator ID_SEPARATOR
+                        The separator user between ID subfields. (default=-)
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).

@@ -666,25 +666,28 @@ class KgtkWriter(KgtkBase):
                 else:
                     raise
 
+    def shuffle(self, values: typing.List[str], shuffle_list: typing.List[int])->typing.List[str]:
+        if len(shuffle_list) != len(values):
+            # TODO: throw a better exception
+            raise ValueError("KgtkWriter: File %s: The shuffle list is %d long but the values are %d long" % (repr(self.file_path),
+                                                                                                              len(shuffle_list),
+                                                                                                              len(values)))
+
+        shuffled_values: typing.List[str] = [""] * self.column_count
+        idx: int
+        for idx in range(len(shuffle_list)):
+            shuffle_idx: int = shuffle_list[idx]
+            if shuffle_idx >= 0:
+                shuffled_values[shuffle_idx] = values[idx]
+        return shuffled_values
+
     # Write the next list of edge values as a list of strings.
     # TODO: Convert integers, coordinates, etc. from Python types
     def write(self, values: typing.List[str],
               shuffle_list: typing.Optional[typing.List[int]]= None):
 
         if shuffle_list is not None:
-            if len(shuffle_list) != len(values):
-                # TODO: throw a better exception
-                raise ValueError("KgtkWriter: File %s: The shuffle list is %d long but the values are %d long" % (repr(self.file_path),
-                                                                                                                  len(shuffle_list),
-                                                                                                                  len(values)))
-
-            shuffled_values: typing.List[str] = [""] * self.column_count
-            idx: int
-            for idx in range(len(shuffle_list)):
-                shuffle_idx: int = shuffle_list[idx]
-                if shuffle_idx >= 0:
-                    shuffled_values[shuffle_idx] = values[idx]
-            values = shuffled_values
+            values = self.shuffle(values, shuffle_list)
 
         # Optionally fill missing trailing columns with empty values:
         if self.fill_missing_columns and len(values) < self.column_count:
@@ -803,12 +806,7 @@ class KgtkWriter(KgtkBase):
                 else:
                     raise
 
-    def writemap(self, value_map: typing.Mapping[str, str]):
-        """
-        Write a map of values to the output file.
-        """
-        column_name: str
-
+    def mapvalues(self, value_map: typing.Mapping[str, str])->typing.List[str]:
         # Optionally check for unexpected column names:
         if self.prohibit_extra_columns:
             for column_name in value_map.keys():
@@ -824,8 +822,13 @@ class KgtkWriter(KgtkBase):
                 raise ValueError("KgtkWriter: File %s: Missing column %s at data record %d" % (repr(self.file_path), column_name, self.line_count))
             else:
                 values.append("")
-                
-        self.write(values)
+        return values
+
+    def writemap(self, value_map: typing.Mapping[str, str]):
+        """
+        Write a map of values to the output file.
+        """
+        self.write(self.mapvalues(value_map))
 
     def build_shuffle_list(self,
                            other_column_names: typing.List[str],
