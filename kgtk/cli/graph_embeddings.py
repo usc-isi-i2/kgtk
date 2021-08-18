@@ -346,7 +346,7 @@ def run(input_file: KGTKFiles,
     from pathlib import Path
     import json,os,h5py,gzip,torch,shutil
     from torchbiggraph.config import parse_config
-    from kgtk.exceptions import kgtk_exception_auto_handler
+    from kgtk.exceptions import KGTKException
     # copy  missing file under kgtk/graph_embeddings
     from templates.kgtkcopytemplate import KgtkCopyTemplate
     from kgtk.graph_embeddings.importers import TSVEdgelistReader,convert_input_data  
@@ -480,5 +480,5 @@ def run(input_file: KGTKFiles,
             print(f"Process Finished.\nOutput has been saved in {kwargs['output_file_path']}")
 
     except Exception as e:
-        kgtk_exception_auto_handler(e)
+        raise KGTKException(str(e))
             
