@@ -348,7 +348,7 @@ def run(input_file: KGTKFiles,
     from torchbiggraph.config import parse_config
     from kgtk.exceptions import KGTKException
     # copy  missing file under kgtk/graph_embeddings
-    from templates.kgtkcopytemplate import KgtkCopyTemplate
+    from kgtk.templates.kgtkcopytemplate import KgtkCopyTemplate
     from kgtk.graph_embeddings.importers import TSVEdgelistReader,convert_input_data  
     from torchbiggraph.train import train
     from torchbiggraph.util import SubprocessInitializer, setup_logging

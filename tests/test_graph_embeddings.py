@@ -68,6 +68,6 @@ if __name__ == '__main__':
     # do some testing
     suite = unittest.TestSuite()
     #  suite.addTest(ClassName(method))
-    suite.addTest(TestGraphEmbeddings("test_graph_embeddings_log"))
+    suite.addTest(TestGraphEmbeddings("test_graph_embeddings_default"))
     runner = unittest.TextTestRunner()
     runner.run(suite)
