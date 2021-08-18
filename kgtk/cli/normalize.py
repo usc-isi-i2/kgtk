@@ -7,13 +7,7 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.kgtkformat import KgtkFormat
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
-from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.lift.kgtklift import KgtkLift
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalue import KgtkValue
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 LOWER_COMMAND: str = 'lower'
 NORMALIZE_EDGES_COMMAND: str = 'normalize-edges'
@@ -32,6 +26,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalue import KgtkValue
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
     _command: str = parsed_shared_args._command
@@ -136,6 +135,11 @@ def run(input_file: KGTKFiles,
 )->int:
     # import modules locally
     from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
+    from kgtk.kgtkformat import KgtkFormat
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalue import KgtkValue
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
