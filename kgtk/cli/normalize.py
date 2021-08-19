@@ -111,7 +111,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="When True, deduplicate new edges. Not suitable for large files. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
-    KgtkIdBuilderOptions.add_arguments(parser, default_style=KgtkIdBuilderOptions.EMPTY_STYLE)
+    KgtkIdBuilderOptions.add_arguments(parser, default_style=KgtkIdBuilderOptions.CONCAT_NLN_NUM_STYLE, expert=_expert)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.EDGE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -415,6 +415,7 @@ def run(input_file: KGTKFiles,
             kw.write(output_row)
             output_line_count += 1
 
+            id_seq_num: int = 0
             column_idx: int
             for column_idx in lower_map.keys():
                 node1_idx: int
@@ -467,7 +468,8 @@ def run(input_file: KGTKFiles,
 
                     lowered_output_row: typing.List[str] = kw.shuffle(lowered_input_row, shuffle_list=shuffle_list)
                     if idb is not None:
-                        lowered_output_row = idb.build(lowered_output_row, input_line_count, already_added=True)
+                        id_seq_num += 0
+                        lowered_output_row = idb.build(lowered_output_row, id_seq_num, already_added=True)
                     if lkw is not None:
                         lkw.write(lowered_output_row)
                         label_line_count += 1
