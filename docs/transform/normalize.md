@@ -82,9 +82,9 @@ Would be transformed by `kgtk normalize-edges` to:
 |    | E1 | reference  | Wikidata |
 
 !!! note
-    The newly generated secondary edges do not themselves have `id` fields.
-    In the future, there may be an option to generate `id` values on output edges as needed.
-    Until then, use the [`kgtk add-id`](../add_id) command to generate
+    The newly generated secondary edges do not themselves have `id` fields unless the `--add-id`
+    option is specified.
+    You may also use the [`kgtk add-id`](../add_id) command to generate
     `id` field values after `kgtk normalize-edges`.
 
 ### Selecting the Additional Columns to Normalize
@@ -133,7 +133,7 @@ edges for each nonempty element of the list.
 
 ### Generating ID Values
 
-`kgtk normalize` will generate ID values for output edges, particularly for
+`kgtk normalize` will generate ID values for output
 edges that were generated as a result of normalization.  This code
 is somewhat experimental, and may be revised in the future.  Alternatively,
 the output from `kgtk normalize` may be piped to `kgtk add-id`.

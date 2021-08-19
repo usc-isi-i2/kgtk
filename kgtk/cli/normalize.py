@@ -410,8 +410,6 @@ def run(input_file: KGTKFiles,
             input_line_count += 1
 
             output_row: typing.List[str] = kw.shuffle(row, shuffle_list=shuffle_list)
-            if idb is not None:
-                output_row = idb.build(output_row, input_line_count, already_added=True)
             kw.write(output_row)
             output_line_count += 1
 
