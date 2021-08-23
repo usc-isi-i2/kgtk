@@ -422,11 +422,18 @@ class KgtkValue(KgtkFormat):
         else:
             return self.validate()
 
-    def is_empty(self, validate: bool = False)->bool:
+    def is_empty(self, validate: bool = False, parse_fields: bool = False)->bool:
         # Is this an empty item?  If so, assume it is valid and ignore the
         # validate parameter.
         if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.EMPTY
+            result = self.data_type == KgtkFormat.DataType.EMPTY
+            # self.valid *must* be true by now. TODO: we should check.
+            if self.fields is None and parse_fields:
+                self.fields = KgtkValueFields(data_type=self.data_type, valid=self.valid)
+            return result
+
+        # Clear any fields from prior validation:
+        self.fields = None
 
         if len(self.value) != 0:
             return False
@@ -434,7 +441,7 @@ class KgtkValue(KgtkFormat):
         # We are certain that this is an empty value.  We can be certain it is valid.
         self.data_type = KgtkFormat.DataType.EMPTY
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=self.data_type, valid=self.valid)
         return True
 
@@ -729,6 +736,9 @@ class KgtkValue(KgtkFormat):
         if not validate:
             return True
 
+        # Clear any fields from prior validation:
+        self.fields = None
+
         # We cannot cache the result of this test because it would interfere
         # if we later determined the exact data type.  We could work around
         # this problem with more thought.
@@ -836,17 +846,19 @@ class KgtkValue(KgtkFormat):
         """
         if self.data_type is not None:
             if self.data_type != KgtkFormat.DataType.NUMBER:
-                # Clear the number components:
-                self.numberstr = None
                 return False
 
             if not validate:
                 return True
             if self.valid is not None:
-                return self.valid
-        
-        # Clear the number components:
-        self.numberstr = None
+                if not self.valid:
+                    return False
+
+                if not (self.fields is None and parse_fields):
+                    return True
+
+        # Clear any fields from prior validation:
+        self.fields = None
 
         if not self._is_number_or_quantity():
             return False
@@ -897,8 +909,16 @@ class KgtkValue(KgtkFormat):
             if not validate:
                 return True
             if self.valid is not None:
-                return self.valid
+                if not self.valid:
+                    return False
+
+                if not (self.fields is None and parse_fields):
+                    return True
         
+
+        # Clear any fields from prior validation:
+        self.fields = None
+
         if not self._is_number_or_quantity():
             return False
         # We don't know yet if this is a quantity.  It could be a number.
@@ -1018,8 +1038,15 @@ class KgtkValue(KgtkFormat):
         if not validate:
             return True
         if self.valid is not None:
-            return self.valid
+            if not self.valid:
+                return False
+
+            if not (self.fields is None and parse_fields):
+                return True
         
+        # Clear any fields from prior validation:
+        self.fields = None
+
         # Validate the string:
         m: typing.Optional[typing.Match]
         if self.options.allow_lax_strings:
@@ -1057,7 +1084,20 @@ class KgtkValue(KgtkFormat):
         The validate parameter is ignored.
         """
         if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.SYMBOL
+            if self.data_type != KgtkFormat.DataType.SYMBOL:
+                return False
+
+            if not validate:
+                return True
+            if self.valid is not None:
+                if not self.valid:
+                    return False
+
+                if not (self.fields is None and parse_fields):
+                    return True
+                
+        # Clear any fields from prior validation:
+        self.fields = None
 
         # Is this a symbol?  It is, if it is not something else.
         if self.is_number_or_quantity() or self.is_string() or self.is_structured_literal() or self.is_boolean():
@@ -1080,7 +1120,20 @@ class KgtkValue(KgtkFormat):
         The validate parameter is ignored, we always validate.
         """
         if self.data_type is not None:
-            return self.data_type == KgtkFormat.DataType.BOOLEAN
+            if self.data_type != KgtkFormat.DataType.BOOLEAN:
+                return False
+
+            if not validate:
+                return True
+            if self.valid is not None:
+                if not self.valid:
+                    return False
+
+                if not (self.fields is None and parse_fields):
+                    return True
+                
+        # Clear any fields from prior validation:
+        self.fields = None
 
         # Is this a boolean?
         if self.value != KgtkFormat.TRUE_SYMBOL and self.value != KgtkFormat.FALSE_SYMBOL:
@@ -1132,9 +1185,17 @@ class KgtkValue(KgtkFormat):
 
         if not validate:
             return True
+
         if self.valid is not None:
-            return self.valid
+            if not self.valid:
+                return False
+
+            if not (self.fields is None and parse_fields):
+                return True
         
+        # Clear any fields from prior validation:
+        self.fields = None
+
         # Validate the language qualified string.
         # print("checking %s" % self.value)
         m: typing.Optional[typing.Match]
@@ -1209,9 +1270,17 @@ class KgtkValue(KgtkFormat):
 
         if not validate:
             return True
+
         if self.valid is not None:
-            return self.valid
+            if not self.valid:
+                return False
+
+            if not (self.fields is None and parse_fields):
+                return True
         
+        # Clear any fields from prior validation:
+        self.fields = None
+
         # Validate the location coordinates:
         rewrite_needed: bool = False
         m: typing.Optional[typing.Match] = KgtkValue.location_coordinates_re.match(self.value)
@@ -1467,10 +1536,16 @@ class KgtkValue(KgtkFormat):
 
         if not validate:
             return True
+
         if self.valid is not None:
-            return self.valid
+            if not self.valid:
+                return False
+
+            if not (self.fields is None and parse_fields):
+                return True
         
-        # Clear the cached date and times components:
+        # Clear any fields from prior validation:
+        self.fields = None
 
         # Validate the date and times:
         m: typing.Optional[typing.Match] = KgtkValue.lax_date_and_times_re.match(self.value)
@@ -1812,7 +1887,7 @@ class KgtkValue(KgtkFormat):
         self.fields = None
         return self.classify()
 
-    def validate(self)->bool:
+    def validate(self, parse_fields: bool =  False)->bool:
         # Validate this KgtkValue.
 
         # Start by classifying the KgtkValue.
@@ -1820,44 +1895,52 @@ class KgtkValue(KgtkFormat):
 
         # If the valid flag has already been cached, return that.
         if self.valid is not None:
-            return self.valid
+            if not self.valid:
+                return False
+
+            if not (self.fields is None and parse_fields):
+                return True
 
         # Clear any fields from prior validation:
         self.fields = None
         
         # Validate the value.
         if dt == KgtkFormat.DataType.EMPTY:
-            return self.is_empty(validate=True)
+            return self.is_empty(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.LIST:
-            return self.is_list(validate=True)
+            return self.is_list(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.NUMBER:
-            return self.is_number(validate=True)
+            return self.is_number(validate=True, parse_fields=parse_feilds)
         elif dt == KgtkFormat.DataType.QUANTITY:
-            return self.is_quantity(validate=True)
+            return self.is_quantity(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.STRING:
-            return self.is_string(validate=True)
+            return self.is_string(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING:
-            return self.is_language_qualified_string(validate=True)
+            return self.is_language_qualified_string(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.LOCATION_COORDINATES:
-            return self.is_location_coordinates(validate=True)
+            return self.is_location_coordinates(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.DATE_AND_TIMES:
-            return self.is_date_and_times(validate=True)
+            return self.is_date_and_times(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.EXTENSION:
-            return self.is_extension(validate=True)
+            return self.is_extension(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.BOOLEAN:
-            return self.is_boolean(validate=True)
+            return self.is_boolean(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.SYMBOL:
-            return self.is_symbol(validate=True)
+            return self.is_symbol(validate=True, parse_fields=parse_fields)
         else:
             raise ValueError("Unrecognized DataType.")
 
-    def revalidate(self, reclassify: bool=False)->bool:
+    def parse_fields(self)->bool:
+        # Ensure that validation has taken place and the filds have been parsed if valid.
+        return self.validate(parse_fields=True)
+
+    def revalidate(self, reclassify: bool=False, parse_fields: bool = False)->bool:
         # Revalidate this KgtkValue after clearing cached values.
         if reclassify:
             self.data_type = None
         self.valid = None
         self.fields = None
-        return self.validate()
+        return self.validate(parse_fields=parse_fields)
         
     def describe(self)->str:
         """
