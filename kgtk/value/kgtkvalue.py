@@ -537,7 +537,7 @@ class KgtkValue(KgtkFormat):
                 self.list_items.append(KgtkValue(item_value, options=self.options, parse_fields=self.parse_fields, parent=self))
         return self.list_items
 
-    def is_list(self, validate: bool = False)->bool:
+    def is_list(self, validate: bool = False, parse_fields: bool = False)->bool:
         # Must test for list before anything else (except empty)!
         if self.data_type is None:
             if len(self.get_list_items()) == 0:
@@ -554,7 +554,7 @@ class KgtkValue(KgtkFormat):
             return self.valid
         
         # We will save the list length even if invalid.
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LIST,
                                           valid=False,
                                           list_len=len(self.get_list_items()))
@@ -708,7 +708,7 @@ class KgtkValue(KgtkFormat):
     # This matches numbers but not quantities.
     number_re: typing.Pattern = re.compile(r'^' + number_pat + r'$')
 
-    def is_number_or_quantity(self, validate: bool=False)->bool:
+    def is_number_or_quantity(self, validate: bool=False, parse_fields: bool  = False)->bool:
         """
         Return True if the first character is 0-9,_,-,.
         and it is either a Python-compatible number or an enhanced
@@ -802,7 +802,7 @@ class KgtkValue(KgtkFormat):
             self.data_type = KgtkFormat.DataType.NUMBER
 
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=self.data_type,
                                           valid=self.valid,
                                           numberstr=numberstr,
@@ -815,7 +815,7 @@ class KgtkValue(KgtkFormat):
                                           units_node=units_node)
         return True
     
-    def is_number(self, validate: bool=False, quiet: bool=False)->bool:
+    def is_number(self, validate: bool=False, quiet: bool=False, parse_fields: bool = False)->bool:
         """
         Otherwise, return True if the first character is 0-9,_,-,.
         and it is a Python-compatible number (with optional limited enhancements).
@@ -877,7 +877,7 @@ class KgtkValue(KgtkFormat):
         # Now we can be certain that this is a number.
         self.data_type = KgtkFormat.DataType.NUMBER
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=self.data_type,
                                           valid=self.valid,
                                           numberstr=numberstr,
@@ -885,7 +885,7 @@ class KgtkValue(KgtkFormat):
         return True
         
     
-    def is_quantity(self, validate: bool=False)->bool:
+    def is_quantity(self, validate: bool=False, parse_fields: bool = False)->bool:
         """
         Return True if the first character is 0-9,_,-,.
         and it is an enhanced quantity.
@@ -967,7 +967,7 @@ class KgtkValue(KgtkFormat):
             # This is a number, not a quantity
             self.data_type = KgtkFormat.DataType.NUMBER
             self.valid = True
-            if self.parse_fields:
+            if parse_fields or self.parse_fields:
                 self.fields = KgtkValueFields(data_type=self.data_type,
                                               valid=self.valid,
                                               numberstr=numberstr,
@@ -997,7 +997,7 @@ class KgtkValue(KgtkFormat):
     lax_string_re: typing.Pattern = re.compile(r'^"(?P<text>.*)"$')
     strict_string_re: typing.Pattern = re.compile(r'^"(?P<text>(?:[^"\\]|\\.)*)"$')
 
-    def is_string(self, validate: bool = False)->bool:
+    def is_string(self, validate: bool = False, parse_fields: bool = False)->bool:
         """
         Return True if the first character  is '"'.
 
@@ -1037,7 +1037,7 @@ class KgtkValue(KgtkFormat):
 
         # We are certain that this is a valid string.
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.STRING,
                                           valid=self.valid,
                                           text=m.group("text"),
@@ -1050,7 +1050,7 @@ class KgtkValue(KgtkFormat):
         """
         return self.value.startswith(("^", "@", "'", "!"))
 
-    def is_symbol(self, validate: bool = False)->bool:
+    def is_symbol(self, validate: bool = False, parse_fields: bool = False)->bool:
         """
         Return True if not a number, string, nor structured literal, nor boolean.
 
@@ -1066,14 +1066,14 @@ class KgtkValue(KgtkFormat):
         # We are certain this is a symbol.  We assume that it is valid.
         self.data_type = KgtkFormat.DataType.SYMBOL
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=self.data_type,
                                           valid=self.valid,
                                           symbol=self.value,
             )
         return True
 
-    def is_boolean(self, validate: bool = False)->bool:
+    def is_boolean(self, validate: bool = False, parse_fields: bool = False)->bool:
         """
         Return True if the value matches one of the special boolean symbols.
 
@@ -1089,7 +1089,7 @@ class KgtkValue(KgtkFormat):
         # We are certain this is a valid boolean.
         self.data_type = KgtkFormat.DataType.BOOLEAN
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=self.data_type,
                                           valid=self.valid,
                                           truth=self.value == KgtkFormat.TRUE_SYMBOL)
@@ -1117,7 +1117,7 @@ class KgtkValue(KgtkFormat):
     strict_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,3})(?P<suffix>-[a-zA-Z0-9]+)?)$")
     wikidata_language_qualified_string_re: typing.Pattern = re.compile(r"^'(?P<text>(?:[^'\\]|\\.)*)'@(?P<lang_suffix>(?P<lang>[a-zA-Z]{2,})(?P<suffix>-[-a-zA-Z0-9]+)?)$")
 
-    def is_language_qualified_string(self, validate: bool=False)->bool:
+    def is_language_qualified_string(self, validate: bool=False, parse_fields: bool = False)->bool:
         """
         Return True if the value looks like a language-qualified string.
         """
@@ -1168,7 +1168,7 @@ class KgtkValue(KgtkFormat):
 
         # We are certain that this is a valid language qualified string.
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING,
                                           valid=self.valid,
                                           text=m.group("text"),
@@ -1191,7 +1191,7 @@ class KgtkValue(KgtkFormat):
     def format_degrees(self, num: float)->str:
         return '{:011.6f}'.format(num)
 
-    def is_location_coordinates(self, validate: bool=False)->bool:
+    def is_location_coordinates(self, validate: bool=False, parse_fields: bool = False)->bool:
         """
         Return False if this value is a list and idx is None.
         Otherwise, return True if the value looks like valid location coordinates.
@@ -1325,7 +1325,7 @@ class KgtkValue(KgtkFormat):
 
         # We are certain that this is valid.
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LOCATION_COORDINATES,
                                           valid=self.valid,
                                           latitudestr=latstr,
@@ -1407,7 +1407,7 @@ class KgtkValue(KgtkFormat):
                                                                                                          precision=precision_pat)
     lax_date_and_times_re: typing.Pattern = re.compile(r'^{date_and_times}$'.format(date_and_times=lax_date_and_times_pat))
                                                                         
-    def is_date_and_times(self, validate: bool=False)->bool:
+    def is_date_and_times(self, validate: bool=False, parse_fields: bool = False)->bool:
         """
         Return True if the value looks like valid date and times
         literal based on ISO-8601.
@@ -1677,7 +1677,7 @@ class KgtkValue(KgtkFormat):
 
         # We are fairly certain that this is a valid date and times.
         self.valid = True
-        if self.parse_fields:
+        if parse_fields or self.parse_fields:
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.DATE_AND_TIMES,
                                           valid=self.valid,
                                           date=date,
