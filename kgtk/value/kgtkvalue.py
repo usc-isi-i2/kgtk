@@ -717,9 +717,9 @@ class KgtkValue(KgtkFormat):
         # If we know the specific data type, delegate the test to that data type.
         if self.data_type is not None:
             if self.data_type == KgtkFormat.DataType.NUMBER:
-                return self.is_number(validate=validate)
+                return self.is_number(validate=validate, parse_field=parse_fields)
             elif self.data_type == KgtkFormat.DataType.QUANTITY:
-                return self.is_quantity(validate=validate)
+                return self.is_quantity(validate=validate, parse_field=parse_fields)
             else:
                 return False # Not a number or quantity.
 
