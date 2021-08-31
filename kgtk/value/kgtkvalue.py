@@ -1233,7 +1233,7 @@ class KgtkValue(KgtkFormat):
             self.fields = KgtkValueFields(data_type=KgtkFormat.DataType.LANGUAGE_QUALIFIED_STRING,
                                           valid=self.valid,
                                           text=m.group("text"),
-                                          decoded_text=KgtkFormat.unstringify('"' + m.group("text") + '"'),
+                                          decoded_text=KgtkFormat.unstringify(self.value),
                                           language=m.group("lang"),
                                           language_suffix=m.group("suffix"))
         return True
