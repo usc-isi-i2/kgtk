@@ -428,7 +428,7 @@ class KgtkValue(KgtkFormat):
         if self.data_type is not None:
             result = self.data_type == KgtkFormat.DataType.EMPTY
             # self.valid *must* be true by now. TODO: we should check.
-            if self.fields is None and parse_fields:
+            if self.fields is None and parse_fields and self.valid:
                 self.fields = KgtkValueFields(data_type=self.data_type, valid=self.valid)
             return result
 
@@ -1819,11 +1819,13 @@ class KgtkValue(KgtkFormat):
         if self.parent is not None:
             self.parent.rebuild_list()
 
-    def is_extension(self, validate=False)->bool:
+    def is_extension(self, validate: bool =False, parse_fields: bool =False)->bool:
         """Return True if the first character is !
 
         Although we refer to the validate parameter in the code below, we
         force self.valid to False.
+
+        Note:  parse_fields is ignored at present.
 
         """
         if self.data_type is None:
@@ -1910,7 +1912,7 @@ class KgtkValue(KgtkFormat):
         elif dt == KgtkFormat.DataType.LIST:
             return self.is_list(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.NUMBER:
-            return self.is_number(validate=True, parse_fields=parse_feilds)
+            return self.is_number(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.QUANTITY:
             return self.is_quantity(validate=True, parse_fields=parse_fields)
         elif dt == KgtkFormat.DataType.STRING:
@@ -1930,8 +1932,8 @@ class KgtkValue(KgtkFormat):
         else:
             raise ValueError("Unrecognized DataType.")
 
-    def parse_fields(self)->bool:
-        # Ensure that validation has taken place and the filds have been parsed if valid.
+    def do_parse_fields(self)->bool:
+        # Ensure that validation has taken place and the fields have been parsed if valid.
         return self.validate(parse_fields=True)
 
     def revalidate(self, reclassify: bool=False, parse_fields: bool = False)->bool:

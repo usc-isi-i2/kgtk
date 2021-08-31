@@ -159,14 +159,13 @@ def run(input_file: KGTKFiles,
             print("%s" % data_type, file=error_file, flush=True)
         return 0
 
+    field_name: str
     if show_field_names:
-        field_name: str
         for field_name in sorted(KgtkValueFields.FIELD_NAMES):
             print("%s" % field_name, file=error_file, flush=True)
         return 0
 
     if show_field_formats:
-        field_name: str
         for field_name in sorted(KgtkValueFields.FIELD_NAME_FORMATS.keys()):
             field_format: str = KgtkValueFields.FIELD_NAME_FORMATS[field_name]
             print("| %20s | %-5s |" % (field_name, field_format), file=error_file, flush=True)
