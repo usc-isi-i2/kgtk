@@ -102,7 +102,7 @@ class KgtkCompact(KgtkFormat):
         for idx, item_list in enumerate(self.current_row_lists):
             if item_list is not None:
                 if self.only_one_id and idx == self.id_column_idx:
-                    item_list = item_list[:1]
+                    item_list = sorted(item_list[:1]) # Ensure sorting.  Is this redundant?
 
                 if len(item_list) > 1:
                     saw_list = True
