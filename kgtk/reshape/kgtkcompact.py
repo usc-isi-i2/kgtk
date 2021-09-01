@@ -434,7 +434,7 @@ class KgtkCompact(KgtkFormat):
                                                                                self.excluded_row_count,
                                                                                self.output_line_count),
                   file=self.error_file, flush=True)
-            if lewh is not None:
+            if lew is not None:
                 print("Wrote %d list ouput records." % (self.list_output_line_count), file=self.error_file, flush=True)
         
         ew.close()
