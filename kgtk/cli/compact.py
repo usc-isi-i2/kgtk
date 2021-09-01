@@ -123,6 +123,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="When True, only records containing lists will be written to the primary output file. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--only-one-id", dest="only_one_id",
+                              help="When the id column contains a list, keep only one element. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+    
     parser.add_argument(      "--build-id", dest="build_id",
                               help="Build id values in an id column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
@@ -144,6 +148,7 @@ def run(input_file: KGTKFiles,
         report_lists: bool,
         exclude_lists: bool,
         output_only_lists: bool,
+        only_one_id: bool,
         build_id: bool,
 
         errors_to_stdout: bool = False,
@@ -192,6 +197,7 @@ def run(input_file: KGTKFiles,
         print("--report-lists=%s" % str(report_lists), file=error_file, flush=True)
         print("--exclude-lists=%s" % str(exclude_lists), file=error_file, flush=True)
         print("--output-only-lists=%s" % str(output_only_lists), file=error_file, flush=True)
+        print("--only-one-id=%s" % str(only_one_id), file=error_file, flush=True)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -221,6 +227,7 @@ def run(input_file: KGTKFiles,
             report_lists=report_lists,
             exclude_lists=exclude_lists,
             output_only_lists=output_only_lists,
+            only_one_id=only_one_id,
             build_id=build_id,
             idbuilder_options=idbuilder_options,
             reader_options=reader_options,

@@ -46,6 +46,7 @@ class KgtkCompact(KgtkFormat):
     output_only_lists: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     list_output_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
+    only_one_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     build_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     idbuilder_options: typing.Optional[KgtkIdBuilderOptions] = attr.ib(default=None)
 
@@ -69,6 +70,8 @@ class KgtkCompact(KgtkFormat):
     current_row: typing.Optional[typing.List[str]] = None
     current_row_lists: typing.Optional[typing.List[typing.Optional[typing.List[str]]]] = None
 
+    id_column_idx: int = 0 # Index of the ID column, if any.
+
     FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.KEY_FIELD_SEPARATOR
 
     def build_key(self, row: typing.List[str], key_columns: typing.List[int])->str:
@@ -84,7 +87,10 @@ class KgtkCompact(KgtkFormat):
         return key
 
     def compact_row(self)->bool:
-        """Compact the current row. Return True if ther eis at least one list in the result, otherwise return False."""
+        """Compact the current row. Return True if there is at least one list in the
+        result, otherwise return False.
+
+        """
         if self.current_row_lists is None:
             return False
 
@@ -95,14 +101,17 @@ class KgtkCompact(KgtkFormat):
         saw_list: bool = False
         for idx, item_list in enumerate(self.current_row_lists):
             if item_list is not None:
+                if self.only_one_id and idx == self.id_column_idx:
+                    item_list = item_list[:1]
+
+                if len(item_list) > 1:
+                    saw_list = True
                 # We don't need to use KgtkValue.join_unique_list(item_list)
                 # because self.merge_row(...) and self.expand_row(...) ensure that
                 # there are no duplicates.
                 #
                 # TODO: run timing studies to determine which approach is more efficient.
                 self.current_row[idx] = KgtkValue.join_sorted_list(item_list)
-                if len(item_list) > 1:
-                    saw_list = True
         self.current_row_lists = None
         return saw_list
 
@@ -273,8 +282,9 @@ class KgtkCompact(KgtkFormat):
                                           verbose=self.verbose,
                                           very_verbose=self.very_verbose,
         )
+        self.id_column_idx = kr.id_column_idx
 
-        # If requested, creat the ID column builder.
+        # If requested, create the ID column builder.
         # Assemble the list of output column names.
         output_column_names: typing.List[str]
         idb: typing.Optional[KgtkIdBuilder] = None
@@ -493,6 +503,10 @@ def main():
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
+    parser.add_argument(      "--only-one-id", dest="only_one_id",
+                              help="When the ID column contains a list, pick one value. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--build-id", dest="build_id",
                               help="Build id values in an id column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -524,6 +538,7 @@ def main():
         print("--report-lists=%s" % str(args.report_lists), file=error_file, flush=True)
         print("--exclude-lists=%s" % str(args.exclude_lists), file=error_file, flush=True)
         print("--output-only-lists=%s" % str(args.output_only_lists), file=error_file, flush=True)
+        print("--only-one-id=%s" % str(args.only_one_id), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -541,6 +556,7 @@ def main():
         exclude_lists=args.exclude_lists,
         output_only_lists=args.output_only_lists,
         output_file_path=args.output_file_path,
+        only_one_id=args.only_one_id,
         build_id=args.build_id,
         idbuilder_options=idbuilder_options,
         reader_options=reader_options,
