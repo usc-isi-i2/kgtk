@@ -481,19 +481,32 @@ class SqliteStore(SqlStore):
 
     def is_standard_input(self, file):
         return self.normalize_file_path(file) == '/dev/stdin'
+
+    def is_input_alias_name(self, name):
+        """Return true if 'name' is a legal input alias.  We require aliases to not
+        contain any path separators to distinguish them from file names which are
+        stored as absolute pathnames in the file info table.
+        """
+        return name.find(os.sep) < 0
     
+    def is_input_file_name(self, name):
+        return not self.is_input_alias_name(name)
+
     def get_file_info(self, file, alias=None, exact=False):
         """Return a dict info structure for the file info for 'file' (or 'alias') or None
         if this file does not exist in the file table.  All column keys will be set in
         the result although some values may be None.  If 'exact', use 'file' as is and
-        do not try to normalize it to an absolute path.
+        do not try to normalize it to an absolute path.  Matches based on 'file' will
+        have preference over matches based on 'alias', for example, a file named 'graph'
+        will match the entry for '/data/graph' (if that is its full name) before it
+        matches an entry named by the alias 'mygraph', for example.
         """
         info = self.fileinfo.get_info(file)
-        if info is None and alias is not None:
-            info = self.fileinfo.get_info(alias)
         if info is None and not exact:
             file = self.normalize_file_path(file)
             info = self.fileinfo.get_info(file)
+        if info is None and alias is not None:
+            info = self.fileinfo.get_info(alias)
         return info
 
     def get_normalized_file(self, file, alias=None, exact=False):
@@ -658,41 +671,83 @@ class SqliteStore(SqlStore):
                 return table
             graphid += 1
 
+    def determine_graph_action(self, file, alias=None, error=True):
+        """Determine which action to perform for the KGTK graph indicated by input 'file' (or 'alias').
+        Returns one of 'add', 'replace', 'reuse' or 'error'.  Raises an exception for error cases in
+        case 'error' was set to True (the default).
+
+        Returns 'add' if no matching file info based on 'file/alias' could be found, in which case
+        the data needs to be newly imported.
+
+        Returns 'reuse' if a matching file info was found and 'file' is an existing regular file whose
+        properties match exactly what was previously loaded, or is not an existing regular file in which
+        case its properties cannot be checked.  This latter case allows us to delete large input files
+        after import without losing the ability to query them, or to query files by using their alias
+        instead of a real filename.
+
+        Returns 'replace' if a matching file info was found and 'file' is an existing regular file
+        whose properties do not match what was previously loaded, or if 'file' names standard input.
+        If so an obsolete graph table for 'file' will have to be removed before new data gets imported.
+
+        Checks for errors such as invalid alias names, aliases that are already in use for other
+        inputs, and cases where an existing file might conflict with an existing input alias.
+        """
+        if alias is not None and not self.is_input_alias_name(alias):
+            if error:
+                raise KGTKException(f'invalid input alias name: {alias}')
+            else:
+                return 'error'
+        
+        info = self.get_file_info(file, alias=alias)
+        if info is None:
+            return 'add'
+        
+        is_aliased = self.is_input_alias_name(info.file)
+        defines_alias = alias is not None
+        if defines_alias:
+            alias_info = self.get_file_info(alias, exact=True)
+            if alias_info is not None and info.file != alias_info.file:
+                if error:
+                    raise KGTKException(f"input alias '{alias}' already in use")
+                else:
+                    return 'error'
+        
+        if self.is_standard_input(file):
+            # we never reuse plain stdin, it needs to be aliased to a new name for that:
+            return 'replace'
+        
+        if os.path.exists(file):
+            if is_aliased and not defines_alias:
+                if error:
+                    raise KGTKException(f"input '{file}' conflicts with existing alias; "+
+                                        f"to replace use explicit '--as {info.file}'")
+                else:
+                    return 'error'
+            if info.size !=  os.path.getsize(file):
+                return 'replace'
+            if info.modtime != os.path.getmtime(file):
+                return 'replace'
+            # don't check md5sum for now
+        return 'reuse'
+
     def has_graph(self, file, alias=None):
         """Return True if the KGTK graph represented/named by 'file' (or its 'alias' if not None)
-        has already been imported and is up-to-date.  If this returns false, an obsolete graph
-        table for 'file' might exist and will have to be removed before new data gets imported.
-        This returns True iff a matching file info was found (named by 'file' or 'alias'), and
-        'file' is an existing regular file whose properties match exactly what was previously loaded,
-        or 'file' is not an existing regular file in which case its properties cannot be checked.
-        This latter case allows us to delete large files used for import without losing the ability
-        to query them, or to query files by using their alias only instead of a real filename.
+        has already been imported and is up-to-date (see 'determine_graph_action' for the full story).
         """
-        info = self.get_file_info(file, alias=alias)
-        if info is not None:
-            if self.is_standard_input(file):
-                # we never reuse plain stdin, it needs to be aliased to a new name for that:
-                return False
-            if os.path.exists(file):
-                if info.size !=  os.path.getsize(file):
-                    return False
-                if info.modtime != os.path.getmtime(file):
-                    return False
-            # don't check md5sum for now:
-            return True
-        return False
+        return self.determine_graph_action(file, alias=alias, error=False) == 'reuse'
 
     def add_graph(self, file, alias=None):
         """Import a graph from 'file' (and optionally named by 'alias') unless a matching
         graph has already been imported earlier according to 'has_graph' (which see).
         """
-        if self.has_graph(file, alias=alias):
+        graph_action = self.determine_graph_action(file, alias=alias)
+        if graph_action == 'reuse':
             if alias is not None:
                 # this allows us to do multiple renamings:
                 self.set_file_alias(file, alias)
             return
         file_info = self.get_file_info(file, alias=alias)
-        if file_info is not None:
+        if graph_action == 'replace':
             # we already have an earlier version of the file in store, delete its graph data:
             self.drop_graph(file_info.graph)
         file = self.normalize_file_path(file)
