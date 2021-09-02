@@ -5,6 +5,7 @@ import threading
 import time
 import re
 import io
+import csv
 
 import kgtk.kypher.query as kyquery
 import kgtk.cli.query as cliquery
@@ -244,6 +245,31 @@ class KypherQuery(object):
         parameters = self._subst_params(self.parameters, params)
         result = self.exec_wrapper(self, parameters, fmt)
         return result
+
+    def execute_to_file(self, file=sys.stdout, noheader=False, **params):
+        """Execute this query with the given 'params' and write the result to the file or
+        file-like object 'file' in KGTK format.  Output a header unless 'noheader' is true.
+        """
+        self.refresh()
+        if hasattr(self.exec_wrapper, 'cache_clear'):
+            # if this is a re-call of a caching query, ensure it is cleared,
+            # since the result iterator was used up in the previous call:
+            self.exec_wrapper.cache_clear()
+        parameters = self._subst_params(self.parameters, params)
+        try:
+            out = open(file, 'w') if isinstance(file, str) else file
+            if not hasattr(out, 'write'):
+                raise KGTKException('expected file or file-like object')
+            result = self.exec_wrapper(self, parameters, iter)
+            csvwriter = csv.writer(out, dialect=None, delimiter='\t',
+                                   quoting=csv.QUOTE_NONE, quotechar=None,
+                                   lineterminator='\n', escapechar=None)
+            if not noheader:
+                csvwriter.writerow(self.get_result_header())
+            csvwriter.writerows(result)
+        finally:
+            if isinstance(file, str):
+                out.close()
 
     def get_result_header(self, error=True):
         """Return the list of column names for this query.  This requires the query to have
@@ -630,6 +656,12 @@ class KypherApi(object):
         For example, the Kypher parameter '$NODE' can be bound with 'NODE=<some value>'.
         """
         return self._get_query(query).execute(fmt=fmt, **params)
+
+    def execute_query_to_file(self, query, file=sys.stdout, noheader=False, **params):
+        """Execute 'query' with the given 'params' and write the result to the file or
+        file-like object 'file' in KGTK format.  Output a header unless 'noheader' is true.
+        """
+        query.execute_to_file(file=file, noheader=noheader, **params)
 
     def get_query_result_header(self, query, error=True):
         """Return the list of column names for 'query' (which may be a name or object).
