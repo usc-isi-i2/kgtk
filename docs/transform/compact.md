@@ -132,6 +132,7 @@ usage: kgtk compact [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]]
                     [--compact-id [True|False]] [--deduplicate [True|False]]
                     [--lists-in-input [LISTS_IN_INPUT]]
+                    [--keep-first KEEP_FIRST_NAMES [KEEP_FIRST_NAMES ...]]
                     [--presorted [True|False]] [--verify-sort [True|False]]
                     [--report-lists [REPORT_LISTS]]
                     [--exclude-lists [EXCLUDE_LISTS]]
@@ -161,7 +162,9 @@ optional arguments:
                         stdout.)
   --list-output-file LIST_OUTPUT_FILE
                         A KGTK output file that will contain only the rows
-                        containing lists. (Optional, use '-' for stdout.)
+                        containing lists. This file will have the same columns
+                        as the primary output file. (Optional, use '-' for
+                        stdout.)
   --columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]
                         The key columns to identify records for compaction.
                         (default=id for node files, (node1, label, node2, id)
@@ -180,6 +183,10 @@ optional arguments:
   --lists-in-input [LISTS_IN_INPUT]
                         Assume that the input file may contain lists (disable
                         when certain it does not). (default=True).
+  --keep-first KEEP_FIRST_NAMES [KEEP_FIRST_NAMES ...]
+                        If compaction results in a list of values for any
+                        column on this list, keep only the first value after
+                        sorting. (default=none).
   --presorted [True|False]
                         Indicate that the input has been presorted (or at
                         least pregrouped) (default=False).
