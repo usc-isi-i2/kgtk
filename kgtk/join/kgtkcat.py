@@ -197,11 +197,11 @@ class KgtkCat():
             row: typing.List[str]
             for row in kr:
                 input_data_lines += 1
-                output_data_lines += 1
                 ew.write(row, shuffle_list=shuffle_list)
 
             # Flush the output file so far:
             ew.flush()
+            output_data_lines += input_data_lines
 
             if self.verbose:
                 print("Read %d data lines from file %d: %s" % (input_data_lines, idx + 1, input_file_path), file=self.error_file, flush=True)
