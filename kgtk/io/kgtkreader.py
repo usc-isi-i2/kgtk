@@ -948,13 +948,13 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     # Get the next edge values as a list of strings.
     def nextrow(self)-> typing.List[str]:
+        line: str
         row: typing.List[str]
 
         if self.use_fast_path:
             # This is the fast read path.
 
             # Read a line from the source
-            line: str
             try:
 
                 line = next(self.source) # Will throw StopIteration
@@ -1000,7 +1000,6 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                         raise StopIteration
 
                 # Read a line from the source
-                line: str
                 try:
 
                     line = next(self.source) # Will throw StopIteration

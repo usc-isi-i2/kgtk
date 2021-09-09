@@ -106,6 +106,24 @@ class KgtkWriter(KgtkBase):
         NODE = 2 # Enforce node file required columns
         AUTO = 3 # Automatically decide whether to enforce edge or node file required columns
 
+    def __attrs_post_init__(self):
+        self.format_writers: typing.Mapping[str, typing.Callable[[KgtkWriter, typing.List[str]], None]] = {
+            self.OUTPUT_FORMAT_KGTK: self.write_kgtk,
+            self.OUTPUT_FORMAT_TSV: self.write_tsv,
+            self.OUTPUT_FORMAT_TSV_UNQUOTED: self.write_tsv_unquoted,
+            self.OUTPUT_FORMAT_TSV_UNQUOTED_EP: self.write_tsv_unquoted_ep,
+            self.OUTPUT_FORMAT_TSV_CSVLIKE: self.write_tsv_csvlike,
+            self.OUTPUT_FORMAT_CSV: self.write_csv,
+            self.OUTPUT_FORMAT_MD: self.write_md,
+            self.OUTPUT_FORMAT_JSON: self.write_json,
+            self.OUTPUT_FORMAT_JSON_MAP: self.write_json_map,
+            self.OUTPUT_FORMAT_JSON_MAP_COMPACT: self.write_json_map_compact,
+            self.OUTPUT_FORMAT_JSON: self.write_jsonl,
+            self.OUTPUT_FORMAT_JSONL_MAP: self.write_jsonl_map,
+            self.OUTPUT_FORMAT_JSONL_MAP_COMPACT: self.write_jsonl_map_compact,
+        }
+        
+
     @classmethod
     def open(cls,
              column_names: typing.List[str],
@@ -717,48 +735,64 @@ class KgtkWriter(KgtkBase):
                                                                                                                                 len(values),
                                                                                                                                 len(values) - self.column_count,
                                                                                                                                 repr(line)))
-        if self.output_format == self.OUTPUT_FORMAT_KGTK:
-            self.writeline(self.column_separator.join(values))
-        elif self.output_format == self.OUTPUT_FORMAT_TSV:
-            self.writeline(self.join_tsv(values))
-        elif self.output_format == self.OUTPUT_FORMAT_TSV_UNQUOTED:
-            self.writeline(self.join_tsv(values, unquoted=True))
-        elif self.output_format == self.OUTPUT_FORMAT_TSV_UNQUOTED_EP:
-            self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False))
-        elif self.output_format == self.OUTPUT_FORMAT_TSV_CSVLIKE:
-            self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False, csvlike=True))
-        elif self.output_format == self.OUTPUT_FORMAT_CSV:
-            self.writeline(self.join_csv(values))
-        elif self.output_format == self.OUTPUT_FORMAT_MD:
-            self.writeline(self.join_md(values))
-        elif self.output_format == self.OUTPUT_FORMAT_JSON:
-            self.writeline(",")
-            self.writeline_noeol(json.dumps(self.reformat_values_for_json(values), indent=None, separators=(',', ':')))
-        elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
-            if self.line_count == 1:
-                self.writeline("")
-            else:
-                self.writeline(",")
-            self.writeline_noeol(json.dumps(self.json_map(values), indent=None, separators=(',', ':')))
-        elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
-            if self.line_count == 1:
-                self.writeline("")
-            else:
-                self.writeline(",")
-            self.writeline_noeol(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
-        elif self.output_format == self.OUTPUT_FORMAT_JSONL:
-            self.writeline(json.dumps(values, indent=None, separators=(',', ':')))
-        elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP:
-            self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')))
-        elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP_COMPACT:
-            self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
-        else:
+        format_writer: typing.Optional[typing.Callable[[KgtkWriter, typing.List[str]], None]] = self.format_writers.get(self.output_format)
+        if format_writer is None:
             raise ValueError("KgtkWriter: File %s: Unrecognized output format '%s'." % (repr(self.file_path), self.output_format))
+        format_writer(values)
 
         self.line_count += 1
         if self.very_verbose:
             sys.stdout.write(".")
             sys.stdout.flush()
+
+
+    def write_kgtk(self, values: typing.List[str]):
+        self.writeline(self.column_separator.join(values))
+
+    def write_tsv(self, values: typing.List[str]):
+        self.writeline(self.join_tsv(values))            
+
+    def write_tsv_unquoted(self, values: typing.List[str]):
+        self.writeline(self.join_tsv(values, unquoted=True))
+
+    def write_tsv_unquoted_ep(self, values: typing.List[str]):
+        self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False))
+
+    def write_tsv_csvlike(self, values: typing.List[str]):
+        self.writeline(self.join_tsv(values, unquoted=True, unescape_pipe=False, csvlike=True))
+
+    def write_csv(self, values: typing.List[str]):
+        self.writeline(self.join_csv(values))
+
+    def write_md(self, values: typing.List[str]):
+        self.writeline(self.join_md(values))
+
+    def write_json(self, values: typing.List[str]):
+        self.writeline(",")
+        self.writeline_noeol(json.dumps(self.reformat_values_for_json(values), indent=None, separators=(',', ':')))
+
+    def write_json_map(self, values: typing.List[str]):
+        if self.line_count == 1:
+            self.writeline("")
+        else:
+            self.writeline(",")
+        self.writeline_noeol(json.dumps(self.json_map(values), indent=None, separators=(',', ':')))
+
+    def write_json_map_compact(self, values: typing.List[str]):
+        if self.line_count == 1:
+            self.writeline("")
+        else:
+            self.writeline(",")
+        self.writeline_noeol(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
+
+    def write_jsonl(self, values: typing.List[str]):
+        self.writeline(json.dumps(values, indent=None, separators=(',', ':')))
+
+    def write_jsonl_map(self, values: typing.List[str]):
+        self.writeline(json.dumps(self.json_map(values), indent=None, separators=(',', ':')))
+
+    def write_jsonl_map_compact(self, values: typing.List[str]):
+        self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
 
     def writerow(self, row: typing.List[typing.Union[str, int, float, bool]]):
         # Convenience method for interoperability with csv.writer.
@@ -849,7 +883,7 @@ class KgtkWriter(KgtkBase):
 
     def is_shuffle_needed(self,
                           other_column_names: typing.List[str],
-                          fail_on_unknown_column: bool = False)->typing.List[int]:
+                          fail_on_unknown_column: bool = False)->bool:
         idx: int
         column_name: str
         for idx, column_name in enumerate(other_column_names):
