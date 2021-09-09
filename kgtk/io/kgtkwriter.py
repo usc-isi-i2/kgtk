@@ -689,33 +689,34 @@ class KgtkWriter(KgtkBase):
         if shuffle_list is not None:
             values = self.shuffle(values, shuffle_list)
 
-        # Optionally fill missing trailing columns with empty values:
-        if self.fill_missing_columns and len(values) < self.column_count:
-            while len(values) < self.column_count:
-                values.append("")
-
         if len(values) != self.column_count:
-            # Optionally validate that the line contained the right number of columns:
-            #
-            # When we report line numbers in error messages, line 1 is the first line after the header line.
-            line: str
-            if self.require_all_columns and len(values) < self.column_count:
-                line = self.column_separator.join(values)
-                raise ValueError("KgtkWriter: File %s: Required %d columns (%s) in output line %d, saw %d: %s" % (repr(self.file_path),
-                                                                                                                  self.column_count,
-                                                                                                                  repr(self.column_separator.join(self.column_names)),
-                                                                                                                  self.line_count,
-                                                                                                                  len(values),
-                                                                                                                  repr(line)))
-            if self.prohibit_extra_columns and len(values) > self.column_count:
-                line = self.column_separator.join(values)
-                raise ValueError("KgtkWriter: File %s: Required %d columns (%s)in output line %d, saw %d (%d extra): %s" % (repr(self.file_path),
-                                                                                                                            self.column_count,
-                                                                                                                            repr(self.column_separator.join(self.column_names)),
-                                                                                                                            self.line_count,
-                                                                                                                            len(values),
-                                                                                                                            len(values) - self.column_count,
-                                                                                                                            repr(line)))
+            # Optionally fill missing trailing columns with empty values:
+            if self.fill_missing_columns and len(values) < self.column_count:
+                while len(values) < self.column_count:
+                    values.append("")
+
+            if len(values) != self.column_count:
+                # Optionally validate that the line contained the right number of columns:
+                #
+                # When we report line numbers in error messages, line 1 is the first line after the header line.
+                line: str
+                if self.require_all_columns and len(values) < self.column_count:
+                    line = self.column_separator.join(values)
+                    raise ValueError("KgtkWriter: File %s: Required %d columns (%s) in output line %d, saw %d: %s" % (repr(self.file_path),
+                                                                                                                      self.column_count,
+                                                                                                                      repr(self.column_separator.join(self.column_names)),
+                                                                                                                      self.line_count,
+                                                                                                                      len(values),
+                                                                                                                      repr(line)))
+                if self.prohibit_extra_columns and len(values) > self.column_count:
+                    line = self.column_separator.join(values)
+                    raise ValueError("KgtkWriter: File %s: Required %d columns (%s)in output line %d, saw %d (%d extra): %s" % (repr(self.file_path),
+                                                                                                                                self.column_count,
+                                                                                                                                repr(self.column_separator.join(self.column_names)),
+                                                                                                                                self.line_count,
+                                                                                                                                len(values),
+                                                                                                                                len(values) - self.column_count,
+                                                                                                                                repr(line)))
         if self.output_format == self.OUTPUT_FORMAT_KGTK:
             self.writeline(self.column_separator.join(values))
         elif self.output_format == self.OUTPUT_FORMAT_TSV:
