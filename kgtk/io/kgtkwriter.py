@@ -694,27 +694,28 @@ class KgtkWriter(KgtkBase):
             while len(values) < self.column_count:
                 values.append("")
 
-        # Optionally validate that the line contained the right number of columns:
-        #
-        # When we report line numbers in error messages, line 1 is the first line after the header line.
-        line: str
-        if self.require_all_columns and len(values) < self.column_count:
-            line = self.column_separator.join(values)
-            raise ValueError("KgtkWriter: File %s: Required %d columns (%s) in output line %d, saw %d: %s" % (repr(self.file_path),
-                                                                                                              self.column_count,
-                                                                                                              repr(self.column_separator.join(self.column_names)),
-                                                                                                              self.line_count,
-                                                                                                              len(values),
-                                                                                                              repr(line)))
-        if self.prohibit_extra_columns and len(values) > self.column_count:
-            line = self.column_separator.join(values)
-            raise ValueError("KgtkWriter: File %s: Required %d columns (%s)in output line %d, saw %d (%d extra): %s" % (repr(self.file_path),
-                                                                                                                        self.column_count,
-                                                                                                                        repr(self.column_separator.join(self.column_names)),
-                                                                                                                        self.line_count,
-                                                                                                                        len(values),
-                                                                                                                        len(values) - self.column_count,
-                                                                                                                        repr(line)))
+        if len(values) != self.column_count:
+            # Optionally validate that the line contained the right number of columns:
+            #
+            # When we report line numbers in error messages, line 1 is the first line after the header line.
+            line: str
+            if self.require_all_columns and len(values) < self.column_count:
+                line = self.column_separator.join(values)
+                raise ValueError("KgtkWriter: File %s: Required %d columns (%s) in output line %d, saw %d: %s" % (repr(self.file_path),
+                                                                                                                  self.column_count,
+                                                                                                                  repr(self.column_separator.join(self.column_names)),
+                                                                                                                  self.line_count,
+                                                                                                                  len(values),
+                                                                                                                  repr(line)))
+            if self.prohibit_extra_columns and len(values) > self.column_count:
+                line = self.column_separator.join(values)
+                raise ValueError("KgtkWriter: File %s: Required %d columns (%s)in output line %d, saw %d (%d extra): %s" % (repr(self.file_path),
+                                                                                                                            self.column_count,
+                                                                                                                            repr(self.column_separator.join(self.column_names)),
+                                                                                                                            self.line_count,
+                                                                                                                            len(values),
+                                                                                                                            len(values) - self.column_count,
+                                                                                                                            repr(line)))
         if self.output_format == self.OUTPUT_FORMAT_KGTK:
             self.writeline(self.column_separator.join(values))
         elif self.output_format == self.OUTPUT_FORMAT_TSV:
@@ -844,6 +845,28 @@ class KgtkWriter(KgtkBase):
             else:
                 results.append(-1) # Means skip this column.
         return results
+
+    def is_shuffle_needed(self,
+                          other_column_names: typing.List[str],
+                          fail_on_unknown_column: bool = False)->typing.List[int]:
+        idx: int
+        column_name: str
+        for idx, column_name in enumerate(other_column_names):
+            if column_name in self.column_name_map:
+                if idx != self.column_name_map[column_name]:
+                    return True # A shuffle is needed.
+            elif fail_on_unknown_column:
+                # TODO: throw a better exception
+                raise ValueError("Unknown column name %s when considering shuffle list" % column_name)
+            else:
+                return True # This column is skipped, so a shuffle is needed.
+
+        if len(other_column_names) < len(self.column_names):
+            if self.fill_missing_columns:
+                return False # A shuffle is not needed.
+            return True # A shuffle is needed.
+        
+        return False # A shuffle is not needed.
     
 def main():
     """

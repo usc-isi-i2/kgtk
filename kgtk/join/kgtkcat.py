@@ -191,13 +191,20 @@ class KgtkCat():
             if self.verbose:
                 print("Copying data from file %d: %s" % (idx + 1, input_file_path), file=self.error_file, flush=True)
 
-            shuffle_list: typing.List[int] = ew.build_shuffle_list(kmc.new_column_name_lists[idx])
-
             input_data_lines: int = 0
             row: typing.List[str]
-            for row in kr:
-                input_data_lines += 1
-                ew.write(row, shuffle_list=shuffle_list)
+            if ew.is_shuffle_needed(kmc.new_column_name_lists[idx]):
+                shuffle_list: typing.List[int] = ew.build_shuffle_list(kmc.new_column_name_lists[idx])
+                if self.verbose:
+                    print("Shuffle list: %s" % " ".join([str(x) for x in shuffle_list]), file=self.error_file, flush=True)
+
+                for row in kr:
+                    input_data_lines += 1
+                    ew.write(row, shuffle_list=shuffle_list)
+            else:
+                for row in kr:
+                    input_data_lines += 1
+                    ew.write(row)
 
             # Flush the output file so far:
             ew.flush()
