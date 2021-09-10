@@ -737,7 +737,7 @@ class KgtkWriter(KgtkBase):
                                                                                                                                 repr(line)))
         format_writer: typing.Optional[typing.Callable[[KgtkWriter, typing.List[str]], None]] = self.format_writers.get(self.output_format)
         if format_writer is None:
-            raise ValueError("KgtkWriter: File %s: Unrecognized output format '%s'." % (repr(self.file_path), self.output_format))
+            raise ValueError("KgtkWriter: File %s: Unrecognized output format %s." % (repr(self.file_path), repr(self.output_format)))
         format_writer(values)
 
         self.line_count += 1
@@ -745,6 +745,107 @@ class KgtkWriter(KgtkBase):
             sys.stdout.write(".")
             sys.stdout.flush()
 
+    def shortcut_copy_is_possible(self, kr: KgtkReader, new_column_names: typing.Optional[typing.List[str]]=None)->bool:
+        if len(kr.column_names) != len(self.column_names):
+            if self.verbose:
+                print("Shortcut not possible: len(kr.column_names)=%d != len(kw.column_names)=%d" % (len(kr.column_names),
+                                                                                                     len(self.column_names)),
+                      file=self.error_file, flush=True)
+            return False
+
+        idx: idx
+        name: str
+        for idx, name in enumerate(self.column_names):
+            if name != kr.column_names[idx]:
+                if self.verbose:
+                    print("Shortcut not possible: kr.colum_names[%d]=%s != kw.column_names[%d]=%s" % (idx,
+                                                                                                      repr(name),
+                                                                                                      idx,
+                                                                                                      repr(kr.column_names[idx])),
+                          file=self.error_file, flush=True)
+                return False
+
+        if new_column_names is not None:
+            if len(new_column_names) != len(self.column_names):
+                if self.verbose:
+                    print("Shortcut not possible: len(new_column_names)=%d != len(kw.column_names)=%d" % (len(new_column_names),
+                                                                                                          len(self.column_names)),
+                          file=self.error_file, flush=True)
+                return False
+            for idx, name in enumerate(new_column_names):
+                if name != self.column_names[idx]:
+                    if self.verbose:
+                        print("Shortcut not possible: new_column_names[%d]=%s != kw.column_names[%d]=%3" % (idx,
+                                                                                                            name,
+                                                                                                            idx,
+                                                                                                            self.column_names[idx]),
+                              file=self.error_file, flush=True)
+                    return False
+        if self.column_separator != kr.options.column_separator:
+            if self.verbose:
+                print("Shortcut not possible: kr.options.column_separator=%s != kw.column_separator=%s" % (kr.options.column_separator,
+                                                                                                           self.column_separator),
+                       file=self.error_file, flush=True)
+            return False
+
+        if self.output_format is not None and self.output_format != self.OUTPUT_FORMAT_KGTK:
+            if self.verbose:
+                print("Shortcut not possible: kw.output_format=%s" % repr(self.output_format),
+                      file=self.error_file, flush=True)
+            return False
+
+        if not kr.use_fast_path:
+            if self.verbose:
+                print("Shortcut not possible: kr does not use fast path", file=self.error_file, flush=True)
+            return False
+
+        if self.gzip_thread is not None:
+            if self.verbose:
+                print("Shortcut not possible: kw.gzip_thread is not None", file=self.error_file, flush=True)
+            return False
+        
+        return True
+        
+
+    def copyfile(self, kr: KgtkReader, new_column_names: typing.Optional[typing.List[str]]=None)->int:
+        """Copy all remaining rows from `kr` to our output stream.
+        """
+        input_data_lines: int = 0
+
+        row: typing.List[str]
+        if self.shortcut_copy_is_possible(kr, new_column_names):
+            if self.verbose:
+                print("Line by line file copy", file=self.error_file, flush=True)
+            line: str
+            for line in kr.source:
+                input_data_lines += 1
+                try:
+                    self.file_out.write(line)
+
+                except IOError as e:
+                    if e.errno == errno.EPIPE:
+                        pass # TODO: propogate a close backwards.                                                                                                                        else:
+                        raise
+            kr.source.close()
+                
+        elif new_column_names is not None and self.is_shuffle_needed(new_column_names):
+            shuffle_list: typing.List[int] = self.build_shuffle_list(new_column_names)
+            if self.verbose:
+                print("Row by row file copy with a shuffle list: %s" % " ".join([str(x) for x in shuffle_list]), file=self.error_file, flush=True)
+                    
+            for row in kr:
+                input_data_lines += 1
+                self.write(row, shuffle_list=shuffle_list)
+        else:
+            if self.verbose:
+                print("Row by row file copy", file=self.error_file, flush=True)
+            for row in kr:
+                input_data_lines += 1
+                self.write(row)
+
+        # Flush the output file so far:
+        self.flush()
+        return input_data_lines
 
     def write_kgtk(self, values: typing.List[str]):
         self.writeline(self.column_separator.join(values))
