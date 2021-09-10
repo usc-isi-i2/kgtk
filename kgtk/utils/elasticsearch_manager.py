@@ -294,7 +294,7 @@ class ElasticsearchManager(object):
                             _properties.add(vals[label_id])
 
                         if property_datatype_dict.get(vals[label_id], None) == 'external-id':
-                            _external_identifiers.add(vals[node2_id])
+                            _external_identifiers.add(vals[node2_id].replace('"', "").strip())
 
             # do one more write for last node
             ElasticsearchManager._write_one_node(_labels=_labels,
