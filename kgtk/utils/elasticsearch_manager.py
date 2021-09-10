@@ -458,7 +458,7 @@ class ElasticsearchManager(object):
             if len(external_identifiers) > 0:
                 _['external_identifiers'] = list(external_identifiers)
             if len(external_identifiers_pairs) > 0:
-                _['external_identifiers_pairs'] = external_identifiers_pairs
+                _['external_identifiers_pairs'] = list(external_identifiers_pairs)
             output_file.write(json.dumps(_))
 
             output_file.write('\n')
