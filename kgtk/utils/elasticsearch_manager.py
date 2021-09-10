@@ -350,7 +350,7 @@ class ElasticsearchManager(object):
         context = kwargs['context']
         is_human = kwargs['is_human']
         extra_aliases = kwargs['extra_aliases']
-        properties = kwargs['pproperties']
+        properties = kwargs['properties']
         external_identifiers = kwargs['external_identifiers']
 
         _labels = {}
