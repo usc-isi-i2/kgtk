@@ -86,6 +86,7 @@ class ElasticsearchManager(object):
         _extra_aliases = set()
         _properties = set()
         _external_identifiers = set()
+        _external_identifiers_pairs = set()
 
         _pagerank = 0.0
 
@@ -146,7 +147,8 @@ class ElasticsearchManager(object):
                                                                  is_human=is_human,
                                                                  extra_aliases=_extra_aliases,
                                                                  properties=_properties,
-                                                                 external_identifiers=_external_identifiers
+                                                                 external_identifiers=_external_identifiers,
+                                                                 external_identifiers_pairs=_external_identifiers_pairs
                                                                  )
                             # initialize for next node
                             _labels = dict()
@@ -175,6 +177,7 @@ class ElasticsearchManager(object):
                             _extra_aliases = set()
                             _properties = set()
                             _external_identifiers = set()
+                            _external_identifiers_pairs = set()
 
                         qnode_statement_count += 1
                         if vals[label_id] in labels:
@@ -294,7 +297,9 @@ class ElasticsearchManager(object):
                             _properties.add(vals[label_id])
 
                         if property_datatype_dict.get(vals[label_id], None) == 'external-id':
-                            _external_identifiers.add(vals[node2_id].replace('"', "").strip())
+                            ex_id = vals[node2_id].replace('"', "").strip()
+                            _external_identifiers.add(ex_id)
+                            _external_identifiers_pairs.add(f"{vals[label_id]}:{ex_id}")
 
             # do one more write for last node
             ElasticsearchManager._write_one_node(_labels=_labels,
@@ -322,7 +327,8 @@ class ElasticsearchManager(object):
                                                  is_human=is_human,
                                                  extra_aliases=_extra_aliases,
                                                  properties=_properties,
-                                                 external_identifiers=_external_identifiers
+                                                 external_identifiers=_external_identifiers,
+                                                 external_identifiers_pairs=_external_identifiers_pairs
                                                  )
         except:
             print(traceback.print_exc())
@@ -363,6 +369,7 @@ class ElasticsearchManager(object):
         extra_aliases = kwargs['extra_aliases']
         properties = kwargs['properties']
         external_identifiers = kwargs['external_identifiers']
+        external_identifiers_pairs = kwargs['external_identifiers_pairs']
 
         _labels = {}
         _aliases = {}
@@ -450,6 +457,8 @@ class ElasticsearchManager(object):
                 _['properties'] = list(properties)
             if len(external_identifiers) > 0:
                 _['external_identifiers'] = list(external_identifiers)
+            if len(external_identifiers_pairs) > 0:
+                _['external_identifiers_pairs'] = external_identifiers_pairs
             output_file.write(json.dumps(_))
 
             output_file.write('\n')
@@ -545,7 +554,14 @@ class ElasticsearchManager(object):
                 'field_type': 'text',
                 'languages': [],
                 'es_fields': ['keyword_lower', 'keyword'],
-                'copy_to': ['all_labels.en', 'all_labels_aliases'],
+                'copy_to': ['all_labels_aliases'],
+                'enabled': True
+            },
+            'external_identifiers_pairs': {
+                'field_type': 'text',
+                'languages': [],
+                'es_fields': ['keyword_lower', 'keyword'],
+                'copy_to': [],
                 'enabled': True
             },
             'class_count': {
