@@ -285,6 +285,11 @@ class ElasticsearchManager(object):
                             if tmp_val.strip() != '':
                                 _extra_aliases.add(tmp_val)
 
+                                if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
+                                    _ascii_label = ElasticsearchManager.transliterate_label(tmp_val)
+                                    if _ascii_label != "":
+                                        _extra_aliases.add(_ascii_label)
+
                         if vals[label_id].startswith('P'):  # add to set of properties
                             _properties.add(vals[label_id])
 
