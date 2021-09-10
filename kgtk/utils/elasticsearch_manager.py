@@ -17,6 +17,7 @@ class ElasticsearchManager(object):
                                 mapping_file_path,
                                 output_path,
                                 alias_fields=None,
+                                extra_alias_properties=None,
                                 pagerank_fields=None,
                                 add_text=False,
                                 description_properties=None,
@@ -41,6 +42,7 @@ class ElasticsearchManager(object):
 
         labels = label_fields.split(',')
         aliases = alias_fields.split(',') if alias_fields else []
+        extra_aliases_properties = set(extra_alias_properties.split(',')) if extra_alias_properties else set()
         pagerank = pagerank_fields.split(',') if pagerank_fields else []
         descriptions = description_properties.split(',') if description_properties else []
 
@@ -81,6 +83,9 @@ class ElasticsearchManager(object):
         class_count = None
         context = None
         is_human = False
+        _extra_aliases = set()
+        _properties = set()
+        _external_identifiers = set()
 
         _pagerank = 0.0
 
@@ -138,7 +143,10 @@ class ElasticsearchManager(object):
                                                                  property_count=property_count,
                                                                  class_count=class_count,
                                                                  context=context,
-                                                                 is_human=is_human
+                                                                 is_human=is_human,
+                                                                 extra_aliases=_extra_aliases,
+                                                                 properties=_properties,
+                                                                 external_identifiers=_external_identifiers
                                                                  )
                             # initialize for next node
                             _labels = dict()
@@ -164,6 +172,9 @@ class ElasticsearchManager(object):
                             class_count = None
                             context = None
                             is_human = False
+                            _extra_aliases = set()
+                            _properties = set()
+                            _external_identifiers = set()
 
                         qnode_statement_count += 1
                         if vals[label_id] in labels:
@@ -265,6 +276,14 @@ class ElasticsearchManager(object):
                             context = vals[node2_id]
                         elif vals[label_id] == 'P31' and vals[node2_id] == 'Q5':
                             is_human = True
+                        elif vals[label_id] in extra_aliases_properties:
+                            _extra_aliases.add(ElasticsearchManager.remove_text_inside_brackets(vals[node2_id]))
+
+                        if vals[label_id].startswith('P'):  # add to set of properties
+                            _properties.add(vals[label_id])
+
+                        if property_datatype_dict.get(vals[label_id], None) == 'external-id':
+                            _external_identifiers.add(vals[node2_id])
 
             # do one more write for last node
             ElasticsearchManager._write_one_node(_labels=_labels,
@@ -289,7 +308,10 @@ class ElasticsearchManager(object):
                                                  property_count=property_count,
                                                  class_count=class_count,
                                                  context=context,
-                                                 is_human=is_human
+                                                 is_human=is_human,
+                                                 extra_aliases=_extra_aliases,
+                                                 properties=_properties,
+                                                 external_identifiers=_external_identifiers
                                                  )
         except:
             print(traceback.print_exc())
@@ -318,7 +340,6 @@ class ElasticsearchManager(object):
         is_class = kwargs['is_class']
         wikitable_anchor_text = kwargs['wikitable_anchor_text']
         wikipedia_anchor_text = kwargs['wikipedia_anchor_text']
-        abbreviated_name = kwargs['abbreviated_name']
         redirect_text = kwargs['redirect_text']
         text_embedding = kwargs['text_embedding']
         graph_embeddings_complex = kwargs['graph_embeddings_complex']
@@ -328,6 +349,9 @@ class ElasticsearchManager(object):
         class_count = kwargs['class_count']
         context = kwargs['context']
         is_human = kwargs['is_human']
+        extra_aliases = kwargs['extra_aliases']
+        properties = kwargs['properties']
+        external_identifiers = kwargs['external_identifiers']
 
         _labels = {}
         _aliases = {}
@@ -409,6 +433,12 @@ class ElasticsearchManager(object):
                 _['context'] = context
             if len(abbreviated_names) > 0:
                 _['abbreviated_name'] = {'en': list(abbreviated_names)}
+            if len(extra_aliases) > 0:
+                _['extra_aliases'] = list(extra_aliases)
+            if len(properties) > 0:
+                _['properties'] = list(properties)
+            if len(external_identifiers) > 0:
+                _['external_identifiers'] = list(external_identifiers)
             output_file.write(json.dumps(_))
 
             output_file.write('\n')
@@ -493,6 +523,20 @@ class ElasticsearchManager(object):
                 'copy_to': ['all_labels.en', 'all_labels_aliases'],
                 'enabled': True
             },
+            'extra_aliases': {
+                'field_type': 'text',
+                'languages': [],
+                'es_fields': ['keyword_lower', 'keyword'],
+                'copy_to': ['all_labels.en', 'all_labels_aliases'],
+                'enabled': True
+            },
+            'external_identifiers': {
+                'field_type': 'text',
+                'languages': [],
+                'es_fields': ['keyword_lower', 'keyword'],
+                'copy_to': ['all_labels.en', 'all_labels_aliases'],
+                'enabled': True
+            },
             'class_count': {
                 'enabled': False
             },
@@ -526,6 +570,13 @@ class ElasticsearchManager(object):
                 'enabled': True
             },
             'instance_ofs': {
+                'field_type': 'text',
+                'languages': [],
+                'es_fields': ['keyword_lower'],
+                'copy_to': [],
+                'enabled': True
+            },
+            'properties': {
                 'field_type': 'text',
                 'languages': [],
                 'es_fields': ['keyword_lower'],
@@ -896,3 +947,21 @@ class ElasticsearchManager(object):
                 abbr_label += name_split[i][0].upper() + '.' + ' '
         abbr_label += name_split[-1]
         return abbr_label
+
+    @staticmethod
+    def remove_text_inside_brackets(text, brackets="()"):
+        count = [0] * (len(brackets) // 2)  # count open/close brackets
+        saved_chars = []
+        for character in text:
+            for i, b in enumerate(brackets):
+                if character == b:  # found bracket
+                    kind, is_close = divmod(i, 2)
+                    count[kind] += (-1) ** is_close  # `+1`: open, `-1`: close
+                    if count[kind] < 0:  # unbalanced bracket
+                        count[kind] = 0  # keep it
+                    else:  # found bracket to remove
+                        break
+            else:  # character is not a [balanced] bracket
+                if not any(count):  # outside brackets
+                    saved_chars.append(character)
+        return ''.join(saved_chars).strip()
