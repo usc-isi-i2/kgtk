@@ -277,7 +277,13 @@ class ElasticsearchManager(object):
                         elif vals[label_id] == 'P31' and vals[node2_id] == 'Q5':
                             is_human = True
                         elif vals[label_id] in extra_aliases_properties:
-                            _extra_aliases.add(ElasticsearchManager.remove_text_inside_brackets(vals[node2_id]))
+                            if separate_languages:
+                                tmp_val, lang = ElasticsearchManager.separate_language_text_tag(vals[node2_id])
+                            else:
+                                tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
+
+                            if tmp_val.strip() != '':
+                                _extra_aliases.add(tmp_val)
 
                         if vals[label_id].startswith('P'):  # add to set of properties
                             _properties.add(vals[label_id])
@@ -498,7 +504,7 @@ class ElasticsearchManager(object):
             'all_labels': {
                 'field_type': 'text',
                 'languages': languages,
-                'es_fields': ['keyword_lower', 'keyword', 'ngram'],
+                'es_fields': ['keyword_lower', 'keyword', 'ngram', 'trigram'],
                 'copy_to': [],
                 'enabled': True
             },
@@ -674,6 +680,12 @@ class ElasticsearchManager(object):
                         },
                         "edge_ngram_search_analyzer": {
                             "tokenizer": "lowercase"
+                        },
+                        "trigram_analyzer": {
+                            "tokenizer": "trigram_tokenizer",
+                            "filter": [
+                                "lowercase"
+                            ]
                         }
                     },
                     "tokenizer": {
@@ -684,6 +696,14 @@ class ElasticsearchManager(object):
                             "min_gram": "2",
                             "type": "edge_ngram",
                             "max_gram": "20"
+                        },
+                        "trigram_tokenizer": {
+                            "type": "ngram",
+                            "min_gram": 3,
+                            "max_gram": 3,
+                            "token_chars": [
+                                "letter"
+                            ]
                         }
                     }
                 }
@@ -863,7 +883,7 @@ class ElasticsearchManager(object):
                 }
 
                 if len(copy_to) > 0:
-                    _mapping[field_name]['copy_to'] = [copy_to]
+                    _mapping[field_name]['copy_to'] = copy_to if isinstance(copy_to, list) else [copy_to]
             else:
                 _mapping = {
                     field_name: {
@@ -906,6 +926,12 @@ class ElasticsearchManager(object):
                         "analyzer": "edge_ngram_analyzer",
                         "search_analyzer": "edge_ngram_search_analyzer"
                     }
+                elif es_field == "trigram":
+                    _mapping['fields'][es_field] = {
+                        "type": "text",
+                        "analyzer": "trigram_analyzer"
+                    }
+
         return _mapping
 
     @staticmethod
