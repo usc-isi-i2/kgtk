@@ -1221,10 +1221,14 @@ def run(input_file: KGTKFiles,
                     multiple_general_filter(kr, kws, rw, subj_idx, subj_filters, pred_idx, pred_filters, obj_idx, obj_filters)
 
         finally:
+            if verbose:
+                print("Closing output files.", file=error_file, flush=True)
             for kw in kws:
                 kw.close()
             if rw is not None:
                 rw.close()
+            if verbose:
+                print("All output files have been closed.", file=error_file, flush=True)
 
         return 0
 
@@ -1617,10 +1621,14 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Unknown match type %s" % repr(match_type))
 
         finally:
+            if verbose:
+                print("Closing output files.", file=error_file, flush=True)
             for kw in kws:
                 kw.close()
             if rw is not None:
                 rw.close()
+            if verbose:
+                print("All output files have been closed.", file=error_file, flush=True)
 
         return 0
 

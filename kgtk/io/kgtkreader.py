@@ -710,7 +710,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if compression_type in [".gz", "gz"]:
             if use_mgzip:
                 if verbose:
-                    print("%s: reading gzip with %d threads: %s" % (who, mgzip_threads, file_name), file=error_file, flush=True)
+                    print("%s: reading mgzip with %d threads: %s" % (who, mgzip_threads, file_name), file=error_file, flush=True)
                 import mgzip
                 if isinstance(file_or_path, Path):
                     return mgzip.open(str(file_or_path), mode="rt", thread=mgzip_threads) # type: ignore
