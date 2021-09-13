@@ -218,7 +218,7 @@ class KgtkWriter(KgtkBase):
             if file_path.suffix == ".gz":
                 if use_mgzip:
                     if verbose:
-                        print("KgtkWriter: writing gzip with %d threads: %s" % (mgzip_threads, str(file_path)), file=error_file, flush=True)
+                        print("KgtkWriter: writing mgzip with %d threads: %s" % (mgzip_threads, str(file_path)), file=error_file, flush=True)
                     import mgzip
                     gzip_file = mgzip.open(str(file_path), mode="wt", thread=mgzip_threads) # type: ignore
                 else:
