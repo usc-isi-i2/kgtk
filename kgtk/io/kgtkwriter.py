@@ -85,6 +85,7 @@ class KgtkWriter(KgtkBase):
 
     # Other implementation options?
     use_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    used_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     mgzip_threads: int = attr.ib(validator=attr.validators.instance_of(int), default=MGZIP_THREAD_COUNT_DEFAULT)
     gzip_in_parallel: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     gzip_thread: typing.Optional[GzipProcess] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(GzipProcess)), default=None)
@@ -164,6 +165,7 @@ class KgtkWriter(KgtkBase):
                               error_file=error_file,
                               header_error_action=header_error_action,
                               use_mgzip=use_mgzip,
+                              used_mgzip=False,
                               mgzip_threads=mgzip_threads,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
@@ -195,6 +197,7 @@ class KgtkWriter(KgtkBase):
                               error_file=error_file,
                               header_error_action=header_error_action,
                               use_mgzip=use_mgzip,
+                              used_mgzip=False,
                               mgzip_threads=mgzip_threads,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
@@ -212,6 +215,7 @@ class KgtkWriter(KgtkBase):
         if verbose:
             print("File_path.suffix: %s" % file_path.suffix, file=error_file, flush=True)
 
+        used_mgzip: bool = False
         if file_path.suffix in [".gz", ".bz2", ".xz", ".lz4"]:
             # TODO: find a better way to coerce typing.IO[Any] to typing.TextIO
             gzip_file: typing.TextIO
@@ -221,6 +225,7 @@ class KgtkWriter(KgtkBase):
                         print("KgtkWriter: writing mgzip with %d threads: %s" % (mgzip_threads, str(file_path)), file=error_file, flush=True)
                     import mgzip
                     gzip_file = mgzip.open(str(file_path), mode="wt", thread=mgzip_threads) # type: ignore
+                    used_mgzip = True
                 else:
                     if verbose:
                         print("KgtkWriter: writing gzip %s" % str(file_path), file=error_file, flush=True)
@@ -274,6 +279,7 @@ class KgtkWriter(KgtkBase):
                               error_file=error_file,
                               header_error_action=header_error_action,
                               use_mgzip=use_mgzip,
+                              used_mgzip=used_mgzip,
                               mgzip_threads=mgzip_threads,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
@@ -312,6 +318,7 @@ class KgtkWriter(KgtkBase):
                               error_file=error_file,
                               header_error_action=header_error_action,
                               use_mgzip=use_mgzip,
+                              used_mgzip = False,
                               mgzip_threads=mgzip_threads,
                               gzip_in_parallel=gzip_in_parallel,
                               gzip_queue_size=gzip_queue_size,
@@ -337,6 +344,7 @@ class KgtkWriter(KgtkBase):
                error_file: typing.TextIO,
                header_error_action: ValidationAction,
                use_mgzip: bool,
+               used_mgzip: bool,
                mgzip_threads: int,
                gzip_in_parallel: bool,
                gzip_queue_size: int,
@@ -450,6 +458,7 @@ class KgtkWriter(KgtkBase):
                              error_file=error_file,
                              header_error_action=header_error_action,
                              use_mgzip=use_mgzip,
+                             used_mgzip=used_mgzip,
                              mgzip_threads=mgzip_threads,
                              gzip_in_parallel=gzip_in_parallel,
                              gzip_thread=gzip_thread,
