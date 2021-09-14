@@ -10,9 +10,10 @@ import time
 import pprint
 
 import sh
+from   odictliteral import odict
 
 import kgtk.kypher.parser as parser
-from   kgtk.kypher.sqlstore import sql_quote_ident
+import kgtk.kypher.sqlstore as ss
 from   kgtk.value.kgtkvalue import KgtkValue
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -169,7 +170,7 @@ class KgtkQuery(object):
         self.force = force
         self.parameters = parameters
         self.defer_params = False
-        self.index_mode = index.lower()
+        self.index_mode = index
         
         if query is None:
             # supplying a query through individual clause arguments is a little bit easier,
@@ -472,11 +473,11 @@ class KgtkQuery(object):
             for graph, col in sql_vars:
                 if graph == self.ALIAS_GRAPH:
                     # variable names a return column alias, rename it apart to avoid name conflicts:
-                    return sql_quote_ident(self.alias_column_name(col))
+                    return ss.sql_quote_ident(self.alias_column_name(col))
             # otherwise, pick the representative from the set of equiv-joined column vars,
             # which corresponds to the graph alias and column name used by the first reference:
             graph, col = sql_vars[0]
-            return '%s.%s' % (graph, sql_quote_ident(col))
+            return '%s.%s' % (graph, ss.sql_quote_ident(col))
         
         elif expr_type == parser.List:
             # we only allow literals in lists, Cypher also supports variables:
@@ -673,11 +674,77 @@ class KgtkQuery(object):
                     indexes.add((self.graph_alias_to_graph(g), c))
         return indexes
 
-    def ensure_relevant_indexes(self, sql, graphs=None, explain=False):
-        """Ensure that relevant indexes for this 'sql' query are available on the database.
-        Based on the specified index_mode strategy, either use 'compute_auto_indexes', the DB's
-        'expert' mode, or some fixed variant such as 'quad' 'triple', 'node1+label', etc.
-        which will be applied to all 'graphs' (defaults to graphs referenced in the query).
+    def get_explicit_graph_index_specs(self):
+        """Collect all explicit per-input index specs and return them
+        as an ordered dict of {<graph>: [index-spec+ ...] ...} items.
+        """
+        explicit_index_specs = odict()
+        for file in self.files:
+            index_specs = self.get_input_option(file, 'index_specs')
+            if index_specs is not None:
+                graph = self.store.get_file_graph(file)
+                explicit_index_specs[graph] = index_specs
+        return explicit_index_specs
+
+    def get_default_graph_index_specs(self):
+        """Collect all default index specs and return them as an ordered dict of
+        {<graph>: [index-spec+ ...] ...} items for all query graphs that do not
+        have any explicit index spec specified for them.
+        """
+        explicit_index_specs = self.get_explicit_graph_index_specs()
+        default_index_specs = odict()
+        for graph, alias in self.get_all_match_clause_graphs():
+            if graph not in explicit_index_specs:
+                default_index_specs[graph] = listify(self.index_mode)
+        return default_index_specs
+
+    def ensure_indexes(self, graphs, index_specs, sql=None, explain=False):
+        """Ensure that for each graph in 'graphs' all indexes according to 'index_specs' are avaible.
+        If expert mode is used, 'sql' needs to be provided for indexing to succeed.
+        """
+        graphs = listify(graphs)
+        for index_spec in listify(index_specs):
+            index_spec = ss.get_normalized_index_mode(index_spec)
+            if isinstance(index_spec, list):
+                for spec in index_spec:
+                    for graph in graphs:
+                        self.store.ensure_graph_index(graph, ss.TableIndex(graph, spec), explain=explain)
+                    
+            elif index_spec == ss.INDEX_MODE_AUTO:
+                # build indexes as suggested by joins and restrictions (restricted to 'graphs'):
+                for graph, column in self.compute_auto_indexes():
+                    if graph in graphs:
+                        # for now unconditionally restrict to core columns:
+                        if column.lower() in ('id', 'node1', 'label', 'node2'):
+                            # the ID check needs to be generalized:
+                            self.store.ensure_graph_index_for_columns(
+                                graph, column, unique=column.lower()=='id', explain=explain)
+                            
+            elif index_spec == ss.INDEX_MODE_EXPERT and sql is not None:
+                # build indexes as suggested by the database (restricted to 'graphs'):
+                for name, graph, columns in self.store.suggest_indexes(sql):
+                    if graph in graphs:
+                        # only consider first column, multi-column indexes can be specified manually:
+                        column = columns[0]
+                        # the ID check needs to be generalized:
+                        self.store.ensure_graph_index_for_columns(
+                            graph, column, unique=column.lower()=='id', explain=explain)
+
+            elif index_spec == ss.INDEX_MODE_NONE:
+                pass
+            
+            elif index_spec == ss.INDEX_MODE_RESET:
+                # not yet implemented:
+                print('WARN: mode:reset not yet implemented')
+
+    def ensure_relevant_indexes(self, sql=None, explain=False):
+        """Ensure that relevant indexes for this query are available on the database.
+        First creates any indexes explicitly specified on individual inputs.  Then, for any
+        graphs referenced in the query that do not have an explicit index specification, create
+        indexes based on the default index_mode strategy.  The default for that is 'auto' which
+        will use 'compute_auto_indexes' to decide what should be indexed.  If 'expert' is used
+        anywhere, 'sql' needs to be provided for indexing to succeed.  If 'explain' is True,
+        do not actually build any indexes, only show commands that would be executed.
         """
         # NOTES
         # - what we want is the minimal number of indexes that allow this query to run efficiently,
@@ -692,51 +759,11 @@ class KgtkQuery(object):
         #   the indexes it suggests, since that often wants multi-column indexes which are expensive
         # - we also need some manual control as well to force certain indexing patterns
         # - we only index core columns for now, but we might have use cases where that is too restrictive
+        for graph, index_specs in self.get_explicit_graph_index_specs().items():
+            self.ensure_indexes(graph, index_specs, sql=sql, explain=explain)
+        for graph, index_specs in self.get_default_graph_index_specs().items():
+            self.ensure_indexes(graph, index_specs, sql=sql, explain=explain)
         
-        if self.index_mode == 'auto':
-            # build indexes as suggested by joins and restrictions (assumes unaliased graph/column pairs):
-            for graph, column in self.compute_auto_indexes():
-                # for now unconditionally restrict to core columns:
-                if column.lower() in ('id', 'node1', 'label', 'node2'):
-                    # the ID check needs to be generalized:
-                    self.store.ensure_graph_index(graph, column, unique=column.lower()=='id', explain=explain)
-            return
-        
-        elif self.index_mode == 'expert':
-            # build indexes as suggested by the database (only first column for now):
-            # TO DO: allow certain two-column indexes such as 'label, node1' to handle fanout issues:
-            indexes = self.store.suggest_indexes(sql)
-            for name, graph, columns in indexes:
-                column = columns[0]
-                # the ID check needs to be generalized:
-                self.store.ensure_graph_index(graph, column, unique=column.lower()=='id', explain=explain)
-            return
-            
-        columns = []
-        if self.index_mode == 'quad':
-            columns += ['id', 'node1', 'label', 'node2']
-        elif self.index_mode == 'triple':
-            columns += ['node1', 'label', 'node2']
-        elif self.index_mode == 'node1+label':
-            columns += ['node1', 'label']
-        elif self.index_mode == 'node1':
-            columns += ['node1']
-        elif self.index_mode == 'label':
-            columns += ['label']
-        elif self.index_mode == 'node2':
-            columns += ['node2']
-        elif self.index_mode == 'none':
-            pass
-        else:
-            raise Exception('Unsupported index mode: %s' % self.index_mode)
-
-        graphs = graphs or set(map(lambda x: x[0], self.get_all_match_clause_graphs()))
-        for graph in graphs:
-            for column in columns:
-                # the ID check needs to be generalized:
-                self.store.ensure_graph_index(graph, column, unique=column=='id', explain=explain)
-
-
     def get_match_clauses(self):
         """Return all strict and optional match clauses of this query in order.
         Returns the (single) strict match clause first which is important for
@@ -819,7 +846,7 @@ class KgtkQuery(object):
         external_condition = []
         
         for (g1, c1), (g2, c2) in sorted(list(self.get_match_clause_joins(match_clause))):
-            condition = '%s.%s = %s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2))
+            condition = '%s.%s = %s.%s' % (g1, ss.sql_quote_ident(c1), g2, ss.sql_quote_ident(c2))
             graph1 = (self.graph_alias_to_graph(g1), g1)
             graph2 = (self.graph_alias_to_graph(g2), g2)
             internal = graph1 in clause_sources and graph2 in clause_sources
@@ -837,7 +864,7 @@ class KgtkQuery(object):
                 external_condition.append(condition)
 
         for (g, c), val in sorted(list(self.get_match_clause_restrictions(match_clause))):
-            internal_condition.append('%s.%s = %s' % (g, sql_quote_ident(c), val))
+            internal_condition.append('%s.%s = %s' % (g, ss.sql_quote_ident(c), val))
 
         where = self.where_clause_to_sql(match_clause.get_where_clause(), litmap, varmap)
         if where:
