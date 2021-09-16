@@ -307,82 +307,6 @@ class KgtkQuery(object):
         return 'label'
     def get_id_column(self, graph):
         return 'id'
-
-    def get_literal_parameter(self, literal, state):
-        """Return a parameter placeholder such as '?12?' that will be mapped to 'literal'
-        and will later be replaced with a query parameter at the appropriate position.
-        """
-        # TO DO: move to TranslationState
-        litmap = state.get_literal_map()
-        if literal in litmap:
-            return litmap[literal]
-        else:
-            placeholder = '???%d??' % len(litmap)
-            litmap[literal] = placeholder
-            return placeholder
-
-    def replace_literal_parameters(self, raw_query, state):
-        """Replace the named literal placeholders in 'raw_query' with positional
-        parameters and build a list of actual parameters to substitute for them.
-        """
-        # TO DO: move to TranslationState
-        litmap = state.get_literal_map()
-        query = io.StringIO()
-        parameters = []
-        # reverse 'litmap' to map placeholders onto literal values:
-        litmap = {p: l for l, p in litmap.items()}
-        for token in re.split(r'\?\?', raw_query):
-            if token.startswith('?'):
-                parameters.append(litmap['??' + token + '??'])
-                token = '?'
-            query.write(token)
-        return query.getvalue(), parameters
-                 
-    def register_clause_variable(self, query_var, sql_var, state, nojoins=False):
-        """Register a reference to the Kypher variable 'query_var' which corresponds to the
-        SQL clause variable 'sql_var' represented as '(graph, column)' where 'graph' is a
-        table alias for the relevant graph specific to the current clause.  If this is the
-        first reference to 'query_var', simply add it to the variable map.  Otherwise, find the
-        best existing reference to equiv-join it with and record the necessary join in 'joins'
-        (unless 'nojoins' is True).
-        """
-        # TO DO: move to TranslationState
-        varmap = state.get_variable_map()
-        
-        sql_vars = varmap.get(query_var)
-        if sql_vars is None:
-            # we use a list here now to preserve the order which matters for optionals:
-            varmap[query_var] = [sql_var]
-        else:
-            # POLICY: we either find the earliest equivalent variable from the same clause
-            # (as in '(x)-[]->{x)'), or the earliest registered variable from a different
-            # clause, which is what we need to handle cross-clause references from optionals
-            # (assuming strict and optional match clauses are processed appropriately in order):
-            # NOTE: further optimizations might be possible here, e.g., we might want to prefer
-            # a self-join on the same column, since it might reduce the number of auto-indexes:
-            this_graph, this_col = sql_var
-            best_var = None
-            for equiv_var in sql_vars:
-                equiv_graph, equiv_col = equiv_var
-                if best_var is None:
-                    best_var = equiv_var
-                elif this_graph == equiv_graph:
-                    # we match on graph and clause, since clause is encoded in graph:
-                    best_var = equiv_var
-                    break
-                else:
-                    # keep current earliest 'best_var':
-                    pass
-            # not sure if they could ever be equal, but just in case:
-            if sql_var != best_var:
-                sql_var not in sql_vars and sql_vars.append(sql_var)
-                # we never join an alias with anything:
-                if this_graph != self.ALIAS_GRAPH:
-                    equiv = [best_var, sql_var]
-                    # normalize join order by order in 'sql_vars' so earlier vars come first:
-                    equiv.sort(key=lambda v: sql_vars.index(v))
-                    if not nojoins:
-                        state.add_match_clause_join(equiv[0], equiv[1])
         
     def pattern_clause_to_sql(self, clause, graph, state):
         node1 = clause[0]
@@ -391,28 +315,28 @@ class KgtkQuery(object):
         
         node1col = self.get_node1_column(graph)
         if node1.labels is not None:
-            para = self.get_literal_parameter(node1.labels[0], state)
+            para = state.get_literal_parameter(node1.labels[0])
             state.add_match_clause_restriction((graph, node1col), para)
         # we do not exclude anonymous vars here, since they can connect edges: <-[]-()-[]->
         if node1.variable is not None:
-            self.register_clause_variable(node1.variable.name, (graph, node1col), state)
+            state.register_clause_variable(node1.variable.name, (graph, node1col))
 
         node2col = self.get_node2_column(graph)
         if node2.labels is not None:
-            para = self.get_literal_parameter(node2.labels[0], state)
+            para = state.get_literal_parameter(node2.labels[0])
             state.add_match_clause_restriction((graph, node2col), para)
         # we do not exclude anonymous vars here (see above):
         if node2.variable is not None:
-            self.register_clause_variable(node2.variable.name, (graph, node2col), state)
+            state.register_clause_variable(node2.variable.name, (graph, node2col))
             
         labelcol = self.get_label_column(graph)
         idcol = self.get_id_column(graph)
         if rel.labels is not None:
-            para = self.get_literal_parameter(rel.labels[0], state)
+            para = state.get_literal_parameter(rel.labels[0])
             state.add_match_clause_restriction((graph, labelcol), para)
         # but an anonymous relation variable cannot connect to anything else:
         if rel.variable is not None and not isinstance(rel.variable, parser.AnonymousVariable):
-            self.register_clause_variable(rel.variable.name, (graph, idcol), state)
+            state.register_clause_variable(rel.variable.name, (graph, idcol))
 
     def pattern_props_to_sql(self, pattern, graph, column, state):
         # 'pattern' is a node or relationship pattern for 'graph.column'.  'column' should be 'node1', 'node2' or 'id'.
@@ -420,7 +344,7 @@ class KgtkQuery(object):
         if props is None or len(props) == 0:
             return
         # if we need to access a property, we need to register anonymous variables as well:
-        self.register_clause_variable(pattern.variable.name, (graph, column), state)
+        state.register_clause_variable(pattern.variable.name, (graph, column))
         for prop, expr in props.items():
             # TO DO: figure out how to better abstract property to column mapping (also see below):
             propcol = isinstance(pattern, parser.RelationshipPattern) and prop  or  column + ';' + prop
@@ -429,7 +353,7 @@ class KgtkQuery(object):
             # and only within a clause do we know which graph is actually meant.  Think about this
             # some more, this issue comes up in the time-machine use case:
             if isinstance(expr, parser.Variable):
-                self.register_clause_variable(expr.name, (graph, propcol), state)
+                state.register_clause_variable(expr.name, (graph, propcol))
             expr = self.expression_to_sql(expr, state)
             state.add_match_clause_restriction((graph, propcol), expr)
 
@@ -461,10 +385,10 @@ class KgtkQuery(object):
         """
         expr_type = type(expr)
         if expr_type == parser.Literal:
-            return self.get_literal_parameter(expr.value, state)
+            return state.get_literal_parameter(expr.value)
         elif expr_type == parser.Parameter:
             value = self.get_parameter_value(expr.name)
-            return self.get_literal_parameter(value, state)
+            return state.get_literal_parameter(value)
         
         elif expr_type == parser.Variable:
             query_var = expr.name
@@ -616,7 +540,7 @@ class KgtkQuery(object):
                 alias_var = parser.Variable(item._query, item.name)
                 # we have to register the alias as a variable, otherwise it can't be referenced in --order-by,
                 # but it is not tied to a specific graph table, thus that part is ALIAS_GRAPH below:
-                self.register_clause_variable(item.name, (self.ALIAS_GRAPH, item.name), state, nojoins=True)
+                state.register_clause_variable(item.name, (self.ALIAS_GRAPH, item.name), nojoins=True)
                 sql_alias = self.expression_to_sql(alias_var, state)
                 select += ' ' + sql_alias
                 agg_info.append(not is_agg and sql_alias or None)
@@ -663,114 +587,6 @@ class KgtkQuery(object):
         state.enable_variables()
         return limit
 
-    def compute_auto_indexes(self, state):
-        """Compute column indexes that are likely needed to run this query efficiently.
-        This is just an estimate based on columns involved in joins and restrictions.
-        """
-        indexes = set()
-        for match_clause in self.get_match_clauses():
-            joins = state.get_match_clause_joins(match_clause)
-            restrictions = state.get_match_clause_restrictions(match_clause)
-            if len(joins) > 0:
-                for (g1, c1), (g2, c2) in joins:
-                    indexes.add((self.graph_alias_to_graph(g1), c1))
-                    indexes.add((self.graph_alias_to_graph(g2), c2))
-            if len(restrictions) > 0:
-                # even if we have joins, we might need additional indexes on restricted columns:
-                for (g, c), val in restrictions:
-                    indexes.add((self.graph_alias_to_graph(g), c))
-        return indexes
-
-    def get_explicit_graph_index_specs(self):
-        """Collect all explicit per-input index specs and return them
-        as an ordered dict of {<graph>: [index-spec+ ...] ...} items.
-        """
-        explicit_index_specs = odict()
-        for file in self.files:
-            index_specs = self.get_input_option(file, 'index_specs')
-            if index_specs is not None:
-                graph = self.store.get_file_graph(file)
-                explicit_index_specs[graph] = index_specs
-        return explicit_index_specs
-
-    def get_default_graph_index_specs(self):
-        """Collect all default index specs and return them as an ordered dict of
-        {<graph>: [index-spec+ ...] ...} items for all query graphs that do not
-        have any explicit index spec specified for them.
-        """
-        explicit_index_specs = self.get_explicit_graph_index_specs()
-        default_index_specs = odict()
-        for graph, alias in self.get_all_match_clause_graphs():
-            if graph not in explicit_index_specs:
-                default_index_specs[graph] = listify(self.index_mode)
-        return default_index_specs
-
-    def ensure_indexes(self, graphs, index_specs, state, explain=False):
-        """Ensure that for each graph in 'graphs' all indexes according to 'index_specs' are avaible.
-        'state' is the final translation state of the query.
-        """
-        graphs = listify(graphs)
-        for index_spec in listify(index_specs):
-            index_spec = ss.get_normalized_index_mode(index_spec)
-            if isinstance(index_spec, list):
-                for spec in index_spec:
-                    for graph in graphs:
-                        self.store.ensure_graph_index(graph, ss.TableIndex(graph, spec), explain=explain)
-                    
-            elif index_spec == ss.INDEX_MODE_AUTO:
-                # build indexes as suggested by query joins and restrictions (restricted to 'graphs'):
-                for graph, column in self.compute_auto_indexes(state):
-                    if graph in graphs:
-                        # for now unconditionally restrict to core columns:
-                        if column.lower() in ('id', 'node1', 'label', 'node2'):
-                            # the ID check needs to be generalized:
-                            self.store.ensure_graph_index_for_columns(
-                                graph, column, unique=column.lower()=='id', explain=explain)
-                            
-            elif index_spec == ss.INDEX_MODE_EXPERT:
-                # build indexes as suggested by the database (restricted to 'graphs'):
-                for name, graph, columns in self.store.suggest_indexes(state.get_sql()):
-                    if graph in graphs:
-                        # only consider first column, multi-column indexes can be specified manually:
-                        column = columns[0]
-                        # the ID check needs to be generalized:
-                        self.store.ensure_graph_index_for_columns(
-                            graph, column, unique=column.lower()=='id', explain=explain)
-
-            elif index_spec == ss.INDEX_MODE_NONE:
-                pass
-            
-            elif index_spec == ss.INDEX_MODE_RESET:
-                # not yet implemented:
-                print('WARN: mode:reset not yet implemented')
-
-    def ensure_relevant_indexes(self, state, explain=False):
-        """Ensure that relevant indexes for this query are available on the database.
-        First creates any indexes explicitly specified on individual inputs.  Then, for any
-        graphs referenced in the query that do not have an explicit index specification, create
-        indexes based on the default index_mode strategy.  The default for that is 'auto' which
-        will use 'compute_auto_indexes' to decide what should be indexed.  'state' is assumed
-        to be the final translation state of the query.  If 'explain' is True, do not actually
-        build any indexes, only show commands that would be executed.
-        """
-        # NOTES
-        # - what we want is the minimal number of indexes that allow this query to run efficiently,
-        #   since index creation itself is expensive in time and disk space
-        # - however, to do this right we need some approximate analysis of the query, e.g., for a join
-        #   we'll generally only need an index on one of the involved columns, however, knowing for
-        #   which one requires knowledge of table size, statistics and other selectivity of the query
-        # - skewed distribution of fanout in columns complicates this further, since an average
-        #   fanout might be very different from maximum fanouts (e.g., for wikidata node2)
-        # - large fanouts might force us to use two-column indexes such as 'label/node2' and 'label/node1'
-        # - to handle this better, we will exploit the SQLite expert command to create (variants) of
-        #   the indexes it suggests, since that often wants multi-column indexes which are expensive
-        # - we also need some manual control as well to force certain indexing patterns
-        # - we only index core columns for now, but we might have use cases where that is too restrictive
-        for graph, index_specs in self.get_explicit_graph_index_specs().items():
-            self.ensure_indexes(graph, index_specs, state, explain=explain)
-        for graph, index_specs in self.get_default_graph_index_specs().items():
-            self.ensure_indexes(graph, index_specs, state, explain=explain)
-        
     def get_match_clauses(self):
         """Return all strict and optional match clauses of this query in order.
         Returns the (single) strict match clause first which is important for
@@ -880,8 +696,7 @@ class KgtkQuery(object):
             raise Exception("unsupported WITH clause, only 'WITH * ...' is currently supported")
         where = self.where_clause_to_sql(with_clause.where, state)
         return where
-
-
+    
     def translate_to_sql(self):
         """Translate this query into an equivalent SQL expression.
         Return the SQL as part of the accumulated final translation state.
@@ -954,7 +769,7 @@ class KgtkQuery(object):
         limit = self.limit_clauses_to_sql(self.skip_clause, self.limit_clause, state)
         limit and query.write('\n' + limit)
         query = query.getvalue().replace(' TRUE\nAND', '')
-        query, parameters = self.replace_literal_parameters(query, state)
+        query, parameters = state.replace_literal_parameters(query)
 
         # logging:
         rule = '-' * 45
@@ -965,6 +780,116 @@ class KgtkQuery(object):
         state.set_parameters(parameters)
         return state
 
+    
+    def compute_auto_indexes(self, state):
+        """Compute column indexes that are likely needed to run this query efficiently.
+        This is just an estimate based on columns involved in joins and restrictions.
+        """
+        indexes = set()
+        for match_clause in self.get_match_clauses():
+            joins = state.get_match_clause_joins(match_clause)
+            restrictions = state.get_match_clause_restrictions(match_clause)
+            if len(joins) > 0:
+                for (g1, c1), (g2, c2) in joins:
+                    indexes.add((self.graph_alias_to_graph(g1), c1))
+                    indexes.add((self.graph_alias_to_graph(g2), c2))
+            if len(restrictions) > 0:
+                # even if we have joins, we might need additional indexes on restricted columns:
+                for (g, c), val in restrictions:
+                    indexes.add((self.graph_alias_to_graph(g), c))
+        return indexes
+
+    def get_explicit_graph_index_specs(self):
+        """Collect all explicit per-input index specs and return them
+        as an ordered dict of {<graph>: [index-spec+ ...] ...} items.
+        """
+        explicit_index_specs = odict()
+        for file in self.files:
+            index_specs = self.get_input_option(file, 'index_specs')
+            if index_specs is not None:
+                graph = self.store.get_file_graph(file)
+                explicit_index_specs[graph] = index_specs
+        return explicit_index_specs
+
+    def get_default_graph_index_specs(self):
+        """Collect all default index specs and return them as an ordered dict of
+        {<graph>: [index-spec+ ...] ...} items for all query graphs that do not
+        have any explicit index spec specified for them.
+        """
+        explicit_index_specs = self.get_explicit_graph_index_specs()
+        default_index_specs = odict()
+        for graph, alias in self.get_all_match_clause_graphs():
+            if graph not in explicit_index_specs:
+                default_index_specs[graph] = listify(self.index_mode)
+        return default_index_specs
+
+    def ensure_indexes(self, graphs, index_specs, state, explain=False):
+        """Ensure that for each graph in 'graphs' all indexes according to 'index_specs' are avaible.
+        'state' is the final translation state of the query.
+        """
+        graphs = listify(graphs)
+        for index_spec in listify(index_specs):
+            index_spec = ss.get_normalized_index_mode(index_spec)
+            if isinstance(index_spec, list):
+                for spec in index_spec:
+                    for graph in graphs:
+                        self.store.ensure_graph_index(graph, ss.TableIndex(graph, spec), explain=explain)
+                    
+            elif index_spec == ss.INDEX_MODE_AUTO:
+                # build indexes as suggested by query joins and restrictions (restricted to 'graphs'):
+                for graph, column in self.compute_auto_indexes(state):
+                    if graph in graphs:
+                        # for now unconditionally restrict to core columns:
+                        if column.lower() in ('id', 'node1', 'label', 'node2'):
+                            # the ID check needs to be generalized:
+                            self.store.ensure_graph_index_for_columns(
+                                graph, column, unique=column.lower()=='id', explain=explain)
+                            
+            elif index_spec == ss.INDEX_MODE_EXPERT:
+                # build indexes as suggested by the database (restricted to 'graphs'):
+                for name, graph, columns in self.store.suggest_indexes(state.get_sql()):
+                    if graph in graphs:
+                        # only consider first column, multi-column indexes can be specified manually:
+                        column = columns[0]
+                        # the ID check needs to be generalized:
+                        self.store.ensure_graph_index_for_columns(
+                            graph, column, unique=column.lower()=='id', explain=explain)
+
+            elif index_spec == ss.INDEX_MODE_NONE:
+                pass
+            
+            elif index_spec == ss.INDEX_MODE_RESET:
+                # not yet implemented:
+                print('WARN: mode:reset not yet implemented')
+
+    def ensure_relevant_indexes(self, state, explain=False):
+        """Ensure that relevant indexes for this query are available on the database.
+        First creates any indexes explicitly specified on individual inputs.  Then, for any
+        graphs referenced in the query that do not have an explicit index specification, create
+        indexes based on the default index_mode strategy.  The default for that is 'auto' which
+        will use 'compute_auto_indexes' to decide what should be indexed.  'state' is assumed
+        to be the final translation state of the query.  If 'explain' is True, do not actually
+        build any indexes, only show commands that would be executed.
+        """
+        # NOTES
+        # - what we want is the minimal number of indexes that allow this query to run efficiently,
+        #   since index creation itself is expensive in time and disk space
+        # - however, to do this right we need some approximate analysis of the query, e.g., for a join
+        #   we'll generally only need an index on one of the involved columns, however, knowing for
+        #   which one requires knowledge of table size, statistics and other selectivity of the query
+        # - skewed distribution of fanout in columns complicates this further, since an average
+        #   fanout might be very different from maximum fanouts (e.g., for wikidata node2)
+        # - large fanouts might force us to use two-column indexes such as 'label/node2' and 'label/node1'
+        # - to handle this better, we will exploit the SQLite expert command to create (variants) of
+        #   the indexes it suggests, since that often wants multi-column indexes which are expensive
+        # - we also need some manual control as well to force certain indexing patterns
+        # - we only index core columns for now, but we might have use cases where that is too restrictive
+        for graph, index_specs in self.get_explicit_graph_index_specs().items():
+            self.ensure_indexes(graph, index_specs, state, explain=explain)
+        for graph, index_specs in self.get_default_graph_index_specs().items():
+            self.ensure_indexes(graph, index_specs, state, explain=explain)
+
+        
     def execute(self):
         state = self.translate_to_sql()
         self.ensure_relevant_indexes(state)
@@ -1074,6 +999,79 @@ class TranslationState(object):
 
     def set_parameters(self, params):
         self.parameters = params
+
+        
+    def get_literal_parameter(self, literal):
+        """Return a parameter placeholder such as '?12?' that will be mapped to 'literal'
+        and will later be replaced with a query parameter at the appropriate position.
+        """
+        litmap = self.get_literal_map()
+        if literal in litmap:
+            return litmap[literal]
+        else:
+            placeholder = '???%d??' % len(litmap)
+            litmap[literal] = placeholder
+            return placeholder
+
+    def replace_literal_parameters(self, raw_query):
+        """Replace the named literal placeholders in 'raw_query' with positional
+        parameters and build a list of actual parameters to substitute for them.
+        """
+        litmap = self.get_literal_map()
+        query = io.StringIO()
+        parameters = []
+        # reverse 'litmap' to map placeholders onto literal values:
+        litmap = {p: l for l, p in litmap.items()}
+        for token in re.split(r'\?\?', raw_query):
+            if token.startswith('?'):
+                parameters.append(litmap['??' + token + '??'])
+                token = '?'
+            query.write(token)
+        return query.getvalue(), parameters
+                 
+    def register_clause_variable(self, query_var, sql_var, nojoins=False):
+        """Register a reference to the Kypher variable 'query_var' which corresponds to the
+        SQL clause variable 'sql_var' represented as '(graph, column)' where 'graph' is a
+        table alias for the relevant graph specific to the current clause.  If this is the
+        first reference to 'query_var', simply add it to the variable map.  Otherwise, find the
+        best existing reference to equiv-join it with and record the necessary join in 'joins'
+        (unless 'nojoins' is True).
+        """
+        varmap = self.get_variable_map()
+        sql_vars = varmap.get(query_var)
+        if sql_vars is None:
+            # we use a list here now to preserve the order which matters for optionals:
+            varmap[query_var] = [sql_var]
+        else:
+            # POLICY: we either find the earliest equivalent variable from the same clause
+            # (as in '(x)-[]->{x)'), or the earliest registered variable from a different
+            # clause, which is what we need to handle cross-clause references from optionals
+            # (assuming strict and optional match clauses are processed appropriately in order):
+            # NOTE: further optimizations might be possible here, e.g., we might want to prefer
+            # a self-join on the same column, since it might reduce the number of auto-indexes:
+            this_graph, this_col = sql_var
+            best_var = None
+            for equiv_var in sql_vars:
+                equiv_graph, equiv_col = equiv_var
+                if best_var is None:
+                    best_var = equiv_var
+                elif this_graph == equiv_graph:
+                    # we match on graph and clause, since clause is encoded in graph:
+                    best_var = equiv_var
+                    break
+                else:
+                    # keep current earliest 'best_var':
+                    pass
+            # not sure if they could ever be equal, but just in case:
+            if sql_var != best_var:
+                sql_var not in sql_vars and sql_vars.append(sql_var)
+                # we never join an alias with anything:
+                if this_graph != self.query.ALIAS_GRAPH:
+                    equiv = [best_var, sql_var]
+                    # normalize join order by order in 'sql_vars' so earlier vars come first:
+                    equiv.sort(key=lambda v: sql_vars.index(v))
+                    if not nojoins:
+                        self.add_match_clause_join(equiv[0], equiv[1])
 
 
 """
