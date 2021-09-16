@@ -308,10 +308,12 @@ class KgtkQuery(object):
     def get_id_column(self, graph):
         return 'id'
 
-    def get_literal_parameter(self, literal, litmap):
+    def get_literal_parameter(self, literal, state):
         """Return a parameter placeholder such as '?12?' that will be mapped to 'literal'
         and will later be replaced with a query parameter at the appropriate position.
         """
+        # TO DO: move to TranslationState
+        litmap = state.get_literal_map()
         if literal in litmap:
             return litmap[literal]
         else:
@@ -319,10 +321,12 @@ class KgtkQuery(object):
             litmap[literal] = placeholder
             return placeholder
 
-    def replace_literal_parameters(self, raw_query, litmap):
+    def replace_literal_parameters(self, raw_query, state):
         """Replace the named literal placeholders in 'raw_query' with positional
         parameters and build a list of actual parameters to substitute for them.
         """
+        # TO DO: move to TranslationState
+        litmap = state.get_literal_map()
         query = io.StringIO()
         parameters = []
         # reverse 'litmap' to map placeholders onto literal values:
@@ -334,14 +338,17 @@ class KgtkQuery(object):
             query.write(token)
         return query.getvalue(), parameters
                  
-    def register_clause_variable(self, query_var, sql_var, varmap, joins):
+    def register_clause_variable(self, query_var, sql_var, state, nojoins=False):
         """Register a reference to the Kypher variable 'query_var' which corresponds to the
         SQL clause variable 'sql_var' represented as '(graph, column)' where 'graph' is a
         table alias for the relevant graph specific to the current clause.  If this is the
-        first reference to 'query_var', simply add it to 'varmap'.  Otherwise, find the best
-        existing reference to equiv-join it with and record the necessary join in 'joins'.
+        first reference to 'query_var', simply add it to the variable map.  Otherwise, find the
+        best existing reference to equiv-join it with and record the necessary join in 'joins'
+        (unless 'nojoins' is True).
         """
-        #print('register_clause_variable: ', query_var, sql_var, varmap, joins)
+        # TO DO: move to TranslationState
+        varmap = state.get_variable_map()
+        
         sql_vars = varmap.get(query_var)
         if sql_vars is None:
             # we use a list here now to preserve the order which matters for optionals:
@@ -374,45 +381,46 @@ class KgtkQuery(object):
                     equiv = [best_var, sql_var]
                     # normalize join order by order in 'sql_vars' so earlier vars come first:
                     equiv.sort(key=lambda v: sql_vars.index(v))
-                    joins.add(tuple(equiv))
+                    if not nojoins:
+                        state.add_match_clause_join(equiv[0], equiv[1])
         
-    def pattern_clause_to_sql(self, clause, graph, litmap, varmap, restrictions, joins):
+    def pattern_clause_to_sql(self, clause, graph, state):
         node1 = clause[0]
         rel = clause[1]
         node2 = clause[2]
         
         node1col = self.get_node1_column(graph)
         if node1.labels is not None:
-            para = self.get_literal_parameter(node1.labels[0], litmap)
-            restrictions.add(((graph, node1col), para))
+            para = self.get_literal_parameter(node1.labels[0], state)
+            state.add_match_clause_restriction((graph, node1col), para)
         # we do not exclude anonymous vars here, since they can connect edges: <-[]-()-[]->
         if node1.variable is not None:
-            self.register_clause_variable(node1.variable.name, (graph, node1col), varmap, joins)
+            self.register_clause_variable(node1.variable.name, (graph, node1col), state)
 
         node2col = self.get_node2_column(graph)
         if node2.labels is not None:
-            para = self.get_literal_parameter(node2.labels[0], litmap)
-            restrictions.add(((graph, node2col), para))
+            para = self.get_literal_parameter(node2.labels[0], state)
+            state.add_match_clause_restriction((graph, node2col), para)
         # we do not exclude anonymous vars here (see above):
         if node2.variable is not None:
-            self.register_clause_variable(node2.variable.name, (graph, node2col), varmap, joins)
+            self.register_clause_variable(node2.variable.name, (graph, node2col), state)
             
         labelcol = self.get_label_column(graph)
         idcol = self.get_id_column(graph)
         if rel.labels is not None:
-            para = self.get_literal_parameter(rel.labels[0], litmap)
-            restrictions.add(((graph, labelcol), para))
+            para = self.get_literal_parameter(rel.labels[0], state)
+            state.add_match_clause_restriction((graph, labelcol), para)
         # but an anonymous relation variable cannot connect to anything else:
         if rel.variable is not None and not isinstance(rel.variable, parser.AnonymousVariable):
-            self.register_clause_variable(rel.variable.name, (graph, idcol), varmap, joins)
+            self.register_clause_variable(rel.variable.name, (graph, idcol), state)
 
-    def pattern_props_to_sql(self, pattern, graph, column, litmap, varmap, restrictions, joins):
+    def pattern_props_to_sql(self, pattern, graph, column, state):
         # 'pattern' is a node or relationship pattern for 'graph.column'.  'column' should be 'node1', 'node2' or 'id'.
         props = getattr(pattern, 'properties', None)
         if props is None or len(props) == 0:
             return
         # if we need to access a property, we need to register anonymous variables as well:
-        self.register_clause_variable(pattern.variable.name, (graph, column), varmap, joins)
+        self.register_clause_variable(pattern.variable.name, (graph, column), state)
         for prop, expr in props.items():
             # TO DO: figure out how to better abstract property to column mapping (also see below):
             propcol = isinstance(pattern, parser.RelationshipPattern) and prop  or  column + ';' + prop
@@ -421,20 +429,20 @@ class KgtkQuery(object):
             # and only within a clause do we know which graph is actually meant.  Think about this
             # some more, this issue comes up in the time-machine use case:
             if isinstance(expr, parser.Variable):
-                self.register_clause_variable(expr.name, (graph, propcol), varmap, joins)
-            expr = self.expression_to_sql(expr, litmap, varmap)
-            restrictions.add(((graph, propcol), expr))
+                self.register_clause_variable(expr.name, (graph, propcol), state)
+            expr = self.expression_to_sql(expr, state)
+            state.add_match_clause_restriction((graph, propcol), expr)
 
-    def pattern_clause_props_to_sql(self, clause, graph, litmap, varmap, restrictions, joins):
+    def pattern_clause_props_to_sql(self, clause, graph, state):
         node1 = clause[0]
         node1col = self.get_node1_column(graph)
-        self.pattern_props_to_sql(node1, graph, node1col, litmap, varmap, restrictions, joins)
+        self.pattern_props_to_sql(node1, graph, node1col, state)
         node2 = clause[2]
         node2col = self.get_node2_column(graph)
-        self.pattern_props_to_sql(node2, graph, node2col, litmap, varmap, restrictions, joins)
+        self.pattern_props_to_sql(node2, graph, node2col, state)
         rel = clause[1]
         idcol = self.get_id_column(graph)
-        self.pattern_props_to_sql(rel, graph, idcol, litmap, varmap, restrictions, joins)
+        self.pattern_props_to_sql(rel, graph, idcol, state)
 
     OPERATOR_TABLE = {
         parser.Add: '+', parser.Sub: '-', parser.Multi: '*', parser.Div: '/', parser.Mod: '%',
@@ -448,26 +456,21 @@ class KgtkQuery(object):
         """
         return str(op).upper().startswith('KGTK_')
 
-    def expression_to_sql(self, expr, litmap, varmap):
+    def expression_to_sql(self, expr, state):
         """Translate a Kypher expression 'expr' into its SQL equivalent.
         """
         expr_type = type(expr)
         if expr_type == parser.Literal:
-            return self.get_literal_parameter(expr.value, litmap)
+            return self.get_literal_parameter(expr.value, state)
         elif expr_type == parser.Parameter:
             value = self.get_parameter_value(expr.name)
-            return self.get_literal_parameter(value, litmap)
+            return self.get_literal_parameter(value, state)
         
         elif expr_type == parser.Variable:
             query_var = expr.name
-            if varmap is None:
-                # for cases where external variables are not allowed (e.g. LIMIT):
-                raise Exception('Illegal context for variable: %s' % query_var)
-            if query_var == '*':
+            sql_vars = state.lookup_variable(query_var, error=True)
+            if sql_vars == '*':
                 return query_var
-            sql_vars = varmap.get(query_var)
-            if sql_vars is None:
-                raise Exception('Undefined variable: %s' % query_var)
             # we allow regular and alias variables of the same name, but once an alias
             # of name 'x' is defined, it will shadow access to any regular variable 'x':
             for graph, col in sql_vars:
@@ -481,31 +484,33 @@ class KgtkQuery(object):
         
         elif expr_type == parser.List:
             # we only allow literals in lists, Cypher also supports variables:
-            elements = [self.expression_to_sql(elt, litmap, None) for elt in expr.elements]
+            state.disable_variables()
+            elements = [self.expression_to_sql(elt, state) for elt in expr.elements]
+            state.enable_variables()
             return '(' + ', '.join(elements) + ')'
         
         elif expr_type == parser.Minus:
-            arg = self.expression_to_sql(expr.arg, litmap, varmap)
+            arg = self.expression_to_sql(expr.arg, state)
             return '(- %s)' % arg
         elif expr_type in (parser.Add, parser.Sub, parser.Multi, parser.Div, parser.Mod):
-            arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
-            arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
+            arg1 = self.expression_to_sql(expr.arg1, state)
+            arg2 = self.expression_to_sql(expr.arg2, state)
             op = self.OPERATOR_TABLE[expr_type]
             return '(%s %s %s)' % (arg1, op, arg2)
         elif expr_type == parser.Hat:
             raise Exception("Unsupported operator: '^'")
         
         elif expr_type in (parser.Eq, parser.Neq, parser.Lt, parser.Gt, parser.Lte, parser.Gte):
-            arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
-            arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
+            arg1 = self.expression_to_sql(expr.arg1, state)
+            arg2 = self.expression_to_sql(expr.arg2, state)
             op = self.OPERATOR_TABLE[expr_type]
             return '(%s %s %s)' % (arg1, op, arg2)
         elif expr_type == parser.Not:
-            arg = self.expression_to_sql(expr.arg, litmap, varmap)
+            arg = self.expression_to_sql(expr.arg, state)
             return '(NOT %s)' % arg
         elif expr_type in (parser.And, parser.Or):
-            arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
-            arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
+            arg1 = self.expression_to_sql(expr.arg1, state)
+            arg2 = self.expression_to_sql(expr.arg2, state)
             op = self.OPERATOR_TABLE[expr_type]
             return '(%s %s %s)' % (arg1, op, arg2)
         elif expr_type == parser.Xor:
@@ -519,12 +524,12 @@ class KgtkQuery(object):
             if function.upper() == 'CAST':
                 # special-case SQLite CAST which isn't directly supported by Cypher:
                 if len(expr.args) == 2 and isinstance(expr.args[1], parser.Variable):
-                    arg = self.expression_to_sql(expr.args[0], litmap, varmap)
+                    arg = self.expression_to_sql(expr.args[0], state)
                     typ = expr.args[1].name
                     return 'CAST(%s AS %s)' % (arg, typ)
                 else:
                     raise Exception("Illegal CAST expression")
-            args = [self.expression_to_sql(arg, litmap, varmap) for arg in expr.args]
+            args = [self.expression_to_sql(arg, state) for arg in expr.args]
             distinct = expr.distinct and 'DISTINCT ' or ''
             self.store.load_user_function(function, error=False)
             return function + '(' + distinct + ', '.join(args) + ')'
@@ -533,7 +538,7 @@ class KgtkQuery(object):
             arg1 = expr.arg1
             arg2 = expr.arg2
             if isinstance(arg1, parser.Variable):
-                var = self.expression_to_sql(arg1, litmap, varmap)
+                var = self.expression_to_sql(arg1, state)
                 for proplook in arg2:
                     if not isinstance(proplook, parser.PropertyLookup):
                         var = None; break
@@ -554,13 +559,13 @@ class KgtkQuery(object):
             raise Exception("Unhandled property lookup expression: " + str(expr))
         
         elif expr_type == parser.Expression3:
-            arg1 = self.expression_to_sql(expr.arg1, litmap, varmap)
+            arg1 = self.expression_to_sql(expr.arg1, state)
             op = expr.operator.upper()
             if op in ('IS_NULL', 'IS_NOT_NULL'):
                 return '(%s %s)' % (arg1, op.replace('_', ' '))
             if expr.arg2 is None:
                 raise Exception('Unhandled operator: %s' % str(op))
-            arg2 = self.expression_to_sql(expr.arg2, litmap, varmap)
+            arg2 = self.expression_to_sql(expr.arg2, state)
             if op in ('IN'):
                 return '(%s %s %s)' % (arg1, op, arg2)
             elif op in ('REGEX'):
@@ -571,11 +576,11 @@ class KgtkQuery(object):
         else:
             raise Exception('Unhandled expression type: %s' % str(parser.object_to_tree(expr)))
 
-    def where_clause_to_sql(self, where_clause, litmap, varmap):
+    def where_clause_to_sql(self, where_clause, state):
         if where_clause is None:
             return ''
         else:
-            return self.expression_to_sql(where_clause.expression, litmap, varmap)
+            return self.expression_to_sql(where_clause.expression, state)
 
     ALIAS_GRAPH = '_'
     ALIAS_COLUMN_PREFIX = '_aLias.'
@@ -592,14 +597,14 @@ class KgtkQuery(object):
         """
         return column.startswith(self.ALIAS_COLUMN_PREFIX) and column[len(self.ALIAS_COLUMN_PREFIX):] or column
 
-    def return_clause_to_sql_selection(self, clause, litmap, varmap):
+    def return_clause_to_sql_selection(self, clause, state):
         select = clause.distinct and 'DISTINCT ' or ''
         first = True
         # Cypher does not have a 'GROUP BY' clause but instead uses non-aggregate return columns
         # that precede an aggregate function as grouping keys, so we have to keep track of those:
         agg_info = []
         for item in clause.items:
-            expr = self.expression_to_sql(item.expression, litmap, varmap)
+            expr = self.expression_to_sql(item.expression, state)
             select += first and expr or (', ' + expr)
             first = False
             # check if this item calls an aggregation function or not: if it does then preceding columns
@@ -611,8 +616,8 @@ class KgtkQuery(object):
                 alias_var = parser.Variable(item._query, item.name)
                 # we have to register the alias as a variable, otherwise it can't be referenced in --order-by,
                 # but it is not tied to a specific graph table, thus that part is ALIAS_GRAPH below:
-                self.register_clause_variable(item.name, (self.ALIAS_GRAPH, item.name), varmap, set())
-                sql_alias = self.expression_to_sql(alias_var, litmap, varmap)
+                self.register_clause_variable(item.name, (self.ALIAS_GRAPH, item.name), state, nojoins=True)
+                sql_alias = self.expression_to_sql(alias_var, state)
                 select += ' ' + sql_alias
                 agg_info.append(not is_agg and sql_alias or None)
             else:
@@ -634,36 +639,38 @@ class KgtkQuery(object):
             group_by = None
         return select, group_by
 
-    def order_clause_to_sql(self, order_clause, litmap, varmap):
+    def order_clause_to_sql(self, order_clause, state):
         if order_clause is None:
             return None
         items = []
         for sort_item in order_clause.items:
-            expr = self.expression_to_sql(sort_item.expression, litmap, varmap)
+            expr = self.expression_to_sql(sort_item.expression, state)
             direction = sort_item.direction.upper()
             items.append(expr + (direction.startswith('ASC') and '' or (' ' + direction)))
         return 'ORDER BY ' + ', '.join(items)
     
-    def limit_clauses_to_sql(self, skip_clause, limit_clause, litmap, varmap):
+    def limit_clauses_to_sql(self, skip_clause, limit_clause, state):
         if skip_clause is None and limit_clause is None:
             return None
+        state.disable_variables()
         limit = 'LIMIT'
         if limit_clause is not None:
-            limit += ' ' + self.expression_to_sql(limit_clause.expression, litmap, None)
+            limit += ' ' + self.expression_to_sql(limit_clause.expression, state)
         else:
             limit += ' -1'
         if skip_clause is not None:
-            limit += ' OFFSET ' + self.expression_to_sql(skip_clause.expression, litmap, None)
+            limit += ' OFFSET ' + self.expression_to_sql(skip_clause.expression, state)
+        state.enable_variables()
         return limit
 
-    def compute_auto_indexes(self):
+    def compute_auto_indexes(self, state):
         """Compute column indexes that are likely needed to run this query efficiently.
         This is just an estimate based on columns involved in joins and restrictions.
         """
         indexes = set()
         for match_clause in self.get_match_clauses():
-            joins = self.get_match_clause_joins(match_clause)
-            restrictions = self.get_match_clause_restrictions(match_clause)
+            joins = state.get_match_clause_joins(match_clause)
+            restrictions = state.get_match_clause_restrictions(match_clause)
             if len(joins) > 0:
                 for (g1, c1), (g2, c2) in joins:
                     indexes.add((self.graph_alias_to_graph(g1), c1))
@@ -698,9 +705,9 @@ class KgtkQuery(object):
                 default_index_specs[graph] = listify(self.index_mode)
         return default_index_specs
 
-    def ensure_indexes(self, graphs, index_specs, sql=None, explain=False):
+    def ensure_indexes(self, graphs, index_specs, state, explain=False):
         """Ensure that for each graph in 'graphs' all indexes according to 'index_specs' are avaible.
-        If expert mode is used, 'sql' needs to be provided for indexing to succeed.
+        'state' is the final translation state of the query.
         """
         graphs = listify(graphs)
         for index_spec in listify(index_specs):
@@ -711,8 +718,8 @@ class KgtkQuery(object):
                         self.store.ensure_graph_index(graph, ss.TableIndex(graph, spec), explain=explain)
                     
             elif index_spec == ss.INDEX_MODE_AUTO:
-                # build indexes as suggested by joins and restrictions (restricted to 'graphs'):
-                for graph, column in self.compute_auto_indexes():
+                # build indexes as suggested by query joins and restrictions (restricted to 'graphs'):
+                for graph, column in self.compute_auto_indexes(state):
                     if graph in graphs:
                         # for now unconditionally restrict to core columns:
                         if column.lower() in ('id', 'node1', 'label', 'node2'):
@@ -720,9 +727,9 @@ class KgtkQuery(object):
                             self.store.ensure_graph_index_for_columns(
                                 graph, column, unique=column.lower()=='id', explain=explain)
                             
-            elif index_spec == ss.INDEX_MODE_EXPERT and sql is not None:
+            elif index_spec == ss.INDEX_MODE_EXPERT:
                 # build indexes as suggested by the database (restricted to 'graphs'):
-                for name, graph, columns in self.store.suggest_indexes(sql):
+                for name, graph, columns in self.store.suggest_indexes(state.get_sql()):
                     if graph in graphs:
                         # only consider first column, multi-column indexes can be specified manually:
                         column = columns[0]
@@ -737,14 +744,14 @@ class KgtkQuery(object):
                 # not yet implemented:
                 print('WARN: mode:reset not yet implemented')
 
-    def ensure_relevant_indexes(self, sql=None, explain=False):
+    def ensure_relevant_indexes(self, state, explain=False):
         """Ensure that relevant indexes for this query are available on the database.
         First creates any indexes explicitly specified on individual inputs.  Then, for any
         graphs referenced in the query that do not have an explicit index specification, create
         indexes based on the default index_mode strategy.  The default for that is 'auto' which
-        will use 'compute_auto_indexes' to decide what should be indexed.  If 'expert' is used
-        anywhere, 'sql' needs to be provided for indexing to succeed.  If 'explain' is True,
-        do not actually build any indexes, only show commands that would be executed.
+        will use 'compute_auto_indexes' to decide what should be indexed.  'state' is assumed
+        to be the final translation state of the query.  If 'explain' is True, do not actually
+        build any indexes, only show commands that would be executed.
         """
         # NOTES
         # - what we want is the minimal number of indexes that allow this query to run efficiently,
@@ -760,9 +767,9 @@ class KgtkQuery(object):
         # - we also need some manual control as well to force certain indexing patterns
         # - we only index core columns for now, but we might have use cases where that is too restrictive
         for graph, index_specs in self.get_explicit_graph_index_specs().items():
-            self.ensure_indexes(graph, index_specs, sql=sql, explain=explain)
+            self.ensure_indexes(graph, index_specs, state, explain=explain)
         for graph, index_specs in self.get_default_graph_index_specs().items():
-            self.ensure_indexes(graph, index_specs, sql=sql, explain=explain)
+            self.ensure_indexes(graph, index_specs, state, explain=explain)
         
     def get_match_clauses(self):
         """Return all strict and optional match clauses of this query in order.
@@ -814,29 +821,14 @@ class KgtkQuery(object):
         """
         return ', '.join([g + ' AS ' + a for g, a in sorted(listify(graphs))])
 
-    def get_match_clause_restrictions(self, match_clause):
-        """Return all restrictions encountered in this 'match_clause' which
-        maps (graph, col) SQL columns onto literal restrictions.
-        """
-        if not hasattr(match_clause, '_restrictions'):
-            match_clause._restrictions = set()
-        return match_clause._restrictions
-
-    def get_match_clause_joins(self, match_clause):
-        """Returns all joins encounterd in this 'match_clause' which
-        maps equivalent SQL column pairs (avoiding dupes and redundant flips).
-        """
-        if not hasattr(match_clause, '_joins'):
-            match_clause._joins = set()
-        return match_clause._joins
-
-    def match_clause_to_sql(self, match_clause, litmap, varmap):
+    def match_clause_to_sql(self, match_clause, state):
         """Translate a strict or optional 'match_clause' into a set of source tables,
         joined tables, internal and external join and where conditions which can then
         be assembled into appropriate FROM/WHERE/INNER JOIN/LEFT JOIN and any necessary
         nested joins depending on the particular structure of 'match_clause'.  This is
         a bit wild and wooly and will likely need further refinement down the road.
         """
+        state.set_match_clause(match_clause)
         clause_sources = sorted(list(self.get_match_clause_graphs(match_clause)))
         primary_source = clause_sources[0]
         sources = clause_sources.copy()
@@ -845,7 +837,7 @@ class KgtkQuery(object):
         internal_condition = []
         external_condition = []
         
-        for (g1, c1), (g2, c2) in sorted(list(self.get_match_clause_joins(match_clause))):
+        for (g1, c1), (g2, c2) in sorted(list(state.get_match_clause_joins(match_clause))):
             condition = '%s.%s = %s.%s' % (g1, ss.sql_quote_ident(c1), g2, ss.sql_quote_ident(c2))
             graph1 = (self.graph_alias_to_graph(g1), g1)
             graph2 = (self.graph_alias_to_graph(g2), g2)
@@ -863,10 +855,10 @@ class KgtkQuery(object):
             else:
                 external_condition.append(condition)
 
-        for (g, c), val in sorted(list(self.get_match_clause_restrictions(match_clause))):
+        for (g, c), val in sorted(list(state.get_match_clause_restrictions(match_clause))):
             internal_condition.append('%s.%s = %s' % (g, ss.sql_quote_ident(c), val))
 
-        where = self.where_clause_to_sql(match_clause.get_where_clause(), litmap, varmap)
+        where = self.where_clause_to_sql(match_clause.get_where_clause(), state)
         if where:
             internal_condition.append(where)
         internal_condition = '\n   AND '.join(internal_condition)
@@ -874,7 +866,7 @@ class KgtkQuery(object):
         
         return sources, joined, internal_condition, external_condition
 
-    def with_clause_to_sql(self, with_clause, litmap, varmap):
+    def with_clause_to_sql(self, with_clause, state):
         """Translate a 'WITH ... WHERE ...' clause which currently is primarily a vehicle to
         communicate a global WHERE clause that applies across all match clauses, so for now
         we only support 'WITH * ...'.  But we do want to generalize this at some point, since
@@ -883,46 +875,42 @@ class KgtkQuery(object):
         """
         if with_clause is None:
             return ""
-        select = self.return_clause_to_sql_selection(with_clause, litmap, varmap)
+        select = self.return_clause_to_sql_selection(with_clause, state)
         if select != ('*', None):
             raise Exception("unsupported WITH clause, only 'WITH * ...' is currently supported")
-        where = self.where_clause_to_sql(with_clause.where, litmap, varmap)
+        where = self.where_clause_to_sql(with_clause.where, state)
         return where
 
 
     def translate_to_sql(self):
         """Translate this query into an equivalent SQL expression.
+        Return the SQL as part of the accumulated final translation state.
         """
-        litmap = {}           # maps Kypher literals onto parameter placeholders
-        varmap = {}           # maps Kypher variables onto representative (graph, col) SQL columns
-        parameters = None     # maps ? parameters in sequence onto actual query parameters
+        state = TranslationState(self)
 
         # process strict and optional match clauses in order which is important to get
         # the proper clause variable registration order; that way optional clauses that
         # reference variables from earlier optional or strict clauses will join correctly:
         for match_clause in self.get_match_clauses():
+            state.set_match_clause(match_clause)
             # translate clause top-level info such as variables and restrictions:
             for clause in match_clause.get_pattern_clauses():
                 graph_alias = self.get_pattern_clause_graph_alias(clause)
-                restrictions = self.get_match_clause_restrictions(match_clause)
-                joins = self.get_match_clause_joins(match_clause)
-                self.pattern_clause_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
+                self.pattern_clause_to_sql(clause, graph_alias, state)
             
             # translate properties:
             for clause in match_clause.get_pattern_clauses():
                 graph_alias = self.get_pattern_clause_graph_alias(clause)
-                restrictions = self.get_match_clause_restrictions(match_clause)
-                joins = self.get_match_clause_joins(match_clause)
-                self.pattern_clause_props_to_sql(clause, graph_alias, litmap, varmap, restrictions, joins)
+                self.pattern_clause_props_to_sql(clause, graph_alias, state)
 
         # assemble SQL query:
         query = io.StringIO()
         
-        select, group_by = self.return_clause_to_sql_selection(self.return_clause, litmap, varmap)
+        select, group_by = self.return_clause_to_sql_selection(self.return_clause, state)
         query.write('SELECT %s' % select)
 
         # start with the mandatory strict match clause:
-        sources, joined, int_condition, ext_condition = self.match_clause_to_sql(self.match_clause, litmap, varmap)
+        sources, joined, int_condition, ext_condition = self.match_clause_to_sql(self.match_clause, state)
         if len(sources) > 1 and not self.force:
             raise Exception('match clause generates a cross-product which can be very expensive, use --force to override')
         assert not ext_condition, 'INTERNAL ERROR: unexpected match clause'
@@ -940,7 +928,7 @@ class KgtkQuery(object):
 
         # now add any left joins from optional match clauses:
         for opt_clause in self.optional_clauses:
-            sources, joined, int_condition, ext_condition = self.match_clause_to_sql(opt_clause, litmap, varmap)
+            sources, joined, int_condition, ext_condition = self.match_clause_to_sql(opt_clause, state)
             if len(sources) > 1 and not self.force:
                 raise Exception('optional clause generates a cross-product which can be very expensive, use --force to override')
             nested = len(joined) > 0
@@ -953,7 +941,7 @@ class KgtkQuery(object):
                 query.write('\nON %s' % '\n   AND '.join(listify(ext_condition) + listify(int_condition)))
 
         # process any 'WITH * WHERE ...' clause to add to the global WHERE condition if necessary:
-        with_where = self.with_clause_to_sql(self.with_clause, litmap, varmap)
+        with_where = self.with_clause_to_sql(self.with_clause, state)
         with_where and where.append(with_where)
         
         # finally add WHERE clause from strict match and/or WITH clause in case there were any:
@@ -961,32 +949,131 @@ class KgtkQuery(object):
 
         # add various other clauses:
         group_by and query.write('\n' + group_by)
-        order = self.order_clause_to_sql(self.order_clause, litmap, varmap)
+        order = self.order_clause_to_sql(self.order_clause, state)
         order and query.write('\n' + order)
-        limit = self.limit_clauses_to_sql(self.skip_clause, self.limit_clause, litmap, varmap)
+        limit = self.limit_clauses_to_sql(self.skip_clause, self.limit_clause, state)
         limit and query.write('\n' + limit)
         query = query.getvalue().replace(' TRUE\nAND', '')
-        query, parameters = self.replace_literal_parameters(query, litmap)
+        query, parameters = self.replace_literal_parameters(query, state)
 
         # logging:
         rule = '-' * 45
         self.log(1, 'SQL Translation:\n%s\n  %s\n  PARAS: %s\n%s'
                  % (rule, query.replace('\n', '\n     '), parameters, rule))
 
-        return query, parameters
+        state.set_sql(query)
+        state.set_parameters(parameters)
+        return state
 
     def execute(self):
-        query, params = self.translate_to_sql()
-        self.ensure_relevant_indexes(query)
-        result = self.store.execute(query, params)
+        state = self.translate_to_sql()
+        self.ensure_relevant_indexes(state)
+        result = self.store.execute(state.get_sql(), state.get_parameters())
         self.result_header = [self.unalias_column_name(c[0]) for c in result.description]
         return result
 
     def explain(self, mode='plan'):
-        query, params = self.translate_to_sql()
-        self.ensure_relevant_indexes(query, explain=True)
-        result = self.store.explain(query, parameters=params, mode=mode)
+        state = self.translate_to_sql()
+        self.ensure_relevant_indexes(state, explain=True)
+        result = self.store.explain(state.get_sql(), parameters=state.get_parameters(), mode=mode)
         return result
+
+
+class TranslationState(object):
+    """Accumulates and manages various state information during translation.
+    """
+
+    def __init__(self, query, litmap=None, varmap=None, match_clause=None, joins=None, restrictions=None):
+        self.query = query
+        self.literal_map = litmap or {}         # maps Kypher literals onto parameter placeholders
+        self.variable_map = varmap or {}        # maps Kypher variables onto representative (graph, col) SQL columns
+        self.match_clause = match_clause        # match clause we are currently processing
+        self.joins = joins or {}                # maps match clauses onto joins encountered in them
+        self.restrictions = restrictions or {}  # maps match clauses onto restrictions encountered in them
+        self.sql = None                         # final SQL translation of 'query'
+        self.parameters = None                  # final parameter values for translated query
+
+    def get_literal_map(self):
+        return self.literal_map
+
+    def get_variable_map(self):
+        return self.variable_map
+
+    def disable_variables(self):
+        """Disable any variable processing (e.g., for contexts where they are illegal).
+        """
+        self._saved_variable_map = self.variable_map
+        self.variable_map = None
+
+    def enable_variables(self):
+        """Enable variable processing again.
+        """
+        self.variable_map = self._saved_variable_map
+
+    def lookup_variable(self, variable, error=True):
+        """Lookup 'variable' in the current variable map.  Raise an error if variables
+        are currently disabled or if 'variable' is undefined (unless 'error' is False).
+        """
+        if self.variable_map is None:
+            if error:
+                # for cases where external variables are not allowed (e.g. LIMIT):
+                raise Exception('Illegal context for variable: %s' % variable)
+            else:
+                return None
+        if variable == '*':
+            return variable
+        sql_vars = self.variable_map.get(variable)
+        if sql_vars is None and error:
+            raise Exception('Undefined variable: %s' % variable)
+        return sql_vars
+    
+    def set_match_clause(self, clause):
+        """Set the current match clause to 'clause'"""
+        self.match_clause = clause
+
+    def get_match_clause_joins(self, clause=None):
+        """Returns all joins encounterd in this match 'clause' which maps equivalent
+        SQL column pairs (avoiding dupes and redundant flips).  'clause' defaults to
+        the current match clause.
+        """
+        clause = clause or self.match_clause
+        if clause not in self.joins:
+            self.joins[clause] = set()
+        return self.joins[clause]
+
+    def add_match_clause_join(self, var1, var2, clause=None):
+        """Add a join between 'var1' and 'var2' to 'clause's joins.
+        'clause' defaults to the current match clause.
+        """
+        self.get_match_clause_joins(clause=clause).add((var1, var2))
+
+    def get_match_clause_restrictions(self, clause=None):
+        """Return all restrictions encountered in this match 'clause' which maps
+        (graph, col) SQL columns onto literal restrictions.  'clause' defaults to
+        the current match clause.
+        """
+        clause = clause or self.match_clause
+        if clause not in self.restrictions:
+            self.restrictions[clause] = set()
+        return self.restrictions[clause]
+
+    def add_match_clause_restriction(self, sqlvar, expression, clause=None):
+        """Add a restriction of 'sqlvar' to 'expression' to 'clause's restrictions.
+        'clause' defaults to the current match clause.
+        """
+        self.get_match_clause_restrictions(clause=clause).add((sqlvar, expression))
+
+    def get_sql(self):
+        return self.sql
+
+    def set_sql(self, sql):
+        self.sql = sql
+
+    def get_parameters(self):
+        return self.parameters
+
+    def set_parameters(self, params):
+        self.parameters = params
 
 
 """
