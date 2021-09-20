@@ -252,14 +252,17 @@ def run(input_file: KGTKFiles,
     if rootfile is not None:
         if verbose:
             print("Reading the root file %s" % repr(rootfile),  file=error_file, flush=True)
-        root_kr: KgtkReader = KgtkReader.open(Path(rootfile),
-                                              error_file=error_file,
-                                              who="root",
-                                              options=root_reader_options,
-                                              value_options=value_options,
-                                              verbose=verbose,
-                                              very_verbose=very_verbose,
-                                              )
+        try:
+            root_kr: KgtkReader = KgtkReader.open(Path(rootfile),
+                                                  error_file=error_file,
+                                                  who="root",
+                                                  options=root_reader_options,
+                                                  value_options=value_options,
+                                                  verbose=verbose,
+                                                  very_verbose=very_verbose,
+                                                  )
+        except SystemExit:
+            raise KGTKException("Exiting.")
 
         rootcol: int
         if root_kr.is_edge_file:
@@ -301,14 +304,17 @@ def run(input_file: KGTKFiles,
     if props_file is not None:
         if verbose:
             print("Reading the root file %s" % repr(props_file),  file=error_file, flush=True)
-        props_kr: KgtkReader = KgtkReader.open(Path(props_file),
-                                              error_file=error_file,
-                                              who="props",
-                                              options=props_reader_options,
-                                              value_options=value_options,
-                                              verbose=verbose,
-                                              very_verbose=very_verbose,
-                                              )
+        try:
+            props_kr: KgtkReader = KgtkReader.open(Path(props_file),
+                                                   error_file=error_file,
+                                                   who="props",
+                                                   options=props_reader_options,
+                                                   value_options=value_options,
+                                                   verbose=verbose,
+                                                   very_verbose=very_verbose,
+                                                   )
+        except SystemExit:
+            raise KGTKException("Exiting.")
 
         propscol: int
         if props_kr.is_edge_file:
@@ -347,14 +353,17 @@ def run(input_file: KGTKFiles,
     if undirected_props_file is not None:
         if verbose:
             print("Reading the undirected properties file %s" % repr(undirected_props_file),  file=error_file, flush=True)
-        undirected_props_kr: KgtkReader = KgtkReader.open(Path(undirected_props_file),
-                                                          error_file=error_file,
-                                                          who="undirected_props",
-                                                          options=undirected_props_reader_options,
-                                                          value_options=value_options,
-                                                          verbose=verbose,
-                                                          very_verbose=very_verbose,
-        )
+        try:
+            undirected_props_kr: KgtkReader = KgtkReader.open(Path(undirected_props_file),
+                                                              error_file=error_file,
+                                                              who="undirected_props",
+                                                              options=undirected_props_reader_options,
+                                                              value_options=value_options,
+                                                              verbose=verbose,
+                                                              very_verbose=very_verbose,
+            )
+        except SystemExit:
+            raise KGTKException("Exiting.")
 
         undirected_props_col: int
         if undirected_props_kr.is_edge_file:
@@ -392,14 +401,17 @@ def run(input_file: KGTKFiles,
     if inverted_props_file is not None:
         if verbose:
             print("Reading the inverted properties file %s" % repr(inverted_props_file),  file=error_file, flush=True)
-        inverted_props_kr: KgtkReader = KgtkReader.open(Path(inverted_props_file),
-                                                          error_file=error_file,
-                                                          who="inverted_props",
-                                                          options=inverted_props_reader_options,
-                                                          value_options=value_options,
-                                                          verbose=verbose,
-                                                          very_verbose=very_verbose,
-        )
+        try:
+            inverted_props_kr: KgtkReader = KgtkReader.open(Path(inverted_props_file),
+                                                            error_file=error_file,
+                                                            who="inverted_props",
+                                                            options=inverted_props_reader_options,
+                                                            value_options=value_options,
+                                                            verbose=verbose,
+                                                            very_verbose=very_verbose,
+            )
+        except SystemExit:
+            raise KGTKException("Exiting.")
 
         inverted_props_col: int
         if inverted_props_kr.is_edge_file:
@@ -434,14 +446,18 @@ def run(input_file: KGTKFiles,
         print("inverted property set=%s" % " ".join(sorted(list(inverted_property_set))),  file=error_file, flush=True)
         
 
-    kr: KgtkReader = KgtkReader.open(input_kgtk_file,
-                                     error_file=error_file,
-                                     who="input",
-                                     options=input_reader_options,
-                                     value_options=value_options,
-                                     verbose=verbose,
-                                     very_verbose=very_verbose,
-                                     )
+    try:
+        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
+                                         error_file=error_file,
+                                         who="input",
+                                         options=input_reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose,
+                                         )
+    except SystemExit:
+        raise KGTKException("Exiting.")
+        
     sub: int = kr.get_node1_column_index(subject_column_name)
     if sub < 0:
         print("Unknown subject column %s" % repr(subject_column_name), file=error_file, flush=True)
@@ -493,14 +509,18 @@ def run(input_file: KGTKFiles,
 
     output_header: typing.List[str] = ['node1','label','node2']
 
-    kw: KgtkWriter = KgtkWriter.open(output_header,
-                                     output_kgtk_file,
-                                     mode=KgtkWriter.Mode.EDGE,
-                                     require_all_columns=True,
-                                     prohibit_extra_columns=True,
-                                     fill_missing_columns=False,
-                                     verbose=verbose,
-                                     very_verbose=very_verbose)
+    try:
+        kw: KgtkWriter = KgtkWriter.open(output_header,
+                                         output_kgtk_file,
+                                         mode=KgtkWriter.Mode.EDGE,
+                                         require_all_columns=True,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=False,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose)
+    except SystemExit:
+        raise KGTKException("Exiting.")
+
     for index in index_list:
         if selflink_bool:
             kw.writerow([name[index], label, name[index]])
