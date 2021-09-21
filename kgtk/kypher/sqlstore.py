@@ -644,7 +644,7 @@ class SqliteStore(SqlStore):
         """Return True if graph 'table_name' has an index that subsumes 'index'.
         """
         for idx in self.get_graph_indexes(table_name):
-            if idx.subsumes(index):
+            if idx.subsumes(index) and not index.redefines(idx):
                 return True
         else:
             return False
@@ -657,9 +657,15 @@ class SqliteStore(SqlStore):
         """
         if not self.has_graph_index(table_name, index):
             loglevel = explain and 0 or 1
+            indexes = self.get_graph_indexes(table_name)
+            # delete anything that is redefined by this 'index':
+            for idx in indexes[:]:
+                if index.redefines(idx) and not explain:
+                    self.drop_graph_index(table_name, idx)
+            indexes = self.get_graph_indexes(table_name)
             # we also measure the increase in allocated disk space here:
             oldsize = self.get_db_size()
-            for index_stmt in index.get_definition():
+            for index_stmt in index.get_create_script():
                 self.log(loglevel, index_stmt)
                 if not explain:
                     self.execute(index_stmt)
@@ -667,7 +673,7 @@ class SqliteStore(SqlStore):
             ginfo = self.get_graph_info(table_name)
             ginfo.size += idxsize
             if not explain:
-                indexes = TableIndex.encode(self.get_graph_indexes(table_name) + [index])
+                indexes = TableIndex.encode(indexes + [index])
                 self.update_graph_info(table_name, indexes=indexes)
                 self.update_graph_info(table_name, size=ginfo.size)
 
@@ -806,6 +812,32 @@ class SqliteStore(SqlStore):
         # now delete the graph table and all associated indexes:
         if self.has_table(table_name):
             self.execute('DROP TABLE %s' % table_name)
+
+    def drop_graph_index(self, table_name, index):
+        """Delete 'index' for graph 'table_name' and its associated info records.
+        """
+        ginfo = self.get_graph_info(table_name)
+        indexes = self.get_graph_indexes(table_name)
+        if index not in indexes:
+            raise KGTKException(f'No such index for {table_name}: {index}]')
+        oldsize = self.get_db_size()
+        for index_stmt in index.get_drop_script():
+            self.log(1, index_stmt)
+            self.execute(index_stmt)
+        idxsize = oldsize - self.get_db_size()
+        indexes.remove(index)
+        ginfo.size -= idxsize
+        self.update_graph_info(table_name, indexes=TableIndex.encode(indexes), size=ginfo.size)
+
+    def drop_graph_indexes(self, table_name, index_type=None):
+        """Delete all indexes for graph 'table_name'.  If 'index_type' is not None,
+        restrict to indexes of that type (can be a short name or a class).
+        """
+        if isinstance(index_type, str):
+            index_type = TableIndex.get_index_type_class(index_type)
+        for index in self.get_graph_indexes(table_name)[:]:
+            if index_type is None or isinstance(index, index_type):
+                self.drop_graph_index(table_name, index)
 
 
     ### Data import:
@@ -1119,32 +1151,36 @@ class InfoTable(object):
 #   '... --idx text:node1,node2/text ...' to specify a full-text search index on a graph column
 # - support for storing and retrieving index objects to database info tables
 # - support for comparing indexes for equivalence and subsumption
-# - support for generating SQL definition statements specific to a particular index type
+# - support for generating SQL definition/deletion statements specific to a particular index type
 # - mapping macro index modes onto their respective index sets or actions
 # - TO DO: detect modes such as 'mode:attgraph' automatically from computing some quick statistics
 
-INDEX_MODE_NONE   = 'mode:none'
-INDEX_MODE_RESET  = 'mode:reset'
-INDEX_MODE_AUTO   = 'mode:auto'
-INDEX_MODE_EXPERT = 'mode:expert'
+INDEX_MODE_NONE        = 'mode:none'
+INDEX_MODE_AUTO        = 'mode:auto'
+INDEX_MODE_AUTO_TEXT   = 'mode:autotext'
+INDEX_MODE_CLEAR       = 'mode:clear'
+INDEX_MODE_CLEAR_TEXT  = 'mode:cleartext'
+INDEX_MODE_EXPERT      = 'mode:expert'
 # legacy modes:
-INDEX_MODE_PAIR   = 'mode:node1+label'
-INDEX_MODE_TRIPLE = 'mode:triple'
-INDEX_MODE_QUAD   = 'mode:quad'
+INDEX_MODE_PAIR        = 'mode:node1+label'
+INDEX_MODE_TRIPLE      = 'mode:triple'
+INDEX_MODE_QUAD        = 'mode:quad'
 
 INDEX_MODES = {
-    INDEX_MODE_NONE:     INDEX_MODE_NONE,
-    INDEX_MODE_RESET:    INDEX_MODE_RESET,
-    INDEX_MODE_AUTO:     INDEX_MODE_AUTO,
-    INDEX_MODE_EXPERT:   INDEX_MODE_EXPERT,
-    'mode:graph':        ['index:node1,label,node2', 'index:label', 'index:node2,label,node1'],
-    'mode:unigraph':     ['index:node1,label,node2', 'index:node2,label,node1'],
-    'mode:attgraph':     ['index:node1'],
-    'mode:textattgraph': ['index:node1', 'text:node1, node2/text/upcase/lang=@en'],
+    INDEX_MODE_NONE:       INDEX_MODE_NONE,
+    INDEX_MODE_AUTO:       INDEX_MODE_AUTO,
+    INDEX_MODE_AUTO_TEXT:  INDEX_MODE_AUTO_TEXT,
+    INDEX_MODE_CLEAR:      INDEX_MODE_CLEAR,
+    INDEX_MODE_CLEAR_TEXT: INDEX_MODE_CLEAR_TEXT,
+    INDEX_MODE_EXPERT:     INDEX_MODE_EXPERT,
+    'mode:graph':          ['index:node1,label,node2', 'index:label', 'index:node2,label,node1'],
+    'mode:unigraph':       ['index:node1,label,node2', 'index:node2,label,node1'],
+    'mode:attgraph':       ['index:node1'],
+    'mode:textattgraph':   ['index:node1', 'text:node1, node2/text/upcase/lang=@en'],
     # legacy modes:
-    INDEX_MODE_PAIR:     ['index:node1', 'index:label'],
-    INDEX_MODE_TRIPLE:   ['index:node1', 'index:label', 'index:node2'],
-    INDEX_MODE_QUAD:     ['index:node1', 'index:label', 'index:node2', 'index:id'],
+    INDEX_MODE_PAIR:       ['index:node1', 'index:label'],
+    INDEX_MODE_TRIPLE:     ['index:node1', 'index:label', 'index:node2'],
+    INDEX_MODE_QUAD:       ['index:node1', 'index:label', 'index:node2', 'index:id'],
 }
 
 def get_normalized_index_mode(index_spec):
@@ -1165,6 +1201,9 @@ def get_normalized_index_mode(index_spec):
         # we might have a bare mode such as 'auto' or 'none', try to look it up as a mode
         # (to use a bare mode as a column name, explicitly use the appropriate index type):
         norm_spec = INDEX_MODES.get('mode:' + index_spec.strip().lower(), [index_spec])
+        # enforce that clear-modes are fully qualified for some extra protection:
+        if norm_spec in (INDEX_MODE_CLEAR, INDEX_MODE_CLEAR_TEXT):
+            raise KGTKException(f"index mode '{index_spec}' needs to be explicitly qualified")
     return norm_spec
 
 # we use /<option> as the option syntax instead of the --<option> syntax used on the command line
@@ -1173,8 +1212,9 @@ INDEX_TOKENIZER_REGEX = re.compile(
     '|'.join([r'(?P<optsepsep>//)\s*',            # '//' (needs to come before single '/')
               r'(?P<optsep>/)\s*',                # '/'
               r'(?P<typesep>:)\s*',               # ':'
+              r'(?P<valuesep>=)\s*',              # '='
               r'(?P<sep>[,()])\s*',               # (',', '(', ')')
-              r'(?P<text>[^,()/:`"\s]+)',         # non-special-char text tokens
+              r'(?P<text>[^,()/:=`"\s]+)',        # non-special-char text tokens
               r'`(?P<quote_1>([^`]*``)*[^`]*)`',  # `-quoted tokens
               r'"(?P<quote_2>([^"]*"")*[^"]*)"',  # "-quoted tokens
               r'(?P<whitespace>\s+)',             # whitespace separates but is ignored
@@ -1229,6 +1269,16 @@ def tokenize_index_spec(index_spec, regex=INDEX_TOKENIZER_REGEX):
                 index_spec[i+1][1] = 'option' if toktype == 'optsep' else 'global-option'
             else:
                 raise KGTKException('illegal index spec syntax')
+        elif toktype == 'valuesep':
+            value = '' # an option followed by non-text means the empty value
+            if i < last and index_spec[i+1][1] == 'text':
+                value = index_spec[i+1][0]
+                index_spec[i+1][1] = 'value'
+            if i > 0 and index_spec[i-1][1].endswith('option'):
+                # if we have a value, we represent it with a tuple:
+                index_spec[i-1][0] = (index_spec[i-1][0], value)
+            else:
+                raise KGTKException('illegal index spec syntax')
     for token, toktype in index_spec:
         if toktype in ('text', 'type', 'option', 'global-option'):
             tokens.append((token, toktype))
@@ -1259,13 +1309,12 @@ def parse_index_spec(index_spec, regex=INDEX_TOKENIZER_REGEX):
             column_options = {}
             parse.columns[token] = column_options
         elif toktype in ('option', 'global-option'):
-            # we don't handle the option value separator '=' in 'regex':
-            opt, value = (token.split('=', 1) + [True])[0:2]
-            opt = opt.strip()
+            opt, value = (token, True) if isinstance(token, str) else token
             try:
-                value = eval(value, {}) # dwim booleans and numbers
+                import ast
+                value = ast.literal_eval(value) # dwim booleans and numbers
             except:
-                pass                    # everything else is considered a string
+                pass                            # everything else is considered a string
             if toktype == 'global-option':
                 parse.options[opt] = value
             elif column_options is not None:
@@ -1299,6 +1348,11 @@ class TableIndex(object):
         """Create an eval-able repr that will recreate 'self' identically.
         """
         return f"{type(self).__name__}({repr(self.table)}, {self.index})"
+
+    def __eq__(self, other):
+        return (type(self) == type(other)
+                and self.index == other.index
+                and self.get_table_name() == other.get_table_name())
 
     @classmethod
     def encode(self, index_tree):
@@ -1342,6 +1396,7 @@ class TableIndex(object):
     def get_index_type_name(self):
         return next(k for k,v in self.INDEX_TYPES.items() if v == self.__class__.__name__)
 
+    @classmethod
     def get_index_type_class(self, index_type):
         class_name = self.INDEX_TYPES.get(index_type)
         if class_name is None:
@@ -1370,8 +1425,13 @@ class TableIndex(object):
         """
         raise KGTKException('not implemented')
 
-    def get_definition(self):
+    def get_create_script(self):
         """Return a list of SQL statements required to create this index.
+        """
+        raise KGTKException('not implemented')
+
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
         """
         raise KGTKException('not implemented')
 
@@ -1401,6 +1461,11 @@ class TableIndex(object):
         """
         return self.table == index.table and self.subsumes_columns(index.index.columns.keys())
 
+    def redefines(self, index):
+        """Return True if 'self' is different from 'index' and redefines it.
+        """
+        return False
+
     
 class StandardIndex(TableIndex):
     """Standard column indexes created via 'CREATE INDEX...'.
@@ -1427,7 +1492,7 @@ class StandardIndex(TableIndex):
         index_name = '%s_%s_idx' % (table_name, column_names)
         return index_name
 
-    def get_definition(self):
+    def get_create_script(self):
         """Return a list of SQL statements required to create this index.
         """
         table_name = self.get_table_name()
@@ -1444,6 +1509,14 @@ class StandardIndex(TableIndex):
         ]
         return statements
 
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
+        """
+        statements = [
+            f'DROP INDEX {sql_quote_ident(self.get_name())}'
+        ]
+        return statements
+
     def subsumes(self, index):
         """Return True if 'self' subsumes or is more general than 'index',
         that is it can handle a superset of lookup requests.
@@ -1453,35 +1526,72 @@ class StandardIndex(TableIndex):
                 and isinstance(index, (StandardIndex, SqlIndex))
                 and self.subsumes_columns(index.index.columns.keys()))
 
+
+# TextIndex NOTES:
+# - all columns will be indexed unless excluded with 'unindexed'
+# - tables are contentless, since we need to match to the source table via rowid anyway
+# - trigram seems to be the most powerful tokenizer, so we use that as the default, however,
+#   it uses extra space, and it requires SQLite 3.34.0 which requires Python 3.9 or later
+# - we support optional names on indexes, which allows us to easily redefine them and to
+#   have multiple indexes on the same source
+# - indexing scores are between -20 and 0, if we rerank with pagerank, that needs to be
+#   considered, for example, additive weighting with log(pagerank) seems like an option
+# - matching on node IDs works too and doesn't require special tokenizer options
+# - we should have a //strip or //preproc option to specify a custom preprocessing function
+
+# Index/tokenizer performance tradeoffs:
+# - case-insensitive trigram (default): fast textmatch, fast textlike, fast textglob, more space
+# - case-sensitive trigram: fast textmatch, fast textglob, no textlike, more space than case-insensitive
+# - ascii, unicode61: fast textmatch on whole words, also prefixes if //prefix is specified,
+#   no textlike, no textglob, less space
     
 class TextIndex(TableIndex):
-    """Specialized indexes to support full-text search.
+    """Specialized indexes to support full-text search via SQLite's FT5.
     """
 
+    COLUMN_OPTIONS    = ('unindexed')
+    TABLE_OPTIONS     = ('tokenize', 'prefix', 'content', 'columnsize', 'detail', 'name')
+    
+    DEFAULT_TOKENIZER = 'trigram'
+    # not all of these apply to all tokenizers, but we don't model that for now:
+    TOKENIZE_OPTIONS  = ('categories', 'tokenchars', 'separators', 'remove_diacritics', 'case_sensitive')
+    
     def parse_spec(self, index_spec):
         """Parse a full-text 'index_spec' such as, for example:
-        'text: node1, node2/text /upper /lang=@en' (the /upper and /lang options
-        are just for illustration of the possible syntax but not yet supported).
+        'text:node1/unindexed,node2//name=labidx//prefix=2//tokenize=trigram'
+        The 'unindexed' option should be rare and is just shown for illustration.
         """
         parse = parse_index_spec(index_spec)
         if parse.type != self.get_index_type_name():
             raise KGTKException(f'mismatched index spec type: {parse.type}')
-        for col, options in parse.columns.items():
-            if options.get('text', False):
-                break
-        else:
-            raise KGTKException(f'no text column(s) specified: {index_spec}')
+        for key in parse.options.keys():
+            if not (key in self.TABLE_OPTIONS or key in self.TOKENIZE_OPTIONS):
+                raise KGTKException(f'unhandled text index option: {key}')
+        if 'tokenize' not in parse.options:
+            for subopt in self.TOKENIZE_OPTIONS:
+                if parse.options.get(subopt) is not None:
+                    raise KGTKException(f'missing tokenize option for {subopt}')
+        # use content-less indexes linked to graph by default (override with //content):
+        content = parse.options.get('content')
+        if not content:    # None, False, ''
+            parse.options['content'] = self.get_table_name()
+        elif content is True:
+            del parse.options['content']
         return parse
 
     def get_name(self):
         """Return the global SQL name to be used for this index.
         """
         table_name = self.get_table_name()
-        column_names = '_'.join(self.index.columns.keys())
-        index_name = '%s_%s_textidx' % (table_name, column_names)
-        return index_name
+        index_name = self.index.options.get('name')
+        if index_name is None:
+            import shortuuid
+            # generate a name based on the index itself instead of external state
+            # (minor gamble on uniqueness with shortened key):
+            index_name = shortuuid.uuid(repr(self)).lower()[0:10] + '_'
+        return f'{table_name}_txtidx_{index_name}'
 
-    def get_definition(self):
+    def get_create_script(self):
         """Return a list of SQL statements required to create this index.
         """
         table_name = self.get_table_name()
@@ -1489,11 +1599,45 @@ class TextIndex(TableIndex):
         columns = self.index.columns
         column_names = ', '.join([sql_quote_ident(col) for col in columns.keys()])
         column_names_with_options = ', '.join(
-            [sql_quote_ident(col) + (' UNINDEXED' if not columns[col].get('text', False) else '')
+            [sql_quote_ident(col) + (' UNINDEXED' if columns[col].get('unindexed', False) else '')
              for col in columns.keys()])
+        
+        options = self.index.options
+        index_options = []
+        if 'tokenize' in options:
+            tokopt = str(options.get('tokenize'))
+            for subopt in self.TOKENIZE_OPTIONS:
+                value = options.get(subopt)
+                if value is not None:
+                    value = str(int(value)) if isinstance(value, bool) else str(value)
+                    tokopt += f""" {subopt} {sql_quote_ident(value, "'")}"""
+            tokopt = f"""tokenize={sql_quote_ident(tokopt)}"""
+            index_options.append(tokopt)
+        else:
+            tokopt = f"""tokenize={sql_quote_ident(self.DEFAULT_TOKENIZER)}"""
+            index_options.append(tokopt)
+        if 'prefix' in options:
+            index_options.append(f"""prefix={sql_quote_ident(str(options.get('prefix')))}""")
+        if 'content' in options:
+            index_options.append(f"""content={sql_quote_ident(str(options.get('content')))}""")
+        if 'columnsize' in options:
+            index_options.append(f"""columnsize={sql_quote_ident(str(options.get('columnsize')))}""")
+        if 'detail' in options:
+            index_options.append(f"""detail={options.get('detail')}""")
+        if index_options:
+            column_names_with_options += (', ' + ', '.join(index_options))
+        
         statements = [
-            f'CREATE VIRTUAL TABLE {index_name} USING FTS5 ({column_names_with_options})',
-            f'INSERT INTO {index_name} ({column_names}) SELECT {column_names} FROM {table_name}',
+            f'CREATE VIRTUAL TABLE {sql_quote_ident(index_name)} USING FTS5 ({column_names_with_options})',
+            f'INSERT INTO {sql_quote_ident(index_name)} ({column_names}) SELECT {column_names} FROM {table_name}',
+        ]
+        return statements
+
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
+        """
+        statements = [
+            f'DROP TABLE {sql_quote_ident(self.get_name())}'
         ]
         return statements
 
@@ -1502,10 +1646,16 @@ class TextIndex(TableIndex):
         that is it can handle a superset of lookup requests.
         """
         # for now we require strict equivalence:
-        return (self.table == index.table
-                and isinstance(index, TextIndex)
-                and self.index.columns == index.index.columns
-                and self.index.options == index.index.options)
+        return self == index
+
+    def redefines(self, index):
+        """Return True if 'self' is different from 'index' and redefines it.
+        Text indexes redefine based on a defined and equal name to another text index.
+        """
+        return (isinstance(index, TextIndex)
+                and self != index
+                and self.index.options.get('name') is not None
+                and self.index.options['name'] == index.index.options.get('name'))
 
     
 class SqlIndex(TableIndex):
@@ -1576,12 +1726,20 @@ class SqlIndex(TableIndex):
         """
         return self.index.options['name']
 
-    def get_definition(self):
+    def get_create_script(self):
         """Return a list of SQL statements required to create this index.
         """
         return [self.index.definition,
                 f'ANALYZE {sql_quote_ident(self.get_name())}',
         ]
+
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
+        """
+        statements = [
+            f'DROP INDEX {sql_quote_ident(self.get_name())}'
+        ]
+        return statements
 
     def subsumes(self, index):
         """Return True if 'self' subsumes or is more general than 'index',
@@ -1591,25 +1749,23 @@ class SqlIndex(TableIndex):
         return (self.table == index.table
                 and isinstance(index, (SqlIndex, StandardIndex))
                 and self.subsumes_columns(index.index.columns.keys()))
-
     
 """
 >>> ss.TableIndex('graph1', 'node1, label, node2')
 StandardIndex('graph1', sdict['type': 'index', 'columns': sdict['node1': {}, 'label': {}, 'node2': {}], 'options': {}])
->>> _.get_definition()
+>>> _.get_create_script()
 ['CREATE INDEX "graph1_node1_label_node2_idx" ON "graph1" ("node1", "label", "node2")',
  'ANALYZE "graph1_node1_label_node2_idx"']
 
-# only the 'text' option is considered for now:
->>> ss.TableIndex('graph2', 'text: node1, node2/text /upper /lang=@en')
-TextIndex('graph2', sdict['type': 'text', 'columns': sdict['node1': {}, 'node2': {'text': True, 'upper': True, 'lang': '@en'}], 'options': {}])
->>> _.get_definition()
-['CREATE VIRTUAL TABLE graph2_node1_node2_textidx USING FTS5 ("node1" UNINDEXED, "node2")',
- 'INSERT INTO graph2_node1_node2_textidx ("node1", "node2") SELECT "node1", "node2" FROM graph2']
+>>> ss.TableIndex('graph2', 'text:node1,node2//tokenize=trigram//case_sensitive//name=myidx')
+TextIndex('graph2', sdict['type': 'text', 'columns': sdict['node1': {}, 'node2': {}], 'options': {'tokenize': 'trigram', 'case_sensitive': True, 'name': 'myidx', 'content': 'graph2'}])
+>>> _.get_create_script()
+['CREATE VIRTUAL TABLE "graph2_txtidx_myidx" USING FTS5 ("node1", "node2", tokenize="trigram case_sensitive \'1\'", content="graph2")', 
+ 'INSERT INTO "graph2_txtidx_myidx" ("node1", "node2") SELECT "node1", "node2" FROM graph2']
 
 >>> ss.TableIndex('graph_1', 'sql: CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")')
 SqlIndex('graph_1', sdict['type': 'sql', 'columns': sdict['node1': {}], 'options': {'unique': True, 'name': 'graph_1_node1_idx', 'table': 'graph_1'}, 'definition': 'CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")'])
->>> _.get_definition()
+>>> _.get_create_script()
 ['CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")',
  'ANALYZE "graph_1_node1_idx"']
 """
