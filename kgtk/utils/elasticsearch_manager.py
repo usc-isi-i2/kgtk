@@ -276,7 +276,8 @@ class ElasticsearchManager(object):
                         elif vals[label_id] == 'class_count':
                             class_count = vals[node2_id]
                         elif vals[label_id] == 'context':
-                            context = ElasticsearchManager.parse_context_string(vals[node2_id])
+                            context_dict = ElasticsearchManager.parse_context_string(node1, vals[node2_id])
+                            context = context_dict[node1]
                         elif vals[label_id] == 'P31' and vals[node2_id] == 'Q5':
                             is_human = True
                         elif vals[label_id] in extra_aliases_properties:
