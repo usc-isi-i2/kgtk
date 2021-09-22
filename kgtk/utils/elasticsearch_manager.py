@@ -1073,7 +1073,8 @@ class ElasticsearchManager(object):
                 string_value.append(c)
             if (i > 0 and c == '"' and property_value_string[i - 1] != "\\") \
                     or \
-                    (i > 0 and c == '"' and property_value_string[i + 1] == ":"):
+                    (i > 0 and c == '"' and property_value_string[i + 1] == ":" and property_value_string[
+                        i + 2] == "P"):
                 line_started = False
         string_val = "".join(string_value)
         length_remove = len(string_val) + 1  # ":" eg i"utc+01:00":P421:Q6655
