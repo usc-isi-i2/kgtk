@@ -276,7 +276,7 @@ class ElasticsearchManager(object):
                         elif vals[label_id] == 'class_count':
                             class_count = vals[node2_id]
                         elif vals[label_id] == 'context':
-                            context = vals[node2_id]
+                            context = ElasticsearchManager.parse_context_string(vals[node2_id])
                         elif vals[label_id] == 'P31' and vals[node2_id] == 'Q5':
                             is_human = True
                         elif vals[label_id] in extra_aliases_properties:
@@ -721,7 +721,7 @@ class ElasticsearchManager(object):
                         "trigram_tokenizer": {
                             "type": "ngram",
                             "min_gram": 3,
-                            "max_gram": 3,
+                            "max_gram": 4,
                             "token_chars": [
                                 "letter"
                             ]
@@ -1012,3 +1012,92 @@ class ElasticsearchManager(object):
                 if not any(count):  # outside brackets
                     saved_chars.append(character)
         return ''.join(saved_chars).strip()
+
+    @staticmethod
+    def parse_context_string(qnode, context_string: str) -> dict:
+
+        context_dict = {
+            qnode: []
+        }
+
+        p_v_dict = {}
+        try:
+            if context_string:
+                prop_val_list = re.split(r'(?<!\\)\|', context_string)
+
+                for prop_val in prop_val_list:
+                    _type = prop_val[0]
+
+                    values, property, item = ElasticsearchManager.parse_prop_val(qnode, prop_val)
+
+                    if item is None:
+                        key = property
+                        if key not in p_v_dict:
+                            p_v_dict[key] = {
+                                'p': property,
+                                "t": _type,
+                                'v': []
+                            }
+                        p_v_dict[key]['v'].append(values)
+
+                    else:
+                        key = f"{property}_{item}"
+                        if key not in p_v_dict:
+                            p_v_dict[key] = {
+                                'p': property,
+                                'i': item,
+                                'v': [],
+                                "t": _type
+                            }
+                        p_v_dict[key]['v'].append(values)
+        except Exception as e:
+            raise Exception(e)
+
+        for k in p_v_dict:
+            context_dict[qnode].append(p_v_dict[k])
+
+        return context_dict
+
+    @staticmethod
+    def parse_prop_val(qnode, property_value_string):
+        line_started = False
+        string_value = list()
+
+        property_value_string = property_value_string[1:]
+
+        for i, c in enumerate(property_value_string):
+            if i == 0 and c == '"':  # start of the string value:
+                line_started = True
+            if line_started:
+                string_value.append(c)
+            if (i > 0 and c == '"' and property_value_string[i - 1] != "\\") \
+                    or \
+                    (i > 0 and c == '"' and property_value_string[i + 1] == ":"):
+                line_started = False
+        string_val = "".join(string_value)
+        length_remove = len(string_val) + 1  # ":" eg i"utc+01:00":P421:Q6655
+        rem_vals = property_value_string[length_remove:].split(":")
+        n = len(string_val)
+        string_val = string_val[1: n - 1]
+
+        property = rem_vals[0]
+
+        if not property.startswith('P'):
+            raise Exception(
+                f"Unexpected format of the context string, Qnode: {qnode}, context string: {property_value_string}. "
+                f"Property does not starts with 'P'")
+
+        if len(rem_vals) == 2:
+            item = rem_vals[1]
+            if not item.startswith('Q'):
+                raise Exception(
+                    f"Unexpected format of the context string, Qnode: {qnode}, context string: {property_value_string}"
+                    f". Item does not start with 'Q'")
+            return string_val, rem_vals[0], item
+
+        if len(rem_vals) == 1:
+            return string_val, property, None
+
+        if len(rem_vals) > 2:
+            raise Exception(
+                f"Unexpected format of the context string, Qnode: {qnode}, context string: {property_value_string}")
