@@ -44,6 +44,7 @@ nav:
       - 'reorder-columns': 'transform/reorder_columns.md'
       - 'replace-nodes': 'transform/replace_nodes.md'
       - 'sort': 'transform/sort.md'
+      - 'table': 'transform/table.md'
       - 'tee': 'transform/tee.md'
       - 'unique': 'transform/unique.md'
       - 'unreify-rdf-statements': 'transform/unreify_rdf_statements.md'

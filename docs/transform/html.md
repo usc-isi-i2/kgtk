@@ -36,7 +36,7 @@ optional arguments:
                         The KGTK file to convert to a GitHub markdown table.
                         (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The GitHub markdown file to write. (May be omitted or
+                        The html file to write. (May be omitted or
                         '-' for stdout.)
 
   -v [optional True|False], --verbose [optional True|False]
