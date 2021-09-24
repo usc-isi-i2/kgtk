@@ -169,6 +169,7 @@ class KgtkCat():
                                          output_column_names=self.output_column_names,
                                          old_column_names=self.old_column_names,
                                          new_column_names=self.new_column_names,
+                                         error_file=self.error_file,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
