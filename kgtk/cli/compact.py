@@ -152,6 +152,7 @@ def run(input_file: KGTKFiles,
         report_lists: bool,
         exclude_lists: bool,
         output_only_lists: bool,
+        only_one_id: bool,
         build_id: bool,
 
         errors_to_stdout: bool = False,
@@ -201,7 +202,6 @@ def run(input_file: KGTKFiles,
         print("--report-lists=%s" % str(report_lists), file=error_file, flush=True)
         print("--exclude-lists=%s" % str(exclude_lists), file=error_file, flush=True)
         print("--output-only-lists=%s" % str(output_only_lists), file=error_file, flush=True)
-        print("--only-one-id=%s" % str(only_one_id), file=error_file, flush=True)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
