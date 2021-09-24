@@ -1,5 +1,11 @@
 """
-Convert a KGTK file to a GitHub markdown table.
+Convert a KGTK file to a human-readable text table with fixed-width columns.
+
+The output file can also be used as a GitHub markdown table.
+
+At the present time, the conversion to fixed-width columns causes KgtkWriter
+to buffer the entire output file.  This command may run out of memory when
+processing large files.
 
 TODO: Need KgtkWriterOptions
 """
