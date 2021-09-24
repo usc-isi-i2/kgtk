@@ -31,7 +31,7 @@ def parser():
         '\n\nThe header record, cotaining the column names, is always passed and is not included in N. ' +
         '\n\nMultiplier suffixes are not supported. ' +
         '\n\nUse this command to filter the output of any KGTK command: ' +
-        '\n\nkgtk xxx / head -N 20 ' +
+        '\n\nkgtk xxx / head -n 20 ' +
         '\n\nUse it to limit the records in a file: ' +
         '\n\nkgtk head -i file.tsv -o file.html' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert html --help'
@@ -59,13 +59,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         else:
             return SUPPRESS
 
-    parser.add_input_file(who="The KGTK file to convert to an HTML table.", positional=True)
-    parser.add_output_file(who="The GitHub markdown file to write.")
+    parser.add_input_file()
+    parser.add_output_file()
 
     parser.add_argument("-n", "--edges", dest="edge_limit", type=int, default=10,
                         help="The number of records to pass if positive (default=%(default)d).")
                         
-    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
+    parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str,
                               choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
