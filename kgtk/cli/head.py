@@ -3,7 +3,7 @@
 When "-n N" is positive, it will pass just the first N data edges of a KGTK
 input file to the KGTK output file.
 
-When "-n N" is negative, it will pass all except the last N edges of the KGTH
+When "-n N" is negative, it will pass all except the last N edges of the KGTK
 input file to the KGTK output file.
 
 The header record, cotaining the column names, is always passed and is not
