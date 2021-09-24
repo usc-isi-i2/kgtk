@@ -820,7 +820,7 @@ class KgtkWriter(KgtkBase):
                       file=self.error_file, flush=True)
             return False
 
-        idx: idx
+        idx: int
         name: str
         for idx, name in enumerate(self.column_names):
             if name != kr.column_names[idx]:
@@ -842,7 +842,7 @@ class KgtkWriter(KgtkBase):
             for idx, name in enumerate(new_column_names):
                 if name != self.column_names[idx]:
                     if self.verbose:
-                        print("Shortcut not possible: new_column_names[%d]=%s != kw.column_names[%d]=%3" % (idx,
+                        print("Shortcut not possible: new_column_names[%d]=%s != kw.column_names[%d]=%s" % (idx,
                                                                                                             name,
                                                                                                             idx,
                                                                                                             self.column_names[idx]),
