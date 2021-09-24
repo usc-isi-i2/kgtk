@@ -87,6 +87,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='When True, search the graph breadth first.  When false, search depth first. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
+    parser.add_argument('--depth-limit',dest='depth_limit',
+                        help='An optional depth limit for breadth-first searches. (default=%(default)s)',
+                        type=int, default=None)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
@@ -124,6 +128,7 @@ def run(input_file: KGTKFiles,
         selflink_bool: bool,
         show_properties: bool,
         breadth_first: bool,
+        depth_limit: typing.Optional[int],
 
         errors_to_stdout: bool,
         errors_to_stderr: bool,
@@ -137,7 +142,7 @@ def run(input_file: KGTKFiles,
     import csv
     from pathlib import Path
     import time
-    from graph_tool.search import dfs_iterator, bfs_iterator
+    from graph_tool.search import dfs_iterator, bfs_iterator, bfs_search, BFSVisitor
     # from graph_tool import load_graph_from_csv
     from graph_tool.util import find_edge
     from kgtk.exceptions import KGTKException
@@ -227,6 +232,8 @@ def run(input_file: KGTKFiles,
         print("--label=%s" % label, file=error_file)
         print("--selflink=%s" % str(selflink_bool), file=error_file)
         print("--breadth-first=%s" % str(breadth_first), file=error_file)
+        if depth_limit is not None:
+            print("--depth-limit=%d" % depth_limit, file=error_file)
         input_reader_options.show(out=error_file)
         root_reader_options.show(out=error_file)
         props_reader_options.show(out=error_file)
@@ -246,6 +253,12 @@ def run(input_file: KGTKFiles,
 
     if undirected and (len(undirected_props) > 0 or undirected_props_file is not None):
         raise KGTKException("--undirected is not allowed with --undirected-props or --undirected-props-file")
+
+    if depth_limit is not None:
+        if not breadth_first:
+            raise KGTKException("--depth-limit is not allowed without --breadth-first")
+        if depth_limit <= 0:
+            raise KGTKException("--depth-limit requires a positive argument")
 
     root_set: typing.Set = set()
 
@@ -489,10 +502,10 @@ def run(input_file: KGTKFiles,
                              verbose=verbose,
                              out=error_file)
 
-    name = G.vp["name"] # Get the vertix name property map (vertex to ndoe1 (subject) name)
+    name = G.vp["name"] # Get the vertex name property map (vertex to ndoe1 (subject) name)
 
     if show_properties:
-        print("Graph name=%s" % name, file=error_file, flush=True)
+        print("Graph name=%s" % repr(name), file=error_file, flush=True)
         print("Graph properties:" , file=error_file, flush=True)
         key: typing.Any
         for key in G.properties:
@@ -526,11 +539,38 @@ def run(input_file: KGTKFiles,
             kw.writerow([name[index], label, name[index]])
                 
         if breadth_first:
-            for e in bfs_iterator(G, G.vertex(index)):
-                kw.writerow([name[index], label, name[e.target()]])
+            if depth_limit is None:
+                for e in bfs_iterator(G, G.vertex(index)):
+                    kw.writerow([name[index], label, name[e.target()]])
+
+            else:
+                class DepthExceeded(Exception):
+                    pass
+
+                class DepthLimitedVisitor(BFSVisitor):
+                    def __init__(self, name, pred, dist):
+                        self.name = name
+                        self.pred = pred
+                        self.dist = dist
+
+                    def tree_edge(self, e):
+                        self.pred[e.target()] = int(e.source())
+                        newdist = self.dist[e.source()] + 1
+                        if depth_limit is not None and newdist > depth_limit:
+                           raise DepthExceeded
+                        self.dist[e.target()] = newdist
+                        kw.writerow([name[index], label, name[e.target()]])
+
+                dist = G.new_vertex_property("int")
+                pred = G.new_vertex_property("int64_t")
+                try:
+                    bfs_search(G, G.vertex(index), DepthLimitedVisitor(name, pred, dist))
+                except DepthExceeded:
+                    pass
         else:
             for e in dfs_iterator(G, G.vertex(index)):
                 kw.writerow([name[index], label, name[e.target()]])
 
     kw.close()
     kr.close()
+
