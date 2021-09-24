@@ -8,6 +8,9 @@ or to easily produce human-readable output in HTML-aware environments.
 This comand is equivalent to `kgtk cat --MODE=NONE --output-format=html`.
 However, it is a lot shorter and easier to type.
 
+The HTML table is generated as a self-contained HTML document with minimal
+formatting.
+
 ## Usage
 
 ```
