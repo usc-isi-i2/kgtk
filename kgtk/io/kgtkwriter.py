@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 import attr
 from enum import Enum
 import errno
+import html
 import json
 from pathlib import Path
 from multiprocessing import Queue
@@ -27,6 +28,7 @@ class KgtkWriter(KgtkBase):
 
     # TODO: use an enum
     OUTPUT_FORMAT_CSV: str = "csv"
+    OUTPUT_FORMAT_HTML: str = "html"
     OUTPUT_FORMAT_JSON: str = "json"
     OUTPUT_FORMAT_JSON_MAP: str = "json-map"
     OUTPUT_FORMAT_JSON_MAP_COMPACT: str = "json-map-compact"
@@ -43,6 +45,7 @@ class KgtkWriter(KgtkBase):
 
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
         OUTPUT_FORMAT_CSV,
+        OUTPUT_FORMAT_HTML,
         OUTPUT_FORMAT_JSON,
         OUTPUT_FORMAT_JSON_MAP,
         OUTPUT_FORMAT_JSON_MAP_COMPACT,
@@ -119,6 +122,7 @@ class KgtkWriter(KgtkBase):
             self.OUTPUT_FORMAT_TSV_CSVLIKE: self.write_tsv_csvlike,
             self.OUTPUT_FORMAT_CSV: self.write_csv,
             self.OUTPUT_FORMAT_MD: self.write_md,
+            self.OUTPUT_FORMAT_HTML: self.write_html,
             self.OUTPUT_FORMAT_JSON: self.write_json,
             self.OUTPUT_FORMAT_JSON_MAP: self.write_json_map,
             self.OUTPUT_FORMAT_JSON_MAP_COMPACT: self.write_json_map_compact,
@@ -265,6 +269,8 @@ class KgtkWriter(KgtkBase):
                         output_format = cls.OUTPUT_FORMAT_MD
                     elif format_suffix == ".csv":
                         output_format = cls.OUTPUT_FORMAT_CSV
+                    elif format_suffix == ".html":
+                        output_format = cls.OUTPUT_FORMAT_HTML
                     elif format_suffix == ".json":
                         output_format = cls.OUTPUT_FORMAT_JSON
                     elif format_suffix == ".jsonl":
@@ -304,6 +310,8 @@ class KgtkWriter(KgtkBase):
                     output_format = cls.OUTPUT_FORMAT_MD
                 elif file_path.suffix == ".csv":
                     output_format = cls.OUTPUT_FORMAT_CSV
+                elif file_path.suffix == ".html":
+                    output_format = cls.OUTPUT_FORMAT_HTML
                 elif file_path.suffix == ".json":
                     output_format = cls.OUTPUT_FORMAT_JSON
                 elif file_path.suffix == ".jsonl":
@@ -611,6 +619,42 @@ class KgtkWriter(KgtkBase):
                 result[self.output_column_names[idx]] = self.reformat_value_for_json(value)
         return result
 
+    def write_html_header(self):
+        self.writeline('<!DOCTYPE html>')
+        self.writeline('<html lang="en">')
+        self.writeline('<head>')
+        self.writeline('<meta charset="utf-8">')
+        self.writeline('<style>')
+        self.writeline('table, th, td {')
+        self.writeline('border: 1px solid black;')
+        self.writeline('border-collapse: collapse;')
+        self.writeline('}')
+        self.writeline('</style>')
+        self.writeline('</head>')
+        self.writeline('<body>')
+        self.writeline('<table>')
+        self.writeline('<tr>')
+
+        column_name: str
+        for column_name in self.output_column_names:
+            self.writeline('<th>%s</th>' % html.escape(column_name))
+
+        self.writeline('</tr>')
+
+    def write_html(self, values: typing.List[str]):
+        self.writeline('<tr>')
+
+        value: str
+        for value in values:
+            self.writeline('<td>%s</td>' % html.escape(value))
+
+        self.writeline('</tr>')
+
+    def write_html_trailer(self):
+        self.writeline('</table>')
+        self.writeline('</body>')
+        self.writeline('</html>')
+
     def write_header(self):
         header: str
         header2: typing.Optional[str] = None
@@ -624,7 +668,11 @@ class KgtkWriter(KgtkBase):
         else:
             column_names = self.column_names
 
-        if self.output_format == self.OUTPUT_FORMAT_JSON:
+        if self.output_format == self.OUTPUT_FORMAT_HTML:
+            self.write_html_header()
+            return;
+
+        elif self.output_format == self.OUTPUT_FORMAT_JSON:
             self.writeline("[")
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
             noeol = True
@@ -993,6 +1041,9 @@ class KgtkWriter(KgtkBase):
             if self.verbose:
                 print("Writing the table buffer: %d rows." % len(table_buffer), file=self.error_file, flush=True)
             self.finish_table()
+
+        elif self.output_format == self.OUTPUT_FORMAT_HTML:
+            self.write_html_trailer()
 
         if self.gzip_thread is not None:
             self.gzip_thread.close()

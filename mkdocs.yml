@@ -24,6 +24,7 @@ nav:
       - 'expand': 'transform/expand.md'
       - 'explode': 'transform/explode.md'
       - 'filter': 'transform/filter.md'
+      - 'html': 'transform/html.md'
       - 'ifempty': 'transform/ifempty.md'
       - 'ifexists': 'transform/ifexists.md'
       - 'ifnotempty': 'transform/ifnotempty.md'
