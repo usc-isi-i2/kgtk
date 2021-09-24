@@ -35,6 +35,7 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_JSONL_MAP_COMPACT: str = "jsonl-map-compact"
     OUTPUT_FORMAT_KGTK: str = "kgtk"
     OUTPUT_FORMAT_MD: str = "md"
+    OUTPUT_FORMAT_TABLE: str = "table"
     OUTPUT_FORMAT_TSV: str = "tsv"
     OUTPUT_FORMAT_TSV_CSVLIKE: str = "tsv-csvlike"
     OUTPUT_FORMAT_TSV_UNQUOTED: str = "tsv-unquoted"
@@ -50,6 +51,7 @@ class KgtkWriter(KgtkBase):
         OUTPUT_FORMAT_JSONL_MAP_COMPACT,
         OUTPUT_FORMAT_KGTK,
         OUTPUT_FORMAT_MD,
+        OUTPUT_FORMAT_TABLE,
         OUTPUT_FORMAT_TSV,
         OUTPUT_FORMAT_TSV_CSVLIKE,
         OUTPUT_FORMAT_TSV_UNQUOTED,
@@ -110,6 +112,7 @@ class KgtkWriter(KgtkBase):
     def __attrs_post_init__(self):
         self.format_writers: typing.Mapping[str, typing.Callable[[KgtkWriter, typing.List[str]], None]] = {
             self.OUTPUT_FORMAT_KGTK: self.write_kgtk,
+            self.OUTPUT_FORMAT_TABLE: self.write_table,
             self.OUTPUT_FORMAT_TSV: self.write_tsv,
             self.OUTPUT_FORMAT_TSV_UNQUOTED: self.write_tsv_unquoted,
             self.OUTPUT_FORMAT_TSV_UNQUOTED_EP: self.write_tsv_unquoted_ep,
@@ -266,6 +269,8 @@ class KgtkWriter(KgtkBase):
                         output_format = cls.OUTPUT_FORMAT_JSON
                     elif format_suffix == ".jsonl":
                         output_format = cls.OUTPUT_FORMAT_JSONL
+                    elif format_suffix == ".table":
+                        output_format = cls.OUTPUT_FORMAT_TABLE
                     else:
                         output_format = cls.OUTPUT_FORMAT_DEFAULT
 
@@ -303,6 +308,8 @@ class KgtkWriter(KgtkBase):
                     output_format = cls.OUTPUT_FORMAT_JSON
                 elif file_path.suffix == ".jsonl":
                     output_format = cls.OUTPUT_FORMAT_JSONL
+                elif file_path.suffix == ".table":
+                    output_format = cls.OUTPUT_FORMAT_TABLE
                 else:
                     output_format = cls.OUTPUT_FORMAT_DEFAULT
 
@@ -642,6 +649,9 @@ class KgtkWriter(KgtkBase):
                 header += " " + col + " |"
                 header2 += " -- |"
             
+        elif self.output_format == self.OUTPUT_FORMAT_TABLE:
+            return # We'll write a header later.
+
         elif self.output_format in [self.OUTPUT_FORMAT_KGTK,
                                     self.OUTPUT_FORMAT_CSV,
                                     self.OUTPUT_FORMAT_TSV,
@@ -904,6 +914,45 @@ class KgtkWriter(KgtkBase):
     def write_jsonl_map_compact(self, values: typing.List[str]):
         self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
 
+    table_buffer: typing.List[typing.List[str]] = [ ]
+    def write_table(self, values: typing.List[str]):
+        self.table_buffer.append(values.copy())
+
+    def join_table(self, values: typing.List[str], col_widths: typing.List[int], fillchar: str = " ")->str:
+        linebuf: typing.List[str] = ["|"]
+        idx: int
+        value: str
+        for idx, value in enumerate(values):
+            linebuf.append(" ")
+            linebuf.append(value.ljust(col_widths[idx], fillchar))
+            linebuf.append(" |")
+        return "".join(linebuf)
+
+    def finish_table(self):
+        # Compute the initial column widths:
+        col_widths: typing.List[int] = [ len(x) for x in self.output_column_names ]
+
+        # Consider the widths of the buffered data:
+        row: typing.List[str]
+        for row in self.table_buffer:
+            idx: int
+            val: str
+            for idx, val in enumerate(row):
+                vallen: int = len(val)
+                if vallen > col_widths[idx]:
+                    col_widths[idx] = vallen
+
+        # Output the header:
+        self.writeline(self.join_table(self.output_column_names, col_widths))
+
+        # Output the line of dashes under the header:
+        self.writeline(self.join_table(["" for x in self.output_column_names], col_widths, fillchar="-"))
+
+        # Output the saved data:
+        for row in self.table_buffer:
+            self.writeline(self.join_table(row, col_widths))
+                       
+
     def writerow(self, row: typing.List[typing.Union[str, int, float, bool]]):
         # Convenience method for interoperability with csv.writer.
         # Don't forget to call kw.close() when done, though.
@@ -940,6 +989,10 @@ class KgtkWriter(KgtkBase):
                 print("Closing the JSON list.", file=self.error_file, flush=True)
             self.writeline("")
             self.writeline("]")
+        elif self.output_format == self.OUTPUT_FORMAT_TABLE:
+            if self.verbose:
+                print("Writing the table buffer: %d rows." % len(table_buffer), file=self.error_file, flush=True)
+            self.finish_table()
 
         if self.gzip_thread is not None:
             self.gzip_thread.close()
