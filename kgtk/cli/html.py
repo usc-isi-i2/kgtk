@@ -1,5 +1,5 @@
 """
-Convert a KGTK file to a GitHub markdown table.
+Convert a KGTK file to an HTML table.
 
 TODO: Need KgtkWriterOptions
 """
