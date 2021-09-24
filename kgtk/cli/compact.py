@@ -152,7 +152,6 @@ def run(input_file: KGTKFiles,
         report_lists: bool,
         exclude_lists: bool,
         output_only_lists: bool,
-        only_one_id: bool,
         build_id: bool,
 
         errors_to_stdout: bool = False,
