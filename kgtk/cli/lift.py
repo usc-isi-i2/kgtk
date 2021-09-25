@@ -16,12 +16,18 @@ import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
+LIFT_COMMAND: str = 'lift'
+ADD_LABELS_COMMAND: str = 'add-labels'
+
 def parser():
     return {
+        'aliases': [ ADD_LABELS_COMMAND ],
         'help': 'Lift labels from a KGTK file.',
-        'description': 'Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. ' +
+        'description': 'Lift labels for a KGTK file. ' +
+        'If called as "kgtk lift", for each of the items in the (node1, label, node2) columns, look for matching label records. ' +
+        'If called as "kgtk add-labels", look for matching label records for all input columns. ' +
         'If found, lift the label values into additional columns in the current record. ' +
-        'Label records are reoved from the output. ' +
+        'Label records are removed from the output unless --remove-label-records=False. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert lift --help'
     }
 
@@ -32,12 +38,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.exceptions import KGTKException
     from kgtk.lift.kgtklift import KgtkLift
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
+    _command: str = parsed_shared_args._command
 
     # This helper function makes it easy to suppress options from
     # The help message.  The options are still there, and initialize
@@ -77,6 +85,41 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            metavar="UNMATCHED_LABEL_OUTPUT_FILE",
                            optional=True)
 
+    suppress_empty_columns_default: bool
+    prefilter_labels_default: bool
+    use_label_enver_default: bool
+    lift_all_columns_default: bool
+    if _command == LIFT_COMMAND:
+        parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
+                                  help=h("The columns for which matching labels are to be lifted. " +
+                                         "The default is [node1, label, node2] or their aliases."), nargs='*')
+
+        parser.add_argument(      "--columns-to-write", dest="output_lifted_column_names",
+                                  help="The columns into which to store the lifted values. " +
+                                  "The default is [node1;label, label;label, node2;label] or their aliases.", nargs='*')
+
+        suppress_empty_columns_default = False
+        prefilter_labels_default = False
+        use_label_envar_default = False
+        lift_all_columns_default = False
+       
+    elif _command == ADD_LABELS_COMMAND:
+        parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
+                                  help=h("The columns for which matching labels are to be lifted. " +
+                                         "The default is all columns except id or its alias."), nargs='*')
+
+        parser.add_argument(      "--columns-to-write", dest="output_lifted_column_names",
+                                  help="The columns into which to store the lifted values. " +
+                                  "The default is [node1;label, label;label, node2;label, ...] or their aliases.", nargs='*')
+
+        suppress_empty_columns_default = True
+        prefilter_labels_default = True
+        use_label_envar_default = True
+        lift_all_columns_default = True
+
+    else:
+        raise KGTKException("Unknown command %s" % repr(_command))
+
     parser.add_argument(      "--input-select-column", "--input-label-column", dest="input_select_column_name",
                               help=h("If input record selection is enabled by --input-select-value, " +
                               "the name of a column that determines which records received lifted values. " +
@@ -87,15 +130,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "The default is not to perform input record selection, " +
                               "and all input records except label records may receive lifted values. "),
                               default=None)
-    
-
-    parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
-                              help=h("The columns for which matching labels are to be lifted. " +
-                              "The default is [node1, label, node2] or their aliases."), nargs='*')
-
-    parser.add_argument(      "--columns-to-write", dest="output_lifted_column_names",
-                              help="The columns into which to store the lifted values. " +
-                              "The default is [node1;label, label;label, node2;label] or their aliases.", nargs='*')
 
     parser.add_argument(      "--lift-suffix", dest="output_lifted_column_suffix",
                               help=h("The suffix used for newly created output columns. (default=%(default)s)."),
@@ -145,7 +179,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--suppress-empty-columns", dest="suppress_empty_columns",
                               help="If true, do not create new columns that would be empty. (default=%(default)s).",
                               metavar="True/False",
-                              type=optional_bool, nargs='?', const=True, default=False)
+                              type=optional_bool, nargs='?', const=True, default=suppress_empty_columns_default)
+
 
     parser.add_argument(      "--ok-if-no-labels", dest="ok_if_no_labels",
                               help="If true, do not abort if no labels were found. (default=%(default)s).",
@@ -155,7 +190,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--prefilter-labels", dest="prefilter_labels",
                               help="If true, read the input file before reading the label file. (default=%(default)s).",
                               metavar="True/False",
-                              type=optional_bool, nargs='?', const=True, default=False)
+                              type=optional_bool, nargs='?', const=True, default=prefilter_labels_default)
 
     parser.add_argument(      "--input-file-is-presorted", dest="input_is_presorted",
                               help="If true, the input file is presorted on the column for which values are to be lifted. (default=%(default)s).",
@@ -180,6 +215,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="If true, output only modified edges to the primary output stream. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--use-label-envar", dest="use_label_envar",
+                              help=h("If true, use the KGTK_LABEL envar for the label file if no --label-file. (default=%(default)s)."),
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=use_label_envar_default)
+
+    parser.add_argument(      "--lift-all-columns", dest="lift_all_columns",
+                              help=h("If true, lift all columns. (default=%(default)s)."),
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=lift_all_columns_default)
+        
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -221,6 +266,9 @@ def run(input_file: KGTKFiles,
 
         output_only_modified_rows: bool = False,
 
+        use_label_envar: bool = False,
+        lift_all_columns: bool = False,
+
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
         show_options: bool = False,
@@ -230,6 +278,7 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
     # import modules locally
+    import os
     from pathlib import Path
     import sys
     
@@ -300,9 +349,20 @@ def run(input_file: KGTKFiles,
         print("--clear-before-lift=%s" % repr(clear_before_lift), file=error_file, flush=True)
         print("--overwrite=%s" % repr(overwrite), file=error_file, flush=True)
         print("--output-only-modified-rows=%s" % repr(output_only_modified_rows), file=error_file, flush=True)
+        print("--use-label-envar=%s" % repr(use_label_envar), file=error_file, flush=True)
+        print("--lift-all-columns=%s" % repr(lift_all_columns), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    # Should the following functionality be moved to KgtkLift?
+    if label_kgtk_file is None and use_label_envar:
+        label_file_envar: str = 'KGTK_LABEL_FILE' # TODO: Move this to a common file.
+        label_file_envar_value: typing.Optional[str] = os.getenv(label_file_envar)
+        if label_file_envar_value is not None:
+            label_kgtk_file = Path(label_file_envar_value)
+            if verbose:
+                print("Using label file %s from envar %s" % (repr(label_file_envar_value), repr(label_file_envar)), file=error_file, flush=True)
 
     try:
         kl: KgtkLift = KgtkLift(
@@ -341,6 +401,8 @@ def run(input_file: KGTKFiles,
             overwrite=overwrite,
 
             output_only_modified_rows=output_only_modified_rows,
+
+            lift_all_columns=lift_all_columns,
 
             reader_options=reader_options,
             value_options=value_options,

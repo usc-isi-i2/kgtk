@@ -82,6 +82,8 @@ class KgtkLift(KgtkFormat):
     matched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
     unmatched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
+    lift_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    
     # TODO: add rewind logic here and KgtkReader
 
     # TODO: find working validators
@@ -102,6 +104,10 @@ class KgtkLift(KgtkFormat):
                 if lift_column_name not in kr.column_name_map:
                     raise ValueError("Unknown lift column %s." % lift_column_name)
                 lift_column_idxs.append(kr.column_name_map[lift_column_name])
+
+        elif self.lift_all_columns:
+            lift_column_idxs = list(range(kr.column_count))
+
         else:
             # Use the edge file key columns if they exist.
             if kr.node1_column_idx >= 0:
@@ -865,7 +871,6 @@ class KgtkLift(KgtkFormat):
                                           very_verbose=self.very_verbose,
         )
 
-        # If supplied, open the label file.
         lkr: typing.Optional[KgtkReader] = None
         if self.label_file_path is not None:
             if self.verbose:
