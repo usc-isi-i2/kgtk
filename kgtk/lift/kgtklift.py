@@ -106,7 +106,11 @@ class KgtkLift(KgtkFormat):
                 lift_column_idxs.append(kr.column_name_map[lift_column_name])
 
         elif self.lift_all_columns:
-            lift_column_idxs = list(range(kr.column_count))
+            idx: int
+            column_name: str
+            for idx, column_name in enumerate(kr.column_names):
+                if not column_name.endswith(self.output_lifted_column_suffix):
+                    lift_column_idxs.append(idx)
 
         else:
             # Use the edge file key columns if they exist.
