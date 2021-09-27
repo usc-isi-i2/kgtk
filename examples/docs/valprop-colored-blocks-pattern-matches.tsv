@@ -1,0 +1,27 @@
+node1	label	node2	id
+red	property	True	
+red	maxoccurs	1	
+green	property	True	
+green	maxoccurs	1	
+blue	property	True	
+blue	maxoccurs	1	
+rgbcolor	datatype	True	
+rgbcolor	node1_type	symbol	
+rgbcolor	node2_type	number	
+rgbcolor	minval	0.0	
+rgbcolor	maxval	1.0	
+rgbcolor	matches	"red\|green\|blue"	
+rgbcolor	requires	red	
+rgbcolor	requires	green	
+rgbcolor	requires	blue	
+rgbcolor	isa	colorclass	
+rgbcolor	prohibits	colorname	
+colorname	property	True	
+colorname	isa	colorclass	
+colorname	node1_type	symbol	
+colorname	node2_type	symbol	
+colorname	node2_values	red	
+colorname	node2_values	green	
+colorname	node2_values	blue	
+colorname	node2_values	yellow	
+colorclass	mustoccur	True	
