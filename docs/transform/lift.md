@@ -7,8 +7,9 @@ and the destination column for the label values.
 
 ### Memory Usage
 
-The input rows are saved in memory, as well as the value-to-label mapping.
-This will impose a limit on the size of the input files that can be processed.
+By default, the input rows are saved in memory, as well as the value-to-label
+mapping.  This will impose a limit on the size of the input files that can be
+processed.
 
 Seperating the labels from the  edges being lifted, and presorting each
 of the files, enables operation with reduced memory requirements.
@@ -104,7 +105,7 @@ optional arguments:
 
 ### Sample Data
 
-Suppose that `file1.tsv` contains the following table in KGTK format:
+Suppose that `lift-file1.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file1.tsv
@@ -146,7 +147,7 @@ By default, `kgtk lift` will build a list of labels if multiple label records
 are found for a property. The labels in the list will be sorted and
 deduplicated.
 
-Suppose that `file4.tsv` contains the following table in KGTK format:
+Suppose that `lift-file4.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file4.tsv
@@ -202,7 +203,7 @@ The labels may be in a seperate file from the input.  If
 processed in a single pass without keeping a copy in memory.  The labels will
 still be loaded into an in-memory dictionary.
 
-Suppose that `file5.tsv` contains the following table in KGTK format:
+Suppose that `lift-file5.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file5.tsv
@@ -214,7 +215,7 @@ kgtk cat --input-file examples/docs/lift-file5.tsv
 | Q1 | P2 | Q6 |
 | Q6 | P1 | Q5 |
 
-And `file6.tsv` contains the following table in KGTK format:
+And `lift-file6.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file6.tsv
@@ -291,7 +292,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
 
 ### Duplicate Labels
 
-Suppose that `file7.tsv` contains the following table in KGTK format,
+Suppose that `lift-file7.tsv` contains the following table in KGTK format,
 which is sorted on the `node1` column:
 
 ```bash
@@ -329,7 +330,7 @@ The output will be the following table in KGTK format:
 
 ### More Sample Data
 
-Suppose that `file8.tsv` contains the following table in KGTK format:
+Suppose that `lift-file8.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file8.tsv
@@ -342,7 +343,7 @@ kgtk cat --input-file examples/docs/lift-file8.tsv
 | Q2 | P1 | Q5 | False |
 | Q2 | P2 | Q6 | False |
 
-and suppose that `file9.tsv` contains the following file in KGTK format:
+and suppose that `lift-file9.tsv` contains the following file in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file9.tsv
@@ -723,7 +724,7 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 
 ### Expert Example: Overriding the Label Match and Value Columns
 
-Consider the following file, file10.tsv, which is like `lift-file9.tsv`,
+Consider the following file, `lift-file10.tsv`, which is like `lift-file9.tsv`,
 but with the `node1` and `node2` columns swapped and with an additional column, `action`:
 
 ```bash
@@ -780,7 +781,7 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 | Q2 | P1 | Q5 | False | "Alice" | "instance of" | "human" |
 | Q2 | P2 | Q6 | False | "Alice" | "friend" | "Fred" |
 
-If we hadn't filter the labels, the output would look like this:
+If we hadn't filtered the labels, the output would have looked like this:
 
 ```bash
 kgtk lift --input-file examples/docs/lift-file8.tsv \
