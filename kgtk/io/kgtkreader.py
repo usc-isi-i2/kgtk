@@ -1,5 +1,4 @@
 """Read a KGTK node or edge file in TSV format.
-
 Normally, results are obtained as rows of string values obtained by iteration
 on the KgtkReader object.  Alternative iterators are available to return the results
 as:
@@ -499,11 +498,19 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     data_lines_excluded_blank_fields: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_lines_excluded_invalid_values: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_lines_excluded_prohibited_lists: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    data_lines_excluded_by_filter: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
     data_errors_reported: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
 
     # Is this an edge file or a node file?
     is_edge_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     is_node_file: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Is there an input filter?
+    # Note: At present, input filtering takes place after sampling, validation, and filling.
+    # This ordering will change in the future, to accomodate sqlite3-based queries.
+    #
+    # TODO: Build a validator for input_filter.
+    input_filter: typing.Optional[typing.Mapping[int, typing.Set[str]]] = attr.ib(default=None)
 
     # Use the fast reading path?
     use_fast_path: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -540,6 +547,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
              mode: typing.Optional[KgtkReaderMode] = None,
              options: typing.Optional[KgtkReaderOptions] = None,
              value_options: typing.Optional[KgtkValueOptions] = None,
+             input_filter: typing.Optional[typing.Mapping[int, typing.Set[str]]] = None,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkReader":
         """
@@ -558,7 +566,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         (header, column_names) = cls._build_column_names(source, options, error_file=error_file, verbose=verbose)
 
         # If there's an implied label, add the column to the end.  If a label column
-        # already exists, ten later we'll detect a duplicate column name.
+        # already exists, then later we'll detect a duplicate column name.
         if options.implied_label is not None:
             column_names.append(cls.LABEL)
                   
@@ -630,14 +638,37 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                      label_column_idx,
                                                                                      node2_column_idx,
                                                                                      id_column_idx), file=error_file, flush=True)
-        # Decide whether or not to use the fast read path.  This code
-        # assumes that the options will not change beyond this point.
+        # Supply the default input_format:
         input_format: str
         if options.input_format is None:
             input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
         else:
             input_format = options.input_format
 
+        # If an input_filter has been supplied, check it for validity:
+        # Note: some of these checks are redundant with the type declaration.
+        # So be it.
+        if input_filter is not None:
+            input_filter_key: int
+            for input_filter_key in sorted(input_filter.keys()):
+                if not isinstance(input_filter_key, int):
+                    raise ValueError("Input filter key %s is not an int." % repr(input_filter_key))
+                if input_filter_key < 0:
+                    raise ValueError("Input filter key %d is less than zero." % input_filter_key)
+                if input_filter_key >= len(column_names):
+                    raise ValueError("Input filter key %d is too large (>= %d)." % (input_filter_key, len(column_names)))
+                input_filter_set: typing.Set[str] = input_filter[input_filter_key]
+                if not isinstance(input_filter_set, set):
+                    raise ValueError("Input filter key %d does not reference a set." % input_filter_key)
+                if len(input_filter_set) == 0:
+                    raise ValueError("Input filter key %d references an empay set." % input_filter_key)
+                input_filter_value: str
+                for input_filter_value in sorted(list(input_filter_set)):
+                    if not isinstance(input_filter_value, str):
+                        raise ValueError("Input filter key %d value %s is not a string." % (input_filter_key, repr(input_filter_value)))
+
+        # Decide whether or not to use the fast read path.  This code
+        # assumes that the options will not change beyond this point.
         use_fast_path: bool
         if options.record_limit is None and \
            options.tail_count is None and \
@@ -646,7 +677,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
            not options.repair_and_validate_lines and \
            not options.repair_and_validate_values and \
            input_format != KgtkReaderOptions.INPUT_FORMAT_CSV and \
-               options.implied_label is None:
+           options.implied_label is None \
+           and input_filter is None:
             use_fast_path = True
             if verbose:
                 print("KgtkReader: using the fast read path.", file=error_file, flush=True)
@@ -688,6 +720,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                    reject_file=reject_file,
                    options=options,
                    value_options=value_options,
+                   input_filter=input_filter,
                    is_edge_file=is_edge_file,
                    is_node_file=is_node_file,
                    use_fast_path=use_fast_path,
@@ -1129,6 +1162,14 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                         if self._ignore_prohibited_lists(row, line):
                             self.reject(line)
                             self.data_lines_excluded_prohibited_lists += 1
+                            continue
+
+                if self.input_filter is not None:
+                    input_filter_idx: int
+                    input_filter_set: typing.Set[str]
+                    for input_filter_idx, input_filter_set in self.input_filter.items():
+                        if row[input_filter_idx] not in input_filter_set:
+                            self.data_lines_excluded_by_filter += 1
                             continue
 
                 self.data_lines_passed += 1
@@ -1647,6 +1688,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             print("Data lines excluded due to invalid values: %d" % self.data_lines_excluded_invalid_values, file=self.error_file, flush=True)
         if self.data_lines_excluded_prohibited_lists > 0:
             print("Data lines excluded due to prohibited lists: %d" % self.data_lines_excluded_prohibited_lists, file=self.error_file, flush=True)
+        if self.data_lines_excluded_by_filter > 0:
+            print("Data lines excluded due to a filter: %d" % self.data_lines_excluded_by_filter, file=self.error_file, flush=True)
         if self.data_errors_reported > 0:
             print("Data errors reported: %d" % self.data_errors_reported, file=self.error_file, flush=True)
 
