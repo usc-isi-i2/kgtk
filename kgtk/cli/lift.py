@@ -89,6 +89,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     prefilter_labels_default: bool
     use_label_enver_default: bool
     lift_all_columns_default: bool
+    require_label_file_default: bool
     if _command == LIFT_COMMAND:
         parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
                                   help=h("The columns for which matching labels are to be lifted. " +
@@ -102,6 +103,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         prefilter_labels_default = False
         use_label_envar_default = False
         lift_all_columns_default = False
+        require_label_file_default = False
        
     elif _command == ADD_LABELS_COMMAND:
         parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
@@ -116,6 +118,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         prefilter_labels_default = True
         use_label_envar_default = True
         lift_all_columns_default = True
+        require_label_file_default = True
 
     else:
         raise KGTKException("Unknown command %s" % repr(_command))
@@ -225,6 +228,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=lift_all_columns_default)
         
+    parser.add_argument(      "--require-label-file", dest="require_label_file",
+                              help=h("If true, a label file must be required explicitly or through an envar. (default=%(default)s)."),
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=require_label_file_default)
+        
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -268,6 +276,7 @@ def run(input_file: KGTKFiles,
 
         use_label_envar: bool = False,
         lift_all_columns: bool = False,
+        require_label_file: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -351,6 +360,7 @@ def run(input_file: KGTKFiles,
         print("--output-only-modified-rows=%s" % repr(output_only_modified_rows), file=error_file, flush=True)
         print("--use-label-envar=%s" % repr(use_label_envar), file=error_file, flush=True)
         print("--lift-all-columns=%s" % repr(lift_all_columns), file=error_file, flush=True)
+        print("--require-label-files=%s" % repr(require_label_file), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -363,6 +373,9 @@ def run(input_file: KGTKFiles,
             label_kgtk_file = Path(label_file_envar_value)
             if verbose:
                 print("Using label file %s from envar %s" % (repr(label_file_envar_value), repr(label_file_envar)), file=error_file, flush=True)
+
+    if require_label_file and label_kgtk_file is None:
+        raise KGTKException("A label file must be specified using --label-file or KGTK_LABEL_FILE")
 
     try:
         kl: KgtkLift = KgtkLift(
