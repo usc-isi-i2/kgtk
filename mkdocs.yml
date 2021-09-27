@@ -18,6 +18,7 @@ nav:
       - 'generate_wikidata_triples': 'export/generate_wikidata_triples.md'
   - 'Transformation commands':
       - 'add-id': 'transform/add_id.md'
+      - 'add-labels': transform/add_labels.md'
       - 'calc': 'transform/calc.md'
       - 'cat': 'transform/cat.md'
       - 'compact': 'transform/compact.md'
