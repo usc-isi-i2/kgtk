@@ -219,7 +219,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--use-label-envar", dest="use_label_envar",
-                              help=h("If true, use the KGTK_LABEL envar for the label file if no --label-file. (default=%(default)s)."),
+                              help="If true, use the KGTK_LABEL_FILE envar for the label file if no --label-file. (default=%(default)s).",
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=use_label_envar_default)
 
