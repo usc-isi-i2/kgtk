@@ -539,6 +539,40 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         return (options, value_options)
 
     @classmethod
+    def _validate_input_filter(cls,
+                               input_filter: typing.Mapping[int, typing.Set[str]],
+                               column_names: typing.List[str])->bool:
+        input_filter_key: int
+        for input_filter_key in sorted(input_filter.keys()):
+            if not isinstance(input_filter_key, int):
+                raise ValueError("Input filter key %s is not an int." % repr(input_filter_key))
+            if input_filter_key < 0:
+                raise ValueError("Input filter key %d is less than zero." % input_filter_key)
+            if input_filter_key >= len(column_names):
+                raise ValueError("Input filter key %d is too large (>= %d)." % (input_filter_key, len(column_names)))
+            input_filter_set: typing.Set[str] = input_filter[input_filter_key]
+            if not isinstance(input_filter_set, set):
+                raise ValueError("Input filter key %d does not reference a set." % input_filter_key)
+            if len(input_filter_set) == 0:
+                raise ValueError("Input filter key %d references an empay set." % input_filter_key)
+            input_filter_value: str
+            for input_filter_value in sorted(list(input_filter_set)):
+                if not isinstance(input_filter_value, str):
+                    raise ValueError("Input filter key %d value %s is not a string." % (input_filter_key, repr(input_filter_value)))
+
+    def add_input_filter(self, input_filter: typing.Mapping[int, typing.Set[str]]):
+        if self.data_lines_read > 0:
+            raise ValueError("The input filter may not be changed after data lines have been read.")
+
+        if self.input_filter is not None:
+            raise ValueError("The input filter has already been defined.")
+        
+        self._validate_input_filter(input_filter, self.column_names)
+
+        self.input_filter = input_filter
+        self.use_fast_path = False
+
+    @classmethod
     def open(cls,
              file_path: typing.Optional[Path],
              who: str = "input",
@@ -649,23 +683,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # Note: some of these checks are redundant with the type declaration.
         # So be it.
         if input_filter is not None:
-            input_filter_key: int
-            for input_filter_key in sorted(input_filter.keys()):
-                if not isinstance(input_filter_key, int):
-                    raise ValueError("Input filter key %s is not an int." % repr(input_filter_key))
-                if input_filter_key < 0:
-                    raise ValueError("Input filter key %d is less than zero." % input_filter_key)
-                if input_filter_key >= len(column_names):
-                    raise ValueError("Input filter key %d is too large (>= %d)." % (input_filter_key, len(column_names)))
-                input_filter_set: typing.Set[str] = input_filter[input_filter_key]
-                if not isinstance(input_filter_set, set):
-                    raise ValueError("Input filter key %d does not reference a set." % input_filter_key)
-                if len(input_filter_set) == 0:
-                    raise ValueError("Input filter key %d references an empay set." % input_filter_key)
-                input_filter_value: str
-                for input_filter_value in sorted(list(input_filter_set)):
-                    if not isinstance(input_filter_value, str):
-                        raise ValueError("Input filter key %d value %s is not a string." % (input_filter_key, repr(input_filter_value)))
+            cls._validate_input_filter(input_filter, column_names)
 
         # Decide whether or not to use the fast read path.  This code
         # assumes that the options will not change beyond this point.
@@ -1167,10 +1185,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 if self.input_filter is not None:
                     input_filter_idx: int
                     input_filter_set: typing.Set[str]
+                    fail: bool = False
                     for input_filter_idx, input_filter_set in self.input_filter.items():
-                        if row[input_filter_idx] not in input_filter_set:
-                            self.data_lines_excluded_by_filter += 1
-                            continue
+                        value: str = row[input_filter_idx]
+                        if value not in input_filter_set:
+                            fail = True
+                            break
+                    if fail:
+                        self.data_lines_excluded_by_filter += 1
+                        continue
 
                 self.data_lines_passed += 1
                 # TODO: User a seperate option to control this.

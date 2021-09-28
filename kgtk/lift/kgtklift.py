@@ -223,6 +223,7 @@ class KgtkLift(KgtkFormat):
                     save_input: bool = True,
                     labels_needed: typing.Optional[typing.Set[str]] = None,
                     label_rows: typing.Optional[typing.MutableMapping[str, typing.List[typing.List[str]]]] = None,
+                    is_label_file: bool = False,
     )->typing.Tuple[typing.Mapping[str, str], typing.List[typing.List[str]]]:
         input_rows: typing.List[typing.List[str]] = [ ]
         labels: typing.MutableMapping[str, str] = { }
@@ -231,6 +232,18 @@ class KgtkLift(KgtkFormat):
         label_select_column_idx: int
         label_value_column_idx: int
         label_match_column_idx, label_select_column_idx, label_value_column_idx = self.lookup_label_table_idxs(kr)
+
+        # Build the label filter.  We will still do the same filtering steps in code below.
+        #
+        # TODO: Remove the redundant filtering steps.
+        if is_label_file:
+            label_filter: typing.MutableMapping[int, typing.Set[str]] = dict()
+            if label_select_column_idx >= 0:
+                label_filter[label_select_column_idx] = set([self.label_select_column_value])
+            if labels_needed is not None and label_match_column_idx >= 0:
+                label_filter[label_match_column_idx] = set(labels_needed)
+            if len(label_filter) > 0:
+                kr.add_input_filter(label_filter)
 
         if self.verbose:
             print("Loading labels from %s" % path, file=self.error_file, flush=True)
@@ -579,7 +592,7 @@ class KgtkLift(KgtkFormat):
             if self.verbose:
                 print("Loading labels from the label file.", file=self.error_file, flush=True)
             # We don't need to worry about input rows in the label file.
-            labels, _ = self.load_labels(lkr, self.label_file_path, save_input=False, labels_needed=labels_needed, label_rows=label_rows)
+            labels, _ = self.load_labels(lkr, self.label_file_path, save_input=False, labels_needed=labels_needed, label_rows=label_rows, is_label_file=True)
         else:
             if self.verbose:
                 print("Loading labels and reading data from the input file.", file=self.error_file, flush=True)
