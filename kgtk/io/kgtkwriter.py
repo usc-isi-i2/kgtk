@@ -29,6 +29,7 @@ class KgtkWriter(KgtkBase):
     # TODO: use an enum
     OUTPUT_FORMAT_CSV: str = "csv"
     OUTPUT_FORMAT_HTML: str = "html"
+    OUTPUT_FORMAT_HTML_COMPACT: str = "html-compact"
     OUTPUT_FORMAT_JSON: str = "json"
     OUTPUT_FORMAT_JSON_MAP: str = "json-map"
     OUTPUT_FORMAT_JSON_MAP_COMPACT: str = "json-map-compact"
@@ -46,6 +47,7 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
         OUTPUT_FORMAT_CSV,
         OUTPUT_FORMAT_HTML,
+        OUTPUT_FORMAT_HTML_COMPACT,
         OUTPUT_FORMAT_JSON,
         OUTPUT_FORMAT_JSON_MAP,
         OUTPUT_FORMAT_JSON_MAP_COMPACT,
@@ -113,7 +115,7 @@ class KgtkWriter(KgtkBase):
         AUTO = 3 # Automatically decide whether to enforce edge or node file required columns
 
     def __attrs_post_init__(self):
-        self.format_writers: typing.Mapping[str, typing.Callable[[KgtkWriter, typing.List[str]], None]] = {
+        self.format_writers: typing.Mapping[str, typing.Callable[[typing.List[str]], None]] = {
             self.OUTPUT_FORMAT_KGTK: self.write_kgtk,
             self.OUTPUT_FORMAT_TABLE: self.write_table,
             self.OUTPUT_FORMAT_TSV: self.write_tsv,
@@ -123,6 +125,7 @@ class KgtkWriter(KgtkBase):
             self.OUTPUT_FORMAT_CSV: self.write_csv,
             self.OUTPUT_FORMAT_MD: self.write_md,
             self.OUTPUT_FORMAT_HTML: self.write_html,
+            self.OUTPUT_FORMAT_HTML_COMPACT: self.write_html_compact,
             self.OUTPUT_FORMAT_JSON: self.write_json,
             self.OUTPUT_FORMAT_JSON_MAP: self.write_json_map,
             self.OUTPUT_FORMAT_JSON_MAP_COMPACT: self.write_json_map_compact,
@@ -619,40 +622,43 @@ class KgtkWriter(KgtkBase):
                 result[self.output_column_names[idx]] = self.reformat_value_for_json(value)
         return result
 
-    def write_html_header(self):
-        self.writeline('<!DOCTYPE html>')
-        self.writeline('<html lang="en">')
-        self.writeline('<head>')
-        self.writeline('<meta charset="utf-8">')
-        self.writeline('<style>')
-        self.writeline('table, th, td {')
-        self.writeline('border: 1px solid black;')
-        self.writeline('border-collapse: collapse;')
-        self.writeline('}')
-        self.writeline('</style>')
-        self.writeline('</head>')
-        self.writeline('<body>')
-        self.writeline('<table>')
-        self.writeline('<tr>')
+    def write_html_header(self, compact: bool = False):
+        self.writelineX('<!DOCTYPE html>', compact=compact)
+        self.writelineX('<html lang="en">', compact=compact)
+        self.writelineX('<head>', compact=compact)
+        self.writelineX('<meta charset="utf-8">', compact=compact)
+        self.writelineX('<style>', compact=compact)
+        self.writelineX('table, th, td {', compact=compact)
+        self.writelineX('border: 1px solid black;', compact=compact)
+        self.writelineX('border-collapse: collapse;', compact=compact)
+        self.writelineX('}', compact=compact)
+        self.writelineX('</style>', compact=compact)
+        self.writelineX('</head>', compact=compact)
+        self.writelineX('<body>', compact=compact)
+        self.writelineX('<table>', compact=compact)
+        self.writelineX('<tr>', compact=compact)
 
         column_name: str
         for column_name in self.output_column_names:
-            self.writeline('<th>%s</th>' % html.escape(column_name))
+            self.writelineX('<th>%s</th>' % html.escape(column_name), compact=compact)
 
-        self.writeline('</tr>')
+        self.writelineX('</tr>', compact=compact)
 
-    def write_html(self, values: typing.List[str]):
-        self.writeline('<tr>')
+    def write_html(self, values: typing.List[str], compact: bool = False):
+        self.writelineX('<tr>', compact=compact)
 
         value: str
         for value in values:
-            self.writeline('<td>%s</td>' % html.escape(value))
+            self.writelineX('<td>%s</td>' % html.escape(value), compact=compact)
 
-        self.writeline('</tr>')
+        self.writelineX('</tr>', compact=compact)
 
-    def write_html_trailer(self):
-        self.writeline('</table>')
-        self.writeline('</body>')
+    def write_html_compact(self, values: typing.List[str]):
+        self.write_html(values, compact=True)
+
+    def write_html_trailer(self, compact: bool = False):
+        self.writelineX('</table>', compact=compact)
+        self.writelineX('</body>', compact=compact)
         self.writeline('</html>')
 
     def write_header(self):
@@ -670,6 +676,10 @@ class KgtkWriter(KgtkBase):
 
         if self.output_format == self.OUTPUT_FORMAT_HTML:
             self.write_html_header()
+            return;
+
+        elif self.output_format == self.OUTPUT_FORMAT_HTML_COMPACT:
+            self.write_html_header(compact=True)
             return;
 
         elif self.output_format == self.OUTPUT_FORMAT_JSON:
@@ -751,6 +761,12 @@ class KgtkWriter(KgtkBase):
                 else:
                     raise
 
+    def writelineX(self, line: str, compact: bool = False):
+        if compact:
+            self.writeline_noeol(line)
+        else:
+            self.writeline(line)
+
     def shuffle(self, values: typing.List[str], shuffle_list: typing.List[int])->typing.List[str]:
         if len(shuffle_list) != len(values):
             # TODO: throw a better exception
@@ -802,7 +818,7 @@ class KgtkWriter(KgtkBase):
                                                                                                                                 len(values),
                                                                                                                                 len(values) - self.column_count,
                                                                                                                                 repr(line)))
-        format_writer: typing.Optional[typing.Callable[[KgtkWriter, typing.List[str]], None]] = self.format_writers.get(self.output_format)
+        format_writer: typing.Optional[typing.Callable[[typing.List[str]], None]] = self.format_writers.get(self.output_format)
         if format_writer is None:
             raise ValueError("KgtkWriter: File %s: Unrecognized output format %s." % (repr(self.file_path), repr(self.output_format)))
         format_writer(values)
@@ -1044,6 +1060,9 @@ class KgtkWriter(KgtkBase):
 
         elif self.output_format == self.OUTPUT_FORMAT_HTML:
             self.write_html_trailer()
+
+        elif self.output_format == self.OUTPUT_FORMAT_HTML_COMPACT:
+            self.write_html_trailer(compact=True)
 
         if self.gzip_thread is not None:
             self.gzip_thread.close()

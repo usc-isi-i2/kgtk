@@ -27,6 +27,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -43,7 +44,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(who="The KGTK file to convert to an HTML table.", positional=True)
     parser.add_output_file(who="The GitHub markdown file to write.")
 
-    parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=%(default)s)"), type=str, default="html")
+    parser.add_argument(      "--output-format", dest="output_format", type=str,
+                              help=h("The file format (default=%(default)s)"),
+                              default=KgtkWriter.OUTPUT_FORMAT_HTML_COMPACT)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
