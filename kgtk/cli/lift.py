@@ -236,6 +236,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="label", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
@@ -308,6 +310,8 @@ def run(input_file: KGTKFiles,
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
+    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="input", fallback=True)
+    label_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="label", fallback=True)
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
@@ -361,7 +365,8 @@ def run(input_file: KGTKFiles,
         print("--use-label-envar=%s" % repr(use_label_envar), file=error_file, flush=True)
         print("--lift-all-columns=%s" % repr(lift_all_columns), file=error_file, flush=True)
         print("--require-label-files=%s" % repr(require_label_file), file=error_file, flush=True)
-        reader_options.show(out=error_file)
+        input_reader_options.show(out=error_file, who="input")
+        label_reader_options.show(out=error_file, who="label")
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
@@ -417,7 +422,8 @@ def run(input_file: KGTKFiles,
 
             lift_all_columns=lift_all_columns,
 
-            reader_options=reader_options,
+            input_reader_options=input_reader_options,
+            label_reader_options=label_reader_options,
             value_options=value_options,
             error_file=error_file,
             verbose=verbose,

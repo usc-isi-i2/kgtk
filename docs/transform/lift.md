@@ -32,9 +32,9 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--clear-before-lift [CLEAR_BEFORE_LIFT]]
                  [--overwrite [OVERWRITE]]
                  [--output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]]
-                 [-v [optional True|False]]
+                 [--use-label-envar [True/False]] [-v [optional True|False]]
 
-Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
+Lift labels for a KGTK file. If called as "kgtk lift", for each of the items in the (node1, label, node2) columns, look for matching label records. If called as "kgtk add-labels", look for matching label records for all input columns. If found, lift the label values into additional columns in the current record. Label records are removed from the output unless --remove-label-records=False. 
 
 Additional options are shown in expert help.
 kgtk --expert lift --help
@@ -96,6 +96,9 @@ optional arguments:
   --output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]
                         If true, output only modified edges to the primary
                         output stream. (default=False).
+  --use-label-envar [True/False]
+                        If true, use the KGTK_LABEL_FILE envar for the label
+                        file if no --label-file. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).

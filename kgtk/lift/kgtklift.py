@@ -88,7 +88,8 @@ class KgtkLift(KgtkFormat):
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
-    reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
+    input_reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
+    label_reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
@@ -328,8 +329,11 @@ class KgtkLift(KgtkFormat):
     def load_input(self,
                    kr: KgtkReader,
                    path: Path,
+                   seperate_label_file: bool = False
     )-> typing.List[typing.List[str]]:
-        if self.remove_label_records:
+        if seperate_label_file:
+            return self.load_input_keeping_label_records(kr, path)
+        elif self.remove_label_records:
             return self.load_input_removing_label_records(kr, path)
         else:
             return self.load_input_keeping_label_records(kr, path)
@@ -513,8 +517,8 @@ class KgtkLift(KgtkFormat):
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
-                                         use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
-                                         mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                         use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                         mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
@@ -586,7 +590,7 @@ class KgtkLift(KgtkFormat):
             if self.prefilter_labels:
                 if self.verbose:
                     print("Reading input data to prefilter the labels.", file=self.error_file, flush=True)
-                input_rows = self.load_input(ikr, self.input_file_path)
+                input_rows = self.load_input(ikr, self.input_file_path, seperate_label_file=True)
                 labels_needed = self.build_labels_needed(input_rows, input_select_column_idx, lift_column_idxs)
             # Read the label file.
             if self.verbose:
@@ -882,7 +886,7 @@ class KgtkLift(KgtkFormat):
 
         ikr: KgtkReader =  KgtkReader.open(self.input_file_path,
                                           error_file=self.error_file,
-                                          options=self.reader_options,
+                                          options=self.input_reader_options,
                                           value_options = self.value_options,
                                           verbose=self.verbose,
                                           very_verbose=self.very_verbose,
@@ -898,7 +902,7 @@ class KgtkLift(KgtkFormat):
 
             lkr =  KgtkReader.open(self.label_file_path,
                                    error_file=self.error_file,
-                                   options=self.reader_options,
+                                   options=self.label_reader_options,
                                    value_options = self.value_options,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose,
@@ -912,8 +916,8 @@ class KgtkLift(KgtkFormat):
                                    require_all_columns=False,
                                    prohibit_extra_columns=True,
                                    fill_missing_columns=True,
-                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
                                    gzip_in_parallel=False,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
@@ -937,8 +941,8 @@ class KgtkLift(KgtkFormat):
                                    require_all_columns=False,
                                    prohibit_extra_columns=True,
                                    fill_missing_columns=True,
-                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
                                    gzip_in_parallel=False,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
@@ -960,8 +964,8 @@ class KgtkLift(KgtkFormat):
                                    require_all_columns=False,
                                    prohibit_extra_columns=True,
                                    fill_missing_columns=True,
-                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
                                    gzip_in_parallel=False,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
@@ -1098,6 +1102,8 @@ def main():
     KgtkReader.add_debug_arguments(parser)
     # TODO: seperate reader options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", defaults=False)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="label", defaults=False)
     KgtkValueOptions.add_arguments(parser)
 
     args: Namespace = parser.parse_args()
@@ -1105,7 +1111,8 @@ def main():
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the option structures.                                                                                                                          
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
+    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="input", fallback=True)
+    label_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="label", fallback=True)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     # Show the final option structures for debugging and documentation.   
@@ -1151,7 +1158,8 @@ def main():
         print("--overwrite=%s" % repr(args.overwrite))
         print("--output-only-modified-rows=%s" % repr(args.output_only_modified_rows))
         
-        reader_options.show(out=error_file)
+        input_reader_options.show(out=error_file, who="input")
+        label_reader_options.show(out=error_file, who="label")
         value_options.show(out=error_file)
 
     kl: KgtkLift = KgtkLift(
@@ -1186,7 +1194,8 @@ def main():
         clear_before_lift=args.clear_before_lift,
         overwrite=args.overwrite,
 
-        reader_options=reader_options,
+        input_reader_options=input_reader_options,
+        label_reader_options=label_reader_options,
         value_options=value_options,
         error_file=error_file,
         verbose=args.verbose,
