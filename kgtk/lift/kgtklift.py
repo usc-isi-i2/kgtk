@@ -23,7 +23,7 @@ import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue
@@ -83,6 +83,7 @@ class KgtkLift(KgtkFormat):
     unmatched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
     lift_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    force_input_mode_none: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
     # TODO: add rewind logic here and KgtkReader
 
@@ -878,6 +879,7 @@ class KgtkLift(KgtkFormat):
     
     def process(self):
         # Open the input file.
+        input_mode: typing.Optional[KgtkReaderMode] = KgtkReaderMode.NONE if self.force_input_mode_none else None
         if self.verbose:
             if self.input_file_path is not None:
                 print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
@@ -885,11 +887,12 @@ class KgtkLift(KgtkFormat):
                 print("Reading the input data from stdin", file=self.error_file, flush=True)
 
         ikr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                          error_file=self.error_file,
-                                          options=self.input_reader_options,
-                                          value_options = self.value_options,
-                                          verbose=self.verbose,
-                                          very_verbose=self.very_verbose,
+                                           error_file=self.error_file,
+                                           mode=input_mode,
+                                           options=self.input_reader_options,
+                                           value_options = self.value_options,
+                                           verbose=self.verbose,
+                                           very_verbose=self.very_verbose,
         )
 
         lkr: typing.Optional[KgtkReader] = None
@@ -994,6 +997,7 @@ def main():
     Test the KGTK lift processor.
 
     TODO: the unmodified row file path.
+    TODO: there are other missing options.
     """
     parser: ArgumentParser = ArgumentParser()
 

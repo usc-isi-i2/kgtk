@@ -11,6 +11,10 @@ or the `KGTK_LABEL_FILE` envar.  The input file is assumeed to be small enough
 to fit into memory, and the labels will be read with prefiltering.
 Any lifted columns that are entirely empty will be suppressed.
 
+Unlike most KGTK commands, `kgtk add-labels` does not by default verify that
+the input file is a valid KGTK file.  This facilitates using it to add
+labels to more general TSV files.
+
 See the `kgtk lift` documentation for more details on the shared behavior
 of these two commands.
 
@@ -119,16 +123,17 @@ Suppose that `add-labels-file1.tsv` contains the following table in KGTK format:
 kgtk cat --input-file examples/docs/add-labels-file1.tsv
 ```
 
-| node1 | label | node2 | color |
-| -- | -- | -- | -- |
-| Q1 | P1 | Q5 | Q101 |
-| Q1 | P2 | Q6 | Q102 |
-| Q6 | P1 | Q5 | Q103 |
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q1 | P1 | Q5 |
+| Q1 | P2 | Q6 |
+| Q6 | P1 | Q5 |
 
-Suppose also that `add-labels-file2.tsv` contains the following table in KGTK format:
+
+Suppose also that `add-labels-labels.tsv` contains the following table in KGTK format:
 
 ```bash
-kgtk cat --input-file examples/docs/add-labels-file2.tsv
+kgtk cat --input-file examples/docs/add-labels-labels.tsv
 ```
 
 | node1 | label | node2 |
@@ -144,14 +149,43 @@ kgtk cat --input-file examples/docs/add-labels-file2.tsv
 | Q103 | label | "green" |
 
 
-### Adding Labels to an Input File with Extra Columns
+### Adding Labels to an Input File
 
-Let's add labels to `add-labels-file1.tsv`.  This file
-contains the additional column `color`.
+Let's add labels to `add-labels-file1.tsv`
 
 ```bash
 kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
-                --label-file examples/docs/add-labels-file2.tsv
+                --label-file examples/docs/add-labels-labels.tsv
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;label | label;label | node2;label |
+| -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | "Elmo" | "instance of" | "human" |
+| Q1 | P2 | Q6 | "Elmo" | "friend" | "Fred" |
+| Q6 | P1 | Q5 | "Fred" | "instance of" | "human" |
+
+### Adding Labels to an Input File with Extra Columns
+
+Let's add labels to `add-labels-file2.tsv`.  This file
+contains the additional column `color`.
+
+```bash
+kgtk cat --input-file examples/docs/add-labels-file2.tsv
+```
+
+| node1 | label | node2 | color |
+| -- | -- | -- | -- |
+| Q1 | P1 | Q5 | Q101 |
+| Q1 | P2 | Q6 | Q102 |
+| Q6 | P1 | Q5 | Q103 |
+
+Add labels to this file:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file2.tsv \
+                --label-file examples/docs/add-labels-labels.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -162,37 +196,25 @@ The output will be the following table in KGTK format:
 | Q1 | P2 | Q6 | Q102 | "Elmo" | "friend" | "Fred" | "blue" |
 | Q6 | P1 | Q5 | Q103 | "Fred" | "instance of" | "human" | "green" |
 
-`kgtk lift` has moved the labels into additional columns and removed
-the label edges from the output file.
-
-### Adding Labels with an Existing Label Coluymn
+### Adding Labels with an Existing Label Column
 
 Suppose that `add-labels-file3.tsv` contains the following table in KGTK format:
 
 ```bash
-kgtk cat --input-file examples/docs/lift-file4.tsv
+kgtk cat --input-file examples/docs/add-labels-file3.tsv
 ```
 
-| node1 | label | node2 |
-| -- | -- | -- |
-| Q1 | P1 | Q5 |
-| Q1 | P2 | Q6 |
-| Q1 | label | "Elmo" |
-| Q2 | label | "Alice" |
-| P1 | label | "instance of" |
-| P2 | label | "friend" |
-| P2 | label | "amigo" |
-| Q5 | label | "human" |
-| Q5 | label | "homo sapiens" |
-| Q5 | label | "human" |
-| Q6 | P1 | Q5 |
-| Q6 | label | "Fred" |
+| node1 | label | node2 | color | node1;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | Q101 | "Elmo" |
+| Q1 | P2 | Q6 | Q102 |  |
+| Q6 | P1 | Q5 | Q103 |  |
 
-Lift this file with no additional arguments:
+Add labels to this file with no additional arguments:
 
 ```bash
 kgtk add-labels --input-file examples/docs/add-labels-file3.tsv \
-                --label-file examples/docs/add-labels-file2.tsv
+                --label-file examples/docs/add-labels-labels.tsv
 ```
 
 | node1 | label | node2 | color | node1;label | label;label | node2;label | color;label |
@@ -203,33 +225,24 @@ kgtk add-labels --input-file examples/docs/add-labels-file3.tsv \
 
 ### Suppression of Empty Label Columns
 
-Suppose that `add-labels-file3.tsv` contains the following table in KGTK format:
+Suppose that `add-labels-file4.tsv` contains the following table in KGTK format:
 
 ```bash
-kgtk cat --input-file examples/docs/lift-file4.tsv
+kgtk cat --input-file examples/docs/add-labels-file4.tsv
 ```
 
-| node1 | label | node2 |
-| -- | -- | -- |
-| Q1 | P1 | Q5 |
-| Q1 | P2 | Q6 |
-| Q1 | label | "Elmo" |
-| Q2 | label | "Alice" |
-| P1 | label | "instance of" |
-| P2 | label | "friend" |
-| P2 | label | "amigo" |
-| Q5 | label | "human" |
-| Q5 | label | "homo sapiens" |
-| Q5 | label | "human" |
-| Q6 | P1 | Q5 |
-| Q6 | label | "Fred" |
+| node1 | label | node2 | color | node1;label | nolabel |
+| -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | Q101 | "Elmo" | Q201 |
+| Q1 | P2 | Q6 | Q102 |  | Q202 |
+| Q6 | P1 | Q5 | Q103 |  | Q203 |
 
-Lift this file, which includes the `nolabel` column, which contains
+Add labels to this file, which includes the `nolabel` column, which contains
 values that are not labels in the labels file:
 
 ```bash
 kgtk add-labels --input-file examples/docs/add-labels-file4.tsv \
-                --label-file examples/docs/add-labels-file2.tsv
+                --label-file examples/docs/add-labels-labels.tsv
 ```
 
 The output will be the following table in KGTK format:
@@ -239,4 +252,55 @@ The output will be the following table in KGTK format:
 | Q1 | P1 | Q5 | Q101 | "Elmo" | Q201 | "instance of" | "human" | "red" |
 | Q1 | P2 | Q6 | Q102 | "Elmo" | Q202 | "friend" | "Fred" | "blue" |
 | Q6 | P1 | Q5 | Q103 | "Fred" | Q203 | "instance of" | "human" | "green" |
+
+### Accepting Input Files that Are Not Valid KGTK FIles
+
+By default, `kgtk add-labels` will accept input files that are not valid
+KGTK files, in the sense that they do not have the required columns (`node1`,
+`label`, `node2` for a KTK Edge file, `id` for a KGTK Node file).
+
+Suppose that `add-labels-file5.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat --input-file examples/docs/add-labels-file5.tsv --mode=NONE
+```
+
+| label | node2 | color |
+| -- | -- | -- |
+| P1 | Q5 | Q101 |
+| P2 | Q6 | Q102 |
+| P1 | Q5 | Q103 |
+
+Add labels to this file, which has values that are not labels in the labels file:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file5.tsv \
+                --label-file examples/docs/add-labels-labels.tsv
+```
+
+The output will be the following table in KGTK format:
+
+| label | node2 | color | label;label | node2;label | color;label |
+| -- | -- | -- | -- | -- | -- |
+| P1 | Q5 | Q101 | "instance of" | "human" | "red" |
+| P2 | Q6 | Q102 | "friend" | "Fred" | "blue" |
+| P1 | Q5 | Q103 | "instance of" | "human" | "green" |
+
+### Expert Example: Rejecting Input Files that Are Not Valid KGTK FIles
+
+By default, `kgtk add-labels` will accept input files that are not valid
+KGTK files, in the sense that they do not have the required columns (`node1`,
+`label`, `node2` for a KTK Edge file, `id` for a KGTK Node file).
+
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file5.tsv \
+                --label-file examples/docs/add-labels-labels.tsv \
+		--force-input-mode-none false
+```
+
+The output will be the following error message:
+
+    In input header 'label	node2	color': Missing required column: id | ID
+    Exit requested
 

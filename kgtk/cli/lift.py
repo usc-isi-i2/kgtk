@@ -90,6 +90,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     use_label_enver_default: bool
     lift_all_columns_default: bool
     require_label_file_default: bool
+    force_input_mode_none_default: bool
     if _command == LIFT_COMMAND:
         parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
                                   help=h("The columns for which matching labels are to be lifted. " +
@@ -104,6 +105,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         use_label_envar_default = False
         lift_all_columns_default = False
         require_label_file_default = False
+        force_input_mode_none_default = False
        
     elif _command == ADD_LABELS_COMMAND:
         parser.add_argument(      "--columns-to-lift", dest="input_lifting_column_names",
@@ -119,6 +121,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         use_label_envar_default = True
         lift_all_columns_default = True
         require_label_file_default = True
+        force_input_mode_none_default = True
 
     else:
         raise KGTKException("Unknown command %s" % repr(_command))
@@ -233,6 +236,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True/False",
                               type=optional_bool, nargs='?', const=True, default=require_label_file_default)
         
+    parser.add_argument(      "--force-input-mode-none", dest="force_input_mode_none",
+                              help=h("If true, force the input file to mode NONE. (default=%(default)s)."),
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=force_input_mode_none_default)
+        
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     # TODO: seperate reader_options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -279,6 +287,7 @@ def run(input_file: KGTKFiles,
         use_label_envar: bool = False,
         lift_all_columns: bool = False,
         require_label_file: bool = False,
+        force_input_mode_none: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -365,6 +374,7 @@ def run(input_file: KGTKFiles,
         print("--use-label-envar=%s" % repr(use_label_envar), file=error_file, flush=True)
         print("--lift-all-columns=%s" % repr(lift_all_columns), file=error_file, flush=True)
         print("--require-label-files=%s" % repr(require_label_file), file=error_file, flush=True)
+        print("--force-input-mode-none=%s" % repr(force_input_mode_none), file=error_file, flush=True)
         input_reader_options.show(out=error_file, who="input")
         label_reader_options.show(out=error_file, who="label")
         value_options.show(out=error_file)
@@ -421,6 +431,7 @@ def run(input_file: KGTKFiles,
             output_only_modified_rows=output_only_modified_rows,
 
             lift_all_columns=lift_all_columns,
+            force_input_mode_none=force_input_mode_none,
 
             input_reader_options=input_reader_options,
             label_reader_options=label_reader_options,
