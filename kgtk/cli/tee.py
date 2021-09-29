@@ -1,5 +1,7 @@
 """
-Remove columns from a KGTK file.
+Make a side copy of the input stream.
+
+--mode=NONE is the degault
 """
 from argparse import Namespace, SUPPRESS
 import typing
@@ -8,8 +10,8 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
-        'help': 'Remove columns from a KGTK file.',
-        'description': 'Remove specific columns from a KGTK file.'
+        'help': 'Make a side copy of the input/output stream..',
+        'description': 'Copy the primary input to the primary output, making a copy to a specified file. This can be used to make a copy of a pipe\'s data.'
     }
 
 
