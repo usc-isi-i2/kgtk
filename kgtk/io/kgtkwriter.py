@@ -1056,7 +1056,7 @@ class KgtkWriter(KgtkBase):
             self.writeline("]")
         elif self.output_format == self.OUTPUT_FORMAT_TABLE:
             if self.verbose:
-                print("Writing the table buffer: %d rows." % len(table_buffer), file=self.error_file, flush=True)
+                print("Writing the table buffer: %d rows." % len(self.table_buffer), file=self.error_file, flush=True)
             self.finish_table()
 
         elif self.output_format == self.OUTPUT_FORMAT_HTML:
