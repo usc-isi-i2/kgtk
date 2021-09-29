@@ -20,6 +20,7 @@ import attr
 from enum import Enum
 import io
 from multiprocessing import Process, Queue
+import os
 from pathlib import Path
 import sys
 import typing
@@ -123,6 +124,9 @@ class KgtkReaderOptions():
     prohibit_whitespace_in_column_names: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     implied_label: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
+    graph_cache: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    use_graph_cache_envar: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     @classmethod
     def add_arguments(cls,
                       parser: ArgumentParser,
@@ -210,6 +214,17 @@ class KgtkReaderOptions():
         fgroup.add_argument(prefix1 + "implied-label",
                             dest=prefix2 + "implied_label",
                             help=h(prefix3 + "When specified, imply a label colum with the specified value (default=%(default)s)."),
+                            type=str, **d(default=None))
+
+        fgroup.add_argument(prefix1 + "use-graph-cache-envar",
+                            dest=prefix2 + "use_graph_cache_envar",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "use KGTK_GRAPH_CACHE if --graph-cache is not specified. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=True))
+
+        fgroup.add_argument(prefix1 + "graph-cache",
+                            dest=prefix2 + "graph_cache",
+                            help=h(prefix3 + "When specified, look for input files in a graph cache. (default=%(default)s)."),
                             type=str, **d(default=None))
 
         if mode_options:
@@ -381,6 +396,8 @@ class KgtkReaderOptions():
             gzip_in_parallel=lookup("gzip_in_parallel", False),
             gzip_queue_size=lookup("gzip_queue_size", KgtkReaderOptions.GZIP_QUEUE_SIZE_DEFAULT),
             implied_label=lookup("implied_label", None),
+            graph_cache=lookup("graph_cache", None),
+            use_graph_cache_envar=lookup("use_graph_cache_envar", True),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
             initial_skip_count=lookup("initial_skip_count", 0),
             invalid_value_action=lookup("invalid_value_action", ValidationAction.REPORT),
@@ -449,6 +466,9 @@ class KgtkReaderOptions():
         print("%sprohibit-whitespace-in-column-names=%s" % (prefix, str(self.prohibit_whitespace_in_column_names)), file=out)
         if self.implied_label is not None:
             print("%simplied-label=%s" % (prefix, str(self.implied_label)), file=out)
+        print("%suse-graph-cache-envar=%s" % (prefix, str(self.use_graph_cache_envar)), file=out)
+        if self.graph_cache is not None:
+            print("%sgraph-cache=%s" % (prefix, str(self.graph_cache)), file=out)
 
 DEFAULT_KGTK_READER_OPTIONS: KgtkReaderOptions = KgtkReaderOptions()
 
@@ -511,6 +531,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     #
     # TODO: Build a validator for input_filter.
     input_filter: typing.Optional[typing.Mapping[int, typing.Set[str]]] = attr.ib(default=None)
+
+    # Graph cache file.
+    graph_cache: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     # Use the fast reading path?
     use_fast_path: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -590,6 +613,20 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         # Supply the default reader and value options:
         (options, value_options) = cls._default_options(options, value_options)
+
+        # Get the graph cache from the options or an envar:
+        graph_cache: typing.Optional[str] = options.graph_cache
+        if options.use_graph_cache_envar and graph_cache is None:
+            graph_cache = os.getenv("KGTK_GRAPH_CACHE", None)
+            if verbose and graph_cache is not None:
+                print("Using KGTK_GRAPH_CACHE=%s" % repr(graph_cache), file=error_file, flush=True)
+
+        # Supply the default input_format:
+        input_format: str
+        if options.input_format is None:
+            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
+        else:
+            input_format = options.input_format
 
         source: ClosableIter[str] = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
 
@@ -672,12 +709,6 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                      label_column_idx,
                                                                                      node2_column_idx,
                                                                                      id_column_idx), file=error_file, flush=True)
-        # Supply the default input_format:
-        input_format: str
-        if options.input_format is None:
-            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
-        else:
-            input_format = options.input_format
 
         # If an input_filter has been supplied, check it for validity:
         # Note: some of these checks are redundant with the type declaration.
@@ -739,6 +770,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                    options=options,
                    value_options=value_options,
                    input_filter=input_filter,
+                   graph_cache=graph_cache,
                    is_edge_file=is_edge_file,
                    is_node_file=is_node_file,
                    use_fast_path=use_fast_path,
