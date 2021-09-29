@@ -3,6 +3,9 @@
 `kgtk tee` copies its input file (standard input by default) to its primary output file (stdout by default)
 and to a secondary output file (specified by `--into-file`).
 
+This command defaults to `--mode=NONE` since it doesn't attach special meaning
+to particular columns.
+
 ## Debugging Pipes
 
 The primary use envisioned for this command is as a tap in complex pipes,

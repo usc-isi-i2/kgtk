@@ -7,6 +7,8 @@ At the present time, the conversion to fixed-width columns causes KgtkWriter
 to buffer the entire output file.  This command may run out of memory when
 processing large files.
 
+--mode=NONE is default
+
 TODO: Need KgtkWriterOptions
 """
 
@@ -25,6 +27,7 @@ def parser():
         '\n\nkgtk xxx / table ' +
         '\n\nUse it to convert a KGTK file to a text table in a file: ' +
         '\n\nkgtk table -i file.tsv -o file.table' +
+        '\n\nThis command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert table --help'
     }
 
@@ -35,7 +38,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -55,7 +58,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=%(default)s)"), type=str, default="table")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NONE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,

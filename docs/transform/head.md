@@ -12,6 +12,9 @@ input file to the KGTK output file.
 The header record, cotaining the column names, is always passed and is not included in the edge limit, N.
 
 Multiplier suffixes are not supported.
+
+This command defaults to `--mode=NONE` since it doesn't attach special meaning
+to particular columns.
                                                                                                                                                                      
 Although a positive `-n N` has the same effect as KgtkReader's `record_limit`
 option, this code currently implements the limit itself.

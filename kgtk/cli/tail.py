@@ -9,6 +9,8 @@ included in N.
 
 Multiplier suffixes are not supported.
 
+--mode=NONE is default.
+
 TODO: Need KgtkWriterOptions
 
 """
@@ -29,6 +31,7 @@ def parser():
         '\n\nkgtk xxx / tail -n 20 ' +
         '\n\nUse it to limit the records in a file: ' +
         '\n\nkgtk tail -i file.tsv -o file.html' +
+        '\n\nThis command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert html --help'
     }
 
@@ -39,7 +42,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -64,7 +67,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NONE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,

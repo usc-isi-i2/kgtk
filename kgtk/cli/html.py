@@ -1,6 +1,8 @@
 """
 Convert a KGTK file to an HTML table.
 
+--mode=NONE is default
+
 TODO: Need KgtkWriterOptions
 """
 
@@ -16,6 +18,7 @@ def parser():
         '\n\nkgtk xxx / html ' +
         '\n\nUse it to convert a KGTK file to a HTML table in a file: ' +
         '\n\nkgtk html -i file.tsv -o file.html' +
+        '\n\nThis command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert html --help'
     }
 
@@ -26,7 +29,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -55,7 +58,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               default=KgtkWriter.OUTPUT_FORMAT_HTML_COMPACT)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NONE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,

@@ -13,6 +13,9 @@ formatting. By default, compact HTML is generated, without end of line
 sequences between elements.  `--readable` or `--output-format html` may be
 used to generate more human-readable HTML.
 
+This command defaults to `--mode=NONE` since it doesn't attach special meaning
+to particular columns.
+                                                                                                                                                                     
 ## Usage
 
 ```

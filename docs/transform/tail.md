@@ -15,6 +15,9 @@ The header record, cotaining the column names, is always passed and is not inclu
 
 Multiplier suffixes are not supported.
 
+This command defaults to `--mode=NONE` since it doesn't attach special meaning
+to particular columns.
+
 ## Usage
 
 ```
