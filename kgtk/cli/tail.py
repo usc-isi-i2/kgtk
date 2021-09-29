@@ -31,6 +31,7 @@ def parser():
         '\n\nkgtk xxx / tail -n 20 ' +
         '\n\nUse it to limit the records in a file: ' +
         '\n\nkgtk tail -i file.tsv -o file.html' +
+        '\n\nThis command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert html --help'
     }
 

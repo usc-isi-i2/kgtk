@@ -18,6 +18,7 @@ def parser():
         '\n\nkgtk xxx / html ' +
         '\n\nUse it to convert a KGTK file to a HTML table in a file: ' +
         '\n\nkgtk html -i file.tsv -o file.html' +
+        '\n\nThis command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert html --help'
     }
 

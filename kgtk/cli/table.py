@@ -27,6 +27,7 @@ def parser():
         '\n\nkgtk xxx / table ' +
         '\n\nUse it to convert a KGTK file to a text table in a file: ' +
         '\n\nkgtk table -i file.tsv -o file.table' +
+        '\n\nThis command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert table --help'
     }
 
