@@ -5,6 +5,9 @@
 The primary uses for this command are to easily produce documentation files
 or to easily produce human-readable output in TABLE-aware environments.
 
+This command defaults to `--mode=NONE` since it doesn't attach special meaning
+to particular columns.
+
 This comand is equivalent to `kgtk cat --MODE=NONE --output-format=table`.
 However, it is a lot shorter and easier to type.
 
