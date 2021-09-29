@@ -28,6 +28,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -44,6 +45,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file(who="The KGTK file to convert to an HTML table.", positional=True)
     parser.add_output_file(who="The GitHub markdown file to write.")
 
+    parser.add_argument(      "--pp", "--readable", dest="readable",
+                              help="If true, use a human-readable output format. (default=%(default)s).",
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--output-format", dest="output_format", type=str,
                               help=h("The file format (default=%(default)s)"),
                               default=KgtkWriter.OUTPUT_FORMAT_HTML_COMPACT)
@@ -54,6 +60,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
+        readable: bool,
         output_format: str,
 
         errors_to_stdout: bool = False,
@@ -89,11 +96,16 @@ def run(input_file: KGTKFiles,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("--input-file=%s" % str(input_file_path), file=error_file, flush=True)
-        print("--output-file=%s" % str(output_file_path), file=error_file, flush=True)
+        print("--input-file=%s" % repr(str(input_file_path)), file=error_file, flush=True)
+        print("--output-file=%s" % repr(str(output_file_path)), file=error_file, flush=True)
+        print("--readabler=%s" % repr(readable), file=error_file, flush=True)
+        print("--output-format=%s" % repr(output_format), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    if readable:
+        output_format = KgtkWriter.OUTPUT_FORMAT_HTML
 
     try:
         kc: KgtkCat = KgtkCat(input_file_paths=[input_file_path],

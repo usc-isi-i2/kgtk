@@ -5,11 +5,13 @@
 The primary uses for this command are to easily produce documentation files
 or to easily produce human-readable output in HTML-aware environments.
 
-This comand is equivalent to `kgtk cat --MODE=NONE --output-format=html`.
+This comand is equivalent to `kgtk cat --MODE=NONE --output-format=html-compact`.
 However, it is a lot shorter and easier to type.
 
 The HTML table is generated as a self-contained HTML document with minimal
-formatting.
+formatting. By default, compact HTML is generated, without end of line
+sequences between elements.  `--readable` or `--output-format html` may be
+used to generate more human-readable HTML.
 
 ## Usage
 
@@ -38,6 +40,8 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The html file to write. (May be omitted or
                         '-' for stdout.)
+  --pp [True/False], --readable [True/False]
+                        If true, use a human-readable output format. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -45,12 +49,22 @@ optional arguments:
 
 ## Examples
 
-### Convert a KGTK Table to an HTMLTable as a Filter
+### Convert a KGTK Table to a compact HTML Table as a Filter
 
-Use this command to filter the standard output of any KGTK command to an HTML table:
+Use this command to filter the standard output of any KGTK command to a
+compact HTML table:
 
 ```bash
 kgtk xxxxx / html
+```
+
+### Convert a KGTK Table to a Readable HTML Table as a Filter
+
+Use this command to filter the standard output of any KGTK command to a human
+readable HTML table:
+
+```bash
+kgtk xxxxx / html --readable
 ```
 
 ### Convert a KGTK file to an HTML Table in a File

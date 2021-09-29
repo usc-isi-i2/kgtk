@@ -622,44 +622,51 @@ class KgtkWriter(KgtkBase):
                 result[self.output_column_names[idx]] = self.reformat_value_for_json(value)
         return result
 
+    def writehtml(self, line: str, indent: int, compact: bool = False):
+        if compact:
+            self.writeline_noeol(line)
+        else:
+            self.writeline("  " * indent + line)
+
     def write_html_header(self, compact: bool = False):
-        self.writelineX('<!DOCTYPE html>', compact=compact)
-        self.writelineX('<html lang="en">', compact=compact)
-        self.writelineX('<head>', compact=compact)
-        self.writelineX('<meta charset="utf-8">', compact=compact)
-        self.writelineX('<style>', compact=compact)
-        self.writelineX('table, th, td {', compact=compact)
-        self.writelineX('border: 1px solid black;', compact=compact)
-        self.writelineX('border-collapse: collapse;', compact=compact)
-        self.writelineX('}', compact=compact)
-        self.writelineX('</style>', compact=compact)
-        self.writelineX('</head>', compact=compact)
-        self.writelineX('<body>', compact=compact)
-        self.writelineX('<table>', compact=compact)
-        self.writelineX('<tr>', compact=compact)
+        self.writehtml('<!DOCTYPE html>', 0, compact=compact)
+        self.writehtml('<html lang="en">', 0, compact=compact)
+        self.writehtml('<head>', 1, compact=compact)
+        self.writehtml('<meta charset="utf-8">', 2, compact=compact)
+        self.writehtml('<style>', 2, compact=compact)
+        self.writehtml('table, th, td {', 0, compact=compact)
+        self.writehtml('border: 1px solid black;', 0, compact=compact)
+        self.writehtml('border-collapse: collapse;', 0, compact=compact)
+        self.writehtml('}', 0, compact=compact)
+        self.writehtml('</style>', 2, compact=compact)
+        self.writehtml('</head>', 1, compact=compact)
+        self.writehtml('<body>', 1, compact=compact)
+        self.writehtml('<table>', 2, compact=compact)
+
+        self.writehtml('<tr>', 3, compact=compact)
 
         column_name: str
         for column_name in self.output_column_names:
-            self.writelineX('<th>%s</th>' % html.escape(column_name), compact=compact)
+            self.writehtml('<th>%s</th>' % html.escape(column_name), 4, compact=compact)
 
-        self.writelineX('</tr>', compact=compact)
+        self.writehtml('</tr>', 3, compact=compact)
 
     def write_html(self, values: typing.List[str], compact: bool = False):
-        self.writelineX('<tr>', compact=compact)
+        self.writehtml('<tr>', 3, compact=compact)
 
         value: str
         for value in values:
-            self.writelineX('<td>%s</td>' % html.escape(value), compact=compact)
+            self.writehtml('<td>%s</td>' % html.escape(value), 4, compact=compact)
 
-        self.writelineX('</tr>', compact=compact)
+        self.writehtml('</tr>', 3, compact=compact)
 
     def write_html_compact(self, values: typing.List[str]):
         self.write_html(values, compact=True)
 
     def write_html_trailer(self, compact: bool = False):
-        self.writelineX('</table>', compact=compact)
-        self.writelineX('</body>', compact=compact)
-        self.writeline('</html>')
+        self.writehtml('</table>', 2, compact=compact)
+        self.writehtml('</body>', 1, compact=compact)
+        self.writehtml('</html>', 0)
 
     def write_header(self):
         header: str
@@ -760,12 +767,6 @@ class KgtkWriter(KgtkBase):
                     pass # TODO: propogate a close backwards.
                 else:
                     raise
-
-    def writelineX(self, line: str, compact: bool = False):
-        if compact:
-            self.writeline_noeol(line)
-        else:
-            self.writeline(line)
 
     def shuffle(self, values: typing.List[str], shuffle_list: typing.List[int])->typing.List[str]:
         if len(shuffle_list) != len(values):
