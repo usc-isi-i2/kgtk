@@ -616,13 +616,6 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # Supply the default reader and value options:
         (options, value_options) = cls._default_options(options, value_options)
 
-        # Get the graph cache from the options or an envar:
-        graph_cache: typing.Optional[str] = options.graph_cache
-        if options.use_graph_cache_envar and graph_cache is None:
-            graph_cache = os.getenv("KGTK_GRAPH_CACHE", None)
-            if verbose and graph_cache is not None:
-                print("Using KGTK_GRAPH_CACHE=%s" % repr(graph_cache), file=error_file, flush=True)
-
         # Supply the default input_format:
         input_format: str
         if options.input_format is None:
@@ -632,18 +625,43 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if verbose:
             print("input format: %s" % input_format, file=error_file, flush=True)
 
-        source: ClosableIter[str] = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
+        # Get the graph cache from the options or an envar:
+        graph_cache: typing.Optional[str] = options.graph_cache
+        if options.use_graph_cache_envar and graph_cache is None:
+            graph_cache = os.getenv("KGTK_GRAPH_CACHE", None)
+            if verbose and graph_cache is not None:
+                print("Using KGTK_GRAPH_CACHE=%s" % repr(graph_cache), file=error_file, flush=True)
 
-        # Read the kgtk file header and split it into column names.  We get the
-        # header back, too, for use in debugging and error messages.
+        source: ClosableIter[str]
         header: str
         column_names: typing.List[str]
-        (header, column_names) = cls._build_column_names(source, options, input_format, error_file=error_file, verbose=verbose)
 
-        # If there's an implied label, add the column to the end.  If a label column
-        # already exists, then later we'll detect a duplicate column name.
-        if options.implied_label is not None:
-            column_names.append(cls.LABEL)
+        use_graph_cache: bool = False
+        if graph_cache is not None and file_path is not None:
+            from kgtk.io.graphcacheadaptor import GraphCacheAdaptor
+            gca: typing.Optional[GraphCacheAdaptor] = GraphCacheAdaptor.open(graph_cache_path=Path(graph_cache),
+                                                                             file_path=file_path,
+                                                                             error_file=error_file,
+                                                                             verbose=verbose)
+            if gca is not None:
+                use_graph_cache = True
+                source = ClosableIterTextIOWrapper(sys.stdin) # This is a dummy definition.
+                column_names = gca.column_names.copy()
+                header = KgtkFormat.COLUMN_SEPARATOR.join(column_names)
+
+        if not use_graph_cache:
+            source = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
+
+            # Read the kgtk file header and split it into column names.  We get the
+            # header back, too, for use in debugging and error messages.
+            (header, column_names) = cls._build_column_names(source, options, input_format, error_file=error_file, verbose=verbose)
+
+            # If there's an implied label, add the column to the end.  If a label column
+            # already exists, then later we'll detect a duplicate column name.
+            #
+            # TODO: do the same for the GraphCacheAdapter
+            if options.implied_label is not None:
+                column_names.append(cls.LABEL)
                   
         # Check for unsafe column names.
         cls.check_column_names(column_names,
@@ -733,52 +751,60 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
            options.implied_label is None:
             use_fast_path = True
             if verbose:
-                print("KgtkReader: using the fast read path.", file=error_file, flush=True)
+                print("KgtkReader: OK to use the fast read path.", file=error_file, flush=True)
         else:
             use_fast_path = False
 
-        if use_fast_path:
+        # Select the best inplementation class.
+        if use_graph_cache and gca is not None:
+            # TODO: Need fast vs. slow GraphCacheReader implementations.
+            cls = gca.reader()
+
+            if verbose:
+                print("KgtkReader: Reading a kgtk file using the graph cache path.", file=error_file, flush=True)
+
+        elif use_fast_path:
+            # The EdgeReader/NodeReader distinctions don't matter on the fast path.
             if input_filter is None:
-                # The EdgeReader/NodeReader distinctions don't matter on the fast path.
                 # We'll instantiate a FastReader, which is a subclass of KgtkReader.
                 # The FastReader import is deferred to avoid circular imports.
                 from kgtk.io.fastreader import FastReader
+                cls = FastReader
             
                 if verbose:
                     print("KgtkReader: Reading a kgtk file using the fast path.", file=error_file, flush=True)
-
-                cls = FastReader
             
             else:
-                # The EdgeReader/NodeReader distinctions don't matter on the fast path.
                 # We'll instantiate a  FilteredFastReader, which is a subclass of KgtkReader.
                 # The FilteredFastReader import is deferred to avoid circular imports.
                 from kgtk.io.fastreader import FilteredFastReader
+                cls = FilteredFastReader
             
                 if verbose:
                     print("KgtkReader: Reading a kgtk file using the filtered fast path.", file=error_file, flush=True)
-
-                cls = FilteredFastReader
             
         elif is_edge_file:
             # We'll instantiate an EdgeReader, which is a subclass of KgtkReader.
             # The EdgeReader import is deferred to avoid circular imports.
             from kgtk.io.edgereader import EdgeReader
+            cls = EdgeReader
             
             if verbose:
                 print("KgtkReader: Reading an edge file.", file=error_file, flush=True)
-
-            cls = EdgeReader
         
         elif is_node_file:
             # We'll instantiate a NodeReader, which is a subclass of KgtkReader.
             # The NodeReader import is deferred to avoid circular imports.
             from kgtk.io.nodereader import NodeReader
+            cls = NodeReader
             
             if verbose:
                 print("KgtkReader: Reading an node file.", file=error_file, flush=True)
 
-            cls = NodeReader
+        else:
+            # cls remains KgtkReader
+            if verbose:
+                print("KgtkReader: Reading a non-KGTK file.", file=error_file, flush=True)
 
         return cls(file_path=file_path,
                    source=source,
@@ -948,7 +974,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 return header, header.split(options.column_separator)
         else:
             # Skip the first record to override the column names in the file.
-            # Do not skip the first record if the file does not hae a header record.
+            # Do not skip the first record if the file does not have a header record.
             if verbose:
                 print("Forcing column names", file=error_file, flush=True)
             if options.skip_header_record:
