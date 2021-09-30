@@ -641,6 +641,29 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if verbose:
             print("input format: %s" % input_format, file=error_file, flush=True)
 
+        # Decide whether or not to use the fast read path.  This code
+        # assumes that the options will not change beyond this point.
+        use_fast_path: bool
+        if options.record_limit is None and \
+           options.tail_count is None and \
+           options.initial_skip_count == 0 and \
+           options.every_nth_record <= 1 and \
+           not options.repair_and_validate_lines and \
+           not options.repair_and_validate_values and \
+           input_format == KgtkReaderOptions.INPUT_FORMAT_KGTK and \
+           options.implied_label is None:
+            use_fast_path = True
+            if verbose:
+                print("KgtkReader: OK to use the fast read path.", file=error_file, flush=True)
+        else:
+            use_fast_path = False
+
+        # If an input_filter has been supplied, check it for validity:
+        # Note: some of these checks are redundant with the type declaration.
+        # So be it.
+        if input_filter is not None:
+            cls._validate_input_filter(input_filter, column_names)
+
         # Get the graph cache from the options or an envar:
         graph_cache: typing.Optional[str] = options.graph_cache
         if options.use_graph_cache_envar and graph_cache is None:
@@ -654,6 +677,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         use_graph_cache: bool = False
         if graph_cache is not None and file_path is not None:
+            if not use_fast_path:
+                raise ValueError("The graph cache may not currently be used with: " +
+                                 "record limit, tail count, initial skip count, every nth record, " +
+                                 "repair and validate lines, repair and validate values, " +
+                                 "non-KGTK input formats, and implied labels.")
+
             from kgtk.io.graphcacheadaptor import GraphCacheAdaptor
             gca: typing.Optional[GraphCacheAdaptor] = GraphCacheAdaptor.open(graph_cache_path=Path(graph_cache),
                                                                              file_path=file_path,
@@ -748,41 +777,16 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                      node2_column_idx,
                                                                                      id_column_idx), file=error_file, flush=True)
 
-        # If an input_filter has been supplied, check it for validity:
-        # Note: some of these checks are redundant with the type declaration.
-        # So be it.
-        if input_filter is not None:
-            cls._validate_input_filter(input_filter, column_names)
-
-        # Decide whether or not to use the fast read path.  This code
-        # assumes that the options will not change beyond this point.
-        use_fast_path: bool
-        if options.record_limit is None and \
-           options.tail_count is None and \
-           options.initial_skip_count == 0 and \
-           options.every_nth_record <= 1 and \
-           not options.repair_and_validate_lines and \
-           not options.repair_and_validate_values and \
-           input_format == KgtkReaderOptions.INPUT_FORMAT_KGTK and \
-           options.implied_label is None:
-            use_fast_path = True
-            if verbose:
-                print("KgtkReader: OK to use the fast read path.", file=error_file, flush=True)
-        else:
-            use_fast_path = False
-
         # Select the best inplementation class.
-        if use_graph_cache and gca is not None:
-            # TODO: Need fast vs. slow GraphCacheReader implementations.
-
-            if verbose:
-                print("KgtkReader: Reading a kgtk file using the graph cache path.", file=error_file, flush=True)
-            cls = gca.reader(fetch_size=options.graph_cache_fetchmany_size,
-                             filter_batch_size=options.graph_cache_filter_batch_size)
-
-        elif use_fast_path:
+        if use_fast_path:
             # The EdgeReader/NodeReader distinctions don't matter on the fast path.
-            if input_filter is None:
+            if use_graph_cache and gca is not None:
+                if verbose:
+                    print("KgtkReader: Reading a kgtk file using the graph cache path.", file=error_file, flush=True)
+                cls = gca.reader(fetch_size=options.graph_cache_fetchmany_size,
+                                 filter_batch_size=options.graph_cache_filter_batch_size)
+    
+            elif input_filter is None:
                 # We'll instantiate a FastReader, which is a subclass of KgtkReader.
                 # The FastReader import is deferred to avoid circular imports.
                 from kgtk.io.fastreader import FastReader
