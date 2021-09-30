@@ -93,8 +93,10 @@ class GraphCacheAdaptor:
                fetch_size: int = 0,
                filter_batch_size: int = 0,
                ):
-        """Based on the parameters passed in, select one of the
-        Graph Cache reader implementations.
+        """Based on the parameters passed in, select one of the Graph Cache reader
+        implementations.  In the future, we might always use the Graph Cache
+        filter batch reader;  the other two are just simpler fallbacks.
+
         """
         if fetch_size > 0:
             if filter_batch_size > 0:
