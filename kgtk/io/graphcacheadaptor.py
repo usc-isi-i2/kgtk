@@ -20,7 +20,7 @@ class GraphCacheAdaptor:
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    cursor = attr.ib(default=None)
+    # cursor = attr.ib(default=None)
 
     is_open: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
@@ -96,7 +96,11 @@ class GraphCacheAdaptor:
 
     def simple_reader(adapter_self):
         from kgtk.io.kgtkreader import KgtkReader
+
+        @attr.s(slots=True, frozen=False)
         class GraphCacheReader(KgtkReader):
+            
+            cursor = attr.ib(default=None)
             
             def build_query(reader_self)->typing.Tuple[str, typing.List[str]]:
                 query_list: typing.List[str] = list()
@@ -160,9 +164,9 @@ class GraphCacheAdaptor:
 
 
             def nextrow(reader_self)->typing.List[str]:
-                if adapter_self.cursor is None:
-                    adapter_self.cursor = reader_self.get_cursor()
-                row = adapter_self.cursor.fetchone()
+                if reader_self.cursor is None:
+                    reader_self.cursor = reader_self.get_cursor()
+                row = reader_self.cursor.fetchone()
                 if row is None:
                     adapter_self.close()
                     raise StopIteration
@@ -173,8 +177,14 @@ class GraphCacheAdaptor:
 
     def fetchmany_reader(adapter_self, fetch_size: int):
         from kgtk.io.kgtkreader import KgtkReader
+
+        @attr.s(slots=True, frozen=False)
         class GraphCacheReader(KgtkReader):
             
+            cursor = attr.ib(default=None)
+            buffer = attr.ib(default=None)
+            buffer_idx: int = attr.ib(default=0)
+
             def build_query(reader_self)->typing.Tuple[str, typing.List[str]]:
                 query_list: typing.List[str] = list()
                 parameters: typing.List[str] = list()
@@ -237,13 +247,21 @@ class GraphCacheAdaptor:
 
 
             def nextrow(reader_self)->typing.List[str]:
-                if adapter_self.cursor is None:
-                    adapter_self.cursor = reader_self.get_cursor()
-                row = adapter_self.cursor.fetchone()
-                if row is None:
-                    adapter_self.close()
-                    raise StopIteration
-                return row
+                if reader_self.cursor is None:
+                    reader_self.cursor = reader_self.get_cursor()
+
+                while True:
+                    if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
+                        row = reader_self.buffer[reader_self.buffer_idx]
+                        reader_self.buffer_idx += 1
+                        return row
+
+                    reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)
+                    reader_self.buffer_idx = 0
+
+                    if len(reader_self.buffer) == 0:
+                        adapter_self.close()
+                        raise StopIteration
 
         return GraphCacheReader
         
