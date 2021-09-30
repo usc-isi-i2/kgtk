@@ -93,6 +93,9 @@ class GraphCacheAdaptor:
                fetch_size: int = 0,
                filter_batch_size: int = 0,
                ):
+        """Based on the parameters passed in, select one of the
+        Graph Cache reader implementations.
+        """
         if fetch_size > 0:
             if filter_batch_size > 0:
                 if self.verbose:
@@ -108,6 +111,17 @@ class GraphCacheAdaptor:
             return self.simple_reader()
 
     def simple_reader(adapter_self):
+        """This is the simple Graph Cache reader.
+
+        If there is a filter, then all of the filter parameters are passed to
+        sqlite3 in a single SELECT statement.  This may lead to poor
+        performance if the filter parameters includes a very large value set.
+
+        The results of the database query are retrieved one at a time.  This
+        may lead to suboptimal performance if the result set is very large,
+        and might lead to memory exhaustion.
+
+        """
         import sqlite3
         from kgtk.io.kgtkreader import KgtkReader
 
@@ -190,6 +204,16 @@ class GraphCacheAdaptor:
         
 
     def fetchmany_reader(adapter_self, fetch_size: int):
+        """This is the fetchmany Graph Cache reader.
+
+        If there is a filter, then all of the filter parameters are passed to
+        sqlite3 in a single SELECT statement.  This may lead to poor
+        performance if the filter parameters includes a very large value set.
+
+        The results of the database query are retrieved in batches.  The
+        maximum size of a batch is specified with `--graph-cache-fetchmany-size`.
+
+        """
         import sqlite3
         from kgtk.io.kgtkreader import KgtkReader
 
@@ -281,6 +305,18 @@ class GraphCacheAdaptor:
         return GraphCacheReader
         
     def filter_batch_reader(adapter_self, fetch_size: int, filter_batch_size: int):
+        """This is the filter batch Graph Cache reader.
+
+        If there is a filter, then all of the filter parameters are passed to
+        sqlite3 in multiple SELECT statements.  The database will scanned multiple
+        times, but if the indexing works properly, performance should be adequate.
+        The maximum number of filter values in a SELECT statement for a single column
+        is specified with `--graph-cache-filter-batch-size`.
+
+        The results of each database query are retrieved in batches.  The
+        maximum size of a batch is specified with `--graph-cache-fetchmany-size`.
+
+        """
         import sqlite3
         from kgtk.io.kgtkreader import KgtkReader
 
