@@ -110,6 +110,32 @@ class GraphCacheAdaptor:
                 query_list.append(" FROM " )
                 query_list.append(adapter_self.table_name)
 
+                if reader_self.input_filter is not None and len(reader_self.input_filter) > 0:
+                    query_list.append(" WHERE ")
+                    col_idx: int
+                    col_values: typing.List[str]
+                    first: bool = True
+                    for col_idx, col_values in reader_self.input_filter.items():
+                        if len(col_values) == 0:
+                            continue;
+                        if first:
+                            first = False
+                        else:
+                            query_list.append(" AND ")
+                        query_list.append('"' + adapter_self.column_names[col_idx] + '"')
+                        if len(col_values) == 1:
+                            query_list.append(" = ?")
+                            parameters.append(list(col_values)[0])
+                        else:
+                            query_list.append(" IN (")
+                            col_value: str
+                            for idx, col_value in enumerate(sorted(list(col_values))):
+                                if idx > 0:
+                                    query_list.append(", ")
+                                query_list.append("?")
+                                parameters.append(col_value)
+                            query_list.append(")")
+
                 query: str = "".join(query_list)
 
                 if adapter_self.verbose:
