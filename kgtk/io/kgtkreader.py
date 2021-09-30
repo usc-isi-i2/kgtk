@@ -129,6 +129,7 @@ class KgtkReaderOptions():
     graph_cache: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     use_graph_cache_envar: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     graph_cache_fetchmany_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT)
+    graph_cache_filter_batch_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT)
 
     @classmethod
     def add_arguments(cls,
@@ -410,7 +411,7 @@ class KgtkReaderOptions():
             graph_cache=lookup("graph_cache", None),
             use_graph_cache_envar=lookup("use_graph_cache_envar", True),
             graph_cache_fetchmany_size=lookup("graph_cache_fetchmany_size", cls.GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT),
-            graph_cache_filter_batch_size=lookup("graph_cache_batch_size", cls.GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT),
+            graph_cache_filter_batch_size=lookup("graph_cache_filter_batch_size", cls.GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
             initial_skip_count=lookup("initial_skip_count", 0),
             invalid_value_action=lookup("invalid_value_action", ValidationAction.REPORT),
@@ -773,11 +774,11 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # Select the best inplementation class.
         if use_graph_cache and gca is not None:
             # TODO: Need fast vs. slow GraphCacheReader implementations.
-            cls = gca.reader(fetch_size=options.graph_cache_fetchmany_size,
-                             filter_batch_size=options.graph_cache_filter_batch_size)
 
             if verbose:
                 print("KgtkReader: Reading a kgtk file using the graph cache path.", file=error_file, flush=True)
+            cls = gca.reader(fetch_size=options.graph_cache_fetchmany_size,
+                             filter_batch_size=options.graph_cache_filter_batch_size)
 
         elif use_fast_path:
             # The EdgeReader/NodeReader distinctions don't matter on the fast path.

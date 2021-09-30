@@ -19,6 +19,7 @@ class GraphCacheAdaptor:
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     is_open: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
@@ -33,6 +34,7 @@ class GraphCacheAdaptor:
              max_cache_size: int = 1000,
              error_file: typing.TextIO = sys.stderr,
              verbose: bool = False,
+             very_verbose: bool = False,
              )->typing.Optional['GraphCacheAdaptor']:
 
         api: kapi.KypherApi = kapi.KypherApi(graphcache=str(graph_cache_path),
@@ -78,7 +80,8 @@ class GraphCacheAdaptor:
                    table_name=table_name,
                    column_names=column_names,
                    error_file=error_file,
-                   verbose=verbose
+                   verbose=verbose,
+                   very_verbose=very_verbose,
                    )
 
     def close(self):
@@ -92,10 +95,16 @@ class GraphCacheAdaptor:
                ):
         if fetch_size > 0:
             if filter_batch_size > 0:
+                if self.verbose:
+                    print("Using the Graph Cache filter batch reader.", file=self.error_file, flush=True)
                 return self.filter_batch_reader(fetch_size, filter_batch_size)
             else:
+                if self.verbose:
+                    print("Using the Graph Cache fetchmany reader.", file=self.error_file, flush=True)
                 return self.fetchmany_reader(fetch_size)
         else:
+            if self.verbose:
+                print("Using the Graph Cache simple reader.", file=self.error_file, flush=True)
             return self.simple_reader()
 
     def simple_reader(adapter_self):
@@ -153,7 +162,7 @@ class GraphCacheAdaptor:
 
                 query: str = "".join(query_list)
 
-                if adapter_self.verbose:
+                if adapter_self.very_verbose:
                     print("Query: %s" % repr(query), file=adapter_self.error_file, flush=True)
                     print("Parameters: [%s]" % ", ".join([repr(x) for x in parameters]), file=adapter_self.error_file, flush=True)
                 
@@ -237,7 +246,7 @@ class GraphCacheAdaptor:
 
                 query: str = "".join(query_list)
 
-                if adapter_self.verbose:
+                if adapter_self.very_verbose:
                     print("Query: %s" % repr(query), file=adapter_self.error_file, flush=True)
                     print("Parameters: [%s]" % ", ".join([repr(x) for x in parameters]), file=adapter_self.error_file, flush=True)
                 
@@ -278,11 +287,15 @@ class GraphCacheAdaptor:
         @attr.s(slots=True, frozen=False)
         class GraphCacheReader(KgtkReader):
             
+            first_time: bool = attr.ib(default=True)
+            need_query: bool = attr.ib(default=True)
             cursor = attr.ib(default=None)
             buffer = attr.ib(default=None)
             buffer_idx: int = attr.ib(default=0)
 
-            input_filter_lists: typing.Optional[typing.Mapping[int, typing.List[str]]] = attr.ib(default=None)
+            batch_state: typing.List[int] = attr.ib(default=attr.Factory(list))
+            input_filter_idxs: typing.List[int] = attr.ib(default=attr.Factory(list))
+            input_filter_lists: typing.List[typing.List[str]] = attr.ib(default=attr.Factory(list))
 
             def convert_input_filter(reader_self):
                 if reader_self.input_filter is None:
@@ -290,15 +303,15 @@ class GraphCacheAdaptor:
                 if len(reader_self.input_filter) == 0:
                     return
 
-                input_filter_lists: typing.MutableMapping[int, typing.List[str]] = dict()
 
                 col_idx: int
                 col_values: typing.Set[str]
                 for col_idx, col_values in reader_self.input_filter.items():
                     if len(col_values) == 0:
                         continue;
-                    input_filter_lists[col_idx] = sorted(list(col_values))
-                reader_self.input_filter_lists = input_filter_lists
+                    reader_self.batch_state.append(0)
+                    reader_self.input_filter_idxs.append(col_idx)
+                    reader_self.input_filter_lists.append(sorted(list(col_values)))
                 
 
             def build_query(reader_self)->typing.Tuple[str, typing.List[str]]:
@@ -319,24 +332,34 @@ class GraphCacheAdaptor:
                 query_list.append(" FROM " )
                 query_list.append(adapter_self.table_name)
 
-                if reader_self.input_filter_lists is not None:
+                if len(reader_self.input_filter_idxs) > 0:
                     query_list.append(" WHERE ")
-                    col_idx: int
-                    col_values: typing.List[str]
-                    first: bool = True
-                    for col_idx, col_values in reader_self.input_filter_lists.items():
-                        if first:
-                            first = False
+                    first_constrained_column: bool = True
+            
+                    idx: int
+                    for idx in range(len(reader_self.input_filter_lists)):
+                        col_state: int = reader_self.batch_state[idx]
+                        col_idx: int = reader_self.input_filter_idxs[idx]
+                        col_values: typing.List[str] = reader_self.input_filter_lists[idx][col_state:(col_state+filter_batch_size)]
+
+                        if first_constrained_column:
+                            first_constrained_column = False
                         else:
                             query_list.append(" AND ")
+                            
                         query_list.append('"' + adapter_self.column_names[col_idx] + '"')
-                        if len(col_values) == 1:
+
+                        if len(col_values) == 0:
+                            raise ValueError("GraphCacheAdaptor internal error: len(col_values) == 0")
+
+                        elif len(col_values) == 1:
                             query_list.append(" = ?")
                             parameters.append(list(col_values)[0])
+
                         else:
                             query_list.append(" IN (")
                             col_value: str
-                            for idx, col_value in col_values:
+                            for idx, col_value in enumerate(col_values):
                                 if idx > 0:
                                     query_list.append(", ")
                                 query_list.append("?")
@@ -345,38 +368,57 @@ class GraphCacheAdaptor:
 
                 query: str = "".join(query_list)
 
-                if adapter_self.verbose:
+                if adapter_self.very_verbose or True:
                     print("Query: %s" % repr(query), file=adapter_self.error_file, flush=True)
                     print("Parameters: [%s]" % ", ".join([repr(x) for x in parameters]), file=adapter_self.error_file, flush=True)
                 
                 return query, parameters
 
-            def get_cursor(reader_self):
-                cursor: sqlite3.Cursor = adapter_self.sql_store.get_conn().cursor()
+            def get_cursor(reader_self)->sqlite3.Cursor:
+                return adapter_self.sql_store.get_conn().cursor()
+
+            def start_query(reader_self):
                 query: str
                 parameters: typing.List[str]
                 query, parameters = reader_self.build_query()
-                cursor.execute(query, parameters)
-                return cursor
+                reader_self.cursor.execute(query, parameters)
+                reader_self.need_query = False
 
+            def advance_state(reader_self)->bool:
+                idx: int
+                for idx in range(len(reader_self.batch_state)):
+                    reader_self.batch_state[idx] += filter_batch_size
+                    if reader_self.batch_state[idx] < len(reader_self.input_filter_lists[idx]):
+                        return True
+                    reader_self.batch_state[idx] = 0
+                return False
 
             def nextrow(reader_self)->typing.List[str]:
-                if reader_self.input_filter is None:
+                if reader_self.first_time:
+                    reader_self.first_time = False
                     reader_self.convert_input_filter()
                     reader_self.cursor = reader_self.get_cursor()
+                    reader_self.start_query()
 
                 while True:
-                    if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
-                        row = reader_self.buffer[reader_self.buffer_idx]
-                        reader_self.buffer_idx += 1
-                        return row
+                    if reader_self.need_query:
+                        if not reader_self.advance_state():
+                            adapter_self.close()
+                            raise StopIteration
+                        reader_self.start_query()
+                            
+                    while True:
+                        if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
+                            row = reader_self.buffer[reader_self.buffer_idx]
+                            reader_self.buffer_idx += 1
+                            return row
 
-                    reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)
-                    reader_self.buffer_idx = 0
-
-                    if len(reader_self.buffer) == 0:
-                        adapter_self.close()
-                        raise StopIteration
+                        reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)
+                        reader_self.buffer_idx = 0
+                        if len(reader_self.buffer) == 0:
+                            reader_self.need_query = True
+                            break
+                            
 
         return GraphCacheReader
         
