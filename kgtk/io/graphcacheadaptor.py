@@ -86,9 +86,15 @@ class GraphCacheAdaptor:
             self.api.close()
             self.is_open = False
 
-    def reader(self, fetch_size: int = 0):
+    def reader(self,
+               fetch_size: int = 0,
+               filter_batch_size: int = 0,
+               ):
         if fetch_size > 0:
-            return self.fetchmany_reader(fetch_size)
+            if filter_batch_size > 0:
+                return self.filter_batch_reader(fetch_size, filter_batch_size)
+            else:
+                return self.fetchmany_reader(fetch_size)
         else:
             return self.simple_reader()
 
@@ -248,6 +254,115 @@ class GraphCacheAdaptor:
 
             def nextrow(reader_self)->typing.List[str]:
                 if reader_self.cursor is None:
+                    reader_self.cursor = reader_self.get_cursor()
+
+                while True:
+                    if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
+                        row = reader_self.buffer[reader_self.buffer_idx]
+                        reader_self.buffer_idx += 1
+                        return row
+
+                    reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)
+                    reader_self.buffer_idx = 0
+
+                    if len(reader_self.buffer) == 0:
+                        adapter_self.close()
+                        raise StopIteration
+
+        return GraphCacheReader
+        
+    def filter_batch_reader(adapter_self, fetch_size: int, filter_batch_size: int):
+        import sqlite3
+        from kgtk.io.kgtkreader import KgtkReader
+
+        @attr.s(slots=True, frozen=False)
+        class GraphCacheReader(KgtkReader):
+            
+            cursor = attr.ib(default=None)
+            buffer = attr.ib(default=None)
+            buffer_idx: int = attr.ib(default=0)
+
+            input_filter_lists: typing.Optional[typing.Mapping[int, typing.List[str]]] = attr.ib(default=None)
+
+            def convert_input_filter(reader_self):
+                if reader_self.input_filter is None:
+                    return
+                if len(reader_self.input_filter) == 0:
+                    return
+
+                input_filter_lists: typing.MutableMapping[int, typing.List[str]] = dict()
+
+                col_idx: int
+                col_values: typing.Set[str]
+                for col_idx, col_values in reader_self.input_filter.items():
+                    if len(col_values) == 0:
+                        continue;
+                    input_filter_lists[col_idx] = sorted(list(col_values))
+                reader_self.input_filter_lists = input_filter_lists
+                
+
+            def build_query(reader_self)->typing.Tuple[str, typing.List[str]]:
+                query_list: typing.List[str] = list()
+                parameters: typing.List[str] = list()
+
+                query_list.append("SELECT ")
+
+                idx: int
+                col_name: str
+                for idx, col_name in enumerate(adapter_self.column_names):
+                    if idx == 0:
+                        query_list.append(" ")
+                    else:
+                        query_list.append(", ")
+                    query_list.append('"' + col_name + '"')
+
+                query_list.append(" FROM " )
+                query_list.append(adapter_self.table_name)
+
+                if reader_self.input_filter_lists is not None:
+                    query_list.append(" WHERE ")
+                    col_idx: int
+                    col_values: typing.List[str]
+                    first: bool = True
+                    for col_idx, col_values in reader_self.input_filter_lists.items():
+                        if first:
+                            first = False
+                        else:
+                            query_list.append(" AND ")
+                        query_list.append('"' + adapter_self.column_names[col_idx] + '"')
+                        if len(col_values) == 1:
+                            query_list.append(" = ?")
+                            parameters.append(list(col_values)[0])
+                        else:
+                            query_list.append(" IN (")
+                            col_value: str
+                            for idx, col_value in col_values:
+                                if idx > 0:
+                                    query_list.append(", ")
+                                query_list.append("?")
+                                parameters.append(col_value)
+                            query_list.append(")")
+
+                query: str = "".join(query_list)
+
+                if adapter_self.verbose:
+                    print("Query: %s" % repr(query), file=adapter_self.error_file, flush=True)
+                    print("Parameters: [%s]" % ", ".join([repr(x) for x in parameters]), file=adapter_self.error_file, flush=True)
+                
+                return query, parameters
+
+            def get_cursor(reader_self):
+                cursor: sqlite3.Cursor = adapter_self.sql_store.get_conn().cursor()
+                query: str
+                parameters: typing.List[str]
+                query, parameters = reader_self.build_query()
+                cursor.execute(query, parameters)
+                return cursor
+
+
+            def nextrow(reader_self)->typing.List[str]:
+                if reader_self.input_filter is None:
+                    reader_self.convert_input_filter()
                     reader_self.cursor = reader_self.get_cursor()
 
                 while True:

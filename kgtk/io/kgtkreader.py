@@ -50,6 +50,7 @@ class KgtkReaderOptions():
     GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
     MGZIP_THREAD_COUNT_DEFAULT: int = 3
     GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT: int = 0
+    GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT: int = 0
 
     # TODO: use an enum
     INPUT_FORMAT_CSV: str = "csv"
@@ -233,6 +234,10 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "Graph cache transfer buffer size. (default=%(default)s)."),
                             type=int, **d(default=cls.GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT))
 
+        fgroup.add_argument(prefix1 + "graph-cache-filter-batch-size", dest=prefix2 + "graph_cache_filter_batch_size",
+                            help=h(prefix3 + "Graph cache filter batch size. (default=%(default)s)."),
+                            type=int, **d(default=cls.GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT))
+
         if mode_options:
             fgroup.add_argument(prefix1 + "mode",
                                 dest=prefix2 + "mode",
@@ -405,6 +410,7 @@ class KgtkReaderOptions():
             graph_cache=lookup("graph_cache", None),
             use_graph_cache_envar=lookup("use_graph_cache_envar", True),
             graph_cache_fetchmany_size=lookup("graph_cache_fetchmany_size", cls.GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT),
+            graph_cache_filter_batch_size=lookup("graph_cache_batch_size", cls.GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
             initial_skip_count=lookup("initial_skip_count", 0),
             invalid_value_action=lookup("invalid_value_action", ValidationAction.REPORT),
@@ -475,6 +481,7 @@ class KgtkReaderOptions():
             print("%simplied-label=%s" % (prefix, str(self.implied_label)), file=out)
         print("%suse-graph-cache-envar=%s" % (prefix, str(self.use_graph_cache_envar)), file=out)
         print("%sgraph-cache-fetchmany-size=%s" % (prefix, str(self.graph_cache_fetchmany_size)), file=out)
+        print("%sgraph-cache-filter-batch-size=%s" % (prefix, str(self.graph_cache_filter_batch_size)), file=out)
         if self.graph_cache is not None:
             print("%sgraph-cache=%s" % (prefix, str(self.graph_cache)), file=out)
 
@@ -766,7 +773,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # Select the best inplementation class.
         if use_graph_cache and gca is not None:
             # TODO: Need fast vs. slow GraphCacheReader implementations.
-            cls = gca.reader(fetch_size=options.graph_cache_fetchmany_size)
+            cls = gca.reader(fetch_size=options.graph_cache_fetchmany_size,
+                             filter_batch_size=options.graph_cache_filter_batch_size)
 
             if verbose:
                 print("KgtkReader: Reading a kgtk file using the graph cache path.", file=error_file, flush=True)
