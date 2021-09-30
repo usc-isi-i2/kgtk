@@ -88,7 +88,90 @@ class GraphCacheAdaptor:
             self.api.close()
             self.is_open = False
 
-    def reader(adapter_self):
+    def reader(self, fetch_size: int = 0):
+        if fetch_size > 0:
+            return self.fetchmany_reader(fetch_size)
+        else:
+            return self.simple_reader()
+
+    def simple_reader(adapter_self):
+        from kgtk.io.kgtkreader import KgtkReader
+        class GraphCacheReader(KgtkReader):
+            
+            def build_query(reader_self)->typing.Tuple[str, typing.List[str]]:
+                query_list: typing.List[str] = list()
+                parameters: typing.List[str] = list()
+
+                query_list.append("SELECT ")
+
+                idx: int
+                col_name: str
+                for idx, col_name in enumerate(adapter_self.column_names):
+                    if idx == 0:
+                        query_list.append(" ")
+                    else:
+                        query_list.append(", ")
+                    query_list.append('"' + col_name + '"')
+
+                query_list.append(" FROM " )
+                query_list.append(adapter_self.table_name)
+
+                if reader_self.input_filter is not None and len(reader_self.input_filter) > 0:
+                    query_list.append(" WHERE ")
+                    col_idx: int
+                    col_values: typing.List[str]
+                    first: bool = True
+                    for col_idx, col_values in reader_self.input_filter.items():
+                        if len(col_values) == 0:
+                            continue;
+                        if first:
+                            first = False
+                        else:
+                            query_list.append(" AND ")
+                        query_list.append('"' + adapter_self.column_names[col_idx] + '"')
+                        if len(col_values) == 1:
+                            query_list.append(" = ?")
+                            parameters.append(list(col_values)[0])
+                        else:
+                            query_list.append(" IN (")
+                            col_value: str
+                            for idx, col_value in enumerate(sorted(list(col_values))):
+                                if idx > 0:
+                                    query_list.append(", ")
+                                query_list.append("?")
+                                parameters.append(col_value)
+                            query_list.append(")")
+
+                query: str = "".join(query_list)
+
+                if adapter_self.verbose:
+                    print("Query: %s" % repr(query), file=adapter_self.error_file, flush=True)
+                    print("Parameters: [%s]" % ", ".join([repr(x) for x in parameters]), file=adapter_self.error_file, flush=True)
+                
+                return query, parameters
+
+            def get_cursor(reader_self):
+                cursor = adapter_self.sql_store.get_conn().cursor()
+                query: str
+                parameters: typing.List[str]
+                query, parameters = reader_self.build_query()
+                cursor.execute(query, parameters)
+                return cursor
+
+
+            def nextrow(reader_self)->typing.List[str]:
+                if adapter_self.cursor is None:
+                    adapter_self.cursor = reader_self.get_cursor()
+                row = adapter_self.cursor.fetchone()
+                if row is None:
+                    adapter_self.close()
+                    raise StopIteration
+                return row
+
+        return GraphCacheReader
+        
+
+    def fetchmany_reader(adapter_self, fetch_size: int):
         from kgtk.io.kgtkreader import KgtkReader
         class GraphCacheReader(KgtkReader):
             

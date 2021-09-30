@@ -49,6 +49,7 @@ class KgtkReaderOptions():
     ERROR_LIMIT_DEFAULT: int = 1000
     GZIP_QUEUE_SIZE_DEFAULT: int = GunzipProcess.GZIP_QUEUE_SIZE_DEFAULT
     MGZIP_THREAD_COUNT_DEFAULT: int = 3
+    GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT: int = 0
 
     # TODO: use an enum
     INPUT_FORMAT_CSV: str = "csv"
@@ -126,6 +127,7 @@ class KgtkReaderOptions():
 
     graph_cache: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
     use_graph_cache_envar: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+    graph_cache_fetchmany_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT)
 
     @classmethod
     def add_arguments(cls,
@@ -226,6 +228,10 @@ class KgtkReaderOptions():
                             dest=prefix2 + "graph_cache",
                             help=h(prefix3 + "When specified, look for input files in a graph cache. (default=%(default)s)."),
                             type=str, **d(default=None))
+
+        fgroup.add_argument(prefix1 + "graph-cache-fetchmany-size", dest=prefix2 + "graph_cache_fetchmany_size",
+                            help=h(prefix3 + "Graph cache transfer buffer size. (default=%(default)s)."),
+                            type=int, **d(default=cls.GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT))
 
         if mode_options:
             fgroup.add_argument(prefix1 + "mode",
@@ -398,6 +404,7 @@ class KgtkReaderOptions():
             implied_label=lookup("implied_label", None),
             graph_cache=lookup("graph_cache", None),
             use_graph_cache_envar=lookup("use_graph_cache_envar", True),
+            graph_cache_fetchmany_size=lookup("graph_cache_fetchmany_size", cls.GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
             initial_skip_count=lookup("initial_skip_count", 0),
             invalid_value_action=lookup("invalid_value_action", ValidationAction.REPORT),
@@ -467,6 +474,7 @@ class KgtkReaderOptions():
         if self.implied_label is not None:
             print("%simplied-label=%s" % (prefix, str(self.implied_label)), file=out)
         print("%suse-graph-cache-envar=%s" % (prefix, str(self.use_graph_cache_envar)), file=out)
+        print("%graph-cache-fetchmany-size=%s" % (prefix, str(self.graph_cache_fetchmany_size)), file=out)
         if self.graph_cache is not None:
             print("%sgraph-cache=%s" % (prefix, str(self.graph_cache)), file=out)
 
@@ -758,7 +766,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # Select the best inplementation class.
         if use_graph_cache and gca is not None:
             # TODO: Need fast vs. slow GraphCacheReader implementations.
-            cls = gca.reader()
+            cls = gca.reader(fetch_size=options.graph_cache_fetchmany_size)
 
             if verbose:
                 print("KgtkReader: Reading a kgtk file using the graph cache path.", file=error_file, flush=True)
