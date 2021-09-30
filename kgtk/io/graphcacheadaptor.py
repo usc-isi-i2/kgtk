@@ -128,7 +128,7 @@ class GraphCacheAdaptor:
         from kgtk.io.kgtkreader import KgtkReader
 
         @attr.s(slots=True, frozen=False)
-        class GraphCacheReader(KgtkReader):
+        class SimpleGraphCacheReader(KgtkReader):
             
             cursor: sqlite3.Cursor = attr.ib(default=None)
             
@@ -202,7 +202,7 @@ class GraphCacheAdaptor:
                     raise StopIteration
                 return row
 
-        return GraphCacheReader
+        return SimpleGraphCacheReader
         
 
     def fetchmany_reader(adapter_self, fetch_size: int):
@@ -220,7 +220,7 @@ class GraphCacheAdaptor:
         from kgtk.io.kgtkreader import KgtkReader
 
         @attr.s(slots=True, frozen=False)
-        class GraphCacheReader(KgtkReader):
+        class FetchManyGraphCacheReader(KgtkReader):
             
             cursor = attr.ib(default=None)
             buffer = attr.ib(default=None)
@@ -304,7 +304,7 @@ class GraphCacheAdaptor:
                         adapter_self.close()
                         raise StopIteration
 
-        return GraphCacheReader
+        return FetchManyGraphCacheReader
         
     def filter_batch_reader(adapter_self, fetch_size: int, filter_batch_size: int):
         """This is the filter batch Graph Cache reader.
@@ -323,7 +323,7 @@ class GraphCacheAdaptor:
         from kgtk.io.kgtkreader import KgtkReader
 
         @attr.s(slots=True, frozen=False)
-        class GraphCacheReader(KgtkReader):
+        class FilterBatchGraphCacheReader(KgtkReader):
             
             first_time: bool = attr.ib(default=True)
             need_query: bool = attr.ib(default=True)
@@ -457,7 +457,7 @@ class GraphCacheAdaptor:
                             break
                             
 
-        return GraphCacheReader
+        return FilterBatchGraphCacheReader
         
 
 def main():
