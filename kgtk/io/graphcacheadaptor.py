@@ -20,8 +20,6 @@ class GraphCacheAdaptor:
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    # cursor = attr.ib(default=None)
-
     is_open: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
 
@@ -95,12 +93,13 @@ class GraphCacheAdaptor:
             return self.simple_reader()
 
     def simple_reader(adapter_self):
+        import sqlite3
         from kgtk.io.kgtkreader import KgtkReader
 
         @attr.s(slots=True, frozen=False)
         class GraphCacheReader(KgtkReader):
             
-            cursor = attr.ib(default=None)
+            cursor: sqlite3.Cursor = attr.ib(default=None)
             
             def build_query(reader_self)->typing.Tuple[str, typing.List[str]]:
                 query_list: typing.List[str] = list()
@@ -123,7 +122,7 @@ class GraphCacheAdaptor:
                 if reader_self.input_filter is not None and len(reader_self.input_filter) > 0:
                     query_list.append(" WHERE ")
                     col_idx: int
-                    col_values: typing.List[str]
+                    col_values: typing.Set[str]
                     first: bool = True
                     for col_idx, col_values in reader_self.input_filter.items():
                         if len(col_values) == 0:
@@ -176,6 +175,7 @@ class GraphCacheAdaptor:
         
 
     def fetchmany_reader(adapter_self, fetch_size: int):
+        import sqlite3
         from kgtk.io.kgtkreader import KgtkReader
 
         @attr.s(slots=True, frozen=False)
@@ -206,7 +206,7 @@ class GraphCacheAdaptor:
                 if reader_self.input_filter is not None and len(reader_self.input_filter) > 0:
                     query_list.append(" WHERE ")
                     col_idx: int
-                    col_values: typing.List[str]
+                    col_values: typing.Set[str]
                     first: bool = True
                     for col_idx, col_values in reader_self.input_filter.items():
                         if len(col_values) == 0:
@@ -238,7 +238,7 @@ class GraphCacheAdaptor:
                 return query, parameters
 
             def get_cursor(reader_self):
-                cursor = adapter_self.sql_store.get_conn().cursor()
+                cursor: sqlite3.Cursor = adapter_self.sql_store.get_conn().cursor()
                 query: str
                 parameters: typing.List[str]
                 query, parameters = reader_self.build_query()

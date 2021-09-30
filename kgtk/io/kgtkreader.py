@@ -474,7 +474,7 @@ class KgtkReaderOptions():
         if self.implied_label is not None:
             print("%simplied-label=%s" % (prefix, str(self.implied_label)), file=out)
         print("%suse-graph-cache-envar=%s" % (prefix, str(self.use_graph_cache_envar)), file=out)
-        print("%graph-cache-fetchmany-size=%s" % (prefix, str(self.graph_cache_fetchmany_size)), file=out)
+        print("%sgraph-cache-fetchmany-size=%s" % (prefix, str(self.graph_cache_fetchmany_size)), file=out)
         if self.graph_cache is not None:
             print("%sgraph-cache=%s" % (prefix, str(self.graph_cache)), file=out)
 
