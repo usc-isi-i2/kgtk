@@ -336,7 +336,6 @@ class GraphCacheAdaptor:
                     query_list.append(" WHERE ")
                     first_constrained_column: bool = True
             
-                    idx: int
                     for idx in range(len(reader_self.input_filter_lists)):
                         col_state: int = reader_self.batch_state[idx]
                         col_idx: int = reader_self.input_filter_idxs[idx]
@@ -368,7 +367,7 @@ class GraphCacheAdaptor:
 
                 query: str = "".join(query_list)
 
-                if adapter_self.very_verbose or True:
+                if adapter_self.very_verbose:
                     print("Query: %s" % repr(query), file=adapter_self.error_file, flush=True)
                     print("Parameters: [%s]" % ", ".join([repr(x) for x in parameters]), file=adapter_self.error_file, flush=True)
                 
