@@ -93,9 +93,12 @@ class ConfigureKGTK(object):
         self.print_env_variables()
 
     def download_tutorial_files(self, graph_path):
+        if not graph_path.endswith('/'):
+            graph_path += '/'
+
         for key in self.graph_files:
-            url = f"{self.INPUT_FILES_URL}/{self.graph_files[key]}"
-            cmd = f" wget {url} > {graph_path}"
+            url = f"{self.INPUT_FILES_URL}/{self.graph_files[key]} --directory-prefix={graph_path}"
+            cmd = f" wget {url}"
             print(subprocess.getoutput(cmd))
 
     def print_env_variables(self):
