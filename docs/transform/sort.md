@@ -678,3 +678,95 @@ kgtk sort -c label,node2 \
 | t13 | t12 | role | kyle_reese |
 | t15 | t14 | role | sarah_connor |
 | t11 | t10 | role | terminator |
+
+
+### Expert Example: Overriding the System `sort` Command
+
+By default, `kgtk sort` uses `sort` as its system sort command.
+If it cannot locate the system `sort` command, it falls back to
+`gsort`.
+
+This can be changed by oferriding the system sort command and/or
+the fallback system sort command using the expert options
+`--sort-command COMMAND` or `--sort-command-fallback COMMAND2`.
+
+Suppose that you want `kgtk sort` to try `gsort` first,
+then `sort`. Use the following:
+
+```
+kgtk sort -c label,node2 \
+          --sort-command gsort \
+	  --sort-command-fallback sort \
+          -i examples/docs/movies_reduced.tsv
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t17 | terminator | award | national_film_registry |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t14 | terminator | cast | linda_hamilton |
+| t12 | terminator | cast | michael_biehn |
+| t9 | terminator | director | james_cameron |
+| t16 | terminator | duration | 108 |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t2 | terminator | instance_of | film |
+| t1 | terminator | label | 'The Terminator'@en |
+| t8 | t7 | location | sweden |
+| t6 | t5 | location | united_states |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t11 | t10 | role | terminator |
+
+Similarly, if you had installed a newer version of sort
+in a local directory, you might use:
+
+`--sort-command /path/to/new/sort`.
+
+### Expert Example: Overriding the System `bash` Command
+
+By default, `kgtk sort` uses `bash` to run its subshell
+commands.  to override this, use:
+
+`--bash-command COMMAND`
+
+### Expert Example: Overriding the System `bzip2` Command
+
+By default, `kgtk sort` uses `bzip2` to compress/decompress
+KGTK files in its pipeline when the filename ends in `.bz2` or `.bz`.
+To override this choice, use:
+
+`--bzip2-command COMMAND`
+
+### Expert Example: Overriding the System `gzip` Command
+
+By default, `kgtk sort` uses `gzip` to compress/decompress
+KGTK files in its pipeline when the filename ends in `.gz` or `.z`.
+To override this choice, use:
+
+`--gzip-command COMMAND`
+
+Note: the `pigz` (Parallel Implementation of Gnu Zip) is a
+parallelized implementation of gzip that is availabe on many
+Linux distributions.  Using `pigz` improves performance on
+large KGTK files when running on systems with more than a few
+cores/threads available.
+
+### Expert Example: Overriding the System `pgrep` Command
+
+By default, `kgtk sort` uses `pgrep` to locakte the executing
+sort command for progress monitoring.
+To override this choice, use:
+
+`--pgrep-command COMMAND`
+
+### Expert Example: Overriding the System `xz` Command
+
+By default, `kgtk sort` uses `xz` to compress/decompress
+KGTK files in its pipeline when the filename ends in `.xz` or `.lzma`.
+To override this choice, use:
+
+`--xz-command COMMAND`
