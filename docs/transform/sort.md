@@ -12,8 +12,10 @@ usage: kgtk sort [-h] [-i INPUT] [-o OUTPUT_FILE] [-c [COLUMNS [COLUMNS ...]]]
                  [--reverse-columns [REVERSE_COLUMNS [REVERSE_COLUMNS ...]]]
                  [--numeric [True|False]]
                  [--numeric-columns [NUMERIC_COLUMNS [NUMERIC_COLUMNS ...]]]
-                 [--pure-python [True|False]] [-X EXTRA]
-                 [-v [optional True|False]]
+                 [--pure-python [True|False]] [--parallel PARALLEL]
+                 [--buffer-size BUFFER_SIZE] [--batch-size BATCH_SIZE]
+                 [-T [TEMPORARY_DIRECTORY [TEMPORARY_DIRECTORY ...]]]
+                 [-X EXTRA] [-v [optional True|False]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -45,6 +47,17 @@ optional arguments:
   --pure-python [True|False]
                         When True, sort in-memory with Python code.
                         (default=False)
+  --parallel PARALLEL   Controls the number of concurrent sort runs when
+                        implemented (GNU sort). (default=None)
+  --buffer-size BUFFER_SIZE
+                        Controls the main memory buffer size when implemented
+                        (GNU sort). (default=None)
+  --batch-size BATCH_SIZE
+                        Controls the number of concurrent merges when
+                        implemented (GNU sort). (default=None)
+  -T [TEMPORARY_DIRECTORY [TEMPORARY_DIRECTORY ...]], --temporary-directory [TEMPORARY_DIRECTORY [TEMPORARY_DIRECTORY ...]]
+                        Controls the temporary file folder(s) when implemented
+                        (GNU sort). (default=[])
   -X EXTRA, --extra EXTRA
                         extra options to supply to the sort program.
                         (default=None)
@@ -463,3 +476,205 @@ kgtk filter -i examples/docs/movies_full.tsv \
 ```
 
     Error: the pure Python sorter does not currently support numeric column sorts.
+
+### Expert Example: Sort a File with Increased Parallelism
+
+When using GNU sort, increased performance may be obtained by increasing
+the number of concurrent sort runs using the `--parallel N` option.
+A good choice for the value `N` on an otherwise unloaded system
+is the number of CPUs available (or the number of hyper-threads, if enables).
+
+```
+kgtk sort -c label,node2 \
+          -i examples/docs/movies_reduced.tsv \
+	  --parallel 20
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t17 | terminator | award | national_film_registry |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t14 | terminator | cast | linda_hamilton |
+| t12 | terminator | cast | michael_biehn |
+| t9 | terminator | director | james_cameron |
+| t16 | terminator | duration | 108 |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t2 | terminator | instance_of | film |
+| t1 | terminator | label | 'The Terminator'@en |
+| t8 | t7 | location | sweden |
+| t6 | t5 | location | united_states |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t11 | t10 | role | terminator |
+
+### Expert Example: Sort a File Using More Main Memory
+
+When using GNU sort, increased performance may be obtained by increasing
+the amount of main memory used by the sort program using the `--buffer-size SIZE`
+option.  From the GNU sort documentation:
+
+SIZE may be followed by the following multiplicative suffixes: % 1% of memory, b 1, K 1024 (default), and so on for M, G, T, P, E, Z, Y.
+
+Warning! Giving sort access to too much memory may cause other programs to page
+out, greatly reducing system responsiveness and potentially causing network connections
+to timeout.
+
+```
+kgtk sort -c label,node2 \
+          -i examples/docs/movies_reduced.tsv \
+	  --buffer-size 10G
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t17 | terminator | award | national_film_registry |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t14 | terminator | cast | linda_hamilton |
+| t12 | terminator | cast | michael_biehn |
+| t9 | terminator | director | james_cameron |
+| t16 | terminator | duration | 108 |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t2 | terminator | instance_of | film |
+| t1 | terminator | label | 'The Terminator'@en |
+| t8 | t7 | location | sweden |
+| t6 | t5 | location | united_states |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t11 | t10 | role | terminator |
+
+### Expert Example: Sort a File using More Concurrent Merges
+
+When using GNU sort, increased performance may be obtained by increasing
+the number of temporary files being merged concurrently using the `--batch-size SIZE`
+option.
+
+```
+kgtk sort -c label,node2 \
+          -i examples/docs/movies_reduced.tsv \
+	  --batch-size 10
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t17 | terminator | award | national_film_registry |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t14 | terminator | cast | linda_hamilton |
+| t12 | terminator | cast | michael_biehn |
+| t9 | terminator | director | james_cameron |
+| t16 | terminator | duration | 108 |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t2 | terminator | instance_of | film |
+| t1 | terminator | label | 'The Terminator'@en |
+| t8 | t7 | location | sweden |
+| t6 | t5 | location | united_states |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t11 | t10 | role | terminator |
+
+### Expert Example: Sort a File using Explicit Temporary Folders
+
+When GNU sort operates on files that will not fit into main memory,
+portions of the file will be written into one or more temporary files.
+The default location for the directory or directories for temporary
+files is determined by the envar TMPDIR, with fallback to `/tmp`.
+
+Depending upon your environment, it may be preferable (or required) to
+direct GNU sort to use other directories for its temporary files.
+The `--temporary-directory PATH ...` option may be used to specify
+the location of the directory or directories for temporary files.
+This option may be repeated.
+
+
+```
+kgtk sort -c label,node2 \
+          -i examples/docs/movies_reduced.tsv \
+	  --temporary-directory tmp1
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t17 | terminator | award | national_film_registry |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t14 | terminator | cast | linda_hamilton |
+| t12 | terminator | cast | michael_biehn |
+| t9 | terminator | director | james_cameron |
+| t16 | terminator | duration | 108 |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t2 | terminator | instance_of | film |
+| t1 | terminator | label | 'The Terminator'@en |
+| t8 | t7 | location | sweden |
+| t6 | t5 | location | united_states |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t11 | t10 | role | terminator |
+
+```
+kgtk sort -c label,node2 \
+          -i examples/docs/movies_reduced.tsv \
+	  --temporary-directory tmp1 tmp2
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t17 | terminator | award | national_film_registry |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t14 | terminator | cast | linda_hamilton |
+| t12 | terminator | cast | michael_biehn |
+| t9 | terminator | director | james_cameron |
+| t16 | terminator | duration | 108 |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t2 | terminator | instance_of | film |
+| t1 | terminator | label | 'The Terminator'@en |
+| t8 | t7 | location | sweden |
+| t6 | t5 | location | united_states |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t11 | t10 | role | terminator |
+
+```
+kgtk sort -c label,node2 \
+          -i examples/docs/movies_reduced.tsv \
+	  --temporary-directory tmp1 \
+	  --temporary-directory tmp2
+```
+
+| id | node1 | label | node2 |
+| -- | -- | -- | -- |
+| t17 | terminator | award | national_film_registry |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t14 | terminator | cast | linda_hamilton |
+| t12 | terminator | cast | michael_biehn |
+| t9 | terminator | director | james_cameron |
+| t16 | terminator | duration | 108 |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t2 | terminator | instance_of | film |
+| t1 | terminator | label | 'The Terminator'@en |
+| t8 | t7 | location | sweden |
+| t6 | t5 | location | united_states |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t13 | t12 | role | kyle_reese |
+| t15 | t14 | role | sarah_connor |
+| t11 | t10 | role | terminator |
