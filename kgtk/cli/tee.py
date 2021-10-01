@@ -11,7 +11,9 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 def parser():
     return {
         'help': 'Make a side copy of the input/output stream..',
-        'description': 'Copy the primary input to the primary output, making a copy to a specified file. This can be used to make a copy of a pipe\'s data.'
+        'description': 'Copy the primary input to the primary output, making a copy to a specified file. This can be used to make a copy of a pipe\'s data.' +
+        '\n\nThis command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.'
+        
     }
 
 
