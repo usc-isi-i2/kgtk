@@ -97,8 +97,8 @@ class ConfigureKGTK(object):
             graph_path += '/'
 
         for key in self.graph_files:
-            url = f"{self.INPUT_FILES_URL}/{self.graph_files[key]} --directory-prefix={graph_path}"
-            cmd = f" wget {url}"
+            url = f"{self.INPUT_FILES_URL}/{self.graph_files[key]}"
+            cmd = f" wget {url} --directory-prefix={graph_path}"
             print(subprocess.getoutput(cmd))
 
     def print_env_variables(self):
