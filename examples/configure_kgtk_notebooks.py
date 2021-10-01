@@ -2,6 +2,9 @@ import os
 import json
 import subprocess
 from pathlib import Path
+from typing import List
+
+always_print_env_variables = {'EXAMPLES_DIR', 'USE_CASES_DIR', 'GRAPH', 'OUT', 'TEMP', 'STORE', 'kgtk', 'kypher'}
 
 
 class ConfigureKGTK(object):
@@ -16,7 +19,7 @@ class ConfigureKGTK(object):
     current_dir = os.getcwd()
     print(f'Current dir: {current_dir}')
     parent_path = Path(current_dir).parent.absolute()
-    use_cases_dir = f"{parent_path}/'use-cases"
+    use_cases_dir = f"{parent_path}/use-cases"
     print(f'Use-cases dir: {use_cases_dir}')
 
     os.environ['EXAMPLES_DIR'] = current_dir
@@ -90,8 +93,6 @@ class ConfigureKGTK(object):
         os.environ['kypher'] = kypher
         self.kgtk_environment_variables.append('kypher')
 
-        self.print_env_variables()
-
     def download_tutorial_files(self, graph_path):
         if not graph_path.endswith('/'):
             graph_path += '/'
@@ -101,6 +102,24 @@ class ConfigureKGTK(object):
             cmd = f" wget {url} --directory-prefix={graph_path}"
             print(subprocess.getoutput(cmd))
 
-    def print_env_variables(self):
+    def print_env_variables(self, file_list: List[str]):
         for key in self.kgtk_environment_variables:
+            if key in always_print_env_variables:
+                print(f"{key}: {os.environ[key]}")
+
+        for key in file_list:
             print(f"{key}: {os.environ[key]}")
+
+    def load_files_into_cache(self, file_list: List[str] = None):
+        """
+        Loads files into graph cache. The keys in this list should be in json_config_file
+        :param file_list:
+        :return:
+        """
+        kypher_command = f"{os.environ['kypher']}"
+        if file_list:
+            for f_key in file_list:
+                kypher_command += f" -i \"{os.environ[f_key]}\" --as {f_key} "
+        kypher_command += " --limit 3"
+        print(kypher_command)
+        print(subprocess.getoutput(kypher_command))
