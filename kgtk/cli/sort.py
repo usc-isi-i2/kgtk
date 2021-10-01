@@ -133,6 +133,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      '--sort-command', dest='sort_command', type=str, default="sort",
                         help=h("The sort command or its substitute. (default=%(default)s)"))
 
+    parser.add_argument(      '--sort-command-fallback', dest='sort_command_fallback', type=str, default="gsort",
+                        help=h("A fallback sort command. (default=%(default)s)"))
+
     parser.add_argument(      '--xz-command', dest='xz_command', type=str, default="xz",
                         help=h("The xz command or its substitute. (default=%(default)s)"))
 
@@ -216,6 +219,7 @@ def run(input_file: KGTKFiles,
         gzip_command: str = "gzip",
         pgrep_command: str = "pgrep",
         sort_command: str = "sort",
+        sort_command_fallback: str = "gsort",
         xz_command: str = "xz",
 
         errors_to_stdout: bool = False,
@@ -230,6 +234,7 @@ def run(input_file: KGTKFiles,
     import os
     from pathlib import Path
     import sh # type: ignore
+    import shutil # type: ignore
     import sys
     import typing
 
@@ -344,6 +349,25 @@ def run(input_file: KGTKFiles,
 
     if pure_python:
         return python_sort()
+
+    # Linux has the "sort" command by default (in major distributions), but
+    # MacOS has the "gsort" command.  Let's investigate our options.
+    #
+    # Note: Setting the sort command and the fallback sort command to
+    # the same thing will bypass this check.
+    if sort_command != sort_command_fallback:
+        if shutil.which(sort_command) is None:
+            if verbose:
+                print("Unable to locate the sort command %s, trying the fallback %s." % (repr(sort_command), repr(sort_command_fallback)),
+                      file=error_file, flush=True)
+            if shutil.which(sort_command_fallback) is None:
+                raise KGTKException("Cannot find the sort command %s or its fallback %s" % (repr(sort_command), repr(sort_command_fallback)))
+            sort_command = sort_command_fallback
+            if verbose:
+                print("Using the sort command fallback %s as the sort command" % repr(sort_command), file=error_file, flush=True)
+        else:
+            if verbose:
+                print("Using the sort command %s" % repr(sort_command), file=error_file, flush=True)
 
     try:
         global header_read_fd
