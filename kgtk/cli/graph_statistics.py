@@ -1,12 +1,9 @@
 """
 Import CSV file in Graph-tool.
 
-Note:  the log file wasn't coverted to the new filename parsing API.
+Note:  the log file wasn't converted to the new filename parsing API.
 
-Note:  The input file is read twice: once for the header, and once for the
-data.  Thus, stdin cannot be used as the input file.
-
-TODO: Convert to KgtkReader and read the file only once.
+Note: ID generation is fixed.  The standard ID generator should be used instead.
 """
 from argparse import Namespace
 import typing
@@ -15,7 +12,8 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
-        'help': 'Import a CSV file in Graph-tool.'
+        'help': 'Import a TSV or CSV file in Graph-tool, optionally generating various statistics ' +
+        '(pagerank, in-degrees, out-degrees, degree distribution, and hits).'
     }
 
 
@@ -35,35 +33,47 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_output_file()
 
     parser.add_argument('--undirected', dest="undirected",
-                        help="Is the graph undirected? (default=%(default)s)",
-                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                        help='Is the graph undirected? If false, then the graph is ' +
+                        ' treated as (node1)->(node2).  If true, then the graph is ' +
+                        ' treated as (node1)<->(node2). ' +
+                        '\n(default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
     parser.add_argument('--degrees', dest='compute_degrees',
-                        help="Whether or not to compute degree distribution. (default=%(default)s)",
-                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                        help='Whether or not to compute degree distribution. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
     parser.add_argument('--pagerank', dest='compute_pagerank',
-                        help="Whether or not to compute PageRank centraility. (default=%(default)s)",
-                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                        help='Whether or not to compute PageRank centraility. ' +
+                        '\nNote: --undirected improves the pagerank calculation. ' +
+                        'If you want both pagerank and in/out-degrees, you should make two runs. ' +
+                        '\n(default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
                         
     parser.add_argument('--hits', dest='compute_hits',
-                        help="Whether or not to compute HITS centraility. (default=%(default)s)",
-                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                        help='Whether or not to compute HITS centraility. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
     parser.add_argument('--log', action='store', type=str, dest='log_file',
-                        help='Summary file for the global statistics of the graph.', default="./summary.txt")
+                        help='Summary file for the global statistics of the graph.', default='./summary.txt')
 
     parser.add_argument('--statistics-only', dest='statistics_only',
                         help='If this flag is set, output only the statistics edges. Else, append the statistics to the original graph. (default=%(default)s',
-                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+                        type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
     parser.add_argument('--vertex-in-degree-property', action='store', dest='vertex_in_degree',
                         default='vertex_in_degree',
-                        help='Label for edge: vertex in degree property. (default=%(default)s')
+                        help='Label for edge: vertex in degree property. ' +
+                        '\nNote: If --undirected is True, then the in-degree will be 0. ' +
+                        '\n(default=%(default)s')
 
     parser.add_argument('--vertex-out-degree-property', action='store', dest='vertex_out_degree',
                         default='vertex_out_degree',
-                        help='Label for edge: vertex out degree property. (default=%(default)s)')
+                        help='Label for edge: vertex out degree property. ' +
+                        '\nNote: if --undirected is True, the the out-degree will be the sum of ' +
+                        'the values that would have been calculated for in-degree and -out-degree ' +
+                        ' if --undirected were False. ' +
+                        '\n(default=%(default)s)')
 
     parser.add_argument('--page-rank-property', action='store', dest='vertex_pagerank',
                         default='vertex_pagerank',

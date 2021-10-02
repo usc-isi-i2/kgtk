@@ -40,13 +40,17 @@ optional arguments:
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
   --undirected [True|False]
-                        Is the graph undirected? (default=False)
+                        Is the graph undirected? If false, then the graph is
+                        treated as (node1)->(node2). If true, then the graph
+                        is treated as (node1)<->(node2). (default=False)
   --degrees [True|False]
                         Whether or not to compute degree distribution.
                         (default=False)
   --pagerank [True|False]
-                        Whether or not to compute PageRank centraility.
-                        (default=False)
+                        Whether or not to compute PageRank centraility. Note:
+                        --undirected improves the pagerank calculation. If you
+                        want both pagerank and in/out-degrees, you should make
+                        two runs. (default=False)
   --hits [True|False]   Whether or not to compute HITS centraility.
                         (default=False)
   --log LOG_FILE        Summary file for the global statistics of the graph.
@@ -55,10 +59,14 @@ optional arguments:
                         Else, append the statistics to the original graph.
                         (default=False
   --vertex-in-degree-property VERTEX_IN_DEGREE
-                        Label for edge: vertex in degree property.
+                        Label for edge: vertex in degree property. Note: If
+                        --undirected is True, then the in-degree will be 0.
                         (default=vertex_in_degree
   --vertex-out-degree-property VERTEX_OUT_DEGREE
-                        Label for edge: vertex out degree property.
+                        Label for edge: vertex out degree property. Note: if
+                        --undirected is True, the the out-degree will be the
+                        sum of the values that would have been calculated for
+                        in-degree and -out-degree if --undirected were False.
                         (default=vertex_out_degree)
   --page-rank-property VERTEX_PAGERANK
                         Label for pank rank property.
