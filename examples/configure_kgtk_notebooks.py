@@ -10,7 +10,7 @@ always_print_env_variables = {'EXAMPLES_DIR', 'USE_CASES_DIR', 'GRAPH', 'OUT', '
 class ConfigureKGTK(object):
     INPUT_FILES_URL = "https://github.com/usc-isi-i2/kgtk-tutorial-files/raw/main/datasets/wikidata-dwd-v2"
 
-    kgtk_environment_variables = []
+    kgtk_environment_variables = set()
     user_home = str(Path.home())
     print(f'User home: {user_home}')
 
@@ -25,8 +25,8 @@ class ConfigureKGTK(object):
     os.environ['EXAMPLES_DIR'] = current_dir
     os.environ['USE_CASES_DIR'] = use_cases_dir
 
-    kgtk_environment_variables.append('EXAMPLES_DIR')
-    kgtk_environment_variables.append('USE_CASES_DIR')
+    kgtk_environment_variables.add('EXAMPLES_DIR')
+    kgtk_environment_variables.add('USE_CASES_DIR')
 
     JSON_CONFIG_PATH = f"{current_dir}/files_config.json"
 
@@ -35,7 +35,8 @@ class ConfigureKGTK(object):
                        output_path: str = None,
                        project_name: str = "kgtk",
                        graph_cache_path: str = None,
-                       json_config_file: str = None):
+                       json_config_file: str = None,
+                       debug=False):
         """
         configures the environment for a jupyter notebook.
         :param input_graph_path: path to the input graph files. By default it'll create a folder "isi-kgtk-tutorial" in
@@ -54,7 +55,7 @@ class ConfigureKGTK(object):
             else json.load(open(self.JSON_CONFIG_PATH))
         for key in self.graph_files:
             os.environ[key] = f"{input_graph_path}/{self.graph_files[key]}"
-            self.kgtk_environment_variables.append(key)
+            self.kgtk_environment_variables.add(key)
 
         # If the input graph path is not None, it is assumed it has the files required
         if input_graph_path is None:
@@ -63,7 +64,7 @@ class ConfigureKGTK(object):
             self.download_tutorial_files(input_graph_path)
 
         os.environ['GRAPH'] = input_graph_path
-        self.kgtk_environment_variables.append('GRAPH')
+        self.kgtk_environment_variables.add('GRAPH')
 
         if output_path is None:
             output_project_path = f"{self.user_home}/{self.default_folder}/{project_name}"
@@ -77,21 +78,22 @@ class ConfigureKGTK(object):
 
         os.environ['OUT'] = output_project_path
         os.environ['TEMP'] = temp_path
-        self.kgtk_environment_variables.append('OUT')
-        self.kgtk_environment_variables.append('TEMP')
+        self.kgtk_environment_variables.add('OUT')
+        self.kgtk_environment_variables.add('TEMP')
 
         if graph_cache_path is None:
             graph_cache_path = f"{temp_path}/wikidata.sqlite3.db"
         os.environ['STORE'] = graph_cache_path
-        self.kgtk_environment_variables.append('STORE')
+        self.kgtk_environment_variables.add('STORE')
 
-        kgtk = "kgtk --debug"
+        kgtk = "kgtk --debug" if debug else "kgtk"
         os.environ['kgtk'] = kgtk
-        self.kgtk_environment_variables.append('kgtk')
+        self.kgtk_environment_variables.add('kgtk')
 
-        kypher = "kgtk --debug query --graph-cache " + os.environ['STORE']
+        kypher = "kgtk --debug query --graph-cache " + os.environ['STORE'] if debug else \
+            "kgtk query --graph-cache " + os.environ['STORE']
         os.environ['kypher'] = kypher
-        self.kgtk_environment_variables.append('kypher')
+        self.kgtk_environment_variables.add('kypher')
 
     def download_tutorial_files(self, graph_path):
         if not graph_path.endswith('/'):
