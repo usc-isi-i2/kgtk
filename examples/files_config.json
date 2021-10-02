@@ -52,6 +52,7 @@
   "description_zhcn": "descriptions.zh-cn.tsv.gz",
   "label_de": "labels.de.tsv.gz",
   "label": "labels.en.tsv.gz",
+  "KGTK_LABEL_FILE": "labels.en.tsv.gz",
   "label_es": "labels.es.tsv.gz",
   "label_fr": "labels.fr.tsv.gz",
   "label_it": "labels.it.tsv.gz",
