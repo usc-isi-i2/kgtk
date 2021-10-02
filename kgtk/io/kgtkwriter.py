@@ -129,7 +129,7 @@ class KgtkWriter(KgtkBase):
             self.OUTPUT_FORMAT_JSON: self.write_json,
             self.OUTPUT_FORMAT_JSON_MAP: self.write_json_map,
             self.OUTPUT_FORMAT_JSON_MAP_COMPACT: self.write_json_map_compact,
-            self.OUTPUT_FORMAT_JSON: self.write_jsonl,
+            self.OUTPUT_FORMAT_JSONL: self.write_jsonl,
             self.OUTPUT_FORMAT_JSONL_MAP: self.write_jsonl_map,
             self.OUTPUT_FORMAT_JSONL_MAP_COMPACT: self.write_jsonl_map_compact,
         }
