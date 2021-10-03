@@ -1,14 +1,21 @@
 import csv
 from io import StringIO
-from IPython.core.display import display, HTML, JSON
+from IPython.core.display import display, HTML, JSON, Markdown
+import json
+import os
 import pandas
 import sh
+import sys
 import typing
 
 def kgtk(arg1: typing.Union[str, pandas.DataFrame],
-         arg2: typing.Optional[str],
+         arg2: typing.Optional[str] = None,
          df: typing.Optional[pandas.DataFrame] = None,
-         bash_command: str = "bash",
+         auto_display_md: bool = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower in ["true", "yes", "y"],
+         auto_display_json: bool = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower in ["true", "yes", "y"],
+         auto_display_html: bool = os.getenv("KGTK_AUTO_DISPLAY_HTML", "true").lower in ["true", "yes", "y"],
+         kgtk_command: str = os.getenv("KGTK_KGTK_COMMAND", "kgtk"),
+         bash_command: str = os.getenv("KGTK_BASH_COMMAND", "bash"),
          )->typing.Optional[pandas.DataFrame]:
     in_df: typing.Optional[pandas.DataFrame] = None
     pipeline: str
@@ -42,24 +49,32 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     outbuf: StringIO = StringIO()
 
     sh_bash = sh.Command(bash_command)
-    sh_bash("-c", cmd, _in=in_tsv, _out=outbuf, _err=sys.stderr)
+    sh_bash("-c", kgtk_command + " " + pipeline, _in=in_tsv, _out=outbuf, _err=sys.stderr)
 
-    output: str = outbuf.get_value()
+    output: str = outbuf.getvalue()
     outbuf.close()
 
     # Decide what to do based on the start of the output:
+    result: typing.Optional[pandas.DataFrame] = None
     if output.startswith("|"):
-        display(output)
-        return None
+        if auto_display_md:
+            display(Markdown(output))
+        else:
+            print(output)
 
     elif output.startswith("["):
-        display(JSON(output))
-        return None
+        if auto_display_json:
+            display(JSON(json.loads(output)))
+        else:
+            print(output)
 
     elif output.startswith("<!DOCTYPE html>"):
-        display(HTML(output))
-        return None
+        if auto_display_html:
+            display(HTML(output))
+        else:
+            print(output)
 
     else:
-        return pandas.DataFrame(output, sep='\t')
-    
+        result = pandas.read_csv(StringIO(output), sep='\t')
+
+    return result
