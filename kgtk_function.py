@@ -164,7 +164,8 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     outbuf.close()
 
     # Any error messages? If so, print the at the end.
-    if errbuf.len > 0:
-        print(errbuf.getvalue())
+    errout: str = errbuf.getvalue()
+    if len(errout) > 0:
+        print(errout)
 
     return result
