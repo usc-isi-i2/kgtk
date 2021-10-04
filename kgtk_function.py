@@ -89,7 +89,12 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     Error Output Processing
     ===== ====== ==========
 
-    Error output is printed after standard output is printed or displayed.
+    If standard output was printed, then any error output will be printed
+    immediately after it.
+
+    If standard output was displayed, the any error output will be printed
+    in a separate output cell which will appear before the standard error
+    output.
 
     """
 
