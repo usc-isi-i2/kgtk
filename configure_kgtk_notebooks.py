@@ -8,28 +8,31 @@ always_print_env_variables = {'EXAMPLES_DIR', 'USE_CASES_DIR', 'GRAPH', 'OUT', '
 
 
 class ConfigureKGTK(object):
-    INPUT_FILES_URL = "https://github.com/usc-isi-i2/kgtk-tutorial-files/raw/main/datasets/wikidata-dwd-v2"
+    def __init__(self):
 
-    kgtk_environment_variables = set()
-    user_home = str(Path.home())
-    print(f'User home: {user_home}')
+        self.INPUT_FILES_URL = "https://github.com/usc-isi-i2/kgtk-tutorial-files/raw/main/datasets/wikidata-dwd-v2"
 
-    default_folder = "isi-kgtk-tutorial"
+        self.kgtk_environment_variables = set()
+        self.user_home = str(Path.home())
+        print(f'User home: {self.user_home}')
 
-    current_dir = os.getcwd()
-    print(f'Current dir: {current_dir}')
-    parent_path = Path(current_dir).parent.absolute()
-    examples_dir = f"{parent_path}/examples"
-    use_cases_dir = f"{parent_path}/use-cases"
-    print(f'Use-cases dir: {use_cases_dir}')
+        self.default_folder = "isi-kgtk-tutorial"
 
-    os.environ['EXAMPLES_DIR'] = examples_dir
-    os.environ['USE_CASES_DIR'] = use_cases_dir
+        self.current_dir = os.getcwd()
+        print(f'Current dir: {self.current_dir}')
+        self.kgtk_path = Path(self.current_dir).parent.absolute()
+        print(f'KGTK dir: {self.kgtk_path}')
+        self.examples_dir = f"{self.kgtk_path}/examples"
+        self.use_cases_dir = f"{self.kgtk_path}/use-cases"
+        print(f'Use-cases dir: {self.use_cases_dir}')
 
-    kgtk_environment_variables.add('EXAMPLES_DIR')
-    kgtk_environment_variables.add('USE_CASES_DIR')
+        os.environ['EXAMPLES_DIR'] = self.examples_dir
+        os.environ['USE_CASES_DIR'] = self.use_cases_dir
 
-    JSON_CONFIG_PATH = f"{current_dir}/files_config.json"
+        self.kgtk_environment_variables.add('EXAMPLES_DIR')
+        self.kgtk_environment_variables.add('USE_CASES_DIR')
+
+        self.JSON_CONFIG_PATH = f"{self.kgtk_path}/files_config.json"
 
     def configure_kgtk(self,
                        input_graph_path: str = None,
