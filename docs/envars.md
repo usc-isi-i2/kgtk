@@ -7,8 +7,8 @@ certain command options.
 | ------- | ------ | -------------------- | ---------- | ------- | ----------- |
 | (all) | `--debug` | `KGTK_OPTION_DEBUG` | boolean | false | When true, enable debug mode. When errors occur, more complete error traces are written. |
 | (all) | `--expert` | `KGTK_OPTION_EXPERT` | boolean | false | When true, enable expert mode.  In expert mode, additional command options may be provided to `--help`. |
-| (many) | `--graph-cache` | `KGTK_GRAPH_CACHE` | string | The location of the graph cache file. |
-| `add-labels` `lift` | `--label-file` | `KGTK_LABEL_FILE` | string | The location of the KGTK file containing label values. |
+| (many) | `--graph-cache` | `KGTK_GRAPH_CACHE` | string | `query`: special per-user filename | The location of the graph cache file. |
+| `add-labels` `lift` | `--label-file` | `KGTK_LABEL_FILE` | string | (none) | The location of the KGTK file containing label values. |
 | (all) | `--pipedebug` | `KGTK_OPTION_PIPEDEBUG` | boolean | false | When true, enable pipe debug mode. Additional feedback is provided during the execution of  KGTK command pipes. |
 | (all) | `--progress` | `KGTK_OPTION_PROGRESS` | boolean | false | When true, enable progress monitoring. The `pv` command is used to monitor command execution. |
 | (all) | `--progress-tty` | `KGTK_OPTION_PROGRESS_TTY` | string | /dev/tty | The tty device for progress monitoring output. |
