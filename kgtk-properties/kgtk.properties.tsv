@@ -1,11 +1,11 @@
 node1	label	node2	id
-isa	label	'is a'@en	isa-label-e79b73
-isa	alias	'isa'@en	isa-alias-7773c5
-isa	description	'Instance or subclass relationship'@en	isa-description-0b5cdc
-isa	P31	Q18616576	isa-P31-Q18616576
-isa	P31	Q28326461	isa-P31-Q28326461
-isa	P31	Q18647519	isa-P31-Q18647519
-isa	data_type	wikibase-item	isa-data_type-643cc9
+Pisa	label	'is a'@en	Pisa-label-e79b73
+Pisa	alias	'isa'@en	Pisa-alias-7773c5
+Pisa	description	'Instance or subclass relationship'@en	Pisa-description-0b5cdc
+Pisa	P31	Q18616576	Pisa-P31-Q18616576
+Pisa	P31	Q28326461	Pisa-P31-Q28326461
+Pisa	P31	Q18647519	Pisa-P31-Q18647519
+Pisa	data_type	wikibase-item	isa-data_type-643cc9
 P279star	label	'subclass of (star)'@en	P279star-label-e79b73
 P279star	alias	'subclass of (reachable)'@en	P279star-alias-7773c5
 P279star	description	'All items reachable via P279 starting from a specific item, including itself.'@en	P279star-description-0b5cdc
@@ -13,15 +13,15 @@ P279star	P31	Q18616576	P279star-P31-Q18616576
 P279star	P31	Q28326461	P279star-P31-Q28326461
 P279star	P31	Q18647519	P279star-P31-Q18647519
 P279star	data_type	wikibase-item	P279star-data_type-wikibase-item
-isa_star	P31	Q18647521	isa_star-P31-Q18647521
-isa_star	label	'is star'@en	isa_star-label
-isa_star	alias	'isa star'@en	isa_star-alias
-isa_star	description	'Relationship between items defined by isa/P279*'@en	isa_star-description
-isa_star	P31	Q18616576	isa_star-P31-Q18616576
-isa_star	P31	Q28326461	isa_star-P31-Q28326461
-isa_star	P31	Q18647519	isa_star-P31-Q18647519
-isa_star	P31	Q18647521	isa_star-P31-Q18647521
-isa_star	data_type	wikibase-item	isa_star-data_type
+Pisa_star	P31	Q18647521	Pisa_star-P31-Q18647521
+Pisa_star	label	'is star'@en	Pisa_star-label
+Pisa_star	alias	'isa star'@en	Pisa_star-alias
+Pisa_star	description	'Relationship between items defined by isa/P279*'@en	Pisa_star-description
+Pisa_star	P31	Q18616576	Pisa_star-P31-Q18616576
+Pisa_star	P31	Q28326461	Pisa_star-P31-Q28326461
+Pisa_star	P31	Q18647519	Pisa_star-P31-Q18647519
+Pisa_star	P31	Q18647521	Pisa_star-P31-Q18647521
+Pisa_star	data_type	wikibase-item	Pisa_star-data_type
 P31P279star	P31	Q18647521	P31P279star-P31-Q18647521
 P31P279star	label	'is star'@en	isa_star-label
 P31P279star	alias	'isa star'@en	P31P279star-alias
@@ -31,13 +31,6 @@ P31P279star	P31	Q28326461	P31P279star-P31-Q28326461
 P31P279star	P31	Q18647519	P31P279star-P31-Q18647519
 P31P279star	P31	Q18647521	P31P279star-P31-Q18647521
 P31P279star	data_type	wikibase-item	P31P279star-data_type
-directed_pagerank	label	'pagerank'@en	directed_pagerank-label-d3bd07
-directed_pagerank	alias	'page rank'@en	directed_pagerank-alias-9d4733
-directed_pagerank	description	'pagerank canculated on the directed graph'@en	directed_pagerank-description-b62fff
-directed_pagerank	P31	Q18616576	directed_pagerank-P31-Q18616576
-directed_pagerank	P31	Q47512165	directed_pagerank-P31-Q47512165
-directed_pagerank	P1629	Q184316	directed_pagerank-P1629-Q184316
-directed_pagerank	data_type	quantity	Pdirected_pagerank-data_type-1a7b30
 Pdirected_pagerank	label	'pagerank'@en	Pdirected_pagerank-label-d3bd07
 Pdirected_pagerank	alias	'page rank'@en	Pdirected_pagerank-alias-9d4733
 Pdirected_pagerank	description	'pagerank canculated on the directed graph'@en	Pdirected_pagerank-description-b62fff
@@ -45,13 +38,6 @@ Pdirected_pagerank	P31	Q18616576	Pdirected_pagerank-P31-Q18616576
 Pdirected_pagerank	P31	Q47512165	Pdirected_pagerank-P31-Q47512165
 Pdirected_pagerank	P1629	Q184316	Pdirected_pagerank-P1629-Q184316
 Pdirected_pagerank	data_type	quantity	Pdirected_pagerank-data_type-1a7b30
-undirected_pagerank	label	'pagerank'@en	undirected_pagerank-label-d3bd07
-undirected_pagerank	alias	'page rank'@en	undirected_pagerank-alias-9d4733
-undirected_pagerank	description	'pagerank canculated on the undirected graph'@en	undirected_pagerank-description-ee8b1c
-undirected_pagerank	P31	Q18616576	undirected_pagerank-P31-Q18616576
-undirected_pagerank	P31	Q47512165	undirected_pagerank-P31-Q47512165
-undirected_pagerank	P1629	Q184316	undirected_pagerank-P1629-Q184316
-undirected_pagerank	data_type	quantity	undirected_pagerank-data_type-1a7b30
 Pundirected_pagerank	label	'pagerank'@en	Pundirected_pagerank-label-d3bd07
 Pundirected_pagerank	alias	'page rank'@en	Pundirected_pagerank-alias-9d4733
 Pundirected_pagerank	description	'pagerank canculated on the undirected graph'@en	Pundirected_pagerank-description-ee8b1c
@@ -59,13 +45,6 @@ Pundirected_pagerank	P31	Q18616576	Pundirected_pagerank-P31-Q18616576
 Pundirected_pagerank	P31	Q47512165	Pundirected_pagerank-P31-Q47512165
 Pundirected_pagerank	P1629	Q184316	Pundirected_pagerank-P1629-Q184316
 Pundirected_pagerank	data_type	quantity	Pundirected_pagerank-data_type-1a7b30
-in_degree	label	'in degree'@en	in_degree-label-aa295d
-in_degree	alias	'degree'@en	in_degree-alias-b5846a
-in_degree	description	'in degree of a node in a graph'@en	in_degree-description-642be1
-in_degree	P31	Q18616576	in_degree-P31-Q18616576
-in_degree	P31	Q47512165	in_degree-P31-Q47512165
-in_degree	P1629	Q383444	in_degree-P1629-Q383444
-in_degree	data_type	quantity	in_degree-data_type-1a7b30
 Pin_degree	label	'in degree'@en	Pin_degree-label-aa295d
 Pin_degree	alias	'degree'@en	Pin_degree-alias-b5846a
 Pin_degree	description	'in degree of a node in a graph'@en	Pin_degree-description-642be1
@@ -73,13 +52,6 @@ Pin_degree	P31	Q18616576	Pin_degree-P31-Q18616576
 Pin_degree	P31	Q47512165	Pin_degree-P31-Q47512165
 Pin_degree	P1629	Q383444	Pin_degree-P1629-Q383444
 Pin_degree	data_type	quantity	Pin_degree-data_type-1a7b30
-out_degree	label	'out degree'@en	out_degree-label-6deeae
-out_degree	alias	'degree'@en	out_degree-alias-b5846a
-out_degree	description	'out degree of a node in a graph'@en	out_degree-description-c7e312
-out_degree	P31	Q18616576	out_degree-P31-Q18616576
-out_degree	P31	Q47512165	out_degree-P31-Q47512165
-out_degree	P1629	Q383444	out_degree-P1629-Q383444
-out_degree	data_type	quantity	out_degree-data_type-1a7b30
 Pout_degree	label	'out degree'@en	Pout_degree-label-6deeae
 Pout_degree	alias	'degree'@en	Pout_degree-alias-b5846a
 Pout_degree	description	'out degree of a node in a graph'@en	Pout_degree-description-c7e312
