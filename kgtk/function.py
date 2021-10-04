@@ -1,5 +1,11 @@
 """This file defines the `kgtk(...)` function, which simplifies KGTK command
-usage in JupyterLab.
+usage in JupyterLab.  The `kypher(...)` command is also defined for convenience.
+
+Importing
+=========
+
+
+from kgtk.function import kgtk, kypher
 
 """
 import csv
@@ -21,14 +27,6 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
          kgtk_command: typing.Optional[str] = None,
          )->typing.Optional[pandas.DataFrame]:
     """This function simplifies using KGTK commands in a Jupyter Lab environment.
-
-    Importing
-    =========
-
-    Import the `kgtk(...)` function as follows:
-
-    `from kgtk.function import kgtk`
-
     Invocation
     ==========
 
@@ -134,7 +132,8 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     JSON_SIGIL: str = "["
     JSONL_MAP_SIGIL: str = "{"
     HTML_SIGIL: str = "<!DOCTYPE html>"
-    USAGE_SIGIL: str = "usage:"
+    USAGE_SIGIL: str = "usage:" # Output from `kgtk --help` or `kgtk command --help`
+    GRAPH_CACHE_SIGIL: str = "Graph Cache" # Output from `kgtk query --show-cache`
 
     # Set the defaults:
     if auto_display_html is None:
@@ -172,6 +171,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     if df is not None:
         if in_df is not None:
             raise ValueError("kgtk(): df= is not allowed when arg1 is a DataFrame")
+        in_df = df
 
     if len(pipeline) == 0:
         raise ValueError("kgtk(...): the pipeline is empty")
@@ -201,6 +201,9 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
 
     # Decide what to do based on the start of the output:
     result: typing.Optional[pandas.DataFrame] = None
+    if len(output) == 0:
+        pass # No standard output
+    
     if output.startswith(MD_SIGIL):
         # Process Markdown output.
         if auto_display_md:
@@ -226,6 +229,10 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         # Process --help output.
         print(output)
 
+    elif output[:len(GRAPH_CACHE_SIGIL)].casefold() == GRAPH_CACHE_SIGIL.casefold():
+        # Process `kgtk query --show-cache` output.
+        print(output)
+
     else:
         # Assume that anything else is KGTK formatted output.  Convert it to a
         # pandas DataFrame and return it.
@@ -233,6 +240,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         # TODO: Remove the escape character from internal `|` characters?
         # If we do that, should we detect KGTK lists and complain?
         # `\|` -> `|`
+        print(output)
         outbuf.seek(0)
         result = pandas.read_csv(outbuf, sep='\t')
 
@@ -244,3 +252,42 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         print(errout)
 
     return result
+
+def kypher(arg1: typing.Union[str, pandas.DataFrame],
+           arg2: typing.Optional[str] = None,
+           df: typing.Optional[pandas.DataFrame] = None,
+           auto_display_html: typing.Optional[bool] = None,
+           auto_display_json: typing.Optional[bool] = None,
+           auto_display_md: typing.Optional[bool] = None,
+           bash_command: typing.Optional[str] = None,
+           kgtk_command: typing.Optional[str] = None,
+           )->typing.Optional[pandas.DataFrame]:
+
+    # Figure out the input DataFrame and pipeline arguments:
+    in_df: typing.Optional[pandas.DataFrame] = None
+    pipeline: str
+    if isinstance(arg1, str):
+        if arg2 is not None:
+            raise ValueError("kypher(arg1, arg2): arg2 is not allowed when arg1 is a string")
+        pipeline = arg1
+    elif isinstance(arg1, pandas.DataFrame):
+        if arg2 is None:
+            raise ValueError("kypher(arg1, arg2): arg2 is required when arg1 is a DataFrame")
+        in_df = arg1
+        pipeline = arg2
+
+    if df is not None:
+        if in_df is not None:
+            raise ValueError("kypher(): df= is not allowed when arg1 is a DataFrame")
+        in_df = df
+
+    pipeline = "query " + pipeline
+
+    return kgtk(pipeline,
+                df=in_df,
+                auto_display_html=auto_display_html,
+                auto_display_json=auto_display_json,
+                auto_display_md=auto_display_md,
+                bash_command=bash_command,
+                kgtk_command=kgtk_command,
+                )
