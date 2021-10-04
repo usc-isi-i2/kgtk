@@ -19,10 +19,11 @@ class ConfigureKGTK(object):
     current_dir = os.getcwd()
     print(f'Current dir: {current_dir}')
     parent_path = Path(current_dir).parent.absolute()
+    examples_dir = f"{parent_path}/examples"
     use_cases_dir = f"{parent_path}/use-cases"
     print(f'Use-cases dir: {use_cases_dir}')
 
-    os.environ['EXAMPLES_DIR'] = current_dir
+    os.environ['EXAMPLES_DIR'] = examples_dir
     os.environ['USE_CASES_DIR'] = use_cases_dir
 
     kgtk_environment_variables.add('EXAMPLES_DIR')
