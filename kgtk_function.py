@@ -11,9 +11,9 @@ import typing
 def kgtk(arg1: typing.Union[str, pandas.DataFrame],
          arg2: typing.Optional[str] = None,
          df: typing.Optional[pandas.DataFrame] = None,
-         auto_display_md: bool = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower in ["true", "yes", "y"],
-         auto_display_json: bool = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower in ["true", "yes", "y"],
-         auto_display_html: bool = os.getenv("KGTK_AUTO_DISPLAY_HTML", "true").lower in ["true", "yes", "y"],
+         auto_display_md: bool = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower() in ["true", "yes", "y"],
+         auto_display_json: bool = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower() in ["true", "yes", "y"],
+         auto_display_html: bool = os.getenv("KGTK_AUTO_DISPLAY_HTML", "true").lower() in ["true", "yes", "y"],
          kgtk_command: str = os.getenv("KGTK_KGTK_COMMAND", "kgtk"),
          bash_command: str = os.getenv("KGTK_BASH_COMMAND", "bash"),
          )->typing.Optional[pandas.DataFrame]:
@@ -71,7 +71,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     `display(Markdown(output))`.
 
     If the output of the pipeline is in JSON format (`--output-format JSON`),
-    identified as starting with `[`, the output will be displayed with
+    identified as starting with `[` or '{', the output will be displayed with
     `display(JSON(output))`.  However, if `kgtk(... auto_display_json=False)`
     or if the envar `KGTK_AUTO_DISPLAY_JSON` set to `false`, then the output
     will be printed.
@@ -133,7 +133,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         else:
             print(output)
 
-    elif output.startswith("["):
+    elif output.startswith("[") or output.startswith("{"):
         if auto_display_json:
             display(JSON(json.loads(output)))
         else:
