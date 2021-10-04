@@ -11,25 +11,42 @@ import typing
 def kgtk(arg1: typing.Union[str, pandas.DataFrame],
          arg2: typing.Optional[str] = None,
          df: typing.Optional[pandas.DataFrame] = None,
-         auto_display_md: typing.Optional[bool] = None,
-         auto_display_json: typing.Optional[bool] = None,
          auto_display_html: typing.Optional[bool] = None,
-         kgtk_command: typing.Optional[str] = None,
+         auto_display_json: typing.Optional[bool] = None,
+         auto_display_md: typing.Optional[bool] = None,
          bash_command: typing.Optional[str] = None,
+         kgtk_command: typing.Optional[str] = None,
          )->typing.Optional[pandas.DataFrame]:
     """This function simplifies using KGTK commands in a Jupyter Lab environment.
+
+    Importing
+    =========
+
+    Currently, `kgtk_function.py` resides at the top level of the KGTK GitHub
+    repository.  It is imported with:
+
+    `from kgtk_function import kgtk`
+
+    However, it may be desirable to move the function into `kgtk/function.py`
+    and import the function as follows:
+
+    `from kgtk.function import kgtk`
+
+    It may also be desirable to incorporate this function into a more general
+    KGTK configuration file.
+
 
     Invocation
     ==========
 
     kgtk("pipeline")
 
-    Execute the command pipeline.  The results are printed, displayed, or
+        Execute the command pipeline.  The results are printed, displayed, or
     returned as a Pandas DataFrame.
 
     kgtk(df, "pipeline")
 
-    The `df` in the call is a Pandas DataFrame, which is converted to KGTK
+        The `df` in the call is a Pandas DataFrame, which is converted to KGTK
     format and passed to the pipeline as standard input. The results are
     printed, displayed, or returned as a Pandas DataFrame.
 
@@ -38,36 +55,49 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
 
     df=DF (default None)
     
-    This is an alternat method for specifying an input DataFrame.
-
-    auto_display_md=True/False (default False)
-
-    This parameter controls the processing of MarkDown output.  See below.
-
-    auto_display_json=True/False (default True)
-
-    This parameter controls the processing of JSON output.  See below.
+        This is an alternate method for specifying an input DataFrame.
 
     auto_display_html=True/False (default True)
 
-    This parameter controls the processing of HTML output.  See below.
+        This parameter controls the processing of HTML output.  See below.
 
-    kgtk_command=CMD (default 'kgtk')
+    auto_display_json=True/False (default True)
 
-    This parameter specifies the kgtk shell command.  If the envar KGTK_KGTK_COMMAND
-    is present, it will supply the default value for the name of the `kgtk` command.
+        This parameter controls the processing of JSON output.  See below.
 
-    One use for this feature is to redefine the `kgtk` command to include
-    `time` as a prefix, and/or to include common options.
+    auto_display_md=True/False (default False)
+
+        This parameter controls the processing of MarkDown output.  See below.
 
     bash_command=CMD (default 'bash')
 
-    This parameter specifies the name of the shell interpreter.  If the envar
-    KGTK_BASH_COMMAND is present, it will supply the default value for the
-    name of the shell interpreter.
+        This parameter specifies the name of the shell interpreter.  If the
+    envar KGTK_BASH_COMMAND is present, it will supply the default value for
+    the name of the shell interpreter.
+
+    kgtk_command=CMD (default 'kgtk')
+
+        This parameter specifies the kgtk shell command.  If the envar
+    KGTK_KGTK_COMMAND is present, it will supply the default value for the
+    name of the `kgtk` command.
+
+        One use for this feature is to redefine the `kgtk` command to include
+    `time` as a prefix, and/or to include common options.
 
     Standard Output Processing
     ======== ====== =========
+
+    If the standard output of the pipeline is in HTML format (`--output-format HTML` or
+    `kgtk("... /html")`), identified by starting with `<!DOCTYPE html>`, the
+    output will be displayed with `display(HTML(output))` by default.
+    However, if `kgtk(... auto_display_json=False)` or if the envar
+    `KGTK_AUTO_DISPLAY_HTML` set to `false`, then the output will be printed.
+
+    If the standard output of the pipeline is in JSON format (`--output-format JSON`),
+    identified as starting with `[` or '{', the output will be displayed with
+    `display(JSON(output))` by default.  However, if
+    `kgtk(... auto_display_json=False)` or if the envar
+    `KGTK_AUTO_DISPLAY_JSON` set to `false`, then the output will be printed.
 
     If the standard output of the pipeline is MarkDown format (typically by
     ending the pipeline in `... / md` or `... /table`, identified as starting
@@ -76,20 +106,11 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     `KGTK_AUTO_DISPLAY_MD` is set to `true`, then the MarkDown will be
     displayed using `display(Markdown(output))`.
 
-    If the standard output of the pipeline is in JSON format (`--output-format JSON`),
-    identified as starting with `[` or '{', the output will be displayed with
-    `display(JSON(output))` by default.  However, if
-    `kgtk(... auto_display_json=False)` or if the envar
-    `KGTK_AUTO_DISPLAY_JSON` set to `false`, then the output will be printed.
+    If the standard output of the pipeline begins with "usage:", then it is
+    treated as output from `--help` and printed.
 
-    If the standard output of the pipeline is in HTML format (`--output-format HTML` or
-    `kgtk("... /html")`), identified by starting with `<!DOCTYPE html>`, the
-    output will be displayed with `display(HTML(output))` by default.
-    However, if `kgtk(... auto_display_json=False)` or if the envar
-    `KGTK_AUTO_DISPLAY_HTML` set to `false`, then the output will be printed.
-
-    If the standard output starts with anything other than `|`, `[`, or `<!DOCTYPE
-    html>`, then the output is assumed to be in KGTK format.  It is converted
+    If the standard output starts with anything other than the cases listed
+    above, then the output is assumed to be in KGTK format.  It is converted
     to a Pandas DataFrame, which is returned to the caller.
 
     Error Output Processing
@@ -102,26 +123,39 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     subsequently displayed by the iPython shell, then any error output will be
     printed before the DataFrame is displayed.
 
+    Environment Variables
+    =========== =========
+
+    This modeule directly uses the following environment variables:
+
+    KGTK_AUTO_DISPLAY_HTML
+    KGTK_AUTO_DISPLAY_JSON
+    KGTK_AUTO_DISPLAY_MD
+    KGTK_BASH_COMMAND
+    KGTK_KGTK_COMMAND
+
     """
 
-    # Set the defaults:
-    if auto_display_md is None:
-        auto_display_md = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower() in ["true", "yes", "y"]
-    if auto_display_json is None:
-        auto_display_json = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower() in ["true", "yes", "y"]
-    if auto_display_html is None:
-        auto_display_html = os.getenv("KGTK_AUTO_DISPLAY_HTML", "true").lower() in ["true", "yes", "y"]
-    if kgtk_command is None:
-        kgtk_command = os.getenv("KGTK_KGTK_COMMAND", "kgtk")
-    if bash_command is None:
-        bash_command = os.getenv("KGTK_BASH_COMMAND", "bash")
-
+    # Important prefixes to look for in standard output:
     MD_SIGIL: str = "|"
     JSON_SIGIL: str = "["
     JSONL_MAP_SIGIL: str = "{"
     HTML_SIGIL: str = "<!DOCTYPE html>"
     USAGE_SIGIL: str = "usage:"
 
+    # Set the defaults:
+    if auto_display_html is None:
+        auto_display_html = os.getenv("KGTK_AUTO_DISPLAY_HTML", "true").lower() in ["true", "yes", "y"]
+    if auto_display_json is None:
+        auto_display_json = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower() in ["true", "yes", "y"]
+    if auto_display_md is None:
+        auto_display_md = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower() in ["true", "yes", "y"]
+    if bash_command is None:
+        bash_command = os.getenv("KGTK_BASH_COMMAND", "bash")
+    if kgtk_command is None:
+        kgtk_command = os.getenv("KGTK_KGTK_COMMAND", "kgtk")
+
+    # Figure out the input DataFrame and pipeline arguments:
     in_df: typing.Optional[pandas.DataFrame] = None
     pipeline: str
     if isinstance(arg1, str):
@@ -135,13 +169,16 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         pipeline = arg2
 
     if df is not None:
-        if in_df is not Nont:
+        if in_df is not None:
             raise ValueError("kgtk(): df= is not allowed when arg1 is a DataFrame")
 
     if len(pipeline) == 0:
         raise ValueError("kgtk(...): the pipeline is empty")
     pipeline = kgtk_command + " " + pipeline
 
+    # If we were supplied an input DataFrame, convert it to KGTK format.
+    #
+    # TODO: The conversion should optionally escape internal `|` characters as `\|`.
     in_tsv: typing.Optional[str] = None
     if in_df is not None:
         in_tsv = in_df.to_csv(sep='\t',
@@ -152,6 +189,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
                               escapechar='\\',
                               )
 
+    # Execute the KGTK command pipeline:
     outbuf: StringIO = StringIO()
     errbuf: StringIO = StringIO()
 
@@ -176,20 +214,24 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         else:
             print(output)
 
-    elif output[:len(HTML_SIGIL)].lower() == HTML_SIGIL.lower():
+    elif output[:len(HTML_SIGIL)].casefold() == HTML_SIGIL.casefold():
         # Process HTML output.
         if auto_display_html:
             display(HTML(output))
         else:
             print(output)
 
-    elif output.startswith(USAGE_SIGIL):
+    elif output[:len(USAGE_SIGIL)].casefold() == USAGE_SIGIL.casefold():
         # Process --help output.
         print(output)
 
     else:
         # Assume that anything else is KGTK formatted output.  Convert it to a
         # pandas DataFrame and return it.
+        #
+        # TODO: Remove the escape character from internal `|` characters?
+        # If we do that, should we detect KGTK lists and complain?
+        # `\|` -> `|`
         outbuf.seek(0)
         result = pandas.read_csv(outbuf, sep='\t')
 
