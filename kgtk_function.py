@@ -106,6 +106,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
 
     if len(pipeline) == 0:
         raise ValueError("kgtk(...): the pipeline is empty")
+    pipeline = kgtk_command + " " + pipeline
 
     in_tsv: typing.Optional[str] = None
     if in_df is not None:
@@ -120,7 +121,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     outbuf: StringIO = StringIO()
 
     sh_bash = sh.Command(bash_command)
-    sh_bash("-c", kgtk_command + " " + pipeline, _in=in_tsv, _out=outbuf, _err=sys.stderr)
+    sh_bash("-c", pipeline, _in=in_tsv, _out=outbuf, _err=sys.stderr)
 
     output: str = outbuf.getvalue()
     outbuf.close()
