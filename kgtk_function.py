@@ -86,6 +86,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     html>`, then the output is assumed to be in KGTK format.  It is converted
     to a Pandas DataFrame, which is returned to the caller.
 
+    TODO: Capture standard error from the subprocess and print it on standard output.
     """
 
     in_df: typing.Optional[pandas.DataFrame] = None
