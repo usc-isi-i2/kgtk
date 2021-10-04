@@ -1,3 +1,7 @@
+"""This file defines the `kgtk(...)` function, which simplifies KGTK command
+usage in JupyterLab.
+
+"""
 import csv
 from io import StringIO
 from IPython.core.display import display, HTML, JSON, Markdown
@@ -5,7 +9,6 @@ import json
 import os
 import pandas
 import sh
-import sys
 import typing
 
 def kgtk(arg1: typing.Union[str, pandas.DataFrame],
@@ -22,19 +25,9 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     Importing
     =========
 
-    Currently, `kgtk_function.py` resides at the top level of the KGTK GitHub
-    repository.  It is imported with:
-
-    `from kgtk_function import kgtk`
-
-    However, it may be desirable to move the function into `kgtk/function.py`
-    and import the function as follows:
+    Import the `kgtk(...)` function as follows:
 
     `from kgtk.function import kgtk`
-
-    It may also be desirable to incorporate this function into a more general
-    KGTK configuration file.
-
 
     Invocation
     ==========
@@ -150,10 +143,18 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         auto_display_json = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower() in ["true", "yes", "y"]
     if auto_display_md is None:
         auto_display_md = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower() in ["true", "yes", "y"]
+
+    # Why not os.getenv("KGTK_BASH_COMMAND", "bash")? Splitting it up makes
+    # mypy happier.
     if bash_command is None:
-        bash_command = os.getenv("KGTK_BASH_COMMAND", "bash")
+        bash_command = os.getenv("KGTK_BASH_COMMAND")
+    if bash_command is None:
+        bash_command = "bash"
+
     if kgtk_command is None:
-        kgtk_command = os.getenv("KGTK_KGTK_COMMAND", "kgtk")
+        kgtk_command = os.getenv("KGTK_KGTK_COMMAND")
+    if kgtk_command is None:
+        kgtk_command = "kgtk"
 
     # Figure out the input DataFrame and pipeline arguments:
     in_df: typing.Optional[pandas.DataFrame] = None
