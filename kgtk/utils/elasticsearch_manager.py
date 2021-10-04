@@ -233,7 +233,7 @@ class ElasticsearchManager(object):
                             if tmp_val.strip() != '':
                                 _descriptions[lang].add(tmp_val)
                         elif vals[label_id].strip() == 'isa_star' or vals[label_id].strip() == 'P39' \
-                                or vals[label_id].strip() == 'P106':
+                                or vals[label_id].strip() == 'P106' or vals[label_id].strip() == 'Pisa_star':
                             _instance_ofs.add(vals[node2_id])
                         elif vals[label_id].strip() == 'datatype':
                             data_type = vals[node2_id]
