@@ -4,7 +4,7 @@ The KGTK commands use environment variables to provide the default value for
 certain command options.
 
 | Command | Option | Environment Variable | Value Type | Default | Description |
-| ======= | ====== | ==================== | ========== | ======= | =========== |
+| ------- | ------ | -------------------- | ---------- | ------- | ----------- |
 | (all) | --debug | KGTK_OPTION_DEBUG | boolean | false | When true, enable debug mode. When errors occur, more complete error traces are written. |
 | (all) | --expert | KGTK_OPTION_EXPERT | boolean | false | When true, enable expert mode.  In expert mode, additional command options may be provided to `--help`. |
 | (many) | --graph-cache | KGTK_GRAPH_CACHE | string | The location of the graph cache file. |
@@ -15,7 +15,7 @@ certain command options.
 | (all) | --timing | KGTK_OPTION_TIMING | boolean | false | When true, enable timing measurements.  A summary of process time is printed. |
 
 | Function | Option | Environment Variable | Value type | Default | Description |
-| ======= | ====== | ==================== | ========== | ======= | =========== |
+| ------- | ------ | -------------------- | ---------- | ------- | ----------- |
 | kgtk() kypher() | auto_display_html | KGTK_AUTO_DISPLAY_HTML | boolean | true | When true, display HTML output.  When false, print HTML output. |
 | kgtk() kypher() | auto_display_json | KGTK_AUTO_DISPLAY_JSON | boolean | true | When true, display JSON output.  When false, print JSON output. |
 | kgtk() kypher() | auto_display_md | KGTK_AUTO_DISPLAY_MD | boolean | false | When true, display Markdown output (`md`, `table`).  When false, print Markdown output. |
