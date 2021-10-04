@@ -8,7 +8,7 @@ always_print_env_variables = {'EXAMPLES_DIR', 'USE_CASES_DIR', 'GRAPH', 'OUT', '
 
 
 class ConfigureKGTK(object):
-    def __init__(self):
+    def __init__(self, kgtk_path: str = None):
 
         self.INPUT_FILES_URL = "https://github.com/usc-isi-i2/kgtk-tutorial-files/raw/main/datasets/wikidata-dwd-v2"
 
@@ -20,7 +20,10 @@ class ConfigureKGTK(object):
 
         self.current_dir = os.getcwd()
         print(f'Current dir: {self.current_dir}')
-        self.kgtk_path = Path(self.current_dir).parent.absolute()
+        if kgtk_path is not None:
+            self.kgtk_path = kgtk_path
+        else:
+            self.kgtk_path = Path(self.current_dir).parent.absolute()
         print(f'KGTK dir: {self.kgtk_path}')
         self.examples_dir = f"{self.kgtk_path}/examples"
         self.use_cases_dir = f"{self.kgtk_path}/use-cases"
@@ -57,6 +60,7 @@ class ConfigureKGTK(object):
         self.graph_files = json.load(open(json_config_file)) \
             if json_config_file is not None \
             else json.load(open(self.JSON_CONFIG_PATH))
+
         for key in self.graph_files:
             os.environ[key] = f"{input_graph_path}/{self.graph_files[key]}"
             self.kgtk_environment_variables.add(key)

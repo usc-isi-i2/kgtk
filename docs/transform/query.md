@@ -1663,11 +1663,11 @@ the query can execute right away without having to import anything.
 Any indexes built by the system to speed up queries are also cached in
 the graph cache.
 
-The location of the cache file can be controlled with the
-`--graph-cache FILE` option.  If that is not explicitly specified,
-the system will create or reuse a cache file in the computer's temp
-directory which will look like this (where `UID` is replaced by the
-current user name):
+The location of the cache file can be controlled with the `--graph-cache FILE`
+option.  If that is not explicitly specified, the environment variable
+KGTK_GRAPH_CACHE will be checked.  If that is not found, the system will
+create or reuse a cache file in the computer's temp directory which will look
+like this (where `UID` is replaced by the current user name):
 
 ```
         /tmp/kgtk-graph-cache-UID.sqlite3.db 
