@@ -163,28 +163,33 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     # Decide what to do based on the start of the output:
     result: typing.Optional[pandas.DataFrame] = None
     if output.startswith(MD_SIGIL):
+        # Process Markdown output.
         if auto_display_md:
             display(Markdown(output))
         else:
             print(output)
 
     elif output.startswith(JSON_SIGIL) or output.startswith(JSONL_MAP_SIGIL):
+        # Process JSON output.
         if auto_display_json:
             display(JSON(json.loads(output)))
         else:
             print(output)
 
     elif output[:len(HTML_SIGIL)].lower() == HTML_SIGIL.lower():
+        # Process HTML output.
         if auto_display_html:
             display(HTML(output))
         else:
             print(output)
 
     elif output.startswith(USAGE_SIGIL):
+        # Process --help output.
         print(output)
 
     else:
-        # result = pandas.read_csv(StringIO(output), sep='\t')
+        # Assume that anything else is KGTK formatted output.  Convert it to a
+        # pandas DataFrame and return it.
         outbuf.seek(0)
         result = pandas.read_csv(outbuf, sep='\t')
 
