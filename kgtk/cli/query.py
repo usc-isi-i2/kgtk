@@ -204,8 +204,10 @@ def run(input_files: KGTKFiles,
         try:
             graph_cache = options.get('graph_cache_file')
             
-            if graph_cache is None:
-                graph_cache = os.getenv('KGTK_GRAPH_CACHE', DEFAULT_GRAPH_CACHE_FILE)
+            if graph_cache is None or len(graph_cache) == 0:
+                graph_cache = os.getenv('KGTK_GRAPH_CACHE')
+                if graph_cache is None or len(graph_cache) == 0:
+                    graph_cache = DEFAULT_GRAPH_CACHE_FILE
             store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache), loglevel=loglevel)
 
             if options.get('show_cache', False):
