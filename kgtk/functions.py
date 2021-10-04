@@ -262,6 +262,42 @@ def kypher(arg1: typing.Union[str, pandas.DataFrame],
            bash_command: typing.Optional[str] = None,
            kgtk_command: typing.Optional[str] = None,
            )->typing.Optional[pandas.DataFrame]:
+    """This function simplifies using kypher (`kgtk query` in a Jupyter Lab environment.
+
+    Invocation
+    ==========
+
+    kypher("pipeline")
+
+        Execute the command pipeline with "query " prepended.  The results are
+    printed, displayed, or returned as a Pandas DataFrame.
+
+    kypher(df, "pipeline")
+
+        The `df` in the call is a Pandas DataFrame, which is converted to KGTK
+    format and passed to the pipeline as standard input. "query " will be
+    prepended to the pipeline. The results are printed, displayed, or returned
+    as a Pandas DataFrame.
+
+    Environment Variables
+    =========== =========
+
+    KGTK_GRAPH_CACHE
+
+        `kgtk query` and other KGTK commands use this environment variable to
+    supply the location of the graph cache when `--graph cache` is not
+    supplied on the command line.  In the JupyterLab environment
+    KGTK_GRAPH_CACHE may be set with:
+
+    %env KGTK_GRAPH_CACHE=/path/to/file.sqlite3.db
+
+
+    Additional Details
+    ========== =======
+
+    See the documentation for the `kgtk(...)` for additional details
+
+    """
 
     # Figure out the input DataFrame and pipeline arguments:
     in_df: typing.Optional[pandas.DataFrame] = None
