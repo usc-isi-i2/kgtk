@@ -94,8 +94,7 @@ class ConfigureKGTK(object):
         os.environ['kgtk'] = kgtk
         self.kgtk_environment_variables.add('kgtk')
 
-        kypher = "kgtk --debug query --graph-cache " + os.environ['STORE'] if debug else \
-            "kgtk query --graph-cache " + os.environ['STORE']
+        kypher = kgtk + " query --graph-cache " + os.environ['STORE']
         os.environ['kypher'] = kypher
         self.kgtk_environment_variables.add('kypher')
 
