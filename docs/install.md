@@ -77,7 +77,7 @@ More information about all available versions and tags is available here: [https
 
 1. Set up your own conda environment:
 ```
-conda create -n kgtk-env python=3.7
+conda create -n kgtk-env python=3.8
 conda activate kgtk-env
 ```
  **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
