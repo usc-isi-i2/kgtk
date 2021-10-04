@@ -15,9 +15,9 @@ certain command options.
 | (all) | `--timing` | `KGTK_OPTION_TIMING` | boolean | false | When true, enable timing measurements.  A summary of process time is printed. |
 
 | Function | Option | Environment Variable | Value type | Default | Description |
-| ------- | ------ | -------------------- | ---------- | ------- | ----------- |kgtk()
-| `kgth()` `kypher()` | `auto_display_html` | `KGTK_AUTO_DISPLAY_HTML` | boolean | true | When true, display HTML output.  When false, print HTML output. |
-| `kgth()` `kypher()` | `auto_display_json` | `KGTK_AUTO_DISPLAY_JSON` | boolean | true | When true, display JSON output.  When false, print JSON output. |
-| `kgth()` `kypher()` | `auto_display_md` | `KGTK_AUTO_DISPLAY_MD` | boolean | false | When true, display Markdown output (`md`, `table`).  When false, print Markdown output. |
-| `kgth()` `kypher()` | `bash_command` | `KGTK_BASH_COMMAND` | string | bash | The shell script interpreter used for subcommand execution. |
-| `kgth()` `kypher()` | `kgtk_command` | `KGTK_KGTK_COMMAND` | string | kgtk | The kgtk command used for subcommand execution. This option may also be used to invoke timing (`time kgtk`) or to pass options to the `kgtk` command (`kgtk --debug`). |
+| ------- | ------ | -------------------- | ---------- | ------- | ----------- |
+| `kgtk()` `kypher()` | `auto_display_html` | `KGTK_AUTO_DISPLAY_HTML` | boolean | true | When true, display HTML output.  When false, print HTML output. |
+| `kgtk()` `kypher()` | `auto_display_json` | `KGTK_AUTO_DISPLAY_JSON` | boolean | true | When true, display JSON output.  When false, print JSON output. |
+| `kgtk()` `kypher()` | `auto_display_md` | `KGTK_AUTO_DISPLAY_MD` | boolean | false | When true, display Markdown output (`md`, `table`).  When false, print Markdown output. |
+| `kgtk()` `kypher()` | `bash_command` | `KGTK_BASH_COMMAND` | string | bash | The shell script interpreter used for subcommand execution. |
+| `kgtk()` `kypher()` | `kgtk_command` | `KGTK_KGTK_COMMAND` | string | kgtk | The kgtk command used for subcommand execution. This option may also be used to invoke timing (`time kgtk`) or to pass options to the `kgtk` command (`kgtk --debug`). |
