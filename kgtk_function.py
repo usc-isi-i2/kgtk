@@ -89,6 +89,11 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     TODO: Capture standard error from the subprocess and print it on standard output.
     """
 
+    MD_SIGIL: str = "|"
+    JSON_SIGIL: str = "["
+    JSONL_MAP_SIGIL: str = "{"
+    HTML_SIGIL: str = "<!DOCTYPE html>"
+
     in_df: typing.Optional[pandas.DataFrame] = None
     pipeline: str
     if isinstance(arg1, str):
@@ -125,29 +130,31 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     sh_bash("-c", pipeline, _in=in_tsv, _out=outbuf, _err=sys.stderr)
 
     output: str = outbuf.getvalue()
-    outbuf.close()
 
     # Decide what to do based on the start of the output:
     result: typing.Optional[pandas.DataFrame] = None
-    if output.startswith("|"):
+    if output.startswith(MD_SIGIL):
         if auto_display_md:
             display(Markdown(output))
         else:
             print(output)
 
-    elif output.startswith("[") or output.startswith("{"):
+    elif output.startswith(JSON_SIGIL) or output.startswith(JSON_MAP_SIGIL):
         if auto_display_json:
             display(JSON(json.loads(output)))
         else:
             print(output)
 
-    elif output.startswith("<!DOCTYPE html>"):
+    elif output[:len(HTML_SIGIL)].lower() == HTML_SIGIL.lower():
         if auto_display_html:
             display(HTML(output))
         else:
             print(output)
 
     else:
-        result = pandas.read_csv(StringIO(output), sep='\t')
+        # result = pandas.read_csv(StringIO(output), sep='\t')
+        outbuf.seek(0)
+        result = pandas.read_csv(outbuf, sep='\t')
 
+    outbuf.close()
     return result
