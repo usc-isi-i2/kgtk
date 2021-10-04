@@ -11,11 +11,11 @@ import typing
 def kgtk(arg1: typing.Union[str, pandas.DataFrame],
          arg2: typing.Optional[str] = None,
          df: typing.Optional[pandas.DataFrame] = None,
-         auto_display_md: bool = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower() in ["true", "yes", "y"],
-         auto_display_json: bool = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower() in ["true", "yes", "y"],
-         auto_display_html: bool = os.getenv("KGTK_AUTO_DISPLAY_HTML", "true").lower() in ["true", "yes", "y"],
-         kgtk_command: str = os.getenv("KGTK_KGTK_COMMAND", "kgtk"),
-         bash_command: str = os.getenv("KGTK_BASH_COMMAND", "bash"),
+         auto_display_md: typing.Optional[bool] = None,
+         auto_display_json: typing.Optional[bool] = None,
+         auto_display_html: typing.Optional[bool] = None,
+         kgtk_command: typing.Optional[str] = None,
+         bash_command: typing.Optional[str] = None,
          )->typing.Optional[pandas.DataFrame]:
     """This function simplifies using KGTK commands in a Jupyter Lab environment.
 
@@ -54,11 +54,17 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
 
     kgtk_command=CMD (default 'kgtk')
 
-    This parameter specifies the kgtk shell command.
+    This parameter specifies the kgtk shell command.  If the envar KGTK_KGTK_COMMAND
+    is present, it will supply the default value for the name of the `kgtk` command.
+
+    One use for this feature is to redefine the `kgtk` command to include
+    `time` as a prefix, and/or to include common options.
 
     bash_command=CMD (default 'bash')
 
-    This parameter specifies the name of the shell interpreter.
+    This parameter specifies the name of the shell interpreter.  If the envar
+    KGTK_BASH_COMMAND is present, it will supply the default value for the
+    name of the shell interpreter.
 
     Standard Output Processing
     ======== ====== =========
@@ -89,19 +95,32 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     Error Output Processing
     ===== ====== ==========
 
-    If standard output was printed, then any error output will be printed
+    If standard output was printed or displayed, then any error output will be printed
     immediately after it.
 
-    If standard output was displayed, the any error output will be printed
-    in a separate output cell which will appear before the standard error
-    output.
+    If standard output was convertd to a DataFrame and returned, and
+    subsequently displayed by the iPython shell, then any error output will be
+    printed before the DataFrame is displayed.
 
     """
+
+    # Set the defaults:
+    if auto_display_md is None:
+        auto_display_md = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower() in ["true", "yes", "y"]
+    if auto_display_json is None:
+        auto_display_json = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower() in ["true", "yes", "y"]
+    if auto_display_html is None:
+        auto_display_html = os.getenv("KGTK_AUTO_DISPLAY_HTML", "true").lower() in ["true", "yes", "y"]
+    if kgtk_command is None:
+        kgtk_command = os.getenv("KGTK_KGTK_COMMAND", "kgtk")
+    if bash_command is None:
+        bash_command = os.getenv("KGTK_BASH_COMMAND", "bash")
 
     MD_SIGIL: str = "|"
     JSON_SIGIL: str = "["
     JSONL_MAP_SIGIL: str = "{"
     HTML_SIGIL: str = "<!DOCTYPE html>"
+    USAGE_SIGIL: str = "usage:"
 
     in_df: typing.Optional[pandas.DataFrame] = None
     pipeline: str
@@ -160,6 +179,9 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
             display(HTML(output))
         else:
             print(output)
+
+    elif output.startswith(USAGE_SIGIL):
+        print(output)
 
     else:
         # result = pandas.read_csv(StringIO(output), sep='\t')
