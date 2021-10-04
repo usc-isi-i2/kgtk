@@ -5,7 +5,7 @@ Importing
 =========
 
 
-from kgtk.function import kgtk, kypher
+from kgtk.functions import kgtk, kypher
 
 """
 import csv
