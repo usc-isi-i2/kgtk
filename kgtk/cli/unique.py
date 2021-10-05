@@ -76,10 +76,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--min-count", dest="min_count", type=int, default=0,
-                              help=f"The minimum count output filter (does not apply to {repr(Unique.NODE_FORMAT)} format). (default=%(default)s).")
+                              help=f"The minimum count output filter (does not apply to {repr(Unique.NODE_FORMAT)} format). The minimum and maximum count filters are conjunctive. (default=%(default)s).")
 
     parser.add_argument(      "--max-count", dest="max_count", type=int, default=999999999999999,
-                              help=f"The minimum count output filter (does not apply to {repr(Unique.NODE_FORMAT)} format). (default=%(default)s).")
+                              help=f"The minimum count output filter (does not apply to {repr(Unique.NODE_FORMAT)} format). The minimum and maximum count filters are conjunctive. (default=%(default)s).")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
