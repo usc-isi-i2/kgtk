@@ -194,8 +194,18 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     outbuf: StringIO = StringIO()
     errbuf: StringIO = StringIO()
 
-    sh_bash = sh.Command(bash_command)
-    sh_bash("-c", pipeline, _in=in_tsv, _out=outbuf, _err=errbuf)
+    try:
+        sh_bash = sh.Command(bash_command)
+        sh_bash("-c", pipeline, _in=in_tsv, _out=outbuf, _err=errbuf)
+
+    except sh.ErrorReturnCode as e:
+        # The pipeline returned an error.  stderr should hav ean error message.
+        errmsg: str = errbuf.getvalue()
+        if len(errmsg) > 0:
+            print(errbuf.getvalue())
+        else:
+            print(str(e))
+        return None
 
     output: str = outbuf.getvalue()
 
