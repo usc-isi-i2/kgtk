@@ -77,6 +77,7 @@ class Unique(KgtkFormat):
         skip_value_count: int = 0
         empty_value_count: int = 0
         unique_value_count: int = 0
+        removed_value_count: int = 0
 
         previous_value: typing.Optional[str] = None
         value_count: int
@@ -142,13 +143,22 @@ class Unique(KgtkFormat):
                         empty_value_count = value_count
 
                     elif self.output_format == self.EDGE_FORMAT:
-                        ew.write([previous_value, self.label_value, str(value_count)])
+                        if value_count >= self.min_count and value_count <= self.max_count:
+                            ew.write([previous_value, self.label_value, str(value_count)])
+                        else:
+                            removed_value_count += 1
 
                     elif self.output_format == self.NODE_ONLY_FORMAT:
-                        ew.write([previous_value])
+                        if value_count >= self.min_count and value_count <= self.max_count:
+                            ew.write([previous_value])
+                        else:
+                            removed_value_count += 1
 
                     elif self.output_format == self.NODE_COUNTS_FORMAT:
-                        ew.write([previous_value, str(value_count)])
+                        if value_count >= self.min_count and value_count <= self.max_count:
+                            ew.write([previous_value, str(value_count)])
+                        else:
+                            removed_value_count += 1
 
                     else:
                         raise ValueError("Unknown output format %s" % str(self.output_format))
@@ -162,13 +172,22 @@ class Unique(KgtkFormat):
                 empty_value_count = value_count
 
             elif self.output_format == self.EDGE_FORMAT:
-                ew.write([previous_value, self.label_value, str(value_count)])
+                if value_count >= self.min_count and value_count <= self.max_count:
+                    ew.write([previous_value, self.label_value, str(value_count)])
+                else:
+                    removed_value_count += 1
 
             elif self.output_format == self.NODE_ONLY_FORMAT:
-                ew.write([previous_value])
+                if value_count >= self.min_count and value_count <= self.max_count:
+                    ew.write([previous_value])
+                else:
+                    removed_value_count += 1
 
             elif self.output_format == self.NODE_COUNTS_FORMAT:
-                ew.write([previous_value, str(value_count)])
+                if value_count >= self.min_count and value_count <= self.max_count:
+                    ew.write([previous_value, str(value_count)])
+                else:
+                    removed_value_count += 1
 
             else:
                 raise ValueError("Unknown output format %s" % str(self.output_format))
@@ -181,6 +200,9 @@ class Unique(KgtkFormat):
                                                                                                                           unique_value_count,
                                                                                                                           empty_value_count),
                   file=self.error_file, flush=True)
+            if removed_value_count > 0:
+                print("Removed %d records by filtering, output %d records." % (removed_value_count, unique_value_count - removed_value_count),
+                      file=self.error_file, flush=True)
 
         ew.close()
 
@@ -198,6 +220,7 @@ class Unique(KgtkFormat):
         skip_line_count: int = 0
         skip_value_count: int = 0
         empty_value_count: int = 0
+        removed_value_count: int = 0
 
         value_counts: typing.MutableMapping[str, int] = { }
         
@@ -274,18 +297,24 @@ class Unique(KgtkFormat):
                 count = value_counts[value]
                 if count >= self.min_count and count <= self.max_count:
                     ew.write([value, self.label_value, str(count)])
+                else:
+                    removed_value_count += 1
 
         elif self.output_format == self.NODE_ONLY_FORMAT:
             for value in sorted(value_counts.keys()):
                 count = value_counts[value]
                 if count >= self.min_count and count <= self.max_count:
                     ew.write([value])
+                else:
+                    removed_value_count += 1
 
         elif self.output_format == self.NODE_COUNTS_FORMAT:
             for value in sorted(value_counts.keys()):
                 count = value_counts[value]
                 if count >= self.min_count and count <= self.max_count:
                     ew.write([value, str(count)])
+                else:
+                    removed_value_count += 1
 
         elif self.output_format == self.NODE_FORMAT:
             # Count filtering does not apply to this format.
@@ -299,6 +328,9 @@ class Unique(KgtkFormat):
 
         if self.verbose:
             print("There were %d unique values." % len(value_counts), file=self.error_file, flush=True)
+            if removed_value_count > 0:
+                print("Removed %d records by filtering, output %d records." % (removed_value_count, len(value_counts) - removed_value_count),
+                      file=self.error_file, flush=True)
 
         ew.close()
        
