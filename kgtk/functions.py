@@ -240,7 +240,6 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         # TODO: Remove the escape character from internal `|` characters?
         # If we do that, should we detect KGTK lists and complain?
         # `\|` -> `|`
-        print(output)
         outbuf.seek(0)
         result = pandas.read_csv(outbuf, sep='\t')
 
