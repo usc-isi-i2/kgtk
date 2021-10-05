@@ -175,7 +175,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
 
     if len(pipeline) == 0:
         raise ValueError("kgtk(...): the pipeline is empty")
-    pipeline = kgtk_command + " " + pipeline
+    pipeline = kgtk_command + " " + ' '.join(pipeline.splitlines())
 
     # If we were supplied an input DataFrame, convert it to KGTK format.
     #
