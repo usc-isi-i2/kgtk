@@ -5,6 +5,7 @@ TODO: Need KgtkWriterOptions
 """
 
 from argparse import Namespace, SUPPRESS
+import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -74,6 +75,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="When True, the input file is presorted. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--min-count", dest="min_count", type=int, default=0,
+                              help=f"The minimum count output filter (does not apply to {repr(Unique.NODE_FORMAT)} format). (default=%(default)s).")
+
+    parser.add_argument(      "--max-count", dest="max_count", type=int, default=999999999999999,
+                              help=f"The minimum count output filter (does not apply to {repr(Unique.NODE_FORMAT)} format). (default=%(default)s).")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -96,6 +103,9 @@ def run(input_file: KGTKFiles,
 
         presorted: bool = False,
 
+        min_count: int = 0,
+        max_count: int = sys.maxsize,
+
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
         show_options: bool = False,
@@ -106,7 +116,6 @@ def run(input_file: KGTKFiles,
 )->int:
     # import modules locally
     from pathlib import Path
-    import sys
 
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
@@ -141,9 +150,14 @@ def run(input_file: KGTKFiles,
         print("--value-filter=%s" % repr(value_filter), file=error_file)
         print("--value-match-type=%s" % repr(value_match_type), file=error_file)
         print("--prefix=%s" % repr(presorted), file=error_file)
+        print("--min-count=%d" % min_count, file=error_file)
+        print("--max-count=%d" % max_count, file=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    if min_count > max_count:
+        raise KGTKException("Error: --min-count %d is greater than --max-count %d" % (min_count, max_count))
 
     try:
         uniq: Unique = Unique(
@@ -159,6 +173,8 @@ def run(input_file: KGTKFiles,
             value_filter=value_filter,
             value_match_type=value_match_type,
             presorted=presorted,
+            min_count=min_count,
+            max_count=max_count,
             reader_options=reader_options,
             value_options=value_options,
             error_file=error_file,

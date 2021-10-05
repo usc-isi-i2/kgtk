@@ -44,6 +44,9 @@ class Unique(KgtkFormat):
 
     presorted: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    min_count: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
+    max_count: int = attr.ib(validator=attr.validators.instance_of(int), default=sys.maxsize)
+
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
     reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
@@ -265,19 +268,27 @@ class Unique(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
 
+        count: int
         if self.output_format == self.EDGE_FORMAT:
             for value in sorted(value_counts.keys()):
-                ew.write([value, self.label_value, str(value_counts[value])])
+                count = value_counts[value]
+                if count >= self.min_count and count <= self.max_count:
+                    ew.write([value, self.label_value, str(count)])
 
         elif self.output_format == self.NODE_ONLY_FORMAT:
             for value in sorted(value_counts.keys()):
-                ew.write([value])
+                count = value_counts[value]
+                if count >= self.min_count and count <= self.max_count:
+                    ew.write([value])
 
         elif self.output_format == self.NODE_COUNTS_FORMAT:
             for value in sorted(value_counts.keys()):
-                ew.write([value, str(value_counts[value])])
+                count = value_counts[value]
+                if count >= self.min_count and count <= self.max_count:
+                    ew.write([value, str(count)])
 
         elif self.output_format == self.NODE_FORMAT:
+            # Count filtering does not apply to this format.
             row = [ kr.column_names[column_idx] ]
             for value in sorted(value_counts.keys()):
                 row.append(str(value_counts[value]))
