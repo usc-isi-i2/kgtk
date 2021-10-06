@@ -282,7 +282,7 @@ def generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose):
 
     # Open the output file.
     kw: KgtkWriter = KgtkWriter.open(#kr.column_names,
-                                    ['id','node1','node2','relation'], # in order to obey the kgtk rules
+                                    ['node1', 'label', 'node2'],
                                     output_kgtk_file,
                                     #mode=KgtkWriter.Mode[kr.mode.name],
                                     mode = KgtkWriter.Mode.AUTO,
@@ -296,10 +296,6 @@ def generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose):
     input_line_count: int = 0
     if verbose:
         logging.info("Processing the input records.", file=self.error_file, flush=True)
-
-    #delete header
-    kw.file_out.seek(0)         # set the cursor to the top of the file
-    kw.file_out.truncate()      # truncate following part == delete first line
 
     MODULE_NAME = 'graph_embeddings' # __name__.split('.')[-1] 
     with open(entities_output) as wv_file:
@@ -475,9 +471,9 @@ def run(input_file: KGTKFiles,
 
         if kwargs["log_file_path"] != None:
             print('Processed Finished.')
-            logging.info(f"Process Finished.\nOutput has been saved in {kwargs['output_file_path']}")
+            logging.info(f"Process Finished.\nOutput has been saved in {repr(str(output_kgtk_file))}")
         else:
-            print(f"Process Finished.\nOutput has been saved in {kwargs['output_file_path']}")
+            print(f"Process Finished.\nOutput has been saved in {repr(str(output_kgtk_file))}")
 
     except Exception as e:
         raise KGTKException(str(e))
