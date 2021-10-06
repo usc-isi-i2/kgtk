@@ -17,6 +17,10 @@ On the other hand, when using undirected (bidirectional) edges,
 (`node1`<->`node2) is counted an an out-edge for each of `node1` and
 `node2`, and there are no in-edge counts.
 
+By default, in-degrees, out-degrees, and pageranks will be computed and
+output.  HITS properties will be computed an doutput for directed graphs, but
+not for undirected ones.
+
 ## Usage
 ```
 usage: kgtk graph-statistics [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]

@@ -17,7 +17,9 @@ def parser():
         'files are generated: a log file, containing a combination of TSV data nd plain text records, ' +
         'and a KGTK file. Summary statistics are directed to ' +
         'the text log file, while detailed statistics (in-degrees, out-degrees, pagerank) are directed ' +
-        'to the KGTK output file.'
+        'to the KGTK output file.' +
+        '\nBy default, in-degrees, out-degrees, and pageranks will be computed and output. ' +
+        'HITS properties will be computed an doutput for directed graphs, but not for undirected ones.'
     }
 
 
