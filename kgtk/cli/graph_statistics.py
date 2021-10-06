@@ -171,11 +171,6 @@ def run(input_file: KGTKFiles,
     if log_top_hits and not compute_hits:
         raise KGTKException("--log-top-hits requires --compute-hits")
 
-    v_prop_dict = {
-        'vertex_pagerank': vertex_pagerank,
-        'vertex_hubs': vertex_hubs,
-        'vertex_auth': vertex_auth
-    }
     try:
 
         # Select where to send error messages, defaulting to stderr.
@@ -227,10 +222,12 @@ def run(input_file: KGTKFiles,
                 print('Computing pagerank.', file=error_file, flush=True)
             v_pr = G2.new_vertex_property('float')
             centrality.pagerank(G2, prop=v_pr)
-            G2.properties[('v', 'vertex_pagerank')] = v_pr
+            G2.properties[('v', vertex_pagerank)] = v_pr
 
         if compute_hits:
-            hits_eig, G2.vp['vertex_hubs'], G2.vp['vertex_auth'] = gtanalysis.compute_hits(G2)
+            if verbose:
+                print('Computing HITS.', file=error_file, flush=True)
+            hits_eig, G2.vp[vertex_hubs], G2.vp[vertex_auth] = gtanalysis.compute_hits(G2)
 
         kw: KgtkWriter = KgtkWriter.open(output_columns,
                                      output_kgtk_file,
@@ -242,6 +239,8 @@ def run(input_file: KGTKFiles,
                                      very_verbose=very_verbose)
 
         if not output_statistics_only:
+            if verbose:
+                print('Copying the input edges to the output.', file=error_file, flush=True)
             id_count = 0
             for e in G2.edges():
                 sid, oid = e
@@ -250,6 +249,8 @@ def run(input_file: KGTKFiles,
                 id_count += 1
 
         if output_degrees or output_properties:
+            if verbose:
+                print('Outputting vertex degrees and/or properties.', file=error_file, flush=True)
             id_count = 0
             for v in G2.vertices():
                 v_id = G2.vp[id_col][v]
@@ -263,11 +264,13 @@ def run(input_file: KGTKFiles,
                     for vprop in G2.vertex_properties.keys():
                         if vprop == id_col:
                             continue
-                        kw.write([v_id, v_prop_dict[vprop], str(G2.vp[vprop][v]), '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count)])
+                        kw.write([v_id, vprop, str(G2.vp[vprop][v]), '{}-{}-{}'.format(v_id, vprop, id_count)])
                         id_count += 1
 
         kw.close()
 
+        if verbose:
+            print('Writing the summary file.', file=error_file, flush=True)
         with open(log_file, 'w') as writer:
             writer.write('graph loaded! It has %d nodes and %d edges\n' % (G2.num_vertices(), G2.num_edges()))
             if log_top_relations:
@@ -287,18 +290,18 @@ def run(input_file: KGTKFiles,
             if log_top_pageranks:
                 writer.write('\n###PageRank\n')
                 writer.write('Max pageranks\n')
-                result = gtanalysis.get_topn_indices(G2, 'vertex_pagerank', top_n, id_col)
+                result = gtanalysis.get_topn_indices(G2, vertex_pagerank, top_n, id_col)
                 for n_id, n_label, pr in result:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, pr))
 
             if log_top_hits:
                 writer.write('\n###HITS\n')
                 writer.write('HITS hubs\n')
-                main_hubs = gtanalysis.get_topn_indices(G2, 'vertex_hubs', top_n, id_col)
+                main_hubs = gtanalysis.get_topn_indices(G2, vertex_hubs, top_n, id_col)
                 for n_id, n_label, hubness in main_hubs:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, hubness))
                 writer.write('HITS auth\n')
-                main_auth = gtanalysis.get_topn_indices(G2, 'vertex_auth', top_n, id_col)
+                main_auth = gtanalysis.get_topn_indices(G2, vertex_auth, top_n, id_col)
                 for n_id, n_label, authority in main_auth:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 

@@ -114,7 +114,11 @@ kgtk cat -i examples/docs/graph-statistics-file1.tsv
 We can use the following command to compute degree and PageRank statistics over the graph:
 
 ```
-kgtk graph_statistics --log summary.txt --pagerank --statistics-only -i examples/docs/graph-statistics-file1.tsv
+kgtk graph_statistics \
+     -i examples/docs/graph-statistics-file1.tsv \
+     --log-file summary.txt \
+     --log-pagerank-centrality \
+     --output-statistics-only
 ```
 
 The output (printed to stdout by default) is as follows:
