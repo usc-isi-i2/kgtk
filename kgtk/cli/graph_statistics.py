@@ -39,19 +39,31 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         '\n(default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
-    parser.add_argument('--degrees', dest='compute_degrees',
-                        help='Whether or not to compute degree distribution. (default=%(default)s)',
+    parser.add_argument('--histogram', dest='compute_degrees_histogram',
+                        help='Whether or not to compute degree distribution and output it to the log file. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
+    parser.add_argument('--top-relations', dest='compute_top_relations',
+                        help='Whether or not to compute top relations and output them to the log file. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
+
+    parser.add_argument('--output-degrees', dest='output_degrees',
+                        help='Whether or not to output degree edges. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
+
+    parser.add_argument('--output-properties', dest='output_properties',
+                        help='Whether or not to output property edges. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
+
     parser.add_argument('--pagerank', dest='compute_pagerank',
-                        help='Whether or not to compute PageRank centraility. ' +
+                        help='Whether or not to compute PageRank centraility and output it to the log file. ' +
                         '\nNote: --undirected improves the pagerank calculation. ' +
                         'If you want both pagerank and in/out-degrees, you should make two runs. ' +
                         '\n(default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
                         
     parser.add_argument('--hits', dest='compute_hits',
-                        help='Whether or not to compute HITS centraility. (default=%(default)s)',
+                        help='Whether or not to compute HITS centraility and output it to the log file. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
     parser.add_argument('--log', action='store', type=str, dest='log_file',
@@ -99,9 +111,12 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         
         undirected: bool,
-        compute_degrees: bool,
+        compute_top_relations: bool,
+        compute_degrees_histogram: bool,
         compute_pagerank: bool,
         compute_hits: bool,
+        output_degrees: bool,
+        output_properties: bool,
         log_file: str,
         statistics_only: bool,
         vertex_in_degree: str,
@@ -181,22 +196,14 @@ def run(input_file: KGTKFiles,
         if verbose:
             print('graph loaded! It has %d nodes and %d edges.' % (G2.num_vertices(), G2.num_edges()), file=error_file, flush=True)
 
-        kw: KgtkWriter = KgtkWriter.open(output_columns,
-                                     output_kgtk_file,
-                                     mode=KgtkWriter.Mode.EDGE,
-                                     require_all_columns=True,
-                                     prohibit_extra_columns=True,
-                                     fill_missing_columns=False,
-                                     verbose=verbose,
-                                     very_verbose=very_verbose)
-
         with open(log_file, 'w') as writer:
             writer.write('graph loaded! It has %d nodes and %d edges\n' % (G2.num_vertices(), G2.num_edges()))
-            writer.write('\n###Top relations:\n')
-            for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=predicate):
-                writer.write('%s\t%d\n' % (rel, freq))
+            if compute_top_relations:
+                writer.write('\n###Top relations:\n')
+                for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=predicate):
+                    writer.write('%s\t%d\n' % (rel, freq))
 
-            if compute_degrees:
+            if compute_degrees_histogram:
                 writer.write('\n###Degrees:\n')
                 for direction in directions:
                     degree_data = gtanalysis.compute_node_degree_hist(G2, direction)
@@ -227,27 +234,38 @@ def run(input_file: KGTKFiles,
                 for n_id, n_label, authority in main_auth:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, authority))
 
-        id_count = 0
+        kw: KgtkWriter = KgtkWriter.open(output_columns,
+                                     output_kgtk_file,
+                                     mode=KgtkWriter.Mode.EDGE,
+                                     require_all_columns=True,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=False,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose)
+
         if not statistics_only:
+            id_count = 0
             for e in G2.edges():
                 sid, oid = e
                 lbl = G2.ep[predicate][e]
                 kw.write([G2.vp[id_col][sid], lbl, G2.vp[id_col][oid], '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)])
                 id_count += 1
 
-        id_count = 0
-        for v in G2.vertices():
-            v_id = G2.vp[id_col][v]
-            kw.write([v_id, vertex_in_degree, str(v.in_degree()), '{}-{}-{}'.format(v_id, vertex_in_degree, id_count)])
-            id_count += 1
-            kw.write([v_id, vertex_out_degree, str(v.out_degree()), '{}-{}-{}'.format(v_id, vertex_out_degree, id_count)])
-            id_count += 1
-
-            for vprop in G2.vertex_properties.keys():
-                if vprop == id_col:
-                    continue
-                kw.write([v_id, v_prop_dict[vprop], str(G2.vp[vprop][v]), '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count)])
+        if output_degrees:
+            id_count = 0
+            for v in G2.vertices():
+                v_id = G2.vp[id_col][v]
+                kw.write([v_id, vertex_in_degree, str(v.in_degree()), '{}-{}-{}'.format(v_id, vertex_in_degree, id_count)])
                 id_count += 1
+                kw.write([v_id, vertex_out_degree, str(v.out_degree()), '{}-{}-{}'.format(v_id, vertex_out_degree, id_count)])
+                id_count += 1
+
+                if output_properties:
+                    for vprop in G2.vertex_properties.keys():
+                        if vprop == id_col:
+                            continue
+                        kw.write([v_id, v_prop_dict[vprop], str(G2.vp[vprop][v]), '{}-{}-{}'.format(v_id, v_prop_dict[vprop], id_count)])
+                        id_count += 1
 
         kw.close()
         kr.close()

@@ -21,7 +21,10 @@ On the other hand, when using undirected (bidirectional) edges,
 ```
 usage: kgtk graph-statistics [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                              [--undirected [True|False]]
-                             [--degrees [True|False]]
+                             [--histogram [True|False]]
+                             [--top-relations [True|False]]
+                             [--output-degrees [True|False]]
+                             [--output-properties [True|False]]
                              [--pagerank [True|False]] [--hits [True|False]]
                              [--log LOG_FILE] [--statistics-only [True|False]]
                              [--vertex-in-degree-property VERTEX_IN_DEGREE]
@@ -43,16 +46,25 @@ optional arguments:
                         Is the graph undirected? If false, then the graph is
                         treated as (node1)->(node2). If true, then the graph
                         is treated as (node1)<->(node2). (default=False)
-  --degrees [True|False]
-                        Whether or not to compute degree distribution.
-                        (default=False)
+  --histogram [True|False]
+                        Whether or not to compute degree distribution and
+                        output it to the log file. (default=False)
+  --top-relations [True|False]
+                        Whether or not to compute top relations and output
+                        them to the log file. (default=True)
+  --output-degrees [True|False]
+                        Whether or not to output degree edges. (default=True)
+  --output-properties [True|False]
+                        Whether or not to output property edges.
+                        (default=True)
   --pagerank [True|False]
-                        Whether or not to compute PageRank centraility. Note:
-                        --undirected improves the pagerank calculation. If you
-                        want both pagerank and in/out-degrees, you should make
-                        two runs. (default=False)
-  --hits [True|False]   Whether or not to compute HITS centraility.
+                        Whether or not to compute PageRank centraility and
+                        output it to the log file. Note: --undirected improves
+                        the pagerank calculation. If you want both pagerank
+                        and in/out-degrees, you should make two runs.
                         (default=False)
+  --hits [True|False]   Whether or not to compute HITS centraility and output
+                        it to the log file. (default=False)
   --log LOG_FILE        Summary file for the global statistics of the graph.
   --statistics-only [True|False]
                         If this flag is set, output only the statistics edges.

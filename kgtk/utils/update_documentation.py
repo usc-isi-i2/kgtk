@@ -70,7 +70,6 @@ class DocUpdater():
 
     """
 
-
     kgtk_command: str = attr.ib(validator=attr.validators.instance_of(str), default="kgtk")
 
     process_usage: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
